@@ -1,39 +1,33 @@
 ---
 name: superimplement
-description: Requires `superRA:using-superra` loaded first. Use when you have a PLAN.md in the superRA task-block format and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `IMPLEMENTED`, some `REVISE`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis", a branch with an APPROVED plan but no code yet, or a REVISE state that needs orchestrator adjudication before re-dispatch.
+description: Requires `superRA:using-superra` loaded first. Use when you have a `superRA/` task tree and are ready to implement its tasks; when a task tree has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a task tree where some tasks are `implemented`, some `revise`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this", "finish this analysis", a branch with an approved task tree but no code yet, or a `revise` state that needs orchestrator adjudication before re-dispatch.
 ---
 
 # superimplement — the IMPLEMENT phase
 
-**First, load `superRA:using-superra` if not already loaded.**
+Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
 
-Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
-
-Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Falls back to direct execution when the user requests it or tasks are trivial.
-
-**Announce at start:** "I'm using the superimplement skill to implement this plan."
+**Announce at start:** "I'm using the superimplement skill to implement the task tree."
 
 ## Execution Modes
 
-1. Load plan from `PLAN.md`; if the handoff docs are missing, structurally incomplete, or contradicted by unlogged material decisions, the main agent's Workflow Frontier Resolver routes to `superRA:superplan` first.
-2. Use **subagent mode** (default): dispatch implementer subagent per task; fresh context per task; orchestrator preserves context for coordination.
-3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
+Default is **subagent mode**: one implementer subagent per task, fresh context per task. Fall back to **direct mode** when the harness lacks subagents, the user requests it, or tasks are trivial. Direct mode still dispatches reviewer subagents after each task — review is never skipped.
 
 ## The Process
 
 **Load `superRA:agent-orchestration` before writing any dispatch prompt.**
 
-1. Read plan, extract all tasks;
-2. **Go through tasks:**
-   a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
-   b. Dispatch reviewer subagent (one comprehensive pass).
-   c. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
+1. Read the task tree, compute the frontier;
+2. **Go through frontier work units:**
+   a. Dispatch one task or a same-parent bundle per `agent-orchestration` §Dispatch Templates. Answer context questions, re-dispatch if needed.
+   b. Dispatch reviewer subagent for the same task or bundle (one comprehensive pass per task).
+   c. **APPROVE** → next frontier recompute. **REVISE** → fix reviewer-found blocking findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE.
 3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `superintegrate` on merge/PR.
 
 ### Step 0: Branch Check
 
-Before any handoff-doc check, dispatch, or commit, check if on a default branch:
+Before any task-tree check, dispatch, or commit, check if on a default branch:
 
 ```bash
 git branch --show-current
@@ -48,58 +42,52 @@ Want me to create one?
 
 If the user declines, proceed — they've given explicit consent to work on the default branch.
 
-### Step 0b: Handoff-Doc Existence Check
+### Step 0b: Task Tree Existence Check
 
-After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, **and** have no uncommitted modifications (neither unstaged nor staged):
+After the branch check, confirm the `superRA/` directory exists with a root `task.md`, is tracked, and has no uncommitted modifications:
 
 ```bash
-[ -f PLAN.md ] && [ -f RESULTS.md ] \
-  && git ls-files --error-unmatch PLAN.md RESULTS.md >/dev/null 2>&1 \
-  && git diff --quiet -- PLAN.md RESULTS.md \
-  && git diff --quiet --cached -- PLAN.md RESULTS.md
+[ -f superRA/task.md ] \
+  && git ls-files --error-unmatch superRA/task.md >/dev/null 2>&1 \
+  && git diff --quiet -- superRA/ \
+  && git diff --quiet --cached -- superRA/
 ```
 
-All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
+All conjuncts must succeed. The first confirms the root task exists; the rest confirm tracking and a clean worktree.
 
-**If the check fails, the handoff docs are outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair the docs.** Do not inline superplan content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
+**If the check fails, the task tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases. After the repair commit, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
 
-Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
-
-If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
+Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS.md`.
-2. **Resolve entry.** If the main agent has not already done so, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all selected tasks are already `APPROVED`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
-3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in PLAN.md's header.
-4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
-5. Review PLAN.md critically — identify any questions or concerns:
+1. Read the root `superRA/task.md` and run `superra task tree` to see the full task tree with statuses.
+2. **Resolve entry** via `using-superRA/references/main-agent.md` §Workflow Frontier Resolver if not already done; continue here only when it selects implementation, review, reproducibility verification, or the Step 4 disposition. If all tasks are already `approved`, skip dispatch and start at Step 3 so approved work is verified and disposition-logged before integration.
+3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the active task or its ancestor chain.
+4. **Read the scoped `### Conventions` / `### Context` / `### Constraints` context in the active task's objective and its ancestor chain** (anatomy: `task-tree/references/task-file-contract.md` §Context Inheritance). When a task the frontier will touch lacks the inherited convention context an agent needs, walk the relevant docs and distill it into the objective of the lowest governing task now (`superplan/references/task-tree-design.md` §Context Distillation) — commit before dispatching subagents.
+5. Review the task tree critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
-   - Are the steps in the right order?
+   - Are the dependencies in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-   - Does any step conflict with a project convention you found in step 4?
-6. Review RESULTS.md for context on any completed steps (if resuming).
+   - Does any task conflict with a project convention you found in step 4?
+6. Review completed tasks' `## Results` sections for context (if resuming).
 7. If concerns: raise them with your human partner before starting.
 8. If no concerns: proceed.
 
 ### Step 2: Execute Tasks
 
-**Before dispatching, read each frontier task's `Depends on:` field.**
-Tasks whose dependencies are all `APPROVED` may be dispatched as a
-single parallel Agent-tool batch (subject to `agent-orchestration`
-§Workload Balancing). Serialize only when no parallel batch is
-available.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Tasks on the frontier may be dispatched singly, as one or more same-parent bundles, or as a parallel Agent-tool batch (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
 
 #### Task Execution Steps
 
-1. **Dispatch implementer.** Subagent mode: dispatch agents following `superRA:agent-orchestration`. 
+1. **Dispatch implementer** per `superRA:agent-orchestration`. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
-4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
+3. **Once DONE or DONE_WITH_CONCERNS:** dispatch the reviewer for one comprehensive task-local pass per assigned task. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+4. **Once APPROVE:** a generic APPROVE with no file/line citations is a red flag — re-dispatch the reviewer to cite the code paths it examined. In a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
 
-When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, the orchestrator may dispatch `Stage: integration` against that single task before advancing. This uses existing stage flexibility — no new mechanism.
+When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
 
-**In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superra` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents unless overridden by the user.
+**In direct mode:** the main agent does Steps 1–2 directly; Steps 3–4 still dispatch reviewer subagents unless the user overrides.
 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
@@ -108,9 +96,7 @@ See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Dis
 
 ### Step 3: Verify Pipeline and Reproducibility
 
-After every task is APPROVED, verify the work end-to-end before presenting completion options. Walk all five checks; do not proceed if any fails.
-
-**Run every check. Don't trust "looks committed" — execute `git status` and read the output. The five checks below are the orchestrator's verification gate: evidence before claims, no shortcuts.**
+After every task is `approved`, verify the work end-to-end before presenting completion options. Walk all five checks against actual command output, not recollection; do not proceed if any fails.
 
 1. **All code committed?**
    ```bash
@@ -118,25 +104,25 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
+2. **Task tree up to date?** Run `superra task tree` and confirm all tasks show `approved`. No tasks stuck in `implemented` or `revise`. Major outcomes are captured in task `## Results` sections, with parent rollups where a higher-level monitoring view needs them.
 
-3. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
+3. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding. Figure attachments in each task's `attachments/` directory are committed.
 
 4. **Reproducibility verification.**
-   - Multi-script pipeline runs end-to-end if the plan declares one.
+   - Multi-script pipeline runs end-to-end if the task tree declares one.
    - Outputs exist and were generated from committed code, not ad-hoc REPL state.
 
-5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
+5. **Deferred MINORs resolved?** Check task `## Review Notes` sections for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in the relevant task's `## Results`.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
-**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu.
+**Once all five checks pass:** proceed to the Step 4 completion menu.
 
 ### Step 4: Present Completion Options
 
-**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `RESULTS.md` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in `PLAN.md`'s Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table atomically with a `## Decisions` log entry recording the promoted symbols; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the root task.md's Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
 
-**Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise). Each option gets a short description.
+**Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise).
 
 ```
 Work complete and verified. Here are the results summary:
@@ -144,17 +130,17 @@ Work complete and verified. Here are the results summary:
 What would you like to do?
 
 1. Proceed with integration
-2. Change the plan
+2. Change the task tree
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 ```
 
-Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
+Fold the researcher's answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before executing the choice, included in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
-- **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`. It runs Protect, Sync, Integrate, Document, and Finish.
-- **Option 2 (Change the plan):** Re-enter `superRA:superplan §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
+- **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`.
+- **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the task-tree edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
@@ -162,39 +148,25 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
 
 Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
 
-**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's gated checklist). Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
+**Workflow-specific review scope at interim checkpoints:** Task-local correctness under `agents/reviewer.md` §Review Protocol. Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
 
 ## Autonomy and Stop Points
 
 The autonomy contract is in `superRA:using-superra/references/main-agent.md` (main-agent only). This section lists the **superimplement-specific stop points** that plug into its pause classes.
 
 - **Step 4 completion menu.** User-defined workflow milestone (see Step 4 above for the four options).
-- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing Plans`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
+- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`; after the task-tree edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
-Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
+Every stop above: stop and `AskUserQuestion` (plain text if unavailable); fold the answer into the relevant task objective **before** acting on it.
 
 ## Agent Loads
 
-This workflow runs the `implementation` Stage for both roles (see `superRA:using-superra` §Skill-Load Manifest).
+Both roles run the `implementation` Stage (`superRA:using-superra` §Skill-Load Manifest).
 
 ## Red Flags
 
-**Never:**
-- Start work on main/master branch without proposing a feature branch first (Step 0)
-- Skip review — even in direct mode
-- Proceed with unfixed `[BLOCKING]` items (a REVISE task is not complete until the re-review promotes it to APPROVED)
-- Dispatch multiple implementers in parallel on the same worktree — when parallel-dispatching ≥2 implementers, each must run in its own worktree per `superRA:agent-orchestration` §Parallelization and Worktree Isolation
-- Paraphrase the task prompt into the dispatch instead of pointing the subagent at `PLAN.md` (the pointer-based convention is mandatory — subagents read the file directly so the dispatch and PLAN.md cannot drift)
-- Skip plan file update after task completion
-- Ignore implementer input-quality or methodology concerns
-- Accept "looks fine" without verification
-- Move to the next task while the current task's review has open issues or status is not APPROVED
-
-**If reviewer returns REVISE:**
-- Adjudicate in the review-notes blockquote first (see Handling Reviewer Feedback)
-- Re-dispatch the implementer with the adjudicated items
-- Re-dispatch the reviewer after implementer fixes (narrow re-review: cited fixes + dependent findings)
-- Repeat until APPROVED
-- Do NOT skip the re-review
-- Do NOT ask the user whether to fix — iterate automatically
+- Skipping review, even in direct mode.
+- Advancing past a task whose review has open issues or whose status is not `approved` — a REVISE task is complete only once re-review promotes it to APPROVED.
+- Accepting "looks fine" without verification, or ignoring implementer input-quality or methodology concerns.
+- Asking the user whether to fix blocking findings instead of iterating REVISE → fix → re-review automatically.

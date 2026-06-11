@@ -1,0 +1,19 @@
+- id: 1
+  author: Julie Zhiyu Fu
+  timestamp: '2026-06-07T14:35:22.627529'
+  resolved: true
+  anchor:
+    section: Objective
+    block_index: 9
+    text_preview: 3. (Optional) task merge command. Evaluate during implementa
+  body: no need for merge; merge has to be done manually to ensure the ingegration
+- id: 2
+  author: Julie Zhiyu Fu
+  timestamp: '2026-06-07T14:36:12.475054'
+  resolved: true
+  anchor:
+    section: Objective
+    block_index: 3
+    text_preview: 1. Lossless depends_on rewire in the hook (YAML metadata onl
+  body: make sure the skills inform agents about the hook behavior so the agent would
+    not be surprised by chagnes

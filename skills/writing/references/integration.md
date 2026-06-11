@@ -2,7 +2,7 @@
 
 > Load when the writing task is riding `superintegrate` (whole-section drafts, whole-paper revisions, R&R passes that touch a base branch). Generic codebase-coherence gates live in `superRA:refactor-and-integrate`; this file owns the writing-specific integration gates.
 
-The writing vertical has no numerical drift tests of its own (unless the task also produced numbers, in which case `econ-data-analysis/references/integration.md` applies in addition). The integration-specific concerns are: the document still builds on the merged state, the structural skeleton is preserved or its changes are authorized, and every hunk in the cumulative diff traces back to a task or a documented decision.
+The writing vertical has no numerical drift tests of its own; when the task also produced numbers, `econ-data-analysis/references/integration.md` applies in addition.
 
 ## Gates
 
@@ -12,7 +12,7 @@ Run the full build after merging with the base branch (commands per engine in `r
 
 ### Gate 2 — Outline stability
 
-Extract the outline (section / subsection headings) from both the base branch and the merged state, compare side by side. Every added, removed, reordered, or reworded heading must trace to either a task in `PLAN.md` or a logged user decision. Unauthorized outline changes are blocking.
+Extract the outline (section / subsection headings) from both the base branch and the merged state, compare side by side. Every added, removed, reordered, or reworded heading must trace to either a task objective or a logged user decision. Unauthorized outline changes are blocking.
 
 Quick extract:
 - LaTeX: `grep -nE '\\(section|subsection|subsubsection)\{' main.tex`
@@ -24,7 +24,7 @@ Sample three hunks at random from the cumulative branch diff. For each, read the
 
 ### Gate 4 — Scope respected
 
-Walk the cumulative branch diff and confirm every hunk traces to a `PLAN.md` task, a logged user decision, or (for no-plan modes) an explicit in-chat request recorded in a commit message. Untraceable hunks — most often a style sweep that escaped the planned scope — are blocking.
+Walk the cumulative branch diff and confirm every hunk traces to a task objective, a logged user decision, or (for no-plan modes) an explicit in-chat request recorded in a commit message. Untraceable hunks — most often a style sweep that escaped the planned scope — are blocking.
 
 ### Data-analysis-touching writing tasks
 

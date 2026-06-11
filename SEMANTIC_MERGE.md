@@ -1,53 +1,48 @@
 # Semantic Merge Record
 
-**Operation:** `merge`
-**Current branch:** `tighten-integration-rules`
-**Incoming ref:** `origin/main`
-**Governing baseline:** `30d6c911c9a2fb62582ad948fd4de82b0b2bf150`
-**Merge commit:** `4e3b9e57f42c35446092f84a48c2768acdfa221b`
-**Propagation commits:** Record-only commit adding this file.
+**Operation:** `merge --no-ff`
+**Current branch:** `better-handoff`
+**Incoming ref:** `better-handoff-impl/semantic-move-hook-json-agent/parallel/posttooluse-empty-json`
+**Governing baseline:** `8f5dd1d5b22954294b22651e41f95751a2e69466`
+**Merge commit:** `1533d06a`
+**Propagation commits:** Record update containing this SHA
 
 ## Current Branch Intent
 
-Generalize superRA Sync and semantic-merge behavior: owner-located mode references, standalone semantic-merge records, result-protection split-out, refactor-and-integrate scope boundaries, direct-mode and Codex generated-agent updates, and release metadata for `0.1.2`.
+`better-handoff` already carried the approved Codex task-hook integration: decision-reminder hook removal, Codex task-tree `PostToolUse` wiring, `updated` metadata removal, stable hook-wrapper packaging, and approved task-tree evidence under `superRA/task-tree/codex-task-hooks`.
 
 ## Incoming Intent
 
-Bring in two `main` updates:
-
-- Header-field handling in `planning-workflow` during plan-change protocol.
-- Parallel worktree branch naming changed from `<branch>/parallel/<slug>` to `<current-branch>-agent/parallel/<slug>` across role specs, orchestration docs, `merge-guard`, and Codex agent generation.
-
-Incoming `main` also carried root `PLAN.md` and `RESULTS.md` from the branch-naming work.
+The incoming parallel branch fixes a Codex harness edge case: no-feedback task-hook paths that emitted empty stdout must emit parseable empty hook JSON (`{}`) for Codex, while Claude-compatible no-feedback paths stay silent and feedback paths still return `additionalContext`.
 
 ## Resolution Thesis
 
-The merge kept the current branch's semantic-merge and integration-workflow restructuring, applied the incoming parallel-branch naming convention to the surviving rewritten surfaces, and omitted root `PLAN.md` / `RESULTS.md` per user instruction. Generated Codex agent files remained consistent with their sources.
+The merge keeps current branch packaging and approved hook-task structure while taking the incoming parseable-empty-output behavior. The temporary update task is folded into the durable `codex-task-hooks` parent per the update-task lifecycle, and the active internals reference is updated so no stale "silent no-feedback" claim remains.
 
 ## File / Script Impact Map
 
 | Path or path cluster | Incoming intent | Resolution | Codebase context |
 |---|---|---|---|
-| `agents/implementer.md`, `.codex/agents/superra_implementer.toml` | Report `<current-branch>-agent/parallel/<slug>` from parallel worktree dispatch. | Kept current branch's leaner handoff wording and applied the new branch pattern. | `.codex/agents` was checked with `sync_codex_agents.py --scope project --check`. |
-| `skills/agent-orchestration/**`, `hooks/merge-guard` | Use and exempt the new `-agent/parallel` branch naming convention. | Applied incoming branch pattern to the current branch's dispatch-template wording and worktree fallback examples. | No broader codebase-coherence work needed. |
-| `skills/codex-superra-setup/scripts/sync_codex_agents.py` | Generate implementer handoff text with the new branch pattern. | Applied the incoming pattern while preserving current branch cleanup behavior. | Generator tests passed. |
-| `skills/semantic-merge/SKILL.md` | Update parallel-worktree exception for the new branch pattern. | Kept the current branch's mode-reference structure and updated the bottom exception to `<current-branch>-agent/parallel/<slug>`. | Conflict resolved by synthesis. |
-| `PLAN.md`, `RESULTS.md` | Incoming root handoff docs from branch-naming work. | Removed from the merge result by user decision. | Root handoff docs are absent after sync. |
+| `hooks/hooks-codex.json` | Export Codex empty-JSON mode for task-hook commands and fail open with `{}` when no plugin root exists. | Kept incoming manifest behavior. | Preserves current `run-hook.cmd task-hook` packaging. |
+| `skills/task-tree/scripts/task_hook.py` | Add `SUPERRA_TASK_HOOK_EMPTY_JSON` and a shared success-exit helper so no-feedback Codex paths emit `{}`. | Kept incoming behavior, including automatic empty-JSON mode for `apply_patch`; feedback JSON remains unchanged. | Existing hook remains best-effort and non-blocking. |
+| `skills/task-tree/scripts/test_task_tree.py` | Cover parseable empty JSON for Codex no-feedback Edit/Write, Bash, empty stdin, manifest fallback, and `apply_patch`. | Preserved incoming regression coverage and Claude silent no-op checks. | Protects the harness-specific output contract. |
+| `skills/task-tree/references/internals.md` | Avoid stale documentation that all valid/ignored no-feedback paths stay silent. | Updated the active hook architecture reference to distinguish Claude silence from Codex `{}` output. | Scope-limited stale-reference fix. |
+| `superRA/task-tree/codex-task-hooks/**`, `superRA/task.md` | Record the implemented update task. | Folded the temporary `06-posttooluse-empty-json` task into the durable approved parent and recorded the merge in the root Sync Map. | Prunes integration-stage update-task structure. |
 
 ## User Decisions
 
-- 2026-04-24: User instructed to delete root `PLAN.md` and `RESULTS.md` from `main`; they are not needed. Implemented by omitting both files from the merge result and recording the decision in the merge commit body.
+None.
 
 ## Checks
 
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` - passed.
-- `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` - passed.
-- `bash tests/check-harness-compatibility.sh` - passed.
-- `bash tests/test-sync-integration-contract.sh` - passed.
-- `bash tests/hooks/test-ensure-agent-orchestration.sh` - passed.
-- `bash tests/hooks/test-ensure-using-superra.sh` - passed.
-- Conflict-marker sweep over touched surfaces - passed.
+- `python3 -m json.tool hooks/hooks-codex.json` — pass.
+- `uv run --script skills/task-tree/scripts/cli.py task check --root superRA` — pass.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" hooks skills/task-tree superRA SEMANTIC_MERGE.md` — pass.
+- `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_tree.py -v` — pass, 328 tests.
+- `bash tests/hooks/test-codex-hooks.sh` — pass, 15/15 after updating stale no-feedback assertions for Codex `{}`.
+- `git diff --check` — pass.
+- `bash tests/check-harness-compatibility.sh` — fails on the pre-existing assertion `using-superRA manifest must reference theory-modeling`; `skills/using-superRA/SKILL.md` is outside this merge's touched hook-output surface, and the same residual check failure was already recorded in the previous semantic merge record.
 
 ## Codebase Context
 
-No broader refactor-and-integrate work was identified for this sync. The only semantic follow-through was applying the new branch naming convention consistently and preserving the current branch's rewritten semantic-merge structure.
+This merge intentionally synthesizes the incoming Codex hook-output fix with the current branch's packaged hook-wrapper design and approved task-tree structure.

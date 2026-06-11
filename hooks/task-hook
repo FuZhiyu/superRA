@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# Stable PostToolUse entry point for task-tree reconciliation (generated
+# by wrapper_resolver.py). Resolves the task-tree scripts from the
+# installed plugin at runtime and forwards stdin to the packaged hook via
+# `uv run --script` (python3 fallback).
+# Regenerate rather than hand-edit: `superra wrapper render-hook`.
+
+set -uo pipefail
+
+input=$(cat)
+
+case "$0" in
+  */*) _superra_script_dir=${0%/*} ;;
+  *) _superra_script_dir=. ;;
+esac
+_superra_script_dir="$(cd "$_superra_script_dir" && pwd)"
+
+# The shim ships inside the plugin: its parent dir is the plugin root.
+if [ -f "${_superra_script_dir%/hooks}/skills/task-tree/scripts/cli.py" ] || [ -f "${_superra_script_dir%/hooks}/skills/task-system/scripts/cli.py" ]; then
+  SUPERRA_REPO_ROOT="${_superra_script_dir%/hooks}"
+  export SUPERRA_REPO_ROOT
+fi
+
+# ---- superRA task-tree source resolver (generated; edit wrapper_resolver.py) ----
+# Resolves the task-tree package dir from the already-installed plugin on disk
+# and runs its scripts with `uv run --script` (python3 fallback), so the CLI
+# never installs anything, never creates a cwd venv, and always reflects the
+# live source (no version-keyed build cache).
+_superra_pick_highest_semver() {
+  # stdin: one candidate dir per line whose parent name is a version.
+  # stdout: the dir whose version sorts highest (sort -V).
+  local best="" best_v="" dir v
+  while IFS= read -r dir; do
+    [ -n "$dir" ] || continue
+    v="${dir%/skills/task-tree}"
+    v="${v%/skills/task-system}"
+    v="${v##*/}"
+    if [ -z "$best" ]; then
+      best="$dir"; best_v="$v"
+    else
+      if [ "$(printf '%s\n%s\n' "$best_v" "$v" | sort -V | tail -n1)" = "$v" ]; then
+        best="$dir"; best_v="$v"
+      fi
+    fi
+  done
+  [ -n "$best" ] && printf '%s\n' "$best"
+}
+
+_superra_claude_install_path() {
+  # Reads ~/.claude/plugins/installed_plugins.json and prints the installPath
+  # for the project-matching record, else the user-scope (projectPath null)
+  # record. Single manifest read, no disk walk.
+  local manifest="$HOME/.claude/plugins/installed_plugins.json"
+  [ -f "$manifest" ] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - "$manifest" "$PWD" <<'PYEOF'
+import json, os, sys
+manifest, cwd = sys.argv[1], sys.argv[2]
+try:
+    with open(manifest) as f:
+        data = json.load(f)
+except Exception:
+    sys.exit(1)
+records = (data.get("plugins") or {}).get("superRA@superRA") or []
+def matches(rec):
+    pp = rec.get("projectPath")
+    return bool(pp) and (cwd == pp or cwd.startswith(pp.rstrip("/") + "/"))
+chosen = next((r for r in records if matches(r)), None)
+if chosen is None:
+    chosen = next((r for r in records if r.get("projectPath") in (None, "")), None)
+# Deliberately no records[0] fallback: an arbitrary record may belong to another
+# project and resolve to a stale/wrong install path. Fall through to the next
+# resolution branch instead of guessing.
+path = (chosen or {}).get("installPath")
+if not path:
+    sys.exit(1)
+print(path)
+PYEOF
+}
+
+_superra_resolve_source() {
+  # 1. Explicit harness env var.
+  local env_root="${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}"
+  if [ -n "$env_root" ]; then
+    if [ -f "$env_root/skills/task-tree/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$env_root/skills/task-tree"
+      return 0
+    fi
+    if [ -f "$env_root/skills/task-system/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$env_root/skills/task-system"
+      return 0
+    fi
+  fi
+
+  # 2. Local checkout (preferred over caches so dev edits win).
+  if [ -n "${SUPERRA_REPO_ROOT:-}" ]; then
+    if [ -f "$SUPERRA_REPO_ROOT/skills/task-tree/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$SUPERRA_REPO_ROOT/skills/task-tree"
+      return 0
+    fi
+    if [ -f "$SUPERRA_REPO_ROOT/skills/task-system/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$SUPERRA_REPO_ROOT/skills/task-system"
+      return 0
+    fi
+  fi
+
+  # 3. Claude cache (authoritative manifest).
+  local claude_path
+  claude_path="$(_superra_claude_install_path 2>/dev/null || true)"
+  if [ -n "$claude_path" ]; then
+    if [ -f "$claude_path/skills/task-tree/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$claude_path/skills/task-tree"
+      return 0
+    fi
+    if [ -f "$claude_path/skills/task-system/scripts/cli.py" ]; then
+      printf 'DIR:%s\n' "$claude_path/skills/task-system"
+      return 0
+    fi
+  fi
+
+  # 4. Codex cache (bounded depth-3 glob; highest semver; slug-case agnostic).
+  local codex_cache="$HOME/.codex/plugins/cache"
+  if [ -d "$codex_cache" ]; then
+    local picked
+    picked="$(
+      for d in "$codex_cache"/*/*/*/skills/task-tree "$codex_cache"/*/*/*/skills/task-system; do
+        [ -f "$d/scripts/cli.py" ] && printf '%s\n' "$d"
+      done | _superra_pick_highest_semver
+    )"
+    if [ -n "$picked" ]; then
+      printf 'DIR:%s\n' "$picked"
+      return 0
+    fi
+  fi
+
+  # 5. GitHub fallback (the only pin; needs network on first clone). Fail fast
+  #    while the pinned ref does not yet carry skills/task-tree — cloning the
+  #    whole repo only to fail the cli.py test is pure waste.
+  if [ "0" = "1" ]; then
+    printf 'GIT:%s@%s\n' "https://github.com/FuZhiyu/superRA.git" "main"
+    return 0
+  fi
+  return 1
+}
+
+_superra_github_clone() {
+  # Shallow-clone the GitHub fallback to a stable user-cache dir and print the
+  # task-tree source dir inside it. `uv run --script` cannot fetch a git
+  # subdirectory, so the clone is the carrier for the loose scripts. Reuses an
+  # existing clone (one fetch to refresh the pinned ref) so repeat calls do not
+  # re-clone. Prints the dir on stdout; returns non-zero on failure.
+  command -v git >/dev/null 2>&1 || return 1
+  local cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/superra"
+  local clone="$cache_root/superRA-main"
+  mkdir -p "$cache_root" || return 1
+  if [ -d "$clone/.git" ]; then
+    # TTL-gate the refresh: only fetch when the clone's last refresh is older
+    # than the window, so a reused clone is not a network round-trip on every
+    # `superra` call / PostToolUse hook fire. The stamp file records last fetch.
+    local stamp="$clone/.superra-fetch-stamp" now ts age
+    now="$(date +%s 2>/dev/null || echo 0)"
+    ts=0
+    [ -f "$stamp" ] && ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+    age=$(( now - ts ))
+    if [ "$now" = "0" ] || [ "$ts" = "0" ] || [ "$age" -ge "86400" ]; then
+      git -C "$clone" fetch --depth 1 origin "main" >/dev/null 2>&1 || true
+      git -C "$clone" reset --hard "origin/main" >/dev/null 2>&1 || true
+      [ "$now" != "0" ] && printf '%s\n' "$now" > "$stamp" 2>/dev/null || true
+    fi
+  else
+    rm -rf "$clone"
+    git clone --depth 1 --branch "main" "https://github.com/FuZhiyu/superRA.git" "$clone" >/dev/null 2>&1 || return 1
+    # Stamp a fresh clone so the TTL window starts now, not at the next call.
+    local fresh; fresh="$(date +%s 2>/dev/null || echo 0)"
+    [ "$fresh" != "0" ] && printf '%s\n' "$fresh" > "$clone/.superra-fetch-stamp" 2>/dev/null || true
+  fi
+  [ -f "$clone/skills/task-tree/scripts/cli.py" ] || return 1
+  printf '%s\n' "$clone/skills/task-tree"
+}
+
+_superra_resolve_dir() {
+  # Resolve to a concrete on-disk task-tree dir, cloning the GitHub fallback
+  # if that is the only branch that resolves. Prints the dir; returns non-zero
+  # if nothing resolves.
+  local resolved kind value
+  resolved="$(_superra_resolve_source)" || return 1
+  kind="${resolved%%:*}"
+  value="${resolved#*:}"
+  if [ "$kind" = "DIR" ]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+  _superra_github_clone
+}
+
+_superra_run_entry() {
+  # $1: entry script basename under <dir>/scripts (e.g. cli.py, plan_dashboard.py,
+  #     task_hook.py). Remaining args are forwarded to the script.
+  # Runs via `uv run --script` (script-scoped: no project discovery, no cwd
+  # venv, live source) and falls back to `python3` when uv is unavailable.
+  local entry="$1"; shift
+  local dir script
+  dir="$(_superra_resolve_dir)" || {
+    echo "superra: could not resolve task-tree source (no env var, checkout, installed plugin, or GitHub clone)" >&2
+    return 1
+  }
+  script="$dir/scripts/$entry"
+  if command -v uv >/dev/null 2>&1; then
+    exec uv run --script "$script" "$@"
+  elif command -v python3 >/dev/null 2>&1; then
+    exec python3 "$script" "$@"
+  else
+    echo "superra: neither uv nor python3 found on PATH" >&2
+    return 127
+  fi
+}
+
+_superra_run() {
+  # Route the first argument: `dashboard` → plan_dashboard.py (carries the web
+  # stack so the task hot path stays minimal); everything else → cli.py.
+  if [ "${1:-}" = "dashboard" ]; then
+    shift
+    _superra_run_entry plan_dashboard.py dashboard "$@"
+  else
+    _superra_run_entry cli.py "$@"
+  fi
+}
+# ---- end superRA task-tree source resolver ----
+
+# Resolve and run the packaged hook; never block (always exit 0).
+_superra_dir="$(_superra_resolve_dir 2>/dev/null || true)"
+_superra_hook_output=""
+if [ -n "$_superra_dir" ]; then
+  _superra_hook="$_superra_dir/scripts/task_hook.py"
+  if command -v uv >/dev/null 2>&1; then
+    _superra_hook_output="$(printf '%s' "$input" | uv run --script "$_superra_hook" 2>/dev/null || true)"
+  elif command -v python3 >/dev/null 2>&1; then
+    _superra_hook_output="$(printf '%s' "$input" | python3 "$_superra_hook" 2>/dev/null || true)"
+  fi
+fi
+# In Codex mode, an empty response is unparseable; emit {} as a last resort.
+if [ -n "$_superra_hook_output" ]; then
+  printf '%s\n' "$_superra_hook_output"
+elif [ -n "${SUPERRA_TASK_HOOK_EMPTY_JSON:-}" ]; then
+  printf '{}\n'
+fi
+exit 0

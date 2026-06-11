@@ -1,10 +1,10 @@
 # Integration Discipline for Theory Modeling — the Rewriting Reference
 
-> Loaded at `Stage: integration` for theory-modeling tasks. The readability layer for theory-modeling work: ex-post structural rewriting (Section A), per-step local obviousness (Section B), cross-document coherence (Section C), and refactor-survival of correctness artifacts (Section D).
+> Loaded at `Stage: integration` for theory-modeling tasks. The readability layer: ex-post structural rewriting (Section A), per-step local obviousness (Section B), cross-document coherence (Section C), refactor-survival of correctness artifacts (Section D).
 >
-> **Scope.** Document-internal coherence and ex-post rewriting. If a structural rewrite surfaces a correctness fix, halt and re-dispatch as `Stage: implementation`. Generic codebase-coherence concerns belong to `refactor-and-integrate/SKILL.md` — load both at this stage.
+> **Scope.** Document-internal coherence and ex-post rewriting. If a structural rewrite surfaces a correctness fix, halt and re-dispatch as `Stage: implementation`. Generic codebase-coherence concerns belong to `refactor-and-integrate` — load both at this stage.
 
-Each section follows **principle → identification protocol → checklist**. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
+Each section follows principle → identification protocol → checklist. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
 
 ---
 
@@ -12,11 +12,9 @@ Each section follows **principle → identification protocol → checklist**. Ve
 
 ### Principle
 
-A derivation is read forward but built backward. **Start from the object the proof needs, then expand only the terms required to evaluate it.** Forward writing runs along a backward dependency walk: name the target; identify what the target requires; recurse only into terms that are not already known.
+A derivation is read forward but built backward. **Start from the object the proof needs, then expand only the terms required to evaluate it.** Name the target; identify what it requires; recurse only into terms not already known. This makes the proof linear in the reader's experience. Local placeholders introduced before the target is named force the reader to hold a symbol with no purpose — the dominant structural failure mode.
 
-This makes the proof linear in the reader's experience: target named, needed pieces named, structural cancellations performed, canonical objects substituted, conclusion reached. Local placeholders introduced before the target is named force the reader to hold a symbol with no purpose; they are the dominant structural failure mode.
-
-The discipline is **recursive**. A multi-step proof signposts its top-level strategy in one sentence; each non-trivial sub-argument signposts its own local strategy in the same form; transition prose at major joins names where we are in the parent plan ("having established $Y$, we turn to $Z$"). A reader entering at any point should be able to recover the local goal from the surrounding signposts.
+The discipline is **recursive**. A multi-step proof signposts its top-level strategy in one sentence; each non-trivial sub-argument signposts its own local strategy the same way; transition prose at major joins names where we are in the parent plan ("having established $Y$, we turn to $Z$"). A reader entering at any point should recover the local goal from the surrounding signposts.
 
 A worked bad/good walkthrough plus identification-training drills lives in `references/objective-first.md`; load on demand for the canonical example before applying the checklist.
 
@@ -28,7 +26,7 @@ Walk the existing derivation top-to-bottom in the reader's order:
 2. **For each displayed equation, ask: which named target does this advance?** If the answer is "we will see in three pages why this matters," the structure has deferred the goal → flag.
 3. **At every block longer than ~5–10 lines of algebra, ask: does the prose open with a one-sentence local strategy?** Sub-arguments without their own opening signpost force the reader to infer scope from algebra alone → flag. Watch for sub-sections that open directly with manipulation rather than prose, and for "we will use this below" phrasing — the term should appear when its use is named.
 4. **At every section/sub-section join, ask: does the prose name the transition?** ("Having $X$, we turn to $Y$.") Bare juxtaposition of blocks without transition prose → flag.
-5. **For each placeholder symbol introduced** (an object that does not appear in `PLAN.md` Notation Conventions and is not a canonical model object), ask: is the placeholder still doing structural work after rewrite, or did the objective-first rewrite remove its reason to exist? Surviving placeholders that no longer carry independent meaning → flag.
+5. **For each placeholder symbol introduced** (an object that does not appear in root task.md Notation Conventions and is not a canonical model object), ask: is the placeholder still doing structural work after rewrite, or did the objective-first rewrite remove its reason to exist? Surviving placeholders that no longer carry independent meaning → flag.
 
 ### Checklist
 
@@ -43,11 +41,11 @@ Walk the existing derivation top-to-bottom in the reader's order:
 
 ### Principle
 
-Every displayed equation should be **obvious** from a roughly half-page reading window above it. "Derivable in principle" is too weak — a reader who has to reconstruct missing definitions, recall a 10-page-back assumption, or unpack three substitutions collapsed into "therefore" loses the thread. The author's job is to make each transition obvious within the local window.
+Every displayed equation should be **obvious** from a roughly half-page reading window above it. "Derivable in principle" is too weak — a reader who has to reconstruct missing definitions, recall a 10-page-back assumption, or unpack three substitutions collapsed into "therefore" loses the thread.
 
-When a step is not obvious, exactly one of six fixes applies:
+When a step is not obvious, one of six fixes applies:
 
-1. **Define inline.** If a symbol is not defined in the local window, give its definition at first use in this region (one phrase or one displayed line — the canonical entry stays in `RESULTS.md`).
+1. **Define inline.** If a symbol is not defined in the local window, give its definition at first use in this region (one phrase or one displayed line — the canonical entry stays in the task's `## Results`).
 2. **Restate the assumption.** If a step depends on an assumption stated far above, restate it in scope at the point of use ("Under the bounded-risk-aversion assumption (§2), …").
 3. **Cite-with-form-recall.** If a step depends on a prior result too far back to assume the reader holds it, cite by name or equation number **and** restate its operative form inline ("By Lemma 3.1, $f(x,\theta) = g(x) + \theta h(x)$, so …"). A bare "(see §3.2)" is insufficient when the step depends on the specific form.
 4. **Split the step.** If multiple substitutions, cancellations, or sign manipulations are collapsed into a single move, split so each transition is one obvious move with one named rule.
@@ -92,14 +90,14 @@ A derivation correct in isolation is wrong in a paper if its symbols clash with 
 
 Three coherence layers, each with its own authority:
 
-- **Notation.** `PLAN.md` Notation Conventions is canonical. Prior-task RESULTS.md ledgers carry symbols not yet promoted but introduced upstream and reusable. Local symbols duplicating either hide the connection.
+- **Notation.** Root task.md Notation Conventions is canonical. Prior-task `## Results` ledgers carry symbols not yet promoted but introduced upstream and reusable. Local symbols duplicating either hide the connection.
 - **Prior results.** Equations and named statements established earlier in the document or a prior task are cited and reused. Re-deriving an equivalent result in a new section silently forks the document.
 - **Prose integration.** Terminology, assumption phrasing, formality level, and notation usage match the surrounding sections.
 
 ### Identification protocol
 
-1. **Notation pre-flight against `PLAN.md` Notation Conventions and prior task ledgers.** For each symbol in the current task, classify:
-   - **Canonical** — already in `PLAN.md` Notation Conventions; reuse.
+1. **Notation pre-flight against root task.md Notation Conventions and prior task ledgers.** For each symbol in the current task, classify:
+   - **Canonical** — already in root task.md Notation Conventions; reuse.
    - **Prior-task-promoted** — in a prior task's ledger naming the same object; reuse and cite.
    - **Genuinely new** — names an object no prior surface has named; log a current-task ledger entry per Gate 1, candidate for promotion per [skills/superimplement/SKILL.md:135](../../superimplement/SKILL.md#L135).
    - **Local duplicate** — names an object an existing canonical or prior-task symbol already names → flag.
@@ -111,7 +109,7 @@ Three coherence layers, each with its own authority:
 - `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a Step 4 promotion candidate (per [skills/superimplement/SKILL.md:135](../../superimplement/SKILL.md#L135)). Local duplicates → REVISE — replace with the upstream symbol and document the rename if relevant.
 - `[BLOCKING]` **Prior-result pre-flight.** Equivalent equations and named statements established in prior tasks are cited and reused, not re-derived. Specializations of a prior result state the relationship explicitly ("Lemma 2.3 specialized to the symmetric case yields …").
 - `[BLOCKING]` **Prose-integration check.** Terminology, assumption phrasing, register, and notation conventions match the surrounding sections. Style breaks at section transitions are REVISE.
-- `[BLOCKING]` **Document-code consistency.** If the model feeds papers, slides, notes, or downstream artifacts in the repo, numerical and methodological inconsistencies between the refactored work and those artifacts are reconciled or flagged in `RESULTS.md` when reconciliation is out of scope.
+- `[BLOCKING]` **Document-code consistency.** If the model feeds papers, slides, notes, or downstream artifacts in the repo, numerical and methodological inconsistencies between the refactored work and those artifacts are reconciled or flagged in the task's `## Results` when reconciliation is out of scope.
 
 ---
 
@@ -130,11 +128,11 @@ Diff the pre-refactor and post-refactor versions of every modified artifact. For
 - `[BLOCKING]` **Stated intuition for new symbols survives.** Every notation entry whose original work carried an intuition or mnemonic (per Gate 1 in `theory-modeling/SKILL.md`) still carries it in the refactored notes — not collapsed into opaque prose or a bare code comment.
 - `[BLOCKING]` **Assumption interpretations survive.** Every assumption whose original work carried a plain-language interpretation (per Gate 2) still carries it — not reduced to a math restriction without the economic reading, and not silently merged away when assumptions are consolidated.
 - `[BLOCKING]` **Per-step reasons survive.** Every non-trivial derivation step whose original work carried both the technical rule and a one-sentence reason for invoking it (per Gate 3) still carries both.
-- `[BLOCKING]` **Per-task Notation & Assumptions Ledger entries survive.** Every per-task ledger entry from the original work (per Gates 1–2) is still present in the refactored `RESULTS.md` — not silently collapsed into prose, removed, or paraphrased away.
+- `[BLOCKING]` **Per-task Notation & Assumptions Ledger entries survive.** Every per-task ledger entry from the original work (per Gates 1–2) is still present in the refactored task's `## Results` — not silently collapsed into prose, removed, or paraphrased away.
 - `[BLOCKING]` **Verification checks survive.** Substitution checks, limiting cases, and simple numerical examples from the original work are present in the refactored code or notes and were rerun successfully.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored work; failures are adjudicated per `references/integrate-drift-tests.md`.
 - `[BLOCKING]` **Rendered markdown/LaTeX matches the refactored code.** Equation blocks, symbols, and case labels match the live derivation and numerical outputs.
-- `[BLOCKING]` **`PLAN.md`'s Notation Conventions table contains only user-confirmed promotions** (per [skills/superimplement/SKILL.md:135](../../superimplement/SKILL.md#L135)). Orphan entries — symbols added to the canonical table without a logged user decision — are REVISE.
+- `[BLOCKING]` **Root task.md's Notation Conventions table contains only user-confirmed promotions** (per [skills/superimplement/SKILL.md:135](../../superimplement/SKILL.md#L135)). Orphan entries — symbols added to the canonical table without a logged user confirmation — are REVISE.
 
 ### Utility reuse and documented deviations
 

@@ -1,5 +1,11 @@
 # superRA Release Notes
 
+## [Unreleased]
+
+### Added
+
+- **`postponed` task status.** New value for `task.md` `status` frontmatter that parks a task off the dispatch frontier without deleting it: a `postponed` leaf never enters the frontier, and a `postponed` task is excluded from the dashboard completion-% denominator — both mirroring `archived`. It differs from `archived` in dependency satisfaction: `archived` lets dependents proceed, while `postponed` **blocks its dependents** until the task is resumed, so `task_check.py` warns when a task depends on a postponed sibling. An all-parked branch rolls up to `postponed` if any child is postponed (else `archived`). The dashboard gains a Postponed kanban column and status badge. Set by the orchestrator / researcher as a scope-deferral decision; resume by setting the status back to `not-started`.
+
 ## [0.2.0] - 2026-05-30
 
 ### Breaking

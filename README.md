@@ -27,11 +27,11 @@ superRA brings discipline to the agent on three fronts. An **implementer–revie
 
 This workflow assumes basic familiarity with git branch/PR workflow; worktrees help but are optional.
 
-superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `superplan §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
+superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `superplan §User Feedback and Changing the Task Tree`, which walks the task DAG and resumes at the right re-entry point.
 
 ```mermaid
 flowchart TB
-    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
     INTEGRATE["<b>INTEGRATE</b><br/>Protect results <br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
     FINISHED(["finished"])
@@ -51,10 +51,20 @@ flowchart TB
 
 To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ... — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
+Run `superra dashboard` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress; it launches in the background and returns immediately, reuses an already-running server, and self-exits once idle.
+
+To share a branch snapshot through GitHub Actions artifacts, install the managed workflow:
+
+```bash
+superra dashboard artifact setup
+```
+
+After pushing a branch, open the workflow run in GitHub Actions and download the artifact named `superra-dashboard-<branch-slug>-<ref-hash>`. The artifact contains the branch's exported `superRA/` dashboard HTML; file links in that export point to the triggering commit on GitHub. GitHub artifacts require repository read access, but they are downloads rather than hosted webpages; the workflow deletes older artifacts with the same branch-derived name before uploading the replacement.
+
 ### Key principles of the workflow
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
-2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
+2. **Task files always reflect the current state.** Material progress lives in committed `superRA/` task files: `## Objective` records the intended work, `## Results` records what happened and what was found, `## Review Notes` carries active review findings, and status frontmatter records task state. A fresh agent can open the repo and resume from the task tree plus git state alone.
 3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results (drift tests are the default mechanism), syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis, theory-modeling, and writing today; literature review and simulation in the pipeline.
@@ -80,11 +90,11 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 
 | Skill | What + when to use |
 |-------|--------------------|
-| **handoff-doc** | Teaches agents how to create a handoff document. Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
 | **report-in-markdown** | Markdown style guide for any agent writing markdown, with on-demand references for figures, LaTeX math, and tables. |
 | **result-protection** | Tools for protecting key research results from unintended changes. Drift/regression tests are the current/default mechanism. Use during Protect or whenever key-result expectations need guarded review. |
 | **refactor-and-integrate** | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Shared by implementer and reviewer. Use during Integrate, or standalone for any refactor that needs consistent quality gates. |
 | **semantic-merge** | Tools for **semantic coherence** in branch integration — intent investigation, role classification (behavior/API, data/schema, docs, generated outputs, tests, config/build), conflict resolution, intent-changing escalation, stale-reference detect-and-resolve, and propagation-to-coherence. Lands a merge commit plus propagation commits as needed to reach semantic coherence, with every commit leaving existing protection passing, and records branch-level / task-local / file-local context explaining the approved post-sync diff. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` — the `merge-guard` hook flags bare invocations automatically. |
+| **task-tree** | Directory-tree task tooling. Filesystem hierarchy is the task hierarchy; each task is a `task.md` (objective + results) with sibling-only dependencies and automatic status rollup. Reading and editing your own task is the executing-agent interface in `using-superRA §Task Interface`. SKILL.md is the load-on-demand tree-tooling layer (query/frontier/DAG, live dashboard server, static export, migration), with `references/commands.md` for the mutation command surface, `references/task-file-contract.md` for task-file mechanics, and `references/internals.md` for the data layer, hook architecture, and migration. Tree-design policy lives in `superplan/references/task-tree-design.md`. |
 | **worktree-data-sync** | Research project often depends on non-git-controlled data. It syncs data between existing git-controlled worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
 | **zotero-paper-reader** | Read and analyze academic papers from a Zotero library, and generate citations from it. Use when reading, finding, summarizing, or analyzing a paper by title, author, DOI, or topic. Handles the full workflow: search Zotero, retrieve the PDF, convert to markdown, and analyze in sections. Supports library queries (metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, attachment retrieval) and citation tooling (BibTeX export, `\cite`/`[@key]` insertion into a draft, master-`.bib` sync, bibliography rendering — Better BibTeX citekeys by default). |
 | **mistral-pdf-to-markdown** | Convert a PDF to Markdown with image extraction via the Mistral OCR API. Use for scanned or complex-layout PDFs that need true OCR, or as the conversion step behind `zotero-paper-reader`. Needs a `MISTRAL_API_KEY`. |
@@ -106,9 +116,9 @@ bundle through `/hooks`.
 | Hook | Trigger | Purpose |
 |------|---------|---------|
 | **merge-guard** | Claude Code Bash hook; Codex `PreToolUse` on `Bash` | Remind to use the `semantic-merge` skill before bare merge/rebase/cherry-pick commands. Codex shell interception is not complete, so this is a reminder surface, not an enforcement boundary. |
-| **ask-user-question-logger** | Claude Code `AskUserQuestion` | Suggest logging important decisions in `PLAN.md`. The script accepts Codex `request_user_input` payloads for future/manual wiring, but the Codex plugin does not install it until Codex documents that tool as a `PostToolUse` surface. |
-| **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a plan into `PLAN.md` + `RESULTS.md` when it will guide later work. |
+| **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a proposed plan into a `superRA/` task tree when it will guide later work. |
 | **codex-plan-stop** | Codex `Stop` while in plan mode after a proposed-plan response | Codex equivalent of the plan-materialization reminder. |
+| **task-tree** | Claude Code and Codex `PostToolUse` on supported task edit and shell paths | Reconcile task trees after direct task edits or structural task-tree shell changes. Codex shell interception is incomplete, so this is best-effort validation and status propagation rather than a complete enforcement boundary. |
 | **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
 | **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |
 | **ensure-agent-orchestration** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
@@ -214,7 +224,7 @@ Codex should cache the plugin after install under `~/.codex/plugins/cache/...`.
 - **Remote marketplace install:** update the marketplace and plugin from Codex, then restart if the UI has not refreshed yet.
 - **Manual local-clone install:** Codex tracks the directory named in your personal marketplace entry. Update that clone, then restart Codex so it reloads the plugin files. For the example above, that usually means `git -C ~/.codex/plugins/superra pull`.
 - **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
-- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`; `/hooks` should list the superRA plugin hooks when plugin hooks are enabled. The Codex hook list should include `autoload-superra`, `merge-guard`, and `codex-plan-stop`.
+- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`; `/hooks` should list the superRA plugin hooks when plugin hooks are enabled. The Codex hook list should include `autoload-superra`, `merge-guard`, `task-tree` `PostToolUse`, and `codex-plan-stop`.
 
 For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build) and [`docs/README.codex.md`](./docs/README.codex.md).
 

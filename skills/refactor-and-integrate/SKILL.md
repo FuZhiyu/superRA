@@ -19,7 +19,7 @@ The active domain skill's stage-load table routes any domain-specific integratio
 
 ## Minimum Net Diff
 
-- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, handoff-doc coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
+- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, task-file coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
 
 Use `git diff <BASE_HEAD_SHA>..HEAD` in normal superintegrate after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
@@ -42,16 +42,14 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When PLAN.md task blocks contain `**Sync impact:**`, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
-
-Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
+When task files contain `**Sync impact:**` fields, use them as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk. Sync impact justifies existing hunks; it does not create new refactor targets or excuse unrelated codebase changes.
 
 ## Final Diff Self-Check
 
 Implementers run this immediately before every return or commit, including no-change cases:
 
-1. **Recompute the governing diff.** In superintegrate after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
-2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
+1. **Recompute the governing diff** using the range from §Minimum Net Diff.
+2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
@@ -66,7 +64,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 **Code integration:**
 
 - `[BLOCKING]` **Final Diff Self-Check present and fresh:** The trail names the governing command/range, records no-change outcomes or surviving-change classes, and gives file/hunk justification for suspicious cases.
-- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk ties to an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
+- `[BLOCKING]` **Governing-diff pruning performed line by line** per §Minimum Net Diff: every surviving hunk ties to an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement.
 - `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement requires them.
 - `[BLOCKING]` **Naming consistency:** variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** existing utility functions are used where appropriate instead of hand-rolled equivalents.
@@ -94,4 +92,4 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Project Doc Audit:**
 
-- `[BLOCKING]` The walk-up audit above was executed for every file in the governing diff; stale claims were updated, new patterns were added at the correct level, parent-level content was not duplicated, missing module guidance pairs were created for new module directories, and docs above the affected area were left alone unless stale.
+- `[BLOCKING]` The §Project Doc Audit walk-up was executed for every file in the governing diff, applying all four rules listed there.

@@ -22,9 +22,7 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 The request hands over an accepted-findings scope and asks to apply it. The scope **is** the work — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
-**When polish follows long-form review**, shape-C input is accepted PLAN.md review notes. The polish task names a bounded sweep (e.g., "all typos", "all citation-format issues") and points to the task-local review items it applies. Batching has already happened before the polish pass — the implementer applies the batch the task names, not re-batches inside polish. Read the findings directly from PLAN.md; no separate lookup is needed.
-
-**When polish is standalone** (a free-floating findings list, not a PLAN.md task block), the implementer reads the raw list and applies per finding.
+**When polish follows long-form review**, shape-C input is accepted task-local `## Review Notes`. The task names a bounded sweep (e.g., "all typos", "all citation-format issues") and points to the review items it applies — apply that batch, do not re-batch. **When polish is standalone** (a free-floating findings list), apply per finding from the raw list.
 
 In both cases, each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
 
@@ -49,28 +47,20 @@ For any contemplated edit, route it through this matrix:
 
 ## Intent comments
 
-Author intent for a paragraph is recorded as a comment on the line immediately above it, in the file's native comment syntax:
+An intent comment on the line above a paragraph (`% intent: …` in `.tex`, `<!-- intent: … -->` in `.md`/`.qmd`) records what the paragraph is trying to do for the reader, not what it currently says.
 
-- `.tex` → `% intent: <one-sentence purpose>`
-- `.md` → `<!-- intent: <one-sentence purpose> -->`
-- `.qmd` → `<!-- intent: <one-sentence purpose> -->`
+**Read pre-existing intent comments before editing** — they expose what the current wording may obscure. **If text and intent conflict, the text wins**: the author may have rewritten the paragraph and not yet updated the comment. Ask whether to align the intent to the new text or rework the text toward the older intent; if asking is impractical, update the intent to match the text and flag it. Priority chain: **user's current request > current text > intent comment > agent's own judgment**.
 
-The comment captures *what the paragraph is trying to do for the reader* — the argument it advances, the question it answers, the position it stakes — not what it currently says.
-
-**Pre-existing intent comments guide the polish.** Read them before editing — they say what the paragraph is trying to do for the reader, which the current wording (under polish) may obscure. **If text and intent conflict, the text wins** — the author may have rewritten the paragraph with updated intent and not yet updated the comment. Ask the author whether to align the intent to the new text or rework the text toward the older intent; if asking is impractical, prefer updating the intent to match the text and flag the change. Priority chain: **user's current request > current text > intent comment > agent's own judgment**.
-
-**Do not invent intent comments.** Intent comes from the author — pre-existing in the file, or stated in the request that triggered this polish. A paragraph without an intent comment stays without one; never guess the purpose from the prose and add a comment. If the polish surfaces an ambiguity that an intent comment would resolve, ask the author and write the comment from their answer; the comment then carries no hedge because the intent is the author's, just newly recorded.
+**Do not invent intent comments.** A paragraph without one stays without one. If polish surfaces an ambiguity an intent comment would resolve, ask the author and write the comment from their answer.
 
 ## Triage
 
-In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the existing handoff-doc convention (`superRA:handoff-doc`) when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
+In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the task-tree editing convention when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
 
 In shape C, the findings list arrives pre-tiered; apply per the shape-C tier rules above.
 
 ## Minimal-edit discipline
 
-For each applied fix, use the smallest edit that resolves the issue. A nominalization fix replaces one noun with one verb, not the whole sentence.
+Use the smallest edit that resolves each issue — a nominalization fix replaces one noun with one verb, not the whole sentence. Over-editing (drifting past scope) and under-editing (shipping only typo/grammar fixes while leaving a weak topic sentence or broken parallelism as silent omissions) are equal failure modes. **The rule constrains the size of each fix, not the number of fixes:** diagnose thoroughly per `style.md §Gated Checklist`, tier and route per §Triage, apply each fix minimally.
 
-Over-editing and under-editing are equal failure modes. Over-editing changes more than the minimum and risks drifting past scope. Under-editing ships only mechanical fixes (typos, grammar) on prose with substantive issues — weak topic sentence, nominalized opener, broken parallelism — and leaves them as silent omissions. **The minimal-edit rule constrains the size of each fix, not the number of fixes.** Diagnose thoroughly per `style.md §Gated Checklist`; tier and route per §Triage; apply each fix minimally.
-
-After the edit batch, run the build (`refactor-and-compile.md` §Compile) and check that no cross-reference broke. A diff that doesn't compile is not a polished diff.
+After the edit batch, build (`refactor-and-compile.md` §Compile) and check no cross-reference broke. A diff that doesn't compile is not a polished diff.

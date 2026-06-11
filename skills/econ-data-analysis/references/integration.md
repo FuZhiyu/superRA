@@ -1,6 +1,6 @@
 # Integration Discipline for Data Analysis
 
-> Data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. `[BLOCKING]` must be fixed for APPROVE; `[ADVISORY]` may be flagged as MINOR. Verdict protocol per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
+> Data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. Severity markers and verdict mechanics per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
 
 Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/SKILL.md`. Load both skills at the `integration` stage.
 
@@ -11,7 +11,7 @@ Generic cross-cutting code-integration concerns (naming, utility reuse, PR-frien
 - `[BLOCKING]` **Transformation-pattern consistency.** Winsorization thresholds, outlier treatment, sample filters, and control variables align with established codebase patterns — or the deviation is documented with reason.
 - `[BLOCKING]` **Variable naming consistency.** Names match existing conventions for the same economic concept (e.g., if the codebase uses `ret_vw` for value-weighted returns, new code does not introduce `vw_return`).
 - `[BLOCKING]` **Sample construction preserved** unless the researcher has authorized a change. Sample filters, exclusions, and the panel scope used in the new analysis match prior usage in the codebase, or the deviation is documented.
-- `[BLOCKING]` **Document-code consistency.** If the analysis results feed into papers, slides, notes, or long-standing downstream artifacts in the repo (or in the researcher's named location), reconcile numerical and methodological inconsistencies between the refactored code and those artifacts. If reconciliation is out of scope for this refactor, flag unreconciled inconsistencies in `RESULTS.md` §Limitations.
+- `[BLOCKING]` **Document-code consistency.** If the analysis results feed into papers, slides, notes, or long-standing downstream artifacts in the repo (or in the researcher's named location), reconcile numerical and methodological inconsistencies between the refactored code and those artifacts. If reconciliation is out of scope for this refactor, flag unreconciled inconsistencies in the task's `## Results` §Limitations.
 
 ## Data discipline preserved through refactoring
 
@@ -32,4 +32,4 @@ Generic cross-cutting code-integration concerns (naming, utility reuse, PR-frien
 
 ## Reviewer verdict protocol
 
-Verdict protocol follows the active reviewer role; walk this checklist alongside `refactor-and-integrate/SKILL.md`.
+Walk this checklist alongside `refactor-and-integrate/SKILL.md`.

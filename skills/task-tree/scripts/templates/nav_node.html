@@ -1,0 +1,59 @@
+{#- Jinja2 macro: navigation-only task node for the master-detail sidebar.
+
+    Renders the same .task-row chrome as task_node.html (toggle caret, slug,
+    title, status badge, progress, comment badge) and the recursive children
+    container, but NO task body / no `## ` sections.  Keeps the per-node
+    attributes the rest of the system keys off: id="task-<path-id>", data-path,
+    data-status, and sse-swap="task:<path>" so SSE row swaps keep working.
+
+    Inlines children to depth 2; depth >=3 children are left as an empty
+    .task-children container, which the sidebar's markLazyNodes() flags
+    data-needsLoad='true' client-side for lazy load via GET /nav/{path}.
+
+    Usage:
+      {% from "nav_node.html" import render_nav_node %}
+      {{ render_nav_node(task, depth=0) }}
+-#}
+
+{% macro render_nav_node(task, depth=0) %}
+{% set eff_status = task.effective_status() %}
+{% set path_id = (task.path | replace('/', '-')) or 'root' %}
+{% set has_children = task.children | length > 0 %}
+
+<div class="task-node"
+     data-path="{{ task.path }}"
+     data-status="{{ eff_status }}"
+     id="task-{{ path_id }}"
+     sse-swap="task:{{ task.path }}"
+     hx-swap="outerHTML">
+
+  {#- Navigation row (always visible) -#}
+  <div class="task-row">
+    <span class="task-toggle{{ '' if has_children else ' leaf' }}">&#9656;</span>
+    {% if task.slug %}
+    <span class="task-slug">{{ task.slug }}</span>
+    {% endif %}
+    <span class="task-title-text">{{ task.title }}</span>
+    <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
+    {% if not task.is_leaf and has_children %}
+    {% set approved_count = [] %}
+    {% for c in task.children %}
+      {% if c.effective_status() == 'approved' %}{% set _ = approved_count.append(1) %}{% endif %}
+    {% endfor %}
+    <span class="task-progress">({{ approved_count | length }}/{{ task.children | length }})</span>
+    {% endif %}
+  </div>
+
+  {#- Children container -#}
+  {% if has_children %}
+  <div class="task-children" id="{{ path_id }}-children" style="display:none;">
+    {% if depth < 3 %}
+      {#- Render children inline for depth 0, 1, and 2 -#}
+      {% for child in task.children %}
+        {{ render_nav_node(child, depth + 1) }}
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

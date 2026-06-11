@@ -1,13 +1,13 @@
 ---
 name: using-superra
-description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
+description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching the task tree.
 ---
 
 Loaded by all agents at dispatch time.
 
 ## Code-Change Defaults
 
-These defaults apply whenever you write, review, or refactor code.
+These apply whenever you write, review, or refactor code.
 
 1. **Surface assumptions and ambiguity early.** Do not silently choose between materially different interpretations. State the assumption you are making, name meaningful tradeoffs, and point out a simpler path when one exists. Ask only when the ambiguity changes correctness, scope, or a decision that belongs to the researcher.
 
@@ -19,28 +19,39 @@ These defaults apply whenever you write, review, or refactor code.
 
 SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
-1. `superplan` creates or revises `PLAN.md` / `RESULTS.md`, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
+1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
 2. `superimplement` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
 3. `superintegrate` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
 
-The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. The main-agent Workflow Frontier Resolver adds four things agents must do consistently: inspect durable evidence, compute the affected frontier, route to the workflow that owns the earliest invalid layer, and enforce the non-negotiable gates before advancement.
+The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. Main agents run the §Workflow Frontier Resolver in `references/main-agent.md` to inspect durable evidence, compute the affected frontier, route to the owning workflow, and enforce gates before advancement.
 
 ## Commit Hygiene
 
-Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Untracked files not your work (editor scratch, `__pycache__`, `.DS_Store`, harness artifacts, or other agents' in-flight edits in a shared worktree) show up in `git status`; `git add -A/./-u` sweeps them in silently and produces cross-agent commit contamination that is hard to unwind.
+Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**, by exact path. A shared worktree carries others' in-flight edits and scratch files (`__pycache__`, `.DS_Store`, harness artifacts) that `git add -A/./-u` would sweep in, producing cross-agent contamination that is hard to unwind.
 
 Before staging:
 
-1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
-2. If yes -> stage it by exact path: `git add path/to/file`.
-3. If no -> leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`.
-4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
+1. Run `git status`; for each modified/new file decide whether you touched it via Write/Edit this turn.
+2. Stage only those, by exact path: `git add path/to/file`. Never `git add -A`, `git add .`, or `git add -u`.
+3. Before `git commit`, run `git diff --cached` and unstage anything you did not write with `git restore --staged path/to/file`.
 
 If you see unfamiliar uncommitted changes and cannot tell whether they are legitimate pending work (from the main agent between dispatches, or the user editing manually) or stale junk, stop and ask the orchestrator (if you are a subagent) or the user (if you are the main agent) — do not unilaterally discard or commit them.
 
-## Handoff Docs
+## Task Interface
 
-Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, full `PLAN.md` / `RESULTS.md` anatomy templates) lives in `superRA:handoff-doc`.
+Handoff runs through the `superRA/` task tree. Reading and editing your assigned task needs only this section.
+
+**Read** with the committed wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
+
+**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Two hook auto-behaviors are intended, do not undo them: flipping a child task's status cascades up to every ancestor, and a same-parent rename of a task re-points its siblings' `depends_on` edges to the new slug.
+
+**Editing principles:**
+
+- Keep the task at latest state, not a log — edit in place and delete superseded content; no "Update:" / "Previously…" blocks or strikethroughs.
+- Doc before report — findings, caveats, and evidence land in the task body before any status return.
+- Write the body sections you own (`## Results`, `## Review Notes`) as a self-contained account a reader can follow standalone, with links and embedded figures (see `report-in-markdown`). The change summary belongs in the commit, not the body.
+
+For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
 
 ## Skill Inventory
 
@@ -48,27 +59,25 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 
 | Category | Skill | One-line purpose |
 |---|---|---|
-| Workflow | `superplan` | PLAN phase: scope check, task decomposition, plan draft. |
+| Workflow | `superplan` | PLAN phase: scope check, task decomposition, task tree creation. |
 | Workflow | `superimplement` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
 | Workflow | `superintegrate` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
-| Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Domain | `theory-modeling` | Theory/modeling vertical: four-gate intuition/interpretability checklist (Objects & Notation, Assumptions, Derivations, Verification & Rendering), notation and assumption discipline, proof and numerical verification. |
-| Domain | `writing` | Writing vertical: Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers. |
-| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (superplan Phase 2, superintegrate Document doc-writer); usable standalone by a single author. |
+| Domain | `econ-data-analysis` | Economic / financial / panel data — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.). Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
+| Domain | `theory-modeling` | Theoretical / mathematical modeling — derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, or simple numerical verification of derived formulas. Four-gate intuition/interpretability checklist (Objects & Notation, Assumptions, Derivations, Verification & Rendering), notation and assumption discipline, proof and numerical verification. |
+| Domain | `writing` | Editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript. Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers. |
 | Utility | `result-protection` | Tools for protecting key results from unintended changes; drift tests are the current/default mechanism. |
 | Utility | `refactor-and-integrate` | Tools for codebase coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence. |
-| Utility | `report-in-markdown` | Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`; on-demand references cover figures, LaTeX math, and tables. |
+| Utility | `report-in-markdown` | Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`; on-demand references cover figures, LaTeX math, and tables; ships a render-integrity self-diagnose CLI (`scripts/check_markdown.py`). |
 | Utility | `semantic-merge` | Tools for semantic coherence in branch integration — intent investigation, role classification, conflict resolution, stale-reference detect-and-resolve, propagation-to-coherence — with workflow sync author/reviewer mode references and standalone merge mode. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
+| Utility | `task-tree` | Load-on-demand tree tooling for the `superRA/` hierarchy — query/frontier/DAG, scaffolding and restructuring, dashboard, and legacy `PLAN.md` / `RESULTS.md` migration. The executing-agent read/edit interface is §Task Interface above, not this skill. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Utility | `zotero-paper-reader` | User-invocable standalone skill — search, retrieve, and analyze papers from a Zotero library, and generate citations from it (BibTeX export, `\cite`/`[@key]` insertion, master-`.bib` sync, bibliography rendering — Better BibTeX citekeys by default). Not loaded by workflow agents or the Manifest; invoke directly when reading, finding, or analyzing a paper, or when citing one. |
 | Utility | `mistral-pdf-to-markdown` | User-invocable standalone skill — convert a PDF to Markdown with image extraction via the Mistral OCR API (needs `MISTRAL_API_KEY`). The conversion step behind `zotero-paper-reader`; not loaded by workflow agents or the Manifest. |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
 
-**Composable design:** Workflow skills own sequencing; domain skills own vertical discipline; utility skills are called on demand. One source of truth per concern.
-
-**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), use the harness adapter reference before interpreting the tool name. 
+**Harness adapters:** When this skill or its references name a Claude-specific tool (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the harness adapter reference before interpreting it.
 
 ## Execution Modes
 
@@ -76,9 +85,9 @@ For execution throughout the workflows, the main agent can dispatch subagents fo
 
 ## Skill-Load Manifest
 
-For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Each loaded skill's own body carries its stage- and role-scoped reference load map — after loading a skill, follow its load map for your Stage and role.
+For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superra` and `superRA:report-in-markdown`** — the two skills every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `report-in-markdown` is always loaded because every agent writes markdown; its body carries the shared markdown rules, with deeper format discipline in references loaded on demand. Subagents get a compact handoff-doc etiquette from `agents/implementer.md` / `agents/reviewer.md` and load `superRA:handoff-doc` on demand or when creating docs from scratch.
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superra` and `superRA:report-in-markdown`** — the two skills every agent already loads (subagents via frontmatter preload, main agent and teammates via explicit `Skill` invocation).
 
 ### Generic (stage-driven)
 
@@ -86,27 +95,20 @@ Apply to every dispatch regardless of domain.
 
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
+| `planning-review` | `superplan` | `skills/superplan/references/planning-review.md` (reviewer mechanics) |
 | `implementation` | `superimplement` | — |
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
-| `documentation` | `superintegrate` Document | `handoff-doc` |
+| `documentation` | `superintegrate` Document | — |
 
-`Stage: sync` is branch-level. `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
+`Stage: sync` is branch-level: `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references it names; the canonical role specs carry no Sync-specific exceptions.
 
-### Domain add-ons (topic-driven)
+### Domain add-ons
 
-If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it. These apply to both the main agents as well as the subagent.
+If the task matches a domain skill's description in §Skill Inventory, load that skill in addition to (not instead of) the generic Stage row. This applies to main agents and subagents alike.
 
-| If the task involves… | Also load |
-|---|---|
-| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` |
-| Theoretical / mathematical modeling — derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, or simple numerical verification of derived formulas | `superRA:theory-modeling` |
-| Editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
-
-Add a new row when introducing a vertical (literature review, simulation). Keep the generic table untouched — only the add-on table grows.
-
-**Main agents additionally load** `references/main-agent.md`, `superRA:handoff-doc`, and `superRA:agent-orchestration` before dispatching subagents or touching PLAN.md. Subagents skip these — they inherit context from their dispatch.
+**Main agents additionally load** `references/main-agent.md` and `superRA:agent-orchestration` before dispatching subagents or touching task files. Subagents inherit this context from their dispatch.
 
 **Unknown `Stage:` values are a dispatch error** — halt and report to the orchestrator rather than guessing a skill/reference load.
 
@@ -118,7 +120,6 @@ SuperRA skills override default system prompt behavior, but **user instructions 
 2. **SuperRA skills** — override default system behavior where they conflict
 3. **Default system prompt** — lowest priority
 
-If CLAUDE.md says "skip data description for this dataset" and a skill says "always describe first," follow the user's instructions. The user is in control.
+When a skill says "always describe first" but CLAUDE.md says "skip data description for this dataset," follow the user. The user is in control.
 
-
-**For main agents:** You MUST proceed to read `references/main-agent.md`. 
+**Main agents:** continue to `references/main-agent.md`.

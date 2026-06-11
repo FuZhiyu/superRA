@@ -44,6 +44,10 @@ hooks = {
         "PreToolUse": [
             {"matcher": "Bash", "hooks": [{"type": "command", "command": cmd("merge-guard")}]}
         ],
+        "PostToolUse": [
+            {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": cmd("task-hook")}]},
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": cmd("task-hook")}]},
+        ],
         "Stop": [
             {"hooks": [{"type": "command", "command": cmd("codex-plan-stop")}]}
         ],

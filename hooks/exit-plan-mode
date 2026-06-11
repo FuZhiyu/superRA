@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse hook: fires after ExitPlanMode returns.
-# Offers a reminder to write durable PLAN.md + RESULTS.md handoff docs when a
-# plan-mode result will guide implementation or another session.
+# Offers a reminder to write durable superRA/ task files when a plan-mode result
+# will guide implementation or another session.
 # Does NOT block — discipline system handles enforcement.
 
 set -euo pipefail
@@ -22,7 +22,7 @@ if [ "$tool_name" != "ExitPlanMode" ]; then
   exit 0
 fi
 
-context="<IMPORTANT>You just exited plan mode. If this plan will guide implementation, review, or handoff to another agent/session, consider writing it into PLAN.md + RESULTS.md at the project root using superRA:superplan and superRA:handoff-doc before relying on it. If those files already exist and reflect the current plan, this reminder is satisfied.</IMPORTANT>"
+context="<IMPORTANT>You just exited plan mode. If this plan will guide implementation, review, or handoff to another agent/session, consider materializing it into a superRA/ task tree using superRA:superplan before relying on it. If task files already exist and reflect the current plan, this reminder is satisfied.</IMPORTANT>"
 
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
   printf '{"additional_context":"%s"}\n' "$context"

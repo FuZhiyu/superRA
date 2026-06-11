@@ -16,11 +16,11 @@ user-invocable: true
 
 # Theory Modeling
 
-Domain skill for rigorous mathematical-modeling work; body carries Stage-Scoped References, the Iron Law, the four-gate checklist (Objects & Notation / Assumptions / Derivations / Verification & Rendering), and Common Rationalizations.
+Domain skill for rigorous mathematical-modeling work.
 
 ## Stage-Scoped References
 
-Companion reference files carry content that applies at a specific phase. Load per stage; do not load them all at every dispatch:
+Load per stage; do not load them all at every dispatch.
 
 | Reference | Load when |
 |---|---|
@@ -29,7 +29,7 @@ Companion reference files carry content that applies at a specific phase. Load p
 | `references/integration.md` | `integration` stage - readability layer for reader-ready output: ex-post structural rewriting (objective-first), per-step local obviousness, cross-document coherence, prose-to-math precision, rendering legibility, and refactor-survival of correctness artifacts. |
 | `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
 
-The four gates below are the creation-time correctness floor — walk at every implementation dispatch, including rough exploratory work. `references/integration.md` is the readability layer — load when the document needs to be polished for a human reader.
+The four gates below are the creation-time correctness floor: walk at every implementation dispatch, including rough exploratory work. `references/integration.md` is the readability layer: load when the document needs polishing for a human reader.
 
 ## The Iron Law
 
@@ -51,13 +51,13 @@ If a symbol appears without a stated meaning, an assumption is written only as a
 
 ## The Four Gates
 
-Four gates underpin trustworthy modeling work, organized around the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering**. Each gate has an **artifact** the implementer produces and a **checklist** of quality items walked while producing it. The gates are **concurrent, not sequential** — every modeling step exercises all four. Documentation is built into the artifact definitions, not handled as a separate phase.
+Four gates underpin trustworthy modeling work, ordered by the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering** (a reader cannot evaluate an assumption that uses an undefined symbol, a derivation without the active assumption set, or a verification claim without an auditable derivation). Each gate has an **artifact** the implementer produces and a **checklist** walked while producing it. The gates are **concurrent** — every modeling step exercises all four; documentation is built into the artifact, not a separate phase.
 
-`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items the reviewer MAY flag as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
+`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items may be flagged as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
 
 ### Falsification tests (per ledger entry in Gates 1 and 2)
 
-Both tests are diagnostic moves the reviewer runs against a slot they suspect is not pulling its weight. The point is to detect text that *looks* like a justification but would survive any small change to the object it claims to justify.
+Both tests are diagnostic moves the reviewer runs against a slot suspected of not pulling its weight: they catch text that *looks* like a justification but would survive any small change to the object it claims to justify.
 
 - **Substitution test.** Read the entry's "What the name carries" / "What this assumption carries" slot, then mentally replace the symbol (or assumption) with a hypothetical sibling — a different symbol $\mathbf{z}_q$ from the same proof, or a different assumption on the same primitive. **Re-read the slot under the swap.** If the slot is still true for the substituted object, the slot is generic and pins nothing down → BLOCKING. The slot must contain something that would be *false* of any other object — a specific sign meaning, a specific structural role, a named scalar cited at a specific site.
 
@@ -71,16 +71,16 @@ Both tests are diagnostic moves the reviewer runs against a slot they suspect is
 
 A reader trusts a model only if every symbol has a clear meaning. Pin down the objects and their names before manipulating them.
 
-**Artifact: per-symbol ledger entry in `RESULTS.md`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
+**Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
 
-Symbols already named in `PLAN.md`'s Notation Conventions table are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
+Symbols already named in the root task.md's Notation Conventions table are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
 
 **Slot template** (all required except where noted):
 
 ```
 Symbol: <name>
 Meaning: <type/space + denotation + origin if derived>
-First-use site: <RESULTS.md line or equation label in this task>
+First-use site: <task ## Results line or equation label in this task>
 Reuse sites: <every additional site, with refs; "none" if one-site>
 Inline alternative: <the actual expression substituted at first-use>
 What the name carries beyond the expression:
@@ -88,7 +88,7 @@ What the name carries beyond the expression:
    structural identity, named scalar cited at site X. "Shorter
    string" does not qualify.>
 Nearest existing symbol considered:
-  <from PLAN.md Notation Conventions, active lemma, or upstream
+  <from root task.md Notation Conventions, active lemma, or upstream
    derivation in this task; "none in scope" is a falsifiable claim>
 Why this name and not that one:
   <only if "Nearest existing" is non-empty>
@@ -120,7 +120,7 @@ The Proof-deletion test in §Falsification tests is the diagnostic move for whet
 - `[BLOCKING]` Reuse-sites slot cites every additional appearance with line or equation refs, or states "none." Claims of reuse without refs are REVISE.
 - `[BLOCKING]` Inline-alternative slot shows the actual substituted expression, not a description of it ("would be unwieldy" is not an inline alternative).
 - `[BLOCKING]` One-site symbols (Reuse sites: none) must justify via concrete content in "What the name carries" — sign meaning, structural role, named scalar cited elsewhere. One-time abbreviation fails regardless of length.
-- `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in `PLAN.md`'s Notation Conventions, the active lemma, or an upstream derivation, REVISE.
+- `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in root task.md's Notation Conventions, the active lemma, or an upstream derivation, REVISE.
 - `[BLOCKING]` One entry per object. Indexed families ($x_k$ for $k=1,\dots,K$) count as one; bundling multiple distinct objects under a shared justification is REVISE.
 - `[BLOCKING]` Domains, units, and sign restrictions are stated whenever they matter for the algebra, comparative statics, or numerical checks.
 - `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
@@ -129,7 +129,7 @@ The Proof-deletion test in §Falsification tests is the diagnostic move for whet
 
 Assumptions carry the economic content of a model. Each one must be attached to a primitive object, readable as economics, and no weaker than it needs to be — prefer a single interpretable primitive over a scattering of weak technical restrictions.
 
-**Artifact: per-assumption ledger entry in `RESULTS.md`.** One entry per assumption. Tasks that introduce no new assumptions record "None."
+**Artifact: per-assumption ledger entry in the task's `## Results`.** One entry per assumption. Tasks that introduce no new assumptions record "None."
 
 **Slot template:**
 
@@ -150,7 +150,7 @@ What this assumption carries beyond existing assumptions:
    existing assumption already imposes. "Cleaner statement" does
    not qualify.>
 Nearest existing assumption considered:
-  <from PLAN.md Assumption Map or upstream derivations>
+  <from root task.md Assumption Map or upstream derivations>
 Why state it this way and not via the existing one:
   <only if "Nearest existing" is non-empty; if a stronger version of
    the existing assumption would cover this case, prefer the synthesis>
@@ -168,7 +168,7 @@ Why state it this way and not via the existing one:
 
 Derivations must be auditable. A correct result that cannot be checked is not an acceptable handoff artifact. Every non-trivial move needs both the technical rule and a reason for invoking it here.
 
-**Artifact: the proof / derivation body in `RESULTS.md`.**
+**Artifact: the proof / derivation body in the task's `## Results`.**
 
 **Checklist:**
 
@@ -188,13 +188,13 @@ Derivations must be auditable. A correct result that cannot be checked is not an
 
 Symbolic work still needs verification. A derivation is not complete until it has survived at least one independent check and reads cleanly for a human audience.
 
-**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used if any, and the pass condition. The rendered output is the human-readable markdown / LaTeX that ships in `RESULTS.md`.
+**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used if any, and the pass condition. The rendered output is the human-readable markdown / LaTeX that ships in the task's `## Results`.
 
 **Checklist:**
 
 - `[BLOCKING]` Every headline symbolic result is checked against at least one independent verification mode: substitute back into the original conditions, test a limiting or special case, or evaluate a simple numerical example.
 - `[BLOCKING]` Numerical verification uses explicit parameter values and states what is being checked: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence.
-- `[BLOCKING]` Special cases and limiting cases are compared against intuition and any stated hypotheses in `PLAN.md`; divergences are flagged before proceeding.
+- `[BLOCKING]` Special cases and limiting cases are compared against intuition and any stated hypotheses in the task objective; divergences are flagged before proceeding.
 - `[BLOCKING]` Special and limiting cases are interpreted economically, not just numerically confirmed (e.g., "at $\beta \to 0$ the policy reduces to the myopic rule, which matches the one-period benchmark").
 - `[BLOCKING]` Results are checked back against the assumption map. If a step quietly needs a stronger sign, domain, or regularity restriction than the current map states, update the assumption map before using the result.
 - `[BLOCKING]` When code, CAS output, or a solver is used, the human-readable result matches the computed object exactly. No manual transcription drift.
@@ -202,17 +202,17 @@ Symbolic work still needs verification. A derivation is not complete until it ha
 
 ### Implementation standards
 
-- `[BLOCKING]` Each task satisfies the current `PLAN.md` objective and scope. When steps are present, they stay in sync with the current route rather than drifting away from the work.
+- `[BLOCKING]` Each task satisfies the current task objective and scope. When steps are present, they stay in sync with the current route rather than drifting away from the work.
 - `[BLOCKING]` If the evidence shows that an extra lemma, case split, derivation step, or verification pass is required to trust the result, add it inside the current task and rewrite the step text to match.
 - `[BLOCKING]` Solver scripts, symbolic code, and model notes are organized so a reviewer can trace the chain from primitives and assumptions to the reported result.
 - `[BLOCKING]` Major modeling decisions (normalization, timing, equilibrium selection, parameter baseline, approximation point) carry a markdown explanation or nearby comment.
 
 ### Documentation and handoff
 
-The ledger artifacts for Gates 1 and 2 already live in `RESULTS.md`; the items below are the cross-cutting documentation rules that apply beyond the per-symbol / per-assumption ledgers.
+Cross-cutting documentation rules beyond the per-symbol / per-assumption ledgers:
 
-- `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record — findings live there before they appear in any status report.
-- `[BLOCKING]` `PLAN.md`'s Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the RESULTS.md ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
+- `[BLOCKING]` Task `## Results` is updated in place. The task file is the record — findings live there before they appear in any status report.
+- `[BLOCKING]` Root task.md's Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the task-level ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
 - `[BLOCKING]` Route human-readable equations, tables, and figures through `superRA:report-in-markdown`.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
@@ -220,14 +220,14 @@ The ledger artifacts for Gates 1 and 2 already live in `RESULTS.md`; the items b
 
 ## Common Rationalizations
 
-LLM-specific excuses that the gate checklists alone do not catch — each row names a behavior pattern, not a restatement of an existing `[BLOCKING]` item.
+LLM-specific excuses the gate checklists alone do not catch.
 
 | Excuse | Reality |
 |---|---|
 | "A/B/C is temporary; I will rename it later." | Placeholder notation spreads. Whatever the proof gets written under becomes the model. |
 | "The numerical check is only illustrative." | "Illustrative" is the dodge. Even toy checks need explicit parameters and a stated pass condition. |
 | "The CAS says it simplifies to zero." | The CAS output is not the verification. State what was checked, under which assumptions, and what the pass condition was. |
-| "I'll update the Notation Conventions table after the derivation is clean." | The table is user-gated, not implementer-editable. Log new symbols to the per-task RESULTS.md ledger and let the user confirm promotion. |
+| "I'll update the Notation Conventions table after the derivation is clean." | The table is user-gated, not implementer-editable. Log new symbols to the per-task `## Results` ledger and let the user confirm promotion. |
 | "It came from the derivation note, so it's already vetted." | Inherited notation is on trial again in the new proof. Legacy legitimacy does not beat a cleaner upstream name available right now. |
 | "These are local proof-only objects." | Cluster framings dodge per-symbol scrutiny by reframing the unit of evaluation. Each symbol still walks Gate 1 on its own — one entry per object, no exceptions. |
 

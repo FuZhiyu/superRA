@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "author": "Julie Zhiyu Fu",
+    "timestamp": "2026-06-01T15:29:07.476837",
+    "resolved": true,
+    "anchor": {
+      "section": "Validation",
+      "block_index": 0,
+      "text_preview": "\nRun python3 skills/task-tree/scripts/task_check.py --plan"
+    },
+    "body": "I prefer not to create new sections but just using the same reviewer note section which has hook built around it"
+  },
+  {
+    "id": 2,
+    "author": "Julie Zhiyu Fu",
+    "timestamp": "2026-06-01T15:30:02.871750",
+    "resolved": true,
+    "anchor": {
+      "section": "Planner Guidance",
+      "block_index": 3,
+      "text_preview": "Agent(subagent_type: \"superRA:reviewer\"):\n  Stage: planning-"
+    },
+    "body": "task tree: a specific task I guess?"
+  },
+  {
+    "id": 3,
+    "author": "Julie Zhiyu Fu",
+    "timestamp": "2026-06-01T15:32:26.137093",
+    "resolved": true,
+    "anchor": {
+      "section": "Planner Guidance",
+      "block_index": 0,
+      "text_preview": "Likely files:"
+    },
+    "body": "where do we teach reviewer agents what to review and how to review? \nthere might be two different modes of review, and we should be able to do it flexibly\none thing to review for example is to see whether the plan is ready for handoff---are there any gaps, any inconsistencies, (btw on the orchestrator side, they Probably can spawn, probably can spawn just a simple agent to do the job. )\nanother thing to review is whether the The plan the architecture design is well-designed, or, the plan is thorough and it's good. Loosely speaking, use the domain knowledge to refute that."
+  }
+]

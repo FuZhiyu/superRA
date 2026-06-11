@@ -52,10 +52,18 @@ hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
 events = hooks["hooks"]
 assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
 assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
+assert "PostToolUse" in events, "Codex hooks must include PostToolUse task-hook reconcile coverage"
 assert "Stop" in events, "Codex hooks must include Stop"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
+post_tool_groups = events["PostToolUse"]
+post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}
+assert "Edit|Write" in post_tool_matchers, "Codex PostToolUse must wire task-hook for edit/apply_patch paths"
+assert "Bash" in post_tool_matchers, "Codex PostToolUse must wire task-hook for structural Bash paths"
+assert all(
+    any("run-hook.cmd" in h["command"] and "task-hook" in h["command"] for h in group["hooks"])
+    for group in post_tool_groups
+), "Codex PostToolUse groups must run the stable task-hook wrapper"
 assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h in group["hooks"]), "Codex Stop must wire codex-plan-stop"
-assert "PostToolUse" not in events, "Codex hooks must not claim unverified request_user_input PostToolUse support"
 PY
 
 section "Shared harness adapters"

@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `superintegrate` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
+description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, task files, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `superintegrate` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
 ---
 
 # Semantic Merge
@@ -13,9 +13,9 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 Load exactly the mode reference that matches the call path:
 
-- **Workflow sync author:** `references/workflow-sync-author.md` when `superintegrate` dispatches an agent to bring the current branch onto a confirmed base. The author owns the Workflow Sync Map and task-local Sync impact format, and carries the Workflow Sync scope boundary.
-- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `superintegrate` dispatches a separate reviewer before Integrate begins. The reviewer points at the author reference for boundary and format recognition.
-- **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow. The standalone reference owns the Semantic Merge Record format and the standalone scope boundary.
+- **Workflow sync author:** `references/workflow-sync-author.md` when `superintegrate` dispatches an agent to bring the current branch onto a confirmed base.
+- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `superintegrate` dispatches a separate reviewer before Integrate begins.
+- **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow.
 
 All modes walk the §Semantic Coherence Checklist below as the shared gated checklist.
 
@@ -35,7 +35,7 @@ If the worktree is dirty with unrelated changes, preserve them reversibly with a
 
 ### 2. Investigate intent on both sides
 
-Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from `PLAN.md` / `RESULTS.md`; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
+Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
 
 **Classify each cluster of changes by role.** The role drives how the cluster is resolved:
 
@@ -66,22 +66,22 @@ Ask the user before resolving — with intent and consequences, not raw diff chu
 
 - both sides imply different valid intents,
 - a conflict changes data contracts, inputs, test expectations, program outputs, or the meaning of a published result,
-- task structure in `PLAN.md` would change (routed through `superplan §User Feedback and Changing Plans`),
+- task structure would change (routed through `superplan §User Feedback and Changing the Task Tree`),
 - drift-test or result-level expectations would move because outputs meaningfully changed.
 
-Log every answer per `handoff-doc` §User Decisions Log before committing the resolution. When `PLAN.md` is absent, record the decision in the standalone merge record and the sync commit body.
+Fold every answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before committing the resolution. When no task tree is present, record the decision in the standalone merge record and the sync commit body.
 
 ### 5. Resolve and land
 
 Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when current-branch intent, an approved task objective, or a logged user decision justifies it.
 
-**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `superintegrate` Protect when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary below.
+**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage from `superintegrate` Protect in workflow mode, or existing tests and drift tests when standalone. Per-commit protection-pass is the lower bound; the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary.
 
-Include the conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode) with the commits that produce them. Broader **codebase-coherence** work — fitting the resulting code into the host project's naming conventions, reusing utilities, keeping the PR-friendly diff, walking up project docs, minimizing net diff against the host — is out of scope for this skill. Handoff artifacts may record context that explains the post-sync diff for later codebase review; they do not carry unresolved semantic-merge work into Integrate.
+Include the conflict resolution, resolved docs, and the mode-specific handoff artifact with the commits that produce them. Broader **codebase-coherence** work is owned by `refactor-and-integrate` and out of scope here. Handoff artifacts may record context that explains the post-sync diff for later codebase review; they do not carry unresolved semantic-merge work into Integrate.
 
 ### 6. Detect and resolve stale references
 
-Run more than a "no conflict markers" check. Before returning, sweep for stale references the merge may have left behind and **resolve those that live within the merge's semantic reach** — fixing them is part of semantic coherence and belongs to this skill:
+A "no conflict markers" check is not enough. Before returning, sweep for stale references within the merge's semantic reach and resolve them — this is part of semantic coherence:
 
 - labels, identifiers, or variable names renamed on one side but still used on the other,
 - paths or module locations moved on one side,
@@ -89,7 +89,7 @@ Run more than a "no conflict markers" check. Before returning, sweep for stale r
 - generated outputs that should have been regenerated,
 - cross-file imports, registry entries, or config keys.
 
-Run targeted checks for touched subsystems where cheap and relevant. Fix stale references that follow directly from the merge itself (a renamed symbol still used at its old call sites, a moved path referenced by a doc that describes the merged code, a generated output the merged sources made stale). Defer broader codebase-fit work — wider convention alignment, utility reuse, diff minimization — to `refactor-and-integrate`. Confirm the tree matches the integrated intent, not just a conflict-free state.
+Run targeted checks for touched subsystems where cheap and relevant. Fix stale references that follow directly from the merge; defer broader codebase-fit work to `refactor-and-integrate`. Confirm the tree matches the integrated intent, not just a conflict-free state.
 
 ## Semantic Coherence Checklist
 
@@ -106,32 +106,30 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 **Scope boundary (semantic coherence stopping rule):**
 
-- `[BLOCKING]` Stale references within the merge's semantic reach are resolved — renamed symbols at old call sites, moved paths referenced by docs describing the merged code, and other follow-through edits the merge itself forced.
-- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per the intent-changing-escalation step and recorded in the handoff artifact.
+- `[BLOCKING]` Stale references within the merge's semantic reach are resolved (per Step 6).
+- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per Step 4 and recorded in the handoff artifact.
 - `[BLOCKING]` Docs and comments that describe the merged code are updated to match.
-- `[BLOCKING]` No conflict markers remain in the tree (also checked in Verification below).
-- `[BLOCKING]` Existing protection passes on every commit landed by this skill — drift tests + key-result coverage in workflow mode; existing tests + drift tests in standalone mode. Per-commit protection-pass is the lower bound; semantic coherence is the stopping rule.
-- `[BLOCKING]` Broader **codebase-coherence** work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is left to `refactor-and-integrate` (or the caller). Handoff artifacts may explain codebase-review context, but they do not define unresolved semantic-sync targets.
+- `[BLOCKING]` Existing protection passes on every commit landed by this skill (per Step 5).
+- `[BLOCKING]` Broader **codebase-coherence** work is left to `refactor-and-integrate`; handoff artifacts explain codebase-review context but do not define unresolved semantic-sync targets.
 
 **Intent integrity:**
 
-- `[BLOCKING]` Intent-changing choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
+- `[BLOCKING]` Intent-changing choices were escalated, folded into the relevant task objective, and implemented as stated.
 - `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
 - `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
 
 **Handoff docs and merge records:**
 
-- `[BLOCKING]` PLAN.md and RESULTS.md remain coherent after the sync when present.
-- `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing Plans` before adaptation proceeded.
+- `[BLOCKING]` Task files remain coherent after the sync when present.
+- `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing the Task Tree` before adaptation proceeded.
 - `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
-- `[ADVISORY]` Routine handoff-doc conflict resolutions are summarized in the Sync Map.
+- `[ADVISORY]` Routine task-file conflict resolutions are summarized in the Sync Map.
 
 **Verification:**
 
 - `[BLOCKING]` No conflict markers remain.
 - `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 - `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
-- `[BLOCKING]` Generated outputs made stale by the merge were regenerated within this skill's commit chain, or — when regeneration would change a meaningful result — escalated per Step 4 above and recorded in the handoff artifact. Regeneration within the merge's semantic reach is not deferred.
 - `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.
 
 ## Exception

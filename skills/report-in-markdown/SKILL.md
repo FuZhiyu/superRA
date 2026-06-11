@@ -1,16 +1,16 @@
 ---
 name: report-in-markdown
-description: Markdown style guide for agents writing PLAN.md, RESULTS.md, status reports, or standalone markdown reports, with optional references for figures, LaTeX math, and tables.
+description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports, with inline rules for source-file citations, LaTeX math, and tables, plus optional references for figures and standalone-report IO. Ships a render-integrity self-diagnose CLI (scripts/check_markdown.py) that flags display-math blocks not blank-line separated and TeX-only macros KaTeX cannot render.
 user-invocable: true
 ---
 
 # Report in Markdown
 
-The markdown style guide for any agent writing markdown. Use the rule below for source-file citations; load references only when the output needs figures, LaTeX math, tables, or final-form `RESULTS.md` guidance.
+Apply the rules below to any markdown you write. Load references only for figures or standalone-report IO.
 
 ## File-reference rule
 
-Cite source files as **markdown links with line anchors**, not backtick-wrapped paths.
+**Always** cite source files as **markdown links with line anchors**, not backtick-wrapped paths.
 
 | Use case | Form |
 |---|---|
@@ -18,22 +18,56 @@ Cite source files as **markdown links with line anchors**, not backtick-wrapped 
 | Line range | [file.py:40-50](file.py#L40-L50) |
 | Whole file | [file.py](file.py) |
 
-Resolve paths **relative to the markdown file's directory** (use `../` as needed). For files at the worktree root, the relative path equals the project-root path.
+Resolve paths **relative to the markdown file's directory** (use `../` as needed). 
 
-## Load map
+## Math
 
-| Caller | Load |
-|---|---|
-| Implementer / reviewer writing routine task-block citations only | nothing beyond this file |
-| Implementer writing a `RESULTS.md` task section with figures / math / tables | `rich-content.md` |
-| `superintegrate` Document doc-writer subagent | `baseline-io.md` + `rich-content.md` + `final-form.md` |
-| `superintegrate` Document doc-reviewer subagent | `final-form.md` |
-| Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
+Use KaTeX syntax for better compatibility:
 
-The `attachments/` directory is a caller parameter; defaults and fallbacks are in `references/rich-content.md` §Figures.
+- Inline: `$...$` — e.g., `The return $r_t$ is defined as ...`
+- Display: `$$...$$`:
+
+```
+$$
+r_t = \frac{p_t - p_{t-1}}{p_{t-1}}
+$$
+```
+
+- Use `\text{...}` for words inside math mode.
+- Prefer LaTeX math over Unicode for any expression that includes subscripts, superscripts, fractions, sums, or integrals.
+
+Two patterns render as broken output in the dashboard with no error, so the renderer cannot warn you about them:
+
+- **Blank-line-separate every display `$$` block.** Put a blank line above and below the `$$` fence lines, and none inside the block. The dashboard renders with `markdown-it-texmath` `delimiters: 'dollars'`, whose `$$` block rule cannot interrupt an open paragraph. A text line directly above the opening `$$` leaves a paragraph open, and the equation is swallowed into that paragraph instead of rendering as a standalone block.
+- **Write KaTeX-undefined operators as `\operatorname{...}`.** Operators that work in a LaTeX `.tex` document — `\diag`, `\cov`, `\var`, `\corr`, `\Cov`, `\Var`, `\E`, `\plim`, `\argmin`, `\argmax`, `\sgn`, `\tr`, `\rank` — are undefined in KaTeX and render as an error. Use `\operatorname{diag}`, `\operatorname{Cov}`, etc.
+
+Run the self-diagnose CLI on any markdown file to catch both before committing (it only reports, never edits):
+
+```
+uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
+```
+
+where `<skill-dir>` is the directory holding this `SKILL.md`. Stdlib-only, so `python3 <skill-dir>/scripts/check_markdown.py …` also works.
+
+## Tables
+
+Inline small results (< ~15 rows) as markdown tables. For larger or code-generated tables, link to the output file instead:
+
+```markdown
+See [output/summary_stats.csv](../output/summary_stats.csv).
+```
+
+When inlining, keep alignment syntax consistent and include units in headers:
+
+```markdown
+| Variable      | Mean   | SD    | N       |
+|---------------|-------:|------:|--------:|
+| Return (%)    |   0.08 |  1.24 | 252,341 |
+| Volume (M)    |  12.40 |  8.15 | 252,341 |
+```
+
 
 ## References
 
-- `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Permanent artifacts only.
-- `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding), LaTeX math, markdown tables.
-- `references/final-form.md` — final `RESULTS.md` consolidation: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation.
+- `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding). Load when the output includes figures.
+- `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Load for permanent standalone artifacts (reports, rendered notes, dashboards); not required for task files or status returns.
