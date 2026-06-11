@@ -44,7 +44,7 @@ Your role is to watch the status advance, read `## Results` to evaluate the find
 The agent stops and asks you a question when it hits a decision that belongs to you:
 a methodology choice the objective did not specify, a data availability question, a scope boundary it cannot resolve from the task file alone.
 These questions are explicit — the agent stops and surfaces them via `AskUserQuestion`.
-If the session is asynchronous (you check in later), the question appears in the task's `## Review Notes` or in the terminal where the agent is running.
+If the session is asynchronous (you check in later), the question is waiting in the terminal where the agent is running; once you answer, the agent folds the decision into the task's `## Objective` so it survives the session.
 
 When agents ask questions about scope — "Should I include pre-2000 observations?" — the answer shapes the task objective.
 Record your answer by editing the `## Objective` directly, then tell the agent to continue.
@@ -53,7 +53,7 @@ Record your answer by editing the `## Objective` directly, then tell the agent t
 
 <!-- intent: explain the comment mechanism and the material-change decision boundary -->
 The cleanest way to give feedback on in-progress work is to pin a comment on the relevant section of a `task.md` via the dashboard.
-Comments surface to the agent on the next `superra task read` and are resolved once the agent addresses them.
+Comments surface to the agent on the next `superra task read`; once addressed, mark them resolved with `superra task comment resolve`.
 
 For small corrections — a note on a specific result, a clarification on what a variable should mean — use a comment.
 

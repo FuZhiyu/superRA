@@ -35,7 +35,7 @@ To stop it explicitly:
 The dashboard has three panels:
 
 **Tree view** — the task hierarchy with status badges.
-Colored badges show each task's status at a glance: not started (grey), in progress (blue), implemented (orange), revise (red), approved (green), archived or postponed (muted).
+Colored badges show each task's status at a glance: not started (grey), in progress (blue), implemented (gold), revise (red), approved (green), archived or postponed (muted).
 Click a task to open its full `task.md` content in the side panel.
 
 **DAG view** — the dependency graph.
