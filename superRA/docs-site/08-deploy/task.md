@@ -18,7 +18,7 @@ Stand up the site build and publish it:
 - The build fails loudly on export errors or missing inputs; no silent partial deploys.
 - The live site URL recorded where users discover it: repo About, `.claude-plugin`/`.codex-plugin` manifest homepage fields, and handed to `09-readme-front-door` for the README links.
 
-**Stop point:** two researcher/admin actions gate the deploy verification — enabling GitHub Pages (Actions source) and seeding the workflow file onto the default branch (a push to `main` outside the normal squash-merge landing). Request both before verification and record the outcomes here. If the researcher declines to touch `main` early, the in-branch criterion is the fallback below and the live-URL validation defers to landing.
+**Stop point (resolved 2026-06-11):** the researcher chose the live-verification path and authorized both admin actions — enable GitHub Pages (Actions source; attempt via `gh api repos/{owner}/{repo}/pages -X POST -f build_type=workflow`, fall back to asking the researcher to flip it in Settings) and seed the workflow file onto `main` as a single-file commit, then dispatch with `--ref` this branch. The live-URL validation below applies.
 
 Validation, in-branch: the local build script succeeds, and — per the stop-point outcome — either a `workflow_dispatch --ref <this branch>` run deploys a real Pages site where the landing page, sidebar nav, search, highlighted code blocks, deep links, and both showcase exports work (verified by loading the published URL), or, on the fallback path, the exported site artifact is verified locally and the live-URL check is recorded in `## Results` as a landing-time follow-up. The push-trigger path is verified after the workstream lands on the default branch.
 
