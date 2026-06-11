@@ -1,6 +1,6 @@
 ---
 title: "How-To Guides for the Researcher Journeys"
-status: implemented
+status: approved
 depends_on:
   - 01-information-architecture
 tags: []
