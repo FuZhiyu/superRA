@@ -1869,6 +1869,16 @@ var PROJECT_ROOT = {{ project_root | tojson }};
 var RESOLVED_ROOT = {{ resolved_root | default('') | tojson }};
 var ROOT_PREFIX = {{ root_prefix | default('') | tojson }};
 var REPO_FILE_BASE = {{ repo_file_base | default('') | tojson }};
+/* The resolved root's path relative to the repo root (e.g. `docs/showcase-demo`).
+   REPO_FILE_BASE links are repo-root-relative, so they need this, not the bare
+   basename ROOT_PREFIX (`showcase-demo`), whenever the tree sits below the repo
+   root. Empty -> ROOT_PREFIX (the tree is at the repo root, e.g. `superRA`). */
+var REPO_ROOT_PREFIX = {{ repo_root_prefix | default('') | tojson }} || ROOT_PREFIX;
+/* Doc-mode: basenames the build emits beside the exported site (e.g. the two
+   showcase exports). A body link to one of these is a sibling artifact, not a
+   repo file, so it is left as a plain relative href instead of being rebased to
+   REPO_FILE_BASE. Empty (the default) outside doc-mode. */
+var DOC_LOCAL_LINKS = {{ doc_local_links | default([]) | tojson }};
 
 /* ── Active worktree (the ?wt= dimension of the URL) ──
    The active worktree is carried in location.search as `?wt=<id>`, separate from
@@ -1996,6 +2006,11 @@ function renderMarkdown(text, sectionName, taskPath) {
   var taskDirRel = taskPath ? taskPath + '/' : '';
   var rootRel = ROOT_PREFIX ? ROOT_PREFIX + '/' : '';
   var repoPathPrefix = rootRel + taskDirRel;
+  /* The GitHub-branch prefix uses the repo-root-relative root path (so a tree
+     below the repo root keeps its `docs/...` prefix); /files/ and vscode keep
+     ROOT_PREFIX / RESOLVED_ROOT. */
+  var repoRootRel = REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '';
+  var repoLinkPrefix = repoRootRel + taskDirRel;
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -2013,8 +2028,28 @@ function renderMarkdown(text, sectionName, taskPath) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
+        if (window.DOC_MODE) {
+          /* Doc pages cite repo files by repo-root-relative path (the authoring
+             contract), so the href IS the repo path — resolve it against the repo
+             root, not the doc node's dir. A link to a sibling export the build
+             emits beside the site (DOC_LOCAL_LINKS) is a build artifact, not a
+             repo file, so it stays a plain relative href. */
+          var docClean = href.replace(/[?#].*$/, '');
+          if (DOC_LOCAL_LINKS.indexOf(docClean) !== -1) {
+            a.setAttribute('target', '_blank');
+            return;
+          }
+          if (REPO_FILE_BASE) {
+            a.setAttribute('href', repoFileHref(href));
+            a.setAttribute('target', '_blank');
+          }
+          /* No REPO_FILE_BASE (e.g. a local doc-mode preview): leave the
+             repo-relative href untouched rather than forging a vscode:// path
+             against the docs root, which would not resolve. */
+          return;
+        }
         if (REPO_FILE_BASE) {
-          a.setAttribute('href', repoFileHref(repoPathPrefix + href));
+          a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
         } else {
           var filePath = taskDirRel + href;
           var loc = '';
@@ -2711,7 +2746,7 @@ var VSCODE_ICON =
 function taskFileVscodeHref(path) {
   var rel = (path ? path + '/' : '') + 'task.md';
   if (REPO_FILE_BASE) {
-    return repoFileHref((ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + rel);
+    return repoFileHref((REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '') + rel);
   }
   return 'vscode://file/' + RESOLVED_ROOT + '/' + rel;
 }

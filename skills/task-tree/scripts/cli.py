@@ -139,10 +139,12 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         _append_optional(argv, "--output", args.output)
         _append_optional(argv, "--root", args.subtree)
         _append_optional(argv, "--repo-file-base", args.repo_file_base)
+        _append_optional(argv, "--repo-file-prefix", args.repo_root_prefix)
         # Accept --doc-mode either before the `export` subcommand (parent flag) or
         # after it (the export-scoped flag) — both land the same generate flag.
         if args.doc_mode or args.export_doc_mode:
             argv.append("--doc-mode")
+        _append_repeated(argv, "--doc-local-link", args.doc_local_links)
     elif args.dashboard_command == "artifact":
         _run_dashboard_artifact(args)
         return
@@ -437,10 +439,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
     )
     export.add_argument(
+        "--repo-file-prefix",
+        dest="repo_root_prefix",
+        default="",
+        help="Resolved root's path relative to the repo root for --repo-file-base "
+             "links, e.g. docs/showcase-demo. Default: the root basename.",
+    )
+    export.add_argument(
         "--doc-mode",
         action="store_true",
         dest="export_doc_mode",
         help="Render as a documentation site (suppress task-workflow chrome)",
+    )
+    export.add_argument(
+        "--doc-local-link",
+        dest="doc_local_links",
+        action="append",
+        default=[],
+        metavar="BASENAME",
+        help="Doc-mode only: a sibling artifact (e.g. demo-tree.html) the build "
+             "emits beside the site; body links to it stay relative. Repeatable.",
     )
     artifact = dash_sub.add_parser("artifact", help="Set up dashboard artifact publishing")
     artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)

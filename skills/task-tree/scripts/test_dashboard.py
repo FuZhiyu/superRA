@@ -1973,7 +1973,9 @@ class TestRenderMarkdownImageRewrite:
             _RENDER_MD_SHIM
             + "var RESOLVED_ROOT = '/abs/root';\n"
             + "var ROOT_PREFIX = " + json.dumps(root_prefix) + ";\n"
+            + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
             + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+            + "var DOC_LOCAL_LINKS = [];\n"
             + defs + "\n"
             + "var body = '![fig](" + src + ")';\n"
             + "var html = renderMarkdown(body, null, " + json.dumps(task_path) + ");\n"
@@ -2182,7 +2184,9 @@ class TestFileLinkConsistency:
         assert m
         fn = m.group(0)
         assert "vscode://file/' + RESOLVED_ROOT + '/'" in fn
-        assert "ROOT_PREFIX ? ROOT_PREFIX + '/' : ''" in fn
+        # GitHub branch uses the repo-root-relative prefix (so a nested tree keeps
+        # its `docs/...` lead), not the bare basename or a hardcoded segment.
+        assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
         # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
         assert "vscode://file/' + RESOLVED_ROOT + '/' + filePath" in BASE_HTML
@@ -2439,6 +2443,41 @@ class TestDashboard:
             True,
         )]
 
+    def test_generate_repo_file_prefix_for_nested_root(self, plan_root):
+        """--repo-file-prefix sets the repo-root-relative prefix for repo links,
+        so a tree below the repo root keeps its leading path instead of the bare
+        basename; default keeps the basename (REPO_ROOT_PREFIX falls back)."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(
+            plan_root, out,
+            repo_file_base="https://github.com/owner/repo/blob/abc123",
+            repo_root_prefix="docs/showcase-demo",
+        )
+        html = out.read_text("utf-8")
+        assert 'var REPO_ROOT_PREFIX = "docs/showcase-demo" || ROOT_PREFIX;' in html
+
+    def test_generate_repo_file_prefix_default_falls_back(self, plan_root):
+        """No --repo-file-prefix -> empty literal, so REPO_ROOT_PREFIX || ROOT_PREFIX
+        resolves to the basename (a tree at the repo root is unaffected)."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(plan_root, out)
+        assert 'var REPO_ROOT_PREFIX = "" || ROOT_PREFIX;' in out.read_text("utf-8")
+
+    def test_cli_dashboard_export_forwards_repo_file_prefix(self, plan_root, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            cli, "_module_main",
+            lambda mod, argv, **kw: calls.append(argv),
+        )
+        cli.main([
+            "dashboard", "export", "--root", str(plan_root),
+            "--repo-file-base", "https://github.com/owner/repo/blob/abc123",
+            "--repo-file-prefix", "docs/showcase-demo",
+        ])
+        argv = calls[0]
+        assert "--repo-file-prefix" in argv
+        assert argv[argv.index("--repo-file-prefix") + 1] == "docs/showcase-demo"
+
     def test_dashboard_html_constant_removed(self):
         """The duplicate hand-maintained template is gone — one source remains."""
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
@@ -2450,7 +2489,7 @@ class TestDashboard:
         Guards the renderMarkdown anchor-translation logic against removal."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
         assert "match(/#L" in src
-        assert "repoFileHref(repoPathPrefix + href)" in src
+        assert "repoFileHref(repoLinkPrefix + href)" in src
 
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
@@ -3068,6 +3107,146 @@ class TestDocMode:
                             lambda mod, argv: captured.__setitem__("argv", argv))
         cli.main(["dashboard", "--root", str(plan), "--doc-mode", "export"])
         assert "--doc-mode" in captured["argv"]
+
+    def test_doc_local_links_embedded(self, tmp_path):
+        """--doc-local-link basenames land in the embedded DOC_LOCAL_LINKS so the
+        client leaves those sibling-artifact links relative; default is empty."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(
+            plan, out, doc_mode=True,
+            doc_local_links=["demo-tree.html", "superra-dev-tree.html"],
+        )
+        html = out.read_text("utf-8")
+        assert ('var DOC_LOCAL_LINKS = ["demo-tree.html", "superra-dev-tree.html"];'
+                in html)
+
+    def test_doc_local_links_default_empty(self, tmp_path):
+        """Without --doc-local-link the embedded list is empty (no regression)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        assert "var DOC_LOCAL_LINKS = [];" in out.read_text("utf-8")
+
+    def test_cli_generate_doc_local_link_repeatable(self, tmp_path):
+        """`generate --doc-local-link` is repeatable and reaches the export."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-doc.html"
+        plan_dashboard.main([
+            "generate", "--plan-root", str(plan), "--output", str(out),
+            "--doc-mode",
+            "--doc-local-link", "demo-tree.html",
+            "--doc-local-link", "superra-dev-tree.html",
+        ])
+        assert ('var DOC_LOCAL_LINKS = ["demo-tree.html", "superra-dev-tree.html"];'
+                in out.read_text("utf-8"))
+
+    def test_cli_dashboard_export_doc_local_link_forwards(self, tmp_path, monkeypatch):
+        """`cli dashboard export --doc-local-link` forwards each to generate."""
+        plan = _docs_plan(tmp_path)
+        captured = {}
+        monkeypatch.setattr(cli, "_module_main",
+                            lambda mod, argv: captured.__setitem__("argv", argv))
+        cli.main([
+            "dashboard", "--root", str(plan), "export", "--doc-mode",
+            "--doc-local-link", "demo-tree.html",
+            "--doc-local-link", "superra-dev-tree.html",
+        ])
+        argv = captured["argv"]
+        assert argv.count("--doc-local-link") == 2
+        assert "demo-tree.html" in argv and "superra-dev-tree.html" in argv
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_doc_mode_link_rewrite_behavioral(self):
+        """Run renderMarkdown under node and assert the doc-mode link branch:
+        a repo-relative authority link resolves repo-root-relative against the
+        blob base (not against the doc node dir), a sibling-export link stays a
+        plain relative href, and with doc-mode off the link is task-relative."""
+        defs = _extract_js_defs(["encodeRepoPath", "repoFileHref",
+                                 "resolveInternalTaskPath", "renderMarkdown"])
+        shim = r"""
+var md = { render: function (text) {
+  var out = text;
+  out = out.replace(/\[([^\]]*)\]\(([^)]+)\)/g,
+    function (_, t, h) { return '<a href="' + h + '">' + t + '</a>'; });
+  return out;
+} };
+function makeEl(tag) {
+  return {
+    tagName: tag.toUpperCase(), _as: [],
+    set innerHTML(html) {
+      var self = this; this._as = [];
+      var am; var are = /<a[^>]*\bhref="([^"]*)"[^>]*>/g;
+      while ((am = are.exec(html))) {
+        (function (val) {
+          var attrs = { href: val };
+          self._as.push({
+            _attrs: attrs,
+            getAttribute: function (n) { return attrs[n] != null ? attrs[n] : null; },
+            setAttribute: function (n, v) { attrs[n] = v; },
+            removeAttribute: function (n) { delete attrs[n]; },
+            classList: { add: function () {} },
+          });
+        })(am[1]);
+      }
+    },
+    get innerHTML() {
+      var out = '';
+      for (var i = 0; i < this._as.length; i++) {
+        out += '<a href="' + (this._as[i]._attrs.href || '') + '"></a>';
+      }
+      return out;
+    },
+    querySelectorAll: function (sel) {
+      if (sel === 'a[href]') return this._as;
+      return [];
+    },
+  };
+}
+var document = { createElement: function (t) { return makeEl(t); } };
+"""
+
+        def run(body, task_path, doc_mode, local_links):
+            harness = (
+                shim
+                + "var window = { STANDALONE: false, DOC_MODE: "
+                + ("true" if doc_mode else "false") + " };\n"
+                + "var RESOLVED_ROOT = '/abs/docs/site';\n"
+                + "var ROOT_PREFIX = 'site';\n"
+                + "var REPO_ROOT_PREFIX = 'site';\n"
+                + "var REPO_FILE_BASE = 'https://gh/owner/repo/blob/sha';\n"
+                + "var DOC_LOCAL_LINKS = " + json.dumps(local_links) + ";\n"
+                + "var TASK_PATHS = {};\n"
+                + defs + "\n"
+                + "var out = renderMarkdown(" + json.dumps(body) + ", null, "
+                + json.dumps(task_path) + ");\n"
+                + "var m = out.match(/href=\"([^\"]*)\"/);\n"
+                + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+            )
+            proc = subprocess.run(
+                [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+            )
+            assert proc.returncode == 0, proc.stderr
+            return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
+
+        # Authority link on a deep doc page -> repo-root-relative blob URL.
+        href = run("[superplan](skills/superplan/SKILL.md)",
+                   "03-concepts/01-the-workflow", True,
+                   ["demo-tree.html"])
+        assert href == "https://gh/owner/repo/blob/sha/skills/superplan/SKILL.md"
+
+        # Sibling-export link stays a plain relative href (build artifact).
+        href = run("[demo](demo-tree.html)", "06-showcase", True,
+                   ["demo-tree.html", "superra-dev-tree.html"])
+        assert href == "demo-tree.html"
+
+        # Doc-mode off: the same href is task-relative (no rebasing change).
+        href = run("[fig](skills/superplan/SKILL.md)",
+                   "03-concepts/01-the-workflow", False, [])
+        assert href == (
+            "https://gh/owner/repo/blob/sha/"
+            "site/03-concepts/01-the-workflow/skills/superplan/SKILL.md"
+        )
 
 
 class TestCodeHighlighting:

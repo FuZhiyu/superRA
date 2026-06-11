@@ -1638,7 +1638,9 @@ def render_standalone_html(
     output_path: Path | None = None,
     root: str | None = None,
     repo_file_base: str = "",
+    repo_root_prefix: str = "",
     doc_mode: bool = False,
+    doc_local_links: list[str] | None = None,
 ) -> str:
     """Render the self-contained standalone dashboard HTML and return it.
 
@@ -1653,9 +1655,18 @@ def render_standalone_html(
     resolve from a ``file://`` open; the HTML itself is not written here.
     *repo_file_base* optionally points file links at a repository browser base
     such as ``https://github.com/owner/repo/blob/sha`` instead of local editor
-    links.  *doc_mode* (opt-in) renders the tree as documentation: task-workflow
+    links.  *repo_root_prefix* is the resolved root's path relative to the repo
+    root (e.g. ``docs/showcase-demo``); repo-file links use it instead of the
+    bare root basename so a tree nested below the repo root keeps its leading
+    path.  Empty falls back to the basename (a tree at the repo root, e.g.
+    ``superRA``).  *doc_mode* (opt-in) renders the tree as documentation: task-workflow
     chrome (status badges, summary stats/progress, kanban toggle, children
-    dependency view) is suppressed.  Default output is unchanged.
+    dependency view) is suppressed, and a genuine body file link resolves
+    repo-root-relative (the doc authoring contract) rather than against the doc
+    node's dir.  *doc_local_links* names basenames the build emits beside the
+    exported site (e.g. the showcase exports) so a doc-mode link to one stays a
+    plain relative href instead of being rebased to *repo_file_base*.
+    Default output is unchanged.
     """
     full_root = walk_plan(plan_root)
     project_root = str(plan_root.resolve().parent)
@@ -1725,7 +1736,9 @@ def render_standalone_html(
         standalone_images=standalone_images,
         standalone_assets=standalone_assets,
         repo_file_base=repo_file_base.rstrip("/"),
+        repo_root_prefix=repo_root_prefix.strip("/"),
         doc_mode=doc_mode,
+        doc_local_links=doc_local_links or [],
         search_index=_build_search_index(scoped_root, all_tasks),
     )
 
@@ -1735,7 +1748,9 @@ def generate_dashboard(
     output_path: Path | None = None,
     root: str | None = None,
     repo_file_base: str = "",
+    repo_root_prefix: str = "",
     doc_mode: bool = False,
+    doc_local_links: list[str] | None = None,
 ) -> Path:
     """Generate a self-contained static HTML dashboard from base.html.
 
@@ -1745,13 +1760,16 @@ def generate_dashboard(
     same name, defaults ``output_path`` to ``plan_root / "dashboard.html"``,
     writes the file, prints the path, and returns it.  *root* scopes the export
     to a subtree (see ``render_standalone_html``).  *doc_mode* renders the tree
-    as a documentation site (chrome suppressed); see ``render_standalone_html``.
+    as a documentation site (chrome suppressed); *doc_local_links* names sibling
+    artifacts left as relative links — see ``render_standalone_html``.
     """
     if output_path is None:
         output_path = plan_root / "dashboard.html"
 
     html = render_standalone_html(
-        plan_root, output_path, root, repo_file_base=repo_file_base, doc_mode=doc_mode
+        plan_root, output_path, root, repo_file_base=repo_file_base,
+        repo_root_prefix=repo_root_prefix,
+        doc_mode=doc_mode, doc_local_links=doc_local_links,
     )
     output_path.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {output_path}")
@@ -2201,9 +2219,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
     )
     gen_p.add_argument(
+        "--repo-file-prefix",
+        dest="repo_root_prefix",
+        default="",
+        help="Resolved root's path relative to the repo root for --repo-file-base "
+             "links, e.g. docs/showcase-demo. Default: the root basename.",
+    )
+    gen_p.add_argument(
         "--doc-mode",
         action="store_true",
         help="Render as a documentation site (suppress task-workflow chrome)",
+    )
+    gen_p.add_argument(
+        "--doc-local-link",
+        dest="doc_local_links",
+        action="append",
+        default=[],
+        metavar="BASENAME",
+        help="Doc-mode only: a sibling artifact (e.g. demo-tree.html) the build "
+             "emits beside the site; body links to it stay relative instead of "
+             "being rebased to --repo-file-base. Repeatable.",
     )
 
     return parser.parse_args(argv)
@@ -2281,7 +2316,10 @@ def main(argv: list[str] | None = None) -> None:
         try:
             generate_dashboard(
                 plan_root, output, root=subtree_root,
-                repo_file_base=args.repo_file_base, doc_mode=args.doc_mode,
+                repo_file_base=args.repo_file_base,
+                repo_root_prefix=args.repo_root_prefix,
+                doc_mode=args.doc_mode,
+                doc_local_links=args.doc_local_links,
             )
         except KeyError as exc:
             print(f"Error: {exc}", file=sys.stderr)
