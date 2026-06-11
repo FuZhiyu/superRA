@@ -22,6 +22,8 @@ Stand up the site build and publish it:
 
 Validation, in-branch: the local build script succeeds, and — per the stop-point outcome — either a `workflow_dispatch --ref <this branch>` run deploys a real Pages site where the landing page, sidebar nav, search, highlighted code blocks, deep links, and both showcase exports work (verified by loading the published URL), or, on the fallback path, the exported site artifact is verified locally and the live-URL check is recorded in `## Results` as a landing-time follow-up. The push-trigger path is verified after the workstream lands on the default branch.
 
+**Known plumbing issue to resolve (found by 03 during authoring):** the standalone export re-bases repo-relative file links against the doc node's directory under the docs root, so a contract-compliant authority link like `skills/superplan/SKILL.md` on a page at `03-concepts/01-the-workflow/` resolves to `<repo-file-base>/site/03-concepts/01-the-workflow/skills/superplan/SKILL.md` — a nonexistent path. The build must make repo-file links resolve repo-root-relative against `--repo-file-base` (an export-flag or doc-mode change coordinated with the `02-dashboard-features/doc-mode` flag surface). Acceptance: every authority link on the built site points at a real blob URL.
+
 ## Planner Guidance
 
 `skills/task-tree/scripts/templates/superra-dashboard-artifact.yml` is the existing CI export precedent; the doc-mode flag/invocation comes from `02-dashboard-features/doc-mode`'s recorded `## Results`.
