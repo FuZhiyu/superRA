@@ -2927,6 +2927,285 @@ class TestStandaloneSelfContained:
         assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
 
 
+# ---------------------------------------------------------------------------
+# Dual-use dashboard features: doc-mode, code highlighting, client search
+# ---------------------------------------------------------------------------
+
+
+def _docs_plan(tmp_path):
+    """A two-node plan: a root landing page and one child doc page, each with a
+    fenced code block — the minimum to exercise doc-mode, highlighting, and
+    search over titles + body text."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(
+        root / "task.md", "Quickstart Home", "not-started",
+        objective="Welcome to the docs about panel regressions.",
+    )
+    child = root / "01-merge-guide"
+    child.mkdir()
+    _write_task_md(
+        child / "task.md", "Merging Datasets", "approved",
+        objective="How to merge CRSP and Compustat with a left join.\n\n"
+                  "```python\ndf.merge(other, how='left')\n```\n\n"
+                  "```julia\nf(x) = x^2\n```",
+    )
+    return root
+
+
+def _docs_client(plan_root):
+    """A TestClient serving *plan_root* — mirrors the `client` fixture setup so
+    doc-mode/highlight/search tests can serve the docs plan directly."""
+    from starlette.testclient import TestClient
+
+    plan_dashboard.PLAN_ROOT = plan_root
+    plan_dashboard._project_root = str(plan_root.resolve().parent)
+    plan_dashboard._jinja_env = None
+    plan_dashboard.rebuild_tree()
+    return TestClient(plan_dashboard.app, raise_server_exceptions=True)
+
+
+class TestDocMode:
+    """Opt-in doc-mode renders the tree as documentation: task-workflow chrome is
+    suppressed, while a default (no-flag) export stays unchanged."""
+
+    def test_doc_mode_sets_attribute_and_flag(self, tmp_path):
+        """--doc-mode marks <html data-doc-mode> and sets window.DOC_MODE true."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        html = out.read_text("utf-8")
+        assert 'data-doc-mode="true"' in html
+        assert "window.DOC_MODE = true" in html
+
+    def test_default_export_is_not_doc_mode(self, tmp_path):
+        """Without the flag the export carries no doc-mode attribute and the flag
+        is false — the default dashboard is unchanged."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "default.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert 'data-doc-mode="true"' not in html
+        assert "window.DOC_MODE = false" in html
+
+    def test_doc_mode_suppresses_chrome_via_css(self, tmp_path):
+        """Doc-mode output carries the chrome-suppression rules keyed off
+        html[data-doc-mode] (badges, progress, summary bar, kanban toggle, DAG)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        html = out.read_text("utf-8")
+        for selector in (
+            "html[data-doc-mode] .badge",
+            "html[data-doc-mode] #summary-bar",
+            "html[data-doc-mode] #btn-kanban",
+            "html[data-doc-mode] .children-dag",
+        ):
+            assert selector in html, f"missing doc-mode rule: {selector}"
+
+    def test_active_node_badge_gated_on_doc_mode(self):
+        """The one JS-built status badge (active-node head) is gated on
+        !window.DOC_MODE so it never renders in doc-mode."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "(status && !window.DOC_MODE)" in src
+
+    def test_doc_mode_default_off_in_render(self, tmp_path):
+        """generate_dashboard defaults doc_mode off (explicit-opt-in invariant)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "default.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        assert 'data-doc-mode' not in out.read_text("utf-8").split("\n")[1]
+
+    def test_serve_index_carries_doc_mode_flag(self, tmp_path, monkeypatch):
+        """The live index route honors the module DOC_MODE flag set by
+        `serve --doc-mode`."""
+        plan = _docs_plan(tmp_path)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert 'data-doc-mode="true"' in html
+        assert "window.DOC_MODE = true" in html
+
+    def test_serve_index_default_not_doc_mode(self, tmp_path, monkeypatch):
+        """With DOC_MODE off (default) the served page carries no doc-mode."""
+        plan = _docs_plan(tmp_path)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert 'data-doc-mode="true"' not in html
+        assert "window.DOC_MODE = false" in html
+
+    def test_cli_generate_doc_mode_flag(self, tmp_path):
+        """`generate --doc-mode` reaches generate_dashboard."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-doc.html"
+        plan_dashboard.main(
+            ["generate", "--plan-root", str(plan), "--output", str(out), "--doc-mode"]
+        )
+        assert 'data-doc-mode="true"' in out.read_text("utf-8")
+
+    def test_cli_dashboard_export_doc_mode_forwards(self, tmp_path, monkeypatch):
+        """`cli dashboard export --doc-mode` forwards --doc-mode to generate."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-exp.html"
+        captured = {}
+
+        def fake_main(argv):
+            captured["argv"] = argv
+
+        monkeypatch.setattr(cli, "_module_main", lambda mod, argv: fake_main(argv))
+        cli.main([
+            "dashboard", "--root", str(plan), "export",
+            "--output", str(out), "--doc-mode",
+        ])
+        assert "--doc-mode" in captured["argv"]
+
+    def test_cli_dashboard_export_doc_mode_before_subcommand(self, tmp_path, monkeypatch):
+        """--doc-mode also works placed before the `export` subcommand."""
+        plan = _docs_plan(tmp_path)
+        captured = {}
+        monkeypatch.setattr(cli, "_module_main",
+                            lambda mod, argv: captured.__setitem__("argv", argv))
+        cli.main(["dashboard", "--root", str(plan), "--doc-mode", "export"])
+        assert "--doc-mode" in captured["argv"]
+
+
+class TestCodeHighlighting:
+    """Fenced code blocks render with highlight.js, wired into the markdown-it
+    path and inlined in the standalone export with theme-aware token colors."""
+
+    def test_markdown_it_wired_with_highlight(self):
+        """markdown-it is constructed with the highlightFence highlighter."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "highlight: highlightFence" in src
+        assert "function highlightFence" in src
+
+    def test_unknown_language_falls_through(self):
+        """highlightFence returns '' for an unknown/absent language so markdown-it
+        keeps its default (plain) rendering — no regression for untagged code."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        # Guard the gate that only highlights a registered language.
+        assert "hljs.getLanguage(lang)" in src
+
+    def test_standalone_inlines_highlight_js(self, tmp_path):
+        """The standalone export inlines the highlight.js bundle + the julia
+        language module and drops the highlight.js CDN tags."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert "hljs" in html  # bundle global present inline
+        assert "cdn.jsdelivr.net/npm/@highlightjs" not in html
+
+    def test_highlight_assets_built(self):
+        """_build_standalone_assets reads the vendored highlight bundle + julia."""
+        assets = plan_dashboard._build_standalone_assets()
+        assert assets["hljs_js"]
+        assert assets["hljs_julia_js"]
+
+    def test_theme_aware_highlight_tokens(self):
+        """Highlight token colors are theme tokens (--hl-*) defined in both the
+        light root and the dark theme block, so code is readable in both."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        # Defined once in :root (light) and once in [data-theme="dark"].
+        assert src.count("--hl-keyword:") == 2
+        assert ".rendered-md .hljs-keyword" in src
+
+    def test_vendor_highlight_files_present(self):
+        """The highlight.js bundle and the julia language module are vendored."""
+        vendor = SCRIPTS_DIR / "vendor"
+        assert (vendor / "highlight.min.js").exists()
+        assert (vendor / "languages" / "julia.min.js").exists()
+
+    def test_served_page_keeps_highlight_cdn(self, tmp_path):
+        """Server mode loads highlight.js from the CDN tags (mirrors the existing
+        markdown-it/katex CDN tags)."""
+        plan = _docs_plan(tmp_path)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert "cdn.jsdelivr.net/npm/@highlightjs" in html
+
+
+class TestClientSearch:
+    """Full-text search over node titles + body text, navigating to results in
+    both the live server and the standalone export."""
+
+    def test_search_index_records_titles_and_body(self, tmp_path):
+        """The index has one record per node (root included) carrying path, slug,
+        title, and flattened body text."""
+        plan = _docs_plan(tmp_path)
+        full = plan_dashboard.walk_plan(plan)
+        index = plan_dashboard._build_search_index(
+            full, plan_dashboard.collect_all_tasks(full)
+        )
+        by_path = {r["path"]: r for r in index}
+        assert "" in by_path and "01-merge-guide" in by_path
+        # Title is indexed.
+        assert by_path["01-merge-guide"]["title"] == "Merging Datasets"
+        # Body prose is indexed (a phrase that is NOT in the title).
+        assert "left join" in by_path["01-merge-guide"]["text"].lower()
+        # Root body prose is indexed too.
+        assert "panel regressions" in by_path[""]["text"].lower()
+
+    def test_search_text_strips_code_and_markdown(self):
+        """_search_text drops fenced/inline code and markdown punctuation."""
+        text = plan_dashboard._search_text(
+            "## Heading\n\nSome **prose** with `inline` code.\n\n"
+            "```python\nsecret_token = 1\n```\n"
+        )
+        assert "prose" in text
+        assert "Heading" in text
+        # Code content and markdown punctuation are gone.
+        assert "secret_token" not in text
+        assert "#" not in text and "`" not in text
+
+    def test_search_index_embedded_in_export(self, tmp_path):
+        """The standalone export embeds SEARCH_INDEX so search runs offline."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert "var SEARCH_INDEX =" in html
+        m = re.search(r"var SEARCH_INDEX = (\[.*?\]);", html, re.DOTALL)
+        assert m is not None
+        index = json.loads(m.group(1))
+        assert any("left join" in r["text"].lower() for r in index)
+
+    def test_search_palette_ui_and_navigation(self):
+        """The palette UI, the title+body scorer, and navigation-via-setActive
+        are wired (selecting a result routes exactly as a sidebar click)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert 'id="search-palette"' in src
+        assert "function runSearch" in src
+        assert "function scoreSearchRecord" in src
+        # chooseSearchResult navigates through the same setActive router.
+        assert "setActive(rec.path" in src
+
+    def test_search_keyboard_affordances(self):
+        """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
+        to open, Escape to dismiss."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "openSearchPalette()" in src
+        assert "ArrowDown" in src and "ArrowUp" in src
+        assert "event.key === 'Enter'" in src
+        assert "event.key === 'Escape'" in src
+
+    def test_search_index_endpoint_returns_index(self, tmp_path):
+        """The live /api/search-index endpoint returns the same index shape so
+        search reflects current tree state after a full-reload."""
+        plan = _docs_plan(tmp_path)
+        with _docs_client(plan) as client:
+            data = client.get("/api/search-index").json()
+        by_path = {r["path"]: r for r in data}
+        assert "01-merge-guide" in by_path
+        assert "left join" in by_path["01-merge-guide"]["text"].lower()
+
+    def test_search_index_refreshed_on_reload(self):
+        """The client re-fetches /api/search-index on a structural full-reload and
+        on a worktree switch so live search stays current."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "function refreshSearchIndex" in src
+        assert "refreshSearchIndex()" in src
 
 
 # ---------------------------------------------------------------------------

@@ -68,6 +68,11 @@ except ImportError:
 # ---------------------------------------------------------------------------
 PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
+# Doc-mode: when True, the live page renders as a documentation site (task-workflow
+# chrome suppressed).  Strictly opt-in via `serve --doc-mode`; default off so the
+# served dashboard is unchanged.  Read by the index route at render time.
+DOC_MODE: bool = False
+
 # Default idle timeout: exit after this many continuous seconds with zero open
 # SSE connections.  Tests inject a sub-second value either by passing ``timeout``
 # straight to ``_idle_monitor`` or by setting ``IDLE_TIMEOUT`` before launch (it is
@@ -852,6 +857,8 @@ async def index(request: Request):
         resolved_root=resolved_root,
         root_prefix=Path(resolved_root).name,
         wt_id=wt_id,
+        doc_mode=DOC_MODE,
+        search_index=_build_search_index(state.root_task, all_tasks),
     )
     return HTMLResponse(content=html)
 
@@ -1051,6 +1058,19 @@ async def comments_summary(request: Request):
 
     _walk(state.root_task)
     return result
+
+
+@app.get("/api/search-index")
+async def search_index(request: Request):
+    """Return the client search index for the resolved worktree — one record per
+    node ({path, slug, title, text}).  The page embeds this index at render time;
+    the client re-fetches here on a structural full-reload so live search reflects
+    the current tree state."""
+    state = resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    all_tasks = collect_all_tasks(state.root_task)
+    return _build_search_index(state.root_task, all_tasks)
 
 
 @app.post("/api/task/{path:path}/comment")
@@ -1552,9 +1572,10 @@ def _build_standalone_assets() -> dict[str, str]:
     """Read the vendored render libraries and return the inlined JS/CSS strings the
     standalone template emits in place of the CDN ``<link>``/``<script>`` tags.
 
-    Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` (raw minified JS, emitted
-    as inline ``<script>`` bodies) and ``katex_css`` (KaTeX CSS with every ``@font-face``
-    rewritten to a base64 woff2 ``data:`` URI, emitted as an inline ``<style>``).
+    Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` / ``hljs_js`` /
+    ``hljs_julia_js`` (raw minified JS, emitted as inline ``<script>`` bodies) and
+    ``katex_css`` (KaTeX CSS with every ``@font-face`` rewritten to a base64 woff2
+    ``data:`` URI, emitted as an inline ``<style>``).
     """
     def _read_js(name: str) -> str:
         # Guard against a future re-pin whose body contains a literal </script>
@@ -1570,8 +1591,46 @@ def _build_standalone_assets() -> dict[str, str]:
         "markdown_it_js": _read_js("markdown-it.min.js"),
         "katex_js": _read_js("katex.min.js"),
         "texmath_js": _read_js("texmath.min.js"),
+        "hljs_js": _read_js("highlight.min.js"),
+        "hljs_julia_js": _read_js("languages/julia.min.js"),
         "katex_css": css,
     }
+
+
+# Strip markdown punctuation/fences from a body so the search index matches on
+# readable words rather than `#`, backticks, link syntax, etc.  Cheap and lossy
+# by design — substring search over titles + body prose is the goal.
+_MD_NOISE_RE = re.compile(r"(```.*?```|`[^`]*`)", re.DOTALL)
+_MD_PUNCT_RE = re.compile(r"[#>*_\[\]()|`]+")
+
+
+def _search_text(body: str) -> str:
+    """Flatten a raw markdown body to indexable plain text: drop fenced/inline
+    code, strip markdown punctuation, and collapse whitespace."""
+    if not body:
+        return ""
+    text = _MD_NOISE_RE.sub(" ", body)
+    text = _MD_PUNCT_RE.sub(" ", text)
+    return " ".join(text.split())
+
+
+def _build_search_index(root_task: Task, all_tasks: list[Task]) -> list[dict[str, str]]:
+    """Build the client search index: one record per node (root included) with
+    its tree ``path``, ``slug``, ``title``, and flattened body ``text``.
+
+    Shared by the embedded index (rendered into base.html) and the live
+    ``/api/search-index`` endpoint, so server and standalone search the same
+    fields.  ``collect_all_tasks`` excludes the root, so it is prepended here.
+    """
+    index: list[dict[str, str]] = []
+    for task in [root_task, *all_tasks]:
+        index.append({
+            "path": task.path,
+            "slug": task.slug,
+            "title": task.title or "",
+            "text": _search_text(task.body),
+        })
+    return index
 
 
 def render_standalone_html(
@@ -1579,6 +1638,7 @@ def render_standalone_html(
     output_path: Path | None = None,
     root: str | None = None,
     repo_file_base: str = "",
+    doc_mode: bool = False,
 ) -> str:
     """Render the self-contained standalone dashboard HTML and return it.
 
@@ -1593,7 +1653,9 @@ def render_standalone_html(
     resolve from a ``file://`` open; the HTML itself is not written here.
     *repo_file_base* optionally points file links at a repository browser base
     such as ``https://github.com/owner/repo/blob/sha`` instead of local editor
-    links.
+    links.  *doc_mode* (opt-in) renders the tree as documentation: task-workflow
+    chrome (status badges, summary stats/progress, kanban toggle, children
+    dependency view) is suppressed.  Default output is unchanged.
     """
     full_root = walk_plan(plan_root)
     project_root = str(plan_root.resolve().parent)
@@ -1663,6 +1725,8 @@ def render_standalone_html(
         standalone_images=standalone_images,
         standalone_assets=standalone_assets,
         repo_file_base=repo_file_base.rstrip("/"),
+        doc_mode=doc_mode,
+        search_index=_build_search_index(scoped_root, all_tasks),
     )
 
 
@@ -1671,6 +1735,7 @@ def generate_dashboard(
     output_path: Path | None = None,
     root: str | None = None,
     repo_file_base: str = "",
+    doc_mode: bool = False,
 ) -> Path:
     """Generate a self-contained static HTML dashboard from base.html.
 
@@ -1679,12 +1744,15 @@ def generate_dashboard(
     calls for task data.  Import-compatible with the previous implementation:
     same name, defaults ``output_path`` to ``plan_root / "dashboard.html"``,
     writes the file, prints the path, and returns it.  *root* scopes the export
-    to a subtree (see ``render_standalone_html``).
+    to a subtree (see ``render_standalone_html``).  *doc_mode* renders the tree
+    as a documentation site (chrome suppressed); see ``render_standalone_html``.
     """
     if output_path is None:
         output_path = plan_root / "dashboard.html"
 
-    html = render_standalone_html(plan_root, output_path, root, repo_file_base=repo_file_base)
+    html = render_standalone_html(
+        plan_root, output_path, root, repo_file_base=repo_file_base, doc_mode=doc_mode
+    )
     output_path.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {output_path}")
     return output_path
@@ -1898,6 +1966,7 @@ def serve_background(
     open_browser: bool = True,
     bind_timeout: float = 10.0,
     idle_timeout: float | None = None,
+    doc_mode: bool = False,
 ) -> int:
     """Launch (or reuse) a detached background dashboard server for this repo.
 
@@ -1945,6 +2014,8 @@ def serve_background(
         host,
         "--no-open",
     ]
+    if doc_mode:
+        cmd.append("--doc-mode")
     if idle_timeout is not None:
         cmd += ["--idle-timeout", str(idle_timeout)]
     pid_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2082,6 +2153,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run blocking in this terminal with logs on stdout (default: background)",
     )
     serve_p.add_argument(
+        "--doc-mode",
+        action="store_true",
+        help="Render as a documentation site (suppress task-workflow chrome)",
+    )
+    serve_p.add_argument(
         "--idle-timeout",
         type=float,
         default=None,
@@ -2124,6 +2200,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="",
         help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
     )
+    gen_p.add_argument(
+        "--doc-mode",
+        action="store_true",
+        help="Render as a documentation site (suppress task-workflow chrome)",
+    )
 
     return parser.parse_args(argv)
 
@@ -2145,8 +2226,9 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
     if args.command == "serve":
-        global PLAN_ROOT
+        global PLAN_ROOT, DOC_MODE
         PLAN_ROOT = Path(args.root).resolve()
+        DOC_MODE = args.doc_mode
 
         if not PLAN_ROOT.exists():
             print(f"Error: plan root not found: {PLAN_ROOT}", file=sys.stderr)
@@ -2179,6 +2261,7 @@ def main(argv: list[str] | None = None) -> None:
                 host=args.host,
                 open_browser=not args.no_open,
                 idle_timeout=args.idle_timeout,
+                doc_mode=args.doc_mode,
             )
             sys.exit(rc)
 
@@ -2196,7 +2279,10 @@ def main(argv: list[str] | None = None) -> None:
         output = Path(args.output) if args.output else None
         subtree_root = args.subtree_root or None
         try:
-            generate_dashboard(plan_root, output, root=subtree_root, repo_file_base=args.repo_file_base)
+            generate_dashboard(
+                plan_root, output, root=subtree_root,
+                repo_file_base=args.repo_file_base, doc_mode=args.doc_mode,
+            )
         except KeyError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)

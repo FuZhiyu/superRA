@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if doc_mode %} data-doc-mode="true"{% endif %}>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -12,16 +12,22 @@
 {% if standalone %}
 {# Standalone export: inline the vendored render libraries + font-inlined KaTeX
    CSS so markdown and math render from a moved/offline file with no CDN fetch.
+   highlight.js (common bundle + the julia language module) is inlined the same
+   way so fenced code stays highlighted offline.
    Server mode keeps the CDN tags (the {% else %} branch). #}
 <style>{{ standalone_assets.katex_css }}</style>
 <script>{{ standalone_assets.markdown_it_js }}</script>
 <script>{{ standalone_assets.katex_js }}</script>
 <script>{{ standalone_assets.texmath_js }}</script>
+<script>{{ standalone_assets.hljs_js }}</script>
+<script>{{ standalone_assets.hljs_julia_js }}</script>
 {% else %}
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/languages/julia.min.js"></script>
 {% endif %}
 <style>
 /* ── Light / Dark tokens ── */
@@ -59,6 +65,19 @@
   --kanban-card-bg: var(--bg-card);
   --kanban-card-border: var(--border);
 
+  /* Syntax-highlight tokens (light) — readable on --bg-alt code blocks. */
+  --hl-keyword:  #953f24;
+  --hl-string:   #3f7a3f;
+  --hl-number:   #8a6d1b;
+  --hl-comment:  #9e9890;
+  --hl-function: #2a6496;
+  --hl-title:    #2a6496;
+  --hl-type:     #6a3a8a;
+  --hl-builtin:  #8a6d1b;
+  --hl-meta:     #6b6560;
+  --hl-attr:     #2a6496;
+  --hl-symbol:   #b44d2d;
+
   --shadow-sm: 0 1px 2px rgba(44,42,37,0.06);
   --shadow-md: 0 2px 8px rgba(44,42,37,0.08);
 }
@@ -94,9 +113,39 @@
   --kanban-card-bg: var(--bg-card);
   --kanban-card-border: var(--border);
 
+  /* Syntax-highlight tokens (dark) — readable on --bg-alt code blocks. */
+  --hl-keyword:  #e08070;
+  --hl-string:   #8ec07c;
+  --hl-number:   #d4b64a;
+  --hl-comment:  #706b63;
+  --hl-function: #7ab0e0;
+  --hl-title:    #7ab0e0;
+  --hl-type:     #c690d0;
+  --hl-builtin:  #d4b64a;
+  --hl-meta:     #a09b93;
+  --hl-attr:     #7ab0e0;
+  --hl-symbol:   #e07850;
+
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
 }
+
+/* ── Doc-mode chrome suppression ──
+   When html[data-doc-mode] is set (opt-in --doc-mode export/serve), the tree
+   renders as documentation: task-workflow chrome is hidden so a reader sees a
+   navigable doc site, not a tracker. Strictly additive — these rules are inert
+   without the attribute, so a normal dashboard is unchanged.
+   Suppressed: status badges (sidebar rows, child cards, active-node head),
+   per-group approved progress counts, the header summary stats + progress bar,
+   the Kanban view toggle, and the children dependency ("Subtasks") view (which
+   is meaningless for a docs tree carrying no depends_on edges — see the task
+   Results for this judgment call). Sidebar nav, sections, math, images, code
+   highlighting, hash deep links, and theming are untouched. */
+html[data-doc-mode] .badge,
+html[data-doc-mode] .task-progress { display: none !important; }
+html[data-doc-mode] #summary-bar { display: none !important; }
+html[data-doc-mode] #btn-kanban { display: none !important; }
+html[data-doc-mode] .children-dag { display: none !important; }
 
 /* ── KaTeX theme integration ── */
 .katex { color: var(--text); }
@@ -320,6 +369,91 @@ body {
 .search-sheet-body .hc-search-host { flex-direction: column; align-items: stretch; }
 .search-sheet-body .hc-search,
 .search-sheet-body .hc-select { width: 100%; }
+
+/* ── Full-text search palette ── */
+.search-palette-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 160;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.search-palette-backdrop.open { display: block; opacity: 1; }
+.search-palette {
+  display: none;
+  position: fixed;
+  left: 50%;
+  top: 12vh;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  z-index: 170;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md), 0 12px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.search-palette.open { display: flex; }
+.search-palette-input {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border-lt);
+  background: var(--bg-card);
+  color: var(--text);
+  outline: none;
+}
+.search-palette-input::placeholder { color: var(--text-mute); }
+.search-palette-results {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.search-palette-results:empty { display: none; }
+.search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.search-result[aria-selected="true"],
+.search-result:hover { background: var(--bg-hover); }
+.search-result-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.search-result-path {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+}
+.search-result-snippet {
+  font-size: 11px;
+  color: var(--text-mid);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result mark {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 2px;
+}
+.search-palette-empty {
+  padding: 14px 16px;
+  font-size: 12px;
+  color: var(--text-mute);
+}
 
 /* ── Main content area ── */
 /* The body is a flex column (header + main-content); main-content fills the
@@ -1225,6 +1359,42 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   padding: 1px 4px;
   border-radius: 2px;
 }
+
+/* ── Syntax highlighting (highlight.js) ──
+   Token classes map to the theme-aware --hl-* tokens so highlighted code is
+   readable in both light and dark. Unhighlighted blocks (no language tag or an
+   unknown language) carry no .hljs class and render as plain --text on
+   --bg-alt, exactly as before this feature. */
+.rendered-md pre code.hljs { color: var(--text); background: transparent; padding: 0; }
+.rendered-md .hljs-keyword,
+.rendered-md .hljs-literal,
+.rendered-md .hljs-selector-tag { color: var(--hl-keyword); }
+.rendered-md .hljs-string,
+.rendered-md .hljs-regexp { color: var(--hl-string); }
+.rendered-md .hljs-number { color: var(--hl-number); }
+.rendered-md .hljs-comment,
+.rendered-md .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.rendered-md .hljs-function .hljs-title,
+.rendered-md .hljs-title.function_ { color: var(--hl-function); }
+.rendered-md .hljs-title,
+.rendered-md .hljs-section,
+.rendered-md .hljs-selector-id,
+.rendered-md .hljs-selector-class { color: var(--hl-title); }
+.rendered-md .hljs-type,
+.rendered-md .hljs-class .hljs-title,
+.rendered-md .hljs-title.class_ { color: var(--hl-type); }
+.rendered-md .hljs-built_in,
+.rendered-md .hljs-builtin-name { color: var(--hl-builtin); }
+.rendered-md .hljs-meta { color: var(--hl-meta); }
+.rendered-md .hljs-attr,
+.rendered-md .hljs-attribute,
+.rendered-md .hljs-property { color: var(--hl-attr); }
+.rendered-md .hljs-symbol,
+.rendered-md .hljs-bullet,
+.rendered-md .hljs-variable,
+.rendered-md .hljs-template-variable { color: var(--hl-symbol); }
+.rendered-md .hljs-emphasis { font-style: italic; }
+.rendered-md .hljs-strong { font-weight: 600; }
 .rendered-md blockquote {
   border-left: 3px solid var(--accent);
   padding: 4px 12px;
@@ -1488,6 +1658,13 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
         <option value="postponed">postponed</option>
       </select>
     </span>
+    {#- Full-text search-and-navigate: opens a command-palette overlay that
+        searches node titles AND body text and jumps to the chosen result. Distinct
+        from the title-only sidebar filter (#search-box) above. Keyboard: '/' or
+        Ctrl/Cmd-K opens it; ↑/↓ move, Enter opens, Esc dismisses. -#}
+    <button class="hc-btn" id="btn-find" type="button"
+            aria-haspopup="dialog" title="Search tasks and pages (/ or Ctrl-K)"
+            onclick="openSearchPalette()">Find</button>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
@@ -1507,6 +1684,22 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
             aria-label="Close search" onclick="closeSearchSheet()">&times;</button>
   </div>
   <div class="search-sheet-body" id="search-sheet-body"></div>
+</div>
+
+{#- Full-text search palette: a centered command-palette overlay that searches
+    node titles + body text over the embedded SEARCH_INDEX and navigates to the
+    chosen result via setActive (the same hash-routing path a sidebar click uses).
+    Hidden until opened; works identically in server and standalone modes. -#}
+<div class="search-palette-backdrop" id="search-palette-backdrop" onclick="closeSearchPalette()"></div>
+<div class="search-palette" id="search-palette" role="dialog" aria-modal="true"
+     aria-label="Search tasks and pages">
+  <input type="text" class="search-palette-input" id="search-palette-input"
+         role="combobox" aria-expanded="false" aria-autocomplete="list"
+         aria-controls="search-palette-results" autocomplete="off"
+         placeholder="Search tasks and pages..." oninput="onSearchPaletteInput()"
+         onkeydown="onSearchPaletteKeydown(event)">
+  <ul class="search-palette-results" id="search-palette-results" role="listbox"
+      aria-label="Search results"></ul>
 </div>
 
 <!-- ── Content ── -->
@@ -1644,8 +1837,28 @@ window.fetch = function (input) {
 window.STANDALONE = false;
 {% endif %}
 
+/* Doc-mode: render this tree as documentation rather than a task tracker. Chrome
+   suppression (status badges, summary stats/progress, kanban toggle, children
+   dependency view) is CSS-driven off `html[data-doc-mode]`; this flag gates the
+   one piece built in JS — the active-node head badge. Strictly opt-in (default
+   false), so a normal dashboard is byte-for-byte unchanged. */
+window.DOC_MODE = {{ 'true' if doc_mode else 'false' }};
+
 /* ── Markdown-it setup ── */
-var md = window.markdownit({ html: false, linkify: true });
+/* Syntax-highlight fenced code via highlight.js when a known language tag is
+   present; unknown/absent tags fall through to markdown-it's default escaping
+   (today's plain rendering). The `hljs` class on <code> is what the theme CSS
+   targets, and `language-<lang>` mirrors markdown-it's own convention. */
+function highlightFence(code, lang) {
+  if (lang && window.hljs && hljs.getLanguage(lang)) {
+    try {
+      var out = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+      return '<pre><code class="hljs language-' + lang + '">' + out + '</code></pre>';
+    } catch (e) { /* fall through to plain rendering */ }
+  }
+  return '';  /* '' -> markdown-it uses its default escaped <pre><code> */
+}
+var md = window.markdownit({ html: false, linkify: true, highlight: highlightFence });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
 /* Absolute path of the resolved task root (the dir the CLI/dashboard resolved
@@ -1705,6 +1918,12 @@ var TASK_PATHS = (function () {
   {% for t in all_tasks %}set[{{ t.path | tojson }}] = true;
   {% endfor %}return set;
 })();
+
+/* Full-text search index: one record per node ({path, slug, title, text}) built
+   server-side from titles + flattened body prose. Embedded at render time so it
+   covers both server and standalone; in server mode it is re-fetched from
+   /api/search-index on a structural full-reload so live search stays current. */
+var SEARCH_INDEX = {{ search_index | default([]) | tojson }};
 
 /* Resolve a task-relative href (`task.md`, `../merge/task.md`, `sibling/task.md`)
    against the active task's tree path and, if it names a real task, return that
@@ -1897,6 +2116,190 @@ function showView(view) {
   document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
   if (view === 'kanban') renderKanbanView();
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Full-text search-and-navigate (command palette)
+   ──────────────────────────────────────────────────────────────────────
+   Searches node titles AND flattened body text over SEARCH_INDEX, ranks
+   matches, and on selection navigates exactly as a sidebar click via
+   setActive() (same hash-routing, active highlight, scroll). No network at
+   query time — the index is embedded; in server mode it is refreshed on a
+   structural full-reload (refreshSearchIndex). Keyboard: '/' or Ctrl/Cmd-K
+   opens; ↑/↓ move the active result, Enter opens it, Esc dismisses.
+   ════════════════════════════════════════════════════════════════════════ */
+var _searchResults = [];      /* current result records, in ranked order */
+var _searchActiveIdx = -1;    /* index of the aria-selected result */
+var SEARCH_MAX_RESULTS = 20;
+
+/* Score one record against a lowercased query. Title hits outrank body hits;
+   an earlier match position and a word-start match rank higher. Returns a
+   positive score on a match, 0 on no match. */
+function scoreSearchRecord(rec, q) {
+  var title = (rec.title || '').toLowerCase();
+  var slug = (rec.slug || '').toLowerCase();
+  var text = (rec.text || '').toLowerCase();
+  var score = 0;
+  var ti = title.indexOf(q);
+  if (ti !== -1) {
+    score += 1000 - Math.min(ti, 100);
+    if (ti === 0 || /\s/.test(title.charAt(ti - 1))) score += 200;  /* word start */
+  }
+  if (slug.indexOf(q) !== -1) score += 300;
+  var bi = text.indexOf(q);
+  if (bi !== -1) score += 100 - Math.min(Math.floor(bi / 10), 90);
+  return score;
+}
+
+/* A short body snippet centered on the first query hit, with the match wrapped
+   in <mark>. HTML-escaped so body text can't inject markup. */
+function searchSnippet(rec, q) {
+  var text = rec.text || '';
+  var lower = text.toLowerCase();
+  var i = lower.indexOf(q);
+  if (i === -1) return '';
+  var start = Math.max(0, i - 30);
+  var slice = text.slice(start, i + q.length + 50);
+  var pre = start > 0 ? '…' : '';
+  var matchStart = i - start;
+  var before = escapeHtml(slice.slice(0, matchStart));
+  var hit = escapeHtml(slice.slice(matchStart, matchStart + q.length));
+  var after = escapeHtml(slice.slice(matchStart + q.length));
+  return pre + before + '<mark>' + hit + '</mark>' + after + '…';
+}
+
+function runSearch(query) {
+  var q = (query || '').trim().toLowerCase();
+  if (!q) return [];
+  var scored = [];
+  for (var i = 0; i < SEARCH_INDEX.length; i++) {
+    var s = scoreSearchRecord(SEARCH_INDEX[i], q);
+    if (s > 0) scored.push({ rec: SEARCH_INDEX[i], score: s });
+  }
+  scored.sort(function(a, b) { return b.score - a.score; });
+  return scored.slice(0, SEARCH_MAX_RESULTS).map(function(x) { return x.rec; });
+}
+
+function renderSearchResults(query) {
+  var list = document.getElementById('search-palette-results');
+  var input = document.getElementById('search-palette-input');
+  if (!list) return;
+  _searchResults = runSearch(query);
+  _searchActiveIdx = _searchResults.length ? 0 : -1;
+  if (!query.trim()) {
+    list.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  if (!_searchResults.length) {
+    list.innerHTML = '<li class="search-palette-empty">No matches.</li>';
+    input.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  var q = query.trim().toLowerCase();
+  list.innerHTML = _searchResults.map(function(rec, idx) {
+    var snippet = searchSnippet(rec, q);
+    var pathLabel = rec.path || 'root';
+    return '<li class="search-result" role="option" data-idx="' + idx + '"'
+      + (idx === 0 ? ' aria-selected="true"' : '')
+      + ' onmousedown="onSearchResultClick(event, ' + idx + ')">'
+      + '<span class="search-result-title">' + escapeHtml(rec.title || pathLabel) + '</span>'
+      + '<span class="search-result-path">' + escapeHtml(pathLabel) + '</span>'
+      + (snippet ? '<span class="search-result-snippet">' + snippet + '</span>' : '')
+      + '</li>';
+  }).join('');
+  input.setAttribute('aria-expanded', 'true');
+}
+
+function highlightSearchResult(idx) {
+  var list = document.getElementById('search-palette-results');
+  if (!list) return;
+  var items = list.querySelectorAll('.search-result');
+  items.forEach(function(el, i) {
+    if (i === idx) {
+      el.setAttribute('aria-selected', 'true');
+      el.scrollIntoView({ block: 'nearest' });
+    } else {
+      el.removeAttribute('aria-selected');
+    }
+  });
+  _searchActiveIdx = idx;
+}
+
+function chooseSearchResult(idx) {
+  var rec = _searchResults[idx];
+  if (!rec) return;
+  closeSearchPalette();
+  setActive(rec.path || '');
+}
+
+function onSearchResultClick(event, idx) {
+  /* mousedown (not click) so the choice fires before the input's blur tears the
+     palette down. */
+  event.preventDefault();
+  chooseSearchResult(idx);
+}
+
+function onSearchPaletteInput() {
+  renderSearchResults(document.getElementById('search-palette-input').value);
+}
+
+function onSearchPaletteKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeSearchPalette();
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    if (_searchResults.length) highlightSearchResult((_searchActiveIdx + 1) % _searchResults.length);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (_searchResults.length) highlightSearchResult((_searchActiveIdx - 1 + _searchResults.length) % _searchResults.length);
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    if (_searchActiveIdx >= 0) chooseSearchResult(_searchActiveIdx);
+  }
+}
+
+function openSearchPalette() {
+  var backdrop = document.getElementById('search-palette-backdrop');
+  var palette = document.getElementById('search-palette');
+  var input = document.getElementById('search-palette-input');
+  if (!palette || !input) return;
+  backdrop.classList.add('open');
+  palette.classList.add('open');
+  input.value = '';
+  renderSearchResults('');
+  input.focus();
+}
+
+function closeSearchPalette() {
+  var backdrop = document.getElementById('search-palette-backdrop');
+  var palette = document.getElementById('search-palette');
+  if (backdrop) backdrop.classList.remove('open');
+  if (palette) palette.classList.remove('open');
+}
+
+/* Refresh the embedded index from the server after a structural full-reload so
+   live search reflects the current tree. No-op in standalone (no server). */
+async function refreshSearchIndex() {
+  if (window.STANDALONE) return;
+  try {
+    var resp = await fetch(wtUrl('/api/search-index'));
+    if (resp.ok) SEARCH_INDEX = await resp.json();
+  } catch (e) { /* keep the embedded index on failure */ }
+}
+
+/* Global key shortcut: '/' or Ctrl/Cmd-K opens the palette (unless the user is
+   already typing in a field). */
+document.addEventListener('keydown', function(event) {
+  var inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
+  if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
+    event.preventDefault();
+    openSearchPalette();
+  } else if (event.key === '/' && !inField) {
+    event.preventDefault();
+    openSearchPalette();
+  }
+});
 
 /* ── Uncap helper: remove max-height after expand transition finishes ── */
 function uncapAfterTransition(el) {
@@ -2344,7 +2747,7 @@ async function loadActiveNode(path) {
     region.innerHTML =
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
-      + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
+      + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
       + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
       + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
@@ -3666,6 +4069,9 @@ async function onFullReload() {
   var expanded = getExpandedNavPaths();
   await loadNavTree();
   await restoreExpandedNavPaths(expanded);
+  /* The tree shape/content changed — refresh the search index so live search
+     reflects the new state. */
+  await refreshSearchIndex();
   /* Refresh PROJECT_ROOT/selector before re-rendering the active card so the VS
      Code button bakes in the current worktree's root. */
   await fetchWorktrees();
@@ -3861,6 +4267,7 @@ async function applyWorktree(wtId, path) {
   ACTIVE_WT = wtId || '';
   reconnectSse();
   await loadNavTree();
+  await refreshSearchIndex();
   await fetchWorktrees();
   var target = resolveSurvivingPath(path || '');
   restoring = true;

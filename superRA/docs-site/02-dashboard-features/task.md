@@ -1,6 +1,6 @@
 ---
 title: "Dual-Use Dashboard Features for Doc Rendering"
-status: not-started
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-10
