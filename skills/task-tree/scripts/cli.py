@@ -139,6 +139,10 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         _append_optional(argv, "--output", args.output)
         _append_optional(argv, "--root", args.subtree)
         _append_optional(argv, "--repo-file-base", args.repo_file_base)
+        # Accept --doc-mode either before the `export` subcommand (parent flag) or
+        # after it (the export-scoped flag) — both land the same generate flag.
+        if args.doc_mode or args.export_doc_mode:
+            argv.append("--doc-mode")
     elif args.dashboard_command == "artifact":
         _run_dashboard_artifact(args)
         return
@@ -156,6 +160,8 @@ def _run_dashboard(args: argparse.Namespace) -> None:
             argv.append("--no-open")
         if args.foreground:
             argv.append("--foreground")
+        if args.doc_mode:
+            argv.append("--doc-mode")
     try:
         _module_main("plan_dashboard", argv)
     except ImportError as exc:
@@ -411,6 +417,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run blocking in this terminal with logs on stdout (default: background)",
     )
+    dashboard.add_argument(
+        "--doc-mode",
+        action="store_true",
+        help="Render as a documentation site (suppress task-workflow chrome)",
+    )
     dash_sub = dashboard.add_subparsers(dest="dashboard_command")
     export = dash_sub.add_parser("export", help="Export a static dashboard HTML file")
     export.add_argument(
@@ -424,6 +435,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--repo-file-base",
         default="",
         help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
+    )
+    export.add_argument(
+        "--doc-mode",
+        action="store_true",
+        dest="export_doc_mode",
+        help="Render as a documentation site (suppress task-workflow chrome)",
     )
     artifact = dash_sub.add_parser("artifact", help="Set up dashboard artifact publishing")
     artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
