@@ -77,9 +77,18 @@ New flags on `generate` and `dashboard export` (forwarded through `cli.py`): `--
 - **Local build:** `docs/build_site.sh` produces all three files; missing-input and empty-output guards exercised by the structure of the script.
 - **Real-artifact (headless Chrome, `file://` open):** the doc-mode `index.html` opens on the landing page ("superRA Documentation"), carries `data-doc-mode="true"`, embeds a 25-record search index covering every doc node, and renders highlighted code blocks (`<code class="hljs …">`) on the how-to pages. Authority links on `#/03-concepts/01-the-workflow` resolve to real blob URLs (`…/skills/superplan/SKILL.md`, …); the `task.md` button resolves to `…/docs/site/03-concepts/01-the-workflow/task.md`. On `#/06-showcase` the two `*-tree.html` links stay relative and no `.html` link is wrongly rebased to GitHub. The demo-tree export's body links resolve to `…/docs/showcase-demo/…` (the `docs/` lead restored). No href anywhere carries the bug signature (`blob/<sha>/site/…` without the `docs/` lead).
 
-### Live deploy (in-branch verification)
+### Live deploy (in-branch verification) — build green, deploy gated to `main`
 
-Per the resolved stop point, the live path was taken: the workflow file was seeded onto `main` as a single-file commit (Contents API, commit `84715d69`) so GitHub registers `workflow_dispatch`, then dispatched against this branch with `--ref better-handoff-doc`. Deploy outcome and published-URL spot-check recorded below.
+Per the resolved stop point, the live path was taken: the workflow file was seeded onto `main` as a single-file commit (Contents API, commit `84715d69`) so GitHub registers `workflow_dispatch`, then dispatched against this branch with `--ref better-handoff-doc` (run `27329930220`).
+
+Outcome: the **build job succeeded** — uv install, `docs/build_site.sh _site`, and the Pages-artifact upload all green (16s). The **deploy job was rejected** before running any step (0 steps, immediate failure) because the `github-pages` environment carries a **custom deployment-branch policy that allows only `main`** (`deployment_branch_policy.custom_branch_policies: true`; allowed branches = `[main]`). A feature branch therefore cannot publish to the live site, which is correct — the live URL is the production custom domain `http://fuzhiyu.me/superRA/`, and an unmerged branch should not overwrite it.
+
+This is the stop point's fallback path: the exported site artifact is verified (CI build green + the headless-Chrome checks above on the locally built artifact), and the live-URL deploy is a **landing-time step**, not a feature-branch action. Two researcher-owned options at landing, neither taken here since both are deploy-policy / merge decisions:
+
+- **Land first (recommended):** merge the workstream to `main`; the push trigger (already on `main` via the seed) then builds and deploys to `fuzhiyu.me/superRA/` automatically, within the existing `main`-only policy. Spot-check the published landing page, sidebar nav, search, highlighted code, deep links, and both showcase exports at that point.
+- **Pre-land live check (optional):** temporarily add `better-handoff-doc` to the `github-pages` environment's allowed deployment branches and re-dispatch — this publishes the unmerged branch to the production domain, so it is a deliberate researcher call.
+
+The push-trigger run that fired on `main` from the seed commit (run `27329855405`) failed as expected: `main` does not yet carry `docs/build_site.sh` or the docs sources, so the build has nothing to build. It goes green once the workstream lands.
 
 ### Follow-ups for `09-readme-front-door` and landing
 
