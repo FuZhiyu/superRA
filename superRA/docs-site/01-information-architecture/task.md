@@ -1,6 +1,6 @@
 ---
 title: "Information Architecture + Docs-Tree Authoring Contract"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-10
@@ -61,6 +61,7 @@ This is the information architecture for the superRA documentation site, plus th
 | Domain skills (what they add, when they load) | **Concepts › Skills & Agents** | Landing, Reference › Skills |
 | Autonomy-with-human-in-the-loop | **Concepts › The Workflow** | — |
 | Adaptive/composable / re-entry | **Concepts › The Workflow** | — |
+| Hooks (what runs automatically, per-harness coverage) | **Reference › Hooks** | How-to › Install & Set Up |
 | Glossary of superRA terms | **Reference › Glossary** | every page (link target) |
 
 *Journeys (the "how"):*
@@ -118,6 +119,7 @@ The site is a single hash-routed standalone export; the nav tree below is the `d
 | `05-reference/04-skills-and-agents/` | Skill inventory and the Stage → skill load manifest, as a lookup. | `using-superRA` §Skill Inventory & §Skill-Load Manifest, `skills/CATEGORIES.md` | 06-reference |
 | `05-reference/05-glossary/` | Every superRA term defined once. | (definitions; links to owning skills) | 06-reference |
 | `05-reference/06-faq/` | Common questions: harness choice, when to skip phases, public-repo data hygiene. | `README.md`, `CLAUDE.md` | 06-reference |
+| `05-reference/07-hooks/` | Hooks lookup: each hook's trigger, purpose, and Claude Code vs Codex coverage. | `hooks/` (hook sources), `docs/README.codex.md` §Hook Coverage | 06-reference |
 | `06-showcase/` | An embedded real task-tree export proving the dogfooding claim. | a sanitized real `superRA/` subtree export | 07-showcase |
 
 Reference pages stay thin per Planner Guidance: each is a short human framing plus a link into the authoritative skill file, never a paraphrase that will drift. `01-welcome/` and the `03-concepts/*` pages carry original teaching prose because no skill file is written for this audience.
@@ -153,7 +155,7 @@ The current [README.md](../../../README.md) becomes a *front door*: a tight pitc
 | Domain Skills (table + roadmap) | **Moves** to `03-concepts/04-skills-and-agents/` and `05-reference/04-skills-and-agents/`; README keeps a one-line list. |
 | Utility Skills (table) | **Moves** to `05-reference/04-skills-and-agents/`; dropped from README body. |
 | Agents (table) | **Moves** to `03-concepts/03-roles-and-review/`; dropped from README body. |
-| Hooks (table) | **Moves** to `05-reference/` (a hooks lookup, sibling of CLI/status); dropped from README body. |
+| Hooks (table) | **Moves** to `05-reference/07-hooks/`; dropped from README body. |
 | Installation (Claude Code / Codex / Other Platforms) | **Stays** — install is the README's job as the GitHub landing; `04-how-to/01-install-and-set-up/` mirrors and expands it (absorbing `docs/README.codex.md` detail). |
 | Contributing | **Stays** — points contributors to `CLAUDE.md`; not site content (the site targets researchers, not contributors). |
 | Upstream | **Stays** — attribution belongs on the repo front door. |
@@ -172,3 +174,4 @@ The empty `docs/site/` tree was created from §2 via `superra task create`, one 
 ## Review Notes
 
 1. **MAJOR — Hooks content has a disposition that points at a non-existent page; the objective's README cross-check fails here.** §4's disposition table routes [README.md §Hooks](../../../README.md#L110) to "`05-reference/` (a hooks lookup, sibling of CLI/status)", but the §2 sitemap lists no hooks page under `05-reference/` (its six children are task-file, cli-commands, status-and-frontier, skills-and-agents, glossary, faq), and the scaffold accordingly created no hooks node (`docs/site/05-reference/` has no hooks child). Hooks is also absent from §1's teaching inventory. So the Hooks README section is dispositioned to a destination that does not exist in the sitemap or the scaffold — when `06-reference` is dispatched, the moved-out Hooks content has no committed home. This is exactly the failure the objective's validation gate ("every README section has a disposition; no concept/journey/README section left without a home") is meant to catch: a named-but-dangling disposition is not a real home. Fix by either (a) adding a hooks reference page to the §2 sitemap and scaffolding the node (e.g. `05-reference/07-hooks/`), or (b) folding Hooks into an existing reference page (e.g. CLI/commands or skills-and-agents) and rewriting the §4 disposition to name that real page — then re-run the README cross-check so no other section dangles.
+   → implemented: took option (a) — added the `05-reference/07-hooks/` row to the §2 sitemap (authority: `hooks/` sources + `docs/README.codex.md` §Hook Coverage), added the Hooks concept row to §1's teaching inventory, rewrote the §4 disposition to name `05-reference/07-hooks/`, and scaffolded the node ([docs/site/05-reference/07-hooks/task.md](../../../docs/site/05-reference/07-hooks/task.md)); re-ran the README cross-check — every §4 move destination now names a page that exists in both sitemap and scaffold, no other section dangles.
