@@ -1,6 +1,6 @@
 ---
 title: "Information Architecture + Docs-Tree Authoring Contract"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-10
@@ -170,8 +170,3 @@ Disposition of the absorb/link candidates named in Planner Guidance: `docs/READM
 The empty `docs/site/` tree was created from §2 via `superra task create`, one node per sitemap row, each with `title` set and an empty `## Objective` placeholder for its owning content task to fill. Verify with `./superRA/superra task tree --root docs/site` (the docs tree is a standalone task root, separate from `superRA/`).
 
 **Stop point reached:** this IA document is ready for researcher approval before content tasks 03–07 are dispatched.
-
-## Review Notes
-
-1. **MAJOR — Hooks content has a disposition that points at a non-existent page; the objective's README cross-check fails here.** §4's disposition table routes [README.md §Hooks](../../../README.md#L110) to "`05-reference/` (a hooks lookup, sibling of CLI/status)", but the §2 sitemap lists no hooks page under `05-reference/` (its six children are task-file, cli-commands, status-and-frontier, skills-and-agents, glossary, faq), and the scaffold accordingly created no hooks node (`docs/site/05-reference/` has no hooks child). Hooks is also absent from §1's teaching inventory. So the Hooks README section is dispositioned to a destination that does not exist in the sitemap or the scaffold — when `06-reference` is dispatched, the moved-out Hooks content has no committed home. This is exactly the failure the objective's validation gate ("every README section has a disposition; no concept/journey/README section left without a home") is meant to catch: a named-but-dangling disposition is not a real home. Fix by either (a) adding a hooks reference page to the §2 sitemap and scaffolding the node (e.g. `05-reference/07-hooks/`), or (b) folding Hooks into an existing reference page (e.g. CLI/commands or skills-and-agents) and rewriting the §4 disposition to name that real page — then re-run the README cross-check so no other section dangles.
-   → implemented: took option (a) — added the `05-reference/07-hooks/` row to the §2 sitemap (authority: `hooks/` sources + `docs/README.codex.md` §Hook Coverage), added the Hooks concept row to §1's teaching inventory, rewrote the §4 disposition to name `05-reference/07-hooks/`, and scaffolded the node ([docs/site/05-reference/07-hooks/task.md](../../../docs/site/05-reference/07-hooks/task.md)); re-ran the README cross-check — every §4 move destination now names a page that exists in both sitemap and scaffold, no other section dangles.
