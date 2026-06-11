@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-23
@@ -33,6 +33,23 @@ Integration of `better-handoff` onto `origin/main` (2026-06-10). `BASE_REF=origi
 - [ ] Integrated
 - [ ] Docs finalized
 - [ ] Final action (PR)
+
+## Review Notes
+
+Branch-level integration review of `03b68d6b..HEAD` (2026-06-10). Generated-artifact sync, Project Doc Audit, surviving-diff sampling, deletions/renames, and the pytest suite all pass; findings below are confined to the shipped shell-test contract surface in `tests/`, which this branch's skill/reference reorganization broke without updating.
+
+1. **MAJOR — [tests/test-sync-integration-contract.sh](../tests/test-sync-integration-contract.sh) fails from a clean checkout (6 assertions); regression introduced by this branch.** The test passed on base `03b68d6b` (where [skills/handoff-doc/references/plan-anatomy.md](../skills/handoff-doc/references/plan-anatomy.md) held the Sync Map / Sync impact contract, 9 `## Sync Map` hits). This branch deprecated `handoff-doc` to a 2-line stub and relocated that contract into [skills/semantic-merge/references/workflow-sync-author.md](../skills/semantic-merge/references/workflow-sync-author.md), [skills/superintegrate/SKILL.md](../skills/superintegrate/SKILL.md), and [skills/task-tree/references/task-file-contract.md](../skills/task-tree/references/task-file-contract.md), but the assertions still grep the old `plan-anatomy.md` location and pre-redesign exact strings. The six failing cases are all stale-location/stale-string, not lost contract — the semantic content survives:
+   - "Plan anatomy defines Sync Map section" / "...Integrate does not turn Sync notes into backlog" / "...Sync impact task-local and temporary" — content moved out of `plan-anatomy.md`.
+   - "Integration review does not re-review semantic coherence" — text still present in [skills/superintegrate/SKILL.md:198-199](../skills/superintegrate/SKILL.md#L198-L199) but line-wrapped, so the substring `Do not recreate incoming-intent` no longer matches.
+   - "Integration reviewer consumes Sync impact context" — reviewer Sync-impact handling survives in [agents/reviewer.md:97](../agents/reviewer.md#L97) (reworded; the literal `As **integration reviewer**, consume task-local ...` is gone).
+   - "Planning workflow routes writing to planning reference" — routing now via the §Domain table `superRA:writing` in [skills/superplan/SKILL.md:64](../skills/superplan/SKILL.md#L64) rather than the literal `load \`skills/writing/references/planning.md\``.
+   Fix: update these assertions to the relocated owners/strings (or retire the ones whose contract a current test already covers) so the contract test tracks the redesigned surface.
+
+2. **MAJOR — [tests/check-harness-compatibility.sh](../tests/check-harness-compatibility.sh) fails from a clean checkout (exit 1); regression introduced by this branch.** Assertion at [tests/check-harness-compatibility.sh:86](../tests/check-harness-compatibility.sh#L86) requires the literal `superRA:theory-modeling` in [skills/using-superRA/SKILL.md](../skills/using-superRA/SKILL.md). On base `03b68d6b` the SKILL.md carried that qualified string and the test passed; the branch's §Skill Inventory rewrite now references domain skills bare-backticked (`` `theory-modeling` ``, matching `` `econ-data-analysis` ``), dropping the qualified form, so the assertion fails. [SEMANTIC_MERGE.md:44](../SEMANTIC_MERGE.md#L44) records this as a "pre-existing" residual carried from a prior internal merge, but it is a real failure relative to the integration base `03b68d6b` and ships in this range. Fix: either restore a `superRA:theory-modeling` reference in the manifest if the qualified form is the intended contract, or relax the assertion to the bare-backtick convention the inventory now uses (consistent with how `econ-data-analysis` is asserted).
+
+3. **MINOR (advisory, not in the committed diff) — stale untracked working-tree cruft at `skills/task-system/`.** Left over from the pre-rename skill path: only `.venv/`, `__pycache__/`, `.pytest_cache/` (all gitignored, zero tracked files, not in `03b68d6b..HEAD`). It will not ship, but a clean `rm -rf skills/task-system` avoids confusion with the renamed `skills/task-tree`.
+
+Scope note: [tests/hooks/test-codex-e2e-cli.sh](../tests/hooks/test-codex-e2e-cli.sh) also exits non-zero locally, but that is the intentionally-optional Codex CLI smoke test (requires a logged-in `codex exec` session and spends model turns); its failure is environmental, not a branch defect.
 
 ## Integration Notes
 
