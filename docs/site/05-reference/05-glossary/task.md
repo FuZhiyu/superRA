@@ -23,7 +23,7 @@ A branch task has children and frames their shared context in its `## Objective`
 Every task has a `status` and, optionally, `depends_on` siblings.
 
 **Frontier**
-The set of leaf tasks that are ready to dispatch right now — their status is `not-started` and all `depends_on` siblings are `approved`.
+The set of leaf tasks that are ready to dispatch right now — their status is `not-started` (or an interrupted `in-progress`) and all `depends_on` siblings are `approved`.
 The orchestrator dispatches frontier tasks; as they reach `approved`, their downstream dependents join the frontier.
 See [Status and Frontier](#/05-reference/03-status-and-frontier).
 

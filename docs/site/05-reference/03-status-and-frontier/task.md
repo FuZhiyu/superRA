@@ -39,7 +39,7 @@ Reviewers own `implemented → revise`, `implemented → approved`, and `approve
 
 ## The frontier
 
-The **frontier** is the set of leaf tasks that are ready to dispatch right now — their status is `not-started` and all their `depends_on` siblings are `approved`.
+The **frontier** is the set of leaf tasks that are ready to dispatch right now — their status is `not-started` (or an interrupted `in-progress`) and all their `depends_on` siblings are `approved`.
 
 ```bash
 ./superRA/superra task frontier
@@ -50,10 +50,13 @@ As tasks move to `approved`, their downstream dependents enter the frontier.
 
 ## Status rollup
 
-A branch task's status is computed from its children:
+A branch task's status is computed from its children, with these rules checked in order:
 
 - `approved` if all active (non-`archived`, non-`postponed`) children are `approved`.
-- `in-progress` if any child is `in-progress`, `implemented`, or `revise`.
-- `not-started` if all children are `not-started`.
+- `revise` if any child is `revise`.
+- `in-progress` if any child is `in-progress` or `implemented`, or if some (but not all) children are `approved`.
+- `not-started` otherwise.
+
+Parked (`archived` / `postponed`) children are excluded from the computation; the all-parked edge case is covered by the authority above.
 
 Run `./superRA/superra task check --propagate-all` after bulk edits to recompute stored rollups.
