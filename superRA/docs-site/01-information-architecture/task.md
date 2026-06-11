@@ -27,7 +27,7 @@ Keep reference pages thin where a skill file already serves humans well — a br
 
 ## Results
 
-This is the information architecture for the superRA documentation site, plus the authoring contract every content task (03–08) follows. It is the artifact the researcher approves before any page is drafted. The empty docs tree is scaffolded at [docs/site/](../../../docs/site/) from the sitemap in §2; each node carries only a `title` and an empty `## Objective` to be filled by its owning content task.
+This is the information architecture for the superRA documentation site, plus the authoring contract every content task (03–08) follows. It is the artifact the researcher approves before any page is drafted — **approved as-is by the researcher 2026-06-11** (including the Landing + Showcase additions alongside the Diátaxis quadrants; the three advisory placement warnings stand as accepted no-action). The empty docs tree is scaffolded at [docs/site/](../../../docs/site/) from the sitemap in §2; each node carries only a `title` and an empty `## Objective` to be filled by its owning content task.
 
 ### 1. Audience model and teaching inventory
 
