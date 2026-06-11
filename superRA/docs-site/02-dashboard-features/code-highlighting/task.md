@@ -1,6 +1,6 @@
 ---
 title: "Syntax Highlighting for Fenced Code Blocks"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-10

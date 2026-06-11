@@ -1,6 +1,6 @@
 ---
 title: "Client-Side Search Over Tasks/Pages"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-10
