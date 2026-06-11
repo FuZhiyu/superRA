@@ -64,8 +64,8 @@ Comments are also shown inline when you run `task read`.
 
 ```bash
 ./superRA/superra task check                  # audit status, dependency integrity, cycles
-./superRA/superra task check --fix-status     # auto-fix legacy status values
-./superRA/superra task check --propagate-all  # re-run parent status rollup
+./superRA/superra task status fix             # repair branch statuses to match child rollups
+./superRA/superra task status propagate       # re-run parent status rollup after bulk edits
 ```
 
 Run `task check` after any bulk operation or raw filesystem change.
