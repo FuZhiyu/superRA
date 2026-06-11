@@ -69,9 +69,10 @@ The PostToolUse hook still revalidates raw filesystem moves and preserves the ol
 `superra task check` is the tree's validation entry point. Run it after any bulk operation or raw filesystem change to audit status validity, dependency integrity, and cycle-free ordering:
 
 ```bash
-superra task check                   # validate full tree; prints findings grouped by task
-superra task check --fix-status      # auto-fix invalid status values (e.g. legacy "completed")
-superra task check --propagate-all   # re-run parent status rollup after bulk edits
+superra task check                    # validate full tree; prints findings grouped by task
+superra task check --category status  # limit to one category: status, dependency, rollup, placement
+superra task status fix               # repair branch status fields to match child rollups
+superra task status propagate         # re-run parent status rollup after bulk edits
 ```
 
 Findings are prefixed `[ERROR]` (blocking; tree is inconsistent), `[WARNING]` (advisory), or `[INFO]` (informational). After recovering from a raw `mv` / `git mv`, run `superra task check` before the next agent dispatch.
