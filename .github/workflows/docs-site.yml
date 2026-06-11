@@ -1,0 +1,59 @@
+name: Deploy docs site
+
+# Builds the superRA documentation site (docs/build_site.sh) and deploys it to
+# GitHub Pages. workflow_dispatch is available now (the docs workstream lands on
+# a branch); the push trigger goes live once the workstream is on the default
+# branch. GitHub only registers workflow_dispatch for workflow files present on
+# the default branch, so in-branch verification seeds this file onto the default
+# branch first, then dispatches with --ref pointing at the working branch.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/site/**"
+      - "docs/showcase-demo/**"
+      - "docs/build_site.sh"
+      - "skills/task-tree/scripts/**"
+      - ".github/workflows/docs-site.yml"
+  workflow_dispatch:
+
+# Pages deploy needs pages:write + id-token:write; read the repo to build.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight deploy at a time; let a running deploy finish.
+concurrency:
+  group: docs-site-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out triggering ref
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build site
+        run: docs/build_site.sh _site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
