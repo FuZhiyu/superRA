@@ -8,14 +8,12 @@ created: 2026-06-11
 
 ## Objective
 
-<!-- intent: frame the purpose of task files as the human-agent collaboration surface -->
 Task files are how you and the agents collaborate.
 Agents write their findings and await your feedback in `task.md`; you steer the work by reading those files and making decisions.
 This guide explains how to read what agents produce, how to give feedback, and when and how to edit task files yourself.
 
 ## Read what an agent produced
 
-<!-- intent: show the right way to read a task and what the output looks like -->
 After an agent completes a task, its findings live in the `## Results` section of that task's `task.md`.
 Read it using the wrapper command, which also injects the ancestor context the agent inherited:
 
@@ -34,7 +32,6 @@ The reviewer's verdict (`APPROVE` or `REVISE`) and their specific findings are i
 
 ## Review and approve work
 
-<!-- intent: explain the researcher's role in the review step and when agents ask questions -->
 When a reviewer agent approves a task, it sets the status to `approved` and the task advances.
 When a reviewer finds problems, it sets the status to `revise` and writes specific findings in `## Review Notes`.
 
@@ -51,7 +48,6 @@ Record your answer by editing the `## Objective` directly, then tell the agent t
 
 ## Give feedback or change scope mid-flight
 
-<!-- intent: explain the comment mechanism and the material-change decision boundary -->
 The cleanest way to give feedback on in-progress work is to pin a comment on the relevant section of a `task.md` via the dashboard.
 Comments surface to the agent on the next `superra task read`; once addressed, mark them resolved with `superra task comment resolve`.
 
@@ -67,7 +63,6 @@ The agent will load `superplan`, propose the necessary task-tree revisions, and 
 
 ## Edit a task file directly
 
-<!-- intent: explain when and how to edit task files directly, and what sections you own -->
 You can edit `task.md` files directly — they are plain Markdown files.
 The authoring convention is "current state, not a log": edit in place rather than appending "Update:" notes.
 
@@ -83,7 +78,6 @@ The full task-file field contract is in [Reference › Task File](#/05-reference
 
 ## Read the current tree and see what is dispatchable
 
-<!-- intent: show tree/frontier commands for monitoring -->
 To see the full tree with status badges:
 
 ```bash

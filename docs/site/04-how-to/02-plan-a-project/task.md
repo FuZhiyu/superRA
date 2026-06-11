@@ -8,13 +8,11 @@ created: 2026-06-11
 
 ## Objective
 
-<!-- intent: state goal and scope of this guide -->
 You want to break new research work into a task tree so agents can execute it step by step, each task reviewed before the next begins.
 This guide shows you how to scope a project and create its task tree, how to adopt superRA in an existing project, and how to migrate from a legacy `PLAN.md`/`RESULTS.md` setup.
 
 ## Start the planning phase
 
-<!-- intent: show the simplest invocation and explain what superplan does -->
 Tell your harness to plan the work.
 You can use plain language — superRA recognizes planning intent:
 
@@ -31,7 +29,6 @@ For the full planning protocol, see the [`superplan` skill](skills/superplan/SKI
 
 ## Review and approve the task tree
 
-<!-- intent: explain the researcher's role in the approval step -->
 The agent proposes a task tree and stops.
 Read it before approving — the task tree is your contract with the agent.
 
@@ -46,7 +43,6 @@ If the tree needs changes, tell the agent what to fix; it revises and stops agai
 
 ## Design task objectives well
 
-<!-- intent: point to the authoritative guidance without paraphrasing it -->
 The quality of the task tree determines how well agents execute.
 An objective is the implementation and review contract — it tells the agent what success looks like, not how to get there.
 
@@ -60,7 +56,6 @@ Key rules:
 
 ## Adopt superRA on an existing project
 
-<!-- intent: retroactive task-tree creation path -->
 If you have analysis code and results already, you can create a task tree retroactively.
 The `superplan` skill has a retroactive documentation mode: it reads your existing code and results, then creates `task.md` files that mirror the logical structure of the work (not just the file layout), and sets task statuses to match the work already done.
 
@@ -75,7 +70,6 @@ For the full retroactive creation protocol, see [`superplan/references/task-tree
 
 ## Migrate from PLAN.md / RESULTS.md
 
-<!-- intent: migration path for users with legacy artifacts -->
 Earlier superRA projects used `PLAN.md` and `RESULTS.md` files instead of a `superRA/` task tree.
 The `task-tree` skill provides a migration command that converts those files into a proper task tree:
 

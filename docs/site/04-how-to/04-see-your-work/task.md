@@ -8,13 +8,11 @@ created: 2026-06-11
 
 ## Objective
 
-<!-- intent: frame the dashboard as the primary progress-monitoring tool -->
 You want to see what the agents have done, what is in progress, and what comes next.
 The live dashboard gives you a tree view, a dependency DAG, and a kanban board — all auto-updating as tasks progress.
 
 ## Open the live dashboard
 
-<!-- intent: give the single command that launches everything -->
 Run this in your project directory:
 
 ```bash
@@ -31,7 +29,6 @@ To stop it explicitly:
 
 ## Navigate the views
 
-<!-- intent: orient the reader to the three views -->
 The dashboard has three panels:
 
 **Tree view** — the task hierarchy with status badges.
@@ -47,7 +44,6 @@ Useful for seeing how much work is in each stage at a glance.
 
 ## Share a snapshot
 
-<!-- intent: explain the artifact share mechanism for async collaboration -->
 To share the current state of your task tree with a collaborator who does not have direct repo access, set up the GitHub Actions artifact workflow:
 
 ```bash
@@ -59,7 +55,6 @@ Anyone with repository read access can download it; the artifact is a self-conta
 
 ## Export a static snapshot locally
 
-<!-- intent: local static export -->
 To generate a self-contained HTML file without GitHub Actions:
 
 ```bash

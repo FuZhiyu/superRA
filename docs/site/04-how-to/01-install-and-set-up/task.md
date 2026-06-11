@@ -8,13 +8,11 @@ created: 2026-06-11
 
 ## Objective
 
-<!-- intent: state goal and orient reader to what this guide covers -->
 You want superRA running in your harness so you can start a project.
 This guide covers installation on Claude Code, Codex, and other harnesses.
 
 ## Install on Claude Code
 
-<!-- intent: give the one-command path first, then note the development path -->
 Claude Code (v2.1+) supports plugin installation directly from GitHub.
 Run two commands and restart:
 
@@ -37,7 +35,6 @@ Full instructions are in the [README installation section](README.md#installatio
 
 ## Install on Codex
 
-<!-- intent: explain the Codex two-piece structure before giving steps -->
 Codex installation has two pieces that must both be done: the plugin (skills and hooks) and the named agents (`superra_implementer`, `superra_reviewer`).
 The split is deliberate — Codex plugins carry shared skill and hook bundles, while named agents are discovered separately from `~/.codex/agents/`.
 
@@ -68,7 +65,6 @@ For the manual local-clone path, hook coverage details, and troubleshooting, see
 
 ## Install on Other Harnesses
 
-<!-- intent: briefly cover other harnesses and point to upstreams rather than duplicating -->
 superRA ships entry files for several other harnesses:
 
 - **Copilot CLI and any `AGENTS.md`-aware tool** — point the tool at [`AGENTS.md`](AGENTS.md) at the repo root.
@@ -79,7 +75,6 @@ For patterns that apply to any Superpowers-compatible harness, see the [upstream
 
 ## What Gets Installed
 
-<!-- intent: summarize what the researcher gets so they can verify the install -->
 A complete install gives you:
 
 - **Skills** — `superplan`, `superimplement`, `superintegrate`, domain skills, and utility skills, all loadable by name in your harness.

@@ -8,14 +8,12 @@ created: 2026-06-11
 
 ## Objective
 
-<!-- intent: address two related scenarios: session interruption and scope revision -->
 Research is rarely linear.
 Sessions get interrupted, scope changes after results come in, and reviewers send tasks back.
 This guide covers two related situations: picking up work that was interrupted mid-session, and revising the task tree after a discovery or scope change.
 
 ## Resume an interrupted project
 
-<!-- intent: explain how re-entry works and what the agent reads to catch up -->
 When you open a new session on a project in progress, the agent re-reads the `superRA/` task tree to find its place.
 The task tree is durable state — it survives session boundaries because it is committed to git.
 
@@ -37,7 +35,6 @@ For the visual version, run `./superRA/superra dashboard` — see [See Your Work
 
 ## Handle a task sent back for revision
 
-<!-- intent: explain the REVISE loop from the researcher perspective -->
 When a reviewer finds problems, the task's status is set to `revise` and the reviewer's findings appear in `## Review Notes` inside the `task.md`.
 The agent reads the findings and fixes them; you do not need to intervene unless a finding requires a decision only you can make (methodology, scope, data availability).
 
@@ -50,7 +47,6 @@ You can read the active findings at any time:
 
 ## Revise the task tree mid-flight
 
-<!-- intent: explain how to change scope after work has started -->
 When a discovery during implementation or a scope change from your research changes what the project should do, go through `superplan` to update the task tree before the agent continues.
 
 Tell the agent:
