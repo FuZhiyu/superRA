@@ -34,3 +34,14 @@ The `slide-design` domain vertical is complete and verified. It teaches audience
 - **Vertical** ([01-add-slide-design-domain-vertical](01-add-slide-design-domain-vertical/task.md)) — `skills/slide-design/SKILL.md` plus stage-scoped references (`planning.md`, `beamer-techniques.md`, `beamer-overlays.md`, `layout-checks.md`, `integration.md`), a house Beamer starter template (`assets/beamer-starter-template.tex`), and `scripts/check_slide_layout.py` for nonvisual layout triage (compile errors, missing assets, overfull boxes, likely-wrapped bullets, boundary text). Registered in `using-superRA` (inventory + domain add-on), `superplan` Phase 2 verticals table, `CATEGORIES.md`, `README.md`, and the skill-triggering test runner.
 
 The nine child tasks under the vertical (`01`–`09`) cover the starter template, layout-checker hardening, reference dedup, Mondrian chrome refinement, the shared checklist + inventory gate, resizebox-scope reconciliation, the non-Beamer fallback, placeholder detection, and the highlight palette — all `approved`.
+
+### Verification
+
+- `uv run --script skills/slide-design/scripts/check_slide_layout.py skills/slide-design/assets/beamer-starter-template.tex --no-fail` — clean apart from the two known info-level possible-wrap false positives (pages 6, 7).
+- Smoke deck (starter template + a frame calling `\includeifexists{nonexistent-figure.pdf}`) flags `missing-asset` (warning) on the rendered placeholder page.
+- `bash -n tests/skill-triggering/run-all.sh` — syntax OK.
+- `git diff main --stat` — only slide-design surfaces (skill dir, wiring rows, task-tree swap, `.agents/skills` symlink).
+- `git diff main --check` — clean.
+- `bash tests/check-harness-compatibility.sh` — 54/54 PASS; codex agents and direct-mode references up to date; `.agents/skills` packaging invariant now satisfied for slide-design (the remaining `mistral-pdf-to-markdown` / `zotero-paper-reader` gaps pre-exist on `main`).
+
+**Final diff self-check:** `git diff main..HEAD`; surviving hunks are (1) net-new slide-design skill dir + references + script + assets, (2) per-skill wiring rows in `using-superRA`/`CATEGORIES.md`/`README.md`/`superplan` + the skill-triggering prompt/runner + `.agents/skills/slide-design` symlink, (3) the `superRA/` task-tree swap (zotero tree removed, slide-design tree added, root rewritten) — main's convention is that `superRA/` holds the live workstream's tree wholesale. No suspicious hunks: every change ties to the extraction objective; the `superplan` Phase 2 row is authored fresh per the source-branch integration-review finding.
