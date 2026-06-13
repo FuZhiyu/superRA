@@ -24,6 +24,7 @@ This repo is **public**: skill artifacts must not embed personal data. The Beame
 
 - Integration base: `main`. This branch (`slide-design-vertical`) was cut fresh from `main` so its diff against `main` contains only slide-design work.
 - The vertical was developed on `superRA-slides-making` (which carries the unrelated better-handoff lineage) and extracted post-sync (source commit `c96f8bcc`) onto this branch. See [01-add-slide-design-domain-vertical](01-add-slide-design-domain-vertical/task.md) §Results for the provenance note.
+- Integration: APPROVED against `main` (base unchanged at `84715d69`). Final action — PR to `main` opened 2026-06-12.
 
 ## Results
 
