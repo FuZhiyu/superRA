@@ -5,7 +5,7 @@
 superRA turns AI coding agents into disciplined Research Assistants. It ships:
 
 1. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-2. **Domain skills** that teach agents how to do research work properly — currently economic data analysis, theory-modeling, and academic writing; literature review and simulation remain on the roadmap.
+2. **Domain skills** that teach agents how to do research work properly — currently economic data analysis, theory-modeling, academic writing, and slide design; literature review and simulation remain on the roadmap.
 3. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
 
 superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
@@ -21,7 +21,7 @@ AI agents are fast but undisciplined:
 - After several iterations, the results quietly drift from the original, and neither you nor the agent can reconstruct why.
 - Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
 
-superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand (for data analysis: always describe before you transform; for theory-modeling: define objects and assumptions before you manipulate the equations). And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
+superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand (for data analysis: always describe before you transform; for theory-modeling: define objects and assumptions before you manipulate the equations; for slide design: reason from the audience's context before optimizing the slide). And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
 
 ## The Plan-Implement-Integrate Workflow
 
@@ -57,7 +57,7 @@ To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, 
 2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
 3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results (drift tests are the default mechanism), syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
-5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis, theory-modeling, and writing today; literature review and simulation in the pipeline.
+5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis, theory-modeling, writing, and slide design today; literature review and simulation in the pipeline.
 
 ## Domain Skills
 
@@ -68,6 +68,7 @@ Domain skills teach agents the discipline that applies to a particular kind of r
 | **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data, and how to render human-friendly notebook. |
 | **theory-modeling** | Four-gate intuition/interpretability discipline for mathematical modeling — Objects & Notation, Assumptions, Derivations, Verification & Rendering — with stated intuition per symbol, interpretable assumptions, per-step reasons, and proof / special-case / numerical verification rendered to markdown/LaTeX. Adds a task-level rewriting/coherence reference set (objective-first, audience-discipline) surfaced at `Stage: integration`. |
 | **writing** | One principle — preserve substance, polish prose — over three working modes: Review, Polish, Draft. Mode classification picks the load set; loaded references *are* the authority grant (structural edits require `structure.md`). Most writing work runs standalone; large work (whole-section drafts, whole-paper revisions, R&R passes) routes through the full PLAN→IMPLEMENT→INTEGRATE workflow. Per-dimension consistency reviewers (terminology, notation, cross-references, citations, numerical, math, argument-logic, code–paper) dispatch in parallel. |
+| **slide-design** | Audience-context discipline for research slides — context engineering, attention management, simplification, main-vs-backup slide tradeoffs, a house Beamer starter template, and Beamer-first layout triage for wrapped bullets, overflow, and missing assets. |
 
 Future verticals are planned hooks, not commitments:
 

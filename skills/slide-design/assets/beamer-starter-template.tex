@@ -1,0 +1,325 @@
+% Beamer starter template — house design language.
+% Adopted from Julie Zhiyu Fu's slide-design guide deck
+% (https://fuzhiyu.me/blogs/slide_design_guide/slide_deck_design.tex).
+% Copy this file to start a new deck; the demo frames at the bottom show the
+% core overlay idioms and should be replaced with real content.
+\documentclass[10pt,english,aspectratio=169,t]{beamer}
+
+%% ============================================================
+%% PACKAGES
+%% ============================================================
+% Encoding and fonts (FiraSans used when installed, silently skipped otherwise)
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\IfFileExists{FiraSans.sty}{\usepackage[lf,medium]{FiraSans}\renewcommand{\familydefault}{\sfdefault}}{}% medium option = Medium as bold: Fira's Bold/SemiBold are too heavy for full-sentence lead-ins
+
+% Math
+\usepackage{amsmath,mathtools,amssymb,amsthm,bbm,bm}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\diag}{diag}
+
+% Graphics
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing,calc,shapes.geometric,arrows.meta,positioning}
+
+% Colors (Mondrian-inspired palette — the deck's whole color vocabulary)
+\usepackage{xcolor}
+\definecolor{MondrianRed}{HTML}{DD0100}      % semantic highlight A + title chrome
+\definecolor{MondrianBlue}{HTML}{0101FD}     % semantic highlight B + title chrome, links
+\definecolor{MondrianBlack}{HTML}{30303A}    % body text, list markers
+\definecolor{MondrianOffWhite}{HTML}{F9F9F9} % background
+
+% Semantic highlights: if the talk contrasts two central concepts, give each a
+% color and use it ONLY for that concept, deck-wide (rename macros per project,
+% e.g. \riskc/\posc). Other emphasis is bold or overlay-timed \alert<N>.
+\newcommand{\semA}[1]{\textcolor{MondrianRed}{#1}}
+\newcommand{\semB}[1]{\textcolor{MondrianBlue}{#1}}
+
+% Tables, layout, misc
+\usepackage{array,booktabs,tabularx,makecell}
+\usepackage{setspace}\onehalfspacing
+\usepackage{float,textcomp,xspace}
+\PassOptionsToPackage{normalem}{ulem}\usepackage{ulem}
+\usepackage{appendixnumberbeamer}
+
+%% ============================================================
+%% BEAMER THEME AND CONFIGURATION
+%% ============================================================
+\usetheme{metropolis}
+\metroset{titleformat=smallcaps,numbering=fraction,block=transparent,sectionpage=none}
+\useinnertheme{circles}
+\beamertemplatenavigationsymbolsempty
+\setbeamertemplate{footline}[frame number]{}
+\setbeamersize{text margin left=10mm, text margin right=10mm}
+
+% Fast iteration: uncomment to compile only selected labeled frames.
+% \includeonlyframes{roadmap,technical-walkthrough}
+
+% Apply Mondrian color palette
+\setbeamercolor{palette primary}{bg=MondrianBlue,fg=white}
+\setbeamercolor{palette secondary}{bg=MondrianRed,fg=white}
+\setbeamercolor{section in head/foot}{fg=MondrianBlack,bg=MondrianOffWhite}
+\setbeamercolor{section in head/foot shaded}{fg=MondrianBlack!55,bg=MondrianOffWhite}
+\setbeamercolor{background canvas}{bg=MondrianOffWhite}
+\setbeamercolor{normal text}{bg=MondrianOffWhite,fg=MondrianBlack}
+\setbeamercolor{alerted text}{bg=MondrianOffWhite,fg=MondrianRed}
+\setbeamercolor{frametitle}{fg=MondrianBlack,bg=MondrianOffWhite}
+
+% Frame title padding
+\makeatletter
+\setlength{\metropolis@frametitle@padding}{1.2ex}
+\makeatother
+
+% Navigation bar at top (section names; helps the audience orient)
+\makeatletter
+\setbeamertemplate{headline}{%
+  \vspace{0.15em}
+  \begin{beamercolorbox}[wd=\paperwidth, ht=2.6ex, dp=0.ex, leftskip=10mm, rightskip=10mm]{section in head/foot}
+    \insertnavigation{\dimexpr\paperwidth-20mm\relax}
+  \end{beamercolorbox}%
+}
+\makeatother
+
+%% ============================================================
+%% CUSTOM COMMANDS
+%% ============================================================
+% \mathhighlight: math-only highlight box — argument must be a math expression.
+% Background from Mondrian palette (MondrianRed!15) so the deck's color vocabulary stays closed.
+\newcommand{\mathhighlight}[1]{\colorbox{MondrianRed!15}{$\displaystyle#1$}}
+% \slidelink{label}{text} creates clickable jump to frame with [label=...]
+\newcommand{\slidelink}[2]{\hyperlink{#1}{\textcolor{MondrianBlue}{[\underline{#2}]}}}
+% Shows placeholder if figure file is missing (drafts can circulate before figures exist)
+\newcommand{\includeifexists}[2][]{%
+  \IfFileExists{#2}{\includegraphics[#1]{#2}}{%
+    \fbox{\parbox[c][0.5\textheight][c]{0.8\textwidth}{\centering\color{gray}\large Figure not available:\\[0.5em]\texttt{#2}}}%
+  }%
+}
+
+% Table column types: L/C/R{0.3} = 30% width, left/center/right-aligned
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1\textwidth}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1\textwidth}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1\textwidth}}
+\renewcommand\arraystretch{1.5}
+
+\newtheorem*{assumption*}{Assumption}
+
+%% ============================================================
+%% DOCUMENT METADATA
+%% ============================================================
+\title{Deck Title}
+\author{Author Name}
+\date{\today}
+
+%% ============================================================
+%% VISUAL TEMPLATES (frame title, title page, list items)
+%% ============================================================
+% Frame title: Mondrian grid-cell header, kept quiet (chrome is decoration --
+% pleasing but quiet). Small blue cell bounded by the black grid (2.2pt vertical
+% line + full-width 1.6pt rule); flat red plane (title-page proportions,
+% 4.85em x 0.87ex) sitting ON the rule at the right margin. The red is anchored
+% to the RULE (zero-height box drawn just above it), not to the title line, so
+% it stays put when a long title wraps; \hangindent aligns continuation lines
+% with the title text. Box depth 0.9ex keeps smallcaps-title parentheses clear
+% of the rule while staying tight.
+% Wrapped in a macro because metropolis's \appendix hook (progressbar=none)
+% resets headline/frametitle/footline to plain -- re-assert after \appendix
+% (see the appendix section in the document body).
+\newcommand{\MondrianFrametitle}{%
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \vspace{0.6em}
+  \begin{beamercolorbox}[wd=\textwidth, sep=0pt, dp=0.9ex]{frametitle}%
+    \hangindent=\dimexpr0.9em+2.2pt+1.0ex\relax
+    {\color{MondrianBlue}\rule[-0.9ex]{0.9em}{3.4ex}}%
+    {\color{MondrianBlack}\rule[-0.9ex]{2.2pt}{3.4ex}}\hspace{1.0ex}%
+    {\usebeamerfont{frametitle}\insertframetitle\strut}%
+  \end{beamercolorbox}
+  \nointerlineskip
+  \hbox to \textwidth{\hfill\smash{\color{MondrianRed}\rule[0pt]{4.85em}{0.87ex}}}%
+  \nointerlineskip
+  {\color{MondrianBlack}\rule{\textwidth}{1.6pt}}
+  \vspace{-1em}
+}}
+\MondrianFrametitle
+\setbeamertemplate{background}{}
+
+% Title page
+\setbeamertemplate{title page}{%
+  \vfill
+  \begin{beamercolorbox}[wd=\textwidth, sep=0pt]{title}
+    % Mondrian header: color blocks sit directly ON a full-width black grid line (no floating blocks)
+    {\color{MondrianBlue}\rule{3em}{1.4ex}}\hfill{\color{MondrianRed}\rule{4.85em}{0.87ex}}\par\nointerlineskip% phi-wider, phi-flatter red: equal area, asymmetric shape
+    {\color{MondrianBlack}\rule{\textwidth}{1.6pt}}\\[1.6ex]
+    {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vspace{0.8ex}
+    {\usebeamerfont{author}\usebeamercolor[fg]{author}\insertauthor\par}
+    \vspace{0.4ex}
+    {\usebeamerfont{date}\usebeamercolor[fg]{date}\insertdate\par}
+    \vspace{1.0ex}
+    {\color{MondrianBlack}\rule{\textwidth}{1.6pt}}
+  \end{beamercolorbox}
+  \vfill
+}
+
+% Itemize: neutral grayscale squares (darker -> lighter for nesting).
+% Markers stay neutral so red/blue in the text always carry meaning;
+% the chrome (blue + red title blocks) keeps color on every slide.
+% baseline=-0.4ex vertically centers the square on the text line.
+\setbeamertemplate{itemize item}{%
+\tikz[baseline=-0.4ex]{\fill[MondrianBlack] (0,0) rectangle (0.65ex,0.65ex);}}
+\setbeamertemplate{itemize subitem}{%
+\tikz[baseline=-0.4ex]{\fill[MondrianBlack!55] (0,0) rectangle (0.55ex,0.55ex);}}
+\setbeamertemplate{itemize subsubitem}{%
+\tikz[baseline=-0.4ex]{\fill[MondrianBlack!35] (0,0) rectangle (0.45ex,0.45ex);}}
+
+% Enumerate: numbered diamonds (neutral; (n.base) aligns the number with the text baseline)
+\setbeamertemplate{enumerate item}{%
+\tikz[baseline=(n.base)]\node[shape=diamond, inner sep=0.15ex, minimum size=1.35ex, fill=MondrianBlack, text=white, font=\bfseries\scriptsize, align=center](n){\insertenumlabel};}
+\setbeamertemplate{enumerate subitem}{%
+\tikz[baseline=(n.base)]\node[shape=diamond, inner sep=0.12ex, minimum size=1.15ex, fill=MondrianBlack!65, text=white, font=\scriptsize, align=center](n){\insertsubenumlabel};}
+\setbeamertemplate{enumerate subsubitem}{%
+\tikz[baseline=(n.base)]\node[shape=diamond, inner sep=0.10ex, minimum size=1.00ex, draw=MondrianBlack, text=MondrianBlack, font=\tiny, align=center](n){\insertsubsubenumlabel};}
+
+%% ============================================================
+%% OVERLAY COMMAND REFERENCE
+%% Beamer overlay specifications control when content appears
+%% ============================================================
+%%
+%% BASIC OVERLAY SPECS:
+%%   <N>       - Show only on slide N
+%%   <N->      - Show from slide N onwards
+%%   <-N>      - Show up to slide N
+%%   <N-M>     - Show from slide N to M
+%%
+%% INCREMENTAL REVEAL (apply per list: \begin{itemize}[<+->]):
+%%   <+->      - Appear on "next" slide and stay visible
+%%   <+(1)->   - Skip one step, then appear (offset by 1)
+%%   <.->      - Appear on SAME slide as previous <+-> item (no increment)
+%%
+%% CONTENT VISIBILITY:
+%%   \pause        - Simple pause; advances overlay counter
+%%   \onslide<N>   - Content visible on slide N (takes space always)
+%%   \only<N>      - Content exists only on N (no space otherwise)
+%%   \visible<N>   - Like \onslide but can span blocks
+%%   \uncover<N>   - Shows content on N, hidden (but spaced) otherwise
+%%
+%% HIGHLIGHTING:
+%%   \alert<N>{text}   - Highlight text on slide N (uses alerted text color)
+%%   \alert<N,M>{text} - Highlight on multiple specific slides
+%%
+%% ADVANCED:
+%%   <+-| alert@+>     - Reveal incrementally AND alert on appearance
+%%   <only@N>          - Alternative syntax for \only<N> on \item
+%%   <visible@N>       - Alternative syntax for \visible<N> on \item
+%%
+%% FRAME LABELS AND REUSE:
+%%   [label=name]      - Give frame a label for later reference
+%%   \againframe<N>{name} - Show slide N of labeled frame again
+%%   \slidelink{label}{text} - Clickable link to labeled frame
+%%
+%% OVERPRINT ENVIRONMENT:
+%%   \begin{overprint} - Stack content in same space across overlays
+%%     \onslide<N> content
+%%   \end{overprint}
+%%
+%% ============================================================
+
+\begin{document}
+\maketitle
+
+% <1-3> limits this frame to overlays 1-3; [label=roadmap] enables \againframe returns
+\begin{frame}<1-3>[label=roadmap]{Roadmap}
+  \begin{enumerate}[<+->]
+    \setlength{\itemsep}{1em}
+    % \alert<1,4> highlights on overlay 1 AND on the \againframe<4> return
+    \item \alert<1,4>{Context}
+    \item \alert<2,5>{Evidence}
+    \item \alert<3,6>{Mechanism}
+  \end{enumerate}
+\end{frame}
+
+\section{Context}
+
+\begin{frame}{Takeaway or Purpose in the Title}
+  Lead with the question the audience should use to interpret the evidence
+
+  % [<+->] reveals this list one item per click
+  \begin{itemize}[<+->]
+    \item First context point
+    \item Second context point
+      \begin{itemize}[<.->]
+        \item Subpoint appears with its parent, not on a separate click
+      \end{itemize}
+    \item Final takeaway before details
+  \end{itemize}
+\end{frame}
+
+\section{Evidence}
+
+% Roadmap return: re-show overlay 5 of the labeled frame, outside the slide count
+\againframe<5>[noframenumbering]{roadmap}
+
+\begin{frame}[label=technical-walkthrough]{Stable Technical Walkthrough}
+  % overlayarea keeps the layout from jumping as content changes
+  \begin{overlayarea}{\textwidth}{0.58\textheight}
+    \only<1>{Start with the object the audience already understands}
+    \only<2>{Introduce the new object only when needed}
+    \only<3>{State the relationship the audience should notice}
+
+    \vspace{1em}
+    \[
+      \visible<1->{\alert<1>{y_i}}
+      \visible<2->{= \alert<2>{\alpha + \beta x_i}}
+      \visible<3->{+ \alert<3>{\varepsilon_i}}
+    \]
+
+    \begin{itemize}
+      \item<1-> \alert<1>{Outcome}: what we want to explain
+      \item<2-> \alert<2>{Signal}: the variation we use
+      \item<3-> \alert<3>{Residual}: what remains unexplained
+    \end{itemize}
+  \end{overlayarea}
+\end{frame}
+
+\section{Mechanism}
+
+\againframe<6>[noframenumbering]{roadmap}
+
+\begin{frame}{Main Slide With Backup Link}
+  Keep the main path light; send expert detail to backup
+
+  \begin{itemize}[<+->]
+    \item Main claim in one line
+    \item Evidence needed for the typical audience
+    \item<.-> \slidelink{backup-derivation}{Derivation in backup}
+  \end{itemize}
+\end{frame}
+
+%---------------------------------------
+% appendixnumberbeamer keeps backup slides out of the main slide count.
+% Metropolis's \appendix hook resets headline/frametitle/footline to plain:
+% re-assert the Mondrian frame title and frame numbering (appendix-local
+% "1 / m" via appendixnumberbeamer), and swap the nav bar for an empty spacer
+% of the same height so appendix titles keep the same vertical position.
+\appendix
+\MondrianFrametitle
+\metroset{numbering=fraction}
+\setbeamertemplate{headline}{%
+  \vspace{0.15em}
+  \begin{beamercolorbox}[wd=\paperwidth, ht=2.6ex, dp=0.ex]{section in head/foot}\end{beamercolorbox}%
+}
+
+\begin{frame}[label=backup-derivation]{Backup: Derivation}
+  Put rigor here when it would overload the main path
+
+  \[
+    y_i = \alpha + \beta x_i + \varepsilon_i
+  \]
+
+  \slidelink{technical-walkthrough}{Back}
+\end{frame}
+
+\end{document}
