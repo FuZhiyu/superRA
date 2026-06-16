@@ -67,6 +67,17 @@ When inlining, keep alignment syntax consistent and include units in headers:
 ```
 
 
+## Raw HTML
+
+Reach for raw HTML only for layouts markdown cannot express — flow diagrams, side-by-side cards, styled callouts. Prefer plain markdown for prose, lists, tables, code, and math; it is more portable and easier to review.
+
+The dashboard renders task markdown with `html: true` and sanitizes the result with DOMPurify before display, so:
+
+- **`class` and `style` survive** — style inline with `style="..."`, or reach the dashboard CSS tokens (`var(--text)`, `var(--bg-alt)`, etc.) via `class`/`style` so a diagram themes with the page.
+- **Scripts, iframes, event handlers (`onclick=`, `onerror=`), and `javascript:` URLs are stripped.** Anything interactive silently will not survive — build static layouts, not widgets.
+
+HTML-heavy content is **dashboard-first**: GitHub's own markdown renderer strips `style` (and most attributes), so a styled HTML block that looks right in the dashboard renders unstyled on GitHub. Keep the meaning legible without the styling, or keep such content out of files meant to be read on GitHub.
+
 ## References
 
 - `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding). Load when the output includes figures.

@@ -1962,6 +1962,12 @@ var document = { createElement: function (t) { return makeEl(t); } };
 var window = { STANDALONE: false };
 function resolveInternalTaskPath() { return null; }
 function repoFileHref(p) { return p; }
+// renderMarkdown sanitizes md.render output through DOMPurify before DOM
+// insertion. These link/image-rewrite tests run before sanitization matters,
+// so a pass-through stub keeps the rewrite branch exercising real logic. The
+// hostile-input behavior of the real DOMPurify is proven in the browser drive
+// recorded in the task Results.
+var DOMPurify = { sanitize: function (html) { return html; } };
 """
 
 
@@ -1973,7 +1979,9 @@ class TestRenderMarkdownImageRewrite:
             _RENDER_MD_SHIM
             + "var RESOLVED_ROOT = '/abs/root';\n"
             + "var ROOT_PREFIX = " + json.dumps(root_prefix) + ";\n"
+            + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
             + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+            + "var DOC_LOCAL_LINKS = [];\n"
             + defs + "\n"
             + "var body = '![fig](" + src + ")';\n"
             + "var html = renderMarkdown(body, null, " + json.dumps(task_path) + ");\n"
@@ -2182,7 +2190,9 @@ class TestFileLinkConsistency:
         assert m
         fn = m.group(0)
         assert "vscode://file/' + RESOLVED_ROOT + '/'" in fn
-        assert "ROOT_PREFIX ? ROOT_PREFIX + '/' : ''" in fn
+        # GitHub branch uses the repo-root-relative prefix (so a nested tree keeps
+        # its `docs/...` lead), not the bare basename or a hardcoded segment.
+        assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
         # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
         assert "vscode://file/' + RESOLVED_ROOT + '/' + filePath" in BASE_HTML
@@ -2230,9 +2240,11 @@ class TestFileLinkConsistency:
             assert 'id="task-root"' in html
             # The container's own /node/ (empty path) route resolves.
             assert c.get("/node/").status_code == 200
-        # The breadcrumb builds a clickable `root` crumb that ascends via
-        # setActive('') — the entry point that returns to the container.
-        assert "addCrumb('root', '', segs.length === 0)" in BASE_HTML
+        # The breadcrumb builds a clickable root crumb that ascends via
+        # setActive('') — the entry point that returns to the container. The
+        # label is 'root' in tracker mode and the site title in doc-mode, so the
+        # assertion pins the empty-path ascent, not the literal label.
+        assert "addCrumb(rootLabel, '', segs.length === 0)" in BASE_HTML
 
     # --- Subtree export resolved-root basis -------------------------------
 
@@ -2439,6 +2451,41 @@ class TestDashboard:
             True,
         )]
 
+    def test_generate_repo_file_prefix_for_nested_root(self, plan_root):
+        """--repo-file-prefix sets the repo-root-relative prefix for repo links,
+        so a tree below the repo root keeps its leading path instead of the bare
+        basename; default keeps the basename (REPO_ROOT_PREFIX falls back)."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(
+            plan_root, out,
+            repo_file_base="https://github.com/owner/repo/blob/abc123",
+            repo_root_prefix="docs/showcase-demo",
+        )
+        html = out.read_text("utf-8")
+        assert 'var REPO_ROOT_PREFIX = "docs/showcase-demo" || ROOT_PREFIX;' in html
+
+    def test_generate_repo_file_prefix_default_falls_back(self, plan_root):
+        """No --repo-file-prefix -> empty literal, so REPO_ROOT_PREFIX || ROOT_PREFIX
+        resolves to the basename (a tree at the repo root is unaffected)."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(plan_root, out)
+        assert 'var REPO_ROOT_PREFIX = "" || ROOT_PREFIX;' in out.read_text("utf-8")
+
+    def test_cli_dashboard_export_forwards_repo_file_prefix(self, plan_root, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            cli, "_module_main",
+            lambda mod, argv, **kw: calls.append(argv),
+        )
+        cli.main([
+            "dashboard", "export", "--root", str(plan_root),
+            "--repo-file-base", "https://github.com/owner/repo/blob/abc123",
+            "--repo-file-prefix", "docs/showcase-demo",
+        ])
+        argv = calls[0]
+        assert "--repo-file-prefix" in argv
+        assert argv[argv.index("--repo-file-prefix") + 1] == "docs/showcase-demo"
+
     def test_dashboard_html_constant_removed(self):
         """The duplicate hand-maintained template is gone — one source remains."""
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
@@ -2450,7 +2497,7 @@ class TestDashboard:
         Guards the renderMarkdown anchor-translation logic against removal."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
         assert "match(/#L" in src
-        assert "repoFileHref(repoPathPrefix + href)" in src
+        assert "repoFileHref(repoLinkPrefix + href)" in src
 
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
@@ -2927,6 +2974,492 @@ class TestStandaloneSelfContained:
         assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
 
 
+# ---------------------------------------------------------------------------
+# Dual-use dashboard features: doc-mode, code highlighting, client search
+# ---------------------------------------------------------------------------
+
+
+def _docs_plan(tmp_path):
+    """A two-node plan: a root landing page and one child doc page, each with a
+    fenced code block — the minimum to exercise doc-mode, highlighting, and
+    search over titles + body text."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(
+        root / "task.md", "Quickstart Home", "not-started",
+        objective="Welcome to the docs about panel regressions.",
+    )
+    child = root / "01-merge-guide"
+    child.mkdir()
+    _write_task_md(
+        child / "task.md", "Merging Datasets", "approved",
+        objective="How to merge CRSP and Compustat with a left join.\n\n"
+                  "```python\ndf.merge(other, how='left')\n```\n\n"
+                  "```julia\nf(x) = x^2\n```",
+    )
+    return root
+
+
+def _docs_client(plan_root):
+    """A TestClient serving *plan_root* — mirrors the `client` fixture setup so
+    doc-mode/highlight/search tests can serve the docs plan directly."""
+    from starlette.testclient import TestClient
+
+    plan_dashboard.PLAN_ROOT = plan_root
+    plan_dashboard._project_root = str(plan_root.resolve().parent)
+    plan_dashboard._jinja_env = None
+    plan_dashboard.rebuild_tree()
+    return TestClient(plan_dashboard.app, raise_server_exceptions=True)
+
+
+class TestDocMode:
+    """Opt-in doc-mode renders the tree as documentation: task-workflow chrome is
+    suppressed, while a default (no-flag) export stays unchanged."""
+
+    def test_doc_mode_sets_attribute_and_flag(self, tmp_path):
+        """--doc-mode marks <html data-doc-mode> and sets window.DOC_MODE true."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        html = out.read_text("utf-8")
+        assert 'data-doc-mode="true"' in html
+        assert "window.DOC_MODE = true" in html
+
+    def test_default_export_is_not_doc_mode(self, tmp_path):
+        """Without the flag the export carries no doc-mode attribute and the flag
+        is false — the default dashboard is unchanged."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "default.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert 'data-doc-mode="true"' not in html
+        assert "window.DOC_MODE = false" in html
+
+    def test_doc_mode_suppresses_chrome_via_css(self, tmp_path):
+        """Doc-mode output carries the chrome-suppression rules keyed off
+        html[data-doc-mode] (badges, progress, summary bar, kanban toggle, DAG)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        html = out.read_text("utf-8")
+        for selector in (
+            "html[data-doc-mode] .badge",
+            "html[data-doc-mode] #summary-bar",
+            "html[data-doc-mode] #btn-kanban",
+            "html[data-doc-mode] .children-dag",
+        ):
+            assert selector in html, f"missing doc-mode rule: {selector}"
+
+    def test_active_node_badge_gated_on_doc_mode(self):
+        """The one JS-built status badge (active-node head) is gated on
+        !window.DOC_MODE so it never renders in doc-mode."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "(status && !window.DOC_MODE)" in src
+
+    def test_doc_mode_default_off_in_render(self, tmp_path):
+        """generate_dashboard defaults doc_mode off (explicit-opt-in invariant)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "default.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        assert 'data-doc-mode' not in out.read_text("utf-8").split("\n")[1]
+
+    def test_serve_index_carries_doc_mode_flag(self, tmp_path, monkeypatch):
+        """The live index route honors the module DOC_MODE flag set by
+        `serve --doc-mode`."""
+        plan = _docs_plan(tmp_path)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert 'data-doc-mode="true"' in html
+        assert "window.DOC_MODE = true" in html
+
+    def test_serve_index_default_not_doc_mode(self, tmp_path, monkeypatch):
+        """With DOC_MODE off (default) the served page carries no doc-mode."""
+        plan = _docs_plan(tmp_path)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert 'data-doc-mode="true"' not in html
+        assert "window.DOC_MODE = false" in html
+
+    def test_cli_generate_doc_mode_flag(self, tmp_path):
+        """`generate --doc-mode` reaches generate_dashboard."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-doc.html"
+        plan_dashboard.main(
+            ["generate", "--plan-root", str(plan), "--output", str(out), "--doc-mode"]
+        )
+        assert 'data-doc-mode="true"' in out.read_text("utf-8")
+
+    def test_cli_dashboard_export_doc_mode_forwards(self, tmp_path, monkeypatch):
+        """`cli dashboard export --doc-mode` forwards --doc-mode to generate."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-exp.html"
+        captured = {}
+
+        def fake_main(argv):
+            captured["argv"] = argv
+
+        monkeypatch.setattr(cli, "_module_main", lambda mod, argv: fake_main(argv))
+        cli.main([
+            "dashboard", "--root", str(plan), "export",
+            "--output", str(out), "--doc-mode",
+        ])
+        assert "--doc-mode" in captured["argv"]
+
+    def test_cli_dashboard_export_doc_mode_before_subcommand(self, tmp_path, monkeypatch):
+        """--doc-mode also works placed before the `export` subcommand."""
+        plan = _docs_plan(tmp_path)
+        captured = {}
+        monkeypatch.setattr(cli, "_module_main",
+                            lambda mod, argv: captured.__setitem__("argv", argv))
+        cli.main(["dashboard", "--root", str(plan), "--doc-mode", "export"])
+        assert "--doc-mode" in captured["argv"]
+
+    def test_doc_local_links_embedded(self, tmp_path):
+        """--doc-local-link basenames land in the embedded DOC_LOCAL_LINKS so the
+        client leaves those sibling-artifact links relative; default is empty."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(
+            plan, out, doc_mode=True,
+            doc_local_links=["demo-tree.html", "superra-dev-tree.html"],
+        )
+        html = out.read_text("utf-8")
+        assert ('var DOC_LOCAL_LINKS = ["demo-tree.html", "superra-dev-tree.html"];'
+                in html)
+
+    def test_doc_local_links_default_empty(self, tmp_path):
+        """Without --doc-local-link the embedded list is empty (no regression)."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out, doc_mode=True)
+        assert "var DOC_LOCAL_LINKS = [];" in out.read_text("utf-8")
+
+    def test_cli_generate_doc_local_link_repeatable(self, tmp_path):
+        """`generate --doc-local-link` is repeatable and reaches the export."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "cli-doc.html"
+        plan_dashboard.main([
+            "generate", "--plan-root", str(plan), "--output", str(out),
+            "--doc-mode",
+            "--doc-local-link", "demo-tree.html",
+            "--doc-local-link", "superra-dev-tree.html",
+        ])
+        assert ('var DOC_LOCAL_LINKS = ["demo-tree.html", "superra-dev-tree.html"];'
+                in out.read_text("utf-8"))
+
+    def test_cli_dashboard_export_doc_local_link_forwards(self, tmp_path, monkeypatch):
+        """`cli dashboard export --doc-local-link` forwards each to generate."""
+        plan = _docs_plan(tmp_path)
+        captured = {}
+        monkeypatch.setattr(cli, "_module_main",
+                            lambda mod, argv: captured.__setitem__("argv", argv))
+        cli.main([
+            "dashboard", "--root", str(plan), "export", "--doc-mode",
+            "--doc-local-link", "demo-tree.html",
+            "--doc-local-link", "superra-dev-tree.html",
+        ])
+        argv = captured["argv"]
+        assert argv.count("--doc-local-link") == 2
+        assert "demo-tree.html" in argv and "superra-dev-tree.html" in argv
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_doc_mode_link_rewrite_behavioral(self):
+        """Run renderMarkdown under node and assert the doc-mode link branch:
+        a repo-relative authority link resolves repo-root-relative against the
+        blob base (not against the doc node dir), a sibling-export link stays a
+        plain relative href, and with doc-mode off the link is task-relative."""
+        defs = _extract_js_defs(["encodeRepoPath", "repoFileHref",
+                                 "resolveInternalTaskPath", "renderMarkdown"])
+        shim = r"""
+var md = { render: function (text) {
+  var out = text;
+  out = out.replace(/\[([^\]]*)\]\(([^)]+)\)/g,
+    function (_, t, h) { return '<a href="' + h + '">' + t + '</a>'; });
+  return out;
+} };
+function makeEl(tag) {
+  return {
+    tagName: tag.toUpperCase(), _as: [],
+    set innerHTML(html) {
+      var self = this; this._as = [];
+      var am; var are = /<a[^>]*\bhref="([^"]*)"[^>]*>/g;
+      while ((am = are.exec(html))) {
+        (function (val) {
+          var attrs = { href: val };
+          self._as.push({
+            _attrs: attrs,
+            getAttribute: function (n) { return attrs[n] != null ? attrs[n] : null; },
+            setAttribute: function (n, v) { attrs[n] = v; },
+            removeAttribute: function (n) { delete attrs[n]; },
+            classList: { add: function () {} },
+          });
+        })(am[1]);
+      }
+    },
+    get innerHTML() {
+      var out = '';
+      for (var i = 0; i < this._as.length; i++) {
+        out += '<a href="' + (this._as[i]._attrs.href || '') + '"></a>';
+      }
+      return out;
+    },
+    querySelectorAll: function (sel) {
+      if (sel === 'a[href]') return this._as;
+      return [];
+    },
+  };
+}
+var document = { createElement: function (t) { return makeEl(t); } };
+// Pass-through DOMPurify: renderMarkdown sanitizes before DOM insertion, but
+// this link-rewrite branch runs after sanitization, so the stub keeps the
+// rewrite logic real (see _RENDER_MD_SHIM for the same rationale).
+var DOMPurify = { sanitize: function (html) { return html; } };
+"""
+
+        def run(body, task_path, doc_mode, local_links):
+            harness = (
+                shim
+                + "var window = { STANDALONE: false, DOC_MODE: "
+                + ("true" if doc_mode else "false") + " };\n"
+                + "var RESOLVED_ROOT = '/abs/docs/site';\n"
+                + "var ROOT_PREFIX = 'site';\n"
+                + "var REPO_ROOT_PREFIX = 'site';\n"
+                + "var REPO_FILE_BASE = 'https://gh/owner/repo/blob/sha';\n"
+                + "var DOC_LOCAL_LINKS = " + json.dumps(local_links) + ";\n"
+                + "var TASK_PATHS = {};\n"
+                + defs + "\n"
+                + "var out = renderMarkdown(" + json.dumps(body) + ", null, "
+                + json.dumps(task_path) + ");\n"
+                + "var m = out.match(/href=\"([^\"]*)\"/);\n"
+                + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+            )
+            proc = subprocess.run(
+                [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+            )
+            assert proc.returncode == 0, proc.stderr
+            return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
+
+        # Authority link on a deep doc page -> repo-root-relative blob URL.
+        href = run("[superplan](skills/superplan/SKILL.md)",
+                   "03-concepts/01-the-workflow", True,
+                   ["demo-tree.html"])
+        assert href == "https://gh/owner/repo/blob/sha/skills/superplan/SKILL.md"
+
+        # Sibling-export link stays a plain relative href (build artifact).
+        href = run("[demo](demo-tree.html)", "06-showcase", True,
+                   ["demo-tree.html", "superra-dev-tree.html"])
+        assert href == "demo-tree.html"
+
+        # Doc-mode off: the same href is task-relative (no rebasing change).
+        href = run("[fig](skills/superplan/SKILL.md)",
+                   "03-concepts/01-the-workflow", False, [])
+        assert href == (
+            "https://gh/owner/repo/blob/sha/"
+            "site/03-concepts/01-the-workflow/skills/superplan/SKILL.md"
+        )
+
+
+class TestCodeHighlighting:
+    """Fenced code blocks render with highlight.js, wired into the markdown-it
+    path and inlined in the standalone export with theme-aware token colors."""
+
+    def test_markdown_it_wired_with_highlight(self):
+        """markdown-it is constructed with the highlightFence highlighter."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "highlight: highlightFence" in src
+        assert "function highlightFence" in src
+
+    def test_unknown_language_falls_through(self):
+        """highlightFence returns '' for an unknown/absent language so markdown-it
+        keeps its default (plain) rendering — no regression for untagged code."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        # Guard the gate that only highlights a registered language.
+        assert "hljs.getLanguage(lang)" in src
+
+    def test_standalone_inlines_highlight_js(self, tmp_path):
+        """The standalone export inlines the highlight.js bundle + the julia
+        language module and drops the highlight.js CDN tags."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert "hljs" in html  # bundle global present inline
+        assert "cdn.jsdelivr.net/npm/@highlightjs" not in html
+
+    def test_highlight_assets_built(self):
+        """_build_standalone_assets reads the vendored highlight bundle + julia."""
+        assets = plan_dashboard._build_standalone_assets()
+        assert assets["hljs_js"]
+        assert assets["hljs_julia_js"]
+
+    def test_theme_aware_highlight_tokens(self):
+        """Highlight token colors are theme tokens (--hl-*) defined in both the
+        light root and the dark theme block, so code is readable in both."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        # Defined once in :root (light) and once in [data-theme="dark"].
+        assert src.count("--hl-keyword:") == 2
+        assert ".rendered-md .hljs-keyword" in src
+
+    def test_vendor_highlight_files_present(self):
+        """The highlight.js bundle and the julia language module are vendored."""
+        vendor = SCRIPTS_DIR / "vendor"
+        assert (vendor / "highlight.min.js").exists()
+        assert (vendor / "languages" / "julia.min.js").exists()
+
+    def test_served_page_keeps_highlight_cdn(self, tmp_path):
+        """Server mode loads highlight.js from the CDN tags (mirrors the existing
+        markdown-it/katex CDN tags)."""
+        plan = _docs_plan(tmp_path)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert "cdn.jsdelivr.net/npm/@highlightjs" in html
+
+
+class TestRawHtmlSanitization:
+    """Agent-authored raw HTML in task markdown renders via markdown-it (html:true)
+    and is sanitized through DOMPurify before DOM insertion.
+
+    Like the figure/highlight standalone tests, these committed checks are
+    SOURCE-PRESENCE assertions over base.html / the export / the vendored asset.
+    The behavioral proof — that a browser passes a styled <div> through with its
+    style attribute, neutralizes a hostile <script>/onerror=/javascript: fixture,
+    and leaves plain-markdown escaping unchanged — is a headless-Chromium drive
+    recorded in the task's Results, since this suite has no browser/JS harness.
+    """
+
+    def test_markdownit_html_enabled(self):
+        """markdown-it is constructed with html:true so agent-authored HTML in a
+        task body is emitted as live HTML rather than escaped text."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "window.markdownit({ html: true," in src
+        # The old escape-everything config must be gone (would re-break raw HTML).
+        assert "html: false" not in src
+
+    def test_render_result_is_sanitized(self):
+        """Every md.render(...) result flows through DOMPurify.sanitize before it
+        reaches the DOM, with style/class kept for authored inline styling. The
+        single renderMarkdown helper is the only md.render call site, so covering
+        it covers task sections, doc pages, and section previews."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert (
+            "DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] })"
+            in src
+        )
+        # No raw md.render(...) reaches innerHTML unsanitized: the only call site
+        # is the one wrapped above.
+        assert src.count("md.render(") == 1
+
+    def test_vendor_purify_present(self):
+        """DOMPurify is vendored for the standalone (offline/published) export."""
+        assert (SCRIPTS_DIR / "vendor" / "purify.min.js").exists()
+
+    def test_purify_asset_built(self):
+        """_build_standalone_assets reads the vendored DOMPurify body."""
+        assets = plan_dashboard._build_standalone_assets()
+        assert assets["purify_js"]
+        assert "DOMPurify" in assets["purify_js"]
+
+    def test_standalone_inlines_purify(self, tmp_path):
+        """The standalone export inlines DOMPurify and drops its CDN tag, so a
+        published/offline single file sanitizes with no network call."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert "DOMPurify" in html  # inline body present
+        assert "cdn.jsdelivr.net/npm/dompurify@" not in html
+
+    def test_served_page_keeps_purify_cdn(self, tmp_path):
+        """Server mode loads DOMPurify from the CDN tag (mirrors the existing
+        markdown-it/katex/highlight CDN tags)."""
+        plan = _docs_plan(tmp_path)
+        with _docs_client(plan) as client:
+            html = client.get("/").text
+        assert "cdn.jsdelivr.net/npm/dompurify@3" in html
+
+
+class TestClientSearch:
+    """Full-text search over node titles + body text, navigating to results in
+    both the live server and the standalone export."""
+
+    def test_search_index_records_titles_and_body(self, tmp_path):
+        """The index has one record per node (root included) carrying path, slug,
+        title, and flattened body text."""
+        plan = _docs_plan(tmp_path)
+        full = plan_dashboard.walk_plan(plan)
+        index = plan_dashboard._build_search_index(
+            full, plan_dashboard.collect_all_tasks(full)
+        )
+        by_path = {r["path"]: r for r in index}
+        assert "" in by_path and "01-merge-guide" in by_path
+        # Title is indexed.
+        assert by_path["01-merge-guide"]["title"] == "Merging Datasets"
+        # Body prose is indexed (a phrase that is NOT in the title).
+        assert "left join" in by_path["01-merge-guide"]["text"].lower()
+        # Root body prose is indexed too.
+        assert "panel regressions" in by_path[""]["text"].lower()
+
+    def test_search_text_strips_code_and_markdown(self):
+        """_search_text drops fenced/inline code and markdown punctuation."""
+        text = plan_dashboard._search_text(
+            "## Heading\n\nSome **prose** with `inline` code.\n\n"
+            "```python\nsecret_token = 1\n```\n"
+        )
+        assert "prose" in text
+        assert "Heading" in text
+        # Code content and markdown punctuation are gone.
+        assert "secret_token" not in text
+        assert "#" not in text and "`" not in text
+
+    def test_search_index_embedded_in_export(self, tmp_path):
+        """The standalone export embeds SEARCH_INDEX so search runs offline."""
+        plan = _docs_plan(tmp_path)
+        out = plan / "doc.html"
+        plan_dashboard.generate_dashboard(plan, out)
+        html = out.read_text("utf-8")
+        assert "var SEARCH_INDEX =" in html
+        m = re.search(r"var SEARCH_INDEX = (\[.*?\]);", html, re.DOTALL)
+        assert m is not None
+        index = json.loads(m.group(1))
+        assert any("left join" in r["text"].lower() for r in index)
+
+    def test_search_palette_ui_and_navigation(self):
+        """The palette UI, the title+body scorer, and navigation-via-setActive
+        are wired (selecting a result routes exactly as a sidebar click)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert 'id="search-palette"' in src
+        assert "function runSearch" in src
+        assert "function scoreSearchRecord" in src
+        # chooseSearchResult navigates through the same setActive router.
+        assert "setActive(rec.path" in src
+
+    def test_search_keyboard_affordances(self):
+        """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
+        to open, Escape to dismiss."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "openSearchPalette()" in src
+        assert "ArrowDown" in src and "ArrowUp" in src
+        assert "event.key === 'Enter'" in src
+        assert "event.key === 'Escape'" in src
+
+    def test_search_index_endpoint_returns_index(self, tmp_path):
+        """The live /api/search-index endpoint returns the same index shape so
+        search reflects current tree state after a full-reload."""
+        plan = _docs_plan(tmp_path)
+        with _docs_client(plan) as client:
+            data = client.get("/api/search-index").json()
+        by_path = {r["path"]: r for r in data}
+        assert "01-merge-guide" in by_path
+        assert "left join" in by_path["01-merge-guide"]["text"].lower()
+
+    def test_search_index_refreshed_on_reload(self):
+        """The client re-fetches /api/search-index on a structural full-reload and
+        on a worktree switch so live search stays current."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "function refreshSearchIndex" in src
+        assert "refreshSearchIndex()" in src
 
 
 # ---------------------------------------------------------------------------

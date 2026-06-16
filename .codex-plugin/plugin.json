@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "superRA skills for disciplined research-assistant workflows in Codex.",
   "author": "Zhiyu Fu",
-  "homepage": "https://github.com/FuZhiyu/superRA",
+  "homepage": "http://fuzhiyu.me/superRA/",
   "repository": "https://github.com/FuZhiyu/superRA",
   "license": "MIT",
   "keywords": [
@@ -25,6 +25,6 @@
       "skills",
       "hooks"
     ],
-    "websiteURL": "https://github.com/FuZhiyu/superRA"
+    "websiteURL": "http://fuzhiyu.me/superRA/"
   }
 }

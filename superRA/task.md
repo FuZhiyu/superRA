@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: revise
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-23
@@ -27,12 +27,16 @@ Workstream rollup (as of 2026-06-10):
 
 ## Workflow Status
 
-Integration of `better-handoff` onto `origin/main` (2026-06-10). `BASE_REF=origin/main`, `BASE_HEAD_SHA=03b68d6b` (already an ancestor of HEAD — Sync no-op; governing diff `03b68d6b..HEAD`).
+Integration of `better-handoff-doc` into trunk `better-handoff` (2026-06-15). Whole-branch scope (researcher decision): the docs-site build plus the dashboard readability redesign. `BASE_REF=better-handoff`. The integration review ran against `221a7934..HEAD` while the trunk sat at `221a7934`. At finish the trunk had advanced one commit to `38eb36ef` ("sharpen skill descriptions and finish the manifest-restructure sweep"), so `BASE_HEAD_SHA` was re-resolved to `38eb36ef` and the work re-synced against it (see Final action below). Final action: squash-merge into `better-handoff` (researcher decision).
 
-- [x] Drift tests created — Protect decision: behavioral contracts are the key results for this tooling branch; protection = the full 646-test suite, including the fix-round regression locks (`TestServeBindHost`, `TestCliPrefixTolerantMutations`, `TestRenderMarkdownImageRewrite`, `test_committed_hook_shim_matches_generator`, `TestWriteTask` atomicity, `TestNoAutoRebuild`). Suite green on HEAD.
-- [ ] Integrated
-- [ ] Docs finalized
-- [ ] Final action (PR)
+- [x] Drift tests created — Protect: behavioral contracts are the key results for this tooling branch; protection = the full dashboard suite (684 passed / 2 skipped on HEAD), now including the readability round's locks (`TestRawHtmlSanitization` HTML-sanitization security gate plus the doc-mode / typography structural checks in `test_dashboard.py`). No new drift tests authored — every task is approved with no scope change, and authoring is scoped to non-approved/related tasks.
+- [x] Integrated — whole-branch integration review of `221a7934..HEAD` APPROVED; delta minimal, every hunk tied to an approved objective or doc-currency fix, DOMPurify security gate verified, vendored-asset SHAs match, no generated artifacts in delta, suite 684/2. Four non-blocking advisories adjudicated: (1) `_site/` added to `.gitignore` this pass; (2) `docs-site.yml` `paths` omits `superRA/**` — accepted (dev-tree export is a snapshot; avoids noisy rebuilds); (3) no `docs/CLAUDE.md` — deferred (low value, mitigated by `build_site.sh` header + the IA authoring contract); (4) homepage `http://` vs `https://` in README/plugin manifests — left as implementer-chosen, flagged for researcher (depends on live custom-domain HTTPS state).
+- Consolidation Gate: clean-enough — placement check passes, no misplaced or episodic tasks; the readability-redesign subtree is properly homed under `task-tree/dashboard/`.
+- [x] Docs finalized — maturation review APPROVED (doc-reviewer, no findings); the [readability-redesign](task-tree/dashboard/readability-redesign/task.md) parent `## Results` is the permanent reader-facing rollup, fact-checked against child Results and code (type roles, DOMPurify 3.4.10 + SHA, doc-mode scoping, recomputed contrast residuals, the `<ol>` diagram, all six child links, suite 684/2, the four deferred follow-ups). docs-site leaf Results were already matured at implementation time.
+- Post-review refinement (direct-edit, in-lane): after live review on a wide display, the dashboard reading measure was widened (72ch → `--measure: 96ch`) and the reading column centered at `max-width: 100ch` in both tracker and doc-mode (doc-mode's 76ch `#active-node` override collapsed into the shared rule). Verified live on the real user path; suite re-run green (684/2); no tests hardcoded the old measure. Recorded in the readability-redesign parent `## Results` §Integration refinement. Too small to re-dispatch a reviewer.
+- [x] Final action — squash-merged `better-handoff-doc` into `better-handoff` (2026-06-15). Base-freshness check at finish found the trunk had advanced from `221a7934` to `38eb36ef` (one commit, a skill-description/manifest-restructure sweep). Re-sync: the only file both sides touched is [report-in-markdown/SKILL.md](../skills/report-in-markdown/SKILL.md) in disjoint regions — trunk trimmed the frontmatter `description:`, our task-02 work added the `## Raw HTML` body section — so the 3-way squash-merge applies both with no conflict; all other trunk-swept files (skill descriptions, manifest, agent specs, theory/econ skills) are disjoint from the docs/dashboard delta. Squash-merge base = `38eb36ef`.
+
+The prior `better-handoff` → `origin/main` integration episode (`BASE_HEAD_SHA=03b68d6b`) is deferred to a future trunk-to-main PR; its open shell-test findings (recorded below in ## Review Notes) pre-exist in trunk relative to this delta and are out of scope for this integration.
 
 ## Review Notes
 
