@@ -14,7 +14,7 @@ Implement the task to achieve its `## Objective` with your own judgment. The dom
 
 In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
+1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code.
 2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
 3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
@@ -29,7 +29,7 @@ If you materially deviate from `## Planner Guidance`, list it in `## Results` wi
 
 For a bundle dispatch, run this protocol independently for each assigned task. Write separate `## Results`, move each `status:` independently, and cite task-local evidence for each path.
 
-Follow the discipline of the domain skill you loaded for this Stage. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
+Follow the discipline of the domain skill you loaded. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
 
 ## Self-Check
 

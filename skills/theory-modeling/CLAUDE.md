@@ -8,7 +8,7 @@ The dominant failure mode of modeling work is **silent algebra under unstated as
 
 ## What composes vs. what is new
 
-The vertical is a **domain skill** under the existing PLAN → IMPLEMENT → INTEGRATE workflow — no new stage, workflow skill, or orchestration mechanism, just one added row in the `using-superra` Skill-Load Manifest domain add-on table. If you find yourself adding a workflow stage or workflow-shaped concept here, stop: the concern belongs in a workflow skill or an existing `Stage:` value reused with new references.
+The vertical is a **domain skill** under the existing PLAN → IMPLEMENT → INTEGRATE workflow — no new stage, workflow skill, or orchestration mechanism, just one added row in the `using-superra` Skill-Load Manifest §Domain table. If you find yourself adding a workflow stage or workflow-shaped concept here, stop: the concern belongs in a workflow skill or an existing `Stage:` value reused with new references.
 
 ## Per-task ledger and user-gated canonical Notation Conventions
 

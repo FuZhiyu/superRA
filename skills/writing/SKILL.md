@@ -1,6 +1,6 @@
 ---
 name: writing
-description: Use PROACTIVELY whenever reviewing, polishing, proofreading, consistency-checking, refactoring wording, or drafting prose a human will read in an academic paper or manuscript. Triggers organized by mode. Review — "review §X", "check my citations", "find issues in this draft", "consistency sweep". Polish — "polish §X", "tighten this paragraph", "proofread", "clean up these edits", "apply these review findings", "rewrite for clarity". Draft — "draft the methods section", "write up the results from these notes". Language/format-agnostic (LaTeX, Markdown, Quarto, plain text). Loaded by implementer and reviewer subagents at dispatch time when the stage touches writing, per `superRA:using-superRA` §Skill-Load Manifest.
+description: Use PROACTIVELY for reviewing, polishing, proofreading, consistency-checking, or drafting prose a human will read in an academic paper or manuscript. Triggers by mode. Review — "review §X", "check my citations", "consistency sweep". Polish — "polish §X", "tighten this paragraph", "proofread", "apply these review findings". Draft — "draft the methods section", "write up these notes". Language/format-agnostic (LaTeX, Markdown, Quarto, plain text).
 user-invocable: true
 ---
 

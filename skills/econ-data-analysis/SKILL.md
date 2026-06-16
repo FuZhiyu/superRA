@@ -1,14 +1,12 @@
 ---
 name: econ-data-analysis
 description: >
-  Use PROACTIVELY whenever performing data analysis on economic,
-  financial, or panel datasets — importing raw data, cleaning,
-  merging, filtering, constructing variables, aggregating, computing
-  summary statistics, producing regression inputs, building figures,
-  or writing analysis scripts. Triggers include panel data, "merge
-  these datasets", "run regression", "clean this data", "construct
-  variable X", "check the summary stats", or any data file with
-  unknown structure. Language-agnostic (Python, Julia, R, Stata).
+  Use PROACTIVELY for data analysis on economic, financial, or panel
+  data — importing, cleaning, merging, filtering, constructing variables,
+  aggregating, summary stats, regressions, or figures. Triggers include
+  panel data, "merge these datasets", "run regression", "clean this
+  data", "construct variable X", or any data file with unknown structure.
+  Language-agnostic (Python, Julia, R, Stata).
 user-invocable: true
 ---
 

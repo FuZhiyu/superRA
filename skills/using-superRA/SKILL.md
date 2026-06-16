@@ -1,6 +1,6 @@
 ---
 name: using-superra
-description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching the task tree.
+description: Master skill for superRA agents. Invoke at the start of any superRA workflow — planning, execution, integration, or merge — before dispatching work or touching the task tree.
 ---
 
 Loaded by all agents at dispatch time.
@@ -39,9 +39,9 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are legit
 
 ## Task Interface
 
-Handoff runs through the `superRA/` task tree. Reading and editing your assigned task needs only this section.
+Tasks are managed task trees in the `superRA/` directory. For basic I/O, this section is sufficient. For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
 
-**Read** with the committed wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
+**Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
 **Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Two hook auto-behaviors are intended, do not undo them: flipping a child task's status cascades up to every ancestor, and a same-parent rename of a task re-points its siblings' `depends_on` edges to the new slug.
 
@@ -51,66 +51,40 @@ Handoff runs through the `superRA/` task tree. Reading and editing your assigned
 - Doc before report — findings, caveats, and evidence land in the task body before any status return.
 - Write the body sections you own (`## Results`, `## Review Notes`) as a self-contained account a reader can follow standalone, with links and embedded figures (see `report-in-markdown`). The change summary belongs in the commit, not the body.
 
-For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
-
-## Skill Inventory
-
-Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the full grouping index.
-
-| Category | Skill | One-line purpose |
-|---|---|---|
-| Workflow | `superplan` | PLAN phase: scope check, task decomposition, task tree creation. |
-| Workflow | `superimplement` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `superintegrate` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
-| Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
-| Domain | `econ-data-analysis` | Economic / financial / panel data — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.). Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Domain | `theory-modeling` | Theoretical / mathematical modeling — derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, or simple numerical verification of derived formulas. Four-gate intuition/interpretability checklist (Objects & Notation, Assumptions, Derivations, Verification & Rendering), notation and assumption discipline, proof and numerical verification. |
-| Domain | `writing` | Editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript. Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers. |
-| Utility | `result-protection` | Tools for protecting key results from unintended changes; drift tests are the current/default mechanism. |
-| Utility | `refactor-and-integrate` | Tools for codebase coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence. |
-| Utility | `report-in-markdown` | Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`; on-demand references cover figures, LaTeX math, and tables; ships a render-integrity self-diagnose CLI (`scripts/check_markdown.py`). |
-| Utility | `semantic-merge` | Tools for semantic coherence in branch integration — intent investigation, role classification, conflict resolution, stale-reference detect-and-resolve, propagation-to-coherence — with workflow sync author/reviewer mode references and standalone merge mode. |
-| Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
-| Utility | `task-tree` | Load-on-demand tree tooling for the `superRA/` hierarchy — query/frontier/DAG, scaffolding and restructuring, dashboard, and legacy `PLAN.md` / `RESULTS.md` migration. The executing-agent read/edit interface is §Task Interface above, not this skill. |
-| Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
-| Utility | `zotero-paper-reader` | User-invocable standalone skill — search, retrieve, and analyze papers from a Zotero library, and generate citations from it (BibTeX export, `\cite`/`[@key]` insertion, master-`.bib` sync, bibliography rendering — Better BibTeX citekeys by default). Not loaded by workflow agents or the Manifest; invoke directly when reading, finding, or analyzing a paper, or when citing one. |
-| Utility | `mistral-pdf-to-markdown` | User-invocable standalone skill — convert a PDF to Markdown with image extraction via the Mistral OCR API (needs `MISTRAL_API_KEY`). The conversion step behind `zotero-paper-reader`; not loaded by workflow agents or the Manifest. |
-| Meta | `using-superra` | This skill — the master skill every agent reads. |
-
-**Harness adapters:** When this skill or its references name a Claude-specific tool (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the harness adapter reference before interpreting it.
-
 ## Execution Modes
 
 For execution throughout the workflows, the main agent can dispatch subagents for implementation, or implement the step itself (Direct mode). Subagent mode is the recommended default and all workflows assume it. Main agents: see `references/main-agent.md §Execution Modes` for the full Direct mode contract.
 
 ## Skill-Load Manifest
 
-For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. After loading a skill, follow its body's stage- and role-scoped reference load map.
+Every dispatch loads along two axes; both apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superra` and `superRA:report-in-markdown`** — the two skills every agent already loads (subagents via frontmatter preload, main agent and teammates via explicit `Skill` invocation).
+1. **Stage** — the workflow phase the dispatch is in (table below). Role-independent; `subagent_type` (implementer vs reviewer) encodes role.
+2. **Domain** — what the task operates on (table below). Load by what the task *touches*, not by which subtree it lives in, and load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
 
-### Generic (stage-driven)
+Both axes load *in addition to* the always-loaded `superRA:using-superra` and `superRA:report-in-markdown`.
 
-Apply to every dispatch regardless of domain.
+### Stage
 
-| `Stage:` | Emitted by | Required skills |
+| `Stage:` | Emitted by | Load |
 |---|---|---|
-| `planning-review` | `superplan` | `skills/superplan/references/planning-review.md` (reviewer mechanics) |
+| `planning-review` | `superplan` | `skills/superplan/references/planning-review.md` |
 | `implementation` | `superimplement` | — |
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
 | `documentation` | `superintegrate` Document | — |
 
-`Stage: sync` is branch-level: `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references it names; the canonical role specs carry no Sync-specific exceptions.
+### Domain
 
-### Domain add-ons
+| Skill | Load when the task… |
+|---|---|
+| `econ-data-analysis` | involves data analysis |
+| `theory-modeling` | derives, solves, verifies, or proves anything mathematical |
+| `writing` | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill)|
 
-If the task matches a domain skill's description in §Skill Inventory, load that skill in addition to (not instead of) the generic Stage row. This applies to main agents and subagents alike.
 
-**Main agents additionally load** `references/main-agent.md` and `superRA:agent-orchestration` before dispatching subagents or touching task files. Subagents inherit this context from their dispatch.
-
-**Unknown `Stage:` values are a dispatch error** — halt and report to the orchestrator rather than guessing a skill/reference load.
+**Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the adapter reference for the current harness under `references/`.
 
 ## Instruction Priority
 

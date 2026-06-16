@@ -308,7 +308,7 @@ def render_implementer_direct_mode_before_you_start() -> str:
 
 In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
+1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code.
 2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
 3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
@@ -321,7 +321,7 @@ def render_reviewer_direct_mode_before_you_start() -> str:
 
 In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
+1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code.
 2. **Read your task via `superra task read <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
 3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.

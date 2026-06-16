@@ -93,8 +93,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 ## Architectural Patterns
 
-- **Lean agents, rich references.** Prototype agents carry role protocol and load stage/domain references at dispatch time. The Skill-Load Manifest in `using-superra` is the authoritative map from `Stage:` values to required skills.
-- **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md`, `README.md`, and the skill inventory, not in nested directories.
+- **Lean agents, rich references.** Prototype agents carry role protocol and load stage/domain references at dispatch time. The Skill-Load Manifest in `using-superra` is the authoritative map from `Stage:` value and task domain to required skills.
+- **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md` and `README.md`, not in nested directories.
 - **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
 - **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
@@ -107,7 +107,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - Add references only when they have a clear load condition from `SKILL.md`.
 - Preserve standalone usability for domain and utility skills.
 - Add new skills only for distinct concerns. Prefer improving an owning skill when the concern already has an owner.
-- Update `skills/CATEGORIES.md`, `README.md`, and the `using-superra` skill inventory when adding, renaming, or removing skills.
+- Update `skills/CATEGORIES.md`, `README.md`, and (for domain skills) the `using-superra` Skill-Load Manifest Domain table when adding, renaming, or removing skills.
 
 ## Codex and Harness Design
 

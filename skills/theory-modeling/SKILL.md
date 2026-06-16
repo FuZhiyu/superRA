@@ -1,16 +1,12 @@
 ---
 name: theory-modeling
 description: >
-  Use PROACTIVELY whenever doing mathematical-modeling work:
-  defining primitives, stating assumptions, setting timing or
-  information structure, deriving optimality conditions, solving
-  equilibria, checking comparative statics, writing proofs,
-  running simple numerical verification, or producing renderable
-  markdown/LaTeX model notes. Triggers include "derive the
-  model", "solve the equilibrium", "check the proof", "write
-  the FOCs", "verify the comparative statics", "calibrate a toy
-  example", or any task where algebra and assumptions must stay
-  explicit.
+  Use PROACTIVELY for mathematical-modeling work — stating assumptions,
+  deriving optimality conditions, solving equilibria, comparative statics,
+  proofs, numerical verification, or renderable model notes. Triggers
+  include "derive the model", "solve the equilibrium", "check the proof",
+  "write the FOCs", "verify the comparative statics", or any task where
+  algebra and assumptions must stay explicit.
 user-invocable: true
 ---
 
