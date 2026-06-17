@@ -1,6 +1,6 @@
 ---
 title: "Add the Explorable Export + Framing-Page Entry"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
