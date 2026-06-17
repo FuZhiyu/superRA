@@ -1,6 +1,6 @@
 ---
 title: "Author the Domain Skills Page"
-status: implemented
+status: approved
 depends_on:
   - 01-ia-and-scaffold
 tags: []
