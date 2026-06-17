@@ -1,6 +1,6 @@
 ---
 title: "Rewrite Quickstart as the Single End-to-End Narrative"
-status: implemented
+status: approved
 depends_on:
   - 01-ia-and-scaffold
 tags: []
