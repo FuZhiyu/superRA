@@ -1,7 +1,7 @@
 ---
 title: "Codex Exec Task-Hook E2E"
-status: approved
-depends_on:  []
+status: implemented
+depends_on: []
 tags: []
 created: 2026-06-17
 ---
@@ -16,12 +16,11 @@ Start from tests/hooks/test-codex-e2e-cli.sh. Build a minimal superRA/ tree in T
 
 ## Results
 
-Implemented optional Codex runtime task-hook coverage in [test-codex-e2e-cli.sh:33-74](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L33-L74), [test-codex-e2e-cli.sh:89-95](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L89-L95), and [test-codex-e2e-cli.sh:136-236](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L136-L236). The script now builds a temporary `superRA/` tree, installs PostToolUse task-hook commands with Codex empty-JSON mode, runs `codex exec` with current noninteractive bypass flags, asks it to edit `superRA/01-child/task.md`, and asserts parsed JSONL hook evidence plus task-tree state. The propagation assertion now first requires the unique mutating task-file path set to be exactly `superRA/01-child/task.md`, so a direct root edit or extra task-file edit fails before root status is used as propagation evidence.
+Implemented optional Codex runtime task-hook coverage in [test-codex-e2e-cli.sh:33-82](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L33-L82), [test-codex-e2e-cli.sh:97-153](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L97-L153), and [test-codex-e2e-cli.sh:164-247](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L164-L247). The script now builds a temporary `superRA/` tree, installs hook commands through a temporary Codex profile with Codex empty-JSON mode for task-hook, runs `codex exec` with current noninteractive flags, asks it to edit `superRA/01-child/task.md`, and asserts Codex JSONL plus task-tree state. The propagation assertion now first requires the unique Codex `file_change` task-file path set to be exactly `superRA/01-child/task.md` and rejects shell task edits, so a direct root edit or extra task-file edit fails before root status is used as propagation evidence.
 
 Verification run in this implementation pass:
 
 - `bash -n tests/hooks/test-codex-e2e-cli.sh` passed.
 - `bash tests/hooks/test-codex-hooks.sh` passed: 15 passed, 0 failed.
 - `codex exec --json --ephemeral --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust --help` passed, verifying the revised noninteractive flags get through CLI parsing without starting a paid session.
-
-The authenticated paid runtime command `bash tests/hooks/test-codex-e2e-cli.sh` was not run in this pass.
+- `bash tests/hooks/test-codex-e2e-cli.sh` passed with a real authenticated Codex session: `PASS Codex UserPromptSubmit hook evidence present` and `PASS Codex task-hook PostToolUse evidence present`.

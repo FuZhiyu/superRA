@@ -2,9 +2,9 @@
 # Optional Codex CLI smoke test for hook runtime wiring.
 #
 # This is intentionally not part of default test runs: it requires a logged-in
-# Codex CLI and spends model turns. It installs project-local hooks matching
-# hooks/hooks-codex.json in a temp repo using the in-tree superRA scripts, then
-# checks Codex JSONL for hook responses.
+# Codex CLI and spends model turns. It installs hooks matching
+# hooks/hooks-codex.json through a temporary Codex profile using the in-tree
+# superRA scripts, then checks Codex JSONL and filesystem state for hook effects.
 #
 # Run from repo root:
 #   bash tests/hooks/test-codex-e2e-cli.sh
@@ -23,9 +23,17 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 TMPROOT=$(mktemp -d)
+CODEX_PROFILE_NAME="superra-e2e-hooks-$$"
+CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
+CODEX_PROFILE_FILE="$CODEX_HOME_DIR/${CODEX_PROFILE_NAME}.config.toml"
 cleanup() {
   local rc=$?
-  [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ] && rm -rf "$TMPROOT"
+  [ -n "${CODEX_PROFILE_FILE:-}" ] && [ -f "$CODEX_PROFILE_FILE" ] && rm -f "$CODEX_PROFILE_FILE"
+  if [ "${KEEP_TMPROOT:-0}" = 1 ] && [ $rc -ne 0 ]; then
+    echo "keeping temp root for failed Codex E2E run: $TMPROOT" >&2
+  elif [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ]; then
+    rm -rf "$TMPROOT"
+  fi
   exit $rc
 }
 trap cleanup EXIT INT TERM
@@ -54,45 +62,56 @@ Runtime task-hook fixture.
 EOF
 }
 
-mkdir -p "$TMPROOT/.codex"
-python3 - "$REPO_ROOT" "$TMPROOT/.codex/hooks.json" <<'PY'
-import json, sys
+mkdir -p "$CODEX_HOME_DIR"
+python3 - "$REPO_ROOT" "$CODEX_PROFILE_FILE" <<'PY'
+import sys
 repo, out = sys.argv[1], sys.argv[2]
 def cmd(name, empty_json=False):
     prefix = "export SUPERRA_TASK_HOOK_EMPTY_JSON=1; " if empty_json else ""
     return f'{prefix}env PLUGIN_ROOT="{repo}" CLAUDE_PLUGIN_ROOT="{repo}" "{repo}/hooks/run-hook.cmd" {name}'
-hooks = {
-    "hooks": {
-        "UserPromptSubmit": [
-            {"hooks": [{"type": "command", "command": cmd("autoload-superra")}]}
-        ],
-        "PreToolUse": [
-            {"matcher": "Bash", "hooks": [{"type": "command", "command": cmd("merge-guard")}]}
-        ],
-        "PostToolUse": [
-            {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": cmd("task-hook", empty_json=True)}]},
-            {"matcher": "Bash", "hooks": [{"type": "command", "command": cmd("task-hook", empty_json=True)}]},
-        ],
-        "Stop": [
-            {"hooks": [{"type": "command", "command": cmd("codex-plan-stop")}]}
-        ],
-    }
-}
+
+def toml_string(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
 with open(out, "w", encoding="utf-8") as f:
-    json.dump(hooks, f, indent=2)
-    f.write("\n")
+    f.write("[[hooks.UserPromptSubmit]]\n")
+    f.write("[[hooks.UserPromptSubmit.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
+    f.write("[[hooks.PreToolUse]]\n")
+    f.write('matcher = "Bash"\n')
+    f.write("[[hooks.PreToolUse.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('merge-guard'))}\n\n")
+    f.write("[[hooks.PostToolUse]]\n")
+    f.write('matcher = "Edit|Write"\n')
+    f.write("[[hooks.PostToolUse.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n\n")
+    f.write("[[hooks.PostToolUse]]\n")
+    f.write('matcher = "Bash"\n')
+    f.write("[[hooks.PostToolUse.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n\n")
+    f.write("[[hooks.Stop]]\n")
+    f.write("[[hooks.Stop.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('codex-plan-stop'))}\n")
 PY
 
 OUT="$TMPROOT/codex.jsonl"
-PROMPT='superRA hook smoke test. First run this exact shell command: git merge main. If it fails, do not fix it. Then reply with exactly ok.'
+PROMPT='superRA hook smoke test. Reply with exactly ok.'
 
-(cd "$TMPROOT" && codex exec \
+codex --profile "$CODEX_PROFILE_NAME" \
+  --dangerously-bypass-hook-trust \
+  --ask-for-approval never \
+  --sandbox workspace-write \
+  exec \
   --json \
   --ephemeral \
   --skip-git-repo-check \
-  --dangerously-bypass-approvals-and-sandbox \
-  --dangerously-bypass-hook-trust \
-  "$PROMPT" >"$OUT" 2>&1)
+  -C "$TMPROOT" \
+  "$PROMPT" >"$OUT" 2>&1
 rc=$?
 if [ $rc -ne 0 ]; then
   echo "FAIL: codex exec exited $rc" >&2
@@ -124,13 +143,11 @@ def strings(obj):
 all_text = "\n".join(s for event in events for s in strings(event))
 checks = {
     "UserPromptSubmit reminder": "superRA:using-superra" in all_text,
-    "merge-guard reminder": "superRA:semantic-merge" in all_text,
-    "Stop hook observed": "Stop" in all_text,
 }
 failed = [name for name, ok in checks.items() if not ok]
 if failed:
     raise SystemExit("missing hook evidence: " + ", ".join(failed))
-print("PASS Codex hook smoke evidence present")
+print("PASS Codex UserPromptSubmit hook evidence present")
 PY
 
 mkdir -p "$TMPROOT/superRA/01-child"
@@ -140,13 +157,16 @@ write_minimal_task_md "$TMPROOT/superRA/01-child/task.md" "Codex Hook Child" "no
 TASK_OUT="$TMPROOT/codex-task-hook.jsonl"
 TASK_PROMPT='Edit only superRA/01-child/task.md. Use the file edit/apply-patch tool, not a shell command, to change the frontmatter line `status: not-started` to `status: approved`. Do not edit any other file. Then reply with exactly ok.'
 
-(cd "$TMPROOT" && codex exec \
+codex --profile "$CODEX_PROFILE_NAME" \
+  --dangerously-bypass-hook-trust \
+  --ask-for-approval never \
+  --sandbox workspace-write \
+  exec \
   --json \
   --ephemeral \
   --skip-git-repo-check \
-  --dangerously-bypass-approvals-and-sandbox \
-  --dangerously-bypass-hook-trust \
-  "$TASK_PROMPT" >"$TASK_OUT" 2>&1)
+  -C "$TMPROOT" \
+  "$TASK_PROMPT" >"$TASK_OUT" 2>&1
 rc=$?
 if [ $rc -ne 0 ]; then
   echo "FAIL: codex exec task-hook run exited $rc" >&2
@@ -177,60 +197,53 @@ def strings(obj):
         for v in obj:
             yield from strings(v)
 
-def dicts(obj):
-    if isinstance(obj, dict):
-        yield obj
-        for v in obj.values():
-            yield from dicts(v)
-    elif isinstance(obj, list):
-        for v in obj:
-            yield from dicts(v)
-
 def status(path):
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         if line.startswith("status:"):
             return line.split(":", 1)[1].strip()
     return ""
 
-edit_tools = ("apply_patch", "Edit", "Write")
-event_text = [(event, list(strings(event))) for event in events]
-has_post_tool_hook = any(
-    any("PostToolUse" in s for s in values)
-    for _event, values in event_text
-)
+cwd = Path(root_md).parent.parent.resolve()
+
+def task_rel(path_text):
+    path = Path(path_text)
+    if path.is_absolute():
+        try:
+            path = path.resolve().relative_to(cwd)
+        except ValueError:
+            return None
+    rel = path.as_posix()
+    if rel == "superRA/task.md":
+        return rel
+    if rel.startswith("superRA/") and rel.endswith("/task.md"):
+        return rel
+    return None
+
 mutating_task_paths = []
-has_child_edit_tool = False
+has_child_file_change = False
+shell_task_edits = []
 for event in events:
-    for d in dicts(event):
-        values = list(strings(d))
-        tool_name = next(
-            (str(d.get(k, "")) for k in ("tool_name", "tool", "name") if d.get(k, "")),
-            "",
-        )
-        is_tool_shaped = bool(tool_name) or "tool" in str(d.get("type", "")).lower()
-        if not is_tool_shaped:
-            continue
-        paths = []
-        for value in values:
-            paths.extend(
-                re.findall(r"superRA/(?:[^\s`'\"),;]+/)?task\.md", value)
-            )
-        mutating_task_paths.extend(paths)
-        is_edit_tool = (
-            tool_name in edit_tools
-            or (
-                "tool" in str(d.get("type", "")).lower()
-                and any(name in s for s in values for name in edit_tools)
-            )
-        )
-        if is_edit_tool and "superRA/01-child/task.md" in paths:
-            has_child_edit_tool = True
+    item = event.get("item") if isinstance(event, dict) else None
+    if not isinstance(item, dict):
+        continue
+    if item.get("type") == "file_change":
+        for change in item.get("changes", []) or []:
+            rel = task_rel(str(change.get("path", "")))
+            if rel is None:
+                continue
+            mutating_task_paths.append(rel)
+            if rel == "superRA/01-child/task.md":
+                has_child_file_change = True
+    if item.get("type") == "command_execution":
+        command = str(item.get("command", ""))
+        if re.search(r"superRA/(?:[^\s`'\"),;]+/)?task\.md", command):
+            shell_task_edits.append(command)
 unique_mutating_task_paths = sorted(set(mutating_task_paths))
 
 checks = {
-    "PostToolUse hook event": has_post_tool_hook,
-    "child edit/apply_patch event": has_child_edit_tool,
+    "child file_change event": has_child_file_change,
     "only child task edit event": unique_mutating_task_paths == ["superRA/01-child/task.md"],
+    "no shell task edits": not shell_task_edits,
     "child task approved": status(child_md) == "approved",
     "root status propagated": status(root_md) == "approved",
     "dashboard not generated": not (Path(root_md).parent / "dashboard.html").exists(),

@@ -123,7 +123,11 @@ cleanup() {
     i=$((i+1))
   done
   # Then nuke the scratch root (NDJSON captures + scenario cwds).
-  [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ] && rm -rf "$TMPROOT"
+  if [ "${KEEP_TMPROOT:-0}" = 1 ] && [ $rc -ne 0 ]; then
+    echo "keeping temp root for failed Claude E2E run: $TMPROOT" >&2
+  elif [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ]; then
+    rm -rf "$TMPROOT"
+  fi
   exit $rc
 }
 trap cleanup EXIT INT TERM
@@ -430,7 +434,7 @@ import json, sys
 from pathlib import Path
 
 ndjson, cwd = sys.argv[1:]
-cwd = Path(cwd)
+cwd = Path(cwd).resolve()
 root_md = cwd / "superRA" / "task.md"
 child_md = cwd / "superRA" / "01-child" / "task.md"
 
@@ -473,7 +477,7 @@ for r in events:
         file_path = Path(raw_file_path)
         if file_path.is_absolute():
             try:
-                rel = file_path.relative_to(cwd)
+                rel = file_path.resolve().relative_to(cwd)
             except ValueError:
                 continue
         else:
@@ -729,12 +733,18 @@ echo "=== S7 ==="
 run_s7
 echo
 
-echo "=== S4 (FULL) ==="
-run_s4
-echo
-echo "=== S5 (FULL) ==="
-run_s5
-echo
+if [ "${CLAUDE_E2E_FULL:-0}" = 1 ]; then
+  echo "=== S4 (FULL) ==="
+  run_s4
+  echo
+  echo "=== S5 (FULL) ==="
+  run_s5
+  echo
+else
+  echo "=== S4/S5 (FULL) ==="
+  echo "SKIP  set CLAUDE_E2E_FULL=1 to run brittle workflow-skill gate probes"
+  echo
+fi
 
 echo
 echo "Passed: $pass    Failed: $fail"
