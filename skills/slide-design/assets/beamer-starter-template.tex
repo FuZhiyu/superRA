@@ -14,8 +14,9 @@
 \usepackage[english]{babel}
 \IfFileExists{FiraSans.sty}{\usepackage[lf,medium]{FiraSans}\renewcommand{\familydefault}{\sfdefault}}{}% medium option = Medium as bold: Fira's Bold/SemiBold are too heavy for full-sentence lead-ins
 
-% Math
-\usepackage{amsmath,mathtools,amssymb,amsthm,bbm,bm}
+% Math — Palatino-style serif math under the FiraSans sans body (the house pairing)
+\usepackage{amsmath,mathtools,amsthm,bbm,bm}
+\usepackage[nosymbolsc]{newpxmath} % Palatino-style serif math; provides AMS symbols (replaces amssymb)
 \DeclareMathOperator{\Var}{Var}
 \DeclareMathOperator{\Cov}{Cov}
 \DeclareMathOperator{\diag}{diag}
@@ -50,10 +51,11 @@
 %% ============================================================
 \usetheme{metropolis}
 \metroset{titleformat=smallcaps,numbering=fraction,block=transparent,sectionpage=none}
+\usefonttheme{professionalfonts} % keep beamer from redeclaring math fonts (needed with newpxmath)
 \useinnertheme{circles}
 \beamertemplatenavigationsymbolsempty
 \setbeamertemplate{footline}[frame number]{}
-\setbeamersize{text margin left=10mm, text margin right=10mm}
+\setbeamersize{text margin left=7mm, text margin right=7mm}
 
 % Fast iteration: uncomment to compile only selected labeled frames.
 % \includeonlyframes{roadmap,technical-walkthrough}
@@ -77,8 +79,8 @@
 \makeatletter
 \setbeamertemplate{headline}{%
   \vspace{0.15em}
-  \begin{beamercolorbox}[wd=\paperwidth, ht=2.6ex, dp=0.ex, leftskip=10mm, rightskip=10mm]{section in head/foot}
-    \insertnavigation{\dimexpr\paperwidth-20mm\relax}
+  \begin{beamercolorbox}[wd=\paperwidth, ht=2.6ex, dp=0.ex, leftskip=7mm, rightskip=7mm]{section in head/foot}
+    \insertnavigation{\dimexpr\paperwidth-14mm\relax}
   \end{beamercolorbox}%
 }
 \makeatother
@@ -110,6 +112,7 @@
 %% DOCUMENT METADATA
 %% ============================================================
 \title{Deck Title}
+\subtitle{Optional Subtitle}
 \author{Author Name}
 \date{\today}
 
@@ -130,7 +133,7 @@
 \newcommand{\MondrianFrametitle}{%
 \setbeamertemplate{frametitle}{%
   \nointerlineskip
-  \vspace{0.6em}
+  \vspace{1.1em}
   \begin{beamercolorbox}[wd=\textwidth, sep=0pt, dp=0.9ex]{frametitle}%
     \hangindent=\dimexpr0.9em+2.2pt+1.0ex\relax
     {\color{MondrianBlue}\rule[-0.9ex]{0.9em}{3.4ex}}%
@@ -154,6 +157,8 @@
     {\color{MondrianBlue}\rule{3em}{1.4ex}}\hfill{\color{MondrianRed}\rule{4.85em}{0.87ex}}\par\nointerlineskip% phi-wider, phi-flatter red: equal area, asymmetric shape
     {\color{MondrianBlack}\rule{\textwidth}{1.6pt}}\\[1.6ex]
     {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vspace{0.8ex}
+    {\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}
     \vspace{0.8ex}
     {\usebeamerfont{author}\usebeamercolor[fg]{author}\insertauthor\par}
     \vspace{0.4ex}
