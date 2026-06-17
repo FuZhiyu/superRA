@@ -16,7 +16,7 @@ The running example is a toy size-and-momentum sort on *simulated* equity return
 
 Be comfortable with git. This matters for any coding agent, not just superRA: the agent commits as it works, and you read and steer through the history. Branching and merging help too — superRA integrates on a branch and merges back when the work is done.
 
-superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). You also need [`uv`](https://docs.astral.sh/uv/) (recommended) or a Python 3 interpreter to launch the dashboard. The dashboard runs as a PEP 723 self-contained script via `uv run --script`, so **`uv` is the smoothest path**; the core is stdlib-only, so plain `python3` works as a fallback.
+superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard. It runs as a self-contained PEP 723 script, so `uv run --script` installs the packages it needs on its own; without `uv` you would have to install that web stack yourself.
 
 ### Install + set up a project
 
