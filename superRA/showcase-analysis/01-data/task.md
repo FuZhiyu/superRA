@@ -1,6 +1,6 @@
 ---
 title: "Download and Build the Monthly Panel"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 script: analysis/01_build_panel.py
