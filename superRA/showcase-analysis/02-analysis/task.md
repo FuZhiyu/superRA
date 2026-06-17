@@ -1,6 +1,6 @@
 ---
 title: "Estimate, Test, and Visualize: CAPM vs FF3"
-status: implemented
+status: approved
 depends_on:
   - 01-data
 tags: []
