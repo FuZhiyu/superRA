@@ -1,6 +1,6 @@
 ---
 title: "Add the Explorable Export + Framing-Page Entry"
-status: not-started
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-17
@@ -20,4 +20,15 @@ Add the real asset-pricing tree as a third standalone, full-chrome export alongs
 
 ## Results
 
-*(filled during implementation)*
+The real asset-pricing tree is now wired into the docs site as a third full-chrome standalone export alongside the demo and dev trees.
+
+- **Build script** ([docs/build_site.sh](../../../../docs/build_site.sh)). Added a fourth `run_gen` call that scopes the full repo tree to the study subtree — `--plan-root superRA --root showcase-analysis --repo-file-prefix superRA/showcase-analysis` (reusing the existing `$dev_tree` variable, which is `superRA`) — writing `showcase-analysis-tree.html` in non-doc-mode (full chrome). Extended the output-existence verification loop and the header comment to cover the fourth file, and registered `--doc-local-link showcase-analysis-tree.html` on the doc-mode `index.html` build so the framing link stays a relative href.
+- **CI trigger** ([.github/workflows/docs-site.yml](../../../../.github/workflows/docs-site.yml)). Added `superRA/showcase-analysis/**` to the push path filter so analysis-tree changes rebuild the site.
+- **Framing page** ([docs/site/06-showcase/task.md](../../../../docs/site/06-showcase/task.md)). Renamed the section to "The three trees", added an entry framing the study as the finished, real, executed counterpart to the mid-flight demo (canonical CAPM-vs-FF3 / GRS test on Ken French's 25 size–B/M portfolios, run end-to-end through the workflow) with the relative link `[Open the asset-pricing study →](showcase-analysis-tree.html)`, and added its build invocation to "How these are built".
+
+**Validation** (`docs/build_site.sh /tmp/showcase_site_build`):
+
+- All four exports built non-empty: `index.html` (2.0 MB), `demo-tree.html` (1.2 MB), `superra-dev-tree.html` (13 MB), `showcase-analysis-tree.html` (1.9 MB).
+- `showcase-analysis-tree.html` carries full task-tracker chrome (kanban, DAG, status pills, rollup markers all present) and 6 base64-inlined PNG figures (`data:image/png;base64`).
+- The framing link resolves as a plain relative basename `showcase-analysis-tree.html` in the built `index.html` — grep confirmed no `https://github.com/.../showcase-analysis-tree.html` blob rebasing, matching the existing `demo-tree.html` link behavior.
+- `report-in-markdown` self-diagnose on the framing page: clean.

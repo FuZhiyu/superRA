@@ -13,6 +13,7 @@ on:
     paths:
       - "docs/site/**"
       - "docs/showcase-demo/**"
+      - "superRA/showcase-analysis/**"
       - "docs/build_site.sh"
       - "skills/task-tree/scripts/**"
       - ".github/workflows/docs-site.yml"

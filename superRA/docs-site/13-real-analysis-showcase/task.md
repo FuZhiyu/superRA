@@ -1,6 +1,6 @@
 ---
 title: "Wire the Real Asset-Pricing Tree into the Docs"
-status: not-started
+status: in-progress
 depends_on:
   - 07-showcase
 tags: []

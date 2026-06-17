@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Build the superRA documentation site into a single output directory.
 #
-# Produces three self-contained HTML files the GitHub Pages deploy serves:
-#   index.html             the docs tree (docs/site) in doc-mode  — the site entry
-#   demo-tree.html         the curated showcase demo tree (full chrome)
-#   superra-dev-tree.html  superRA's own task tree (full chrome)
+# Produces four self-contained HTML files the GitHub Pages deploy serves:
+#   index.html                  the docs tree (docs/site) in doc-mode  — the site entry
+#   demo-tree.html              the curated showcase demo tree (full chrome)
+#   superra-dev-tree.html       superRA's own task tree (full chrome)
+#   showcase-analysis-tree.html the real CAPM-vs-FF3 study tree (full chrome)
 #
 # The showcase framing page links to the two *-tree.html files by relative
 # basename, so they must sit beside index.html; --doc-local-link keeps those
@@ -81,7 +82,8 @@ run_gen \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$docs_tree" \
   --doc-local-link demo-tree.html \
-  --doc-local-link superra-dev-tree.html
+  --doc-local-link superra-dev-tree.html \
+  --doc-local-link showcase-analysis-tree.html
 
 # --- 2. Showcase exports (full task-tracker chrome, never doc-mode) ---------
 run_gen \
@@ -96,12 +98,21 @@ run_gen \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$dev_tree"
 
-# --- Verify the three files landed ------------------------------------------
-for f in index.html demo-tree.html superra-dev-tree.html; do
+# The real asset-pricing study is a subtree of superRA, so scope the full repo
+# tree to it with --root and prefix its file links accordingly.
+run_gen \
+  --plan-root "$dev_tree" \
+  --root showcase-analysis \
+  --output "$out_dir/showcase-analysis-tree.html" \
+  --repo-file-base "$repo_file_base" \
+  --repo-file-prefix "$dev_tree/showcase-analysis"
+
+# --- Verify the four files landed -------------------------------------------
+for f in index.html demo-tree.html superra-dev-tree.html showcase-analysis-tree.html; do
   if [ ! -s "$out_dir/$f" ]; then
     echo "build_site: export produced no $f" >&2
     exit 1
   fi
 done
 
-echo "build_site: wrote $out_dir/{index,demo-tree,superra-dev-tree}.html"
+echo "build_site: wrote $out_dir/{index,demo-tree,superra-dev-tree,showcase-analysis-tree}.html"
