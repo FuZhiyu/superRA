@@ -2,7 +2,7 @@
 
 > ⚠️ **Breaking change (0.2.0):** the three workflow phase skills were renamed — `planning-workflow` → `superplan`, `implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate` — to avoid colliding with Claude Code's Workflow tool / `/workflows`. Update any saved `Skill(superRA:planning-workflow|implementation-workflow|integration-workflow)` calls to the new ids, and refresh globally-installed Codex agents by rerunning `codex-superra-setup`. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note.
 
-**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [How-To guides](http://fuzhiyu.me/superRA/#/04-how-to), [Concepts](http://fuzhiyu.me/superRA/#/03-concepts), [Reference](http://fuzhiyu.me/superRA/#/05-reference), and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/06-showcase).
+**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Reference](http://fuzhiyu.me/superRA/#/05-reference), and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/06-showcase).
 
 superRA turns AI coding agents into disciplined research assistants. It ships:
 
@@ -50,17 +50,17 @@ flowchart TB
     class FINISHED terminal
 ```
 
-To start, just describe what you want — `make a plan on...`, `implement according to the plan`, `integrate it with the update on main` — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`. The [Concepts](http://fuzhiyu.me/superRA/#/03-concepts) section explains each phase, re-entry, and the autonomy-with-human-in-the-loop model.
+To start, just describe what you want — `make a plan on...`, `implement according to the plan`, `integrate it with the update on main` — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
-The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `./superRA/superra dashboard` to watch and steer it through the tree, DAG, and kanban views; the [dashboard guide](http://fuzhiyu.me/superRA/#/04-how-to/04-see-your-work) covers live serve and branch-snapshot sharing.
+The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `./superRA/superra dashboard` to watch and steer it through the tree, DAG, and kanban views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks each phase end to end — covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 
 ## Skills, Agents, and Hooks
 
-superRA ships **domain skills** — currently data analysis, theory modeling, academic writing, and slide design, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Skills & Agents concept page](http://fuzhiyu.me/superRA/#/03-concepts/04-skills-and-agents) explains the model, and the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
+superRA ships **domain skills** — currently data analysis, theory modeling, academic writing, and slide design, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages walk each skill and its design idea, and the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
 
-The agents that carry out the work are an [implementer and a reviewer](http://fuzhiyu.me/superRA/#/03-concepts/03-roles-and-review), and superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
+The agents that carry out the work are an implementer and a reviewer (introduced in the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart)), and superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
 
 ## Installation
 
@@ -82,7 +82,7 @@ claude plugin marketplace update superRA
 claude plugin update superRA
 ```
 
-For a local-clone install (to modify superRA itself), Codex setup, and other harnesses (Copilot CLI, Gemini CLI), see the [Install & Set Up guide](http://fuzhiyu.me/superRA/#/04-how-to/01-install-and-set-up).
+For Codex setup and a local-clone install (to track or modify superRA itself), see [`docs/README.codex.md`](docs/README.codex.md). Any other harness that supports skills and subagents installs the same plugin sources.
 
 ## Contributing
 
