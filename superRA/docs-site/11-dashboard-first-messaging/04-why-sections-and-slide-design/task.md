@@ -1,6 +1,6 @@
 ---
 title: "Welcome Why-Sections + Feature slide-design"
-status: implemented
+status: approved
 depends_on: 
   - 01-front-door-and-welcome
   - 02-propagate-dashboard
