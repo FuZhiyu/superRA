@@ -8,37 +8,18 @@ created: 2026-06-17
 
 ## Objective
 
-A domain skill loads *on top of* a workflow phase, not instead of it. The [workflow](#/02-quickstart) supplies the choreography — dispatch a task, review it, advance — and the domain skill supplies the discipline inside it: what counts as good work for *this kind of research*, enforced as the agent goes and checked again by the reviewer. The implementer and reviewer working a data-analysis task both load the data-analysis skill, so they are held to the same standard.
+A domain skill gives the agent the methodology for your kind of research and gives the reviewer the standard to hold the work to. With a data task loaded, the agent describes the panel before it builds a variable, and the reviewer checks that it did; with a theory task, it defines its symbols before it manipulates them, and the reviewer checks that too. The discipline is the one you would apply by hand — superRA makes it run on every task and survive an adversarial second read.
 
-The payoff for you: supporting a new kind of research means writing one domain skill, not forking the workflow. The implementer–reviewer pair, the task tree, and the integration phase all carry over unchanged. Regression, proof, or manuscript — the same spine runs, and the matching domain skill decides what discipline applies inside it.
+## Data analysis — econ-data-analysis
 
-The sections below introduce each implemented domain skill with the one idea that tells you whether it fits your work. Each links to its `SKILL.md`, the authority for the full discipline — read the skill file for details rather than a second copy here. The grouping lives in [CATEGORIES.md](skills/CATEGORIES.md).
+You get an agent that always knows what it is holding before it changes it. The discipline at the center is the **Iron Law: describe the data before you transform it** — shapes, keys, distributions, missingness, balancedness come first, so the agent can't quietly drop half the sample on a bad merge and report that everything looked fine. Reach for it for any work on economic, financial, or panel data — importing, cleaning, merging, building variables, aggregating, running regressions, making figures — and especially when you hand the agent a data file whose structure it has not seen. The law sits inside a describe–analyze–validate loop, with pitfall catalogs for the operations that bite hardest: merges, time series, aggregations. It runs in Python, Julia, R, or Stata. See [`econ-data-analysis`](skills/econ-data-analysis/SKILL.md).
 
-## Data analysis — `econ-data-analysis`
+## Theory and modeling — theory-modeling
 
-Use this when the task imports, cleans, merges, filters, constructs variables from, aggregates, or models data — economic, financial, or panel data especially, though the discipline is language-agnostic (Python, Julia, R, Stata).
+You get derivations a referee can audit line by line: every symbol defined, every assumption interpretable, every step justified. The discipline is **four gates, walked in the order your trust depends on: Objects & Notation → Assumptions → Derivations → Verification & Rendering.** You can't judge an assumption built on an undefined symbol, or a derivation without its active assumptions, so the agent defines objects, fixes assumptions, and only then manipulates equations. Reach for it when a task derives, solves, verifies, or proves something mathematical — stating assumptions, writing first-order conditions, solving an equilibrium, running comparative statics, checking a proof, or producing renderable model notes. It guards against the characteristic failure of machine-generated math: plausible algebra resting on a symbol that quietly means two things or an assumption back-filled after the fact.  See [`theory-modeling`](skills/theory-modeling/SKILL.md).
 
-Its flagship discipline is the **Iron Law: no transformation without first describing the data.** The agent describes what it actually has — shapes, keys, distributions, missingness — before it filters a row or builds a variable. The most expensive analysis bugs are the ones where the agent dropped half the sample and reported that everything looked fine. Around the law sits a **describe–analyze–validate** loop run as three concurrent disciplines, plus pitfall catalogs for the operations that bite most often: merges, time series, aggregations. See [`econ-data-analysis/SKILL.md`](skills/econ-data-analysis/SKILL.md).
+## Writing — writing
 
-## Theory and modeling — `theory-modeling`
-
-Use this when the task derives, solves, verifies, or proves anything mathematical — stating assumptions, writing first-order conditions, solving an equilibrium, running comparative statics, checking a proof, or producing renderable model notes.
-
-Its flagship discipline is **four gates, walked in the order a reader's trust depends on them: Objects & Notation → Assumptions → Derivations → Verification & Rendering.** A reader cannot evaluate an assumption that uses an undefined symbol, a derivation without the active assumption set, or a verification claim without an auditable derivation. So the agent defines the objects and notation first, fixes the assumptions next, and only then manipulates equations. The gates are concurrent: every modeling step exercises all four, and the documentation is part of the artifact, not a cleanup phase afterward. See [`theory-modeling/SKILL.md`](skills/theory-modeling/SKILL.md).
-
-## Writing — `writing`
-
-Use this when the task drafts, polishes, proofreads, or reviews prose a human will read — a manuscript section, an abstract, a response letter. It is language- and format-agnostic (LaTeX, Markdown, Quarto, plain text).
-
-Its flagship discipline is one principle across three modes: **preserve substance, polish prose.** The argument, the logic, the structure, the technical claims, and the author's intent are sovereign; wording, flow, parallelism, and mechanical correctness are the editing target. The three modes — **Review** (find issues), **Polish** (apply edits within a fixed scope), and **Draft** (write new prose) — share that principle, a style and structure knowledge base, and eight consistency dimensions an agent checks in parallel. See [`writing/SKILL.md`](skills/writing/SKILL.md).
+You get an editor that improves how your prose reads without touching what it argues. The discipline is one principle in three modes: **preserve substance, polish prose.** Your argument, structure, claims, and intent are sovereign; wording, flow, and mechanics are the editing target — if an edit would change substance, the agent stops and asks. The three modes — **Review** (find issues), **Polish** (edit within a fixed scope), **Draft** (write new prose) — share that principle and a set of consistency checks. Reach for it to draft, polish, proofread, or review prose a human will read — a manuscript section, an abstract, a response letter — in LaTeX, Markdown, Quarto, or plain text. This is the domain skill you'll most often invoke directly on your own manuscript, standalone, outside any task tree: point it at a section and ask it to review or polish. See [`writing`](skills/writing/SKILL.md).
 
 ## On the roadmap
-
-The architecture grows by adding verticals, not by forking the workflow. Two are planned but not yet implemented:
-
-- **Literature review** — citation integrity and claim-evidence mapping.
-- **Simulation** — seed discipline, sensitivity across parameter grids, and stochastic reproducibility.
-
-Each plugs into the same scaffolding the implemented domains use: the implementer–reviewer pair, the task-tree handoff, and the human-in-the-loop review gates.
-
-Once you know which discipline your work needs, the next page introduces the [utility skills](#/04-utility-skills) — the domain-neutral tools the workflow and agents compose across every vertical.

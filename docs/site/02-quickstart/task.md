@@ -14,9 +14,9 @@ The running example is a toy size-and-momentum sort on *simulated* equity return
 
 ### Prerequisite
 
-Be comfortable with git. This matters for any coding agent, not just superRA: the agent commits as it works, and you read and steer through the history. Branching and merging help too — superRA integrates on a branch and merges back when the work is done.
+**git** is the one real prerequisite — as it is for any agentic coding workflow. The agent commits as it works, and you read and steer through the history. A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills) skill keeps non-git-controlled data in sync across those isolated worktrees.
 
-superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard. It runs as a self-contained PEP 723 script, so `uv run --script` installs the packages it needs on its own; without `uv` you would have to install that web stack yourself.
+superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard.
 
 ### Install + set up a project
 
@@ -29,7 +29,7 @@ claude plugin install superRA@superRA
 
 Codex needs a second step — the named agents — covered in the [Codex install notes](docs/README.codex.md). The full install reference (updating, the local-clone path for forking) lives in the project [README](README.md).
 
-The fastest way to feel superRA is to point it at work you already have. Take an existing project, commit everything, start Claude Code, and ask it something like:
+The fastest way to feel superRA is to point it at work you already have. Take an existing project (commit everything first if you haven't), start Claude Code, and ask it something like:
 
 ```text
 Use superRA and retroactively create task trees for [what I'm working on],
@@ -71,7 +71,7 @@ A live, auto-updating dashboard opens in your browser, runs in the background, a
 Now run a task. Ask Claude to `superimplement`:
 
 ```text
-superimplement the next task.
+superimplement @superRA/01-simulate-panel.
 ```
 
 Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, the panel simulation — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently* — the actual files and diff, not the implementer's summary — and returns one of two verdicts. **APPROVE** advances the task; **REVISE** sends numbered, specific findings back for a fix pass. Work never advances past a `REVISE`, however small the task looks. Review is not skippable.
@@ -107,7 +107,19 @@ Because the results live in committed task files rather than the chat, they are 
 
 The tasks are done and approved — the work is correct. But a correct result is not the same as one landed safely. The INTEGRATE phase folds the work into your codebase so the results stay reproducible and coherent for the long haul. Trigger it the same way: ask Claude to `superintegrate`.
 
-It is a phase of its own, not a final `git commit`, because each step guards against a different way good work goes wrong after it is done. superRA **protects the key results against drift** with small automated checks that pin the numbers you care about, so a later refactor that moves them fails loudly instead of slipping through. It **syncs with your base branch by intent**, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`. It **refactors the work to fit your codebase** with a minimal, reviewable diff, **matures the task findings into documentation** a future reader can follow, and only then **ships** by PR or merge. The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
+It is a phase of its own, not a final `git commit`, because each stage guards against a different way good work goes wrong after it is done:
+
+1. **Protect** — pin the key results with small automated checks, so a later refactor that moves a number you care about fails loudly instead of slipping through silently.
+2. **Sync** — fold in your base branch by intent, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`.
+3. **Refactor** — fit the work to your codebase with a minimal, reviewable diff instead of a pile of single-shot scripts.
+4. **Document** — mature the task findings into documentation a future reader can follow.
+5. **Finish** — ship by PR or merge.
+
+The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
+
+#### Composable and iterative
+
+Research is rarely linear, and superRA does not force it to be. The phases form a cycle, not a one-way pipeline: a discovery mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving finished work untouched. You can revise a task's objective as your understanding shifts, add tasks to a tree that is already running, or point superRA at work you have already done and have it build the task tree retroactively — the adoption example above is exactly that. The tree is a living structure you steer, not a plan you lock in up front.
 
 ### Where to go next
 
