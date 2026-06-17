@@ -1,6 +1,6 @@
 ---
 title: "Canonical Asset-Pricing Test: CAPM vs Fama-French 3-Factor on the 25 Size-B/M Portfolios"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
@@ -45,4 +45,10 @@ This is a documentation artifact built from fully public data — no vendor or p
 
 ## Results
 
-*(workstream rollup — filled as children complete)*
+The study ran end-to-end through the workflow and reproduces from source via [run_all.sh](run_all.sh) (`download → build panel → estimate/test/visualize`, ~3.5s).
+
+**Headline:** adding SMB and HML to the market factor halves the average pricing error on the 25 size × book-to-market portfolios (mean $|\alpha|$ 0.195 → 0.089 %/month), yet both models are still rejected by the GRS joint test over 1963-07 → 2026-04 — CAPM $F(25,728)=4.10$ and FF3 $F(25,726)=3.55$ — the canonical textbook result. FF3 prices most of the cross-section but fails on the precisely-estimated small-growth corner (`SMALL LoBM` $\alpha=-0.47$, $t=-5.1$).
+
+- [01-data](01-data/task.md) — public Ken French data → 754-month panel (1963-07 → 2026-04), validated against published factor magnitudes.
+- [02-analysis](02-analysis/task.md) — CAPM/FF3 on all 25 portfolios, GRS test (implemented from the residual covariance, cross-checked two ways), and the four figures.
+- [03-writeup](03-writeup/task.md) — the reader-facing narrative with the math and the two key figures.
