@@ -1,6 +1,6 @@
 ---
 title: "Polish Pass: Fix Audience Leaks + Prose Quality Across Reading-Flow Pages"
-status: implemented
+status: approved
 depends_on:
   - 02-quickstart
   - 03-domain-skills
