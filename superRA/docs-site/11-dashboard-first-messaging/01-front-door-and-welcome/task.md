@@ -1,6 +1,6 @@
 ---
 title: "Roll Back README + Rewrite Welcome (Dashboard-First)"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-17
