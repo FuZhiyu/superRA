@@ -1,6 +1,6 @@
 ---
 title: "Add a Design Philosophy Section to the Welcome Page"
-status: implemented
+status: approved
 depends_on:
   - 05-finalize
 tags: []
