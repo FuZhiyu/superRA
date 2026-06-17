@@ -40,4 +40,4 @@ claude plugin install superRA@superRA
 ```
 
 For Codex, enable plugin hooks in your config (`[features].plugin_hooks = true` in `~/.codex/config.toml`) and run `/hooks` to trust the superRA bundle.
-See [How-to: Install and Set Up](#/04-how-to/01-install-and-set-up) for the full per-harness procedure.
+See the [Quickstart](#/02-quickstart) for install and setup, and the project [README](README.md) for the full per-harness procedure.

@@ -1,6 +1,6 @@
 ---
 title: "Align Welcome, Prune Dropped Sections, Verify Build"
-status: not-started
+status: implemented
 depends_on:
   - 02-quickstart
   - 03-domain-skills
@@ -26,3 +26,38 @@ Make the rest of the site consistent with the new structure, remove the dropped 
 ## Planner Guidance
 
 The link sweep is the correctness-critical step — a dropped-page link that survives is a broken link on the live site. Grep the whole `docs/` tree (and `build_site.sh`) for `03-concepts` and `04-how-to` before declaring done. The doc-mode preview caches inlined CSS, so verify on a live serve or hard refresh, not a stale `file://` open.
+
+## Results
+
+The restructure is closed: the site is six pages, the two dropped sections are gone, and no link resolves to a deleted page in either the source or the rendered build.
+
+**1. Welcome aligned ([docs/site/01-welcome/task.md](../../../../../docs/site/01-welcome/task.md)).** The two "Start here" bullets that pointed at the deleted Concepts and How-To sections now point at the two new skills pages — [Domain Skills](#/03-domain-skills) and [Utility Skills](#/04-utility-skills). Pitch untouched. The "What it is" domain list dropped "slide design", leaving the authoritative three (data analysis, theory modeling, academic writing) per [skills/CATEGORIES.md §Domain](../../../../../skills/CATEGORIES.md).
+
+**2. README slide-design fix ([README.md](../../../../../README.md)).** Both surviving slide-design mentions (the numbered "What you get" list and the prose domain-skills paragraph) were trimmed to the authoritative three. This is the one README consistency fix this task owns beyond the link sweep.
+
+**3. Dropped sections deleted.** `docs/site/03-concepts/` (5 pages) and `docs/site/04-how-to/` (6 pages) removed entirely via `git rm -r`, including their `attachments/`.
+
+**4. Link sweep — zero surviving dropped-page links.** Every `#/03-concepts/...` and `#/04-how-to/...` reference in a surviving page was repointed to where the content now lives:
+
+| File | Old target | Repointed to |
+|---|---|---|
+| `01-welcome` (2 links) | Concepts, How-To sections | `#/03-domain-skills`, `#/04-utility-skills` |
+| `05-reference/04-skills-and-agents` | (duplicated skill prose) | added pointers to `#/03-domain-skills` / `#/04-utility-skills`; kept the lookup tables (reference-appropriate, denser than the prose pages) |
+| `05-reference/05-glossary` (5 links) | Concepts: Task Tree / Skills / Integration×2 / Roles | `#/04-utility-skills` (task tree, result-protection, semantic-merge), `#/03-domain-skills`, `#/02-quickstart` |
+| `05-reference/06-faq` (4 links) | How-To Install / Concepts Roles / How-To Resume / Concepts Integration | `#/02-quickstart`, `[superimplement]` skill, `#/04-utility-skills` |
+| `05-reference/02-cli-commands` | How-To: See Your Work | `#/02-quickstart` |
+| `05-reference/07-hooks` | How-To: Install | `#/02-quickstart` + `[README](README.md)` |
+| `06-showcase` (3 links) | Concepts Task Tree / Roles×2 / How-To See Your Work | `#/02-quickstart`, `#/04-utility-skills`, `[task-tree skill]` |
+
+`docs/build_site.sh` carried no dropped-page references (verified by grep). `05-reference/04-skills-and-agents` was thinned by adding a "for the narrative introduction, see …" pointer to each of the new pages at the head of its Domain and Utility sections, so it points at them rather than competing as a second reading-flow copy while staying a lookup home.
+
+**5. Build + render verification (verified against rendered output).**
+
+- `docs/build_site.sh /tmp/superra-finalize-site` exited 0 and wrote all three files (`index.html`, `demo-tree.html`, `superra-dev-tree.html`).
+- Source grep `grep -rn "03-concepts\|04-how-to" docs/` after the sweep: **0 matches**.
+- Rendered `index.html`: `grep -c "03-concepts"` = **0**, `grep -c "04-how-to"` = **0**.
+- Every `#/` hash link in the rendered output resolves to an existing node path (the only non-doc `#/` hits are a JS regex literal `/##/g` and the root `#/`).
+- Six top-level pages render in document order: `01-welcome`, `02-quickstart`, `03-domain-skills`, `04-utility-skills`, `05-reference`, `06-showcase`.
+- New pages render: `index.html` contains the Domain Skills body ("Iron Law") and Utility Skills body ("filesystem is the task hierarchy"); doc-mode chrome active (`data-doc-mode="true"`); "slide design" string count = **0**.
+- Live-serve doc-mode check (`dashboard --doc-mode --root docs/site`, fresh server after stopping the stale one): root returns HTTP 200, `data-doc-mode="true"` present, `/api/tree` carries **0** dropped-page references.
+- All seven edited pages pass `report-in-markdown/scripts/check_markdown.py` (clean).

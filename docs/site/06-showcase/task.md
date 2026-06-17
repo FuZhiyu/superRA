@@ -10,7 +10,7 @@ created: 2026-06-11
 
 You have read about the task tree. Here you can open one and click around.
 
-This page links to two live exports of real superRA task trees. They are not screenshots and not a simplified mock-up — they are the actual task-tracker interface, rendered by the same dashboard you get when you run superRA yourself. The documentation site you are reading is itself a dashboard export, so the chrome around these trees is the chrome around this page. Everything you read in [The Task Tree](#/03-concepts/02-the-task-tree) and [Roles & Review](#/03-concepts/03-roles-and-review) is something you can now see directly: the status of every task, how a parent's status rolls up from its children, the dependency graph, and the review conversation inside an individual task.
+This page links to two live exports of real superRA task trees. They are not screenshots and not a simplified mock-up — they are the actual task-tracker interface, rendered by the same dashboard you get when you run superRA yourself. The documentation site you are reading is itself a dashboard export, so the chrome around these trees is the chrome around this page. Everything you read about in the [Quickstart](#/02-quickstart) and the [task-tree skill](#/04-utility-skills) is something you can now see directly: the status of every task, how a parent's status rolls up from its children, the dependency graph, and the review conversation inside an individual task.
 
 ### What you are looking at
 
@@ -20,7 +20,7 @@ Each export is a self-contained page with the full task-tracker chrome. As you e
 - **Rollup.** A parent task's status is computed from its children, not set by hand. A tree with one child in `revise` shows the parent as un-finished — you can see at a glance that the project is not done, and where the holdup is.
 - **The DAG.** The dependency graph view draws the edges between tasks: which task must finish before which can start. A task with an unmet dependency is off the [frontier](#/05-reference/03-status-and-frontier) — the set of tasks ready to be worked right now.
 - **The kanban board.** The same tasks, grouped into columns by status, so a whole project's progress reads as one glance across the board.
-- **Inside a task.** Click any task to open its `task.md`: the objective at the top, the results an implementer wrote, and the [review notes](#/03-concepts/03-roles-and-review) a reviewer left — including findings that were sent back for revision. This is the handoff surface agents and humans share; the [Task File reference](#/05-reference/01-task-file) is the full anatomy.
+- **Inside a task.** Click any task to open its `task.md`: the objective at the top, the results an implementer wrote, and the review notes a reviewer left — including findings that were sent back for revision. This is the handoff surface agents and humans share; the [Task File reference](#/05-reference/01-task-file) is the full anatomy.
 
 Every task path is a deep link. The address bar updates as you navigate, so you can bookmark or share a link straight to one task.
 
@@ -36,7 +36,7 @@ Every task path is a deep link. The address bar updates as you navigate, so you 
 
 ### How these are built
 
-Both exports are produced by the task-tree dashboard's standalone export — the same `generate` command documented in [See Your Work](#/04-how-to/04-see-your-work) — which writes a single self-contained HTML file with everything inlined, no server required. The exports are rebuilt fresh in CI on every deploy and are never committed to the repository; only the task sources are. The exact build invocation lives in the deploy pipeline, which regenerates each tree with:
+Both exports are produced by the task-tree dashboard's standalone export — the same `generate` command documented in the [task-tree skill](skills/task-tree/SKILL.md) — which writes a single self-contained HTML file with everything inlined, no server required. The exports are rebuilt fresh in CI on every deploy and are never committed to the repository; only the task sources are. The exact build invocation lives in the deploy pipeline, which regenerates each tree with:
 
 - **Demo tree:** `uv run --script skills/task-tree/scripts/plan_dashboard.py generate --plan-root docs/showcase-demo`
 - **superRA's own tree:** `uv run --script skills/task-tree/scripts/plan_dashboard.py generate --plan-root superRA`

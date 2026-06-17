@@ -31,7 +31,7 @@ The full mutation command surface — scaffolding, renaming, dependency wiring, 
 ```
 
 The dashboard launches in the background and reuses an already-running server.
-See [How-to: See Your Work](#/04-how-to/04-see-your-work) for a guided walkthrough.
+See the [Quickstart](#/02-quickstart) for the dashboard in a guided walkthrough.
 
 ## Scaffolding a new task
 

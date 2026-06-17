@@ -14,7 +14,7 @@ What it is:
 
 - A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. You are viewing one right now — this documentation site is itself built on the dashboard.
 - An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, academic writing, and slide design.
+- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, and academic writing.
 
 ## Why superRA?
 
@@ -60,8 +60,8 @@ Three ideas carry most of the discipline. An **implementer–reviewer pair** sit
 ## Start here
 
 - New to superRA and want to try it? The [Quickstart](#/02-quickstart) runs one tiny analysis end to end in about twenty minutes — you will meet the task tree, dispatch, review, and status by doing rather than reading.
-- Want the model behind what you saw? The [Concepts](#/03-concepts) section explains the workflow, the task tree, the implementer–reviewer loop, how skills and agents fit together, and what the integration phase protects.
-- Have a specific job in mind? The [How-To guides](#/04-how-to) cover named journeys — installing, planning a project, working with task files, watching progress on the dashboard, and integrating and shipping.
+- Want to know which discipline fits your work? The [Domain Skills](#/03-domain-skills) page introduces each one — data analysis, theory modeling, academic writing — with the single idea you need to tell whether it applies.
+- Looking for the tools the workflow composes? The [Utility Skills](#/04-utility-skills) page covers the task tree, intent-aware merging, result protection, and the rest of the domain-neutral layer.
 - Looking up a field, flag, status, or command? The [Reference](#/05-reference) section has the exact definitions, with links to the skill files that own them.
 - Want proof it is real? The [Showcase](#/06-showcase) embeds an actual superRA task tree exported by the same dashboard that renders this site.
 

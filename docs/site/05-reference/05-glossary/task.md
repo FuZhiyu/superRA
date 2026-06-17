@@ -14,7 +14,7 @@ Each is defined once here; other pages link back rather than redefine.
 **Task tree**
 The `superRA/` directory of `task.md` files that represents a project's work.
 The filesystem hierarchy is the task hierarchy: subdirectories are child tasks, sibling `depends_on` fields wire execution order, and parent status rolls up from children automatically.
-See [Concepts: The Task Tree](#/03-concepts/02-the-task-tree) for the full model.
+See [Utility Skills: The Task Tree](#/04-utility-skills) for the full model.
 
 **Task**
 A single `task.md` file together with its directory.
@@ -39,17 +39,17 @@ See [Skills and Agents Reference](#/05-reference/04-skills-and-agents) and [skil
 **Domain skill**
 A skill that carries vertical-specific discipline for a research domain (data analysis, theory/modeling, writing).
 Domain skills load on top of the workflow skill when the task touches their domain, adding field-specific protocols without forking the workflow.
-See [Concepts: Skills and Agents](#/03-concepts/04-skills-and-agents).
+See [Domain Skills](#/03-domain-skills).
 
 **Drift test**
 A lightweight regression check committed alongside a result to guard it from unintended future changes.
 Drift tests are the default mechanism of the `result-protection` skill and are created during the Protect step of INTEGRATE.
-See [Concepts: Integration and Protection](#/03-concepts/05-integration-and-protection).
+See [Utility Skills: Protecting Results](#/04-utility-skills).
 
 **Semantic merge**
 An intent-aware branch integration performed by the `semantic-merge` skill.
 Instead of accepting every incoming change blindly, semantic merge classifies conflicts by intent, escalates intent-changing decisions to the researcher, sweeps stale references, and leaves a propagation trail so the post-sync diff is coherent and every commit leaves existing protection tests passing.
-See [Concepts: Integration and Protection](#/03-concepts/05-integration-and-protection).
+See [Utility Skills: Intent-aware Merging](#/04-utility-skills).
 
 **Direct mode**
 An execution mode where the main agent implements a task itself rather than dispatching a subagent implementer/reviewer pair.
@@ -58,7 +58,7 @@ See [skills/using-superRA/SKILL.md §Execution Modes](skills/using-superRA/SKILL
 
 **Subagent mode**
 The default execution mode: the main agent dispatches a separate implementer subagent and a separate reviewer subagent for each task, enforcing adversarial review.
-See [Concepts: Roles and Review](#/03-concepts/03-roles-and-review).
+See the [Quickstart](#/02-quickstart) for the implementer–reviewer loop in action.
 
 **Implementer**
 The agent role that executes a task — writes the code, fills `## Results`, and sets `status: implemented`.

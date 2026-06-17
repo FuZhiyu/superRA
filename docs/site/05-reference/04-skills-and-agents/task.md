@@ -27,6 +27,7 @@ They own the procedural shape of each phase and call the matching domain skill w
 ## Domain skills
 
 Domain skills carry vertical-specific discipline and load on top of the workflow skill when a task touches their domain.
+For the narrative introduction to each one, see the [Domain Skills](#/03-domain-skills) page; this is the lookup form.
 
 | Skill | Domain | Flagship discipline |
 |---|---|---|
@@ -37,6 +38,7 @@ Domain skills carry vertical-specific discipline and load on top of the workflow
 ## Utility skills
 
 Utility skills are domain-neutral tools callable by workflow skills, agents, or directly by a researcher.
+For the narrative introduction to each one, see the [Utility Skills](#/04-utility-skills) page; this is the lookup form.
 
 | Skill | What it provides |
 |---|---|
