@@ -1,6 +1,6 @@
 ---
 title: "Codex Exec Task-Hook E2E"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
