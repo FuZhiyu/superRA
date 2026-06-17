@@ -1,6 +1,6 @@
 ---
 title: "Propagate Dashboard-First Framing Across Docs"
-status: implemented
+status: approved
 depends_on: 
   - 01-front-door-and-welcome
 
