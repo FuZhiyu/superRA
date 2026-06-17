@@ -42,7 +42,7 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When task files contain `**Sync impact:**` fields, use them as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk. Sync impact justifies existing hunks; it does not create new refactor targets or excuse unrelated codebase changes.
+When a task file carries a `## Sync Impact` section, use it as self-contained evidence for why a hunk already exists in the governing diff. Sync impact justifies existing hunks; it does not create new refactor targets or excuse unrelated codebase changes.
 
 ## Final Diff Self-Check
 
@@ -51,9 +51,9 @@ Implementers run this immediately before every return or commit, including no-ch
 1. **Recompute the governing diff** using the range from §Minimum Net Diff.
 2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
-4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
+4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
-6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` and tasks explicitly reopened by accepted review findings.
+6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `status` is not `approved` and tasks explicitly reopened by accepted review findings.
 
 The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
 

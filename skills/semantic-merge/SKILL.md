@@ -35,7 +35,7 @@ If the worktree is dirty with unrelated changes, preserve them reversibly with a
 
 ### 2. Investigate intent on both sides
 
-Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
+Read commit messages, diffs, and any task tree or docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
 
 **Classify each cluster of changes by role.** The role drives how the cluster is resolved:
 
@@ -69,7 +69,7 @@ Ask the user before resolving — with intent and consequences, not raw diff chu
 - task structure would change (routed through `superplan §User Feedback and Changing the Task Tree`),
 - drift-test or result-level expectations would move because outputs meaningfully changed.
 
-Fold every answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before committing the resolution. When no task tree is present, record the decision in the standalone merge record and the sync commit body.
+Fold every answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before committing the resolution. When no task tree is present, record the decision in the sync commit body.
 
 ### 5. Resolve and land
 
@@ -77,7 +77,7 @@ Run the sync operation only after intent investigation. Resolve by the plan from
 
 **Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage from `superintegrate` Protect in workflow mode, or existing tests and drift tests when standalone. Per-commit protection-pass is the lower bound; the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary.
 
-Include the conflict resolution, resolved docs, and the mode-specific handoff artifact with the commits that produce them. Broader **codebase-coherence** work is owned by `refactor-and-integrate` and out of scope here. Handoff artifacts may record context that explains the post-sync diff for later codebase review; they do not carry unresolved semantic-merge work into Integrate.
+Include the conflict resolution, resolved docs, and the mode-specific sync record with the commits that produce them — the git log (commit messages) plus the task-local `## Sync Impact` sections in workflow mode, and the commit body in standalone mode. Broader **codebase-coherence** work is owned by `refactor-and-integrate` and out of scope here. The sync record may capture context that explains the post-sync diff for later codebase review; it does not carry unresolved semantic-merge work into Integrate.
 
 ### 6. Detect and resolve stale references
 
@@ -107,10 +107,10 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 **Scope boundary (semantic coherence stopping rule):**
 
 - `[BLOCKING]` Stale references within the merge's semantic reach are resolved (per Step 6).
-- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per Step 4 and recorded in the handoff artifact.
+- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per Step 4 and recorded in the sync record.
 - `[BLOCKING]` Docs and comments that describe the merged code are updated to match.
 - `[BLOCKING]` Existing protection passes on every commit landed by this skill (per Step 5).
-- `[BLOCKING]` Broader **codebase-coherence** work is left to `refactor-and-integrate`; handoff artifacts explain codebase-review context but do not define unresolved semantic-sync targets.
+- `[BLOCKING]` Broader **codebase-coherence** work is left to `refactor-and-integrate`; the sync record explains codebase-review context but does not define unresolved semantic-sync targets.
 
 **Intent integrity:**
 
@@ -118,12 +118,11 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 - `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
 - `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
 
-**Handoff docs and merge records:**
+**Sync record:**
 
 - `[BLOCKING]` Task files remain coherent after the sync when present.
 - `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing the Task Tree` before adaptation proceeded.
-- `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
-- `[ADVISORY]` Routine task-file conflict resolutions are summarized in the Sync Map.
+- `[BLOCKING]` Affected tasks carry a `## Sync Impact` section (per `references/workflow-sync-author.md`) when workflow Sync leaves task-specific context needed to understand the post-sync diff.
 
 **Verification:**
 

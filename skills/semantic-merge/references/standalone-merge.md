@@ -1,10 +1,10 @@
 # Standalone Semantic-Merge Mode
 
-Standalone mode uses `semantic-merge/SKILL.md` §Shared Steps and §Semantic Coherence Checklist. This reference carries the standalone boundary, inputs, merge record format, and report fields.
+Standalone mode uses `semantic-merge/SKILL.md` §Shared Steps and §Semantic Coherence Checklist. This reference carries the standalone boundary, inputs, and report fields.
 
 ## Boundary
 
-Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the approved resolution in `SEMANTIC_MERGE.md`. The stopping rule and per-commit protection-pass come from `SKILL.md §Semantic Coherence Checklist §Scope boundary`, with existing tests and drift tests as the protection here. **Codebase coherence**, when wanted, is the caller's job via `refactor-and-integrate` after this skill returns.
+Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the approved resolution in the commit body — the durable record by design, the same "git for change" principle that drops the in-tree sync record in workflow mode. The stopping rule and per-commit protection-pass come from `SKILL.md §Semantic Coherence Checklist §Scope boundary`, with existing tests and drift tests as the protection here. **Codebase coherence**, when wanted, is the caller's job via `refactor-and-integrate` after this skill returns.
 
 ## Inputs
 
@@ -20,55 +20,8 @@ Intent sources are per `SKILL.md §Shared Steps` step 2.
 
 ## Mode-Specific Process
 
-1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks `superRA/` task structure, or needs durable file/script-level context. When no task tree is present, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body.
-2. Run the requested merge / rebase / cherry-pick after intent investigation.
-3. **Land the merge commit plus any propagation commits needed to reach semantic coherence** per `SKILL.md §Shared Steps` step 5, recording the resolution in `SEMANTIC_MERGE.md`.
-4. Record codebase-coherence context useful for later review in the `SEMANTIC_MERGE.md` File / Script Impact Map. The record explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
-
-## Semantic Merge Record Format
-
-When no `superRA/` task structure exists, or when standalone semantic-merge needs a durable record beyond the commit body, create or update `SEMANTIC_MERGE.md`:
-
-```markdown
-# Semantic Merge Record
-
-**Operation:** `merge | rebase | cherry-pick`
-**Current branch:** `<branch>`
-**Incoming ref:** `<incoming-ref>`
-**Governing baseline:** `<sha/ref>`
-**Merge commit:** `<sha>`
-**Propagation commits:** `<sha1>, <sha2>, ...` (or `None`)
-
-## Current Branch Intent
-
-<summary from branch name, commits, docs, and diffs>
-
-## Incoming Intent
-
-<summary from incoming commits, docs, and diffs>
-
-## Resolution Thesis
-
-<what the merge kept, dropped, or synthesized>
-
-## File / Script Impact Map
-
-| Path or path cluster | Incoming intent | Resolution | Codebase context |
-|---|---|---|---|
-| `<path>` | `<intent>` | `<resolution>` | `<context or None>` |
-
-## User Decisions
-
-<logged decisions or "None">
-
-## Checks
-
-<commands and outcomes>
-
-## Codebase Context
-
-<context useful for later codebase review, or "None">
-```
+1. Run the requested merge / rebase / cherry-pick after intent investigation.
+2. **Land the merge commit plus any propagation commits needed to reach semantic coherence** per `SKILL.md §Shared Steps` step 5, recording the resolution in the commit body of the merge commit (and any propagation commit). The commit body captures the resolution thesis (what the merge kept, dropped, or synthesized), file/script-level impact and codebase context useful for later `refactor-and-integrate` review, any user decisions logged during escalation, and the checks run. It explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
 
 ## Report
 
@@ -77,7 +30,6 @@ Report:
 - operation, incoming ref, governing baseline, and direction
 - current-branch intent and incoming intent
 - merge commit SHA and any propagation-commit SHAs
-- merge record location or why none was needed
 - user decisions asked and logged
 - stash status (if any)
 - checks run (existing tests, drift tests) and codebase context recorded for the caller / `refactor-and-integrate`

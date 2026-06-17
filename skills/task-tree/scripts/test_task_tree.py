@@ -3600,6 +3600,83 @@ class TestTaskCheck:
         after = (root_dir / "task.md").read_text(encoding="utf-8")
         assert before == after, "task check must not mutate the tree"
 
+    # --- Advisory sync-impact leak-detector category ---
+
+    def _append_section(self, path: Path, section: str) -> None:
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\n" + section + "\n",
+            encoding="utf-8",
+        )
+
+    def test_sync_impact_flags_lingering_section(self, tmp_path):
+        """A task carrying a ## Sync Impact section yields one advisory finding."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug in ("01-a", "02-b"):
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "not-started")
+        self._append_section(
+            root_dir / "01-a" / "task.md",
+            "## Sync Impact\n\nThe merge rewired the join key; see commit abc123.",
+        )
+        findings = task_check.run_checks(root_dir, category="sync-impact")
+        assert len(findings) == 1
+        f = findings[0]
+        assert f.category == "sync-impact"
+        assert f.severity == "warning"
+        assert f.task_path == "01-a"
+        assert "Sync Impact" in f.message
+
+    def test_sync_impact_clean_tree_no_findings(self, tmp_path):
+        """A tree with no ## Sync Impact section yields no findings."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug in ("01-a", "02-b"):
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "not-started")
+        findings = task_check.run_checks(root_dir, category="sync-impact")
+        assert findings == []
+
+    def test_sync_impact_category_selects_only_this_check(self, tmp_path):
+        """--category sync-impact runs only the leak-detector, not other checks."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        # Single-child root would trip the placement check; an invalid status
+        # would trip the status check. sync-impact selection must ignore both.
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-only"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Only", "not-started")
+        self._append_section(
+            d / "task.md", "## Sync Impact\n\nRebased onto the new schema."
+        )
+        findings = task_check.run_checks(root_dir, category="sync-impact")
+        assert all(f.category == "sync-impact" for f in findings)
+        assert len(findings) == 1
+        assert findings[0].task_path == "01-only"
+
+    def test_sync_impact_never_mutates(self, tmp_path):
+        """task check is read-only — a lingering section is not auto-removed."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug in ("01-a", "02-b"):
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "not-started")
+        self._append_section(
+            root_dir / "01-a" / "task.md", "## Sync Impact\n\nKept the left join."
+        )
+        before = (root_dir / "01-a" / "task.md").read_text(encoding="utf-8")
+        findings = task_check.run_checks(root_dir, category="sync-impact")
+        assert findings  # leak detected
+        after = (root_dir / "01-a" / "task.md").read_text(encoding="utf-8")
+        assert before == after, "task check must not mutate the tree"
+
 
 # --- Status rollup propagation tests (from better-handoff, adapted for unified status) ---
 

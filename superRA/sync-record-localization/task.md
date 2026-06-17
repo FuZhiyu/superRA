@@ -1,6 +1,6 @@
 ---
 title: "Localize the Sync Record: Drop Sync Map + SEMANTIC_MERGE.md, Keep Temporary Task-Local ## Sync Impact"
-status: not-started
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
@@ -37,3 +37,20 @@ Suggested ordering: `01-canonical-model` is the keystone and must land + approve
 Verification across the workstream is grep-based plus the task-tree test suite for `04`: after the tree is approved, no `## Sync Map`, `SEMANTIC_MERGE.md`, `**Integration status:**`, or "task block" survives in `skills/` or `CLAUDE.md` (historical `docs/plans/*` excluded), and `./superRA/superra task check` cleanly flags a lingering `## Sync Impact`.
 
 Pre-start housekeeping: commit the in-flight vertical-neutral terminology sweep (`git diff --stat` shows it across superintegrate, refactor-and-integrate, semantic-merge worktree ref, superimplement, superplan, docs/site, agents/implementer.md, the codex toml) as its own commit titled e.g. `skills: generalize analysis→feature/task terminology` before dispatching any implementer.
+
+## Results
+
+All five subtasks delivered and approved; the sync-record model is now single-sourced and localized.
+
+- **No branch-level `## Sync Map`.** The format and writing instructions were removed from the owner (`semantic-merge/references/workflow-sync-author.md`) and from every consumer (`superintegrate`, `refactor-and-integrate`, `semantic-merge` SKILL + sync-reviewer, `using-superRA/SKILL.md` + `main-agent.md` Frontier Resolver, `CATEGORIES.md`). The branch-level sync narrative now lives in the git log (merge + propagation commit messages). A side benefit the user's "no root summary" steer unlocked: sync-review findings now use the ordinary `## Review Notes` + REVISE mechanism instead of a bespoke "Sync review notes" home.
+- **Canonical task-local `## Sync Impact` section.** Self-anchoring (no longer pinned to the dead `**Integration status:**` field), registered in `task-tree/references/task-file-contract.md` as a conditional, temporary, integration-phase-only section, with the format owned by `semantic-merge` and pointed-to (not restated) elsewhere.
+- **Cleanup mechanism.** `superintegrate` Step 5 closeout now guarantees `## Sync Impact` removal and cites a warn-only `superra task check --category sync-impact` leak-detector (added to `task_check.py` + `cli.py`, 4 new tests). On its first real run it caught a genuine pre-existing orphan (see follow-ups).
+- **`SEMANTIC_MERGE.md` eliminated.** The record format was deleted from `standalone-merge.md` (content requirement relocated to the commit body), and the leftover tracked artifact in the repo root was removed (`16291ecf`).
+- **Stale terminology swept** ("task block", `**Integration status:**` → `status:` frontmatter) across the live surfaces; legacy-PLAN.md-migration parser/docs/tests intentionally retain the old field names since they describe the format the migrator consumes.
+
+**Verification:** task-tree suite 688 passed / 2 skipped; repo-wide grep confirms no `## Sync Map` instruction, `SEMANTIC_MERGE`, or live `**Integration status:**` survives in `skills/` / `agents/` / `README.md` / `CLAUDE.md` outside the single intentional negation; integration review APPROVED with zero findings (minimum-net-diff, codebase fit, project-doc audit all clean). Sync was a no-op (base unchanged); consolidation gate judged the tree clean-enough.
+
+**Pre-existing follow-ups surfaced (out of this workstream's scope — separate cleanup, in other subtrees):**
+1. Orphaned `## Sync Impact` section in `task-tree/dashboard/github-artifact-action/task.md` (flagged by the new check).
+2. `task-tree/agent-interface/integ-workflow/task.md` planning prose still describes the old `## Sync Map` / `integration_status:` model.
+3. Loose "task blocks" / handoff-doc framing in `skills/writing/references/planning.md` — belongs to the separate handoff-doc-deprecation concern.

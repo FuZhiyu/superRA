@@ -128,15 +128,12 @@ Agent(generic):
 
   Use semantic-merge workflow sync author mode. Land the merge commit plus
   any propagation commits needed to reach semantic coherence — `SKILL.md
-  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write
-  `## Sync Map` section in root task.md (superRA/task.md) only when there is
-  material overlap, a conflict, a user decision, sync-review carryover, or
-  post-sync context. Add task-local `## Sync Impact` sections to affected
-  task.md files. Defer codebase coherence — convention fit, utility reuse,
-  PR-friendly diffs, Project Doc Audit walk-up, minimum net diff — to
-  `refactor-and-integrate` via Integrate. Return the full sync commit chain,
-  Sync Map status, task-local Sync Impact annotations, checks run, and
-  codebase-review context recorded.
+  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. The
+  branch-level sync narrative is the commit messages; add a task-local
+  `## Sync Impact` section to each affected task.md whose post-sync diff needs
+  task-specific context. Defer codebase coherence — convention fit, utility
+  reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff — to
+  `refactor-and-integrate` via Integrate.
 ```
 
 If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, folds the decision into the relevant task objective, commits, and re-dispatches the sync author with the decision context.
@@ -161,17 +158,17 @@ Agent(generic):
 
   Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
   intent, current-branch intent, conflict resolution, user-decision logging,
-  Sync Map completeness (root task.md `## Sync Map`), task-local `## Sync
-  Impact` coverage, and scope boundary. Record sync-review status and notes
-  in root task.md `## Sync Map` when a map exists or when review finds a
-  material issue. Return APPROVE or REVISE.
+  task-local `## Sync Impact` coverage, and scope boundary. Record any
+  sync-review finding via the standard mechanism (affected task's
+  `## Review Notes`, or the REVISE return for a branch-level finding with no
+  task home). Return APPROVE or REVISE.
 ```
 
 On REVISE, adjudicate sync-review findings per `superRA:agent-orchestration` §Handling Reviewer Feedback, re-dispatch the sync author for accepted items, then re-dispatch the sync reviewer. Integrate starts only after sync review APPROVES.
 
 ## Integrate
 
-Integrate is the post-sync quality gate. It uses task-local `## Sync Impact` sections and root task.md `## Sync Map` clusters as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
+Integrate is the post-sync quality gate. It uses task-local `## Sync Impact` sections plus the sync commit messages (git log) as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
 
 **Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base for minimum-net-diff review after Sync.
 
@@ -187,10 +184,10 @@ Agent(subagent_type: "superRA:reviewer"):
   Task: Post-sync integration review
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-  Sync context: task-local `## Sync Impact` sections plus root task.md `## Sync Map`, if present
+  Sync context: task-local `## Sync Impact` sections plus the sync commit messages (git log)
 
-  Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
-    (root task.md) as context, then review `git diff <BASE_HEAD_SHA>..HEAD`.
+  Additionally: read task-local `## Sync Impact` sections and the sync commit messages
+    as context, then review `git diff <BASE_HEAD_SHA>..HEAD`.
     For every touched or Sync-impact-affected task, either set
     `status: approved` in its frontmatter or write review notes in
     `## Review Notes` and set `status: revise`. Findings should
@@ -219,8 +216,8 @@ Agent(subagent_type: "superRA:implementer"):
   Tasks in scope: <task paths with status: revise>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
-  Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
-    (root task.md) as context, address accepted review findings, and run the minimum-net-diff
+  Additionally: read task-local `## Sync Impact` sections and the sync commit messages
+    as context, address accepted review findings, and run the minimum-net-diff
     self-check against `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Commit code + task.md
     atomically. Do not touch tasks outside `Tasks in scope` except where required by an accepted
     reviewer finding.
@@ -232,8 +229,7 @@ Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep
 
 Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
-- remove temporary `## Sync Map` from root task.md, if present
-- remove temporary task-local `## Sync Impact` sections unless a lasting task assumption still belongs in the task.md
+- remove every temporary task-local `## Sync Impact` section, unless a lasting task assumption still belongs in the task.md — in which case fold that assumption into the task's `## Objective` and remove the section. Then run `superra task check` (warn-only `sync-impact` category) and confirm it flags no surviving `## Sync Impact`.
 - flip `Integrated` in root task.md §Workflow Status
 - commit the closeout doc edit
 
@@ -351,7 +347,7 @@ Report what was published or landed and what was cleaned up.
 ## When to Lighten
 
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
-- **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
+- **Small changes:** Keep the same five steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
 - **Task tree consolidation:** The assessment gate always runs, but a clean-enough tree skips the consolidation pass entirely — see §Consolidation Gate.
 
