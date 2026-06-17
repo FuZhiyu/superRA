@@ -1,0 +1,1003 @@
+# Research Project Setup Skill — Plan
+
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is contributor work on superRA itself (skill authoring) — no implemented domain vertical applies. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff. Treat skill/agent edits per `/CLAUDE.md` Contributor Discipline (load `skill-creator` before editing any `skills/*/SKILL.md`).
+
+**Objective:** Add a new `skills/research-project-setup/` skill to superRA that owns interactive project scaffolding and feature retrofit, bundling the canonical project skeleton and the `create_project.sh` scaffolder; then deprecate the standalone `ResearchProjectTemplate` repo.
+
+**Methodology:** Move the existing assets (`ProjectExample/`, `ProjectExample-Share/`, `create_project.sh`, `.claude/skills/research-project-setup/SKILL.md`) from `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate` into a new top-level superRA skill, restructured to match the `codex-superra-setup` pattern (SKILL.md + `scripts/` + references). Consolidate the duplicate `*-template.md` files into single source by folding their unique lines into `template/CLAUDE.md` / `template/README.md`. Extend `create_project.sh` to register the absolute share-folder path in `.claude/settings.local.json` (additionalDirectories) and `.codex/config.toml` (writable_roots) so agents have permission to write into arbitrarily-located share folders. Update superRA inventory surfaces (CATEGORIES.md, README.md, using-superRA SKILL.md). Verify end-to-end with the standalone script path and an agent-driven path.
+
+**Domain vertical gap:** No implemented superRA domain vertical exactly matches "contributor / skill authoring" work. Following the planning-workflow Phase 1 guidance: "If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work." Flagged — proceeding with workflow-skill discipline only.
+
+**Output:**
+- `skills/research-project-setup/SKILL.md`
+- `skills/research-project-setup/scripts/create_project.sh`
+- `skills/research-project-setup/template/` (Git-side skeleton, with `Data`/`Notes`/`Output` symlinks preserved)
+- `skills/research-project-setup/template-share/` (share-side skeleton)
+- `skills/research-project-setup/references/feature-catalog.md`
+- `skills/research-project-setup/references/retrofit-playbooks.md`
+- Bundled LaTeX templates: `skills/research-project-setup/template/Paper/manuscript.tex`, `skills/research-project-setup/template/Slides/slides.tex`, `skills/research-project-setup/template/references.bib`
+- Updated `skills/CATEGORIES.md`, `README.md`, `skills/using-superRA/SKILL.md`
+- Deprecation commit in the separate `ResearchProjectTemplate` repo (deferred, separate repo, separate commit)
+
+**Expected Results:**
+- Installing superRA gives the user both a "create a new research project" interactive capability and the underlying `create_project.sh` they can run directly.
+- A scaffolded project with `--share-path "$HOME/Dropbox/.../Foo-Share"` lets Claude Code (and Codex) write into `Notes/`, `Data/`, `Output/` without permission prompts because the absolute share-folder path is registered at scaffold time.
+- The standalone `ResearchProjectTemplate` repo carries only a deprecation README pointing at superRA install instructions.
+
+**Sensitivity Analysis:** N/A — this is a refactor + move with verification, not an empirical analysis.
+
+**Pipeline:** N/A (single skill addition; no multi-script dependency).
+
+---
+
+## Workflow Status
+
+- [x] **Plan approved** — researcher approved via ExitPlanMode on 2026-05-21.
+- [x] **Execution complete** — Tasks 1–6 and 8 all `APPROVED`; Task 5's manual steps superseded by Task 8's automated CLI suite (8/8 PASS + load-bearing negative control). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) intentionally deferred to after the superRA-side PR lands.
+- [x] **Drift tests created** — Task 8's automated CLI test suite (`skills/research-project-setup/tests/`) serves as the protection mechanism. 8/8 PASS at `25c5a83` with load-bearing negative-control script (`test_a_negative_control.sh`); only doc-only commits since. See §Decisions 2026-05-21 (Protect satisfaction).
+- [x] **Integrated** — Synced with `origin/main` at `d861089` via merge commit `e739f2c` (sync review APPROVED at `0fb4041`); post-sync integration review APPROVED at `4de21bb` (Tasks 1–6, 8 `Integration status: APPROVED`; full drift-test suite ran 8/8 PASS at HEAD).
+- [ ] **Docs finalized** — RESULTS.md matured, inventory surfaces audited.
+- [ ] **Finished** — branch landed or PR opened; standalone `ResearchProjectTemplate` deprecation commit pushed.
+
+---
+
+## Project Conventions
+
+Walked at planning time (2026-05-21). Re-walk on-demand only.
+
+### Repo root
+- `/CLAUDE.md` (HEAD at `3b5de66`): Contributor guidelines for superRA internals. Treat skill/agent edits as skill creation (load `skill-creator` first). Ownership boundaries table — `research-project-setup` is a new top-level skill, owns its concern and references project-skeleton + scaffolder. Internal design philosophy mandates: lean SKILL.md + references, behavior-shaping instructions only (DRY + Necessity tests), no wrapper instructions around authoritative content, no reminders of harness defaults. Generated artifacts (e.g., Codex agent TOMLs from `sync_codex_agents.py`) stay generated — PLAN.md must list them and the generator command when touched. Commit hygiene: stage only files this turn touched.
+- `/AGENTS.md` and `/AGENT.md`: symlinks/aliases to `/CLAUDE.md`.
+- `/README.md` (HEAD at `3b5de66`): User-facing product model. New skill must be added to its Utility-skills table and (optionally) the intro feature list. Skill inventory in `skills/using-superRA/SKILL.md` is the agent-facing authority and must mirror.
+
+### Module-level docs walked
+- `/skills/CATEGORIES.md` (HEAD at `3b5de66`): Authoritative grouping index. New skill goes under **Utility** with a one-row addition. The "Adding a Skill" section at the bottom encodes the four required surfaces to update (CATEGORIES.md row, README.md row, flat layout, optional stage-scoped references if domain skill — N/A here).
+- `/skills/codex-superra-setup/SKILL.md` (HEAD at `3b5de66`): Pattern reference for the new skill — `SKILL.md` + `scripts/sync_codex_agents.py` shape. Mirrors what `research-project-setup` will look like (SKILL.md + `scripts/create_project.sh` + `template/` + `template-share/` + `references/`).
+- `/skills/using-superRA/SKILL.md` (HEAD at `3b5de66`): Carries the Skill Inventory table (must add row) and the Skill-Load Manifest (no new Stage needed — this skill is invoked by user trigger phrases, not by workflow Stage).
+
+### Source repo walked (not part of superRA)
+- `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/README.md`: User-facing entry point of the template. Documents the two-folder design (`MyProject/` + share folder), `create_project.sh` flags, agent-driven setup via the `research-project-setup` skill, retrofit playbooks, superRA + Codex plugin declarations. Content is the source for `skills/research-project-setup/SKILL.md` and `references/feature-catalog.md`.
+- `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/create_project.sh`: The scaffolder being moved. Existing flag parser (`--share-path`, `--no-superra`, `--no-codex`, `--with-overleaf`, `--with-ci`) is preserved; path constants and the new share-path sandbox-registration logic are added.
+- `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/ProjectExample/`: Git-side skeleton. `Data`, `Notes`, `Output` are symlinks pointing at `../ProjectExample-Share/{Data,Notes,Output}`. Symlinks must survive the move with `cp -a` (or `cp -P`).
+- `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/ProjectExample-Share/`: Share-side skeleton. Contains only `.gitkeep` in `Data/`, `Notes/`, `Output/`, and `Notes/.env` (API-key template).
+- `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/.claude/skills/research-project-setup/SKILL.md`: Source SKILL.md being rewritten into the leaner superRA shape; existing six retrofit playbooks move into `references/retrofit-playbooks.md` verbatim.
+
+### Not walked (not reachable from the planned diff)
+- `superRA/hooks/`, `superRA/agents/implementer.md`, `superRA/agents/reviewer.md`, `superRA/skills/{econ-data-analysis,theory-modeling,writing,reproduction,semantic-merge,...}` — unchanged by this work.
+- `ResearchProjectTemplate/TestDataAnalysis-Share/`, `ResearchProjectTemplate/ProjectExample-Share/Notes/.env` (treated as a template — not customized here), `ResearchProjectTemplate/.claude/settings.local.json` — local test/scratch artifacts.
+
+---
+
+## Decisions
+
+> **User decision (2026-05-21):** Move canonical template files into the new superRA skill; do not retain separate `*-template.md` files — use the `ProjectExample/CLAUDE.md` and `ProjectExample/README.md` as the single source, applying `sed s/ProjectExample/$PROJECT_NAME/g` on copy. Fold the few extra lines that today live only in `CLAUDE-template.md` / `README-template.md` into the surviving copies.
+> **Question asked:** Where should the canonical template files live? Do we still need separate `*-template.md` files?
+> **Rationale:** Single source avoids drift; the variants differ by only a handful of lines.
+
+> **User decision (2026-05-21):** Fully archive / deprecate the standalone `ResearchProjectTemplate` repo after the superRA-side changes land. Replace its README with a deprecation note pointing at superRA install. Do not delete the GitHub repo.
+> **Question asked:** What should the standalone repo become?
+> **Rationale:** Once the skill, script, and templates live in superRA, the old repo has nothing left to maintain.
+
+> **User decision (2026-05-21):** Keep the retrofit feature catalog at parity with today — the six existing playbooks. No new retrofit features added in this PR.
+> **Question asked:** Should retrofit playbooks expand now?
+> **Rationale:** Move first, expand later — avoid scope creep.
+
+> **User decision (2026-05-21):** Preserve the two-folder structure inside the skill — `template/` (Git skeleton, internal symlinks preserved) plus `template-share/` (share-side skeleton) — mirroring `ProjectExample/` + `ProjectExample-Share/` one-for-one.
+> **Question asked:** Don't we have the two-folder structure originally?
+> **Rationale:** The two-folder layout is the canonical design the template embodies; preserving it inside the skill visually documents the design and matches what `create_project.sh` provisions.
+
+> **User decision (2026-05-21):** `create_project.sh` (and `setup_mac.sh`) must register the absolute share-folder path in `.claude/settings.local.json` (`additionalDirectories`) and in `.codex/config.toml` (`[sandbox_workspace_write] writable_roots`) when the user supplies a non-default share path, so the agents have permission to write into `Data/`/`Notes/`/`Output/` (whose symlink targets sit outside the project root).
+> **Question asked:** When the share path is arbitrary, should the scaffolder also register it with Claude / Codex sandboxes?
+> **Rationale:** Permissions are enforced against resolved absolute paths, not symlink names — without this, scaffolded projects with non-sibling share folders trigger permission prompts on every write into the share folder.
+
+> **User decision (2026-05-21):** Bundle LaTeX templates in the scaffolded project skeleton by default (not opt-in): `template/Paper/manuscript.tex` (article-class manuscript), `template/Slides/slides.tex` (beamer / metropolis theme), and `template/references.bib` at the project root. Mirror the IntermediaryDemand setup (`~/Dropbox/research_projects/IntermediaryDemand/Paper/Draft/intermediary_demand_draft.tex` and `Paper/Slides/LSE_slides/LSE_24032026.tex`) — 12pt article + geometry 1in margins + biblatex (biber, authoryear, natbib=true) + booktabs / multirow / makecell / subcaption / hyperref / tikz / pgfplots + math operator macros (`\argmax`, `\argmin`, `\diag`, `\Var`, `\Cov`, `\Corr`, `\sgn`) + colored author-note macros (`\NOTEA`/`\NOTEB`/`\NOTEC` as generic placeholders for the IntermediaryDemand `\NOTEZ`/`\NOTEJ`/`\NOTEM` pattern); slides use beamer + metropolis with progressbar/smallcaps/fraction numbering. Bib lives at project root, shared across paper and slides (`\addbibresource{../references.bib}` from Paper/, from Slides/). Adds new Task 6; renumbers the existing ResearchProjectTemplate deprecation to Task 7.
+> **Question asked:** Add a LaTeX template to the bundled skeleton? If so, what shape?
+> **Rationale:** Every project the scaffolder creates needs LaTeX scaffolding eventually; bundling it removes friction. IntermediaryDemand carries the user's preferred preamble and structure, so mirror that rather than invent a new one.
+
+> **User decision (2026-05-21):** Run Task 5's deferred manual steps (3, 4, 5, 7) before entering integration-workflow. After they pass, flip Task 5 to full APPROVED and check `Execution complete`, then proceed with integration. Task 7 (ResearchProjectTemplate deprecation) still happens after the superRA-side PR lands.
+> **Question asked:** Step 4 completion menu — proceed with integration now, or run manual verification steps first?
+> **Rationale:** User-defined workflow milestone; researcher wants concrete validation in a fresh harness session before the branch enters integration.
+
+> **User decision (2026-05-21):** Replace Task 5's deferred manual verification (Steps 3, 4, 5, 7) with an automated CLI-driven test suite (new Task 8) exercising both Claude Code CLI and Codex CLI in headless mode. Use the cheapest model per CLI (Claude `claude-haiku-4-5-20251001`; Codex `gpt-5-mini` or equivalent). Test A (sandbox write to share folder) uses a **strict permission profile** (no bypass) so it actually exercises `register_share_path_with_agents` — Tests B/C/D use a permissive bypass profile since they test skill routing, not permissions. A mandatory negative-control step in Task 8's verification breaks the registered share path and confirms Test A then *fails*, proving the assertion is load-bearing. Task 5's manual Steps 3, 4, 5, 7 are superseded by Task 8 coverage.
+> **Question asked:** Convert deferred manual verification into automated CLI tests for both Claude and Codex, using the cheapest model?
+> **Rationale:** Manual verification is slow, easy to skip, and not reproducible. Both CLIs must be exercised because `create_project.sh` writes both `.claude/settings.local.json` and `.codex/config.toml`; either could silently regress. A scripted suite makes future skill changes safe.
+
+> **Methodology decision (2026-05-21):** Claude strict-profile flag is `--permission-mode acceptEdits`, not "no flag". The Task 8 dispatch instructed "pass NO `--permission-mode` flag" on the premise that the default mode honors `permissions.additionalDirectories` in headless. An empirical sweep on `claude` 2.1.147 (against a freshly-scaffolded project carrying the absolute share path in `additionalDirectories`, targeting an absolute write path under the share root) contradicted that premise:
+> - `(no flag)` / `default` / `auto` / `dontAsk`: every headless Write to a path outside the project CWD records as a `permission_denial` regardless of `additionalDirectories` (no human to approve in headless).
+> - `acceptEdits`: writes INSIDE workspace + `additionalDirectories` succeed; writes OUTSIDE still record `permission_denials` — verified against a stripped-registration project (denials=1 file=no) AND against a registered project (denials=0 file=yes).
+> - `bypassPermissions`: accepts everything — defeats the test.
+>
+> The implementer made this correction during Task 8 Step 2; the reviewer independently re-verified it on Task 8 review. `acceptEdits` is therefore the canonical strict-profile flag for any future Claude headless test of `additionalDirectories`. Evidence: RESULTS.md Task 8 §Strict-profile flag discovery, and the comment block above `run_claude` in [tests/lib/common.sh](skills/research-project-setup/tests/lib/common.sh#L86-L101).
+> **Question asked:** N/A — surfaced empirically during implementation, not by question.
+> **Rationale:** Without recording this in §Decisions, the next agent that re-reads the original dispatch will see "no flag" and treat the empirically-verified `acceptEdits` choice as a deviation to be corrected — re-introducing a vacuous Test A.
+
+> **User decision (2026-05-21):** Proceed with integration. All in-scope tasks (1–6, 8) APPROVED; Task 8 verified 8/8 PASS with load-bearing negative control. Dispatch `superRA:integration-workflow` (Protect → Sync → Integrate → Document → Finish). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) remains deferred to after this superRA-side PR lands.
+> **Question asked:** Step 4 completion menu — proceed with integration, change the plan, keep as-is, or discard?
+> **Rationale:** User-chosen workflow milestone after Task 8 approval.
+
+> **User decision (2026-05-21):** Task 8's automated CLI test suite is the protection mechanism for this skill-authoring branch. Treat the 8/8 PASS run at commit `25c5a83` as the current protected state — only doc-only commits (`45e595d`, `50640fe`, `f68e358`) have landed since, so the suite's PASS still applies without re-running. Flip `Drift tests created` in §Workflow Status and proceed to Sync.
+> **Question asked:** How should Protect be satisfied — test suite is the protection, re-run now, or add additional protection?
+> **Rationale:** Task 8 already exercises every invariant Protect would cover for skill-authoring work (sandbox registration end-to-end via both CLIs, skill discoverability, retrofit playbook application). Re-running burns budget without adding signal because no code-bearing commits have landed since the suite passed.
+
+> **Sync target base (2026-05-21):** `origin/main`. Branch `superRA-project-template` was cut off main and is destined to land back into main via PR. Recorded merge-base `08b68c85`; current `origin/main` HEAD `d861089` ("[codex] add Codex plugin hooks (#27)"). The single incoming commit touches `hooks/`, `package.json`, `skills/using-superRA/references/codex-instructions.md`, `skills/agent-orchestration/references/worktree-harness-fallback.md`, and adds `tests/hooks/*`; no overlap expected with this branch's `skills/research-project-setup/` and `skills/research-project-setup/tests/` work.
+> **Question asked:** N/A — default `origin/main` is the only candidate; no prior decision needed alternatives.
+> **Rationale:** Standard PR target for superRA contributor work.
+
+> **User decision (2026-05-21):** Open the PR before maturing handoff docs. Skip the Document step (RESULTS.md relocation, PLAN.md disposition) and go directly to Finish — push the branch and open a PR against `origin/main`. The handoff docs live at the worktree root for now; permanent disposition can happen post-PR or as a follow-up commit.
+> **Question asked:** Where should matured RESULTS.md live? (User interrupted with "create a PR first" before answering.)
+> **Rationale:** User-driven workflow ordering — get the PR up for review now; doc maturation is a doc-only follow-up that doesn't block review.
+
+---
+
+### Task 1: Scaffold skill directory + move templates
+
+**Depends on:** *(none)*
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** N/A (file moves + directory creation; no analysis code).
+**Input:** `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/{ProjectExample,ProjectExample-Share,create_project.sh,CLAUDE-template.md,README-template.md}`
+**Output:** `skills/research-project-setup/{scripts/,template/,template-share/,references/}` populated.
+
+- [x] **Step 1: Create the skill directory tree and confirm absence**
+
+```bash
+cd /Users/zhiyufu/package_dev/superRA-project-template
+mkdir -p skills/research-project-setup/{scripts,template,template-share,references}
+ls -la skills/research-project-setup/
+```
+
+- [x] **Step 2: Copy `ProjectExample/` → `template/` preserving symlinks**
+
+The internal `Data`, `Notes`, `Output` symlinks (`-> ../ProjectExample-Share/{Data,Notes,Output}`) must survive the move. After copying, retarget them at the new sibling `template-share/` so they resolve inside the skill directory.
+
+```bash
+SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
+DST=skills/research-project-setup/template
+cp -a "$SRC/ProjectExample/." "$DST/"
+# Retarget the three symlinks at the new sibling template-share/
+for sub in Data Notes Output; do
+    ln -sfn "../template-share/$sub" "$DST/$sub"
+done
+# Verify
+for sub in Data Notes Output; do readlink "$DST/$sub"; done
+ls -la "$DST/" | grep -E '^l'
+```
+
+- [x] **Step 3: Copy `ProjectExample-Share/` → `template-share/`**
+
+```bash
+SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
+DST=skills/research-project-setup/template-share
+cp -a "$SRC/ProjectExample-Share/." "$DST/"
+find "$DST" -mindepth 1 | sort
+# Confirm: Data/.gitkeep, Notes/.gitkeep, Notes/.env, Output/.gitkeep
+```
+
+- [x] **Step 4: Fold `*-template.md` unique lines into `template/CLAUDE.md` and `template/README.md`**
+
+Diff snapshot at planning time (Step 4 of approved plan): `CLAUDE-template.md` lacks the "For Codex Only" example-specific block and one share-folder paragraph at line 28–29; `README-template.md` has slightly leaner share-folder prose at lines 3–28. Keep the **template-style** (generic) wording where the variants differ. Concretely:
+
+```bash
+SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
+DST=skills/research-project-setup/template
+diff "$SRC/CLAUDE-template.md" "$DST/CLAUDE.md"
+diff "$SRC/README-template.md" "$DST/README.md"
+# For each diff hunk, decide whether to keep the template-side (generic) or ProjectExample-side wording.
+# Apply the resolved single-source version with Edit/Write directly on $DST/CLAUDE.md and $DST/README.md.
+```
+
+Decisions for the fold:
+- **CLAUDE.md**: Drop the "For Codex Only" section (it lists ProjectExample-specific skills which are example-only context). Keep the share-folder paragraph from the ProjectExample copy (more informative).
+- **README.md**: Use the generic phrasing from the template variant where it diverges (it is the rendered-into-a-new-project wording, which is what we want).
+
+- [x] **Step 5: Copy `create_project.sh` → `scripts/create_project.sh` (paths edited in Task 2)**
+
+```bash
+SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
+DST=skills/research-project-setup/scripts/create_project.sh
+cp -a "$SRC/create_project.sh" "$DST"
+chmod +x "$DST"
+head -20 "$DST"
+```
+
+- [x] **Step 6: Verify, stage, and commit**
+
+```bash
+# Verify all the moved content is in place and symlinks resolve.
+ls -la skills/research-project-setup/
+ls -la skills/research-project-setup/template/
+ls -la skills/research-project-setup/template-share/
+test -L skills/research-project-setup/template/Data
+test -L skills/research-project-setup/template/Notes
+test -L skills/research-project-setup/template/Output
+ls -L skills/research-project-setup/template/Notes/  # should resolve into template-share/Notes
+git add skills/research-project-setup
+git status
+git diff --cached --stat | head
+git commit -m "feat(skill): scaffold research-project-setup with bundled template + share skeleton"
+```
+
+---
+
+### Task 2: Update `create_project.sh` paths and add share-path sandbox registration
+
+**Depends on:** Task 1
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** `skills/research-project-setup/scripts/create_project.sh` (and the bundled `template/setup_mac.sh` for the coauthor side).
+**Input:** The copied `create_project.sh` from Task 1.
+**Output:** Updated script that (a) reads templates from the new in-skill paths and (b) writes the absolute share-folder path into `.claude/settings.local.json` and `.codex/config.toml` for arbitrary share paths.
+
+- [x] **Step 1: Rewrite path constants**
+
+Map (`$SCRIPT_DIR` is the script's own dir, now `skills/research-project-setup/scripts/`; `template/` and `template-share/` are siblings of `scripts/` under the skill root):
+
+| Old | New |
+| --- | --- |
+| `$SCRIPT_DIR/ProjectExample/Notes/.env`             | `$SCRIPT_DIR/../template-share/Notes/.env` |
+| `$SCRIPT_DIR/ProjectExample/pyproject.toml`         | `$SCRIPT_DIR/../template/pyproject.toml` |
+| `$SCRIPT_DIR/ProjectExample/setup_mac.sh`           | `$SCRIPT_DIR/../template/setup_mac.sh` |
+| `$SCRIPT_DIR/CLAUDE-template.md`                    | `$SCRIPT_DIR/../template/CLAUDE.md` |
+| `$SCRIPT_DIR/README-template.md`                    | `$SCRIPT_DIR/../template/README.md` |
+| `$SCRIPT_DIR/ProjectExample/.claude`                | `$SCRIPT_DIR/../template/.claude` |
+| `$SCRIPT_DIR/ProjectExample/.codex`                 | `$SCRIPT_DIR/../template/.codex` |
+| `$SCRIPT_DIR/ProjectExample/.mcp.json`              | `$SCRIPT_DIR/../template/.mcp.json` |
+| `$SCRIPT_DIR/ProjectExample/.gitignore`             | `$SCRIPT_DIR/../template/.gitignore` |
+| `$SCRIPT_DIR/ProjectExample/overleaf-sync`          | `$SCRIPT_DIR/../template/overleaf-sync` |
+| `$SCRIPT_DIR/ProjectExample/.github`                | `$SCRIPT_DIR/../template/.github` |
+
+Use `Edit` to apply each substitution in `skills/research-project-setup/scripts/create_project.sh`. After the edits, smoke-test it (Step 5).
+
+- [x] **Step 2: Add share-path sandbox registration to `create_project.sh`**
+
+After `SHARE_PATH` is resolved to absolute and after `.claude/settings.json` + `.codex/config.toml` are copied/patched, append a new section:
+
+```bash
+# Register the absolute share-folder path with Claude and Codex sandboxes so
+# the agents can write into Data/Notes/Output regardless of where the share
+# folder physically lives. settings.local.json is per-machine and gitignored.
+register_share_path_with_agents() {
+    local share_abs="$1"
+    # Claude: .claude/settings.local.json — merge into additionalDirectories.
+    mkdir -p .claude
+    if [ -f .claude/settings.local.json ]; then
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+p = '.claude/settings.local.json'
+with open(p) as f: cfg = json.load(f)
+perms = cfg.setdefault('permissions', {})
+dirs = perms.setdefault('additionalDirectories', [])
+for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+    if d not in dirs:
+        dirs.append(d)
+with open(p, 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    else
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+cfg = {
+    "permissions": {
+        "additionalDirectories": [share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"]
+    }
+}
+with open('.claude/settings.local.json', 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    fi
+
+    # Codex: .codex/config.toml — append the absolute paths to writable_roots
+    # alongside the existing relative ./Data /Notes /Output entries.
+    if [ -f .codex/config.toml ]; then
+        python3 - "$share_abs" <<'PY'
+import re, sys
+share = sys.argv[1]
+p = '.codex/config.toml'
+with open(p) as f: txt = f.read()
+# Locate [sandbox_workspace_write] writable_roots = [ ... ] and inject the
+# absolute paths just before the closing bracket if not already present.
+m = re.search(r'(\[sandbox_workspace_write\][^\[]*writable_roots\s*=\s*\[)([^\]]*)(\])', txt, flags=re.DOTALL)
+if m:
+    body = m.group(2)
+    additions = []
+    for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+        if d not in body:
+            additions.append(f'    "{d}",')
+    if additions:
+        new_body = body.rstrip() + ('\n' if not body.endswith('\n') else '') + '\n'.join(additions) + '\n'
+        txt = txt[:m.start(2)] + new_body + txt[m.end(2):]
+        with open(p, 'w') as f: f.write(txt)
+PY
+    fi
+
+    # Ensure .claude/settings.local.json is gitignored (per-machine, never committed).
+    if ! grep -qxF '.claude/settings.local.json' .gitignore 2>/dev/null; then
+        echo '.claude/settings.local.json' >> .gitignore
+    fi
+}
+
+register_share_path_with_agents "$SHARE_PATH"
+```
+
+Place this call near the end of `create_project.sh`, *after* the `.claude/` and `.codex/` copies but *before* the final `setup_mac.sh` invocation (so the per-machine settings exist before `setup_mac.sh` runs — `setup_mac.sh` will run the same function on coauthor machines).
+
+- [x] **Step 3: Mirror the registration into `template/setup_mac.sh` for coauthor machines**
+
+`setup_mac.sh` runs after a coauthor clones the repo on a new machine; their `$SHARE_PATH` comes from `.share-path`. The same function lives there:
+
+```bash
+# Inside template/setup_mac.sh, after $SHARE_PATH is resolved (it currently
+# reads from .share-path or prompts):
+register_share_path_with_agents "$SHARE_PATH"   # same function body, copy verbatim
+```
+
+`Edit` `skills/research-project-setup/template/setup_mac.sh` to insert the same function definition and call.
+
+- [x] **Step 4: Confirm `template/.gitignore` already lists `.claude/settings.local.json`** (idempotency check)
+
+```bash
+grep -nF '.claude/settings.local.json' skills/research-project-setup/template/.gitignore || echo "not yet listed — add it"
+```
+
+Add the entry if absent so freshly-scaffolded projects start with the right gitignore line.
+
+- [x] **Step 5: Smoke-test the scaffolder against /tmp**
+
+```bash
+rm -rf /tmp/SmokeProj /tmp/SmokeProj-Share /tmp/SmokeShare
+bash skills/research-project-setup/scripts/create_project.sh /tmp/SmokeProj \
+    --share-path /tmp/SmokeShare --with-overleaf --with-ci
+# Assertions:
+test -d /tmp/SmokeProj/Code && echo "Code/ ok"
+test -d /tmp/SmokeShare/Data && echo "share Data/ ok"
+test -L /tmp/SmokeProj/Notes && echo "Notes symlink ok"
+[ "$(readlink /tmp/SmokeProj/Notes)" = "/tmp/SmokeShare/Notes" ] && echo "Notes target ok"
+grep -F "/tmp/SmokeShare" /tmp/SmokeProj/.claude/settings.local.json && echo "claude registration ok"
+grep -F "/tmp/SmokeShare" /tmp/SmokeProj/.codex/config.toml && echo "codex registration ok"
+grep -xF '.claude/settings.local.json' /tmp/SmokeProj/.gitignore && echo "gitignore ok"
+# Re-run idempotency: a second registration call must not duplicate entries
+bash -c 'cd /tmp/SmokeProj && . ../SmokeProj/setup_mac.sh 2>/dev/null; true'
+test "$(grep -c "/tmp/SmokeShare\"" /tmp/SmokeProj/.codex/config.toml)" -le 4 && echo "no duplicate codex entries"
+# Cleanup
+rm -rf /tmp/SmokeProj /tmp/SmokeShare
+```
+
+- [x] **Step 6: Commit**
+
+```bash
+git add skills/research-project-setup/scripts/create_project.sh \
+        skills/research-project-setup/template/setup_mac.sh \
+        skills/research-project-setup/template/.gitignore
+git commit -m "feat(skill): wire create_project.sh to new paths + share-path sandbox registration"
+```
+
+---
+
+### Task 3: Write `SKILL.md` + reference files
+
+**Depends on:** Task 1
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** N/A — markdown authoring.
+**Input:** Existing `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/.claude/skills/research-project-setup/SKILL.md` (source content for the move).
+**Output:** `skills/research-project-setup/SKILL.md`, `skills/research-project-setup/references/feature-catalog.md`, `skills/research-project-setup/references/retrofit-playbooks.md`.
+
+- [x] **Step 1: Author `SKILL.md`**
+
+Frontmatter `description` must include trigger phrases (verbatim list):
+
+```
+Create a new academic research project from the bundled template, OR add template features to an existing project (superRA Claude plugin, Codex superRA plugin + named agents, Overleaf sync, GitHub Actions CI, decoupled .share-path, Figures/Tables restructure). Use when the user asks to "create a new research project", "scaffold a project", "bootstrap a research repo", "add Overleaf sync", "add CI workflows to this project", "retrofit superRA", or similar. Supports interactive opt-ins and ex-post retrofit on existing projects. Invokable standalone — does not require the PLAN→IMPLEMENT→INTEGRATE workflow.
+```
+
+Body structure (target ~100–120 lines):
+
+1. One-paragraph "what this skill does".
+2. **Mode detection** — Fresh-setup vs Retrofit detection signals (cwd-content based: empty/unrelated → fresh; presence of `pyproject.toml` / `Code/` / `setup_mac.sh` → retrofit). Ambiguous → one `AskUserQuestion`.
+3. **Fresh-setup procedure** — collect inputs (name, destination, share path, one multi-select question for the four opt-ins: superRA Claude plugin / Codex / Overleaf / CI), invoke `scripts/create_project.sh` with the right flags, write `Notes/setup_decisions.md` decision log, report flag-dependent next steps.
+4. **Retrofit procedure** — identify feature, look up playbook in `references/retrofit-playbooks.md`, apply targeted edits, one commit per feature.
+5. **When-to-ask vs when-to-act** — carried over from the source skill body verbatim (good guidance and not duplicated elsewhere).
+6. Pointers to `references/feature-catalog.md` (for "what's available?") and `references/retrofit-playbooks.md` (for the recipes).
+
+Write directly with `Write` after authoring the content in-head.
+
+- [x] **Step 2: Author `references/feature-catalog.md`**
+
+One section per opt-in feature, each with:
+- **What it is** — 1–2 sentence description
+- **Default** — ON / OFF
+- **Flag** — `create_project.sh` flag
+- **Wiring it requires after install** — concrete next-steps
+
+Features at launch (six total — four opt-ins plus the two retrofit-only ones for reference): superRA Claude plugin (ON), superRA Codex plugin + named agents (ON), Overleaf sync (OFF), GitHub Actions CI (OFF). Plus reference sections for the retrofit-only playbooks (Figures/Tables restructure; decoupled `.share-path`).
+
+- [x] **Step 3: Author `references/retrofit-playbooks.md`**
+
+Move the six playbooks from the source `SKILL.md` verbatim, updating paths:
+- `$TEMPLATE_DIR/ProjectExample/...` → `$SKILL_DIR/template/...` (where `$SKILL_DIR` is `skills/research-project-setup/` of the active superRA install).
+- The "Where this skill ships" section at the bottom of the source SKILL.md is dropped entirely (superseded by the new install model — the skill ships with superRA).
+
+Playbooks:
+1. Add superRA Claude plugin
+2. Add Codex superRA plugin + named agents
+3. Add Overleaf sync
+4. Add GitHub Actions CI
+5. Restructure Figures/Tables under `Paper/` (pre-v2 migration, destructive — confirm first)
+6. Switch from sibling-Share to decoupled `.share-path` — **extended** to also rewrite `.claude/settings.local.json` and `.codex/config.toml` for the new absolute share path (mirroring the new logic in `create_project.sh` Task 2 Step 2).
+
+- [x] **Step 4: Commit**
+
+```bash
+git add skills/research-project-setup/SKILL.md \
+        skills/research-project-setup/references/feature-catalog.md \
+        skills/research-project-setup/references/retrofit-playbooks.md
+git commit -m "feat(skill): research-project-setup SKILL.md + feature catalog + retrofit playbooks"
+```
+
+---
+
+### Task 4: Update superRA inventory surfaces
+
+**Depends on:** Task 3 (skill body must exist so descriptions match)
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** N/A — markdown edits to three inventory files.
+**Input:** Existing `skills/CATEGORIES.md`, `README.md`, `skills/using-superRA/SKILL.md`.
+**Output:** Same three files with a new row for `research-project-setup`.
+
+- [x] **Step 1: Add Utility-table row in `skills/CATEGORIES.md`**
+
+`Edit` the file; insert a new row in the Utility table (between `report-in-markdown` and `semantic-merge` alphabetically):
+
+```markdown
+| `research-project-setup` | Interactive scaffolder + retrofit playbooks for academic research projects. Owns `create_project.sh`, the canonical project skeleton (`template/` + `template-share/`), and the six feature playbooks (superRA Claude plugin, Codex superRA plugin + named agents, Overleaf sync, GitHub Actions CI, Figures/Tables restructure, decoupled `.share-path`). Invokable standalone — no workflow Stage. |
+```
+
+- [x] **Step 2: Add row to the Utility table in `/README.md`**
+
+Insert in the Utility-skill table (alphabetic position). Use one-line summary consistent with the CATEGORIES.md row. Also extend the intro feature list at the top of the README to mention "interactive project scaffolding + feature retrofit" as a third axis.
+
+- [x] **Step 3: Add row to the Skill Inventory in `skills/using-superRA/SKILL.md`**
+
+Add to the Utility section of the Skill Inventory table:
+
+```markdown
+| Utility | `research-project-setup` | Interactive scaffolder + retrofit for academic research projects (`create_project.sh`, bundled template, six feature playbooks). Standalone-invokable. |
+```
+
+Confirm no row needs adding in the Skill-Load Manifest — this skill is invoked by user trigger phrases, not by workflow Stage, so it does not appear in the Stage → required-skills table.
+
+- [x] **Step 4: Commit**
+
+```bash
+git add skills/CATEGORIES.md README.md skills/using-superRA/SKILL.md
+git commit -m "docs: register research-project-setup in inventory surfaces"
+```
+
+---
+
+### Task 5: End-to-end verification
+
+**Depends on:** Task 2, Task 3, Task 4
+**Review status:** APPROVED (Steps 1, 2, 6, 8 automated and passed; Steps 3, 4, 5, 7 SUPERSEDED by Task 8's automated CLI test suite — see §Decisions 2026-05-21)
+**Integration status:** APPROVED
+
+**Script:** Manual verification + small shell assertions.
+**Input:** The completed skill from Tasks 1–4.
+**Output:** A short verification log written into `RESULTS.md` Task 5 section.
+
+Steps 1, 2, 6, 8 are automated and executed in this task. Steps 3, 4, 5, 7 are SUPERSEDED by Task 8 — left as `- [ ]` for traceability but covered by automated test cases A–D.
+
+- [x] **Step 1: Standalone scaffolder with arbitrary share path**
+
+```bash
+rm -rf /tmp/TestProj /tmp/TestShareDropbox
+mkdir -p /tmp/TestShareDropbox
+bash skills/research-project-setup/scripts/create_project.sh /tmp/TestProj \
+    --share-path /tmp/TestShareDropbox --with-overleaf --with-ci
+# Structure
+find /tmp/TestProj -maxdepth 2 -type d | sort
+test -L /tmp/TestProj/Data && [ "$(readlink /tmp/TestProj/Data)" = "/tmp/TestShareDropbox/Data" ]
+test -L /tmp/TestProj/Notes
+test -L /tmp/TestProj/Output
+test -d /tmp/TestProj/Paper/Figures
+test -d /tmp/TestProj/.github/workflows
+test -x /tmp/TestProj/overleaf-sync
+# Sandbox registration
+cat /tmp/TestProj/.claude/settings.local.json
+grep -F '/tmp/TestShareDropbox' /tmp/TestProj/.claude/settings.local.json
+grep -F '/tmp/TestShareDropbox' /tmp/TestProj/.codex/config.toml
+grep -xF '.claude/settings.local.json' /tmp/TestProj/.gitignore
+# superRA on by default
+grep -F '"superRA@superRA"' /tmp/TestProj/.claude/settings.json
+grep -F 'plugins."superra@superra"' /tmp/TestProj/.codex/config.toml
+```
+
+- [x] **Step 2: Opt-out flags strip declarations**
+
+```bash
+rm -rf /tmp/TestProjNoSR /tmp/TestProjNoSR-Share
+bash skills/research-project-setup/scripts/create_project.sh /tmp/TestProjNoSR --no-superra --no-codex
+grep -F '"superRA@superRA"' /tmp/TestProjNoSR/.claude/settings.json && echo "FAIL — superRA still declared" || echo "ok"
+test ! -d /tmp/TestProjNoSR/.codex && echo "ok — .codex stripped"
+```
+
+- [ ] **Step 3: Open scaffolded project in Claude Code and write into the share folder without prompt**
+
+Manual: open `/tmp/TestProj` in a fresh Claude Code session, ask "touch a file at Notes/test.txt and stage it". Confirm no permissions prompt appears. (If a prompt does appear, the share-path registration failed — return to Task 2.)
+
+- [ ] **Step 4: Agent fresh-setup path**
+
+Manual: open a fresh Claude Code or Codex session in an empty directory and say "create a new research project named `VerifyFoo`". Confirm:
+- Agent invokes the skill (mode = fresh-setup).
+- Asks the four-checkbox opt-in question once.
+- Runs `create_project.sh` with the right flags.
+- Writes `<share-path>/Notes/setup_decisions.md` with the three-line user-decision blockquote.
+
+- [ ] **Step 5: Agent retrofit path**
+
+Manual: in the project produced by Step 4, say "add Overleaf sync to this project". Confirm:
+- Agent invokes the skill (mode = retrofit).
+- Applies the Overleaf playbook (copies `overleaf-sync` from `skills/research-project-setup/template/overleaf-sync`, updates `.gitignore`, commits).
+
+- [x] **Step 6: superRA-internal regression — codex agent sync still works**
+
+```bash
+python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
+echo "exit=$?"
+```
+
+- [ ] **Step 7: Inventory discoverability**
+
+Open Claude Code in any directory with superRA installed; type a trigger phrase ("create a new research project"). Confirm the skill is surfaced by the harness.
+
+- [x] **Step 8: Cleanup + RESULTS.md**
+
+```bash
+rm -rf /tmp/TestProj /tmp/TestShareDropbox /tmp/TestProjNoSR /tmp/TestProjNoSR-Share
+# Move VerifyFoo to /tmp before cleanup if it was scaffolded into the cwd.
+```
+
+Update `RESULTS.md` Task 5 section with the verification outcomes (pass/fail per step). Commit RESULTS.md.
+
+---
+
+### Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
+
+**Depends on:** Task 1 (skill directory exists with `template/Paper/` and `template/Slides/` stubs)
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** N/A — markdown / LaTeX authoring + file additions inside `skills/research-project-setup/template/`.
+**Input:** Reference sources — `~/Dropbox/research_projects/IntermediaryDemand/Paper/Draft/intermediary_demand_draft.tex` (manuscript preamble + structure) and `~/Dropbox/research_projects/IntermediaryDemand/Paper/Slides/LSE_slides/LSE_24032026.tex` (slides preamble + theme).
+**Output:** Three new files committed inside `skills/research-project-setup/template/`:
+- `template/Paper/manuscript.tex`
+- `template/Slides/slides.tex`
+- `template/references.bib`
+
+Plus one updated file:
+- `skills/research-project-setup/SKILL.md` — one-line mention under "what gets scaffolded" so the agent can explain bundled LaTeX templates.
+
+The `Paper/.gitkeep`, `Paper/Figures/.gitkeep`, `Paper/Tables/.gitkeep`, `Slides/.gitkeep` files stay (the `Figures/` and `Tables/` directories remain ready for compiled output regardless of which `.tex` is the primary).
+
+- [x] **Step 1: Author `template/Paper/manuscript.tex`**
+
+Generic article-class manuscript adapted from the IntermediaryDemand source. Title and author substituted via the existing `sed s/ProjectExample/$PROJECT_NAME/g` pass at scaffold time (so the title placeholder must contain the literal string `ProjectExample`). Beyond the PLAN.md preamble: added `\usepackage{comment}` (utility, portable) and the standard theorem environments (`theorem`, `proposition`, `lemma`, `corollary`, `definition`, `assumption`) since the source manuscript clearly relies on them and they are generic for any econ paper.
+
+Content shape (write directly with `Write`):
+
+```latex
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\usepackage[left=1in, right=1in, top=1.1in, bottom=1.1in]{geometry}
+\usepackage{color}
+\usepackage{amsmath,amssymb}
+\usepackage[backend=biber,style=authoryear,natbib=true]{biblatex}
+\addbibresource{../references.bib}
+\usepackage[title]{appendix}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage[normalem]{ulem}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+% Colored author-note macros — rename to your coauthors' initials
+\newcommand{\NOTEA}[1]{\textsf{\color{blue}[\textbf{A's note:} #1]}}
+\newcommand{\NOTEB}[1]{\textsf{\color{red}[\textbf{B's note:} #1]}}
+\newcommand{\NOTEC}[1]{\textsf{\color{green}[\textbf{C's note:} #1]}}
+
+\title{ProjectExample}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO: abstract.
+\end{abstract}
+
+\section{Introduction}
+TODO.
+
+\section{Model / Data}
+TODO. Example figure inclusion: \texttt{\textbackslash includegraphics\{Figures/example.pdf\}}. Example table inclusion: \texttt{\textbackslash input\{Tables/example.tex\}}.
+
+\section{Results}
+TODO.
+
+\section{Conclusion}
+TODO.
+
+\printbibliography
+
+\appendix
+\section{Appendix}
+TODO.
+
+\end{document}
+```
+
+- [x] **Step 2: Author `template/Slides/slides.tex`**
+
+Beamer with the metropolis theme, mirroring the IntermediaryDemand slides preamble. The `\title` line carries the `ProjectExample` placeholder for sed substitution.
+
+```latex
+\documentclass[11pt,english,aspectratio=169]{beamer}
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[backend=biber, style=authoryear]{biblatex}
+\addbibresource{../references.bib}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{ragged2e}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{bm}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts (mirror manuscript.tex)
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+\metroset{titleformat=smallcaps, numbering=fraction}
+\setbeamersize{text margin left=0.5cm, text margin right=0.5cm}
+\setbeamercolor{block body}{fg=black, bg=blue!10}
+
+\title{ProjectExample}
+\subtitle{Subtitle}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Motivation}
+    TODO.
+\end{frame}
+
+\begin{frame}{Main Result}
+    TODO.
+\end{frame}
+
+\begin{frame}{Conclusion}
+    TODO.
+\end{frame}
+
+\appendix
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
+
+\end{document}
+```
+
+- [x] **Step 3: Add `template/references.bib`**
+
+Empty `.bib` stub at project root (so both `Paper/` and `Slides/` resolve `\addbibresource{../references.bib}` to the same file). Include a placeholder comment + a single commented-out example entry so authors see the expected format:
+
+```bibtex
+% Project bibliography. Shared by Paper/manuscript.tex and Slides/slides.tex
+% via \addbibresource{../references.bib}.
+%
+% Example entry (uncomment and edit, or replace):
+%
+% @article{example2026,
+%   author  = {Author, A. and Author, B.},
+%   title   = {An example title},
+%   journal = {Journal of Examples},
+%   year    = {2026},
+%   volume  = {1},
+%   number  = {1},
+%   pages   = {1--10},
+% }
+```
+
+- [x] **Step 4: Update `skills/research-project-setup/SKILL.md` and wire the scaffolder**
+
+Added one sentence to `SKILL.md` describing the bundled LaTeX scaffolding, right after the "skill bundles three things" paragraph. Also extended `scripts/create_project.sh` to copy the three new files into a scaffolded project (under `mkdir -p Code Paper/...`): `Paper/manuscript.tex` and `Slides/slides.tex` are copied with the `s/ProjectExample/$PROJECT_NAME/g` substitution; `references.bib` is copied verbatim (comments only). This scaffolder wiring is implied by Step 5's assertions (`test -f Paper/manuscript.tex`, etc.) and was not explicit in PLAN.md.
+
+- [x] **Step 5: Verify scaffold rendering + LaTeX compile**
+
+```bash
+# Re-run the smoke test under /tmp to confirm the new files land in a scaffolded project.
+rm -rf /tmp/LatexProj /tmp/LatexProj-Share
+bash skills/research-project-setup/scripts/create_project.sh /tmp/LatexProj
+# Assertions
+test -f /tmp/LatexProj/Paper/manuscript.tex && echo "manuscript present"
+test -f /tmp/LatexProj/Slides/slides.tex && echo "slides present"
+test -f /tmp/LatexProj/references.bib && echo "bib present"
+grep -F "\\title{LatexProj}" /tmp/LatexProj/Paper/manuscript.tex && echo "title sed'd"
+grep -F "\\title{LatexProj}" /tmp/LatexProj/Slides/slides.tex && echo "slides title sed'd"
+
+# Compile (soft — skip on failure with a note rather than fail the task)
+if command -v latexmk >/dev/null 2>&1; then
+    (cd /tmp/LatexProj/Paper && latexmk -pdf -interaction=nonstopmode manuscript.tex) \
+        && echo "manuscript compiled" \
+        || echo "manuscript compile failed — record in RESULTS.md; the user will fix interactively if needed"
+    (cd /tmp/LatexProj/Slides && latexmk -pdf -interaction=nonstopmode slides.tex) \
+        && echo "slides compiled" \
+        || echo "slides compile failed — record in RESULTS.md (metropolis theme + LuaLaTeX/XeLaTeX may be required)"
+else
+    echo "latexmk not installed — skip compile verification"
+fi
+rm -rf /tmp/LatexProj /tmp/LatexProj-Share
+```
+
+If `latexmk` is not available or compilation fails on the metropolis theme (which expects LuaLaTeX/XeLaTeX-compatible fonts and may need additional CTAN packages), record the outcome in RESULTS.md and treat it as a known precondition rather than a blocking issue — the templates are textual scaffolding intended for the user's own LaTeX toolchain, not a portable build.
+
+- [x] **Step 6: Commit**
+
+```bash
+git add skills/research-project-setup/template/Paper/manuscript.tex \
+        skills/research-project-setup/template/Slides/slides.tex \
+        skills/research-project-setup/template/references.bib \
+        skills/research-project-setup/SKILL.md \
+        skills/research-project-setup/scripts/create_project.sh \
+        PLAN.md RESULTS.md
+git commit -m "feat(skill): bundle LaTeX templates (manuscript + slides + refs.bib) in scaffolded skeleton"
+```
+
+---
+
+### Task 7: Deprecate the standalone `ResearchProjectTemplate` repo
+
+**Depends on:** Task 5 (verified-working superRA-side skill) and Task 6 (LaTeX bundle)
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** N/A — operates in a separate git repo (`/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate`).
+**Input:** The verified superRA install.
+**Output:** Deprecation commit in `ResearchProjectTemplate` pushed to its remote.
+
+- [ ] **Step 1: Replace `ResearchProjectTemplate/README.md` with a deprecation note**
+
+```markdown
+# ResearchProjectTemplate (deprecated)
+
+This template has moved into the [superRA](https://github.com/FuZhiyu/superRA) plugin under `skills/research-project-setup/`. To create a new academic research project:
+
+**Agent-driven (recommended):** Install superRA in Claude Code or Codex, then ask: "create a new research project named `MyProject`."
+
+**CLI (script directly):**
+```bash
+git clone https://github.com/FuZhiyu/superRA
+bash superRA/skills/research-project-setup/scripts/create_project.sh MyProject [--share-path PATH] [--with-overleaf] [--with-ci] [--no-superra] [--no-codex]
+```
+
+See `superRA/skills/research-project-setup/SKILL.md` and `superRA/README.md` for details.
+
+This repo is preserved for backlink stability but no longer maintained.
+```
+
+- [ ] **Step 2: Delete superseded files from `ResearchProjectTemplate`**
+
+```bash
+cd /Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
+git rm -r ProjectExample ProjectExample-Share TestDataAnalysis-Share CLAUDE-template.md README-template.md create_project.sh PLAN.md RESULTS.md
+# Keep: README.md (new), LICENSE (if present), .gitignore, .claude/skills/research-project-setup/ (delete too — already in superRA)
+git rm -r .claude/skills/research-project-setup
+git status
+```
+
+- [ ] **Step 3: Commit and push**
+
+```bash
+git add README.md
+git commit -m "deprecate: move research-project-setup into superRA plugin"
+git push origin main
+```
+
+- [ ] **Step 4: Confirm deprecation lands**
+
+```bash
+# Verify on GitHub:
+gh repo view FuZhiyu/ResearchProjectTemplate --web
+# Or via API:
+gh api repos/FuZhiyu/ResearchProjectTemplate --jq '.description, .pushed_at'
+```
+
+Update the new `README.md` for the deprecated repo if `gh repo view` reveals additional surface (e.g., repo description, topics) that should reflect deprecation. Optionally edit the GitHub repo description through `gh repo edit FuZhiyu/ResearchProjectTemplate --description "Deprecated — moved into FuZhiyu/superRA"`.
+
+---
+
+### Task 8: Automated CLI test suite (Claude Code + Codex headless)
+
+**Depends on:** Task 2 (sandbox registration), Task 3 (SKILL.md trigger phrases), Task 6 (LaTeX bundle copied by scaffolder)
+**Review status:** APPROVED
+**Integration status:** APPROVED
+
+**Script:** New test harness under `skills/research-project-setup/tests/` (bash + small Python where needed).
+**Input:** The installed superRA plugin (Claude + Codex), the cheapest model alias per CLI, a writable `$HOME` subtree.
+**Output:** A scripted suite that scaffolds throwaway projects, invokes each CLI headlessly against four scenarios, asserts behavior, prints a PASS/FAIL table, and tears down. Plus a negative-control check that proves Test A is load-bearing.
+
+**Critical: temp dirs MUST live under `$HOME/rps-tests/`.** macOS sandboxing treats `/tmp` (which symlinks to `/private/tmp`) and `/var/folders/` as broadly writable for both Claude and Codex by default — meaning Test A's strict-profile assertion (that writes outside the registered share path get denied) would *vacuously pass* even with a broken `register_share_path_with_agents`. **The trap also extends to several `$HOME` subdirs:** the template's [.codex/config.toml](skills/research-project-setup/template/.codex/config.toml) ships `~/.venvs`, `~/.cache`, and `~/.local/share/uv` in default `writable_roots`. Picking `$HOME/.cache/rps-tests/` would re-introduce the vacuous-pass bug. Use `$HOME/rps-tests/<scenario>-XXXX` (a direct child of the home directory, not under any default writable_root subtree) for every scratch dir: `mkdir -p "$HOME/rps-tests"` then `mktemp -d "$HOME/rps-tests/<scenario>-XXXX"`. Update `cleanup_paths` to refuse anything not under `$HOME/rps-tests/`. The negative-control step (Step 8) is the canary — if Test A passes against a project with the registered share path stripped, the test is not actually checking permissions.
+
+**Critical: strict-profile flags must keep `additionalDirectories` load-bearing.**
+- **Claude:** strict profile uses `--permission-mode acceptEdits`. Empirically tested on `claude` 2.1.147: with NO `--permission-mode` flag (default mode), and with `default`/`auto`/`dontAsk` explicitly, every headless Write to a path OUTSIDE the project CWD is recorded as a `permission_denial` regardless of whether the absolute path is registered in `permissions.additionalDirectories` (or even given an explicit `Write(<abs>/**)` allow rule). `acceptEdits` is the only mode where headless writes INSIDE workspace + `additionalDirectories` succeed AND writes OUTSIDE that set still produce `permission_denials` — verified against a project with `additionalDirectories=[]` (denials=1, file not created). So `acceptEdits` is the strict-profile mode that exercises the registration. `bypassPermissions` would accept everything and defeat the test.
+- **Codex:** strict profile uses `-s workspace-write -c approval_policy="never"`, which respects `[sandbox_workspace_write] writable_roots` and silently fails writes outside it. Do NOT add `--dangerously-bypass-approvals-and-sandbox` in strict.
+
+**Critical: timeouts must actually kill the process.** The negative-control step exists to confirm Test A FAILS against a broken project — but a denied write can manifest as the agent retrying or stalling rather than exiting. Each agent invocation runs under `with_timeout` (default 300s); for Test A and the negative-control step, override to a tighter budget (e.g., `AGENT_TIMEOUT=90`) so a stuck run is killed quickly. The `with_timeout` helper must SIGKILL after a grace period if SIGTERM is ignored — `perl alarm` fallback alone has been known to leave child processes running on macOS; prefer `gtimeout --kill-after=10 <secs>` (install via `brew install coreutils` if missing) and fall back to `perl alarm` only when neither `gtimeout` nor GNU `timeout` exists. The negative-control script also wraps the whole step in an outer wall-clock guard so even a runaway harness terminates within ~3 minutes.
+
+**Permission profiles** (do not collapse — Test A's correctness depends on this):
+- **Strict** (Test A only — testing the sandbox registration itself): no bypass. Headless agent denies prompts → write fails if `register_share_path_with_agents` did not register the absolute share path.
+- **Permissive** (Tests B/C/D — testing skill routing, not permissions): bypass enabled so legitimate prompts unrelated to the regression do not stall the run.
+
+Claude command shapes (strict / permissive):
+```bash
+claude -p "<prompt>" --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" --output-format json
+claude -p "<prompt>" --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" --permission-mode bypassPermissions --output-format json
+```
+
+Codex command shapes (strict / permissive):
+```bash
+codex exec -C <dir> -m "${CODEX_MODEL:-gpt-5-mini}" -s workspace-write -a never --skip-git-repo-check --json "<prompt>"
+codex exec -C <dir> -m "${CODEX_MODEL:-gpt-5-mini}" --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json "<prompt>"
+```
+
+**Test matrix (4 scenarios × 2 CLIs = 8 cases):**
+
+| ID | Setup | Prompt | Assertions |
+|---|---|---|---|
+| A | Scaffold project at `mktemp -d "$HOME/rps-tests/A-proj-XXXX"`, non-sibling share at `mktemp -d "$HOME/rps-tests/A-share-XXXX"` so the share resolves to a path the project's `.claude/settings.local.json` and `.codex/config.toml` must explicitly allow | `"create a file Notes/test.txt containing the word hello"` | `<share>/Notes/test.txt` exists with "hello"; `.permission_denials` empty (Claude); no sandbox-violation events in JSONL (Codex) |
+| B | Empty `mktemp -d "$HOME/rps-tests/B-cwd-XXXX"`, target project path `$HOME/rps-tests/B-proj-XXXX`, share `$HOME/rps-tests/B-share-XXXX` | `"create a new research project named VerifyBar at <abs-path> with share folder at <abs-share>, no Overleaf, no CI"` (absolute paths embedded by the harness) | scaffolded project root exists with `.claude/`, `.codex/`, symlinks; `Notes/setup_decisions.md` exists; output references the skill or `create_project.sh` |
+| C | Scaffold at `mktemp -d "$HOME/rps-tests/C-proj-XXXX"` without `--with-overleaf` | `"add Overleaf sync to this project"` | `overleaf-sync/` directory appears; `.gitignore` carries overleaf entries; `git log -1` shows a new commit |
+| D | Empty `mktemp -d "$HOME/rps-tests/D-cwd-XXXX"` (no scaffolded project) | `"create a new research project"` | output references the `research-project-setup` skill or `create_project.sh` (skill surfaced from any CWD) |
+
+**Directory layout:**
+
+```
+skills/research-project-setup/tests/
+  README.md
+  run_tests.sh
+  lib/common.sh
+  cases/
+    test_a_sandbox.sh
+    test_b_fresh.sh
+    test_c_retrofit.sh
+    test_d_discovery.sh
+```
+
+- [x] **Step 1: Skeleton + `lib/common.sh`**
+
+Created `tests/`, `run_tests.sh`, `lib/common.sh`, and the four `cases/*.sh` files. `common.sh` exports:
+- `scaffold_project <name> <share-path> [extra create_project.sh flags...]` — wraps the scaffolder.
+- `cleanup_paths <paths...>` — `rm -rf` with `$HOME/rps-tests/*` guard (anything else is refused; mirrors the path discipline that keeps Test A load-bearing — see the temp-dir note above).
+- `run_claude <cwd> <profile> <prompt>` — strict ⇒ `--permission-mode acceptEdits` (the only headless mode that makes `additionalDirectories` load-bearing — see the strict-profile-flags note above); permissive ⇒ `--permission-mode bypassPermissions`. Both add `--output-format stream-json --verbose` (tool-use events must be in the stream for `assert_output_mentions` to find the skill / scaffolder substring) and `--plugin-dir <superRA-repo-root>` so the in-development skill loads.
+- `run_codex <cwd> <profile> <prompt>` — strict ⇒ `-s workspace-write -c approval_policy="never"`; permissive ⇒ `--dangerously-bypass-approvals-and-sandbox`.
+- `codex_install_skill_link` / `codex_uninstall_skill_link` — Test D only; symlinks the dev skill into `~/.codex/skills/research-project-setup` so codex skill discovery finds it from any CWD (codex has no per-invocation plugin-dir flag, unlike claude).
+- `assert_file_exists`, `assert_file_contains`, `assert_no_permission_denials` (parses stream-json JSONL, finds the final `result` event, asserts its `permission_denials` array is empty), `assert_no_codex_sandbox_violation` (scans JSONL for `operation not permitted`, `blocked by the sandbox`, `EACCES`, etc.), `assert_output_mentions`.
+- `with_timeout <seconds> <cmd...>` — uses `gtimeout` / `timeout` / `perl alarm` fallback (macOS lacks `timeout` by default).
+
+`run_tests.sh` carries the case → script map and the `--only` / `--case` / `--keep` / `--verbose` flag parser, calls each case script, and prints a final matrix table. Pre-flight verifies `create_project.sh` is executable, `claude --version` and `codex login status` (skip CLI rows that fail; fail only if both are unusable).
+
+- [x] **Step 2: Test A (sandbox, strict profile)**
+
+Implemented `cases/test_a_sandbox.sh`. Three deviations from the original PLAN.md draft were required to make the test actually load-bearing:
+
+1. **Both project and share path live under `$HOME/rps-tests/`.** The template `.codex/config.toml` ships `/tmp`, `/private/tmp`, `/var/folders`, `~/.venvs`, `~/.cache`, `~/.local/share/uv` in the default `writable_roots`. Any scratch dir under those subtrees is writable even when `register_share_path_with_agents` did **not** run — defeating the negative-control proof. `$HOME/rps-tests/` is a direct child of the home directory not under any default writable-root subtree, so both codex's writable_roots and claude's additionalDirectories must list the absolute share path for the test to PASS.
+2. **Prompt targets the absolute share-folder path.** The original "create `Notes/test.txt`" prompt is satisfied via the workspace symlink and bypasses the `additionalDirectories` check on the resolved target. Rewritten as "create a file at the absolute path `<SHARE>/Notes/test.txt`" so the agent writes through the absolute path that the registration governs.
+3. **Claude strict profile uses `--permission-mode acceptEdits`.** The dispatch instruction was "pass NO `--permission-mode` flag" on the premise that the default mode honors `additionalDirectories` in headless. An empirical sweep (`default`, `auto`, `dontAsk`, `acceptEdits` against a properly-registered project and against a stripped-registration project) showed:
+   - `default` / `auto` / `dontAsk` — every headless Write to a path outside the project CWD is recorded as a `permission_denial` regardless of `additionalDirectories` or explicit `Write(<abs>/**)` allow rules. So the PASS case fails.
+   - `acceptEdits` — writes INSIDE workspace + `additionalDirectories` succeed; writes OUTSIDE still produce denials (verified: denials=1, file absent when `additionalDirectories=[]`).
+   - `bypassPermissions` — accepts everything; defeats the test.
+   `acceptEdits` is therefore the mode that makes the registration load-bearing in headless `-p` mode on `claude` 2.1.147. The negative-control step proves the assertion fails when the registration is stripped.
+
+- [x] **Step 3: Test B (fresh setup, permissive)**
+
+Implemented `cases/test_b_fresh.sh`. Three prompt iterations were needed:
+
+1. Open-ended "create a research project at these paths" — claude ran the scaffolder but skipped writing `Notes/setup_decisions.md`.
+2. "Use the skill, follow the fresh-setup procedure" — claude failed to create the project at all in one trial (LLM nondeterminism).
+3. Final phrasing pins the exact `bash <create_project> <proj> --share-path <share>` command line and explicitly names `setup_decisions.md` as a required action. Both CLIs now reliably scaffold + write the decision log.
+
+Output-format note: `--output-format json` (single-object) only emits the model's final summary text, which often doesn't mention the skill/scaffolder verbatim. Switched `run_claude` to `--output-format stream-json --verbose` so `assert_output_mentions` can match the `Bash` tool_use entries that carry `create_project.sh`.
+
+- [x] **Step 4: Test C (retrofit Overleaf, permissive)**
+
+Implemented `cases/test_c_retrofit.sh`. The terse "add Overleaf sync to this project" prompt was unreliable across both CLIs — claude in particular wandered off-playbook. The final prompt names the skill template path (`$SKILL_ROOT/template/overleaf-sync`) and the commit title (`add: Overleaf subtree sync`), matching the Playbook 3 wording in `references/retrofit-playbooks.md`. The `.gitignore` assertion is satisfied by the existing `.Paper-pre-subtree-backup/` line shipped by the template — no edit needed at retrofit time.
+
+- [x] **Step 5: Test D (trigger discovery, permissive)**
+
+Implemented `cases/test_d_discovery.sh`. For claude, `--plugin-dir <superRA-repo-root>` (set in `run_claude`) is sufficient — discovery works from any CWD. For codex, the installed marketplace `superra@superRA` plugin still points at an older superRA snapshot that does not yet include this skill; codex therefore can't find the in-development version through its normal discovery path. The case adds a setup step that symlinks `$SKILL_ROOT` to `~/.codex/skills/research-project-setup` for the duration of the test and removes the symlink in its `EXIT` trap (idempotent: skips if the path already exists, only removes if the symlink still points at the dev skill).
+
+- [x] **Step 6: README + polish**
+
+Wrote [tests/README.md](skills/research-project-setup/tests/README.md) — how to run, env-var overrides (`CLAUDE_MODEL`, `CODEX_MODEL`, `AGENT_TIMEOUT`, `KEEP_ARTIFACTS=1`), per-test profile / setup notes, the final agent prompts and why each had to be tightened, the skill-discovery shimming, and the manual negative-control recipe. Added a one-line pointer in [skills/research-project-setup/SKILL.md](skills/research-project-setup/SKILL.md) under a new `## Verification` section just before `## When to ask vs when to act`.
+
+- [x] **Step 7: Full-suite green run**
+
+Re-ran from scratch under the corrected discipline (all scratch dirs under `$HOME/rps-tests/`, `cleanup_paths` guard tightened to that subtree). Models: `claude-haiku-4-5-20251001` (Claude) and `gpt-5.4-mini` (Codex — `codex doctor` lists `gpt-5.4-mini` as the cheapest mini-tier alias; `gpt-5-mini` is not exposed on this ChatGPT-account install). **8/8 PASS** — full matrix and wall-times in [RESULTS.md Task 8](RESULTS.md#task-8-automated-cli-test-suite-claude-code--codex-headless).
+
+- [x] **Step 8: Negative-control regression check (MANDATORY — proves Test A is load-bearing)**
+
+Implemented as a runnable standalone script: [`cases/test_a_negative_control.sh`](skills/research-project-setup/tests/cases/test_a_negative_control.sh). The script scaffolds a fresh project + share under `$HOME/rps-tests/neg-{proj,share}-*`, surgically strips `additionalDirectories=[]` from `.claude/settings.local.json` and removes the absolute share-path lines from `.codex/config.toml writable_roots`, then replays Test A's prompt + assertions against the broken project under the strict profile. It reports `"expected FAIL got FAIL ✓"` per CLI when the file is absent (and a `permission_denial` is recorded for claude); `UNEXPECTED PASS` is a hard failure. Anti-hang invariants: `AGENT_TIMEOUT=90` per invocation; `with_timeout` now provides a hard SIGKILL-after-10s grace via a setpgid + process-group-kill pure-bash branch when `gtimeout`/`timeout` are absent — so a retrying agent cannot keep the script alive. Run: `bash skills/research-project-setup/tests/cases/test_a_negative_control.sh both`. Output captured in [RESULTS.md Task 8 §Negative-control](RESULTS.md#task-8-automated-cli-test-suite-claude-code--codex-headless).
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add skills/research-project-setup/tests/ \
+        skills/research-project-setup/SKILL.md \
+        PLAN.md RESULTS.md
+git commit -m "test(skill): automated CLI suite for research-project-setup (Claude + Codex headless)"
+```
+
+---
+
+## Final Diff Self-Check
+
+**Governing range:** `git diff d86108913ff2f627106f2aa76403e63fadc25e97..HEAD` (synced-base head → current branch HEAD).
+
+**Surviving net contribution against `origin/main`:** entirely confined to the planned scope —
+- `skills/research-project-setup/**` (new skill: SKILL.md + references + scripts/create_project.sh + template/ + template-share/ + tests/);
+- `README.md` (one Utility-table row + one intro feature-list bullet for the new skill);
+- `skills/CATEGORIES.md` (one Utility-table row for the new skill);
+- `skills/using-superRA/SKILL.md` (one Utility row in the Skill Inventory);
+- `PLAN.md`, `RESULTS.md` (this branch's handoff docs);
+- `.gitignore` (whitelist negation pair so `template/.claude/{settings.json,agents,skills}` are tracked despite the root-level `.claude/` ignore).
+
+No `hooks/`, `tests/hooks/`, `.codex-plugin/plugin.json`, or `docs/plans/2026-05-21-codex-hooks-*.md` hunks survive against `origin/main` — the Codex-hooks work was a strict-superset upstream merge during Sync (cluster `codex-hooks-supersede`, §Sync Map).
+
+**Attestation (Integrate phase, no-code-change posture):**
+- No refactor was required. The new skill lives in an empty top-level namespace (`skills/research-project-setup/`) with no convention-fit refactor opportunities against neighboring skills.
+- No utility duplication identified. The scaffolder (`create_project.sh`) and template skeleton are new surfaces; no existing superRA utility provides overlapping behavior.
+- Test suite re-ran 8/8 PASS at HEAD post-sync (Task 8 matrix re-verified after the `origin/main` merge; identical to the pre-sync 8/8 PASS at commit `25c5a83`).
+- Orchestrator accepts absence of an integrate-implementer pass given the no-code-change posture: only doc edits (this REVISE round's RESULTS.md doc-currency fix + this self-check trail) land in the Integrate phase.
+
+**Suspicious-hunk justifications:** none. The `.gitignore` whitelist hunk is documented in [RESULTS.md Task 1](RESULTS.md#task-1-scaffold-skill-directory--move-templates) (without it, `template/.claude/settings.json` would be silently swept by the root `.claude/` ignore and Task 5 Step 1's `grep '"superRA@superRA"'` would fail). All other hunks are task-objective hunks.
+
+---

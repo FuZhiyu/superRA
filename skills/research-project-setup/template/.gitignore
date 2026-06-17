@@ -1,0 +1,101 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+*-blx.bib
+*.dvi
+*.ps
+*.pdf
+*.png
+# Whitelist publication-quality assets co-located with the manuscript
+!Paper/Figures/*.png
+!Paper/Figures/*.pdf
+!Paper/Tables/*.tex
+!Paper/Tables/*.pdf
+!Paper/**/*.tex
+!Paper/**/*.cls
+!Paper/**/*.sty
+!Paper/**/*.bib
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+.Rproj.user
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Project specific
+# Share-folder location (machine-local — recorded by setup_mac.sh)
+.share-path
+# Symlinks resolved per-machine, not committed
+Notes
+Data
+Output
+# Personal Claude Code overrides
+.claude/settings.local.json
+# Scratch / temp / exploratory
+scratch/
+# Overleaf pre-subtree backup (safe to delete after the subtree migration succeeds)
+.Paper-pre-subtree-backup/
+sync/
+uv.lock
+*.tmp
+*.bak
