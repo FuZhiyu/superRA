@@ -1,6 +1,6 @@
 ---
 title: "Codex Exec Task-Hook E2E"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -16,3 +16,11 @@ Start from tests/hooks/test-codex-e2e-cli.sh. Build a minimal superRA/ tree in T
 
 ## Results
 
+Implemented optional Codex runtime task-hook coverage in [test-codex-e2e-cli.sh:33-74](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L33-L74) and [test-codex-e2e-cli.sh:137-221](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L137-L221). The script now builds a temporary `superRA/` tree, installs PostToolUse task-hook commands with Codex empty-JSON mode, asks a real `codex exec` run to edit `superRA/01-child/task.md`, and asserts parsed JSONL hook evidence plus task-tree state: child status `approved`, root status propagated to `approved`, and no generated dashboard.
+
+Verification run in this implementation pass:
+
+- `bash -n tests/hooks/test-codex-e2e-cli.sh` passed.
+- `bash tests/hooks/test-codex-hooks.sh` passed: 15 passed, 0 failed.
+
+The authenticated paid runtime command `bash tests/hooks/test-codex-e2e-cli.sh` was not run in this pass.

@@ -8,10 +8,12 @@
 #   (a) the UserPromptSubmit / PreToolUse:Skill hooks are correctly registered,
 #   (b) Claude Code's runtime wiring delivers stdin → hook script → stdout,
 #   (c) the three-way platform output branch selected at runtime matches
-#       what the hook script emits.
+#       what the hook script emits,
+#   (d) the PostToolUse task hook runs after a real task.md edit and propagates
+#       task-tree status.
 #
 # How to run:
-#   bash tests/hooks/test-e2e-cli.sh            # all six scenarios (S1 S2 S3 S6 S4 S5)
+#   bash tests/hooks/test-e2e-cli.sh            # all seven scenarios (S1 S2 S3 S6 S7 S4 S5)
 #
 # Requirements:
 #   - claude CLI >= 2.1.116 on PATH, logged in (the suite uses the live keychain auth).
@@ -21,11 +23,11 @@
 #     (claude-haiku-4-5) to keep the per-scenario cost minimal. Observed
 #     cost on Haiku (per scenario, approximate):
 #       S1 ~ $0.015    S2 ~ $0.020 + $0.018 (two turns: setup + resume-check)
-#       S3 ~ $0.012    S6 ~ $0.018
+#       S3 ~ $0.012    S6 ~ $0.018    S7 ~ $0.020
 #       S4 ~ $0.090    S5 ~ $0.100 (multi-turn deny-and-retry chains; loading
 #                                   using-superRA / agent-orchestration adds
 #                                   the skill bodies to subsequent turns)
-#     Total full-suite cost ~ $0.27. --tools "" does not suppress the model
+#     Total full-suite cost ~ $0.29. --tools "" does not suppress the model
 #     turn on 2.1.116 — it only disables tool invocation — so we cannot drop
 #     the model cost to zero. Haiku is the cheapest alternative.
 #
@@ -244,6 +246,36 @@ print(f"{cost:.4f}")
 PYEOF
 }
 
+write_minimal_task_md() {
+  local path="$1"
+  local title="$2"
+  local status="$3"
+  mkdir -p "$(dirname "$path")"
+  cat >"$path" <<EOF
+---
+title: $title
+status: $status
+depends_on: []
+tags: []
+created: 2026-06-17
+---
+
+## Objective
+
+Runtime task-hook fixture.
+
+## Results
+
+(empty)
+EOF
+}
+
+write_minimal_task_tree() {
+  local cwd="$1"
+  write_minimal_task_md "$cwd/superRA/task.md" "Claude Hook Root" "not-started"
+  write_minimal_task_md "$cwd/superRA/01-child/task.md" "Claude Hook Child" "not-started"
+}
+
 # ---- scenario assertion helpers ---------------------------------------
 
 pass=0
@@ -386,6 +418,81 @@ assert_pretooluse_all_silent() {
     fi
   done <<<"$resp"
   record_pass "$name" "(all PreToolUse silent)"
+}
+
+# Assert: a real Edit/Write touched superRA/01-child/task.md, Claude Code
+# emitted a PostToolUse hook_response for that edit, and the task hook propagated
+# the child status to the root task.
+assert_task_hook_edit_e2e() {
+  local name="$1"; local ndjson="$2"; local cwd="$3"
+  if python3 - "$ndjson" "$cwd" <<'PYEOF'
+import json, sys
+from pathlib import Path
+
+ndjson, cwd = sys.argv[1:]
+cwd = Path(cwd)
+root_md = cwd / "superRA" / "task.md"
+child_md = cwd / "superRA" / "01-child" / "task.md"
+
+events = []
+with open(ndjson, encoding="utf-8") as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except Exception:
+            continue
+
+post_tool = [
+    r for r in events
+    if r.get("type") == "system"
+    and r.get("subtype") == "hook_response"
+    and r.get("hook_event") == "PostToolUse"
+]
+if not post_tool:
+    raise SystemExit("no PostToolUse hook_response")
+
+for r in post_tool:
+    stdout = (r.get("stdout") or "").strip()
+    if stdout:
+        json.loads(stdout)
+
+task_edit = False
+for r in events:
+    if r.get("type") != "assistant":
+        continue
+    for c in r.get("message", {}).get("content", []) or []:
+        if c.get("type") != "tool_use" or c.get("name") not in {"Edit", "Write"}:
+            continue
+        tool_input = c.get("input", {}) or {}
+        file_path = str(tool_input.get("file_path", ""))
+        if file_path.endswith("superRA/01-child/task.md"):
+            task_edit = True
+if not task_edit:
+    raise SystemExit("no Edit/Write tool_use for superRA/01-child/task.md")
+
+def status(path: Path) -> str:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+checks = {
+    "child task approved": status(child_md) == "approved",
+    "root status propagated": status(root_md) == "approved",
+    "dashboard not generated": not (root_md.parent / "dashboard.html").exists(),
+}
+failed = [name for name, ok in checks.items() if not ok]
+if failed:
+    raise SystemExit(", ".join(failed))
+PYEOF
+  then
+    record_pass "$name" "(PostToolUse + propagated status)"
+  else
+    record_fail "$name" "task-hook evidence check failed"
+  fi
 }
 
 # ---- Scenarios ---------------------------------------------------------
@@ -560,6 +667,33 @@ run_s6() {
   echo "       cost: \$$cost"
 }
 
+# S7 — real task.md Edit triggers the PostToolUse task hook and propagates
+# status from the edited child task to the root task.
+run_s7() {
+  local name="S7 task-hook runs after task.md edit"
+  local cwd sid out
+  new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
+  write_minimal_task_tree "$cwd"
+  sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
+  out="$cwd/s7.ndjson"
+  local sys_prompt
+  sys_prompt='Use only the Read and Edit tools. Edit exactly superRA/01-child/task.md by changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok.'
+  if ! run_claude "$out" "$cwd" "$sid" \
+    --no-session-persistence \
+    --tools Read,Edit \
+    --allowedTools Read,Edit \
+    --permission-mode acceptEdits \
+    --append-system-prompt "$sys_prompt" \
+    -- "Run the task-hook edit probe now."; then
+    record_fail "$name" "claude exited nonzero"
+    tail -n 60 "$out" >&2
+    return
+  fi
+  local cost; cost=$(report_cost "$out")
+  assert_task_hook_edit_e2e "$name" "$out" "$cwd"
+  echo "       cost: \$$cost"
+}
+
 # ---- run ---------------------------------------------------------------
 
 echo "=== S1 ==="
@@ -573,6 +707,9 @@ run_s3
 echo
 echo "=== S6 ==="
 run_s6
+echo
+echo "=== S7 ==="
+run_s7
 echo
 
 echo "=== S4 (FULL) ==="
