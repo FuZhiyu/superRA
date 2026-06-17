@@ -1,6 +1,6 @@
 ---
 title: "Condense & Restructure: Quickstart-Centered Docs + Two Skills Pages"
-status: in-progress
+status: approved
 depends_on:
   - 11-dashboard-first-messaging
 tags: []
