@@ -1,6 +1,6 @@
 ---
 title: "Rewrite Quickstart as the Single End-to-End Narrative"
-status: not-started
+status: implemented
 depends_on:
   - 01-ia-and-scaffold
 tags: []
@@ -41,3 +41,23 @@ End by directing the reader to the two new skill pages — [Domain Skills](#/03-
 ## Planner Guidance
 
 This is the longest single rewrite. Lean on the existing prose already in the file and in the soon-deleted concepts pages — you are condensing and inlining proven copy, not writing from scratch. Cut ruthlessly: anything that reads as repetition of a concept already introduced earlier in the same page is the verbosity this restructure exists to remove. Keep one paragraph per line.
+
+## Results
+
+Rewrote [docs/site/02-quickstart/task.md](../../../../docs/site/02-quickstart/task.md) into a single end-to-end narrative spine following the design-sketch section order. All four inline `<!-- ... -->` design comments are resolved and removed (`grep "<!--"` → none).
+
+**Structure delivered** (matching the sketch headers): Objective → Prerequisite → Install + set up a project → A typical workflow (four `####` subsections: Superplan, Superimplement, Watch progress and read results, Superintegrate) → Where to go next. The old standalone "Step 3 — Watch progress" and "Step 4 — Read the results" steps are merged into one subsection per the sketch comment, with the dashboard framed as the default monitor-and-read surface and the markdown/CLI path demoted to a brief mention.
+
+**Concepts folded inline** (the deleted Concepts pages' essential ideas, condensed): the task tree introduced at Superplan as committed `task.md` files holding project state; the dashboard as the *human* view of those files (the agent-facing CLI surface is deliberately not taught); the implementer–reviewer pair and why adversarial review at Superimplement; the frontier at the watch step; the INTEGRATE phase (protect / sync-by-intent / refactor / document / ship) at Superintegrate. Details link out to authoritative homes rather than being re-explained.
+
+**Prerequisite facts resolved accurately** per repo [CLAUDE.md §Local Task-Tree CLI Development](../../../../CLAUDE.md): `uv run --script` (PEP 723) is stated as the recommended path, with `python3` as a stdlib-only fallback — no hand-waving. Git literacy stated as a plain hard prerequisite. Claude Code / Codex parity stated, with Codex install + agent-invocation differences linked to [docs/README.codex.md](../../../../docs/README.codex.md) (the surviving repo authority, since the `04-how-to` install page is deleted in `05-finalize`).
+
+**Trigger word** introduced at high level only — saying `superra` (or a phase word) turns the workflow on; the hook wiring is left as contributor internal, not documented.
+
+**Toy example and screenshots kept**: the size-and-momentum-on-simulated-returns example and all three existing dashboard screenshots (`dashboard-workspace.png`, `dashboard-kanban.png`, `dashboard-task-detail.png`) are reused, re-anchored to the points in the narrative where each view is first relevant.
+
+**Ends** by directing the reader to [Domain Skills](#/03-domain-skills) and [Utility Skills](#/04-utility-skills) as the next read, plus Reference and Showcase.
+
+**Verification.** `report-in-markdown` self-diagnose reports the file clean. All five cross-page hash links resolve to existing pages (`05-reference/01-task-file`, `03-domain-skills`, `04-utility-skills`, `05-reference`, `06-showcase`); no stale `#/03-concepts` or `#/04-how-to` links remain. All six repo-file link targets and all three attachment images exist on disk. The page renders without error through the real doc-mode export path (`plan_dashboard.py generate --doc-mode --root 02-quickstart`); the only `katex-error`/`ParseError` strings in the output are literals inside the vendored KaTeX JS bundle, not rendered page content (the page has no math).
+
+**Deviation from Planner Guidance — install-detail link target.** The objective suggested linking Codex/install specifics to "Reference / Install". There is no install page in the Reference section, and the `04-how-to/01-install-and-set-up` page is deleted in `05-finalize`, so I linked Codex specifics to the durable repo authority [docs/README.codex.md](../../../../docs/README.codex.md) and general install to the repo [README](../../../../README.md) — the same targets the welcome page already uses — rather than a target that will not survive the restructure. The reader still reaches the authoritative install detail.
