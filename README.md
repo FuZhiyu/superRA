@@ -52,7 +52,7 @@ flowchart TB
 
 To start, just describe what you want — `make a plan on...`, `implement according to the plan`, `integrate it with the update on main` — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`. The [Concepts](http://fuzhiyu.me/superRA/#/03-concepts) section explains each phase, re-entry, and the autonomy-with-human-in-the-loop model.
 
-The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `superra dashboard` to watch and steer it through the tree, DAG, and kanban views; the [dashboard guide](http://fuzhiyu.me/superRA/#/04-how-to/04-see-your-work) covers live serve and branch-snapshot sharing.
+The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `./superRA/superra dashboard` to watch and steer it through the tree, DAG, and kanban views; the [dashboard guide](http://fuzhiyu.me/superRA/#/04-how-to/04-see-your-work) covers live serve and branch-snapshot sharing.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 

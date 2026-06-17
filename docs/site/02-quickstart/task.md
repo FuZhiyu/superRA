@@ -54,14 +54,14 @@ Claude loads the `superplan` skill, explores the empty project, and proposes a s
 You can see the tree any time from a terminal in the project. The filesystem *is* the task hierarchy — each task is a `task.md` file in its own directory:
 
 ```text
-$ superra task tree
+$ ./superRA/superra task tree
 ◐ Size and Momentum Sort on Simulated Equity Returns
   ● 01-simulate-panel: Simulate the monthly equity panel
   ◐ 02-build-portfolios: Construct size and momentum portfolios
   ○ 03-report-spread: Report average returns and the momentum spread
 ```
 
-The glyphs are task status: `○` not started, `◐` in progress, `●` done. The root's `◐` is not set by hand — it is a *rollup* of its children, so a parent always reflects the state of the work beneath it. The three children form a chain: portfolios depend on the simulated panel, and the report depends on the portfolios. The full status model and the frontier idea below are explained in [The Task Tree](#/03-concepts/02-the-task-tree).
+The glyphs are task status: `○` not started, `◐` in progress, `●` approved (reviewed and done). The root's `◐` is not set by hand — it is a *rollup* of its children, so a parent always reflects the state of the work beneath it. The three children form a chain: portfolios depend on the simulated panel, and the report depends on the portfolios. The full status model and the frontier idea below are explained in [The Task Tree](#/03-concepts/02-the-task-tree).
 
 ### Step 2 — Implement one task
 
@@ -91,14 +91,14 @@ Simulated the panel in code/01_simulate_panel.py from seed 42 and wrote data/pan
 After the first task is approved, ask which task is ready next — the *frontier* is the set of leaf tasks whose dependencies are all satisfied:
 
 ```text
-$ superra task frontier
+$ ./superRA/superra task frontier
   ◐ 02-build-portfolios: Construct size and momentum portfolios [depends: 01-simulate-panel]
 ```
 
 For a visual view, launch the dashboard from a project terminal:
 
 ```bash
-superra dashboard
+./superRA/superra dashboard
 ```
 
 It opens a live, auto-updating dashboard in your browser, launches in the background, and exits on its own once idle. The default **Workspace** view shows the tree with status pills and the parent rollup. Here is this toy project mid-flight, with the panel task approved and the portfolio task in progress:

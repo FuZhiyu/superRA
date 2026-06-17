@@ -1,6 +1,6 @@
 ---
 title: "New-User Documentation Audit (Advertise + Clarity)"
-status: not-started
+status: implemented
 depends_on: 
   - 01-front-door-and-welcome
   - 02-propagate-dashboard
@@ -25,4 +25,33 @@ Scope: edits stay within the docs-site pages and README; do not change CLI behav
 Validation: findings recorded with location + rationale + disposition (fixed / left for user); applied fixes render cleanly in doc-mode (subtree-root Build command); both audit questions answered with a clear verdict, not a vague "looks good".
 
 ## Results
+
+Cold read of the rendered site as a researcher with zero superRA vocabulary, README → welcome → quickstart → how-to (install, see-your-work) in order, cross-checked against the showcase and CLI reference pages. Both audit questions get a clear verdict below; in-scope advertising/clarity fixes were applied, and one item that would re-open methodology is left for the user.
+
+### Verdict — Q1: Does it advertise superRA and the dashboard well enough? **Yes, with two fixes applied.**
+
+The dashboard is genuinely top-billed, not buried. On both front doors it is item #1, carries the monitor + handoff duality in one sentence, and lands the self-referential "you are reading one" hook ([README.md:9](../../../../README.md#L9); [docs/site/01-welcome/task.md:16](../../../../docs/site/01-welcome/task.md#L16)). The "why not an unguided agent / why not Superpowers" contrast is concrete and fair — it characterizes superRA's own human-in-the-loop emphasis for exploratory social-science research rather than knocking the alternative ([docs/site/01-welcome/task.md:26](../../../../docs/site/01-welcome/task.md#L26)). The README is self-sufficient for a 60-second skim: what it is, the dashboard, the workflow diagram, install. The value proposition is compelling and concrete (the "half the sample silently dropped" failure mode in the README lands).
+
+Two advertising defects found and fixed:
+
+1. **[fixed] slide-design miscategorized as a research domain (carryover from `01`).** The welcome page framed all four of *data analysis / theory modeling / academic writing / slide design* as "domain skills," but only the first three are research verticals per [`skills/CATEGORIES.md`](../../../../skills/CATEGORIES.md); slide-design is a presentation/utility skill, and the README already listed only the three. Reframed by capability, not category, so the two front doors agree and slide design stays visible without being publicly miscategorized: "domain skills … for the research work at hand — data analysis, theory modeling, and academic writing — plus a presentation skill for turning results into slide decks" ([docs/site/01-welcome/task.md:18](../../../../docs/site/01-welcome/task.md#L18)).
+2. **[fixed] cosmetic double-blank-line artifacts** left by the `01` rewrite, after `## Objective`, before `## How it works`, and before `## Start here`. Swept all three.
+
+### Verdict — Q2: Is it clear how to use it? **Yes, the path is clear; two consistency bugs fixed.**
+
+The welcome → quickstart → how-to path is followable cold. Install → start a project → plan → implement under review → watch on the dashboard → read results → resume is a coherent first journey; jargon (task tree, frontier, implementer–reviewer pair, rollup) is introduced by *doing* in the quickstart and each term links to its concept page. No dead-end pages: the how-to landing and welcome "Start here" both route onward; the dashboard is never described before the reader is shown how to open it (quickstart Step 3 and the See Your Work guide both open with the run command).
+
+Two clarity bugs found and fixed:
+
+1. **[fixed] broken CLI pointer — bare `superra` would not resolve.** The quickstart's copy-paste blocks and the README dashboard line used bare `superra task tree` / `superra task frontier` / `superra dashboard`, but the wrapper ships at `./superRA/superra` and is not on `PATH` — the authoritative CLI reference and the See Your Work guide both use `./superRA/superra`. A new user pasting the quickstart would hit "command not found" on their first dashboard command. Corrected all three quickstart invocations and the README inline to `./superRA/superra` ([docs/site/02-quickstart/task.md:57](../../../../docs/site/02-quickstart/task.md#L57), [:94](../../../../docs/site/02-quickstart/task.md#L94), [:101](../../../../docs/site/02-quickstart/task.md#L101); [README.md:55](../../../../README.md#L55)).
+2. **[fixed] status-glyph vocabulary mismatch.** The quickstart legend called `●` "done," but `●` maps to `approved` in the CLI ([skills/task-tree/scripts/task_query.py:29](../../../../skills/task-tree/scripts/task_query.py#L29)), and the dashboard guide, showcase, and status pills all use `approved`. A reader clicking into the dashboard sees green "approved" pills, not "done." Relabeled to `` `●` approved (reviewed and done)`` to match the term the rest of the journey uses, without re-opening the status model the concept page owns ([docs/site/02-quickstart/task.md:64](../../../../docs/site/02-quickstart/task.md#L64)).
+
+### Left for the user (would re-open a structural/methodology question — not acted on)
+
+- **README CLI-form precedent.** I corrected the README's single inline `superra dashboard` to `./superRA/superra dashboard` as an in-scope broken-pointer fix, but the README otherwise uses bare `claude plugin …` / package-manager-style commands and deliberately keeps the dashboard mention prose-light for the 60-second skim. If you prefer the README to stay free of the `./superRA/` path prefix in prose (treating the wrapper path as a docs-site detail), revert [README.md:55](../../../../README.md#L55) to the bare form; the quickstart and reference pages would still carry the runnable path. Flagging because it touches the approved `01` README and the consistency call is a style preference, not a correctness gap.
+
+### Validation
+
+- Markdown self-diagnose clean on all three touched files (`check_markdown.py`).
+- Doc-mode export built successfully (`plan_dashboard.py generate --plan-root docs/site --doc-mode`); confirmed the slide-design reframe, the corrected `./superRA/superra dashboard` form, and the `approved (reviewed and done)` glyph label rendered into the HTML and the stale "done" legend is gone.
 

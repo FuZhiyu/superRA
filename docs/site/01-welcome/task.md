@@ -8,23 +8,17 @@ created: 2026-06-11
 
 ## Objective
 
-
 superRA turns an AI coding agent into a disciplined research assistant. You bring a research question; superRA gives the agent a workflow that plans the work, implements it under adversarial review, and integrates the result into your codebase without letting the findings quietly drift. It runs on Claude Code, Codex, or any harness that supports skills and subagents.
 
 What it is:
 
 - A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. You are viewing one right now — this documentation site is itself built on the dashboard.
 - An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-- **Domain skills** that teach agents the right discipline for the work at hand, enforced as they go:
-  - data analysis
-  - theory modeling
-  - academic writing
-  - slide design
+- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — data analysis, theory modeling, and academic writing — plus a presentation skill for turning results into slide decks.
 
 Why superRA rather than an existing agentic-coding framework like [Superpowers](https://github.com/obra/superpowers)?
 
 Those frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the current direction pushes hard to remove the human from the loop. Social-science research needs a different rhythm: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
-
 
 ## How it works
 
@@ -58,7 +52,6 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
 In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work only advances on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-aware (never a blind merge), refactored to fit the codebase, documented, and shipped. The phases form a cycle, not a pipeline: a discovery while implementing or a scope change after merge routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
 
 Three ideas carry most of the discipline. An **implementer–reviewer pair** sits at every step, so no result ships without an independent second look. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And the **task tree** keeps the project's state in committed files you can read at any time, so a fresh agent — or you, a week later — can open the repo and resume from the files and git history alone.
-
 
 ## Start here
 
