@@ -1,6 +1,6 @@
 ---
 title: "Rework the Three-Phase Diagram on the Welcome Page"
-status: implemented
+status: revise
 depends_on:
   - 08-polish-prose-and-leaks
 tags: []
@@ -39,3 +39,15 @@ If Mermaid is not supported in doc-mode, the minimal fix is to anchor the loop-b
 Rendered result:
 
 ![The reworked three-phase diagram: PLAN, IMPLEMENT, INTEGRATE boxes and a finished pill in a single column, with a dashed return edge looping up the left gutter into PLAN labeled "plan change loops back to PLAN".](attachments/welcome-diagram-rendered.png)
+
+## Review Notes
+
+1. **MAJOR** — [01-welcome/task.md:32-35](../../../01-welcome/task.md#L32-L35): The bottom (origin) of the return edge dangles in empty space, so the loop-back is still partly the "free-floating dashed line ... disconnected from the boxes" the objective set out to remove — just relocated from the right sidebar to the bottom-left.
+
+   Verified against the **live** doc-mode render (`http://localhost:8995/#/01-welcome`, headless, widths 820/560/420). The dashed return edge connects cleanly into PLAN at the **top** (arrowhead at the PLAN box's left edge — that end is good), but at the **bottom** it ends in blank space roughly level with the `finished` pill, ~170px to the left of it, with **no horizontal connector** to INTEGRATE, the `finished` pill, or anything in the flow. A reader sees a dashed line emerging from nowhere. The fix needs an actual return path that visibly *originates* from the end of the flow (e.g. a horizontal segment from below INTEGRATE / the `finished` row over to the gutter, then up), not just a vertical stub.
+
+   Root cause: the bracket div ([01-welcome/task.md:33](../../../01-welcome/task.md#L33)) is positioned with `right:0` and **no `width` or `left`**, so its content box collapses (measured bounding box width = 2px). The `border-top` / `border-bottom` you added therefore render as ~0-length corner curls, not the horizontal arms described in `## Results`. The element is effectively a single vertical dashed line with rounded stubs — it is not the "L-shaped bracket (top + left + bottom borders) ... turning into the top-left of the PLAN box" that `## Results` claims. Give the bracket a real width spanning from the gutter to the box edge (or restructure the return path) so the bottom arm actually reaches the flow.
+
+2. **MAJOR** — [task.md:30](task.md#L30) and [task.md:35](task.md#L35): `## Results` materially misdescribes the rendered output, so it is not the self-contained, accurate account the task interface requires. Line 30 claims an "L-shaped dashed bracket (top + left + bottom borders ...) ... turning into the top-left of the PLAN box"; line 35 claims the bracket "spans the full flow height ... down to the `finished` pill row, so it reads as returning from the end of the flow back to PLAN." Neither holds: there is no rendered bottom arm and the line stops short of the flow's end with a visible horizontal gap (see item 1). The reported x=426/x=425 connection is true only for the **top** arrival into PLAN. Update `## Results` to describe what actually renders once the origin connection is fixed, and re-capture `attachments/welcome-diagram-rendered.png` (the committed screenshot crops off the dangling bottom, so it does not surface the defect).
+
+Confirmed sound (no action needed): the Mermaid-unsupported determination (verified against served HTML + `base.html`/`dag.html`); prose paragraph and Design Philosophy section untouched (diff confined to lines 31-55); `docs/build_site.sh` builds clean; no phase-box overlap and layout holds at narrow widths; all information preserved (three phases + contents, `finished` pill, feedback label).
