@@ -459,7 +459,7 @@ for r in post_tool:
     if stdout:
         json.loads(stdout)
 
-task_edit = False
+mutating_task_paths = []
 for r in events:
     if r.get("type") != "assistant":
         continue
@@ -467,11 +467,28 @@ for r in events:
         if c.get("type") != "tool_use" or c.get("name") not in {"Edit", "Write"}:
             continue
         tool_input = c.get("input", {}) or {}
-        file_path = str(tool_input.get("file_path", ""))
-        if file_path.endswith("superRA/01-child/task.md"):
-            task_edit = True
-if not task_edit:
-    raise SystemExit("no Edit/Write tool_use for superRA/01-child/task.md")
+        raw_file_path = str(tool_input.get("file_path", ""))
+        if not raw_file_path.endswith("/task.md") and raw_file_path != "superRA/task.md":
+            continue
+        file_path = Path(raw_file_path)
+        if file_path.is_absolute():
+            try:
+                rel = file_path.relative_to(cwd)
+            except ValueError:
+                continue
+        else:
+            rel = file_path
+        rel_s = rel.as_posix()
+        if rel_s.startswith("superRA/") and rel_s.endswith("/task.md"):
+            mutating_task_paths.append(rel_s)
+        elif rel_s == "superRA/task.md":
+            mutating_task_paths.append(rel_s)
+unique_mutating_task_paths = sorted(set(mutating_task_paths))
+if unique_mutating_task_paths != ["superRA/01-child/task.md"]:
+    raise SystemExit(
+        "unexpected mutating task-file edits: "
+        + (", ".join(unique_mutating_task_paths) or "(none)")
+    )
 
 def status(path: Path) -> str:
     for line in path.read_text(encoding="utf-8").splitlines():

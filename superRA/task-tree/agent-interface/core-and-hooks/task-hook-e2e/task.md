@@ -1,6 +1,6 @@
 ---
 title: "Task-Hook Runtime E2E Coverage"
-status: revise
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-17

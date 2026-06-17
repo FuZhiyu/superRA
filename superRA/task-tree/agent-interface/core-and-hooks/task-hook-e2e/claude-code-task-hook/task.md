@@ -1,6 +1,6 @@
 ---
 title: "Claude Code Task-Hook E2E"
-status: revise
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -16,7 +16,7 @@ Use tests/hooks/test-e2e-cli.sh conventions for isolated temp dirs, session clea
 
 ## Results
 
-Implemented optional Claude Code runtime task-hook coverage in [test-e2e-cli.sh:249-277](../../../../../../tests/hooks/test-e2e-cli.sh#L249-L277), [test-e2e-cli.sh:423-496](../../../../../../tests/hooks/test-e2e-cli.sh#L423-L496), and [test-e2e-cli.sh:670-712](../../../../../../tests/hooks/test-e2e-cli.sh#L670-L712). The new S7 scenario builds an isolated temporary `superRA/` tree, runs Claude Code with `Read,Edit` and `acceptEdits`, and asserts the NDJSON event stream contains a PostToolUse hook response plus an actual `Edit`/`Write` tool use for `superRA/01-child/task.md`. It then checks filesystem state: child status `approved`, root status propagated to `approved`, and no generated dashboard.
+Implemented optional Claude Code runtime task-hook coverage in [test-e2e-cli.sh:249-277](../../../../../../tests/hooks/test-e2e-cli.sh#L249-L277), [test-e2e-cli.sh:423-505](../../../../../../tests/hooks/test-e2e-cli.sh#L423-L505), and [test-e2e-cli.sh:687-712](../../../../../../tests/hooks/test-e2e-cli.sh#L687-L712). The S7 scenario builds an isolated temporary `superRA/` tree, runs Claude Code with `Read,Edit` and `acceptEdits`, and asserts the NDJSON event stream contains a PostToolUse hook response. The propagation assertion now first collects every mutating `Edit`/`Write` task-file target under the temp tree and requires the unique path set to be exactly `superRA/01-child/task.md`, so a direct root edit or extra task-file edit fails before root status is used as propagation evidence.
 
 Verification run in this implementation pass:
 
@@ -28,3 +28,4 @@ The authenticated paid runtime command `bash tests/hooks/test-e2e-cli.sh` was no
 ## Review Notes
 
 1. **MAJOR** [test-e2e-cli.sh:448-485](../../../../../../tests/hooks/test-e2e-cli.sh#L448-L485) verifies that some PostToolUse hook response exists, that an `Edit`/`Write` touched `superRA/01-child/task.md`, and that the root task ends as `approved`, but it never rejects a second `Edit`/`Write` directly targeting `superRA/task.md`. That leaves the claimed propagation assertion dependent on the prompt instruction at [test-e2e-cli.sh:680](../../../../../../tests/hooks/test-e2e-cli.sh#L680), not on event-stream evidence. A Claude run that edits both child and root could pass even if the task hook did not propagate status. Tighten S7 to require exactly the intended mutating task-file edit, or at least fail on any mutating tool use whose `file_path` targets `superRA/task.md`, before treating the final root status as hook propagation evidence.
+   → implemented: S7 now collects all `Edit`/`Write` task-file targets under the isolated `superRA/` tree and fails unless the unique mutating task-file path set is exactly `superRA/01-child/task.md` before checking root status ([test-e2e-cli.sh:462-491](../../../../../../tests/hooks/test-e2e-cli.sh#L462-L491)).

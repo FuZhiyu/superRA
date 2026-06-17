@@ -90,9 +90,8 @@ PROMPT='superRA hook smoke test. First run this exact shell command: git merge m
   --json \
   --ephemeral \
   --skip-git-repo-check \
+  --dangerously-bypass-approvals-and-sandbox \
   --dangerously-bypass-hook-trust \
-  --ask-for-approval never \
-  --sandbox workspace-write \
   "$PROMPT" >"$OUT" 2>&1)
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -145,9 +144,8 @@ TASK_PROMPT='Edit only superRA/01-child/task.md. Use the file edit/apply-patch t
   --json \
   --ephemeral \
   --skip-git-repo-check \
+  --dangerously-bypass-approvals-and-sandbox \
   --dangerously-bypass-hook-trust \
-  --ask-for-approval never \
-  --sandbox workspace-write \
   "$TASK_PROMPT" >"$TASK_OUT" 2>&1)
 rc=$?
 if [ $rc -ne 0 ]; then
@@ -157,7 +155,7 @@ if [ $rc -ne 0 ]; then
 fi
 
 python3 - "$TASK_OUT" "$TMPROOT/superRA/task.md" "$TMPROOT/superRA/01-child/task.md" <<'PY'
-import json, sys
+import json, re, sys
 from pathlib import Path
 
 jsonl, root_md, child_md = sys.argv[1:]
@@ -200,22 +198,39 @@ has_post_tool_hook = any(
     any("PostToolUse" in s for s in values)
     for _event, values in event_text
 )
-has_task_edit_event = any(
-    any("superRA/01-child/task.md" in s for s in strings(d))
-    and (
-        any(str(d.get(k, "")) in edit_tools for k in ("tool_name", "tool", "name"))
-        or (
-            "tool" in str(d.get("type", "")).lower()
-            and any(name in s for s in strings(d) for name in edit_tools)
+mutating_task_paths = []
+has_child_edit_tool = False
+for event in events:
+    for d in dicts(event):
+        values = list(strings(d))
+        tool_name = next(
+            (str(d.get(k, "")) for k in ("tool_name", "tool", "name") if d.get(k, "")),
+            "",
         )
-    )
-    for event in events
-    for d in dicts(event)
-)
+        is_tool_shaped = bool(tool_name) or "tool" in str(d.get("type", "")).lower()
+        if not is_tool_shaped:
+            continue
+        paths = []
+        for value in values:
+            paths.extend(
+                re.findall(r"superRA/(?:[^\s`'\"),;]+/)?task\.md", value)
+            )
+        mutating_task_paths.extend(paths)
+        is_edit_tool = (
+            tool_name in edit_tools
+            or (
+                "tool" in str(d.get("type", "")).lower()
+                and any(name in s for s in values for name in edit_tools)
+            )
+        )
+        if is_edit_tool and "superRA/01-child/task.md" in paths:
+            has_child_edit_tool = True
+unique_mutating_task_paths = sorted(set(mutating_task_paths))
 
 checks = {
     "PostToolUse hook event": has_post_tool_hook,
-    "task edit event": has_task_edit_event,
+    "child edit/apply_patch event": has_child_edit_tool,
+    "only child task edit event": unique_mutating_task_paths == ["superRA/01-child/task.md"],
     "child task approved": status(child_md) == "approved",
     "root status propagated": status(root_md) == "approved",
     "dashboard not generated": not (Path(root_md).parent / "dashboard.html").exists(),
