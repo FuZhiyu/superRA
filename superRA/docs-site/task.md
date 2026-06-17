@@ -1,6 +1,6 @@
 ---
 title: "Documentation Site: Dogfooded Task-Tree Docs + README Front Door"
-status: in-progress
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-10
