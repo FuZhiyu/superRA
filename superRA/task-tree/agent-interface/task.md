@@ -1,6 +1,6 @@
 ---
 title: "Task-Tree Agent Interface"
-status: in-progress
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-24
