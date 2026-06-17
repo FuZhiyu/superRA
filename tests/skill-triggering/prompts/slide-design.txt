@@ -1,0 +1,1 @@
+I'm preparing Beamer slides for a finance seminar. Please review the deck structure, shorten bullets that wrap, decide what should move to backup slides, and make the technical slides easier for a live audience to follow.

@@ -55,6 +55,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
 | Domain | `theory-modeling` | Theory/modeling vertical: four-gate intuition/interpretability checklist (Objects & Notation, Assumptions, Derivations, Verification & Rendering), notation and assumption discipline, proof and numerical verification. |
 | Domain | `writing` | Writing vertical: Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers. |
+| Domain | `slide-design` | Slide-design vertical: audience-context discipline, attention management, simplification, main-vs-backup tradeoffs, and Beamer-first layout triage. |
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (superplan Phase 2, superintegrate Document doc-writer); usable standalone by a single author. |
 | Utility | `result-protection` | Tools for protecting key results from unintended changes; drift tests are the current/default mechanism. |
 | Utility | `refactor-and-integrate` | Tools for codebase coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence. |
@@ -103,6 +104,7 @@ If the task/topic matches a row below, load the listed skill **in addition to** 
 | Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` |
 | Theoretical / mathematical modeling — derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, or simple numerical verification of derived formulas | `superRA:theory-modeling` |
 | Editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
+| Designing, reviewing, or fixing research presentation slides — audience context, attention flow, simplification, Beamer layout | `superRA:slide-design` |
 
 Add a new row when introducing a vertical (literature review, simulation). Keep the generic table untouched — only the add-on table grows.
 
