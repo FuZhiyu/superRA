@@ -1,7 +1,7 @@
 ---
 title: "Dashboard-First Messaging Revision"
-status: not-started
-depends_on:  []
+status: in-progress
+depends_on: []
 tags: []
 created: 2026-06-17
 ---

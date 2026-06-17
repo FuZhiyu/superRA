@@ -1,6 +1,6 @@
 ---
 title: "Roll Back README + Rewrite Welcome (Dashboard-First)"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -29,4 +29,22 @@ Follow the authoring contract (frontmatter `title`-only — the welcome page kee
 Validation: render both surfaces in doc-mode (subtree-root Build command) and confirm the welcome mermaid diagram renders and the README still renders on GitHub; confirm no `<!-- -->` author comments remain in either file; confirm the dashboard appears as the first/lead feature in both.
 
 ## Results
+
+Both front doors now lead with the dashboard, followed by the workflow, then domain skills — the shared "what it is" content matches in order and framing across [README.md](../../../../README.md) and the [welcome page](../../../../docs/site/01-welcome/task.md).
+
+**README** — rolled back to the earlier enumerated style (commit `a9d09a3c`): an "It ships:" numbered list and a "Why superRA?" bulleted section, replacing the prior flowing-paragraph rewrite. The **task-tree dashboard is item #1** in "It ships", carrying the monitoring + handoff framing and the "this documentation site is itself a dashboard export — you are reading one" hook. Preserved per the `09-readme-front-door` invariant: breaking-change banner, doc-site link line, PLAN→IMPLEMENT→INTEGRATE mermaid diagram + invoke keywords, the dashboard screenshot embed, the Claude Code install path, contributing/upstream/license, and the Superpowers attribution line. Author comment removed.
+
+**Welcome page** — replaced the long second paragraph with the user's "What it is" bulleted list (dashboard first, with the "you are viewing one" hook; then the plan-implement-integrate workflow; then domain skills — data analysis, theory modeling, academic writing, slide design). Added the "Why superRA rather than a framework like Superpowers?" section as clean prose, framing the contrast as a research-workflow difference (software-engineering frameworks target verifiable, unit-testable tasks and push to remove the human; social-science research is fluid/exploratory and needs the human in the loop). Draft typos fixed; both author comments removed.
+
+### Diagram decision (welcome "How it works")
+
+The user's comment asked to adopt "the mermaid diagram where we have the arrow pointing back." **A literal `mermaid` fenced block does not render in doc-mode**: the dashboard's markdown content renderer is markdown-it with vendored plugins (`vendor/`: highlight.js, katex, markdown-it, purify, texmath) — no mermaid library; mermaid is wired only into the separate DAG panel, and no `docs/site` page uses a mermaid block. Pasting the README's mermaid would have rendered as raw text. So the intent — the cyclic "plan change loops back to PLAN" arrow — was realized by adapting the page's existing hand-built HTML phase diagram to add a dashed loop-back arrow, keeping it consistent with the HTML-diagram convention the other doc pages already use.
+
+### Orchestrator finalization
+
+The implementer subagent stalled on a watchdog timeout after writing both files but before committing. The orchestrator finalized in-lane: fixed one wording slip (README "this task tree" → "a task tree", since the README is the GitHub front door, not a task page), wrote these Results, set status, and committed. The diagram-render verification and an independent content pass are left to the reviewer.
+
+### Verification left for review
+
+Live doc-mode render of the welcome page's new HTML diagram (layout/loop-back arrow) is unverified — flagged for the reviewer per the subtree Build command (`--doc-mode`, not `file://`). README renders on GitHub (standard mermaid + markdown, unchanged structure).
 
