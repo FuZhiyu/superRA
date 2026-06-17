@@ -12,11 +12,20 @@ This is the 20-minute walkthrough you run on day one. You will plan a tiny resea
 
 The running example is a toy size-and-momentum sort on *simulated* equity returns: a small, public-safe analysis with no real data. Every command on this page was run as shown, and every screenshot is the dashboard rendering this exact toy project.
 
-### What you need
+### Prerequisite
 
-You need three things: [Claude Code](https://docs.claude.com/en/docs/claude-code) (the primary path this tutorial follows), `git`, and either [`uv`](https://docs.astral.sh/uv/) or a Python 3 interpreter for the `superra` CLI. If you run Codex instead of Claude Code, the workflow is identical — only the install step and the way you invoke agents differ; see [Install & Set Up](#/04-how-to/01-install-and-set-up) for the Codex path.
+Basic knowledge of git is absolutely necessary (in my view, not only for this plugin but for use agents at all). Knowledge of branching and merging is highly recommended. 
+
+
+
+<!-- we support claude code or codex -->
+You need three things: [Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex], `git`, and either [`uv`](https://docs.astral.sh/uv/) or a Python 3 interpreter for the `superra` CLI. If you run Codex instead of Claude Code, the workflow is identical — only the install step and the way you invoke agents differ; see [Install & Set Up](#/04-how-to/01-install-and-set-up) for the Codex path.
+
+<!-- are you sure python3 is sufficient? i thought to sort through the dependency we need uv?  -->
 
 ### Install superRA
+
+In this guide, we use claude code for narrative though they equally apply to codex. 
 
 Install the plugin into Claude Code as a marketplace, then restart your session:
 
@@ -25,23 +34,23 @@ claude plugin marketplace add FuZhiyu/superRA
 claude plugin install superRA@superRA
 ```
 
-That installs the skills, the implementer and reviewer agents, the lifecycle hooks, and the `superra` task-tree CLI. The full install reference — updating, the local-clone path for forking, and Codex — lives in [Install & Set Up](#/04-how-to/01-install-and-set-up).
+<!-- add codex instruction -->
 
-### Start a project
+The full install reference — updating, the local-clone path for forking, and Codex — lives in [Install & Set Up](#/04-how-to/01-install-and-set-up).
 
-Make an empty directory, turn it into a git repository, and open Claude Code there:
+### Set up a project
 
-```bash
-mkdir momentum-starter && cd momentum-starter
-git init
-claude
-```
+Take an existing project or some ongoing work, make sure all existing changes are commited, and start the Claude Code and ask:
 
-superRA writes its task tree into a `superRA/` directory at the repository root and expects to commit alongside your work, so a fresh git repo is the right starting point.
+``use superRA and retroactively create task trees for [tasks I'm working on|xxxx], and show me the dashboard"
 
-### Step 1 — Plan the analysis
+The magical word to invoke superra skill is `superra`---a hook will ensure once you say the spell, agents will follow the superra. 
 
-Tell Claude what you want to study, in plain language, and ask it to plan. The phrase *make a plan* routes the request into superRA's PLAN phase:
+### A Typical Workflow
+
+### Superplan
+
+Tell Claude what you want to work on, in plain language, and ask it to plan. You don't need to be in the Plan mode in codex/claude. To ensure it follows the superra workflow, you can use the trigger phrase `superplan`
 
 ```text
 Using superRA, make a plan for a small toy analysis: simulate a monthly
@@ -49,9 +58,13 @@ equity panel, sort firms into size and momentum portfolios, and report the
 long-short momentum spread. Keep it to a handful of tasks on simulated data.
 ```
 
-Claude loads the `superplan` skill, explores the empty project, and proposes a small task tree — for this request, three tasks under one root. Planning is autonomous but it stops for you at one gate: before any code is written, it presents the proposed decomposition and waits for your approval. Read the objectives, then approve. The planner commits the task tree to `superRA/` so the structure is in git before execution starts.
+Claude loads the `superplan` skill, explores the existing project, and proposes a small task tree — for this request, three tasks under one root. Planning is autonomous but it stops for you at one gate: before any code is written, it presents the proposed decomposition and waits for your approval. Read the objectives, then approve. The planner commits the task tree to `superRA/` so the structure is in git before execution starts.
 
-You can see the tree any time from a terminal in the project. The filesystem *is* the task hierarchy — each task is a `task.md` file in its own directory:
+<!-- explain how the tasks are stored in high level. do not explain the cli here. cli is for agents. explain the dashboard instead. explain how to show the dashboard superra/superra dashboard or ask agents to show you-->
+
+<!-- You can see the tree any time from a terminal in the project. The filesystem *is* the task hierarchy — each task is a `task.md` file in its own directory: -->
+
+<!-- make them nested tasks under the current page and provide the  -->
 
 ```text
 $ ./superRA/superra task tree
@@ -61,19 +74,20 @@ $ ./superRA/superra task tree
   ○ 03-report-spread: Report average returns and the momentum spread
 ```
 
-The glyphs are task status: `○` not started, `◐` in progress, `●` approved (reviewed and done). The root's `◐` is not set by hand — it is a *rollup* of its children, so a parent always reflects the state of the work beneath it. The three children form a chain: portfolios depend on the simulated panel, and the report depends on the portfolios. The full status model and the frontier idea below are explained in [The Task Tree](#/03-concepts/02-the-task-tree).
+The full task-tree desig are explained in [The Task Tree](#/03-concepts/02-the-task-tree).
 
-### Step 2 — Implement one task
+### Superimplement
 
-Now run a task. Ask Claude to implement, and it loads the `superimplement` skill and picks up the first task whose dependencies are satisfied:
+Now run a task. Ask Claude to `superimplement`
 
 ```text
-Implement the next task according to the plan.
+superImplement task @...
 ```
 
 This is where superRA's central discipline shows up: every task runs through an **implementer–reviewer pair**. An implementer agent writes the code — here, the panel simulation — records what it found in the task's `## Results` section, and hands off. A separate reviewer agent then inspects the work independently and returns `APPROVE` or `REVISE`. Work only advances on `APPROVE`; a `REVISE` sends specific findings back to the implementer for a fix pass. Review is never skipped, however small the task looks. The roles and the review protocol are defined in [Roles & Review](#/03-concepts/03-roles-and-review).
 
-When the first task is approved, its `task.md` carries the real outcome. Opening `superRA/01-simulate-panel/task.md` shows the results the implementer wrote and the reviewer checked:
+The dashboard will be real-time updated as the agents are doing their work. 
+
 
 ```text
 ## Results
@@ -95,6 +109,7 @@ $ ./superRA/superra task frontier
   ◐ 02-build-portfolios: Construct size and momentum portfolios [depends: 01-simulate-panel]
 ```
 
+<!-- this should be the deafult mode for monitoring rather than the markdown files-->
 For a visual view, launch the dashboard from a project terminal:
 
 ```bash
@@ -112,7 +127,7 @@ The **Kanban** view shows the same tasks as a board, one column per status — t
 The dashboard also renders a dependency DAG and lets you share a branch snapshot through GitHub Actions. Those are covered in [See Your Work](#/04-how-to/04-see-your-work).
 
 ### Step 4 — Read the results
-
+<!-- 3 and 4 should be merged. -->
 Results live in the task files, not in the chat. That is deliberate: a fresh agent — or you, next week — can reopen the repository and resume from the task tree and git history alone. Click any task in the dashboard to read its objective and results in place:
 
 ![Dashboard task detail for the panel task: the Objective and the Results the implementer wrote and the reviewer checked.](attachments/dashboard-task-detail.png)
@@ -125,14 +140,10 @@ cat superRA/01-simulate-panel/task.md
 
 Each task's `## Objective` records the intended work and its `## Results` records what happened. The full anatomy of a `task.md` — every frontmatter field and body section — is in [The Task File](#/05-reference/01-task-file).
 
-### Finish, and where to go next
+### Superintegrate
 
-That is one task, end to end: you planned an analysis, ran a task through review, watched it on the dashboard, and read the result from the task file. Run the remaining two tasks the same way — *implement the next task according to the plan* — and the momentum spread report falls out at the end.
 
-This walkthrough deliberately skipped the rest of the workflow. To go deeper:
 
-- **Plan your own project.** Scoping a real analysis and writing good task objectives is its own skill — see [Plan a Project](#/04-how-to/02-plan-a-project).
-- **Integrate and ship.** Protecting results against drift, syncing with a base branch, and opening a PR are the INTEGRATE phase — see [Integrate & Ship](#/04-how-to/05-integrate-and-ship).
-- **Understand the model.** For the *why* behind the three phases and the re-entry loop, read [The Workflow](#/03-concepts/01-the-workflow).
-- **See it on a real tree.** The [Showcase](#/06-showcase) embeds a full task-tree export — including superRA's own development tree — so you can explore the UI on real work.
-</content>
+
+
+### Skills
