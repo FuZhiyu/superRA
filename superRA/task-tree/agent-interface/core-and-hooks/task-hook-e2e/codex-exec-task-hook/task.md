@@ -1,6 +1,6 @@
 ---
 title: "Codex Exec Task-Hook E2E"
-status: implemented
+status: revise
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -24,3 +24,9 @@ Verification run in this implementation pass:
 - `bash tests/hooks/test-codex-hooks.sh` passed: 15 passed, 0 failed.
 
 The authenticated paid runtime command `bash tests/hooks/test-codex-e2e-cli.sh` was not run in this pass.
+
+## Review Notes
+
+1. **MAJOR** [test-codex-e2e-cli.sh:94](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L94) and [test-codex-e2e-cli.sh:149](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L149) pass `--ask-for-approval never` to `codex exec`, but the current local `codex-cli 0.140.0` rejects that flag before any session starts. I reproduced this with `bash tests/hooks/test-codex-e2e-cli.sh`, which exits at argument parsing with `unexpected argument '--ask-for-approval'`; the optional runtime E2E therefore cannot currently exercise PostToolUse behavior. Update the script to the current noninteractive approval/sandbox flags and verify the script gets past CLI parsing before relying on it as E2E coverage.
+
+2. **MAJOR** [test-codex-e2e-cli.sh:199-220](../../../../../../tests/hooks/test-codex-e2e-cli.sh#L199-L220) does not prove the task hook propagated the root status from the child edit. It accepts any string containing `PostToolUse`, any event mentioning a child task edit, and a final root status of `approved`; it never rejects an `Edit`/`Write`/`apply_patch` that directly edits `superRA/task.md`. A model that edits both child and root would pass even if the task hook failed to propagate status. Tighten the assertion to identify a structural PostToolUse task-hook response for the task-edit turn and require that the only mutating task-file path is `superRA/01-child/task.md` before using root status as propagation evidence.
