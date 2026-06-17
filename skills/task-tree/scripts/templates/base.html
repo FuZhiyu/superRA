@@ -52,6 +52,14 @@
   --fs-head:  19px;   /* header brand + section heads */
   --fs-title: 23px;   /* active-node title (matches content h1) */
 
+  /* Uniform height for inline chrome controls (header buttons/selects/search,
+     card-head VS Code + Share). Native <button>/<select> render at different
+     intrinsic heights (line-height: normal vs the UA select metric), so every
+     control pins this explicitly with box-sizing: border-box to sit on one
+     baseline. The (pointer: coarse) block floors these to 44px via min-height,
+     which wins over this height — touch targets are unaffected. */
+  --control-h: 28px;
+
   --bg:        #faf9f7;
   --bg-alt:    #f2f0ec;
   --bg-card:   #ffffff;
@@ -296,6 +304,8 @@ body {
   display: flex; align-items: center; gap: 6px;
 }
 .hc-btn, .hc-select {
+  box-sizing: border-box;
+  height: var(--control-h);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   padding: 4px 10px;
@@ -305,6 +315,13 @@ body {
   color: var(--text-mid);
   cursor: pointer;
   transition: all 0.15s ease;
+}
+/* Buttons (not native selects) center their label in the fixed-height box. */
+.hc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .hc-btn:hover, .hc-select:hover { background: var(--bg-hover); color: var(--text); }
 
@@ -332,6 +349,8 @@ body {
   border-color: var(--accent);
 }
 .hc-search {
+  box-sizing: border-box;
+  height: var(--control-h);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   padding: 4px 10px;
@@ -348,6 +367,10 @@ body {
 }
 .hc-search::placeholder { color: var(--text-mute); }
 .theme-toggle {
+  box-sizing: border-box;
+  height: var(--control-h);
+  display: inline-flex;
+  align-items: center; justify-content: center;
   font-size: var(--fs-emph); line-height: 1;
   background: none; border: none;
   color: var(--text-mute); cursor: pointer;
@@ -835,6 +858,18 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   overscroll-behavior-x: contain;
 }
 
+/* The header's controls have a ~1500px one-line max-content but shrink to a
+   ~1268px min before they would clip; a fine-pointer window narrower than that
+   forces horizontal page scroll and pushes the theme toggle off-screen. Wrap the
+   controls onto a second line once the viewport drops below that min. Kept off
+   wide screens (>1280px stay a single compact row) and expressed as a width
+   query so it composes with — rather than duplicates — the coarse-pointer wrap
+   that handles wide touch tablets. */
+@media (max-width: 1280px) {
+  .header { flex-wrap: wrap; }
+  .header-controls { flex-wrap: wrap; }
+}
+
 /* ── Narrow breakpoint: force drawer mode regardless of pin state ── */
 @media (max-width: 860px) {
   .nav-hamburger { display: inline-flex; }
@@ -852,17 +887,17 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
     padding-bottom: max(60px, calc(60px + env(safe-area-inset-bottom)));
     padding-left: max(18px, env(safe-area-inset-left));
   }
-  /* Tighten the header so it never forces a horizontal scrollbar: trim the
-     padding/gaps and let the controls wrap under the title row. Keep the
-     safe-area floor so the notch/rounded corners stay clear on a phone. */
+  /* Tighten the header padding/gaps at this width (the wrap itself is owned by
+     the max-width: 1280px block above). Keep the safe-area floor so the
+     notch/rounded corners stay clear on a phone. */
   .header {
     padding-top: max(8px, env(safe-area-inset-top));
     padding-right: max(12px, env(safe-area-inset-right));
     padding-bottom: 8px;
     padding-left: max(12px, env(safe-area-inset-left));
-    gap: 8px; flex-wrap: wrap;
+    gap: 8px;
   }
-  .header-controls { flex-wrap: wrap; gap: 4px; }
+  .header-controls { gap: 4px; }
 }
 
 /* Phone width: drop the verbose summary stats and pull the free-text search +
@@ -899,11 +934,10 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Enlarging the inline header controls below would push the row past the
-     viewport on a wide touch iPad (768–1366px, above the 620px phone breakpoint
-     where search/filter move into the sheet). Let the header wrap so the taller
-     controls flow onto a second line instead of forcing horizontal page scroll —
-     same mechanism the 860px width block already uses. */
+  /* The taller (44px) touch controls below would otherwise push the row past the
+     viewport on a wide touch iPad (e.g. 1366px landscape, above the max-width:
+     1280px wrap that already covers narrower widths). Wrap here too so the row
+     flows onto a second line instead of forcing horizontal page scroll. */
   .header { flex-wrap: wrap; }
   .header-controls { flex-wrap: wrap; }
 
@@ -1066,10 +1100,15 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
    The VS Code button (rendered just before it) carries the margin-left:auto that
    claims the free space; both then group together, spaced by the header gap. */
 .share-btn {
+  box-sizing: border-box;
+  height: var(--control-h);
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
-  padding: 4px 12px;
+  padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg);
@@ -1086,10 +1125,13 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
    Sits beside Share at the trailing edge (margin-left:auto claims the free
    space; the header's gap spaces it from the Share button that follows). */
 .vscode-btn {
+  box-sizing: border-box;
+  height: var(--control-h);
   margin-left: auto;
   align-self: center;
   display: inline-flex;
   align-items: center;
+  line-height: 1;
   gap: 6px;
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
@@ -1285,11 +1327,19 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
-  flex-shrink: 0;
+  /* The title absorbs slack first (flex-shrink:100 below), but a long top-level
+     slug ("markdown-integrity") with an empty/short title can itself exceed the
+     rail. Let the slug ellipsis-truncate as a last resort so the trailing
+     badge/progress (flex-shrink:0) never clip; min-width:0 lets it shrink. */
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-/* Title is the row's elastic element: it absorbs the available width and
-   ellipsis-truncates so the trailing badge/progress (flex-shrink:0) never clip
-   — degrades deliberately at narrow sidebar widths and after user resize. */
+/* Title is the row's primary elastic element: it absorbs the available width and
+   ellipsis-truncates first (flex-shrink:100 >> the slug's 1) so the trailing
+   badge/progress (flex-shrink:0) never clip — degrades deliberately at narrow
+   sidebar widths and after user resize. */
 .task-title-text {
   font-family: var(--font-display);
   font-size: var(--fs-body);
@@ -1298,7 +1348,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1 1 auto;
+  flex: 1 100 auto;
   min-width: 0;
 }
 
