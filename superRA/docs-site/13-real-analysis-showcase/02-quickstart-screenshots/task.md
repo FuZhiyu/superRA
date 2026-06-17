@@ -1,6 +1,6 @@
 ---
 title: "Capture Stage Screenshots for the Quickstart"
-status: implemented
+status: approved
 depends_on:
   - 01-export-and-framing
 tags: []
