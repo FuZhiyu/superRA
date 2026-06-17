@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: in-progress
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-23
@@ -10,7 +10,7 @@ created: 2026-05-23
 
 Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE research workflow, its task-tree tooling and dashboard, handoff artifacts, and the domain/utility skill library. Active workstreams nest as subtrees under this root.
 
-The largest in-progress workstream is the handoff system — task tracking, planning artifacts, and human-readable visualization — whose integration history is recorded under ## Integration Notes and ## Sync Map below. Separate skill-development workstreams nest alongside it, including [zotero-skills](zotero-skills/task.md) (the MCP-free Zotero paper-reading skill, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` conversion skill).
+The largest in-progress workstream is the handoff system — task tracking, planning artifacts, and human-readable visualization — whose integration history is recorded under ## Integration Notes and ## Sync Map below. Separate skill-development workstreams nest alongside it, including [zotero-skills](zotero-skills/task.md) (the MCP-free Zotero paper-reading skill, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` conversion skill) and [showcase-analysis](showcase-analysis/task.md) (a real CAPM-vs-FF3 empirical asset-pricing study run end-to-end through the workflow to serve as the documentation showcase, wired into the docs site under [docs-site/13-real-analysis-showcase](docs-site/13-real-analysis-showcase/task.md)).
 
 ### Conventions
 
