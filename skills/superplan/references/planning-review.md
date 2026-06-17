@@ -8,7 +8,7 @@ The dispatch carries a `Review mode:` of **handoff-readiness** or **design-revie
 
 **What each mode evaluates:**
 
-- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, parent/sibling context, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
+- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, parent/sibling context, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context. Human readability is satisfied when a self-orienting pointer names the convention and how it bears on the task (per `task-tree-design.md` §Context Distillation) — a correct pointer to an auto-loaded doc or manifest skill is not an under-distillation finding; copied rule text where a pointer would do is the finding to raise.
 - **Design review:** objective fit of the proposed architecture, decomposition, and task structure. Use [task-tree-design.md](task-tree-design.md) for the full policy.
 
 Both modes can return `[BLOCKING]` findings for poor tree design, not only unclear prose. Review against [task-tree-design.md](task-tree-design.md): durable ownership, depth vs. breadth, branching and dependency quality, parent/sibling context, update-task lifecycle, action-verb durability, and the `## Objective` / `## Planner Guidance` split.

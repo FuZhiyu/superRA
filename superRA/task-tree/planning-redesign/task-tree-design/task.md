@@ -41,7 +41,7 @@ The redesign should make `superplan` own task-tree design and keep `task-tree` f
 
 ## Results
 
-The task-tree design redesign is implemented and reviewed across six approved child tasks.
+The task-tree design redesign is implemented and reviewed across seven approved child tasks.
 
 ### Key Findings
 
@@ -50,6 +50,7 @@ The task-tree design redesign is implemented and reviewed across six approved ch
 - Dispatch instructions now support bundled simple tasks as spawn-cost amortization while preserving per-task reads, results, statuses, review notes, and approvals.
 - Planning review now evaluates tree-design quality directly, including durable ownership, branching, dependencies, parent/sibling context, update-task lifecycle, action-verb durability, and task clarity.
 - Consolidation and integration cleanup now apply the task-tree design protocol before Document, including whole-tree update-task checks, mature/rename handling, scope-expansion rewrites, and advisory use of placement diagnostics.
+- The context model and point-vs-distill rule are settled in [07-context-model-and-pointing](07-context-model-and-pointing/task.md): a task is not a self-contained "zero project context" bubble — the agent's working context is the assembled set of auto-loaded `CLAUDE.md`/`AGENTS.md`, manifest skills, the ancestor chain, and on-demand directory walking. The objective points into that set rather than copying it, distilling only scattered/non-discoverable conventions, with self-orienting pointers that keep tasks human-readable.
 
 ### Verification
 

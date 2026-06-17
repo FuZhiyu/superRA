@@ -32,7 +32,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`, `tags`
 
 ## Context Inheritance
 
-`superra task read <path>` renders the assigned task with its ancestor chain, including each ancestor's full `## Objective` and nested `### Context` / `### Conventions` / `### Constraints` subsections. Agents inherit scoped context from the task tree; they do not need to re-walk project guidance docs when the governing objectives already contain the needed conventions.
+`superra task read <path>` renders the assigned task with its ancestor chain, including each ancestor's full `## Objective` and nested `### Context` / `### Conventions` / `### Constraints` subsections. This rendered chain is one part of the agent's working context, alongside auto-loaded `CLAUDE.md` / `AGENTS.md` (project-level plus any nested in a directory the agent reads), manifest-loaded skills, and on-demand directory walking when a touched file needs a convention the chain does not cover. A scoped subsection makes a convention reachable from the task either by distilling it or by pointing to where it already lives (an auto-loaded doc, a manifest skill, a coherent `README`); planners choose point-vs-distill per `skills/superplan/references/task-tree-design.md` §Context Distillation.
 
 Dependent siblings are ordered peers, not inherited context. Read a dependency's `## Results` only when the downstream task's objective needs that result, output file, sample, variable, or decision.
 

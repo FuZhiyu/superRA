@@ -15,7 +15,7 @@ Load this reference when designing, changing, consolidating, or integration-chec
 - Fixed `script` / `input` / `output` expectations when they define scope.
 - Validation criteria — what must be true for the task to be complete.
 
-Include enough context that an implementer with zero project context can work independently after reading the task objective plus the ancestor chain up to the root.
+The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (the project-level ones plus any nested in a directory the agent reads), manifest-loaded skills, the assigned task plus its ancestor chain via `superra task read`, and on-demand directory walking when a touched file needs a convention the chain does not cover. The objective's job is to make that assembled set *sufficient* — point into it so the right standing context and the right files are reachable — not to reproduce context that already lives there. See §Context Distillation for the point-vs-distill choice.
 
 `## Planner Guidance` is optional and advisory. Use it for suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints, and other context the implementer may adapt or ignore while satisfying `## Objective`.
 
@@ -29,9 +29,18 @@ Existing task files without `## Planner Guidance` remain valid. Do not bulk-migr
 
 ## Context Distillation
 
-Scoped context lives on the lowest ancestor whose subtree it governs. The task tree is recursive: any task can carry context for its subtree, and the top task is not a special semantic owner. When a convention, constraint, or piece of context changes what an implementation or review agent does, place it in the `## Objective` of the lowest task whose subtree it applies to, under a scoped `### Context`, `### Conventions`, or `### Constraints` subsection.
+Scoped context lives on the lowest ancestor whose subtree it governs. The task tree is recursive: any task can carry context for its subtree, and the top task is not a special semantic owner. When a convention, constraint, or piece of context changes what an implementation or review agent does, it belongs in the `## Objective` of the lowest task whose subtree it applies to, under a scoped `### Context`, `### Conventions`, or `### Constraints` subsection — but "belongs in the objective" means the agent must reach it from there, not that its text must be copied there.
 
-During planning, walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) and distill what changes implementation or review behavior into those scoped subsections. Write a summary stating the behavior to follow, not a verbatim excerpt of the source doc. Stamp the walk date when the distillation reflects a docs walk. When the walk found no relevant convention for the subtree, say so explicitly and name the out-of-scope paths.
+For each behavior-changing convention, choose how to put it in reach by where it already lives. Point over copy: when the convention already lives somewhere the agent reaches, a pointer keeps the task readable and leaves one source of truth, while a copy is a second version that drifts from the original as either changes. Copy only when there is no reachable source to point at.
+
+1. **Already in the agent's standing context** — auto-loaded `CLAUDE.md` / `AGENTS.md` (project-level or nested in a directory the agent reads), or a manifest-loaded skill. Point with a self-orienting line plus the path/anchor. Do not copy.
+2. **Reachable but not standing, or living in one coherent doc** (e.g. a data-directory `README`). Point with a self-orienting line plus the location, so both the human reader and the implementer's on-demand directory walk land on it.
+3. **Scattered across multiple files or not reliably discoverable.** Distill a behavior-stating summary into the scoped subsection, with a source pointer. Write the behavior to follow, not a verbatim excerpt; stamp the walk date.
+4. **Task-specific context that lives nowhere else.** State it inline; there is no tradeoff.
+
+A **self-orienting line states the convention's substance** — the gist of what it requires and how it bears on this task — so the reviewer grasps it without opening the link; the link carries full detail. A bare "see X" that names only a location is not self-orienting. This concise-substance line is what lets a pointer satisfy human readability in tiers 1–2 without reproducing the full rule text. Reserve inline reproduction of rule *text* for context that is task-specific or is itself the thing under review.
+
+Walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) to classify each relevant convention into a tier. When the walk found no relevant convention for the subtree, say so explicitly and name the out-of-scope paths.
 
 ## Splitting Tasks
 
