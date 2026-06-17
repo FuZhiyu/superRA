@@ -30,9 +30,11 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
 
 <div style="display:flex;align-items:stretch;margin:1.4em 0;font-family:var(--font-text);max-width:560px;">
   <div style="position:relative;width:118px;flex:none;margin-right:-1px;">
-    <div style="position:absolute;top:34px;bottom:18px;right:0;border-left:2px dashed var(--accent);border-top:2px dashed var(--accent);border-bottom:2px dashed var(--accent);border-top-left-radius:10px;border-bottom-left-radius:10px;"></div>
-    <div style="position:absolute;top:24px;right:-7px;color:var(--accent);font-size:15px;line-height:1;" aria-hidden="true">&#9650;</div>
-    <div style="position:absolute;top:50%;left:0;transform:translateY(-50%);width:104px;color:var(--accent);font-size:12px;font-style:italic;text-align:center;line-height:1.35;">plan change<br/>loops back<br/>to PLAN</div>
+    <svg viewBox="0 0 118 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;">
+      <path d="M 117 99 L 22 99 Q 12 99 12 92 L 12 8 Q 12 1 22 1 L 120 1" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <div style="position:absolute;top:0;left:111px;transform:translateY(-46%);color:var(--accent);font-size:14px;line-height:1;" aria-hidden="true">&#9654;</div>
+    <div style="position:absolute;top:50%;left:6px;transform:translateY(-50%);width:100px;color:var(--accent);font-size:12px;font-style:italic;text-align:center;line-height:1.35;background:var(--bg);padding:2px 0;">plan change<br/>loops back<br/>to PLAN</div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
     <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
