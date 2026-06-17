@@ -1,6 +1,6 @@
 ---
 title: "Canonical Asset-Pricing Test: CAPM vs Fama-French 3-Factor on the 25 Size-B/M Portfolios"
-status: not-started
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-17

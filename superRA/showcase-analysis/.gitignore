@@ -1,0 +1,5 @@
+# Raw Ken French downloads (zips + extracted CSVs) — public, regenerated on demand
+data/raw/
+
+# Intermediate panel — rebuilt by analysis/01_build_panel.py
+data/ff_panel.parquet
