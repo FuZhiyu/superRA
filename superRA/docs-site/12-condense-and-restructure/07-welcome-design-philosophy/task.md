@@ -1,6 +1,6 @@
 ---
 title: "Add a Design Philosophy Section to the Welcome Page"
-status: not-started
+status: implemented
 depends_on:
   - 05-finalize
 tags: []
@@ -24,3 +24,15 @@ The five ideas, in this order (researcher-approved framing, 2026-06-17). Each ge
 ## Planner Guidance
 
 This is a single-page, single-section edit — keep it tight and front-door appropriate. Lean on prose already on the Welcome page and the two new skills pages for phrasing; do not re-explain mechanics the rest of the page or the Quickstart already cover. One paragraph per line.
+
+## Results
+
+Added a `## Design Philosophy` section to [docs/site/01-welcome/task.md](../../../../docs/site/01-welcome/task.md), placed after "How it works" and before "Start here", per the objective. The pitch, both why-sections, and the three-phase diagram are intact.
+
+The pre-existing "Three ideas carry most of the discipline" paragraph was **absorbed** into the new section, not duplicated — its three ideas (implementer–reviewer pair, domain skills, task tree) map onto the new bullets 2/3, 3, and 1 respectively, so the standalone paragraph was deleted. Verified absent in the rendered HTML (grep for "Three ideas carry most of the discipline" returns 0 hits in the build output).
+
+The section is a scannable bulleted list of the five researcher-approved ideas in the specified order, each with a bold name, a 1–2 sentence adopter-facing description, and an italic "Why it matters" line. Lead-in sentence ("Five ideas carry most of the discipline. If they fit how you work, superRA is for you.") frames it as an adoption-decision aid. Phrasing reuses prose already on the page (the cycle-not-pipeline framing from "How it works", the silent-drop-half-the-sample failure from "Why superRA?") rather than re-explaining mechanics. No contributor internals (hooks, file formats, load order). One paragraph per line.
+
+Verification:
+- `python3 skills/report-in-markdown/scripts/check_markdown.py docs/site/01-welcome/task.md` → `clean`.
+- `docs/build_site.sh _site_check` → built `index.html`, `demo-tree.html`, `superra-dev-tree.html` with no errors; "Design Philosophy" and "Everything important is in the repo" both render in `index.html`. Build output removed after the check (generated site is never committed).

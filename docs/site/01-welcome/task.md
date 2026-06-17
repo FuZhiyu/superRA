@@ -55,7 +55,15 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
 
 In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work only advances on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-aware (never a blind merge), refactored to fit the codebase, documented, and shipped. The phases form a cycle, not a pipeline: a discovery while implementing or a scope change after merge routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
 
-Three ideas carry most of the discipline. An **implementer–reviewer pair** sits at every step, so no result ships without an independent second look. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And the **task tree** keeps the project's state in committed files you can read at any time, so a fresh agent — or you, a week later — can open the repo and resume from the files and git history alone.
+## Design Philosophy
+
+Five ideas carry most of the discipline. If they fit how you work, superRA is for you.
+
+- **Everything important is in the repo.** Every task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. *Why it matters:* a fresh agent session, or you a week later, resumes from the repo alone; you never lose the thread between sessions or get locked into one long conversation.
+- **Adversarial review at every step.** A separate reviewer agent must `APPROVE` each task before it advances, and a `REVISE` loops the work back until it passes. *Why it matters:* it catches the "everything looks good" failure where an agent silently drops half the sample before running the regression — the biggest risk of fast AI output.
+- **Domain discipline, enforced as the work happens.** A domain skill applies your field's methodology while the agent works — describe-before-transform for data, assumptions-before-algebra for theory — and the reviewer re-checks it. *Why it matters:* you get methodology you can defend, not just code that runs.
+- **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins. *Why it matters:* momentum without babysitting, with interruptions reserved for the judgment calls only a researcher can make.
+- **Composable and adaptive.** superRA hands the agent reusable mechanisms it assembles for the situation rather than a fixed script, and the phases form a cycle, not a pipeline — discoveries and scope changes route back to the right point, leaving finished work untouched. A new research type is one new domain skill, not a workflow fork. *Why it matters:* the tool bends to research's exploratory rhythm and grows with your work.
 
 ## Start here
 
