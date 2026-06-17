@@ -10,7 +10,7 @@ created: 2026-06-11
 
 You have read about the task tree. Here you can open one and click around.
 
-This page links to two live exports of real superRA task trees. They are not screenshots and not a simplified mock-up — they are the actual task-tracker interface, rendered by the same dashboard you get when you run superRA yourself. Everything you read in [The Task Tree](#/03-concepts/02-the-task-tree) and [Roles & Review](#/03-concepts/03-roles-and-review) is something you can now see directly: the status of every task, how a parent's status rolls up from its children, the dependency graph, and the review conversation inside an individual task.
+This page links to two live exports of real superRA task trees. They are not screenshots and not a simplified mock-up — they are the actual task-tracker interface, rendered by the same dashboard you get when you run superRA yourself. The documentation site you are reading is itself a dashboard export, so the chrome around these trees is the chrome around this page. Everything you read in [The Task Tree](#/03-concepts/02-the-task-tree) and [Roles & Review](#/03-concepts/03-roles-and-review) is something you can now see directly: the status of every task, how a parent's status rolls up from its children, the dependency graph, and the review conversation inside an individual task.
 
 ### What you are looking at
 

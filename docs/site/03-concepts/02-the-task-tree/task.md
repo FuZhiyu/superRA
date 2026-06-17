@@ -23,3 +23,7 @@ A task's `status` moves through a small set of values as work progresses — fro
 ## Dependencies and the frontier
 
 Tasks declare dependencies on their *siblings* — a task lists the directory names of the tasks under the same parent that must complete before it can start. These edges turn the tree into a directed graph of what-blocks-what. The **frontier** is the set of tasks that are ready to run right now: not yet finished, with every dependency already satisfied. When superRA asks "what is next?", it computes the frontier and dispatches from it, which is how the workflow knows what can proceed in parallel and what must wait. You never schedule tasks by hand; you declare the dependencies and the frontier follows.
+
+## The tree is also a live dashboard
+
+Because the whole project state lives in this committed tree, the same files are what the **task-tree dashboard** renders — a live tree, dependency DAG, and kanban view that auto-update as work progresses, so you both monitor and steer the work in flight. And because nothing of value lives outside the tree, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. The [See Your Work (Dashboard)](#/04-how-to/04-see-your-work) guide is the operational how-to for running it.

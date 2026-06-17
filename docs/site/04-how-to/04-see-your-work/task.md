@@ -8,8 +8,8 @@ created: 2026-06-11
 
 ## Objective
 
-You want to see what the agents have done, what is in progress, and what comes next.
-The live dashboard gives you a tree view, a dependency DAG, and a kanban board — all auto-updating as tasks progress.
+The live dashboard is the primary way to monitor and hand off a superRA project: you watch and steer work in flight, and because it renders the same committed task tree, a fresh agent session a week later can pick up from exactly where work left off.
+It gives you a tree view, a dependency DAG, and a kanban board — all auto-updating as tasks progress.
 
 ## Open the live dashboard
 

@@ -1,6 +1,6 @@
 ---
 title: "Propagate Dashboard-First Framing Across Docs"
-status: not-started
+status: implemented
 depends_on: 
   - 01-front-door-and-welcome
 
@@ -26,3 +26,27 @@ Validation: render the touched pages in doc-mode (subtree-root Build command); e
 
 ## Results
 
+Propagated the dashboard-first framing established in sibling `01` (canonical wording: "a live tree, dependency DAG, and kanban view … that auto-update as work progresses, so you both monitor and steer it"; "the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off"; "this documentation site is itself a dashboard export — you are reading one"). Reused that phrasing rather than inventing a competing one.
+
+### Pages changed
+
+- **[docs/site/03-concepts/02-the-task-tree/task.md](../../../../docs/site/03-concepts/02-the-task-tree/task.md)** — added a new `## The tree is also a live dashboard` section after the frontier section. It ties the committed tree to what the dashboard renders (monitoring + handoff, reusing the canonical wording) and links to `#/04-how-to/04-see-your-work` as the operational how-to. Integrated as a new concept section following the existing flow (state → contents → status → dependencies → dashboard), not bolted onto an unrelated paragraph.
+- **[docs/site/04-how-to/04-see-your-work/task.md](../../../../docs/site/04-how-to/04-see-your-work/task.md)** — replaced the opening "you want to see what the agents have done" lead with a one-line lead establishing the dashboard as the **primary way to monitor and hand off** a project (not merely "see" it), keeping the existing tree/DAG/kanban sentence. No welcome-page pitch duplicated; the mechanics sections are untouched.
+- **[docs/site/06-showcase/task.md](../../../../docs/site/06-showcase/task.md)** — the dogfooding hook ("rendered by the same dashboard you get when you run superRA yourself", plus the handoff-surface line and the "How these are built" section) was already strong, but the self-referential "this page itself is a dashboard export" hook was missing. Added one clause: "The documentation site you are reading is itself a dashboard export, so the chrome around these trees is the chrome around this page."
+
+### Dashboard-mentioning pages deliberately left unchanged
+
+Surveyed every page that mentions "dashboard". All remaining mentions are operational/incidental references that correctly point to the See-Your-Work guide as the operational home and neither undersell nor contradict the elevated monitoring/handoff framing:
+
+- `docs/site/02-quickstart/task.md` — walkthrough references (launch the dashboard, screenshots, "covered in See Your Work"); already carries the handoff idea ("a fresh agent — or you, next week — can reopen the repository").
+- `docs/site/04-how-to/task.md` — index line: "monitor progress with the live dashboard" (already aligned).
+- `docs/site/04-how-to/03-work-with-task-files/task.md` — comment-pinning mechanics + a pointer to See Your Work.
+- `docs/site/04-how-to/06-resume-and-revise/task.md` — "for the visual version, run … dashboard" pointer.
+- `docs/site/05-reference/01-task-file/task.md`, `02-cli-commands/task.md`, `04-skills-and-agents/task.md`, `06-faq/task.md` — reference-section lookups (CLI commands, field definitions, skill table, FAQ pointer); reference tone is intentionally terse, elevation belongs on the welcome/concept/how-to pages.
+
+### Validation
+
+- `report-in-markdown/scripts/check_markdown.py` on all three touched files: clean.
+- Rendered the full `docs/site` tree in doc-mode export (`plan_dashboard.py generate --plan-root docs/site`): builds without error; all three edited bodies and the `#/04-how-to/04-see-your-work` cross-link are present in the output.
+- Cross-link `#/04-how-to/04-see-your-work` resolves to a real node (`docs/site/04-how-to/04-see-your-work/task.md` exists).
+- Authoring contract followed: links to the See-Your-Work node as authority (no skill-body paraphrase), glossary terminology ("task tree", "frontier", "dashboard"), one paragraph per line, `#/` hash cross-links, public-safe content.
