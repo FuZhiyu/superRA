@@ -6,12 +6,12 @@
 
 superRA turns AI coding agents into disciplined research assistants. It ships:
 
-1. A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you watch and steer the work in flight. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. This documentation site is itself a dashboard export — you are reading one.
+1. A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you watch and steer the work in flight. The whole project state lives in the tree it renders, so the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, pick up exactly where work left off. This site is itself a dashboard export — you are reading one.
 2. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-3. **Domain skills** that teach agents how to do research work properly — currently data analysis, theory modeling, and academic writing; literature review and simulation remain on the roadmap.
+3. **Domain skills** that teach agents how to do research work properly — currently data analysis, theory modeling, and academic writing; literature review and simulation on the roadmap.
 4. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
 
-superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
+superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research — exploratory, iterative, and fluid.
 
 superRA is compatible with Claude Code, Codex, and any other harness that supports skills and subagents. See below for installation.
 
@@ -19,16 +19,16 @@ superRA is compatible with Claude Code, Codex, and any other harness that suppor
 
 AI agents are fast but undisciplined:
 
-- Agents generate far more code than anyone will carefully review, often inconsistent with the existing codebase.
-- As the context window fills, agents become more error-prone — but starting fresh loses the thread of what was done and why.
-- After several iterations, the results quietly drift from the original, and neither you nor the agent can reconstruct why.
-- Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
+- They generate far more code than anyone will carefully review, often inconsistent with the existing codebase.
+- As the context window fills, they grow more error-prone — but starting fresh loses the thread of what was done and why.
+- After several iterations the results drift from the original, and neither you nor the agent can reconstruct why.
+- Half the sample gets dropped before a regression runs while the agent declares "everything looks good".
 
-superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
+superRA brings discipline on three fronts. An **implementer–reviewer pair** sits at every step, so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And an explicit **integration phase** folds each task into the existing codebase and matures the documentation, so what lands on `main` is coherent, not a pile of single-shot outputs.
 
 ## The Plan-Implement-Integrate Workflow
 
-superRA organizes every project into three phases — **PLAN → IMPLEMENT → INTEGRATE**. The phases are domain-agnostic; the active domain skill supplies the discipline that applies inside each one. They form a cycle, not a pipeline: a discovery while implementing or a scope change after merge routes back to planning and resumes at the right re-entry point, leaving unrelated finished work untouched.
+superRA organizes every project into three phases — **PLAN → IMPLEMENT → INTEGRATE**. The phases are domain-agnostic; the active domain skill supplies the discipline that applies inside each one. They form a cycle, not a pipeline: a discovery while implementing, or a scope change after merge, routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
 
 ```mermaid
 flowchart TB
@@ -52,15 +52,15 @@ flowchart TB
 
 To start, just describe what you want — `make a plan on...`, `implement according to the plan`, `integrate it with the update on main` — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
-The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `./superRA/superra dashboard` to watch and steer it through the tree, DAG, and kanban views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks each phase end to end — covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
+The project's state lives in a task tree — a directory of small `task.md` files, each holding one unit of work — that you can read at any time. Run `./superRA/superra dashboard` to watch and steer it through the tree, DAG, and kanban views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks each phase end to end, covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 
 ## Skills, Agents, and Hooks
 
-superRA ships **domain skills** — currently data analysis, theory modeling, and academic writing, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages walk each skill and its design idea, and the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
+superRA ships **domain skills** — currently data analysis, theory modeling, and academic writing, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages walk each skill and its design idea; the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
 
-The agents that carry out the work are an implementer and a reviewer (introduced in the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart)), and superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
+The work is carried out by an implementer and a reviewer (introduced in the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart)). superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
 
 ## Installation
 

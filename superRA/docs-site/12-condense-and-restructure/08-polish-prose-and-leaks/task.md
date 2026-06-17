@@ -1,6 +1,6 @@
 ---
 title: "Polish Pass: Fix Audience Leaks + Prose Quality Across Reading-Flow Pages"
-status: not-started
+status: implemented
 depends_on:
   - 02-quickstart
   - 03-domain-skills
@@ -31,3 +31,26 @@ A `writing`-skill **Polish pass** over the user-facing reading-flow prose. The c
 ## Planner Guidance
 
 Load the `writing` skill in Polish mode (`references/polish.md` + `references/style.md`; the audience-leak rule is `style.md §Audience: write to the reader, not the conversation`). The leaks are systemic, not one-off — read each page end to end against the audience model rather than fixing only the cited example. One paragraph per line.
+
+## Results
+
+Synthesis pass: I compared the pre-polish original in this worktree against three competing polish variants (branches `…/parallel/polish-a` "spare reference-doc", `polish-b` "researcher to researcher", `polish-c` "punchy and minimal") and assembled the strongest rendering of each passage into one file per target, enforcing one consistent voice across the site (plain, concrete, substance-first, spare-to-researcher).
+
+**Audience model used:** a researcher adopting superRA — comfortable with git and an AI harness, not assumed to know plugin internals or superRA terminology. Every sentence checked against that information set.
+
+**Per-file variant sourcing:**
+
+- [docs/site/01-welcome/task.md](../../../../docs/site/01-welcome/task.md) — body prose from polish-c (drops "quietly"/"silently"/"far more" intensifiers, "intent-aware"→"intent-first", tightens the design-philosophy bullets). "Start here" list from polish-c's framing, which removes all five rhetorical-question hooks ("New to superRA and want to try it?", "Want proof it is real?") and converts them to declarative "To try it…" / "For…" leads. Rejected polish-a's showcase line ("Want to see a real project?") because it reintroduces a question hook.
+- [docs/site/02-quickstart/task.md](../../../../docs/site/02-quickstart/task.md) — polish-c throughout; it was the most coherent single voice and nailed every passage. Fixes the three systemic leaks: the worked-example CLI/agent-interface contrast collapses to "You read the tree on the **dashboard**"; the prerequisite/runtime paragraph drops "run the `superra` CLI … mostly the agents' interface to the tree" in favor of "to launch the dashboard"; the `frontier` jargon at "Watch progress" softens to the plain behavior ("the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard"). Also fixes "cross-cutting"→"domain-neutral" in the "Where to go next" list.
+- [docs/site/03-domain-skills/task.md](../../../../docs/site/03-domain-skills/task.md) — polish-c (polish-a touched one line, polish-b judged the page clean and made no changes). Genuine prose tightening only: removes "silently"/"currently-implemented", fixes "an agent can check"→"an agent checks", "is built to grow"→"grows". No structural or content change.
+- [docs/site/04-utility-skills/task.md](../../../../docs/site/04-utility-skills/task.md) — polish-c (polish-a unchanged, polish-b touched only the objective). Removes the remaining `frontier` leak in the task-tree section ("the *frontier* of tasks ready to work next"→"the set of tasks ready to work next"), per the directive that the formal term stays only in Reference. Kept polish-c's edits but dropped its stray double blank line before "## Standalone helpers".
+- [README.md](../../../../README.md) — polish-c. Fixes the broken parallelism "folds each task into the existing codebase and maturing documentation"→"…and matures the documentation"; removes "quietly"/"silently"; tightens the "Why superRA?" bullets and the "Skills, Agents, and Hooks" section. "far more code than anyone will carefully review" kept in the complaint bullet (factual, not self-congratulatory).
+
+**Voice convention:** polish-c was the strongest and most internally consistent variant on four of the five files, so blending leaned heavily on it; the welcome "Start here" list and the cross-file leak fixes were the main passage-level selections. No restructuring, no content/structure change, no concept moved between pages.
+
+**Verification (run in this session):**
+
+- `docs/build_site.sh` — builds clean; wrote `_site/{index,demo-tree,superra-dev-tree}.html`, all three files non-empty.
+- `check_markdown.py` on all five files — each reports `clean`.
+- Leak/AI-pattern grep across the five files (`03-concepts|04-how-to|cross-cutting|seamless|robust|leverage|the agents' interface|frontier`) — no matches.
+- Six-page structure intact (slide-design absent, dashboard-first framing preserved); no dropped-page link regressions.
