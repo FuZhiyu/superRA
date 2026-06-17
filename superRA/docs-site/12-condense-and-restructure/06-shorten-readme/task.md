@@ -1,6 +1,6 @@
 ---
 title: "Shorten README into a Front Door Pointing at the Docs"
-status: implemented
+status: approved
 depends_on:
   - 01-ia-and-scaffold
 tags: []
