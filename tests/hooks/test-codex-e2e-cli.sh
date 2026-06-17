@@ -119,7 +119,7 @@ if [ $rc -ne 0 ]; then
   exit 1
 fi
 
-python3 - "$OUT" <<'PY'
+if ! python3 - "$OUT" <<'PY'
 import json, sys
 path = sys.argv[1]
 events = []
@@ -149,6 +149,9 @@ if failed:
     raise SystemExit("missing hook evidence: " + ", ".join(failed))
 print("PASS Codex UserPromptSubmit hook evidence present")
 PY
+then
+  exit 1
+fi
 
 mkdir -p "$TMPROOT/superRA/01-child"
 write_minimal_task_md "$TMPROOT/superRA/task.md" "Codex Hook Root" "not-started"
@@ -174,7 +177,7 @@ if [ $rc -ne 0 ]; then
   exit 1
 fi
 
-python3 - "$TASK_OUT" "$TMPROOT/superRA/task.md" "$TMPROOT/superRA/01-child/task.md" <<'PY'
+if ! python3 - "$TASK_OUT" "$TMPROOT/superRA/task.md" "$TMPROOT/superRA/01-child/task.md" <<'PY'
 import json, re, sys
 from pathlib import Path
 
@@ -253,3 +256,6 @@ if failed:
     raise SystemExit("missing task-hook evidence: " + ", ".join(failed))
 print("PASS Codex task-hook PostToolUse evidence present")
 PY
+then
+  exit 1
+fi
