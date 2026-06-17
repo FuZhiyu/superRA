@@ -1,6 +1,6 @@
 ---
 title: "Writeup: Does FF3 Price the Size-Value Cross-Section?"
-status: implemented
+status: revise
 depends_on:
   - 02-analysis
 tags: []
@@ -9,6 +9,10 @@ input: results from 02-analysis
 output: this task's ## Results (the matured narrative)
 created: 2026-06-17
 ---
+
+## Review Notes
+
+1. **MAJOR** — [task.md:26](task.md#L26), [task.md:29](task.md#L29), [task.md:50](task.md#L50), [task.md:60](task.md#L60), [task.md:69](task.md#L69), [task.md:78](task.md#L78): the six `<!-- intent: … -->` HTML comments are a Draft-mode authoring artifact addressed to the editing process, not to the showcase-visiting researcher. They render invisibly (markdown-it `html: true` + DOMPurify pass the comment nodes through, but the browser does not display them), yet they ship verbatim in the committed source the docs build exports as the showcase, and no sibling showcase node (01-data, 02-analysis) carries any. They are process-internal scaffolding leaking into a reader-facing node — the writing skill's audience discipline (write to the reader, not the conversation). **Fix:** strip all six `<!-- intent: … -->` lines (and the blank line each leaves) from `## Results`. The section headings already convey the same structure to the reader.
 
 ## Objective
 
