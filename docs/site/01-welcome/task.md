@@ -28,32 +28,52 @@ AI agents are fast but undisciplined. They generate more code than anyone will c
 
 superRA organizes every project into three phases — **PLAN → IMPLEMENT → INTEGRATE**.
 
-<div style="display:flex;align-items:stretch;margin:1.4em 0;font-family:var(--font-text);max-width:560px;">
-  <div style="position:relative;width:118px;flex:none;margin-right:-1px;">
-    <svg viewBox="0 0 118 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;">
-      <path d="M 117 99 L 22 99 Q 12 99 12 92 L 12 8 Q 12 1 22 1 L 120 1" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>
-    </svg>
-    <div style="position:absolute;top:0;left:111px;transform:translateY(-46%);color:var(--accent);font-size:14px;line-height:1;" aria-hidden="true">&#9654;</div>
-    <div style="position:absolute;top:50%;left:6px;transform:translateY(-50%);width:100px;color:var(--accent);font-size:12px;font-style:italic;text-align:center;line-height:1.35;background:var(--bg);padding:2px 0;">plan change<br/>loops back<br/>to PLAN</div>
-  </div>
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">PLAN</strong>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">scope &middot; task decomposition &middot; <code style="font-family:var(--font-mono);font-size:0.9em;">superRA/</code> task tree</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">IMPLEMENT</strong> <span style="font-size:13px;color:var(--text-mute);">(per task)</span>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">implementer &#8644; reviewer loop<br/>APPROVE advances &middot; REVISE loops back</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">INTEGRATE</strong>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">Protect results &middot; Sync with base &middot; Integrate/refactor &middot; Document &middot; Finish</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="border:1px solid var(--st-ok-t);border-radius:999px;background:var(--st-ok);color:var(--st-ok-t);padding:6px 22px;font-family:var(--font-display);font-size:15px;font-weight:600;">finished</div>
-  </div>
+<div style="margin:1.4em auto;max-width:560px;">
+<svg viewBox="0 0 560 324" style="width:100%;height:auto;font-family:var(--font-text);" role="img" aria-label="PLAN, IMPLEMENT, and INTEGRATE phase boxes in a vertical flow down to a finished state, with two dashed 'plan change' edges looping back from IMPLEMENT and INTEGRATE into PLAN.">
+  <defs>
+    <marker id="ra-loop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+    <marker id="ra-down" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--text-mute)"/></marker>
+  </defs>
+
+  <path d="M 170 122 C 118 122, 114 46, 168 46" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ra-loop)"/>
+  <path d="M 170 214 C 72 214, 72 34, 168 34" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ra-loop)"/>
+
+  <line x1="356" y1="70" x2="356" y2="94" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+  <line x1="356" y1="162" x2="356" y2="186" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+  <line x1="356" y1="254" x2="356" y2="278" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+
+  <g>
+    <rect x="170" y="6" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="14" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="29" style="font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">PLAN</text>
+    <text x="188" y="47" style="font-size:13px;fill:var(--text-mid);">scope &middot; task decomposition</text>
+    <text x="188" y="62" style="font-size:13px;fill:var(--text-mid);"><tspan style="font-family:var(--font-mono);font-size:11.5px;">superRA/</tspan> task tree</text>
+  </g>
+
+  <g>
+    <rect x="170" y="98" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="106" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="121" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">IMPLEMENT<tspan style="font-family:var(--font-text);font-size:11px;font-weight:400;fill:var(--text-mute);"> (per task)</tspan></text>
+    <text x="188" y="139" style="font-size:13px;fill:var(--text-mid);">implementer &#8644; reviewer loop</text>
+    <text x="188" y="154" style="font-size:13px;fill:var(--text-mid);">APPROVE advances &middot; REVISE loops back</text>
+  </g>
+
+  <g>
+    <rect x="170" y="190" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="198" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="213" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">INTEGRATE</text>
+    <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Protect results &middot; Sync with base</text>
+    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Integrate/refactor &middot; Document &middot; Finish</text>
+  </g>
+
+  <rect x="298" y="282" width="116" height="36" rx="18" fill="var(--st-ok)" stroke="var(--st-ok-t)"/>
+  <text x="356" y="305" text-anchor="middle" style="font-family:var(--font-display);font-size:14px;font-weight:600;fill:var(--st-ok-t);">finished</text>
+
+  <rect x="88" y="75" width="60" height="15" fill="var(--bg)"/>
+  <text x="118" y="86" text-anchor="middle" style="font-size:10.5px;font-style:italic;fill:var(--accent);">plan change</text>
+  <rect x="44" y="118" width="60" height="15" fill="var(--bg)"/>
+  <text x="74" y="129" text-anchor="middle" style="font-size:10.5px;font-style:italic;fill:var(--accent);">plan change</text>
+</svg>
 </div>
 
 In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped. The phases form a cycle, not a pipeline: a discovery while implementing, or a scope change after merge, routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
