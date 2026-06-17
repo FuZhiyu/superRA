@@ -43,6 +43,7 @@ Surveyed every page that mentions "dashboard". All remaining mentions are operat
 - `docs/site/04-how-to/03-work-with-task-files/task.md` — comment-pinning mechanics + a pointer to See Your Work.
 - `docs/site/04-how-to/06-resume-and-revise/task.md` — "for the visual version, run … dashboard" pointer.
 - `docs/site/05-reference/01-task-file/task.md`, `02-cli-commands/task.md`, `04-skills-and-agents/task.md`, `06-faq/task.md` — reference-section lookups (CLI commands, field definitions, skill table, FAQ pointer); reference tone is intentionally terse, elevation belongs on the welcome/concept/how-to pages.
+- `docs/site/task.md` (docs-site root node) — its dashboard mention ("exported to static HTML by the task-tree dashboard in doc-mode") is authoring-scaffold metadata describing how the site is built, not reader-facing pitch; correctly left alone.
 
 ### Validation
 
