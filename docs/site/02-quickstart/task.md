@@ -109,6 +109,22 @@ The tasks are done and approved — the work is correct. But a correct result is
 
 It is a phase of its own, not a final `git commit`, because each step guards against a different way good work goes wrong after it is done. superRA **protects the key results against drift** with small automated checks that pin the numbers you care about, so a later refactor that moves them fails loudly instead of slipping through. It **syncs with your base branch by intent**, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`. It **refactors the work to fit your codebase** with a minimal, reviewable diff, **matures the task findings into documentation** a future reader can follow, and only then **ships** by PR or merge. The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
 
+#### The same arc on a real project
+
+The toy run above is small enough to read in one sitting. The status mechanics are identical on a full study. These three shots are the *same* real tree — the CAPM-vs-FF3 [Showcase](#/06-showcase) — at three moments of its actual run, read straight from its git history. Watch the sidebar pills and the parent rollup change as the work moves.
+
+Right after `superplan`, the tree is laid out and nothing has run — every task is `not-started` (grey), the rollup reads 0 of 3:
+
+![Showcase tree right after planning: three tasks under the root, all not-started, rollup 0/3.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-after-planning.png)
+
+Mid-`superimplement`, the tree shows the implementer–reviewer loop in flight: the data task is `approved` (green), the analysis task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`:
+
+![Showcase tree mid-implement: data approved, analysis implemented and awaiting review, writeup not-started, parent in-progress.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-mid-implement.png)
+
+Once every task has survived its review, the whole tree is `approved` (green) and the rollup reads 3 of 3 — the state INTEGRATE picks up:
+
+![Showcase tree complete: all three tasks approved, rollup 3/3.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-complete.png)
+
 ### Where to go next
 
 You have run a full cycle. The two pieces of discipline that do most of the work — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on — each have a page:
