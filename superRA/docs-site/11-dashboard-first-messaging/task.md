@@ -1,6 +1,6 @@
 ---
 title: "Dashboard-First Messaging Revision"
-status: approved
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-17
