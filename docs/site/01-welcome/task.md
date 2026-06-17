@@ -28,7 +28,12 @@ AI agents are fast but undisciplined. They generate more code than anyone will c
 
 superRA organizes every project into three phases — **PLAN → IMPLEMENT → INTEGRATE**.
 
-<div style="display:flex;gap:18px;align-items:stretch;margin:1.4em 0;font-family:var(--font-text);max-width:560px;">
+<div style="display:flex;align-items:stretch;margin:1.4em 0;font-family:var(--font-text);max-width:560px;">
+  <div style="position:relative;width:118px;flex:none;margin-right:-1px;">
+    <div style="position:absolute;top:34px;bottom:18px;right:0;border-left:2px dashed var(--accent);border-top:2px dashed var(--accent);border-bottom:2px dashed var(--accent);border-top-left-radius:10px;border-bottom-left-radius:10px;"></div>
+    <div style="position:absolute;top:24px;right:-7px;color:var(--accent);font-size:15px;line-height:1;" aria-hidden="true">&#9650;</div>
+    <div style="position:absolute;top:50%;left:0;transform:translateY(-50%);width:104px;color:var(--accent);font-size:12px;font-style:italic;text-align:center;line-height:1.35;">plan change<br/>loops back<br/>to PLAN</div>
+  </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
     <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
       <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">PLAN</strong>
@@ -46,10 +51,6 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
     </div>
     <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
     <div style="border:1px solid var(--st-ok-t);border-radius:999px;background:var(--st-ok);color:var(--st-ok-t);padding:6px 22px;font-family:var(--font-display);font-size:15px;font-weight:600;">finished</div>
-  </div>
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:2px dashed var(--accent);padding-left:14px;color:var(--accent);font-size:13px;font-style:italic;text-align:center;line-height:1.4;">
-    <span aria-hidden="true" style="font-size:20px;">&#8624;</span>
-    plan change<br/>loops back to PLAN
   </div>
 </div>
 
