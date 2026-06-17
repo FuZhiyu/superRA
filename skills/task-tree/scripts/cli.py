@@ -572,7 +572,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     check.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
-    check.add_argument("--category", choices=["status", "dependency", "rollup", "placement"], help="Check one category")
+    check.add_argument("--category", choices=["status", "dependency", "rollup", "placement", "sync-impact"], help="Check one category")
     _set_runner(check, _run_check)
 
     create = task_sub.add_parser("create", help="Create a task directory")

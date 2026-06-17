@@ -12,6 +12,7 @@ Every `task.md` — root, branch, or leaf — uses the same body sections. The t
 - **`## Planner Guidance`** — optional advisory suggestions or exploration notes, useful but not binding.
 - **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval.
 - **`## Workflow Status`** — integration-phase progress record, present only on the root task during INTEGRATE. Carries checkboxes for the four superintegrate milestones (`Drift tests created`, `Integrated`, `Docs finalized`, and the final action). These checkboxes are an integration-phase-only exception to the "no checkboxes in tasks" rule — they track cross-stage workflow state, not implementation steps, and are written and flipped by the orchestrator during INTEGRATE. Remove the section after Finish.
+- **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
 Branch tasks (those with children) do not carry `script`, `input`, or `output` — those belong on leaf tasks.
 

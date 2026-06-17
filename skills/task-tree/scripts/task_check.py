@@ -8,6 +8,9 @@ Checks:
    no cycles, flags dependencies on archived tasks.
 3. Rollup consistency — stored parent status matches compute_status()
    from children.
+4. Placement / structure — advisory smells the placement ladder forbids.
+5. Sync-impact leak — advisory warning for any task still carrying a
+   temporary ## Sync Impact section past Integrate closeout.
 
 Exit code 0 if clean, 1 if issues found.
 """
@@ -16,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,7 +46,7 @@ class Finding:
     """A single diagnostic finding."""
 
     task_path: str
-    category: str  # "status" | "dependency" | "rollup" | "placement"
+    category: str  # "status" | "dependency" | "rollup" | "placement" | "sync-impact"
     severity: str  # "error" | "warning"
     message: str
 
@@ -343,6 +347,51 @@ def _check_cross_subtree_output_overlap(
 
 
 # ---------------------------------------------------------------------------
+# Check 5: Lingering ## Sync Impact (advisory)
+# ---------------------------------------------------------------------------
+
+# Matches the canonical ``## Sync Impact`` heading (owned by
+# semantic-merge/references/workflow-sync-author.md) as a standalone heading line,
+# tolerating trailing whitespace but no other variation, so the leak-detector
+# neither misses the canonical form nor over-matches near-misses.
+_SYNC_IMPACT_HEADING = re.compile(r"^##\s+Sync Impact\s*$", re.MULTILINE)
+
+
+def check_sync_impact(root: Task) -> list[Finding]:
+    """Flag any task carrying a temporary ``## Sync Impact`` section.
+
+    ``## Sync Impact`` is scaffolding the sync author adds during Integrate and
+    must remove at Integrate closeout (or fold a lasting assumption into
+    ``## Objective``). A surviving section is a leak. All findings are advisory
+    ``warning`` severity — a ``## Sync Impact`` section is legitimate mid-Integrate,
+    so this is a leak-detector, never a hard gate, and the check never mutates.
+    """
+    findings: list[Finding] = []
+    _check_sync_impact_recursive(root, findings)
+    return findings
+
+
+def _check_sync_impact_recursive(task: Task, findings: list[Finding]) -> None:
+    task_md = task.dir_path / "task.md"
+    if task_md.exists():
+        text = task_md.read_text(encoding="utf-8")
+        if _SYNC_IMPACT_HEADING.search(text):
+            findings.append(Finding(
+                task_path=task.path,
+                category="sync-impact",
+                severity="warning",
+                message=(
+                    "carries a temporary '## Sync Impact' section; remove it at "
+                    "Integrate closeout, or fold any lasting task assumption into "
+                    "'## Objective' and drop the section"
+                ),
+            ))
+
+    for child in task.children:
+        _check_sync_impact_recursive(child, findings)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -361,7 +410,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup", "placement"],
+        choices=["status", "dependency", "rollup", "placement", "sync-impact"],
         help="Only run a specific check category",
     )
     return parser.parse_args(argv)
@@ -384,6 +433,8 @@ def run_checks(
     if category is None or category == "placement":
         is_forest = not (plan_root / "task.md").exists()
         findings.extend(check_placement(root, is_forest=is_forest))
+    if category is None or category == "sync-impact":
+        findings.extend(check_sync_impact(root))
 
     return findings
 
