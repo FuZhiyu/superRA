@@ -1,6 +1,6 @@
 ---
 title: "Align Welcome, Prune Dropped Sections, Verify Build"
-status: implemented
+status: approved
 depends_on:
   - 02-quickstart
   - 03-domain-skills
