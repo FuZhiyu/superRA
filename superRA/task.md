@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-23
@@ -87,4 +87,3 @@ Scope note: [tests/hooks/test-codex-e2e-cli.sh](../tests/hooks/test-codex-e2e-cl
 - [task-tree/dashboard/github-artifact-action](task-tree/dashboard/github-artifact-action/task.md): synced against local `better-handoff` on 2026-06-04. Feature-branch pre-sync merge base = `35feea5f`; artifact branch head = `73212f9b`; first incoming `better-handoff` head = `6b6d4d30`; final integration base head = `1069da5f`. Material code overlap was the dashboard command surface and docs/tests: incoming made `superra dashboard` background-by-default with `--foreground` and `superra dashboard stop`, while this branch added `superra dashboard artifact setup`. Resolution keeps both command paths, preserves browser auto-open for plain `superra dashboard` unless `--no-open` is passed, routes artifact setup without invoking the dashboard server, and preserves the base-side mobile/iPad dashboard integration record from `1069da5f`.
 - [zotero-skills](zotero-skills/task.md): synced `origin/main` (PR #31, commit `5dfe928b`) into the trunk on 2026-06-05. Incoming is purely additive — the MCP-free `zotero-paper-reader` skill, the vendored `mistral-pdf-to-markdown` skill, their tests, and `README.md` / `skills/CATEGORIES.md` / `skills/using-superRA/SKILL.md` inventory entries. Two conflicts: `.gitignore` resolved by union (kept the trunk's `.plan/` + `**.pyc` entries, added `superRA/dashboard.html`); `superRA/task.md` was an add/add collision of two unrelated roots. Per researcher decision the trunk root was reframed from "Better Handoff" to the repo-level "superRA" root, and the incoming zotero workstream root + its 01–06 task subdirs were relocated as the `zotero-skills/` subtree (no content loss). Dashboard regenerated to reflect the new tree.
 - [zotero-skills](zotero-skills/task.md): synced local `main` (`b797260c`, PR #33 plus the #32 Mistral dependency fix) into `better-handoff` on 2026-06-09 from merge base `5dfe928b`. Incoming added BibTeX export, citation insertion, bibliography rendering, Better BibTeX key support, and related tests/docs. Resolution preserved the branch's repo-level `superRA/task.md`, relocated incoming tasks 07-10 into the existing `zotero-skills/` subtree, and kept the task-specific results under [zotero-skills](zotero-skills/task.md) rather than restoring the old standalone Zotero root.
-
