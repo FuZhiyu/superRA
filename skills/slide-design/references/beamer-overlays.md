@@ -4,7 +4,7 @@ Use this reference when writing or reviewing Beamer slides with incremental reve
 
 ## Template
 
-Use `assets/beamer-starter-template.tex` as the copyable starting point. Its overlay command reference block and demo frames are the authoritative examples for the idioms below.
+Use `<skill-dir>/assets/beamer-starter-template.tex` as the copyable starting point. Its overlay command reference block and demo frames are the authoritative examples for the idioms below.
 
 ## Choosing Commands
 

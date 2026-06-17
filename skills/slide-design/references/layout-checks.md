@@ -10,7 +10,7 @@ Use this reference when checking Beamer output, line wraps, overfull boxes, figu
 4. Flag likely wrapped bullets and text near slide boundaries.
 5. Inspect only the flagged pages visually when the cheap check is inconclusive: render them with `pdftoppm -png -r 100 -f N -l N deck.pdf page` and read the images.
 
-`uv run --script scripts/check_slide_layout.py deck.tex` automates steps 1-4; add `--render-flagged DIR` to also produce PNGs of flagged pages for step 5. Treat its output as triage evidence, not a final aesthetic verdict.
+`uv run --script <skill-dir>/scripts/check_slide_layout.py deck.tex` automates steps 1-4; add `--render-flagged DIR` to also produce PNGs of flagged pages for step 5. `<skill-dir>` is the directory containing the slide-design `SKILL.md`. Treat its output as triage evidence, not a final aesthetic verdict.
 
 ## Interpreting Findings
 

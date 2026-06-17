@@ -26,6 +26,8 @@ Load per stage; do not load them all at every dispatch:
 | `references/layout-checks.md` | IMPLEMENT or review when editing Beamer, checking line wraps, overflow, figures, overlays, or final PDF layout. |
 | `references/integration.md` | INTEGRATE / final polish - deck-wide consistency, buildability, backup-slide hygiene, and communication review. |
 
+For bundled scripts and assets, `<skill-dir>` is the directory containing this `SKILL.md`; substitute the real path before running commands or copying files.
+
 **Non-Beamer decks (PowerPoint, Keynote, browser slides):** the Core Principle, Audience Context Discipline, Techniques, and the non-Beamer-specific checklist items apply. The Beamer references, starter template, and `check_slide_layout.py` do not apply. Read the build/layout `[BLOCKING]` item as "the deck renders or exports without overflow or unresolved placeholders, verified in the target tool."
 
 ## Core Principle
@@ -62,7 +64,7 @@ The hard part is judging what the audience knows at each moment. Run an audience
 - Use alerts, boldface, color, and size to identify the current point and connect related text/equation pieces.
 - De-emphasize sources, caveats, and secondary notes instead of letting them compete visually with the main claim.
 - Design for recovery after distraction: a distracted audience member should be able to skim the slide and rejoin the talk.
-- For Beamer overlay mechanics, load `references/beamer-overlays.md` and reuse `assets/beamer-starter-template.tex`.
+- For Beamer overlay mechanics, load `references/beamer-overlays.md` and reuse `<skill-dir>/assets/beamer-starter-template.tex`.
 
 ### Simplification
 
@@ -89,8 +91,8 @@ Shared checklist walked by the implementer (before DONE) and by the reviewer (as
 
 ## Layout Triage
 
-For Beamer decks, use `scripts/check_slide_layout.py` when a cheap nonvisual pass is enough to catch likely line wraps, overfull boxes, missing figures, or text near slide boundaries. Load `references/layout-checks.md` for triage evidence interpretation and layout guidance.
+For Beamer decks, use `uv run --script <skill-dir>/scripts/check_slide_layout.py` when a cheap nonvisual pass is enough to catch likely line wraps, overfull boxes, missing figures, or text near slide boundaries. Load `references/layout-checks.md` for triage evidence interpretation and layout guidance.
 
 ## Beamer Implementation
 
-Start new decks from `assets/beamer-starter-template.tex` — it carries the house design language (theme, palette, frame/title templates, list markers, semantic commands) and an overlay command reference. Do not rebuild a preamble from scratch when the template applies.
+Start new decks from `<skill-dir>/assets/beamer-starter-template.tex` — it carries the house design language (theme, palette, frame/title templates, list markers, semantic commands) and an overlay command reference. Do not rebuild a preamble from scratch when the template applies.

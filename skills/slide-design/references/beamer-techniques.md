@@ -2,7 +2,7 @@
 
 Use this reference when creating or refactoring Beamer source. It covers common implementation patterns; the communication discipline still comes from `SKILL.md`.
 
-For copyable examples, use `assets/beamer-starter-template.tex`. Keep new examples in references short; extend the template when an idiom needs code.
+For copyable examples, use `<skill-dir>/assets/beamer-starter-template.tex`. Keep new examples in references short; extend the template when an idiom needs code.
 
 ## Preamble And Theme
 
@@ -65,5 +65,5 @@ For simplification principles (what to show, what to move to backup), see SKILL.
 
 - Wrap optional figures in a missing-figure placeholder command when drafts may circulate before all figures exist.
 - Keep figure paths stable relative to the deck source.
-- Run `scripts/check_slide_layout.py` after Beamer edits that affect text length, overlays, figures, equations, or tables.
+- Run `uv run --script <skill-dir>/scripts/check_slide_layout.py` after Beamer edits that affect text length, overlays, figures, equations, or tables.
 - When the checker flags a page, inspect the rendered page or simplify the source before adding spacing hacks.
