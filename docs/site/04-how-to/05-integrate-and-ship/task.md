@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-You have a branch of analysis code that works, the reviewer approved the tasks, and now you want to land it on `main` without breaking existing results or making the codebase incoherent.
+You have a working branch, the reviewer approved the tasks, and now you want to land it on `main` without breaking existing results or making the codebase incoherent.
 The INTEGRATE phase handles this: it protects key results with drift tests, syncs the branch against the current base using intent-aware merging, refactors for codebase fit, matures the documentation, and opens the PR.
 
 Trigger integration by saying:
@@ -39,7 +39,7 @@ Instead, the agent uses the `semantic-merge` skill: it investigates the intent o
 You are asked to confirm the target base if it was not already recorded in the task tree.
 You may also be asked to adjudicate intent-changing conflicts — cases where two edits are logically incompatible and only you can decide which intent wins.
 
-Do not run `git merge` manually on an analysis branch; the `merge-guard` hook will remind you to use `semantic-merge` instead.
+Do not run `git merge` manually on your branch; the `merge-guard` hook will remind you to use `semantic-merge` instead.
 
 ## Integrate
 

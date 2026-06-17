@@ -23,7 +23,7 @@ If you materially deviate from `## Planner Guidance`, list it in `## Results` wi
 
 For a bundle dispatch, run this protocol independently for each assigned task. Write separate `## Results`, move each `status:` independently, and cite task-local evidence for each path.
 
-Follow the discipline of the domain skill you loaded. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
+Follow the discipline of the domain skill you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
 
 ## Self-Check
 

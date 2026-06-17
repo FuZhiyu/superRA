@@ -56,7 +56,7 @@ Key rules:
 
 ## Adopt superRA on an existing project
 
-If you have analysis code and results already, you can create a task tree retroactively.
+If you already have code and results, you can create a task tree retroactively.
 The `superplan` skill has a retroactive documentation mode: it reads your existing code and results, then creates `task.md` files that mirror the logical structure of the work (not just the file layout), and sets task statuses to match the work already done.
 
 To start, open your project and say:

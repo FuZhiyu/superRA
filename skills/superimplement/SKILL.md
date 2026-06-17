@@ -1,6 +1,6 @@
 ---
 name: superimplement
-description: Requires `superRA:using-superra` loaded first. Use when a `superRA/` task tree is ready to implement via an implementer-reviewer pair, when resuming a tree with mixed `implemented` / `revise` / not-started tasks, or when an analysis is code-complete and you want to verify reproducibility and present completion options. Triggers include "execute the plan", "run task N", "implement this", "finish this analysis", or a `revise` state needing adjudication before re-dispatch.
+description: Requires `superRA:using-superra` loaded first. Use when a `superRA/` task tree is ready to implement via an implementer-reviewer pair, when resuming a tree with mixed `implemented` / `revise` / not-started tasks, or when the work is code-complete and you want to verify reproducibility and present completion options. Triggers include "execute the plan", "run task N", "implement this", "finish this work", or a `revise` state needing adjudication before re-dispatch.
 ---
 
 # superimplement — the IMPLEMENT phase
@@ -35,8 +35,8 @@ git branch --show-current
 
 If on `main` or `master`:
 ```
-You're on main. I recommend creating a feature branch for this work:
-  git checkout -b analysis/<topic>
+You're on main. I recommend creating a branch for this work:
+  git checkout -b <topic>
 Want me to create one?
 ```
 
@@ -142,7 +142,7 @@ Fold the researcher's answer into the relevant task objective (rewriting it to b
 - **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`.
 - **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the task-tree edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <work-branch>`, and — if the work was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
 ## Orchestrator Discipline
 

@@ -168,7 +168,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 ### `superRA/` Is the Task Tracker
 
-`superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite`. Any work that is part of the analysis (a new task, discovered subtask, methodology check, sensitivity run, refactor pass) lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. `TodoWrite` is only a transient within-session view — it does not persist, so it cannot carry analysis tasks or coordinate work across sessions. When the two disagree, `superRA/` is right.
+`superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite`. Any work that is part of the project (a new task, discovered subtask, methodology check, sensitivity run, refactor pass) lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. `TodoWrite` is only a transient within-session view — it does not persist, so it cannot carry tasks or coordinate work across sessions. When the two disagree, `superRA/` is right.
 
 ## User Feedback and Changing the Task Tree
 
@@ -178,7 +178,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 
 - Adding, removing, or restructuring task directories.
 - Changing a task's objective, script, input, or output.
-- Changing the analysis-level objective, methodology, sample definition, or expected output.
+- Changing the project-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge.
 - Substantive restructure findings surfaced mid-INTEGRATE. The orchestrator authors the Restructure Proposal; the researcher decides.

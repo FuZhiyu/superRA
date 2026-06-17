@@ -5,7 +5,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a task tree
 
 # superintegrate — the INTEGRATE phase
 
-Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified analysis branch through five steps:
+Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified branch through five steps:
 
 ```
 Protect   -> protect key results (default: drift tests)
@@ -64,7 +64,7 @@ Drift tests are the default protection mechanism, guarding key results through S
 
 ## Sync
 
-Sync brings the analysis branch onto the current base before refactor starts. It is serialized: one generic sync author followed by one generic sync reviewer, no parallelization.
+Sync brings the branch onto the current base before refactor starts. It is serialized: one generic sync author followed by one generic sync reviewer, no parallelization.
 
 ### Step 1: Resolve the target base
 
@@ -83,9 +83,9 @@ fi
 If no prior decision records the base, ask:
 
 ```text
-This integration will sync the analysis branch against <base-ref>.
+This integration will sync the branch against <base-ref>.
 Is that correct, or did it split from a release branch, co-authored track,
-or sibling analysis branch?
+or sibling branch?
 ```
 
 Record the confirmed `BASE_REF` in root task.md before fetching, computing anchors, or dispatching.
@@ -120,7 +120,7 @@ Agent(generic):
   References:
     - semantic-merge/references/workflow-sync-author.md
 
-  Task: Sync this analysis branch with <base-ref>
+  Task: Sync this branch with <base-ref>
   Base branch: <base-ref>
   PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
@@ -296,7 +296,7 @@ Agent(subagent_type: "superRA:reviewer"):
     <prior-round adjudication notes if re-dispatching>
 ```
 
-Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.
+Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to the code, re-enter Integrate.
 
 On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
 
@@ -344,7 +344,7 @@ Run the project pipeline or targeted verification on the final tree. If it fails
 
 ### Step 4: Cleanup
 
-If the analysis used a worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree; see `superRA:worktree-data-sync` for data teardown.
+If the work used a worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree; see `superRA:worktree-data-sync` for data teardown.
 
 Report what was published or landed and what was cleaned up.
 

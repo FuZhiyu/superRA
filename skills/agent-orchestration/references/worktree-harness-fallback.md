@@ -16,7 +16,7 @@ git worktree add <path> -b <branch-name> <base-ref>
 
 - `<path>` — absolute or repo-relative. Placement convention below.
 - `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<current-branch>-agent/parallel/<slug>`.
-- `<base-ref>` — typically the current analysis branch (`HEAD` is fine when already on it).
+- `<base-ref>` — typically the current branch (`HEAD` is fine when already on it).
 
 After creation, the orchestrator seeds non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
 

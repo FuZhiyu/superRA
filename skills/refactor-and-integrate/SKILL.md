@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when refactoring analysis code for codebase integration, reviewing post-sync branch quality, auditing project docs, pruning a governing diff to minimum net diff, or using task-local Sync impact as justification evidence.
+description: Utility skill (any phase). Use when refactoring code for codebase integration, reviewing post-sync branch quality, auditing project docs, pruning a governing diff to minimum net diff, or using task-local Sync impact as justification evidence.
 ---
 
 # Refactor and Integrate
@@ -69,7 +69,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Naming consistency:** variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** existing utility functions are used where appropriate instead of hand-rolled equivalents.
 - `[BLOCKING]` **No debug artifacts:** no leftover debug prints, commented-out experiments, or temporary variables.
-- `[BLOCKING]` **Minimal existing-file changes:** modifications outside the analysis scope are minimal and justified.
+- `[BLOCKING]` **Minimal existing-file changes:** modifications outside the task scope are minimal and justified.
 - `[ADVISORY]` **Code simplification:** redundant code removed and repeated patterns consolidated only where the task or codebase-coherence review demanded the touch.
 - `[ADVISORY]` **PR-friendly diffs:** avoid unnecessary reformatting that obscures substantive changes.
 
@@ -80,8 +80,8 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **PR quality:**
 
-- `[BLOCKING]` **Focused diff:** changes are limited to analysis scope.
-- `[BLOCKING]` **Self-contained:** the analysis can be understood from the code and documentation.
+- `[BLOCKING]` **Focused diff:** changes are limited to task scope.
+- `[BLOCKING]` **Self-contained:** the work can be understood from the code and documentation.
 - `[ADVISORY]` **Clean commits:** commit history is logical and messages are descriptive.
 
 **Documentation currency:**

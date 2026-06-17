@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-Getting a correct result is not the same as landing it safely. Once the analysis is in hand, superRA shifts from "fast and exploratory" to "strict and protective": the integration phase folds the work into your codebase in a way that keeps the results reproducible and coherent for the long haul. This is the job of [superintegrate](skills/superintegrate/SKILL.md), and it is a phase of its own — not a final `git commit` — because each of its steps guards against a different way that good work quietly goes wrong after it is done.
+Getting a correct result is not the same as landing it safely. Once the work is in hand, superRA shifts from "fast and exploratory" to "strict and protective": the integration phase folds the work into your codebase in a way that keeps the results reproducible and coherent for the long haul. This is the job of [superintegrate](skills/superintegrate/SKILL.md), and it is a phase of its own — not a final `git commit` — because each of its steps guards against a different way that good work quietly goes wrong after it is done.
 
 ## Protecting results against drift
 
