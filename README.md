@@ -8,7 +8,7 @@ superRA turns AI coding agents into disciplined research assistants. It ships:
 
 1. A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you watch and steer the work in flight. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. This documentation site is itself a dashboard export — you are reading one.
 2. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-3. **Domain skills** that teach agents how to do research work properly — currently economic data analysis, theory-modeling, and academic writing; literature review and simulation remain on the roadmap.
+3. **Domain skills** that teach agents how to do research work properly — currently data analysis, theory modeling, academic writing, and slide design; literature review and simulation remain on the roadmap.
 4. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
 
 superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
@@ -58,7 +58,7 @@ The project's state lives in a task tree — a directory of small `task.md` file
 
 ## Skills, Agents, and Hooks
 
-superRA ships **domain skills** — currently economic data analysis, theory-modeling, and academic writing, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Skills & Agents concept page](http://fuzhiyu.me/superRA/#/03-concepts/04-skills-and-agents) explains the model, and the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
+superRA ships **domain skills** — currently data analysis, theory modeling, academic writing, and slide design, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Skills & Agents concept page](http://fuzhiyu.me/superRA/#/03-concepts/04-skills-and-agents) explains the model, and the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
 
 The agents that carry out the work are an [implementer and a reviewer](http://fuzhiyu.me/superRA/#/03-concepts/03-roles-and-review), and superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
 

@@ -14,11 +14,15 @@ What it is:
 
 - A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. You are viewing one right now — this documentation site is itself built on the dashboard.
 - An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, and academic writing.
+- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, academic writing, and slide design.
 
-Why superRA rather than an existing agentic-coding framework like [Superpowers](https://github.com/obra/superpowers)?
+## Why superRA?
 
-Those frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the current direction pushes hard to remove the human from the loop. Social-science research needs a different rhythm: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
+AI agents are fast but undisciplined. They generate far more code than anyone will carefully review. They drift as the context window fills — and starting fresh loses the thread of what was done and why. They silently drop half the sample before a regression runs, then report "everything looks good". superRA brings discipline to the agent at every step: no result ships without adversarial review, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent rather than a pile of single-shot outputs.
+
+## Why not an existing framework like Superpowers?
+
+[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the current direction pushes hard to remove the human from the loop. Social-science research needs a different rhythm: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
 
 ## How it works
 
