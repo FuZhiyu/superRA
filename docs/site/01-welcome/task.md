@@ -14,7 +14,7 @@ What it is:
 
 - A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. You are viewing one right now — this documentation site is itself built on the dashboard.
 - An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — data analysis, theory modeling, and academic writing — plus a presentation skill for turning results into slide decks.
+- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, and academic writing.
 
 Why superRA rather than an existing agentic-coding framework like [Superpowers](https://github.com/obra/superpowers)?
 
