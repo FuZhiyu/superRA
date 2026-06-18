@@ -1,6 +1,6 @@
 ---
 title: "Workflows: Overview + One Page Per Phase"
-status: not-started
+status: implemented
 depends_on: 
   - 01-ia-and-scaffold
 
@@ -30,3 +30,13 @@ Validation: the overview links resolve to the three phase pages; each phase page
 
 ## Results
 
+Filled all four `05-workflows/` stubs with user-facing prose under `## Objective`, per the authoring contract in [01-information-architecture §3](../../01-information-architecture/task.md). Removed the scaffold's empty `## Results` heading from each page so the doc nodes carry only page content (per the contract's "no `## Results` on doc nodes" rule).
+
+- [docs/site/05-workflows/task.md](../../../../docs/site/05-workflows/task.md) — overview: frames PLAN → IMPLEMENT → INTEGRATE as the project spine, states the phases compose (run only the part you need) and are re-enterable, and gives a one-line entry per phase linking down to `#/05-workflows/01-plan`, `02-implement`, `03-integrate`.
+- [docs/site/05-workflows/01-plan/task.md](../../../../docs/site/05-workflows/01-plan/task.md) — PLAN: what `superplan` produces (the task tree), the one approval gate that is the researcher's, that planning is re-enterable on scope change; links to [superplan](skills/superplan/SKILL.md). Absorbs the dropped-FAQ "Can I skip PLAN?" item.
+- [docs/site/05-workflows/02-implement/task.md](../../../../docs/site/05-workflows/02-implement/task.md) — IMPLEMENT: the implementer–reviewer pair, adversarial review, APPROVE/REVISE and advance to `approved`; links to [superimplement](skills/superimplement/SKILL.md) and the role specs. Absorbs the FAQ "direct vs. subagent mode" and "resuming a project" items.
+- [docs/site/05-workflows/03-integrate/task.md](../../../../docs/site/05-workflows/03-integrate/task.md) — INTEGRATE: the five steps (Protect/Sync/Refactor/Document/Finish) and the decisions the researcher owns; links to [superintegrate](skills/superintegrate/SKILL.md). Absorbs the FAQ "Can I skip INTEGRATE?" item.
+
+**FAQ coverage for task 05.** The four phase-level FAQ facts each have a home: skip-PLAN on 01-plan, direct-vs-subagent and resuming on 02-implement, skip-INTEGRATE on 03-integrate. The non-phase FAQ items (harness choice, data hygiene, plan-mode hook, merge-guard, authority pointer) belong to other pages owned by other tasks and are out of scope here.
+
+**Validation.** Markdown self-diagnose clean on all four pages (`check_markdown.py`). Static export build succeeded (`plan_dashboard.py generate --plan-root docs/site`); every hash-link target used (`05-workflows/01-plan`, `02-implement`, `03-integrate`, `04-utility-skills/01-task-tree`, `04-utility-skills/01-task-tree/04-dashboard`, `02-quickstart`) resolves to a real node path in the export, and all four FAQ section headings render. Each phase page leads with what the reader gets, links to its owning skill as authority, and stands alone when landed on directly.
