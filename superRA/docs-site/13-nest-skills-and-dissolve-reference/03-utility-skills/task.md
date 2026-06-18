@@ -1,6 +1,6 @@
 ---
 title: "Utility Skills: Overview + One Page Per Skill"
-status: not-started
+status: implemented
 depends_on: 
   - 01-ia-and-scaffold
 
@@ -46,3 +46,5 @@ Reshaped `04-utility-skills/` from one flat page into an overview over one page 
 Per-page `## Results` scaffold sections were removed from the eight content pages (doc nodes carry only `## Objective` per the authoring contract §3); frontmatter `status`/`depends_on` left at scaffold defaults (hidden by doc-mode).
 
 **Validation.** All page bodies render under doc-mode: built `plan_dashboard.py generate --plan-root docs/site --doc-mode --root 04-utility-skills` clean (exit 0), and a content-presence check confirmed every page's distinctive prose and the task-tree down-links landed in the export. `report-in-markdown` self-diagnose reports all nine files clean. No teaching from the current flat page was dropped — every per-skill paragraph survives on its page, and the overview keeps the framing prose.
+
+**Operating-manual rewrite (researcher feedback).** The eight per-skill pages were rewritten from the initial nest-and-frame pass to the §Conventions skill-page quality bar — they had read like pitches, not manuals (zotero-paper-reader was nearly empty). A two-draft-then-synthesize pass (two independent drafters per page reading the real `SKILL.md` + references, a synthesizer fact-checking both against the skill file and merging the best) now makes each page state, concretely: the failure a bare agent produces that the skill prevents, what the skill does, and how a researcher invokes it with example commands. Highlights: semantic-merge leads with the silent-revert of a bare `git merge`; result-protection with the silently-moved key number; zotero-paper-reader now documents its real search / read-PDF / BibTeX-export / `\cite`-insertion capabilities with example requests; report-in-markdown corrected a wrong `check_markdown.py` path; semantic-merge dropped an invented `SEMANTIC_MERGE.md` filename during fact-check. The task-tree page stays high-level and links down to its four detail children. The overview one-liners were rewritten to match. Doc-mode build clean; `check_markdown` clean on all nine.

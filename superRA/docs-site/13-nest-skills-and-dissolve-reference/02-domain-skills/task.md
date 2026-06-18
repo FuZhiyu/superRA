@@ -1,6 +1,6 @@
 ---
 title: "Domain Skills: Overview + One Page Per Skill"
-status: not-started
+status: implemented
 depends_on: 
   - 01-ia-and-scaffold
 
@@ -41,3 +41,5 @@ Validation: the overview links resolve to the three pages; each page stands on i
 No teaching from the flat page is lost: every concept (Iron Law, describe–analyze–validate, pitfall catalogs, four gates and their order, three writing modes, consistency checks, standalone-on-manuscript framing) moved to the per-skill pages; the overview keeps only framing plus links.
 
 **Validation.** Markdown self-diagnose (`check_markdown.py`): all four pages clean. Doc-mode static export built clean (exit 0, `--doc-mode`, `--repo-file-base https://github.com/owner/superRA/blob/main`): the three down-links (`#/03-domain-skills/0{1,2,3}-…`) are present in the output and no un-rebased relative `skills/.../SKILL.md` href leaked. The per-skill pages use the same `[name](skills/<skill>/SKILL.md)` repo-file-link convention as the already-approved quickstart page; the export wires `REPO_FILE_BASE` globally, so the SKILL.md links rebase to the GitHub blob URL identically for these pages and the existing ones.
+
+**Operating-manual rewrite (researcher feedback).** The three per-skill pages were rewritten from the initial nest-and-frame pass to the §Conventions skill-page quality bar — they had read like pitches, not manuals. A two-draft-then-synthesize pass (two independent drafters per page reading the real `SKILL.md` + references, a synthesizer fact-checking both against the skill file and merging the best) now makes each page state, concretely: the failure a bare agent produces that the skill prevents, what the skill does, and how a researcher invokes it with example prompts. theory-modeling leads with the symbol-means-two-things / back-filled-assumption failure and notation reuse across the four gates; writing teaches the polish-unstaged-diff pattern, in-text directives (`% TODO:`/`[fill in]`/`DO NOT EDIT`/`% intent:`), and Review/Polish/Draft triggers; econ-data-analysis leads with the silent-bad-merge / undescribed-panel failure and the describe→analyze→validate loop. The overview one-liners were rewritten to match. Doc-mode build clean; `check_markdown` clean on all four.
