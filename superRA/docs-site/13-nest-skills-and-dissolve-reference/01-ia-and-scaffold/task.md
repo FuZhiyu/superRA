@@ -1,6 +1,6 @@
 ---
 title: "Revise IA Contract for Nested Structure + Scaffold New Page Stubs"
-status: implemented
+status: revise
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -44,4 +44,8 @@ The IA contract now describes the nested structure with a top-level Workflows se
 **Validation passed.** `./superRA/superra task tree --root docs/site` shows the `05-workflows/` section with its three phase pages; every scaffolded stub appears in the revised §2 sitemap and every non-dropped sitemap page has a stub or an existing page (the transient double-`05` with `05-reference/` resolves once `13-/04`/`13-/05` relocate and drop its children). §2 cross-checks against §1's teaching inventory — every concept, journey, and re-homed glossary/FAQ fact is homed. `report-in-markdown`'s `check_markdown.py` reports the contract file clean; no stale `08-showcase`/`07-hooks`-as-target/glossary-as-page strings remain.
 
 **Stop point:** the researcher approves this revised IA sitemap before the content tasks (`02`–`06`) are dispatched.
+
+## Review Notes
+
+1. **MAJOR** — live README links into the dissolving Reference section are left unowned by the `13-` subtree, so the restructure creates dead links the plan does not close. [README.md:5](../../../../README.md#L5) points at `#/05-reference` (the Reference landing, dissolved entirely) and `#/06-showcase` (renumbered to `07-showcase`); [README.md:61](../../../../README.md#L61) points at `#/05-reference/04-skills-and-agents` (a dropped page); [README.md:63](../../../../README.md#L63) points at `#/05-reference/07-hooks` (promoted to `06-hooks`). The §4 README split table and the renumbering note in [01-information-architecture/task.md](../../01-information-architecture/task.md) correctly document the *page* moves (Hooks → `06-hooks/`), but the link-repoint task [`07-link-integrity-and-build`](../07-link-integrity-and-build/task.md#L19) scopes its sweep and its validation grep to `docs/site/` only ("Sweep every page under `docs/site/`"; "a repo grep for `#/05-reference` … returns nothing in `docs/site/`"), excluding `README.md`. No `13-` task is assigned to repoint these README links, so they will 404 once `13-/05-dissolve-reference` drops/promotes the targets. As the gating contract task, close the gap from here: either record README-link repointing as a disposition in §4, or note that `13-/07-link-integrity-and-build` must extend its sweep and validation grep to `README.md` (and any other `docs/` markdown that deep-links the site, e.g. `docs/README.codex.md` if it links into the site). Surfacing for orchestrator adjudication — if README link repointing is intentionally deferred to a separate README-maintenance task outside `13-`, the renumbering note should say so explicitly rather than leaving the four links silently unowned.
 
