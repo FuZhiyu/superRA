@@ -1,6 +1,6 @@
 ---
 title: "Writing Deep Review Task Trees"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -27,8 +27,3 @@ Likely files: skills/writing/SKILL.md, references/planning.md, references/long-f
 - `rg -n 'handoff' skills/writing/references -g '*.md'` returned no matches.
 - `rg -n 'handoff doc|Project Conventions in the handoff|shared review-doc|review-doc|Long-form review retrofit|Retrofitting a Review Plan|PLAN-only|\.plan/' skills/writing tests/test-sync-integration-contract.sh -g '*.md' -g '*.sh'` returned only the contract test's assertion that `skills/superplan/SKILL.md` must not contain `PLAN-only`.
 - `./superRA/superra task check` reported 0 errors and 2 pre-existing warnings: `task-tree/test-suite` depends on archived `auto-rebuild`, and `task-tree/dashboard/github-artifact-action` still carries temporary `## Sync Impact`.
-
-## Review Notes
-
-1. MAJOR: The objective requires sweeping stale handoff-doc-era language from the touched writing surfaces ([task.md:11](task.md#L11)), but the implementation leaves runtime writing references telling agents to finish "before handoff" and "list in handoff" ([draft.md:3](../../../../skills/writing/references/draft.md#L3), [refactor-and-compile.md:148](../../../../skills/writing/references/refactor-and-compile.md#L148)). The verification grep in `## Results` only searches `handoff doc` / `Project Conventions in the handoff` and therefore misses these plain `handoff` leftovers ([task.md:27](task.md#L27)). Replace the remaining handoff-era wording with task/status-return/completion language and broaden the targeted grep so it would catch this class of stale language.
-   → implemented: replaced the stale runtime phrases with completion/status-return wording and added a contract assertion against plain `handoff` in writing references ([draft.md:3](../../../../skills/writing/references/draft.md#L3), [refactor-and-compile.md:148](../../../../skills/writing/references/refactor-and-compile.md#L148), [test-sync-integration-contract.sh:343](../../../../tests/test-sync-integration-contract.sh#L343)).
