@@ -1,6 +1,6 @@
 ---
 title: "Domain Skills: Overview + One Page Per Skill"
-status: revise
+status: implemented
 depends_on: 
   - 01-ia-and-scaffold
 
@@ -47,5 +47,6 @@ No teaching from the flat page is lost: every concept (Iron Law, describe–anal
 ## Review Notes
 
 1. **MAJOR — writing page overstates that every mode auto-runs all eight consistency dimensions over any target.** [docs/site/03-domain-skills/03-writing/task.md:31-33](../../../../docs/site/03-domain-skills/03-writing/task.md#L31-L33): the heading "Consistency checks every mode runs" plus "Whatever the mode, it runs eight consistency dimensions over the target. So a polish pass on one paragraph also catches a symbol that drifted from its first definition, a `\citet` that does not match your bibliography, a 'Section 3' where the rest of the paper writes '§3', or a coefficient rounded to three decimals in one table and two in another." misrepresents what the skill does. In [skills/writing/SKILL.md](../../../../skills/writing/SKILL.md) the Knowledge files table loads `references/consistency/*.md` only "when Review or polish *targets that consistency dimension*," and [skills/writing/references/polish.md:1-3](../../../../skills/writing/references/polish.md#L1-L3) scopes Polish to `style.md` by default — sentence-scope by default. A single-paragraph polish does not auto-scan the whole bibliography for `\citet` mismatches or compare rounding precision across two different tables; those are wider-scope dimension checks loaded on demand. This is the "what the skill actually does" fact-check the dispatch flagged. Fix: reframe so the dimensions are checks the skill *can* run / runs *when the target is in scope* (e.g. "across the eight consistency dimensions" rather than "every mode runs all eight over any target"), and drop the cross-table / whole-bibliography examples that imply a one-paragraph polish triggers a paper-wide scan. The eight dimension names themselves are accurate.
+   → implemented: reframed the section to "Consistency checks, scaled to what you ask for" — the skill *carries* eight dimensions and *applies the ones your scope calls for* (sentence/paragraph polish stays local; "check citations" / "consistency sweep on §3" loads those; a full-paper review pulls in all). The cross-table/whole-bibliography catches are now explicitly attributed to a review pointed at the whole draft, not a one-paragraph polish. ([docs/site/03-domain-skills/03-writing/task.md:31](../../../../docs/site/03-domain-skills/03-writing/task.md#L31))
 
 2. **MINOR — hype heading on the writing page.** [docs/site/03-domain-skills/03-writing/task.md:23](../../../../docs/site/03-domain-skills/03-writing/task.md#L23): "The killer pattern: polish a diff" uses a hype phrase the rest of the page otherwise avoids (`feedback_no_ai_flavored_prose`). The pattern itself is real and well-described. Suggest a plain heading, e.g. "Polish a diff" or "The unstaged-diff pattern."
