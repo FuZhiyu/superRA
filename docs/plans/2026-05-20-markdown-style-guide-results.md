@@ -19,16 +19,16 @@ This branch makes `report-in-markdown` the always-loaded markdown style guide fo
 
 - The always-loaded style guide is [../../skills/report-in-markdown/SKILL.md](../../skills/report-in-markdown/SKILL.md).
 - The expanded file-reference details are in [../../skills/report-in-markdown/references/rich-content.md](../../skills/report-in-markdown/references/rich-content.md).
-- The Skill-Load Manifest lives in [../../skills/using-superRA/SKILL.md](../../skills/using-superRA/SKILL.md).
+- The Skill-Load Manifest lives in [../../skills/using-superra/SKILL.md](../../skills/using-superra/SKILL.md).
 - Canonical role behavior lives in [../../agents/implementer.md](../../agents/implementer.md) and [../../agents/reviewer.md](../../agents/reviewer.md).
 - The handoff-doc pointer and plan example live in [../../skills/handoff-doc/SKILL.md](../../skills/handoff-doc/SKILL.md) and [../../skills/handoff-doc/references/plan-anatomy.md](../../skills/handoff-doc/references/plan-anatomy.md).
-- Generated Codex artifacts are [../../skills/using-superRA/references/direct-mode-implementer.md](../../skills/using-superRA/references/direct-mode-implementer.md), [../../skills/using-superRA/references/direct-mode-reviewer.md](../../skills/using-superRA/references/direct-mode-reviewer.md), [../../.codex/agents/superra_implementer.toml](../../.codex/agents/superra_implementer.toml), and [../../.codex/agents/superra_reviewer.toml](../../.codex/agents/superra_reviewer.toml).
+- Generated Codex artifacts are [../../skills/using-superra/references/direct-mode-implementer.md](../../skills/using-superra/references/direct-mode-implementer.md), [../../skills/using-superra/references/direct-mode-reviewer.md](../../skills/using-superra/references/direct-mode-reviewer.md), [../../.codex/agents/superra_implementer.toml](../../.codex/agents/superra_implementer.toml), and [../../.codex/agents/superra_reviewer.toml](../../.codex/agents/superra_reviewer.toml).
 
 ## Implementation Summary
 
 `report-in-markdown` now carries the always-applicable citation rule in its skill body and keeps figures, LaTeX math, markdown tables, and Stage 2 final-form discipline in on-demand references. The citation rule covers single-line, range, and whole-file links, with path resolution relative to the markdown file.
 
-`using-superRA` now treats `report-in-markdown` as always loaded alongside `using-superra`. The documentation-stage manifest row no longer double-lists it, because the manifest paragraph defines it as universal.
+`using-superra` now treats `report-in-markdown` as always loaded alongside `using-superra`. The documentation-stage manifest row no longer double-lists it, because the manifest paragraph defines it as universal.
 
 The implementer and reviewer role specs now include the same one-line citation reminder and canonical examples using markdown-link citations. `handoff-doc` points readers to `report-in-markdown` for code-file citations, and `plan-anatomy.md` uses the same example shape.
 

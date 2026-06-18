@@ -32,7 +32,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 ### Module-level docs walked
 
-- `skills/using-superRA/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies; skill descriptions stay concise trigger metadata rather than workflow summaries.
+- `skills/using-superra/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies; skill descriptions stay concise trigger metadata rather than workflow summaries.
 - `tests/structural-invariants.sh`: when a new plugin surface or metadata rule becomes load-bearing, encode it as an invariant so regressions fail fast.
 
 ### Not walked (not needed for this retroactive handoff)
@@ -93,7 +93,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files affected:** `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `.agents/skills/*`, `.codex/agents/*`, `AGENT.md`, `skills/codex-superra-setup/*`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/codex-tools.md`, `skills/using-superRA/references/claude-tools.md`, `.codex/INSTALL.md`, `docs/README.codex.md`, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`
+**Files affected:** `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `.agents/skills/*`, `.codex/agents/*`, `AGENT.md`, `skills/codex-superra-setup/*`, `skills/using-superra/SKILL.md`, `skills/using-superra/references/codex-tools.md`, `skills/using-superra/references/claude-tools.md`, `.codex/INSTALL.md`, `docs/README.codex.md`, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`
 
 **Input:** Existing canonical `skills/` and `agents/`, official Codex plugin/skills/subagents docs, and the user decisions recorded above.
 
@@ -102,7 +102,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 - [x] **Step 1: Add Codex plugin and marketplace surfaces.** Added `.codex-plugin/plugin.json` pointing at `./skills/` and `.agents/plugins/marketplace.json` pointing at the repo root so Codex can install the plugin locally from this checkout.
 - [x] **Step 2: Expose canonical skills and contributor instructions to Codex.** Created `.agents/skills/` symlinks back to canonical `skills/*` and added `AGENT.md -> CLAUDE.md` alongside the existing `AGENTS.md` symlink.
 - [x] **Step 3: Add named-agent generation and installation.** Added `skills/codex-superra-setup/`, the `sync_codex_agents.py` generator / installer, generated `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml`, and tests for the install/update path.
-- [x] **Step 4: Update shared harness references and install docs.** Reworked Codex docs and `using-superRA` adapter references so Codex uses plugin skills plus named custom agents instead of the older prompt-wrapping workaround.
+- [x] **Step 4: Update shared harness references and install docs.** Reworked Codex docs and `using-superra` adapter references so Codex uses plugin skills plus named custom agents instead of the older prompt-wrapping workaround.
 
 ### Task 2: Codex Metadata Cleanup and Validation
 **Review status:** APPROVED
@@ -124,7 +124,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files affected:** `PLAN.md`, `docs/plans/2026-04-17-codex-compatibility-results.md`, `tests/check-harness-compatibility.sh`, `CLAUDE.md`, `README.md`, `skills/using-superRA/references/main-agent.md`, and any docs or plugin surfaces flagged by the integration pass
+**Files affected:** `PLAN.md`, `docs/plans/2026-04-17-codex-compatibility-results.md`, `tests/check-harness-compatibility.sh`, `CLAUDE.md`, `README.md`, `skills/using-superra/references/main-agent.md`, and any docs or plugin surfaces flagged by the integration pass
 
 **Input:** Approved Codex compatibility implementation (`3e9f1c8`) plus the approved execution-stage record in `docs/plans/2026-04-17-codex-compatibility-results.md`
 
@@ -132,4 +132,4 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 - [x] **Step 1: Confirm drift-test coverage.** User chose a new top-level compatibility check as the Stage 1 guard: add a Claude/Codex compatibility script that validates both harness surfaces, then keep `tests/structural-invariants.sh`, `skills/codex-superra-setup/scripts/test_sync_codex_agents.py`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` as the concrete checks it runs.
 - [x] **Step 2: Run the integration review / fix loop.** Added `tests/check-harness-compatibility.sh` as the top-level harness guard, then ran an integration pass over the new surface. The only accepted finding was a missing contributor-facing instruction to run the new guard for harness-surface changes, fixed in `CLAUDE.md`. The compatibility script reran cleanly afterward.
-- [x] **Step 3: Finalize handoff for merge.** Re-merged `origin/main` into `codex-adaption` (Round 3, minimum-net-diff per the 2026-04-20 §Decisions entry) absorbing main commits `a635dac` (drop `tests/structural-invariants.sh`), `242519e` (PR #12 skill-surface simplification, including `5c8b93a` execution-workflow → implementation-workflow rename), and `2431e93` (lowercase `using-superra`). Took main verbatim on every shared file and surgically re-threaded only the Codex-essential additive surfaces: §Codex design subsection + AGENT.md alias note in `CLAUDE.md` (the harness-compat contributor bullet was intentionally dropped per user manual override of `CLAUDE.md`), the Codex install bullet in `README.md`, the `codex-superra-setup` row + harness adapter pointer in `skills/using-superRA/SKILL.md`, the `execution-workflow` → `implementation-workflow` rename in `skills/using-superRA/references/codex-tools.md`, and the `.agents/skills/execution-workflow` → `.agents/skills/implementation-workflow` symlink refresh. Folded the two Codex-essential checks from the dropped `tests/structural-invariants.sh` (frontmatter parses + ≤1024-char description; `.agents/skills/` symlink coverage) inline into `tests/check-harness-compatibility.sh` along with the finding-9 lowercase-`name:` assertion, and removed the now-broken `bash tests/structural-invariants.sh` call. Regenerated `.codex/agents/superra_*.toml` from the rewritten `agents/*.md` via `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`. Archived `docs/plans/2026-04-19-*.md` left untouched per advisory finding 12.
+- [x] **Step 3: Finalize handoff for merge.** Re-merged `origin/main` into `codex-adaption` (Round 3, minimum-net-diff per the 2026-04-20 §Decisions entry) absorbing main commits `a635dac` (drop `tests/structural-invariants.sh`), `242519e` (PR #12 skill-surface simplification, including `5c8b93a` execution-workflow → implementation-workflow rename), and `2431e93` (lowercase `using-superra`). Took main verbatim on every shared file and surgically re-threaded only the Codex-essential additive surfaces: §Codex design subsection + AGENT.md alias note in `CLAUDE.md` (the harness-compat contributor bullet was intentionally dropped per user manual override of `CLAUDE.md`), the Codex install bullet in `README.md`, the `codex-superra-setup` row + harness adapter pointer in `skills/using-superra/SKILL.md`, the `execution-workflow` → `implementation-workflow` rename in `skills/using-superra/references/codex-tools.md`, and the `.agents/skills/execution-workflow` → `.agents/skills/implementation-workflow` symlink refresh. Folded the two Codex-essential checks from the dropped `tests/structural-invariants.sh` (frontmatter parses + ≤1024-char description; `.agents/skills/` symlink coverage) inline into `tests/check-harness-compatibility.sh` along with the finding-9 lowercase-`name:` assertion, and removed the now-broken `bash tests/structural-invariants.sh` call. Regenerated `.codex/agents/superra_*.toml` from the rewritten `agents/*.md` via `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`. Archived `docs/plans/2026-04-19-*.md` left untouched per advisory finding 12.

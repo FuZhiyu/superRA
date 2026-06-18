@@ -34,7 +34,7 @@ The earlier `30e94f6` integration approval was superseded. Tasks 9-11 split resu
 
 **Status:** APPROVED after integration pruning
 
-Canonical implementer/reviewer docs no longer carry `Stage: sync` branch-level exceptions. `using-superRA` removes Sync from the task-scoped Skill-Load Manifest and records Sync as a generic semantic-merge dispatch. `refactor-and-integrate` now consumes task-local Sync impact and referenced Sync Map clusters without reloading full semantic-merge. Generated Codex agents and direct-mode role references were refreshed.
+Canonical implementer/reviewer docs no longer carry `Stage: sync` branch-level exceptions. `using-superra` removes Sync from the task-scoped Skill-Load Manifest and records Sync as a generic semantic-merge dispatch. `refactor-and-integrate` now consumes task-local Sync impact and referenced Sync Map clusters without reloading full semantic-merge. Generated Codex agents and direct-mode role references were refreshed.
 
 Integration pruning removed the broad "task-scoped stages" wording from canonical role handoff instructions. The role docs now express ownership in terms of assigned PLAN.md task blocks, and generated direct-mode / Codex role files were regenerated from the canonical sources.
 
@@ -178,7 +178,7 @@ File-by-file changes:
 - `skills/refactor-and-integrate/SKILL.md` — refactor/integration uses Sync impact as evidence for existing post-sync hunks, not as an independent work queue, and applies the minimum-net-diff gate line by line.
 - `CLAUDE.md` — Teach-the-Protocol DRY / Necessity gate now explicitly applies line by line to instruction edits under `skills/*` and `agents/*`.
 - `skills/handoff-doc/references/plan-anatomy.md` — PLAN anatomy now describes Sync Map / Sync impact as temporary context scaffolding.
-- `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, and `CLAUDE.md` — public/contributor summaries aligned with the context-not-obligation contract.
+- `README.md`, `skills/CATEGORIES.md`, `skills/using-superra/SKILL.md`, and `CLAUDE.md` — public/contributor summaries aligned with the context-not-obligation contract.
 
 Verification passed on 2026-04-23:
 
@@ -201,7 +201,7 @@ File-by-file changes:
 
 - `skills/result-protection/SKILL.md` — new lean skill body for key-result protection, with drift tests identified as the current/default mechanism and data-analysis tolerance guidance delegated to `econ-data-analysis`.
 - `skills/result-protection/references/drift-test-quality.md` — new generic drift-test quality checklist covering red-green verification, tolerance documentation, independence, clarity, project test conventions, and expectation-update escalation.
-- `skills/using-superRA/SKILL.md` — Skill Inventory includes `result-protection`; the `protection` manifest row now loads `result-protection`; the `sync` manifest row loads `semantic-merge`; `refactor-and-integrate` is described as codebase coherence plus Sync impact context.
+- `skills/using-superra/SKILL.md` — Skill Inventory includes `result-protection`; the `protection` manifest row now loads `result-protection`; the `sync` manifest row loads `semantic-merge`; `refactor-and-integrate` is described as codebase coherence plus Sync impact context.
 - `skills/integration-workflow/SKILL.md` — Protect wording now names key-result protection conceptually and routes `Stage: protection` agents to `result-protection`; concrete drift-test suite runs and the `Drift tests created` milestone remain in place.
 - `skills/econ-data-analysis/SKILL.md` and `skills/econ-data-analysis/references/integrate-drift-tests.md` — data-analysis-specific key-result selection, tolerance, and failure-mode guidance remain in econ; generic drift-test quality now points to `result-protection`.
 - `.agents/skills/result-protection` — repo-local Codex discovery symlink for the new canonical skill.

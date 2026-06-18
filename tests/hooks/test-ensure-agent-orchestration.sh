@@ -105,7 +105,7 @@ print(d.get("hookSpecificOutput", {}).get("permissionDecisionReason", ""))
 }
 
 loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:agent-orchestration"}}]}}'
-other_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superRA"}}]}}'
+other_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superra"}}]}}'
 
 # V1: non-Skill tool -> silent
 run_case "V1 non-Skill Bash"             expect-silent "Bash"  ""
@@ -113,13 +113,13 @@ run_case "V1 non-Skill Read"             expect-silent "Read"  ""
 
 # V2: Skill tool, non-workflow skill -> silent
 run_case "V2 Skill handoff-doc"          expect-silent "Skill" "superRA:handoff-doc"
-run_case "V2 Skill using-superRA"        expect-silent "Skill" "superRA:using-superRA"
+run_case "V2 Skill using-superra"        expect-silent "Skill" "superRA:using-superra"
 run_case "V2 Skill agent-orchestration"  expect-silent "Skill" "superRA:agent-orchestration"
 run_case "V2 Skill empty"                expect-silent "Skill" ""
 
 # V3: workflow skill, companion NOT loaded -> deny
 #
-# Transcript present but only mentions the other companion (using-superRA) —
+# Transcript present but only mentions the other companion (using-superra) —
 # this hook must still deny because it specifically guards agent-orchestration.
 run_case "V3a superplan no-transcript"    expect-deny  "Skill" "superRA:superplan"       "$other_transcript"
 run_case "V3b superimplement not-loaded" expect-deny  "Skill" "superRA:superimplement" "$other_transcript"

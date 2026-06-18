@@ -17,16 +17,16 @@ This branch finalized the Codex-specific orchestration instructions for
 superRA so a Codex agent treats user-invoked superRA workflow as
 explicit authorization for named-agent dispatch, keeps reviewer
 dispatch mandatory by default, uses concrete Codex tool names in the
-adapter map, and loads the Codex adapter from `using-superRA`
+adapter map, and loads the Codex adapter from `using-superra`
 explicitly. The permanent plan companion is
 [2026-04-22-codex-agent-dispatch-preference-plan.md](./2026-04-22-codex-agent-dispatch-preference-plan.md).
 
 ## Permanent Artifacts
 
 - The Codex-specific adapter surface now lives at
-  [../../skills/using-superRA/references/codex-instructions.md](../../skills/using-superRA/references/codex-instructions.md).
+  [../../skills/using-superra/references/codex-instructions.md](../../skills/using-superra/references/codex-instructions.md).
 - The shared master-skill load rule lives at
-  [../../skills/using-superRA/SKILL.md](../../skills/using-superRA/SKILL.md).
+  [../../skills/using-superra/SKILL.md](../../skills/using-superra/SKILL.md).
 - Contributor guidance for harness adapter ownership lives at
   [../../CLAUDE.md](../../CLAUDE.md).
 - The compatibility gate for this branch lives at
@@ -35,21 +35,21 @@ explicitly. The permanent plan companion is
 ## Implementation
 
 - The Codex adapter reference is now
-  [../../skills/using-superRA/references/codex-instructions.md](../../skills/using-superRA/references/codex-instructions.md),
+  [../../skills/using-superra/references/codex-instructions.md](../../skills/using-superra/references/codex-instructions.md),
   which carries the Codex-only dispatch override, warm-agent lifecycle
   guidance, named-agent setup notes, and the concrete Codex tool map
   for `request_user_input`, `update_plan`,
   `spawn_agent(agent_type="superra_implementer"|"superra_reviewer")`,
   and `send_input`.
 - The shared master skill now states that Codex agents load
-  [../../skills/using-superRA/references/codex-instructions.md](../../skills/using-superRA/references/codex-instructions.md)
+  [../../skills/using-superra/references/codex-instructions.md](../../skills/using-superra/references/codex-instructions.md)
   immediately after
-  [../../skills/using-superRA/SKILL.md](../../skills/using-superRA/SKILL.md)
+  [../../skills/using-superra/SKILL.md](../../skills/using-superra/SKILL.md)
   loads `superRA:using-superra`; the final follow-up on this branch
   also removed the extra Claude-only harness pointer from that sentence.
 - Contributor guidance in
   [../../CLAUDE.md](../../CLAUDE.md) now points maintainers at the
-  owning harness adapter reference under `skills/using-superRA/references/`
+  owning harness adapter reference under `skills/using-superra/references/`
   instead of hardcoding the older `<harness>-tools.md` naming pattern.
 - The branch validation script
   [../../tests/check-harness-compatibility.sh](../../tests/check-harness-compatibility.sh)
