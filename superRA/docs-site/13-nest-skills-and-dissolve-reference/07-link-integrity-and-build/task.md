@@ -14,7 +14,7 @@ created: 2026-06-17
 
 ## Objective
 
-Final task: repoint every cross-page link that the restructure invalidated, remove the emptied `05-reference/` parent, and verify the whole site builds and renders with no broken links. This is the gate that catches the seam bugs a per-page edit cannot see.
+Final task: repoint every cross-page link that the restructure invalidated — inside `docs/site/` **and** in the repo markdown that deep-links the site (`README.md`, `docs/README.codex.md`) — remove the emptied `05-reference/` parent, and verify the whole site builds and renders with no broken links. This is the gate that catches the seam bugs a per-page edit cannot see.
 
 **Site-wide link repoint.** Sweep every page under `docs/site/` (welcome, quickstart, both skills overviews and all their per-skill/detail pages, the new workflows pages, hooks, showcase) and repoint every stale `#/…` hash link to its new path:
 
@@ -28,6 +28,8 @@ Final task: repoint every cross-page link that the restructure invalidated, remo
 - In-page anchors that pointed at the old flat skills pages (e.g. "Utility Skills: The Task Tree", "Protecting Results") → repoint to the specific skill subpage, e.g. `#/04-utility-skills/01-task-tree`, `#/04-utility-skills/03-result-protection`.
 
 Find them with a repo-wide search for `#/05-reference`, `#/06-showcase`, and `#/04-utility-skills`/`#/03-domain-skills` bare-page anchors; fix the source files. Also fix any links that point *into* the relocated task-file/cli/status pages from outside (quickstart, welcome, other pages).
+
+**Repoint the README front-door links too.** `README.md` deep-links the site at four invalidated targets — `#/05-reference` (the Reference landing, dissolved), `#/06-showcase` (→ `#/07-showcase`), `#/05-reference/04-skills-and-agents` (dropped), and `#/05-reference/07-hooks` (→ `#/06-hooks`). Repoint the two that have a new home (showcase, hooks); for the two whose target is gone (the Reference landing and skills-and-agents), rewrite the surrounding prose to point at what replaces them (the Workflows section / the skills overview pages) or drop the link — do not leave a link to a dissolved page. Sweep `docs/README.codex.md` the same way if it deep-links the site. These are the only files outside `docs/site/` in scope.
 
 **Remove the empty `05-reference/` parent** once tasks `04` and `05` have moved or dropped all its children.
 

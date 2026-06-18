@@ -175,6 +175,8 @@ The current [README.md](../../../README.md) becomes a *front door*: a tight pitc
 
 Disposition of the absorb/link candidates named in Planner Guidance: `docs/README.codex.md` is **linked** from `01-welcome/`'s install pointer (Codex install detail), left in place. `docs/README.opencode.md` is upstream-Superpowers content, not superRA-specific; it is **linked, not absorbed** — referenced alongside the Codex note for "other harnesses," left in place.
 
+**README front-door links into the site.** The README already carries hash deep-links into the site (`#/02-quickstart`, `#/03-domain-skills`, `#/04-utility-skills`, and — invalidated by this restructure — `#/05-reference`, `#/05-reference/04-skills-and-agents`, `#/05-reference/07-hooks`, `#/06-showcase`). Repointing those invalidated links is owned by `13-/07-link-integrity-and-build`, whose sweep covers `README.md` and `docs/README.codex.md` alongside `docs/site/`: showcase → `#/07-showcase` and hooks → `#/06-hooks` are repoints, while the dissolved Reference landing and the dropped skills-and-agents link are rewritten to point at the Workflows section or the skills overviews (or dropped), since their targets no longer exist.
+
 **README cross-check (validation):** every section heading currently in `README.md` appears exactly once in the table above with a Stays / Moves / Dropped-from-README disposition. No section is left without a disposition.
 
 ### Scaffold
