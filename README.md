@@ -82,6 +82,17 @@ claude plugin marketplace update superRA
 claude plugin update superRA
 ```
 
+### Upgrading
+
+This release replaces the legacy `PLAN.md` / `RESULTS.md` files with the `superRA/` task tree. Existing projects keep working: superRA detects a legacy `PLAN.md` at session start and offers to migrate it (`superra task migrate from-plan`). See the [superRA docs](http://fuzhiyu.me/superRA/) for details.
+
+To stay on the previous version instead, pin the install to the frozen `v0.1.2` tag:
+
+```bash
+claude plugin marketplace add FuZhiyu/superRA@v0.1.2
+claude plugin install superRA@superRA
+```
+
 For a local-clone install (to modify superRA itself), Codex setup, and other harnesses (Copilot CLI, Gemini CLI), see the [Install & Set Up guide](http://fuzhiyu.me/superRA/#/04-how-to/01-install-and-set-up).
 
 ## Contributing

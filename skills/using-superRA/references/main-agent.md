@@ -6,7 +6,7 @@ Before your first substantive response:
 
 - Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-tree` §CLI Setup.
 - Run `./superRA/superra task tree` for the full status summary.
-- If `PLAN.md` exists without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
+- If `PLAN.md` exists without a `superRA/` directory, the project predates the `superRA/` task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer migration via `superra task migrate from-plan`, and point them to the superRA docs at http://fuzhiyu.me/superRA/ for details.
 
 
 ## Workflow Frontier Resolver
