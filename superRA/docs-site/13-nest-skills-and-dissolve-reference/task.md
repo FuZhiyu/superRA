@@ -1,6 +1,6 @@
 ---
 title: "Nest Skills Pages + Dissolve Reference into Progressive Subpages"
-status: not-started
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-17
@@ -24,7 +24,7 @@ Four structural moves, detailed in the child tasks:
 - **User-facing, not agent-facing.** Every page is written for the researcher *using* the skill — the commands they run, the dashboard features they click, the moments they reach for it — not for the agent the skill instructs. When a skill exposes user-visible functionality, surface it: the task-tree dashboard's static export (shareable HTML snapshots), task comments (the human-in-the-loop steering channel), and running tasks across parallel worktrees all belong on the page, framed as things the researcher does. See `feedback_docs_audience_high_level_not_internals`.
 - **Writing domain.** Implementers load the `writing` skill for every page — this is reader-facing prose. Apply its audience-first discipline; lead each page with what the reader gets, then when to reach for it; no AI-flavored prose (`feedback_no_ai_flavored_prose`).
 - **Authority, not paraphrase.** Doc pages teach the human journey and link to the canonical skill/agent file for behavior detail. A detail subpage is a human-facing orientation plus a link to the authoritative skill reference — never a second copy of agent-facing discipline that would drift (`CLAUDE.md` §Ownership Boundaries).
-- **Relocations preserve content and repoint links.** Moving a page keeps its prose and updates every `#/...` link that targeted it. No page's teaching is dropped in a move except the deliberately-dropped `skills-and-agents`.
+- **Relocations preserve content and repoint links.** Moving a page keeps its prose and updates every `#/...` link that targeted it. The only deliberate drops are `skills-and-agents` (inventory absorbed into the overviews) and the standalone glossary/FAQ (facts folded into the pages that own them); no other page's teaching is lost in a move.
 
 ### Context
 

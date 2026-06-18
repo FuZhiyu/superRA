@@ -1,6 +1,6 @@
 ---
 title: "Revise IA Contract for Nested Structure + Scaffold New Page Stubs"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -28,20 +28,20 @@ Validation: the revised §2 sitemap cross-checks against §1's teaching inventor
 
 ## Results
 
-The IA contract now describes the nested, Reference-dissolved structure, and the genuinely-new page stubs are scaffolded. Both deliverables landed.
+The IA contract now describes the nested structure with a top-level Workflows section and no standalone glossary/FAQ, and the genuinely-new page stubs (including the workflows section) are scaffolded. Both deliverables landed.
 
 **IA contract revision** — edited in place in [`01-information-architecture/task.md`](../../01-information-architecture/task.md), which owns the sitemap by design:
 
-- **Framing paragraph** rewritten to record the `13-` restructure as the current state succeeding the `12-` flat-skills-plus-Reference layout (overviews-with-per-skill-pages, task-tree reference nested under its page, Reference dissolved).
-- **§1 knowledge-state table:** the Domain Skills and Utility Skills rows now describe overview-plus-per-skill-page reading (knows-which-skills-exist at the overview, design-idea-and-load-trigger one descent down; task-tree descends a further level). The third row was retitled from "Reference" to "Glossary / FAQ / Hooks (top-level lookups)" since the Reference parent is gone. The §1 concept and gap tables had their stale `Reference › …` homes repointed to the new per-skill-page / top-level homes (a stale-content fix beyond the literal scope-line, required so the contract reads as current state).
-- **§2 sitemap:** the flat `03-domain-skills`/`04-utility-skills` rows and the entire `05-reference/` block (plus `06-showcase`) are replaced by the full nested tree — `03-domain-skills/` over three per-skill pages; `04-utility-skills/` over `01-task-tree` (over `01-task-file`/`02-cli-commands`/`03-status-and-frontier`/`04-dashboard`), `02-semantic-merge` … `08-mistral-pdf-to-markdown`; top-level `05-glossary`/`06-faq`/`07-hooks`/`08-showcase`. The "Teaches / Links to / owning content task" columns are kept; owning tasks point into the `13-` subtree. A "Dropped from the tree" note records that `04-skills-and-agents` is dropped (inventory absorbed into the two overviews; Stage→load manifest is internal). A "Renumbering note" records the top-level renumber and the nesting renumber with rationale, mirroring §2's prior renumbering style. The §2 intro and validation paragraph were updated for the new shape and ownership subtree.
-- **§3 authoring contract:** confirmed to hold for three-level nesting; one line added to the cross-page-links bullet covering nested full-path links and how a detail subpage links up to its parent (the one genuine gap nesting exposed). No unchanged rules restated.
-- **§4 README split:** the two stale page-path references (`05-reference/04-skills-and-agents/`, `05-reference/07-hooks/`) repointed to the new homes.
-- **§Scaffold:** rewritten to list exactly the new stubs this task created and to name the relocated pages as moves performed by `13-/04`/`13-/05`, not scaffolded here.
+- **Framing paragraph** records the current state: overviews-with-per-skill-pages, task-tree reference nested under its page, a new Workflows section with a page per phase, and the Reference section dissolved (hooks promoted, glossary/FAQ dropped with facts folded, skills-and-agents dropped, showcase renumbered).
+- **§1 knowledge-state table:** added a Workflows row (overview → knows the three phases compose; phase page → knows what it does, what to invoke, what's theirs to decide); retitled the lookups row to "Hooks" since glossary/FAQ are gone. In the concept table, the phase-cycle row now also points at Workflows, a new "each phase in depth" row owns the Workflows pages, and the glossary-of-terms row is re-homed to "introduced inline where first met" (no standalone glossary). The named-gap "FAQ / glossary" row is re-homed to the Workflows/skill/inline destinations.
+- **§2 sitemap:** the glossary/FAQ rows are removed and the new `05-workflows/` overview plus `01-plan`/`02-implement`/`03-integrate` inserted; hooks renumbered to `06-hooks`, showcase to `07-showcase`. The "Dropped from the tree" note now records glossary/FAQ as dropped-not-promoted with each fact's fold destination; the "Renumbering note" and validation cross-check are rewritten for the new tail. Owning-task column points into the `13-` subtree (now `13-/02`–`13-/07`).
+- **§3 authoring contract:** unchanged — three-level nesting and the detail-subpage link-up line already cover the workflows nesting; no new rule needed.
+- **§4 README split:** Hooks disposition repointed to `06-hooks/`.
+- **§Scaffold:** lists the workflows stubs among the new pages and moves glossary/FAQ from the "relocated" list to the "dropped" list.
 
-**Scaffold** — created with `./superRA/superra task create --root docs/site …` so frontmatter and ordering are correct. The genuinely-new stubs (`title`-only meaningful frontmatter, empty `## Objective`): three domain per-skill pages, eight utility per-skill pages, and the new `04-utility-skills/01-task-tree/04-dashboard` page. The relocated pages (task-file, cli, status, glossary, faq, hooks, showcase) were deliberately **not** scaffolded — they are moves of existing content owned by `13-/04` and `13-/05`.
+**Scaffold** — created with `./superRA/superra task create --root docs/site …` so frontmatter and ordering match the prior scaffold (title-only meaningful frontmatter, empty `## Objective`). The genuinely-new stubs added this round: the `05-workflows/` overview and its `01-plan`/`02-implement`/`03-integrate` children. The domain per-skill, utility per-skill, and `04-dashboard` stubs from the prior run are unchanged (those sections keep their `03`/`04` numbering). The relocated pages (task-file, cli, status, hooks, showcase) and the dropped pages (glossary, faq, skills-and-agents) are not scaffolded — they are moves/drops owned by `13-/04` and `13-/05`.
 
-**Validation passed.** The scaffolded `docs/site/` tree (`./superRA/superra task tree --root docs/site`) cross-checks against the revised §2 sitemap: every scaffolded stub appears in the sitemap, and every non-dropped sitemap page has either a stub (new pages) or an existing page (relocations still under `05-reference/`/`06-showcase/`). §2 cross-checks against §1's teaching inventory — every concept, journey, and named gap remains homed. `report-in-markdown`'s `check_markdown.py` reports the contract file clean; no stale `Reference › …` strings remain in it.
+**Validation passed.** `./superRA/superra task tree --root docs/site` shows the `05-workflows/` section with its three phase pages; every scaffolded stub appears in the revised §2 sitemap and every non-dropped sitemap page has a stub or an existing page (the transient double-`05` with `05-reference/` resolves once `13-/04`/`13-/05` relocate and drop its children). §2 cross-checks against §1's teaching inventory — every concept, journey, and re-homed glossary/FAQ fact is homed. `report-in-markdown`'s `check_markdown.py` reports the contract file clean; no stale `08-showcase`/`07-hooks`-as-target/glossary-as-page strings remain.
 
-**Stop point:** the researcher approves this revised IA sitemap before the content tasks (`02`–`05`) are dispatched.
+**Stop point:** the researcher approves this revised IA sitemap before the content tasks (`02`–`06`) are dispatched.
 
