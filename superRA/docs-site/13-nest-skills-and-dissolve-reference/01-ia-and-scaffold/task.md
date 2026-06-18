@@ -1,6 +1,6 @@
 ---
 title: "Revise IA Contract for Nested Structure + Scaffold New Page Stubs"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-17
