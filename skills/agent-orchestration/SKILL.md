@@ -190,6 +190,8 @@ When a reviewer returns REVISE:
 
 5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`.** Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious. Commit the edit in the same commit as the re-dispatched implementer's fix.
 
+**Skipping re-review.** After the implementer fixes a REVISE round, the default is a narrow re-review dispatch. For a very minor fix — a one-line correction, a typo, a cosmetic edit you can confirm at the cited file:line — verify it inline and set the task `approved` yourself instead of spawning a reviewer. Reserve the re-review dispatch for fixes whose correctness you cannot confirm by reading the diff, and never skip it on a CRITICAL or MAJOR finding.
+
 **Authority:** Override any reviewer issue with documented reasoning, but never silently ignore one.
 
 **Limits:**
@@ -205,7 +207,7 @@ Implementer and reviewer agents own their commits and document updates (see `age
 | `not-started` | Planned, no work yet | Dispatch implementer |
 | `in-progress` | Being worked on | Wait for implementer or re-dispatch |
 | `implemented` | Code committed and ready for review | Dispatch reviewer |
-| `revise` | Reviewer found blocking issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
+| `revise` | Reviewer found blocking issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings), or verify a very minor fix inline (see Handling Reviewer Feedback) |
 | `approved` | Review passed | Proceed to next task |
 | `archived` | No longer relevant; removed from scope | Not dispatchable; dependency treated as satisfied — dependents may proceed. |
 | `postponed` | Deferred and parked off the frontier; not deleted | Not dispatchable; its dependents are blocked until resumed. Set back to `not-started` to resume. |
