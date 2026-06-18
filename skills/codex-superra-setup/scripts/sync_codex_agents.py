@@ -32,7 +32,7 @@ ROLE_SPECS = (
         codex_target_filename="superra_implementer.toml",
         codex_name="superra_implementer",
         nickname_candidates=("implementer", "superra-implementer"),
-        direct_mode_target="skills/using-superRA/references/direct-mode-implementer.md",
+        direct_mode_target="skills/using-superra/references/direct-mode-implementer.md",
         direct_mode_title="Direct-Mode Implementer",
     ),
     RoleSpec(
@@ -40,7 +40,7 @@ ROLE_SPECS = (
         codex_target_filename="superra_reviewer.toml",
         codex_name="superra_reviewer",
         nickname_candidates=("reviewer", "superra-reviewer"),
-        direct_mode_target="skills/using-superRA/references/direct-mode-reviewer.md",
+        direct_mode_target="skills/using-superra/references/direct-mode-reviewer.md",
         direct_mode_title="Direct-Mode Reviewer",
     ),
 )

@@ -5,7 +5,7 @@
 set -uo pipefail
 
 HOOK_NAME="ensure-using-superra"
-COMPANION="superRA:using-superRA"
+COMPANION="superRA:using-superra"
 
 HOOK="$(cd "$(dirname "$0")/../.." && pwd)/hooks/$HOOK_NAME"
 if [ ! -x "$HOOK" ]; then
@@ -117,7 +117,7 @@ print(d.get("hookSpecificOutput", {}).get("permissionDecisionReason", ""))
   fi
 }
 
-loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superRA"}}]}}'
+loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superra"}}]}}'
 other_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:agent-orchestration"}}]}}'
 
 # V1: non-Skill tool -> silent
@@ -126,14 +126,14 @@ run_case "V1 non-Skill Read"             expect-silent "Read"  ""
 
 # V2: Skill tool, non-workflow skill -> silent
 run_case "V2 Skill handoff-doc"          expect-silent "Skill" "superRA:handoff-doc"
-run_case "V2 Skill using-superRA itself" expect-silent "Skill" "superRA:using-superRA"
+run_case "V2 Skill using-superra itself" expect-silent "Skill" "superRA:using-superra"
 run_case "V2 Skill agent-orchestration"  expect-silent "Skill" "superRA:agent-orchestration"
 run_case "V2 Skill empty"                expect-silent "Skill" ""
 
 # V3: workflow skill, companion NOT loaded -> deny
 #
 # Transcript present but only mentions other-companion (agent-orchestration) —
-# this hook must still deny because it specifically guards using-superRA.
+# this hook must still deny because it specifically guards using-superra.
 run_case "V3a superplan no-transcript"   expect-deny   "Skill" "superRA:superplan"       "$other_transcript"
 run_case "V3b superimplement not-loaded" expect-deny  "Skill" "superRA:superimplement" "$other_transcript"
 run_case "V3c superintegrate not-loaded"    expect-deny  "Skill" "superRA:superintegrate"    "$other_transcript"
@@ -145,7 +145,7 @@ run_case "V4c superintegrate loaded"       expect-silent "Skill" "superRA:superi
 
 # V4d: transcript contains the skill reference buried among other text
 # with whitespace around the colon — tolerant regex must still match.
-tolerant_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{ "skill" : "superRA:using-superRA" }}]}}'
+tolerant_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{ "skill" : "superRA:using-superra" }}]}}'
 run_case "V4d tolerant-whitespace"       expect-silent "Skill" "superRA:superplan" "$tolerant_transcript"
 
 # V5: fail-open on missing transcript

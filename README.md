@@ -110,8 +110,8 @@ bundle through `/hooks`.
 | **ask-user-question-logger** | Claude Code `AskUserQuestion` | Suggest logging important decisions in `PLAN.md`. The script accepts Codex `request_user_input` payloads for future/manual wiring, but the Codex plugin does not install it until Codex documents that tool as a `PostToolUse` surface. |
 | **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a plan into `PLAN.md` + `RESULTS.md` when it will guide later work. |
 | **codex-plan-stop** | Codex `Stop` while in plan mode after a proposed-plan response | Codex equivalent of the plan-materialization reminder. |
-| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
-| **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |
+| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superra` if the master skill has not yet loaded this session. |
+| **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-deny the workflow-skill call when `superRA:using-superra` is not yet loaded; reason directs Claude to load it and retry. |
 | **ensure-agent-orchestration** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
 
 ## Installation

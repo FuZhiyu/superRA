@@ -4,7 +4,7 @@
 # Fires on every user prompt. If the prompt mentions "superRA" (or a
 # case/spacing variant) or names a phase skill directly (superplan,
 # superimplement, superintegrate) AND the session transcript does not
-# already show a Skill invocation for superRA:using-superRA, inject a
+# already show a Skill invocation for superRA:using-superra, inject a
 # system-reminder telling Claude to load the master skill before
 # responding. Suppressed on non-matching prompts and on sessions where
 # the skill is already loaded.
@@ -56,11 +56,11 @@ fi
 # Transcript gate: if the master skill has already been invoked this
 # session, suppress the reminder. The Claude Code transcript stores
 # Skill tool calls as JSON; match the skill-name field tolerantly
-# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"'
+# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"'
 # (case-insensitive, whitespace-tolerant around the colon) so minor
 # format drift does not cause duplicate reminders.
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
-   && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
+   && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path"; then
   printf '{}\n'
   exit 0
 fi
@@ -68,7 +68,7 @@ fi
 if [ -n "${PLUGIN_ROOT:-}" ]; then
   context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load `superRA:using-superra`. It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
 else
-  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superRA"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superra"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
 fi
 
 # JSON-escape the reminder text so inner double quotes / backslashes do

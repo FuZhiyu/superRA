@@ -61,7 +61,7 @@ After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, *
 
 All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
 
-**If the check fails, the handoff docs are outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair the docs.** Do not inline superplan content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
+**If the check fails, the handoff docs are outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair the docs.** Do not inline superplan content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
 
 Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
@@ -70,7 +70,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`.
-2. **Resolve entry.** If the main agent has not already done so, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all selected tasks are already `APPROVED`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
+2. **Resolve entry.** If the main agent has not already done so, run `using-superra/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all selected tasks are already `APPROVED`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in PLAN.md's header.
 4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:

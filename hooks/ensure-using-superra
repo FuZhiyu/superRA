@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse hook: hard-gate the three superRA phase skills'
 # (superRA:superplan, superRA:superimplement, superRA:superintegrate)
-# Skill calls on superRA:using-superRA being loaded first.
+# Skill calls on superRA:using-superra being loaded first.
 #
 # Fires on every PreToolUse event. Only acts when:
 #   tool_name == "Skill" AND
@@ -9,7 +9,7 @@
 #                        superRA:superimplement,
 #                        superRA:superintegrate}
 # and the session transcript does NOT already show a Skill invocation
-# for superRA:using-superRA. In that case the hook emits a
+# for superRA:using-superra. In that case the hook emits a
 # permissionDecision: deny payload instructing Claude to load the
 # companion skill and retry. All other cases emit `{}`.
 #
@@ -26,7 +26,7 @@
 
 set -euo pipefail
 
-COMPANION="superRA:using-superRA"
+COMPANION="superRA:using-superra"
 
 input=$(cat)
 
@@ -83,7 +83,7 @@ fi
 # session, let the call through. Match the skill-name field tolerantly
 # (case-insensitive, whitespace-tolerant around the colon) so minor
 # transcript-format drift does not cause a spurious deny.
-if grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
+if grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path"; then
   printf '{}\n'
   exit 0
 fi
