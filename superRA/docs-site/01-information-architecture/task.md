@@ -29,7 +29,7 @@ Keep reference pages thin where a skill file already serves humans well — a br
 
 This is the information architecture for the superRA documentation site, plus the authoring contract every content task follows. It is the artifact the researcher approves before any page is drafted.
 
-**Current structure — superseded the original Diátaxis split (researcher-approved 2026-06-17).** The site was first built on a six-section Diátaxis-style layout (Welcome / Quickstart / Concepts / How-To / Reference / Showcase), approved 2026-06-11. That structure proved repetitive — concepts were explained in a standalone Concepts section, re-explained inline in the Quickstart, and again in the How-To guides. The [`12-condense-and-restructure`](../12-condense-and-restructure/task.md) subtree collapses it into a lean, quickstart-centered structure: one narrative spine plus two skill-introduction pages. The authoritative sitemap and dispositions below now describe that structure; §1's audience model and §3's authoring contract carry over unchanged. The empty docs tree is scaffolded at [docs/site/](../../../docs/site/); each node carries only a `title` and an empty `## Objective` to be filled by its owning content task.
+**Current structure — quickstart-centered, nested, Reference dissolved (researcher-approved 2026-06-17).** The site was first built on a six-section Diátaxis-style layout (Welcome / Quickstart / Concepts / How-To / Reference / Showcase), approved 2026-06-11. That structure proved repetitive — concepts were explained in a standalone Concepts section, re-explained inline in the Quickstart, and again in the How-To guides. The [`12-condense-and-restructure`](../12-condense-and-restructure/task.md) subtree collapsed it into a lean, quickstart-centered spine plus two flat skill-introduction pages, with a Reference section retained. The [`13-nest-skills-and-dissolve-reference`](../13-nest-skills-and-dissolve-reference/task.md) subtree takes the next step: the two flat skills pages become overviews each opening onto a page per skill, the task-tree skill's reference detail nests under its page, and the standalone Reference section is dissolved — its cross-cutting pages promoted to the top level, `skills-and-agents` dropped, and showcase renumbered. The authoritative sitemap and dispositions below describe that structure; §1's audience model and §3's authoring contract carry over with the two skills-row updates in §1 and the nesting line in §3. The empty docs tree is scaffolded at [docs/site/](../../../docs/site/); each node carries only a `title` and an empty `## Objective` to be filled by its owning content task.
 
 ### 1. Audience model and teaching inventory
 
@@ -43,9 +43,9 @@ This is the information architecture for the superRA documentation site, plus th
 |---|---|---|
 | Welcome | Knows research + git + a harness; zero superRA vocabulary. | Knows the one-sentence pitch, the three-phase shape, and whether to continue. |
 | Quickstart | Has installed superRA; no vocabulary yet. | Has walked one project end to end; has met task tree, dispatch, review, status, drift tests, and semantic merge *along the way*, with the *why* introduced inline. |
-| Domain Skills | Knows the basic loop from the quickstart. | Knows which domain skills exist and the design idea behind each, so they can tell which apply to their own work. |
-| Utility Skills | Knows the basic loop from the quickstart. | Knows which utility skills exist and the cross-cutting capability each provides. |
-| Reference | Knows what they're looking for. | Has the exact field/flag/status/command, or a link to the authoritative skill file. |
+| Domain Skills (overview + a page per skill) | Knows the basic loop from the quickstart. | From the overview: knows which domain skills exist and that each has its own page. From a skill's page, one descent down: knows the design idea behind that skill and when it loads, so they can tell whether it applies to their own work. |
+| Utility Skills (overview + a page per skill) | Knows the basic loop from the quickstart. | From the overview: knows which utility skills exist and that each has its own page. From a skill's page, one descent down: knows the cross-cutting capability that skill provides and when it comes into play; the task-tree page descends a further level to operational detail (field tables, CLI surface, status mechanics, dashboard). |
+| Glossary / FAQ / Hooks (top-level lookups) | Knows what they're looking for. | Has the exact term, answer, or hook trigger, or a link to the authoritative skill file. |
 
 **Teaching inventory — every concept and journey, mapped to a home.** A concept or journey is "covered" when at least one page teaches it; the page that *owns* it is bolded. The standalone Concepts and How-To sections are dropped: their essential ideas now live inline in the Quickstart narrative spine (each concept introduced at the point in the walkthrough where it matters) and in the two skills pages, with everything that does not fit there cut. The Quickstart owns the largest share of the teaching by design.
 
@@ -55,17 +55,17 @@ This is the information architecture for the superRA documentation site, plus th
 |---|---|---|
 | What superRA is / the pitch | **Welcome** | README front door |
 | PLAN → IMPLEMENT → INTEGRATE phase cycle | **Quickstart** | Welcome |
-| Task tree (filesystem = task hierarchy, `task.md`, sibling deps, status rollup) | **Quickstart** | Reference › Task File |
+| Task tree (filesystem = task hierarchy, `task.md`, sibling deps, status rollup) | **Quickstart** | Utility Skills › task-tree (+ its task-file detail page) |
 | Implementer/reviewer pair & adversarial review | **Quickstart** | — |
-| Status lifecycle & frontier | **Quickstart** | Reference › Status & Frontier |
-| Drift/regression tests (result protection) | **Quickstart** | Utility Skills, Reference › Skills |
-| Semantic merge (intent-aware sync) | **Quickstart** | Utility Skills, Reference › Skills |
-| Domain skills (what they add, when they load) | **Domain Skills** | Welcome, Quickstart, Reference › Skills |
-| Utility skills (cross-cutting capabilities) | **Utility Skills** | Quickstart, Reference › Skills |
+| Status lifecycle & frontier | **Quickstart** | Utility Skills › task-tree › status-and-frontier |
+| Drift/regression tests (result protection) | **Quickstart** | Utility Skills › result-protection |
+| Semantic merge (intent-aware sync) | **Quickstart** | Utility Skills › semantic-merge |
+| Domain skills (what they add, when they load) | **Domain Skills** | Welcome, Quickstart, each domain skill's page |
+| Utility skills (cross-cutting capabilities) | **Utility Skills** | Quickstart, each utility skill's page |
 | Autonomy-with-human-in-the-loop | **Quickstart** | Welcome |
 | Adaptive/composable / re-entry | **Quickstart** | — |
-| Hooks (what runs automatically, per-harness coverage) | **Reference › Hooks** | Quickstart (inline mention) |
-| Glossary of superRA terms | **Reference › Glossary** | every page (link target) |
+| Hooks (what runs automatically, per-harness coverage) | **Hooks** (top-level) | Quickstart (inline mention) |
+| Glossary of superRA terms | **Glossary** (top-level) | every page (link target) |
 
 *Journeys (the "how"):*
 
@@ -89,38 +89,50 @@ The dropped How-To journeys are not lost: each is folded into the corresponding 
 | Quickstart | Quickstart |
 | Worked task-tree example | Showcase (embedded real export) |
 | Task-design guidance | Quickstart (superplan stage; links to `superplan/references/task-tree-design.md`) |
-| FAQ / glossary | Reference › Glossary + Reference › FAQ |
+| FAQ / glossary | top-level Glossary + FAQ |
 | "How do I collaborate with agents via task files" narrative | Quickstart (inline along the walkthrough) |
 
 All six gaps are homed; no gap is orphaned.
 
 ### 2. Sitemap
 
-The structure is quickstart-centered: a single end-to-end Quickstart narrative is the spine, introducing every concept inline at the point it matters, flanked by a pitch front door, two skill-introduction pages, a reference lookup home, and an embedded showcase. The standalone Concepts and How-To sections of the original Diátaxis layout are dropped — their ideas survive only inline in the Quickstart and the two skills pages.
+The structure is quickstart-centered and progressively disclosed: a single end-to-end Quickstart narrative is the spine, introducing every concept inline at the point it matters, flanked by a pitch front door, two skills overviews that each open onto a page per skill, and — promoted out of the dissolved Reference section — top-level glossary, FAQ, hooks, and showcase pages. The standalone Concepts and How-To sections of the original Diátaxis layout were dropped earlier — their ideas survive inline in the Quickstart and the skills pages. The shape of the tree now carries the teaching: a high-level overview at the top, a page per skill one level down, and operational detail (the task-tree field tables, CLI surface, status mechanics, and dashboard) one level deeper still, revealed only as the reader descends.
 
-The site is a single hash-routed standalone export; the nav tree below is the `docs/site/` directory tree. Numeric prefixes set display order. Each brief names what the page teaches and the authoritative skill/reference file it links to (rather than paraphrases). Page-to-content-task ownership (within the [`12-condense-and-restructure`](../12-condense-and-restructure/task.md) subtree) is shown in the rightmost column so the downstream dispatch is unambiguous.
+The site is a single hash-routed standalone export; the nav tree below is the `docs/site/` directory tree. Numeric prefixes set display order. Each brief names what the page teaches and the authoritative skill/reference file it links to (rather than paraphrases). Page-to-content-task ownership (within the [`13-nest-skills-and-dissolve-reference`](../13-nest-skills-and-dissolve-reference/task.md) subtree) is shown in the rightmost column so the downstream dispatch is unambiguous; the `13-/` prefix names the child task that owns each page.
 
 | Nav path (`docs/site/…`) | Teaches | Links to (authority) | Owning content task |
 |---|---|---|---|
 | `01-welcome/` | Front door: one-sentence pitch, why superRA (incl. why-not-Superpowers), the three-phase shape, install pointer, "start here" routing to the Quickstart and skills pages. | `README.md`, mermaid phase diagram | 05-finalize (light alignment only) |
-| `02-quickstart/` | The walkthrough: one end-to-end narrative — setup → superplan → superimplement → superintegrate — introducing every concept (task tree, dispatch, implementer/reviewer review, status & frontier, drift tests, semantic merge, re-entry) *inline along the way*, dashboard-first, with detail linked to Reference. Ends by directing the reader to the two skills pages. | `superplan`, `superimplement`, `superintegrate`, `task-tree/SKILL.md`, `using-superRA` | 02-quickstart |
-| `03-domain-skills/` | Each domain skill introduced one by one with its high-level design idea: what research work it disciplines and when it loads. | `skills/CATEGORIES.md`, the domain skill files (`econ-data-analysis`, `theory-modeling`, `writing`, …) | 03-domain-skills |
-| `04-utility-skills/` | Each utility skill introduced one by one with its high-level design idea: the cross-cutting capability it provides and when it comes into play. | `skills/CATEGORIES.md`, the utility skill files (`result-protection`, `semantic-merge`, `refactor-and-integrate`, `report-in-markdown`, …) | 04-utility-skills |
-| `05-reference/` (parent) | Reference hub (information-oriented lookups). Kept as-is — a lookup/fallback home, not part of the reading flow. | — | 05-finalize (link repointing only) |
-| `05-reference/01-task-file/` | `task.md` anatomy: frontmatter fields, body sections. | `task-tree/references/task-file-contract.md` | 05-finalize (link repointing only) |
-| `05-reference/02-cli-commands/` | The `superra` CLI surface: query, mutate, dashboard. | `task-tree/references/commands.md` | 05-finalize (link repointing only) |
-| `05-reference/03-status-and-frontier/` | Status enum, lifecycle, rollup, frontier computation. | `task-tree/references/task-file-contract.md`, `task-tree/SKILL.md` | 05-finalize (link repointing only) |
-| `05-reference/04-skills-and-agents/` | Skill inventory and the Stage → skill load manifest, as a lookup. | `using-superRA` §Skill Inventory & §Skill-Load Manifest, `skills/CATEGORIES.md` | 05-finalize (link repointing only) |
-| `05-reference/05-glossary/` | Every superRA term defined once. | (definitions; links to owning skills) | 05-finalize (link repointing only) |
-| `05-reference/06-faq/` | Common questions: harness choice, when to skip phases, public-repo data hygiene. | `README.md`, `CLAUDE.md` | 05-finalize (link repointing only) |
-| `05-reference/07-hooks/` | Hooks lookup: each hook's trigger, purpose, and Claude Code vs Codex coverage. | `hooks/` (hook sources), `docs/README.codex.md` §Hook Coverage | 05-finalize (link repointing only) |
-| `06-showcase/` | An embedded real task-tree export proving the dogfooding claim. | a sanitized real `superRA/` subtree export | 05-finalize (link repointing only) |
+| `02-quickstart/` | The walkthrough: one end-to-end narrative — setup → superplan → superimplement → superintegrate — introducing every concept (task tree, dispatch, implementer/reviewer review, status & frontier, drift tests, semantic merge, re-entry) *inline along the way*, dashboard-first, with detail linked to the relevant skill page. Ends by directing the reader to the two skills overviews. | `superplan`, `superimplement`, `superintegrate`, `task-tree/SKILL.md`, `using-superRA` | 02-quickstart |
+| `03-domain-skills/` (overview) | Short framing of what a domain skill is, plus a one-line entry per skill linking to its page. | `skills/CATEGORIES.md` | 13-/02-domain-skills |
+| `03-domain-skills/01-econ-data-analysis/` | The data-analysis discipline (Iron Law, describe–analyze–validate) and when it loads. | `econ-data-analysis/SKILL.md` | 13-/02-domain-skills |
+| `03-domain-skills/02-theory-modeling/` | The four-gate modeling discipline and when it loads. | `theory-modeling/SKILL.md` | 13-/02-domain-skills |
+| `03-domain-skills/03-writing/` | The three writing modes (Review / Polish / Draft) and when it loads. | `writing/SKILL.md` | 13-/02-domain-skills |
+| `04-utility-skills/` (overview) | Short framing of what a utility skill is, plus a one-line entry per skill linking to its page. | `skills/CATEGORIES.md` | 13-/03-utility-skills |
+| `04-utility-skills/01-task-tree/` | High-level design of the task tree — filesystem as task hierarchy, rollup, frontier, dashboard — as the researcher's project view. Detail nests beneath. | `task-tree/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/01-task-tree/01-task-file/` | `task.md` anatomy: frontmatter fields, body sections. | `task-tree/references/task-file-contract.md` | 13-/04-task-tree-reference-nesting (move of `05-reference/01-task-file`) |
+| `04-utility-skills/01-task-tree/02-cli-commands/` | The `superra` CLI surface: query, mutate, dashboard. | `task-tree/references/commands.md` | 13-/04-task-tree-reference-nesting (move of `05-reference/02-cli-commands`) |
+| `04-utility-skills/01-task-tree/03-status-and-frontier/` | Status enum, lifecycle, rollup, frontier computation. | `task-tree/references/task-file-contract.md`, `task-tree/SKILL.md` | 13-/04-task-tree-reference-nesting (move of `05-reference/03-status-and-frontier`) |
+| `04-utility-skills/01-task-tree/04-dashboard/` | New user-facing page: the dashboard's static export (shareable HTML snapshots), task comments (the human-in-the-loop steering channel), and running tasks across parallel worktrees — framed as things the researcher does. | `task-tree/SKILL.md` | scaffolded by 13-/01; filled by 13-/04-task-tree-reference-nesting |
+| `04-utility-skills/02-semantic-merge/` | Intent-aware sync: resolving conflicts by intent rather than ours/theirs. | `semantic-merge/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/03-result-protection/` | Drift/regression tests that protect key results across sync, refactor, and maintenance. | `result-protection/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/04-refactor-and-integrate/` | Codebase coherence: convention fit, utility reuse, PR-friendly diffs. | `refactor-and-integrate/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/05-report-in-markdown/` | The markdown style guide: file-link citations, math, tables, figures. | `report-in-markdown/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/06-worktree-data-sync/` | Non-git data sync between worktrees: seed, diff, apply, teardown. | `worktree-data-sync/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/07-zotero-paper-reader/` | Read and analyze Zotero papers and generate citations from the library. | `zotero-paper-reader/SKILL.md` | 13-/03-utility-skills |
+| `04-utility-skills/08-mistral-pdf-to-markdown/` | Convert a PDF to markdown with image extraction via Mistral OCR. | `mistral-pdf-to-markdown/SKILL.md` | 13-/03-utility-skills |
+| `05-glossary/` | Every superRA term defined once. | (definitions; links to owning skills) | 13-/05-dissolve-reference (promote of `05-reference/05-glossary`) |
+| `06-faq/` | Common questions: harness choice, when to skip phases, public-repo data hygiene. | `README.md`, `CLAUDE.md` | 13-/05-dissolve-reference (promote of `05-reference/06-faq`) |
+| `07-hooks/` | Hooks lookup: each hook's trigger, purpose, and Claude Code vs Codex coverage. | `hooks/` (hook sources), `docs/README.codex.md` §Hook Coverage | 13-/05-dissolve-reference (promote of `05-reference/07-hooks`) |
+| `08-showcase/` | An embedded real task-tree export proving the dogfooding claim. | a sanitized real `superRA/` subtree export | 13-/05-dissolve-reference (renumber of `06-showcase`) |
 
-**Dropped from the tree** (deleted in `05-finalize` once content tasks have repointed away): `03-concepts/` (5 pages) and `04-how-to/` (6 pages). Their essential ideas are folded inline into the Quickstart and the two skills pages; everything that does not fit is cut. The numbering works out cleanly — deleting `03-concepts` and `04-how-to` frees `03`/`04` for the two new skills pages, and `05-reference`/`06-showcase` keep their numbers.
+**Dropped from the tree.** `05-reference/04-skills-and-agents/` is dropped, not moved: its skill inventory is now carried by the two skills overview pages (`03-domain-skills/` and `04-utility-skills/`), and the Stage → skill load manifest it also held is internal agent-routing detail that the researcher audience does not need (the user-facing fact — which skill applies to which work — lives on each skill's own page). The standalone `05-reference/` parent is dissolved: it no longer exists once its children are promoted to the top level or nested under `01-task-tree/`. The earlier-dropped `03-concepts/` (5 pages) and `04-how-to/` (6 pages), already folded into the Quickstart and the skills pages, are deleted alongside this restructure.
 
-Reference pages stay thin per Planner Guidance: each is a short human framing plus a link into the authoritative skill file, never a paraphrase that will drift. `01-welcome/`, `02-quickstart/`, and the two skills pages carry original teaching prose because no skill file is written for this audience.
+Reference detail pages stay thin per Planner Guidance: each is a short human framing plus a link into the authoritative skill file, never a paraphrase that will drift. `01-welcome/`, `02-quickstart/`, the skills overviews, and the per-skill pages carry original teaching prose because no skill file is written for this audience.
 
-**Sitemap ↔ inventory cross-check (validation).** Every concept and journey row in §1 maps to exactly one owning page above, and every named gap is homed (table in §1). Every kept page above traces to a content task in the `12-condense-and-restructure` subtree. No page is authority-less, and no concept/journey/gap is page-less.
+**Renumbering note.** Dissolving the `05-reference/` parent promotes its cross-cutting children to the top level and renumbers the tail: glossary → `05-glossary/`, faq → `06-faq/`, hooks → `07-hooks/`, and the former `06-showcase/` slides to `08-showcase/` to keep its place at the end of the reading flow. The task-tree reference children (`01-task-file`, `02-cli-commands`, `03-status-and-frontier`) renumber from their `05-reference/` prefix to `04-utility-skills/01-task-tree/01..03`, where their detail belongs to the skill that owns it. This mirrors §2's earlier renumbering rationale: numbers follow the reading order, and a move that changes a page's parent renumbers it to fit the new parent's sequence. Cross-page `#/...` links to any moved page are repointed by the owning content task (`13-/04` and `13-/05`) and verified site-wide by `13-/06-link-integrity-and-build`.
+
+**Sitemap ↔ inventory cross-check (validation).** Every concept and journey row in §1 maps to exactly one owning page above (domain/utility concepts now resolve to a skill's own page reached via its overview; task-file, status, and glossary detail resolve to the nested or promoted pages). Every named gap is homed (table in §1). Every kept page above traces to a content task in the `13-nest-skills-and-dissolve-reference` subtree. No page is authority-less, and no concept/journey/gap is page-less. Every non-dropped page in this sitemap has either a scaffolded stub (the domain per-skill pages, the utility per-skill pages, `01-task-tree/`, and `04-dashboard/`) or an existing page relocated by `13-/04`/`13-/05`; no scaffolded stub is absent from this sitemap.
 
 ### 3. Docs-tree authoring contract
 
@@ -130,7 +142,7 @@ The binding rules every content task follows when authoring `docs/site/`:
 - **Frontmatter:** each node uses `title` only. `status` and `depends_on` are left at their scaffold defaults (`not-started`, `[]`) and are **hidden at render time by doc-mode** — the opt-in render mode whose flag/marker name is settled by `02-dashboard-features/doc-mode` and whose exact build invocation is settled by `08-deploy`. Authors must not rely on a specific flag spelling; they rely on doc-mode being engaged by the build.
 - **Page body:** the page content lives under `## Objective` of each node (the body section the export renders as the page; any `## ` heading becomes a collapsible section via `render_task_body`). Use `## ` subheadings within a page for structure. Do not add `## Results` / `## Review Notes` to doc nodes — those are task-workflow sections, not doc content.
 - **Ordering:** numeric directory prefixes (`01-`, `02-`, …) set display order; they are display-only and independent of any dependency DAG (doc nodes carry no real dependencies).
-- **Cross-page links:** hash links `#/<path>` where `<path>` is the doc-tree-relative node path (e.g. `[the domain skills](#/03-domain-skills)`). These resolve within the single-file hash-routed export.
+- **Cross-page links:** hash links `#/<path>` where `<path>` is the doc-tree-relative node path (e.g. `[the domain skills](#/03-domain-skills)`). These resolve within the single-file hash-routed export. With three-level nesting, a nested path is the full directory path (e.g. `[the CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands)`). A detail subpage links up to its parent skill page the same way (e.g. the CLI page back to `#/04-utility-skills/01-task-tree`); an overview links down to each per-skill page; the export's nav already shows the descent, so a page links to its parent only where the prose hands the reader back up, not on every page by rote.
 - **Repo-file links:** to cite a skill/agent/source file as authority, link to the GitHub blob via the export's `--repo-file-base` (settled by `08-deploy` to the repo's blob URL at the built ref). In source, write the link as a normal repo-relative path target that the export re-bases; authors do not hardcode full GitHub URLs.
 - **Figures/screenshots:** dashboard screenshots and diagrams are committed under `docs/site/<page>/attachments/` and embedded with `![caption](attachments/<file>)`; the export base64-inlines images, so relative paths from the node directory are correct. Prefer the live mermaid phase diagram (already in `README.md`) over a raster where a diagram suffices.
 - **Public-repo hygiene:** all examples use placeholder or hypothetical research content — no personal data, real group names, real paths, or private query results.
@@ -148,10 +160,10 @@ The current [README.md](../../../README.md) becomes a *front door*: a tight pitc
 | The Plan-Implement-Integrate Workflow (+ mermaid + invoke keywords) | **Moves** to `01-welcome/` (three-phase shape) and `02-quickstart/` (the walkthrough); README keeps the mermaid diagram and a one-line pointer. |
 | dashboard / artifact-share paragraphs | **Moves** to `02-quickstart/` (dashboard-first throughout); README keeps a one-line mention with a link. |
 | Key principles of the workflow | **Moves** to `02-quickstart/` (introduced inline); dropped from README. |
-| Domain Skills (table + roadmap) | **Moves** to `03-domain-skills/` and `05-reference/04-skills-and-agents/`; README keeps a one-line list. |
-| Utility Skills (table) | **Moves** to `04-utility-skills/` and `05-reference/04-skills-and-agents/`; dropped from README body. |
+| Domain Skills (table + roadmap) | **Moves** to `03-domain-skills/` (overview + a page per skill); README keeps a one-line list. |
+| Utility Skills (table) | **Moves** to `04-utility-skills/` (overview + a page per skill); dropped from README body. |
 | Agents (table) | **Moves** to `02-quickstart/` (implementer/reviewer introduced inline at the review step); dropped from README body. |
-| Hooks (table) | **Moves** to `05-reference/07-hooks/`; dropped from README body. |
+| Hooks (table) | **Moves** to `07-hooks/`; dropped from README body. |
 | Installation (Claude Code / Codex / Other Platforms) | **Stays** — install is the README's job as the GitHub landing; `01-welcome/` carries the install pointer (absorbing `docs/README.codex.md` detail by link). |
 | Contributing | **Stays** — points contributors to `CLAUDE.md`; not site content (the site targets researchers, not contributors). |
 | Upstream | **Stays** — attribution belongs on the repo front door. |
@@ -163,4 +175,4 @@ Disposition of the absorb/link candidates named in Planner Guidance: `docs/READM
 
 ### Scaffold
 
-The `docs/site/` tree exists as a standalone task root (separate from `superRA/`); inspect it with `./superRA/superra task tree --root docs/site`. Under the current structure the two new skills pages (`03-domain-skills/`, `04-utility-skills/`) are scaffolded with `title` set and an empty `## Objective` placeholder for their owning content tasks; the dropped `03-concepts/` and `04-how-to/` directories remain in place as valid link targets until the content tasks repoint away and `05-finalize` deletes them.
+The `docs/site/` tree exists as a standalone task root (separate from `superRA/`); inspect it with `./superRA/superra task tree --root docs/site`. The two skills overview pages (`03-domain-skills/`, `04-utility-skills/`) already carry content from `12-condense-and-restructure`; the content tasks reshape them into overviews. The genuinely-new stubs for this restructure are scaffolded with `title` set and an empty `## Objective`: the three domain per-skill pages (`03-domain-skills/01-econ-data-analysis`, `02-theory-modeling`, `03-writing`), the eight utility per-skill pages (`04-utility-skills/01-task-tree` … `08-mistral-pdf-to-markdown`), and the new `04-utility-skills/01-task-tree/04-dashboard` page. The relocated pages — `01-task-file`, `02-cli-commands`, `03-status-and-frontier`, `05-glossary`, `06-faq`, `07-hooks`, and the showcase — are not scaffolded here; they are moves of existing content under `05-reference/` (and `06-showcase/`) performed by `13-/04` and `13-/05`, which renumber and repoint them. The `05-reference/04-skills-and-agents/` page is deleted by `13-/05` once its inventory is absorbed into the two overviews.
