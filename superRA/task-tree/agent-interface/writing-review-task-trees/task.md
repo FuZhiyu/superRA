@@ -29,3 +29,8 @@ Likely files: skills/writing/SKILL.md, references/planning.md, references/long-f
 - `./superRA/superra task check` reported 0 errors and 2 warnings before Integrate cleanup: `task-tree/test-suite` depends on archived `auto-rebuild`, and `task-tree/dashboard/github-artifact-action` still carried a temporary `## Sync Impact`. Integrate closeout removed the stale temporary section.
 
 **Final diff self-check:** `git diff 5af4c27d571cca58ee6187c248cf83f41ac641c0..HEAD`; surviving change classes are writing review-task workflow instructions, stale-handoff wording removal, sync-propagation of the minor re-review exception into workflow summaries, task/status records, and the required Integrate cleanup of a stale temporary `## Sync Impact` section. Suspicious hunk justifications: `skills/*` edits are justified by the approved task objective plus sync propagation from `better-handoff`; approved task-file edits are status/results/workflow-record updates required by superRA gates; the dashboard artifact task edit only removes temporary integration scaffold caught by `superra task check --category sync-impact`.
+
+### Integration Closeout
+- Synced onto `better-handoff` at `BASE_HEAD_SHA=5af4c27d571cca58ee6187c248cf83f41ac641c0`; the only incoming change was the minor re-review exception in `agent-orchestration`, propagated into `superimplement` and `superintegrate` summaries.
+- Integration review approved the surviving diff as scoped to this task, sync propagation, workflow records, and required temporary Sync Impact cleanup.
+- Permanent evidence: `tests/test-sync-integration-contract.sh` protects the review-only task-tree marker and stale-wording sweep; the full task-tree suite passed after sync.
