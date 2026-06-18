@@ -16,9 +16,9 @@ Hook source files live in [hooks/](hooks/); harness-specific wiring is in [hooks
 
 | Hook | Trigger event | Purpose | Claude Code | Codex | Cursor |
 |---|---|---|:---:|:---:|:---:|
-| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Injects a reminder to load `superRA:using-superRA` if the master skill has not loaded this session. | Yes | Yes | Yes |
+| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Injects a reminder to load `superRA:using-superra` if the master skill has not loaded this session. | Yes | Yes | Yes |
 | **merge-guard** | `PreToolUse` on `Bash` commands matching `git merge/rebase/cherry-pick` | Reminds the agent to use `superRA:semantic-merge` instead of a bare merge command. | Yes | Yes | Yes |
-| **ensure-using-superra** | `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-denies the workflow-skill call when `superRA:using-superRA` is not yet loaded; directs the agent to load it and retry. | Yes | — | Yes |
+| **ensure-using-superra** | `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-denies the workflow-skill call when `superRA:using-superra` is not yet loaded; directs the agent to load it and retry. | Yes | — | Yes |
 | **ensure-agent-orchestration** | `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Same pattern as above, gating on `superRA:agent-orchestration`. | Yes | — | Yes |
 | **task-hook** | `PostToolUse` on `Edit`, `Write`, and `Bash` | Reconciles the task tree after direct task edits or structural shell changes — validates status, propagates rollups. Codex shell interception is incomplete, so this is best-effort validation rather than a complete enforcement boundary. | Yes | Yes | — |
 | **exit-plan-mode** | `PostToolUse` on `ExitPlanMode` | Suggests materializing a proposed plan into a `superRA/` task tree when it will guide later work. | Yes | — | Yes |

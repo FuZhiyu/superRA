@@ -68,7 +68,7 @@ import sys
 repo, out = sys.argv[1], sys.argv[2]
 def cmd(name, empty_json=False):
     prefix = "export SUPERRA_TASK_HOOK_EMPTY_JSON=1; " if empty_json else ""
-    return f'{prefix}env PLUGIN_ROOT="{repo}" CLAUDE_PLUGIN_ROOT="{repo}" "{repo}/hooks/run-hook.cmd" {name}'
+    return f'{prefix}env PLUGIN_ROOT="{repo}" CLAUDE_PLUGIN_ROOT="{repo}" /bin/sh "{repo}/hooks/run-hook.cmd" {name}'
 
 def toml_string(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'

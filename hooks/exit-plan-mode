@@ -6,7 +6,13 @@
 
 set -euo pipefail
 
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
 
 tool_name=$(echo "$input" | python3 -c "
 import sys, json

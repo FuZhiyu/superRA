@@ -229,7 +229,15 @@ _superra_github_clone() {
     local stamp="$clone/.superra-fetch-stamp" now ts age
     now="$(date +%s 2>/dev/null || echo 0)"
     ts=0
-    [ -f "$stamp" ] && ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+    if [ -f "$stamp" ]; then
+      if [ -x /bin/cat ]; then
+        ts="$(/bin/cat "$stamp" 2>/dev/null || echo 0)"
+      elif [ -x /usr/bin/cat ]; then
+        ts="$(/usr/bin/cat "$stamp" 2>/dev/null || echo 0)"
+      else
+        ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+      fi
+    fi
     age=$(( now - ts ))
     if [ "$now" = "0" ] || [ "$ts" = "0" ] || [ "$age" -ge "__GITHUB_FETCH_TTL_SECONDS__" ]; then
       git -C "$clone" fetch --depth 1 origin "__GITHUB_REF__" >/dev/null 2>&1 || true
@@ -363,7 +371,13 @@ def render_hook_shim() -> str:
         "\n"
         "set -uo pipefail\n"
         "\n"
-        "input=$(cat)\n"
+        "if [ -x /bin/cat ]; then\n"
+        "  input=$(/bin/cat)\n"
+        "elif [ -x /usr/bin/cat ]; then\n"
+        "  input=$(/usr/bin/cat)\n"
+        "else\n"
+        "  input=$(cat)\n"
+        "fi\n"
         "\n"
         "case \"$0\" in\n"
         "  */*) _superra_script_dir=${0%/*} ;;\n"

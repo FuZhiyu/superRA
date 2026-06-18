@@ -4,7 +4,7 @@
 # Fires on every user prompt. If the prompt mentions "superRA" (or a
 # case/spacing variant) or names a phase skill directly (superplan,
 # superimplement, superintegrate) AND the session transcript does not
-# already show a Skill invocation for superRA:using-superRA, inject a
+# already show a Skill invocation for superRA:using-superra, inject a
 # system-reminder telling Claude to load the master skill before
 # responding. Suppressed on non-matching prompts and on sessions where
 # the skill is already loaded.
@@ -26,7 +26,21 @@
 
 set -euo pipefail
 
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
+
+if [ -x /usr/bin/grep ]; then
+  GREP=/usr/bin/grep
+elif [ -x /bin/grep ]; then
+  GREP=/bin/grep
+else
+  GREP=grep
+fi
 
 # Parse prompt + transcript_path from the UserPromptSubmit JSON payload.
 # Emit tab-separated so IFS=$'\t' read cleanly splits them even when the
@@ -48,7 +62,7 @@ print(prompt + "\t" + tp)
 IFS=$'\t' read -r prompt transcript_path <<<"$parsed"
 
 # Fast path: no superRA mention -> silent.
-if ! printf '%s' "$prompt" | grep -iqE '(^|[^[:alnum:]])(super[-_ ]?ra|superplan|superimplement|superintegrate)([^[:alnum:]]|$)'; then
+if ! printf '%s' "$prompt" | "$GREP" -iqE '(^|[^[:alnum:]])(super[-_ ]?ra|superplan|superimplement|superintegrate)([^[:alnum:]]|$)' 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
@@ -56,16 +70,16 @@ fi
 # Transcript gate: if the master skill has already been invoked this
 # session, suppress the reminder. The Claude Code transcript stores
 # Skill tool calls as JSON; match the skill-name field tolerantly
-# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"'
+# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"'
 # (case-insensitive, whitespace-tolerant around the colon) so minor
 # format drift does not cause duplicate reminders.
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
-   && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
+   && "$GREP" -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path" 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
 
-context='The user mentioned superRA. Load superRA:using-superRA if you have not already this session.'
+context='The user mentioned superRA. Load superRA:using-superra if you have not already this session.'
 
 # JSON-escape the reminder text so inner double quotes / backslashes do
 # not invalidate the payload. `python3 -m json.dumps` emits the string

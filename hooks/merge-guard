@@ -12,11 +12,25 @@
 set -euo pipefail
 
 # Read tool input from stdin
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
+
+if [ -x /usr/bin/grep ]; then
+  GREP=/usr/bin/grep
+elif [ -x /bin/grep ]; then
+  GREP=/bin/grep
+else
+  GREP=grep
+fi
 
 # Fast path: grep raw input for merge keywords before any JSON parsing.
 # This makes the no-match case (vast majority of Bash calls) nearly zero-cost.
-if ! echo "$input" | grep -qE 'git (merge|rebase|cherry-pick)(\s|"|$)'; then
+if ! echo "$input" | "$GREP" -qE 'git (merge|rebase|cherry-pick)(\s|"|$)' 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
@@ -29,7 +43,7 @@ print(d.get('tool_input', {}).get('command', ''))
 " 2>/dev/null || echo "")
 
 # Skip abort, continue, skip, quit — these are not new merges
-if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick) --(abort|continue|skip|quit)'; then
+if echo "$command" | "$GREP" -qE 'git (merge|rebase|cherry-pick) --(abort|continue|skip|quit)' 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
@@ -38,13 +52,13 @@ fi
 # Branch-name convention from superRA:agent-orchestration §Parallelization
 # and Worktree Isolation — <current-branch>-agent/parallel/<slug> branches are disjoint
 # by construction and merge with plain git merge.
-if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+\S+/parallel/'; then
+if echo "$command" | "$GREP" -qE 'git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+\S+/parallel/' 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
 
 # Detect actual merge/rebase/cherry-pick commands
-if echo "$command" | grep -qE '(^|\s)git (merge|rebase|cherry-pick)(\s|$)'; then
+if echo "$command" | "$GREP" -qE '(^|\s)git (merge|rebase|cherry-pick)(\s|$)' 2>/dev/null; then
   context="<IMPORTANT>Bare git merge/rebase/cherry-pick detected. Invoke superRA:semantic-merge first to integrate intentionally rather than mechanically.</IMPORTANT>"
 
   # Platform-appropriate output format (matches session-start pattern)

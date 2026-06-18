@@ -7,7 +7,13 @@
 
 set -uo pipefail
 
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
 
 case "$0" in
   */*) _superra_script_dir=${0%/*} ;;
@@ -160,7 +166,15 @@ _superra_github_clone() {
     local stamp="$clone/.superra-fetch-stamp" now ts age
     now="$(date +%s 2>/dev/null || echo 0)"
     ts=0
-    [ -f "$stamp" ] && ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+    if [ -f "$stamp" ]; then
+      if [ -x /bin/cat ]; then
+        ts="$(/bin/cat "$stamp" 2>/dev/null || echo 0)"
+      elif [ -x /usr/bin/cat ]; then
+        ts="$(/usr/bin/cat "$stamp" 2>/dev/null || echo 0)"
+      else
+        ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+      fi
+    fi
     age=$(( now - ts ))
     if [ "$now" = "0" ] || [ "$ts" = "0" ] || [ "$age" -ge "86400" ]; then
       git -C "$clone" fetch --depth 1 origin "main" >/dev/null 2>&1 || true
