@@ -1,7 +1,7 @@
 ---
 title: "Nest Skills Pages + Dissolve Reference into Progressive Subpages"
 status: not-started
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-06-17
 ---
@@ -10,11 +10,12 @@ created: 2026-06-17
 
 Restructure the `docs/site/` documentation tree so it uses the task tree's own nesting for progressive disclosure instead of flat pages plus a separate Reference section. The site already dogfoods the task tree (each node's `## Objective` renders as one page); this work makes the *shape* of that tree teach the material — a high-level overview at the top, a page per skill below it, and the operational detail one level deeper still, revealed only when the reader descends.
 
-Three structural moves, detailed in the child tasks:
+Four structural moves, detailed in the child tasks:
 
 1. **Domain Skills and Utility Skills become overviews with a page per skill.** `03-domain-skills/` and `04-utility-skills/` keep only a short framing plus a one-line entry per skill; each skill's high-level design moves to its own child page. Domain skills get one page each. Utility skills get one page each, and may get a further detail subpage where genuine human-facing internals overflow the page.
-2. **The task-tree skill's reference detail nests under it.** The current `05-reference/01-task-file`, `02-cli-commands`, and `03-status-and-frontier` pages move to become children of `04-utility-skills/01-task-tree/`, so the task-tree page explains the high-level design and its subpages carry the field tables, CLI surface, and status mechanics.
-3. **The standalone Reference section is dissolved.** Its cross-cutting pages — `05-glossary`, `06-faq`, `07-hooks` — are promoted to top-level pages; `04-skills-and-agents` is dropped (its inventory is already carried by the two skills overview pages, and its Stage→load manifest is internal); `06-showcase` is renumbered to keep its place at the end.
+2. **The task-tree skill's reference detail nests under it.** The current `05-reference/01-task-file`, `02-cli-commands`, and `03-status-and-frontier` pages move to become children of `04-utility-skills/01-task-tree/`, rewritten concise and user-oriented, so the task-tree page explains the high-level design and its subpages carry the field tables, CLI surface, and status mechanics.
+3. **The standalone Reference section is dissolved.** Its `07-hooks` page is promoted to a top-level `06-hooks`; `04-skills-and-agents` is dropped (its inventory is already carried by the two skills overview pages, and its Stage→load manifest is internal); `05-glossary` and `06-faq` are dropped, not promoted — their genuinely-useful facts are introduced on the relevant pages instead (phase questions on the workflows pages, merge-guard on the semantic-merge page, sharing/data-hygiene on the dashboard page), so the site carries no standalone glossary or FAQ; `06-showcase` is renumbered to `07-showcase` to keep its place at the end.
+4. **A new top-level Workflows section is added.** `05-workflows/` is an overview over a page per phase — `01-plan`, `02-implement`, `03-integrate` — giving the researcher more detail on the three workflows than the quickstart's inline walkthrough, written user-facing and concise: what each phase does for them, what they invoke (`superplan`/`superimplement`/`superintegrate`), and the decisions they make along the way.
 
 ### Conventions
 

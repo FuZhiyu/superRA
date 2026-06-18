@@ -12,13 +12,13 @@ created: 2026-06-17
 
 Build the detail subpages under `04-utility-skills/01-task-tree/` (the high-level page is owned by task `03`). These are what the reader descends to for the operational detail the skill page deliberately omits. Everything here is written for the **researcher using the tooling** — the commands they run, the dashboard features they click — not for the agent.
 
-**Relocate three existing Reference pages** as children, preserving their prose and adding the user lens:
+**Relocate three existing Reference pages** as children, then **rewrite each to be concise and user-oriented** — the current pages were written reference-style; trim them to what a researcher needs to do the thing, lead with the user's task, and push exhaustive field-by-field detail to the linked authority rather than reproducing it:
 
-- `01-task-file` ← from `docs/site/05-reference/01-task-file`: `task.md` anatomy — frontmatter fields, body sections, status lifecycle pointer. Keep it a human orientation that links to `task-tree/references/task-file-contract.md` as authority.
-- `02-cli-commands` ← from `docs/site/05-reference/02-cli-commands`: the `superra` command surface a researcher runs day to day — read the tree, frontier, DAG, `task read`, create/move, **comments** (`task comment list`/`resolve`), diagnostics. Links to `task-tree/references/commands.md`.
-- `03-status-and-frontier` ← from `docs/site/05-reference/03-status-and-frontier`: status enum, lifecycle, rollup, frontier computation.
+- `01-task-file` ← from `docs/site/05-reference/01-task-file`: `task.md` anatomy — the fields a researcher reads and edits, the body sections, status lifecycle pointer. A human orientation that links to `task-tree/references/task-file-contract.md` as authority; do not transcribe the full field contract.
+- `02-cli-commands` ← from `docs/site/05-reference/02-cli-commands`: the `superra` command surface a researcher runs day to day — read the tree, frontier, DAG, `task read`, create/move, **comments** (`task comment list`/`resolve`), diagnostics. Lead with the handful of commands used constantly; link to `task-tree/references/commands.md` for the full surface.
+- `03-status-and-frontier` ← from `docs/site/05-reference/03-status-and-frontier`: status enum, lifecycle, rollup, frontier computation — framed as what the researcher sees and decides, not an internal state-machine spec.
 
-Move the directories (e.g. `./superRA/superra task move --root docs/site …`, or `git mv` plus a manual link fix); repoint each relocated page's own internal `#/…` links to the new sibling/parent paths. Site-wide repointing of links *into* these pages is task `06`'s job, not this task's.
+Move the directories (e.g. `./superRA/superra task move --root docs/site …`, or `git mv` plus a manual link fix); repoint each relocated page's own internal `#/…` links to the new sibling/parent paths. Preserve every genuinely user-facing fact through the rewrite — concise means tighter and better-targeted, not lossy. Site-wide repointing of links *into* these pages is task `07`'s job, not this task's.
 
 **Author a new `04-dashboard` page** — the user-facing dashboard and collaboration capabilities, which the current docs scatter or omit. Cover, from the researcher's point of view:
 
