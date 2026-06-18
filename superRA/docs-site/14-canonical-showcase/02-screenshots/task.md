@@ -1,6 +1,6 @@
 ---
 title: "Capture Task-Detail + Kanban Views and Compress All Quickstart Screenshots"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
