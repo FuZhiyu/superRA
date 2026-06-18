@@ -12,7 +12,6 @@ on:
       - main
     paths:
       - "docs/site/**"
-      - "docs/showcase-demo/**"
       - "superRA/showcase-analysis/**"
       - "docs/build_site.sh"
       - "skills/task-tree/scripts/**"

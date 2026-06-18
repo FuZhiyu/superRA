@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # Build the superRA documentation site into a single output directory.
 #
-# Produces four self-contained HTML files the GitHub Pages deploy serves:
+# Produces two self-contained HTML files the GitHub Pages deploy serves:
 #   index.html                  the docs tree (docs/site) in doc-mode  — the site entry
-#   demo-tree.html              the curated showcase demo tree (full chrome)
-#   superra-dev-tree.html       superRA's own task tree (full chrome)
 #   showcase-analysis-tree.html the real CAPM-vs-FF3 study tree (full chrome)
 #
-# The showcase framing page links to the two *-tree.html files by relative
-# basename, so they must sit beside index.html; --doc-local-link keeps those
-# links relative instead of rebasing them to the repo blob base.
+# The showcase framing page links to showcase-analysis-tree.html by relative
+# basename, so it must sit beside index.html; --doc-local-link keeps that
+# link relative instead of rebasing it to the repo blob base.
 #
 # Repo-file authority links on the docs site resolve repo-root-relative against
 # --repo-file-base (the GitHub blob URL at the built ref). The ref defaults to
@@ -32,7 +30,6 @@ out_dir="${1:-_site}"
 gen="skills/task-tree/scripts/plan_dashboard.py"
 
 docs_tree="docs/site"
-demo_tree="docs/showcase-demo"
 dev_tree="superRA"
 
 # --- Resolve the repo-file base (GitHub blob URL at the built ref) ----------
@@ -48,7 +45,7 @@ fi
 repo_file_base="${REPO_FILE_BASE:-https://github.com/${repo_slug}/blob/${sha}}"
 
 # --- Verify every required input exists before touching the output ----------
-for tree in "$docs_tree" "$demo_tree" "$dev_tree"; do
+for tree in "$docs_tree" "$dev_tree"; do
   if [ ! -d "$tree" ]; then
     echo "build_site: missing task tree: $tree" >&2
     exit 1
@@ -81,23 +78,9 @@ run_gen \
   --doc-mode \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$docs_tree" \
-  --doc-local-link demo-tree.html \
-  --doc-local-link superra-dev-tree.html \
   --doc-local-link showcase-analysis-tree.html
 
-# --- 2. Showcase exports (full task-tracker chrome, never doc-mode) ---------
-run_gen \
-  --plan-root "$demo_tree" \
-  --output "$out_dir/demo-tree.html" \
-  --repo-file-base "$repo_file_base" \
-  --repo-file-prefix "$demo_tree"
-
-run_gen \
-  --plan-root "$dev_tree" \
-  --output "$out_dir/superra-dev-tree.html" \
-  --repo-file-base "$repo_file_base" \
-  --repo-file-prefix "$dev_tree"
-
+# --- 2. Showcase export (full task-tracker chrome, never doc-mode) ----------
 # The real asset-pricing study is a subtree of superRA, so scope the full repo
 # tree to it with --root and prefix its file links accordingly.
 run_gen \
@@ -107,12 +90,12 @@ run_gen \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$dev_tree/showcase-analysis"
 
-# --- Verify the four files landed -------------------------------------------
-for f in index.html demo-tree.html superra-dev-tree.html showcase-analysis-tree.html; do
+# --- Verify the two files landed --------------------------------------------
+for f in index.html showcase-analysis-tree.html; do
   if [ ! -s "$out_dir/$f" ]; then
     echo "build_site: export produced no $f" >&2
     exit 1
   fi
 done
 
-echo "build_site: wrote $out_dir/{index,demo-tree,superra-dev-tree,showcase-analysis-tree}.html"
+echo "build_site: wrote $out_dir/{index,showcase-analysis-tree}.html"
