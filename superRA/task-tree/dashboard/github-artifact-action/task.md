@@ -27,10 +27,6 @@ Likely implementation shape: add a packaged workflow template under skills/task-
 
 - GitHub Actions artifact exports pass a repository blob URL rooted at `${{ github.sha }}` into the static dashboard exporter, so downloaded HTML opens file links and task-file buttons on GitHub instead of local editor paths. Plain local exports keep the existing local editor-link behavior unless `--repo-file-base` is provided.
 
-## Sync Impact
-
-Synced with `better-handoff` after the dashboard serve-lifecycle work landed there. The artifact publisher remains a static-export workflow installer under `superra dashboard artifact setup`; plain `superra dashboard` keeps the incoming background server lifecycle and still auto-opens by default unless `--no-open` is used.
-
 ## Review Notes
 
 *(Retrospective audit, 2026-06-10 — MINOR items only; status stays `approved`.)*
