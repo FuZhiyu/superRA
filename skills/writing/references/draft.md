@@ -1,6 +1,6 @@
 # Draft Mode
 
-> Load when the request is to write new prose — "draft the methods section", "write up the results from these notes", "compose the introduction from this outline". Output is new prose, structurally and stylistically self-checked before handoff.
+> Load when the request is to write new prose — "draft the methods section", "write up the results from these notes", "compose the introduction from this outline". Output is new prose, structurally and stylistically self-checked before completion.
 
 ## Workflow
 

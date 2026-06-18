@@ -145,7 +145,7 @@ Failure modes the warning table above does not name explicitly:
 
 - **Build errors introduced by the edit:** the edit is responsible. Fix before completion.
 - **Build errors already present before the edit (the document was already broken):** flag in the task or status return — this is usually an upstream issue (missing package, bad path); escalate to the researcher unless the edit should include the fix.
-- **Warnings newly introduced:** triage per table above. If `[BLOCKING]`-class, fix; otherwise list in handoff.
+- **Warnings newly introduced:** triage per table above. If `[BLOCKING]`-class, fix; otherwise report them in the task or status return.
 - **Warnings present before and after the edit:** note as pre-existing, do not touch unless the task scope includes build-hygiene.
 
 ### Build output record

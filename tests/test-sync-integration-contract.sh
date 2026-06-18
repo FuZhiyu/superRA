@@ -340,6 +340,11 @@ assert_absent \
   "## Findings" \
   "skills/writing/references/long-form-review.md"
 
+assert_absent \
+  "Writing runtime references no longer use handoff-era wording" \
+  "handoff" \
+  "skills/writing/references"
+
 echo
 echo "Passed: $pass    Failed: $fail"
 if [ $fail -gt 0 ]; then
