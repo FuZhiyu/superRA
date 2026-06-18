@@ -1,6 +1,6 @@
 ---
 title: "Make the Real Study the Sole Showcase Example (Retire the Simulated Demo)"
-status: in-progress
+status: approved
 depends_on:
   - 13-real-analysis-showcase
 tags: []
