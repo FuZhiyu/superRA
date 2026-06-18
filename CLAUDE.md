@@ -88,7 +88,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
 | Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
 | Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
-| Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
+| Harness-specific tool names and runtime differences | Adapter references under `skills/using-superra/references/` |
 | Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `agents/implementer.md` and `agents/reviewer.md` |
 
 ## Architectural Patterns
@@ -112,10 +112,10 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 ## Codex and Harness Design
 
 - **Canonical instructions stay shared.** Workflow behavior lives in root `skills/`; role behavior lives in `agents/`. Do not create Codex-only copies of shared behavior.
-- **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superRA/references/`, such as `codex-instructions.md` or `claude-tools.md`.
-- **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superRA/references/`.
+- **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superra/references/`, such as `codex-instructions.md` or `claude-tools.md`.
+- **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superra/references/`.
 - **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
-- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
+- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
 - **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 

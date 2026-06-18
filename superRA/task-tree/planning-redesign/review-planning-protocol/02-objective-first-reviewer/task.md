@@ -19,7 +19,7 @@ Update `skills/superimplement/SKILL.md` where it currently defines comprehensive
 Likely files:
 - `agents/reviewer.md`
 - `skills/superimplement/SKILL.md`
-- generated files after source edits: `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_reviewer.toml`
+- generated files after source edits: `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_reviewer.toml`
 
 The compact behavior-shaping rule should be: review the task broadly using the reviewer's own judgment and the active domain discipline; domain checklists are mandatory gates, not the review boundary. Avoid adding per-domain examples to `agents/reviewer.md`; those belong in the domain skills.
 
@@ -47,7 +47,7 @@ Potential reviewer failure modes to close:
 
 ### Generated Artifacts
 - Regenerated with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-- Generated outputs updated from `agents/reviewer.md`: [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../../../skills/using-superRA/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml).
+- Generated outputs updated from `agents/reviewer.md`: [../../../skills/using-superra/references/direct-mode-reviewer.md](../../../../../skills/using-superra/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml).
 
 ### Validation
 - `python3 skills/task-tree/scripts/task_check.py --plan-root superRA` passed after the task-root rename: all checks passed, no issues found.

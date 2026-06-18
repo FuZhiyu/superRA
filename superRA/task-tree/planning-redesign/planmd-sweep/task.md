@@ -16,7 +16,7 @@ Consolidation update, 2026-05-31: this task also absorbs the former standalone t
 
 ### Files and Changes
 
-**`skills/using-superRA/SKILL.md`** (1 line)
+**`skills/using-superra/SKILL.md`** (1 line)
 - Line 22: "creates or revises `PLAN.md` / `RESULTS.md`" → "creates or revises the `.plan/` task tree"
 
 **`skills/econ-data-analysis/SKILL.md`** (4 lines)
@@ -49,7 +49,7 @@ Consolidation update, 2026-05-31: this task also absorbs the former standalone t
 **`skills/writing/references/planning.md`** — throughout, update PLAN.md → root `.plan/task.md`, RESULTS.md → task `## Results`. The PLAN-only long-form review retrofit path simplifies naturally: review findings go in each task's `## Review Notes` section.
 
 ### Direct-Mode References (generated files)
-`skills/using-superRA/references/direct-mode-implementer.md` and `direct-mode-reviewer.md` are generated from `agents/implementer.md` and `agents/reviewer.md` via `sync_codex_agents.py`. Since the canonical agent specs are already .plan/-native, regeneration should produce .plan/-native direct-mode refs. Verify by running the generator and checking output.
+`skills/using-superra/references/direct-mode-implementer.md` and `direct-mode-reviewer.md` are generated from `agents/implementer.md` and `agents/reviewer.md` via `sync_codex_agents.py`. Since the canonical agent specs are already .plan/-native, regeneration should produce .plan/-native direct-mode refs. Verify by running the generator and checking output.
 
 ### Verification
 Run `grep -rn 'PLAN\.md\|RESULTS\.md' skills/ --include='*.md'` and confirm remaining matches are only in:
@@ -74,13 +74,13 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 - Removed the stale final-form results workflow from report-in-markdown. The remaining markdown guidance routes routine task citations through the core file-reference rule and loads rich-content only for figures, math, or tables ([../../../../skills/report-in-markdown/SKILL.md](../../../../skills/report-in-markdown/SKILL.md), [../../../../skills/report-in-markdown/references/rich-content.md](../../../../skills/report-in-markdown/references/rich-content.md), [../../../../skills/report-in-markdown/references/baseline-io.md](../../../../skills/report-in-markdown/references/baseline-io.md)).
 - Updated the approved figure-attachments task record so current authority points to task-tree results shape / figure embedding and report-in-markdown rich-content figure mechanics ([../../figure-attachments/task.md](../../figure-attachments/task.md)).
 - Updated user-facing and hook guidance away from `PLAN.md + RESULTS.md` and toward `.plan/` task files as the durable record ([../../../../README.md](../../../../README.md), [../../../../hooks/ask-user-question-logger](../../../../hooks/ask-user-question-logger), [../../../../hooks/exit-plan-mode](../../../../hooks/exit-plan-mode), [../../../../hooks/codex-plan-stop](../../../../hooks/codex-plan-stop)).
-- Regenerated implementer artifacts from the canonical role spec ([../../../../skills/using-superRA/references/direct-mode-implementer.md](../../../../skills/using-superRA/references/direct-mode-implementer.md), [../../../../.codex/agents/superra_implementer.toml](../../../../.codex/agents/superra_implementer.toml)).
+- Regenerated implementer artifacts from the canonical role spec ([../../../../skills/using-superra/references/direct-mode-implementer.md](../../../../skills/using-superra/references/direct-mode-implementer.md), [../../../../.codex/agents/superra_implementer.toml](../../../../.codex/agents/superra_implementer.toml)).
 
 ### Files Modified
 
 **PLAN.md/RESULTS.md sweep (40 files):**
 
-- [`skills/using-superRA/SKILL.md`](skills/using-superRA/SKILL.md) — `PLAN.md` / `RESULTS.md` in §Runtime Workflow Map and `User Decisions Log format` in §Handoff Docs
+- [`skills/using-superra/SKILL.md`](skills/using-superra/SKILL.md) — `PLAN.md` / `RESULTS.md` in §Runtime Workflow Map and `User Decisions Log format` in §Handoff Docs
 - [`skills/econ-data-analysis/SKILL.md`](skills/econ-data-analysis/SKILL.md) — 4 operational refs (expectations comparison, implementation standards, documentation/handoff)
 - [`skills/econ-data-analysis/references/planning.md`](skills/econ-data-analysis/references/planning.md) — 4 refs (Data Inventory gate, red flags)
 - [`skills/econ-data-analysis/references/integrate-drift-tests.md`](skills/econ-data-analysis/references/integrate-drift-tests.md) — 4 refs (key results identification, audit trail)
@@ -127,8 +127,8 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 **Generator fix and regeneration:**
 
 - [`skills/codex-superra-setup/scripts/sync_codex_agents.py`](skills/codex-superra-setup/scripts/sync_codex_agents.py) — fixed `split_top_level_sections` to skip `##` headings inside code fences; updated `source_opener` and `direct_opener` pattern strings to match current `agents/implementer.md` wording
-- [`skills/using-superRA/references/direct-mode-implementer.md`](skills/using-superRA/references/direct-mode-implementer.md) — regenerated (clean of PLAN.md/RESULTS.md)
-- [`skills/using-superRA/references/direct-mode-reviewer.md`](skills/using-superRA/references/direct-mode-reviewer.md) — regenerated (clean of PLAN.md/RESULTS.md and `## Decisions`)
+- [`skills/using-superra/references/direct-mode-implementer.md`](skills/using-superra/references/direct-mode-implementer.md) — regenerated (clean of PLAN.md/RESULTS.md)
+- [`skills/using-superra/references/direct-mode-reviewer.md`](skills/using-superra/references/direct-mode-reviewer.md) — regenerated (clean of PLAN.md/RESULTS.md and `## Decisions`)
 - [`.codex/agents/superra_implementer.toml`](.codex/agents/superra_implementer.toml) — regenerated
 - [`.codex/agents/superra_reviewer.toml`](.codex/agents/superra_reviewer.toml) — regenerated
 
@@ -141,7 +141,7 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 `grep -rn 'PLAN\.md\|RESULTS\.md' skills/ --include='*.md'` remaining matches are only:
 - `task-tree/` — migration tool references (correct)
 - `CATEGORIES.md` — inventory description (correct)
-- `using-superRA/SKILL.md:63` — skill inventory mentioning migration feature (correct)
+- `using-superra/SKILL.md:63` — skill inventory mentioning migration feature (correct)
 - `main-agent.md:19` — backward-compatibility migration offer (correct)
 - `planning-workflow/SKILL.md:32` — legacy PLAN.md detection (correct)
 - `report-in-markdown/references/baseline-io.md` — literal `RESULTS.md` filename (correct)

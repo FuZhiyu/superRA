@@ -10,7 +10,7 @@ created: 2026-06-11
 
 Skills are the instruction sets superRA loads at runtime to teach agents the right discipline for a phase or domain.
 Agents are the role prototypes — implementer and reviewer — that execute and sign off on work.
-This page is a lookup table; the authoritative inventory with one-line descriptions lives in [skills/using-superRA/SKILL.md §Skill Inventory](skills/using-superRA/SKILL.md), and the category grouping lives in [skills/CATEGORIES.md](skills/CATEGORIES.md).
+This page is a lookup table; the authoritative inventory with one-line descriptions lives in [skills/using-superra/SKILL.md §Skill Inventory](skills/using-superra/SKILL.md), and the category grouping lives in [skills/CATEGORIES.md](skills/CATEGORIES.md).
 
 ## Workflow skills
 
@@ -52,7 +52,7 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 ## Stage → skill load manifest
 
 Agents load skills based on the `Stage:` field in their dispatch.
-The full Stage → required-skills table is the authoritative map in [skills/using-superRA/SKILL.md §Skill-Load Manifest](skills/using-superRA/SKILL.md).
+The full Stage → required-skills table is the authoritative map in [skills/using-superra/SKILL.md §Skill-Load Manifest](skills/using-superra/SKILL.md).
 
 A compressed view:
 

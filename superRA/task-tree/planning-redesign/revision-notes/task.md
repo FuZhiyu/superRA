@@ -40,7 +40,7 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 - Update §Orchestrator Duties and §Handling Reviewer Feedback: replace "log in ## Decisions" with the new mechanism (rewrite objective + add revision note)
 - Update escalation protocol: after `AskUserQuestion`, fold the decision into the objective text, optionally add a revision note if the change is non-obvious
 
-**`skills/using-superRA/references/main-agent.md`:** Handled by sibling task `main-agent-update` (which is already rewriting that file). Not in scope here.
+**`skills/using-superra/references/main-agent.md`:** Handled by sibling task `main-agent-update` (which is already rewriting that file). Not in scope here.
 
 ### Verification
 - `grep -rn '## Decisions' skills/ agents/` should return no operational references (only historical/migration context)
@@ -66,6 +66,6 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 ### Out-of-Scope Residuals
 
 - `skills/task-tree/references/internals.md:30` — data model field `decisions: str # extracted from ## Decisions`. This is a code-level concern for whoever updates the Python scripts; not in this task's file list.
-- `skills/using-superRA/SKILL.md:43` — parenthetical mention of "User Decisions Log format" in §Handoff Docs. Not in this task's file list. The sibling `main-agent-update` task or a follow-up should address this.
+- `skills/using-superra/SKILL.md:43` — parenthetical mention of "User Decisions Log format" in §Handoff Docs. Not in this task's file list. The sibling `main-agent-update` task or a follow-up should address this.
 - Other files outside scope (implementation-workflow, integration-workflow, semantic-merge, result-protection, handoff-doc, direct-mode refs) still reference `## Decisions` and `§User Decisions Log`. These are not in this task's five-file scope.
 

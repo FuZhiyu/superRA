@@ -1,5 +1,5 @@
 ---
-title: "Author Task Interface Section in using-superRA"
+title: "Author Task Interface Section in using-superra"
 status: approved
 depends_on: []
 tags: []
@@ -8,9 +8,9 @@ created: 2026-06-01
 
 ## Objective
 
-Add a single authoritative **Task Interface** section to `skills/using-superRA/SKILL.md` that carries everything an executing agent (implementer, reviewer, direct-mode main agent) needs to read and edit its assigned `task.md` — and nothing more. This section becomes the one source of truth that the slimmed `task-tree/SKILL.md` (task 02) and the slimmed role specs (task 03) point to. This is the foundational task; do it first and get the boundary exactly right, because everything else points here.
+Add a single authoritative **Task Interface** section to `skills/using-superra/SKILL.md` that carries everything an executing agent (implementer, reviewer, direct-mode main agent) needs to read and edit its assigned `task.md` — and nothing more. This section becomes the one source of truth that the slimmed `task-tree/SKILL.md` (task 02) and the slimmed role specs (task 03) point to. This is the foundational task; do it first and get the boundary exactly right, because everything else points here.
 
-**Where it goes.** Replace/absorb the current thin `## Handoff Docs` pointer paragraph in `skills/using-superRA/SKILL.md` (around line 41). That paragraph currently only points at `agents/*.md §Editing Etiquette` and `task-tree/references/planning.md`; it becomes the new self-contained interface section (keep a pointer to planning.md for *depth*, but carry the operational essentials inline).
+**Where it goes.** Replace/absorb the current thin `## Handoff Docs` pointer paragraph in `skills/using-superra/SKILL.md` (around line 41). That paragraph currently only points at `agents/*.md §Editing Etiquette` and `task-tree/references/planning.md`; it becomes the new self-contained interface section (keep a pointer to planning.md for *depth*, but carry the operational essentials inline).
 
 **What the section MUST carry (the universal core):**
 - A task is a `task.md` file: YAML frontmatter + free-form `##` body sections. (Do NOT carry the "everything is a task / filesystem = hierarchy" *mental model* here — that is tree-reasoning concept material owned by `task-tree/SKILL.md §Core Concepts`, and it does not describe the orchestrator/planner who work across many tasks. The core only needs the shape of the file an agent reads and edits.)
@@ -28,16 +28,16 @@ Add a single authoritative **Task Interface** section to `skills/using-superRA/S
 **Discipline.** Apply the `CLAUDE.md` "Teach the Protocol" DRY/Necessity gate to every line: if planning.md or a role spec already carries it, point — do not restate. The section is a behavior-shaping summary + pointers, not a second copy of the anatomy. Load `skill-creator` before editing.
 
 **Validation (must be true to be complete):**
-- A reader who loads only `using-superRA/SKILL.md` can, from this section alone, correctly read their task, edit it inline, set their status, and stay within ownership bounds — without loading `task-tree`.
+- A reader who loads only `using-superra/SKILL.md` can, from this section alone, correctly read their task, edit it inline, set their status, and stay within ownership bounds — without loading `task-tree`.
 - No line duplicates content that `planning.md` or the role specs own; pointers are used instead.
-- The old `## Handoff Docs` pointer paragraph is gone (absorbed), with no dangling references to it elsewhere in `using-superRA`.
+- The old `## Handoff Docs` pointer paragraph is gone (absorbed), with no dangling references to it elsewhere in `using-superra`.
 - **No knowledge lost:** any interface guidance you remove from its old location must already be present in this new section (or another reachable owner). You are only de-duplicating and relocating, never dropping the last copy — task `09-coverage-audit` will check this against a git snapshot.
 
-**Output:** `skills/using-superRA/SKILL.md`.
+**Output:** `skills/using-superra/SKILL.md`.
 
 ## Results
 
-Replaced the thin `## Handoff Docs` pointer paragraph in [SKILL.md](../../../../../skills/using-superRA/SKILL.md) (was line 41) with a self-contained `## Task Interface` section. The section is the single source of truth the slimmed `task-tree/SKILL.md` (task 02) and role specs (task 03) will point to.
+Replaced the thin `## Handoff Docs` pointer paragraph in [SKILL.md](../../../../../skills/using-superra/SKILL.md) (was line 41) with a self-contained `## Task Interface` section. The section is the single source of truth the slimmed `task-tree/SKILL.md` (task 02) and role specs (task 03) will point to.
 
 **What the new section carries (universal core, inline):**
 - Task = `task.md` (frontmatter + `##` body sections), with the mental-model framing deliberately omitted (owned by `task-tree §Core Concepts`).
@@ -56,4 +56,4 @@ Replaced the thin `## Handoff Docs` pointer paragraph in [SKILL.md](../../../../
 - Remaining `§Handoff` references in `agents/*.md`, `references/direct-mode-*.md`, and `sync_codex_agents.py` all point to the role specs' own intra-file `## Handoff` section (not the removed `## Handoff Docs`); slimming those is task 03's scope, not this task's.
 - DRY/Necessity gate self-applied line by line: every retained line is behavior-shaping (mandated read path + rationale, edit rationale, the one inline copy of the editing principles, generic ownership boundary); no line restates `planning.md` anatomy or role-spec annotation mechanics — those are pointers only.
 
-**Validation criteria met:** a reader with only `using-superRA/SKILL.md` can read (via `task_read`), edit inline, set status (enum present), and stay in ownership bounds; no duplicated owned content; old paragraph absorbed with no dangling references; no last-copy knowledge dropped.
+**Validation criteria met:** a reader with only `using-superra/SKILL.md` can read (via `task_read`), edit inline, set status (enum present), and stay in ownership bounds; no duplicated owned content; old paragraph absorbed with no dangling references; no last-copy knowledge dropped.

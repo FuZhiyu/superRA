@@ -19,7 +19,7 @@ The review mode should be owned by `superplan` and its thorough-planning referen
 Likely files:
 - `skills/superplan/SKILL.md`
 - `skills/superplan/references/thorough-planning.md`
-- `skills/using-superRA/SKILL.md` if adding `Stage: planning-review`
+- `skills/using-superra/SKILL.md` if adding `Stage: planning-review`
 - `agents/reviewer.md` for planning-review modes and the ownership exception
 - generated reviewer artifacts after role-spec edits
 
@@ -38,11 +38,11 @@ Suggested dispatch shape: use `agent-orchestration` §Dispatch Templates for the
 
 ### Key Findings
 
-- Added `Stage: planning-review` to the manifest so staged reviewer dispatches no longer trip the unknown-stage guard, with no additional required skills beyond the always-loaded baseline ([../../../skills/using-superRA/SKILL.md](../../../../../skills/using-superRA/SKILL.md)).
+- Added `Stage: planning-review` to the manifest so staged reviewer dispatches no longer trip the unknown-stage guard, with no additional required skills beyond the always-loaded baseline ([../../../skills/using-superra/SKILL.md](../../../../../skills/using-superra/SKILL.md)).
 - Updated `superplan` and its thorough-planning reference so optional planning review is owned by planning, runs only for thorough depth or explicit handoff-review requests, supports `handoff-readiness` and `design-review`, uses assigned-target `## Review Notes`, and never changes implementation `status:` ([../../../skills/superplan/SKILL.md](../../../../../skills/superplan/SKILL.md), [../../../skills/superplan/references/thorough-planning.md](../../../../../skills/superplan/references/thorough-planning.md)).
 - Integration review fix: moved the planning-review dispatch-shape exception to `agent-orchestration`, left `superplan` / thorough-planning responsible for planning choreography and mode selection, and removed dispatch-field description from the reviewer role ([../../../skills/agent-orchestration/SKILL.md](../../../../../skills/agent-orchestration/SKILL.md), [../../../skills/superplan/SKILL.md](../../../../../skills/superplan/SKILL.md), [../../../agents/reviewer.md](../../../../../agents/reviewer.md)).
 - Updated the reviewer role with the planning-review exception: task/subtree-scoped input, optional/no git range, `[BLOCKING]` / `[ADVISORY]` findings in the assigned target's `## Review Notes`, no child-note edits, and no `status:` / `## Revision Notes` edits ([../../../agents/reviewer.md](../../../../../agents/reviewer.md)).
-- Regenerated reviewer artifacts after the role-spec change with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`: [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml) and [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../../../skills/using-superRA/references/direct-mode-reviewer.md). The generator direct-mode preface was adjusted so the regenerated direct-mode reviewer does not describe planning review as diff-scoped ([../../../skills/codex-superra-setup/scripts/sync_codex_agents.py](../../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py)).
+- Regenerated reviewer artifacts after the role-spec change with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`: [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml) and [../../../skills/using-superra/references/direct-mode-reviewer.md](../../../../../skills/using-superra/references/direct-mode-reviewer.md). The generator direct-mode preface was adjusted so the regenerated direct-mode reviewer does not describe planning review as diff-scoped ([../../../skills/codex-superra-setup/scripts/sync_codex_agents.py](../../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py)).
 
 ### Validation
 

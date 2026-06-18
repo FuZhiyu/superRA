@@ -1,6 +1,6 @@
 # Markdown Style Guide Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is a contributor-discipline change (skills + agent files) under the rules in repo-root `CLAUDE.md`. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff. **Generated artifacts:** changes to `agents/*.md` require regeneration of `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` via `skills/codex-superra-setup/scripts/sync_codex_agents.py`. Do not hand-edit those files.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is a contributor-discipline change (skills + agent files) under the rules in repo-root `CLAUDE.md`. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff. **Generated artifacts:** changes to `agents/*.md` require regeneration of `skills/using-superra/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` via `skills/codex-superra-setup/scripts/sync_codex_agents.py`. Do not hand-edit those files.
 
 **Objective:** Teach every superRA agent to cite source files using markdown links with line anchors (e.g. `[file.py:42](file.py#L42)`) instead of bare backtick paths, by re-scoping `report-in-markdown` to be the always-loaded markdown style guide.
 
@@ -11,10 +11,10 @@
 **Output:**
 - `skills/report-in-markdown/SKILL.md` (rewritten)
 - `skills/report-in-markdown/references/rich-content.md` (extended §File references)
-- `skills/using-superRA/SKILL.md` (Skill-Load Manifest updated)
+- `skills/using-superra/SKILL.md` (Skill-Load Manifest updated)
 - `agents/implementer.md`, `agents/reviewer.md` (canonical examples + conditional-load text updated)
 - `skills/handoff-doc/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md` (pointer + examples updated)
-- Generated artifacts: `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` (regenerated, not hand-edited)
+- Generated artifacts: `skills/using-superra/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` (regenerated, not hand-edited)
 
 **Expected Results / Hypotheses:** After the change, an implementer or reviewer dispatched at any Stage will load `report-in-markdown` and have the file-link rule visible in its always-loaded skill body. Routine review-item citations in PLAN.md and RESULTS.md task sections will use markdown links matching the canonical agent-body example. Stage 2 RESULTS.md fact-check (already enforced via `final-form.md`) will continue to pass with no regression. Total instruction-line growth in always-loaded surface is < 25 lines.
 
@@ -46,7 +46,7 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 
 ### Module-level docs walked
 - `/skills/CATEGORIES.md` (HEAD at 886fda8): authoritative grouping index. `report-in-markdown` is listed under Utility with description "Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage." This description is now slightly narrow given the scope shift; row should be updated to reflect "markdown style guide for any agent writing markdown" and remind of the always-loaded status.
-- No `CLAUDE.md` / `AGENTS.md` / `README.md` in `skills/report-in-markdown/`, `skills/using-superRA/`, `skills/handoff-doc/`, or `agents/` — the SKILL.md files themselves are authoritative for their skills' behavior.
+- No `CLAUDE.md` / `AGENTS.md` / `README.md` in `skills/report-in-markdown/`, `skills/using-superra/`, `skills/handoff-doc/`, or `agents/` — the SKILL.md files themselves are authoritative for their skills' behavior.
 
 ### Not walked (not reachable from the planned diff)
 - `skills/econ-data-analysis/`, `skills/theory-modeling/`, `skills/integration-workflow/`, etc. — domain and other workflow skills are not edited by this plan; they will pick up the new style guide via the Skill-Load Manifest and via `agents/implementer.md` / `agents/reviewer.md` examples without needing per-skill edits.
@@ -163,11 +163,11 @@ Re-read both files end-to-end. Confirm:
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Script:** `skills/using-superRA/SKILL.md` (§Skill-Load Manifest)
+**Script:** `skills/using-superra/SKILL.md` (§Skill-Load Manifest)
 **Input:** Current manifest §Generic table (lines 79–89), with `report-in-markdown` only at `Stage: documentation`.
 **Output:** Updated manifest where `report-in-markdown` is always loaded (in addition to `using-superra`); each Stage row's "Required skills" column lists it explicitly, or a short "always loaded" note above the table makes the universality clear.
 
-- [x] **Step 1: Update `skills/using-superRA/SKILL.md` §Skill-Load Manifest**
+- [x] **Step 1: Update `skills/using-superra/SKILL.md` §Skill-Load Manifest**
 
 Took **Form A**: extended the explanatory paragraph above the §Generic table to call out `report-in-markdown` as always loaded alongside `using-superra`, with a one-sentence rationale ("every agent writes markdown"). Dropped `report-in-markdown` from the `documentation` Stage row to avoid double-listing — `handoff-doc` remains there.
 
@@ -274,7 +274,7 @@ Document the triage decisions in RESULTS.md Task 4 §Notes.
 
 - [x] **Step 3: Validate, commit**
 
-Re-ran the grep after rewrites; only the intentional anti-pattern example in `skills/report-in-markdown/references/rich-content.md:105` ("Wrong (backtick path)") and the to-be-regenerated `skills/using-superRA/references/direct-mode-*.md` files remain. All canonical hits cleaned.
+Re-ran the grep after rewrites; only the intentional anti-pattern example in `skills/report-in-markdown/references/rich-content.md:105` ("Wrong (backtick path)") and the to-be-regenerated `skills/using-superra/references/direct-mode-*.md` files remain. All canonical hits cleaned.
 
 ---
 
@@ -285,15 +285,15 @@ Re-ran the grep after rewrites; only the intentional anti-pattern example in `sk
 
 **Script:** `python skills/codex-superra-setup/scripts/sync_codex_agents.py`
 **Input:** Updated `agents/implementer.md` and `agents/reviewer.md`.
-**Output:** Regenerated `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml` — committed with the same diff content as the canonical agent files.
+**Output:** Regenerated `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml` — committed with the same diff content as the canonical agent files.
 
 - [x] **Step 1: Run the regeneration script**
 
 Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --force`. Wrote four files:
 - `.codex/agents/superra_implementer.toml`
 - `.codex/agents/superra_reviewer.toml`
-- `skills/using-superRA/references/direct-mode-implementer.md`
-- `skills/using-superRA/references/direct-mode-reviewer.md`
+- `skills/using-superra/references/direct-mode-implementer.md`
+- `skills/using-superra/references/direct-mode-reviewer.md`
 
 - [x] **Step 2: Verify generated files reflect Task 3 edits**
 

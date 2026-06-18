@@ -9,7 +9,7 @@ created: 2026-05-24
 
 ## Objective
 
-Rewrite `skills/using-superRA/references/main-agent.md` to replace all PLAN.md/RESULTS.md references with `.plan/` task-tree operations.
+Rewrite `skills/using-superra/references/main-agent.md` to replace all PLAN.md/RESULTS.md references with `.plan/` task-tree operations.
 
 ### Session Start Actions (lines 5–16)
 - Check for `.plan/task.md` instead of `PLAN.md`
@@ -45,7 +45,7 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 
 ### Files Modified
 
-- [skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md) — Complete rewrite of all PLAN.md/RESULTS.md references to `.plan/` task-tree operations.
+- [skills/using-superra/references/main-agent.md](../../../../skills/using-superra/references/main-agent.md) — Complete rewrite of all PLAN.md/RESULTS.md references to `.plan/` task-tree operations.
 
 ### Changes by Section
 

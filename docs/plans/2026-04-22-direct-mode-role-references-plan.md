@@ -8,21 +8,21 @@ skill-owned references that the main agent can load through
 approach, and add a validation check for the new path.
 
 **Methodology:** Take the simple immediate fix. Manually copy the
-direct-mode-relevant role protocol into `skills/using-superRA/references/`,
+direct-mode-relevant role protocol into `skills/using-superra/references/`,
 update `main-agent.md` to load those references in direct mode, and add
 doc/test coverage that makes the new dependency explicit. Defer
 automatic generation/sync to a later follow-up.
 
 **Conventions:** Keep `agents/implementer.md` and `agents/reviewer.md`
 canonical. The new direct-mode references are temporary manual mirrors
-owned by `skills/using-superRA/` so the main agent can load them from
+owned by `skills/using-superra/` so the main agent can load them from
 the plugin skill surface. Do not delete `.agents/skills/` in this pass:
 repo docs and current tests treat it as the load-bearing repo-local
 Codex skill-discovery surface.
 
 **Output:** two skill-owned direct-mode role references under
-`skills/using-superRA/references/`, updated direct-mode instructions in
-`skills/using-superRA/references/main-agent.md`, development-facing doc
+`skills/using-superra/references/`, updated direct-mode instructions in
+`skills/using-superra/references/main-agent.md`, development-facing doc
 updates describing the manual mirror rule, an archived-hand-off pointer
 from `docs/plans/2026-04-22-codex-agent-dispatch-preference-{plan,results}.md`,
 and validation in `tests/check-harness-compatibility.sh`.
@@ -64,7 +64,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Module-level docs walked
 - `/docs/plans/2026-04-22-codex-agent-dispatch-preference-plan.md`: archived permanent record for the prior scope on this branch; now carries the re-entry decision and should remain the historical record rather than the active execution tracker.
 - `/docs/plans/2026-04-22-codex-agent-dispatch-preference-results.md`: archived permanent results for the prior scope; current follow-up should only add a pointer/note, not overwrite its original findings.
-- `/skills/using-superRA/references/main-agent.md`: direct mode currently tells the main agent to read raw `agents/implementer.md` / `agents/reviewer.md`; this is the primary file to rewrite.
+- `/skills/using-superra/references/main-agent.md`: direct mode currently tells the main agent to read raw `agents/implementer.md` / `agents/reviewer.md`; this is the primary file to rewrite.
 - `/agents/implementer.md` and `/agents/reviewer.md`: canonical role protocols remain here; the follow-up should copy only the direct-mode-relevant role guidance into skill-owned references, leaving these files canonical.
 - `/skills/codex-superra-setup/SKILL.md`: named Codex agents expect the superRA skills to be available in the parent session; setup does not make raw repo files available to the main agent in other repos.
 - `/tests/check-harness-compatibility.sh`: current top-level harness check already guards Codex metadata, agent generation, and `.agents/skills/` symlink coverage; extend it for the new direct-mode reference path.
@@ -87,7 +87,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 >
 > **Integration note (2026-04-22):** Phase A uses the direct-mode assertions already added to `tests/check-harness-compatibility.sh` as the drift guard for this follow-up; `bash tests/check-harness-compatibility.sh` re-ran green on the current branch baseline before Phase B.
 >
-> **Integration note (2026-04-22):** The existing open PR still targets `main`, matching the earlier branch-level integration-base decision recorded in `docs/plans/2026-04-22-codex-agent-dispatch-preference-plan.md`. `origin/main` remained an ancestor of this branch during Phase B, so no mechanical merge commit was needed; the only cumulative-diff fix was trailing whitespace in `skills/using-superRA/references/main-agent.md`, after which `git diff --check addc9ca7fe1bdbedb080d92095facb649074c1e4..HEAD` and `bash tests/check-harness-compatibility.sh` both passed.
+> **Integration note (2026-04-22):** The existing open PR still targets `main`, matching the earlier branch-level integration-base decision recorded in `docs/plans/2026-04-22-codex-agent-dispatch-preference-plan.md`. `origin/main` remained an ancestor of this branch during Phase B, so no mechanical merge commit was needed; the only cumulative-diff fix was trailing whitespace in `skills/using-superra/references/main-agent.md`, after which `git diff --check addc9ca7fe1bdbedb080d92095facb649074c1e4..HEAD` and `bash tests/check-harness-compatibility.sh` both passed.
 >
 > **Integration note (2026-04-22):** Phase C moved this follow-up plan alongside its matured results at `docs/plans/2026-04-22-direct-mode-role-references-plan.md` and `docs/plans/2026-04-22-direct-mode-role-references-results.md`, matching the repo's existing permanent-record convention for completed branches.
 >
@@ -98,13 +98,13 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Script:** `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `skills/using-superRA/references/main-agent.md`
-**Input:** canonical role protocols in `agents/implementer.md` and `agents/reviewer.md`, current direct-mode bullets in `skills/using-superRA/references/main-agent.md`
+**Script:** `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `skills/using-superra/references/main-agent.md`
+**Input:** canonical role protocols in `agents/implementer.md` and `agents/reviewer.md`, current direct-mode bullets in `skills/using-superra/references/main-agent.md`
 **Output:** two skill-owned direct-mode role references containing the role protocol the main agent needs in direct mode, plus updated direct-mode instructions that load those references instead of raw `agents/*.md`
 
 - [x] **Step 1: Choose the manual copy boundary.** Copied the role-protocol sections the main agent actually needs in direct mode: stage-load guidance, pre-start checks, self-review / review protocol, handoff ownership, inline-edit discipline, and commit / escalation rules. Left dispatch-prompt framing, worktree-return mechanics, and orchestrator-facing report format in the canonical agent files because `main-agent.md` already owns that surface.
-- [x] **Step 2: Create the skill-owned references.** Added `skills/using-superRA/references/direct-mode-implementer.md` and `skills/using-superRA/references/direct-mode-reviewer.md` with explicit notes that they are temporary manual mirrors of the canonical agent files.
-- [x] **Step 3: Rewire direct mode.** Updated `skills/using-superRA/references/main-agent.md` so direct mode now loads the new skill-owned references instead of raw `agents/implementer.md` / `agents/reviewer.md`.
+- [x] **Step 2: Create the skill-owned references.** Added `skills/using-superra/references/direct-mode-implementer.md` and `skills/using-superra/references/direct-mode-reviewer.md` with explicit notes that they are temporary manual mirrors of the canonical agent files.
+- [x] **Step 3: Rewire direct mode.** Updated `skills/using-superra/references/main-agent.md` so direct mode now loads the new skill-owned references instead of raw `agents/implementer.md` / `agents/reviewer.md`.
 - [x] **Step 4: Validate the read path.** Re-read the direct-mode bullets and the new references together, then ran `bash tests/check-harness-compatibility.sh`; the direct-mode path no longer depends on raw agent files and still preserves the review requirement.
 
 ### Task 2: Document and validate the temporary manual-mirror approach

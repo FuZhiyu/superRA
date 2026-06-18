@@ -42,7 +42,7 @@ With .plan/ as the primary handoff mechanism:
    - User Decisions Log: superplan/references/task-tree-design.md
    ```
 
-3. **Update Skill-Load Manifest** in `skills/using-superRA/SKILL.md`:
+3. **Update Skill-Load Manifest** in `skills/using-superra/SKILL.md`:
    - Remove handoff-doc from the `Stage: documentation` row
    - Remove the "main agents additionally load handoff-doc" instruction
    - Remove from skill inventory table
@@ -65,7 +65,7 @@ With .plan/ as the primary handoff mechanism:
 - Merged all unique content from `handoff-doc/references/` into `task-tree/references/` (content now lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and [superplan/references/task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md)): field-by-field notes, User Decisions Log, Conventions section discipline, Workflow Status checkboxes, Stale Content Checklist, Results Shape (two-stage lifecycle, per-task template, section ownership, figure embedding).
 - Replaced `handoff-doc/SKILL.md` body with 12-line deprecation redirect.
 - Replaced both reference files with one-line redirects.
-- Removed handoff-doc from `using-superRA/SKILL.md`: inventory table, Stage: documentation row (replaced with `report-in-markdown`), "main agents additionally load" instruction, Skill-Load Manifest explanatory paragraph.
+- Removed handoff-doc from `using-superra/SKILL.md`: inventory table, Stage: documentation row (replaced with `report-in-markdown`), "main agents additionally load" instruction, Skill-Load Manifest explanatory paragraph.
 - Updated 14 files across workflow skills, agent files, utility skills, and domain references to point at `task-tree/references/planning.md` instead of `handoff-doc`.
 - Updated CLAUDE.md ownership table, CATEGORIES.md, and README.md.
 

@@ -4,7 +4,7 @@ Load this reference when you are an orchestrator or planner mutating a `superRA/
 
 All commands below run through the committed `./superRA/superra` wrapper. Bare `superra …` in the examples denotes that wrapper.
 
-**Single-field edits go through direct edit, not these CLIs.** To set one field on one task — including `status` — edit its `task.md` directly with Read/Edit (see `using-superRA/SKILL.md §Task Interface`); the PostToolUse hook validates and propagates. The commands below are convenience scaffolding for creating tasks from a template and for bulk or scripted changes — reach for them when direct edit would be tedious or error-prone.
+**Single-field edits go through direct edit, not these CLIs.** To set one field on one task — including `status` — edit its `task.md` directly with Read/Edit (see `using-superra/SKILL.md §Task Interface`); the PostToolUse hook validates and propagates. The commands below are convenience scaffolding for creating tasks from a template and for bulk or scripted changes — reach for them when direct edit would be tedious or error-prone.
 
 ## Scaffold a new task
 
@@ -79,7 +79,7 @@ Findings are prefixed `[ERROR]` (blocking; tree is inconsistent), `[WARNING]` (a
 
 ## Comments
 
-A researcher pins comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (see `using-superRA/SKILL.md §Task Interface`), so use these commands only for the standalone read/resolve loop:
+A researcher pins comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (see `using-superra/SKILL.md §Task Interface`), so use these commands only for the standalone read/resolve loop:
 
 ```bash
 superra task comment list <task>           # unresolved comments on a task, each with its full anchored block

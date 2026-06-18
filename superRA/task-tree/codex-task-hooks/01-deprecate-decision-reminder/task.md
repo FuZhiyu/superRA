@@ -33,4 +33,4 @@ Validation:
 - `python3 -m json.tool hooks/hooks-cursor.json` — passed.
 - `python3 -m json.tool hooks/hooks-codex.json` — passed.
 - `bash tests/hooks/test-codex-hooks.sh` — passed, 13/13 cases.
-- `rg -n "ask-user-question-logger|request_user_input" hooks README.md docs/README.codex.md tests/hooks/test-codex-hooks.sh skills/using-superRA/references/codex-instructions.md` — only the intentional Codex adapter mapping remains in `skills/using-superRA/references/codex-instructions.md`.
+- `rg -n "ask-user-question-logger|request_user_input" hooks README.md docs/README.codex.md tests/hooks/test-codex-hooks.sh skills/using-superra/references/codex-instructions.md` — only the intentional Codex adapter mapping remains in `skills/using-superra/references/codex-instructions.md`.

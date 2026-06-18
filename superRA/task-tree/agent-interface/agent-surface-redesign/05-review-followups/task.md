@@ -10,7 +10,7 @@ created: 2026-06-01
 
 ## Objective
 
-Apply the `CLAUDE.md` DRY/Necessity gate to the lean task-interface surfaces produced by tasks 02 and 03, fixing the violations a researcher review surfaced. The authoritative read/edit/format home is `using-superRA/SKILL.md §Task Interface`; `task-tree/SKILL.md` is a load-on-demand router for orchestrators/planners/contributors; `agents/implementer.md` and `agents/reviewer.md` carry only role-specific protocol. Every line removed below either restates content one of those owners already carries (DRY) or narrates what a file does/omits instead of shaping behavior (the banned meta-commentary / wrapper anti-pattern). Do not remove any line that shapes non-default behavior, states a safety invariant, or enforces an ordering constraint. Load `skill-creator` before editing any `SKILL.md`, per `CLAUDE.md §Skill Authoring`.
+Apply the `CLAUDE.md` DRY/Necessity gate to the lean task-interface surfaces produced by tasks 02 and 03, fixing the violations a researcher review surfaced. The authoritative read/edit/format home is `using-superra/SKILL.md §Task Interface`; `task-tree/SKILL.md` is a load-on-demand router for orchestrators/planners/contributors; `agents/implementer.md` and `agents/reviewer.md` carry only role-specific protocol. Every line removed below either restates content one of those owners already carries (DRY) or narrates what a file does/omits instead of shaping behavior (the banned meta-commentary / wrapper anti-pattern). Do not remove any line that shapes non-default behavior, states a safety invariant, or enforces an ordering constraint. Load `skill-creator` before editing any `SKILL.md`, per `CLAUDE.md §Skill Authoring`.
 
 **Scope A — `skills/task-tree/SKILL.md`.** A researcher has partially cleaned this file in the working tree (uncommitted); treat their edits as a head-start, finish per the findings below, and do not revert them.
 
@@ -31,11 +31,11 @@ Apply the `CLAUDE.md` DRY/Necessity gate to the lean task-interface surfaces pro
 - The `→ implemented:` / `→ orchestrator:` annotation protocol and the `status: implemented` enum value — confirmed correct and intentionally informal.
 - The role specs' "What You Own / You may NOT edit" sections — authoritative per §Task Interface's delegation; do not restructure.
 
-**Regenerate derived files.** After editing the canonical `agents/*.md`, run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` and confirm with `--check`. Generated targets (never hand-edit): `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. The slimmed §Editing Etiquette pointer must propagate into the two direct-mode references.
+**Regenerate derived files.** After editing the canonical `agents/*.md`, run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` and confirm with `--check`. Generated targets (never hand-edit): `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. The slimmed §Editing Etiquette pointer must propagate into the two direct-mode references.
 
 **Validation (must hold to complete):**
 - `task-tree/SKILL.md` has exactly one routing surface and one §Task-Interface pointer; no "this skill does/doesn't …" meta-commentary remains; the status enum is not written in this file.
-- The four shared-principle names appear together in exactly one place — §Task Interface. `grep -rn "remove-superseded-content" agents/ skills/using-superRA/references/ .codex/` returns no role-spec or generated echo.
+- The four shared-principle names appear together in exactly one place — §Task Interface. `grep -rn "remove-superseded-content" agents/ skills/using-superra/references/ .codex/` returns no role-spec or generated echo.
 - Both role specs retain every role-specific etiquette / ownership / verdict line (confirm by a heading walk).
 - No `<!-- -->` comments remain: `grep -rn "<!--" agents/implementer.md agents/reviewer.md skills/task-tree/SKILL.md` is empty.
 - `sync_codex_agents.py --scope project --check` reports all generated files up to date.
@@ -61,6 +61,6 @@ Done in Direct mode (orchestrator implemented + self-reviewed against the `CLAUD
 
 **Verification:**
 - `grep -rn "<!--" agents/implementer.md agents/reviewer.md skills/task-tree/SKILL.md` → empty.
-- `grep -rln "remove-superseded-content" agents/ skills/using-superRA/ .codex/` → empty (the hyphenated token lived only in the deleted echo; §Task Interface still states all four principles in prose at `using-superRA/SKILL.md:55-58`).
+- `grep -rln "remove-superseded-content" agents/ skills/using-superra/ .codex/` → empty (the hyphenated token lived only in the deleted echo; §Task Interface still states all four principles in prose at `using-superra/SKILL.md:55-58`).
 - Status enum appears nowhere in `task-tree/SKILL.md`.
 - The 5 `<skill-dir>` placeholders and the script-invocation text are unchanged — script-path/packaging is deferred to a separate branch.

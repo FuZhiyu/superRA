@@ -49,7 +49,7 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 
 ### Generated Artifacts
 - Regenerated via `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-- Generated outputs updated from canonical role specs: [../../../skills/using-superRA/references/direct-mode-implementer.md](../../../../../skills/using-superRA/references/direct-mode-implementer.md), [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../../../skills/using-superRA/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_implementer.toml](../../../../../.codex/agents/superra_implementer.toml), [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml).
+- Generated outputs updated from canonical role specs: [../../../skills/using-superra/references/direct-mode-implementer.md](../../../../../skills/using-superra/references/direct-mode-implementer.md), [../../../skills/using-superra/references/direct-mode-reviewer.md](../../../../../skills/using-superra/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_implementer.toml](../../../../../.codex/agents/superra_implementer.toml), [../../../.codex/agents/superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml).
 
 ### Notes
 - Root `superRA/task.md` conventions were read; they identify repo `AGENTS.md` / `CLAUDE.md` as the contributor-facing authority for internals and confirm no additional guidance files under the touched implementation paths.

@@ -31,7 +31,7 @@ For a throwaway branch or a personal experiment that will never merge, you can s
 No.
 Direct mode (the main agent implements the task itself) is available for small, clearly-scoped tasks where the overhead of dispatching two subagents outweighs the benefit.
 The recommended default is subagent mode because adversarial review catches errors the implementer cannot self-check.
-See [Concepts: Roles and Review](#/03-concepts/03-roles-and-review) and [skills/using-superRA/SKILL.md §Execution Modes](skills/using-superRA/SKILL.md).
+See [Concepts: Roles and Review](#/03-concepts/03-roles-and-review) and [skills/using-superra/SKILL.md §Execution Modes](skills/using-superra/SKILL.md).
 
 **My project is a public repo. What data hygiene rules apply?**
 superRA tasks are committed alongside your code, so any content in `task.md` files becomes public.

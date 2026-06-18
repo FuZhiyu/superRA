@@ -19,7 +19,7 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 3. `skills/econ-data-analysis/SKILL.md` line 154 — update `[BLOCKING]` checklist from `results_attachments/` to task-local `attachments/`
 4. `skills/superimplement/SKILL.md` line 119 — update Step 3 verification gate
 5. `agents/implementer.md` line 143 — update pre-commit checklist
-6. `skills/using-superRA/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
+6. `skills/using-superra/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
 
 **Legacy authority removed by [task-tree/planning-redesign/planmd-sweep](../task-tree/planning-redesign/planmd-sweep/task.md):**
 - `skills/report-in-markdown/references/final-form.md` formerly owned Stage 2 final-results relocation. Current Stage 2 task-result maturation lives in `skills/task-tree/references/task-file-contract.md` §Results Shape (the figure-embedding/results-shape content moved here from the removed `planning.md`); tree-design judgment lives in `skills/superplan/references/task-tree-design.md`; figure mechanics live in `skills/report-in-markdown/references/rich-content.md` §Figures.
@@ -49,7 +49,7 @@ Current attachment guidance is task-local: task results embed figures from `atta
 | [SKILL.md (econ-data-analysis)](../../../skills/econ-data-analysis/SKILL.md) | `[BLOCKING]` checklist → task-local `attachments/` |
 | [SKILL.md (superimplement)](../../../skills/superimplement/SKILL.md) | Step 3 gate → task-local `attachments/` |
 | [implementer.md](../../../agents/implementer.md) | Pre-commit checklist → `attachments/...` |
-| [direct-mode-implementer.md](../../../skills/using-superRA/references/direct-mode-implementer.md) | Pre-commit checklist → `attachments/...` |
+| [direct-mode-implementer.md](../../../skills/using-superra/references/direct-mode-implementer.md) | Pre-commit checklist → `attachments/...` |
 | `.codex/agents/superra_implementer.toml` | Regenerated from source |
 
 ### Dashboard

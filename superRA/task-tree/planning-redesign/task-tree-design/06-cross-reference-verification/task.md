@@ -18,7 +18,7 @@ Run the cross-reference, generated-artifact, and verification sweep after the re
 ### Required Checks
 
 - Sweep active source docs for stale references to `skills/task-tree/references/planning.md`; update them to the new superplan tree-design reference or the renamed task-file contract reference as appropriate.
-- Update inventory and ownership surfaces: `AGENTS.md`, `CLAUDE.md` if present as the contributor alias, `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` inventory rows if needed, and deprecated handoff-doc stubs if they still point at active references.
+- Update inventory and ownership surfaces: `AGENTS.md`, `CLAUDE.md` if present as the contributor alias, `README.md`, `skills/CATEGORIES.md`, `skills/using-superra/SKILL.md` inventory rows if needed, and deprecated handoff-doc stubs if they still point at active references.
 - Update task-tree diagnostics/docstrings such as `task_check.py` placement references if they cite the moved policy.
 - Regenerate Codex/direct-mode artifacts when canonical role specs changed, and run the generator in check mode afterward.
 - Run targeted tests for any code/docstring changes in task-tree scripts, plus text or grep checks that prove stale active references are gone.
@@ -41,7 +41,7 @@ Run the cross-reference, generated-artifact, and verification sweep after the re
 
 ### Generated Artifacts and Tests
 
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` confirmed `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superRA/references/direct-mode-implementer.md`, and `skills/using-superRA/references/direct-mode-reviewer.md` are in sync with [implementer.md](../../../../../agents/implementer.md) and [reviewer.md](../../../../../agents/reviewer.md).
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` confirmed `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superra/references/direct-mode-implementer.md`, and `skills/using-superra/references/direct-mode-reviewer.md` are in sync with [implementer.md](../../../../../agents/implementer.md) and [reviewer.md](../../../../../agents/reviewer.md).
 - `uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_task_tree.py -q -k task_check` passed: 4 tests passed, 321 deselected.
 - No generated artifacts, active skill files, role specs, or task-tree scripts required edits in this final sweep.
 

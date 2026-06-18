@@ -43,7 +43,7 @@ Keep hook compatibility separate from user dashboard launch. Hooks may need a ha
 
 - `task_create.py` already stopped generating `serve` in the approved `uv-package` dependency, so this task preserved that code path and verified it instead of re-editing it.
 - Broader README and full command-surface documentation migration remains in the downstream `docs-tests-compat` task; this task updated only active instructions and hook entry points needed to remove the wrapper/hardcoded hook path.
-- Generated role artifacts were not regenerated because canonical agent specs were untouched. If a later edit affects role specs or generated direct-mode/Codex agent files, the project generator is `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`; generated files are `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, and `.codex/agents/superra_reviewer.toml`.
+- Generated role artifacts were not regenerated because canonical agent specs were untouched. If a later edit affects role specs or generated direct-mode/Codex agent files, the project generator is `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`; generated files are `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, and `.codex/agents/superra_reviewer.toml`.
 
 ### Verification
 

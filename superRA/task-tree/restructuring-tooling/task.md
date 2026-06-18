@@ -26,7 +26,7 @@ This is the tooling half of the placement/consolidation redesign whose rules are
 
 Boundary: auto-mutate YAML metadata (`depends_on`, mirroring status), never task *content* (objectives, results). Do not auto-renumber display prefixes.
 
-**Document the behavior for agents (so the change is not surprising).** Wherever the hook's existing auto-behaviors are described to agents — the agent-facing §Task Interface / commit-hygiene surface in `using-superRA`, and `task-tree` SKILL — state that a rename auto-cascades sibling `depends_on`, so an agent that renames a task expects the hook to re-point its dependents rather than being surprised by a silent edit. A silent auto-mutation the agent does not anticipate is the exact failure this guards against.
+**Document the behavior for agents (so the change is not surprising).** Wherever the hook's existing auto-behaviors are described to agents — the agent-facing §Task Interface / commit-hygiene surface in `using-superra`, and `task-tree` SKILL — state that a rename auto-cascades sibling `depends_on`, so an agent that renames a task expects the hook to re-point its dependents rather than being surprised by a silent edit. A silent auto-mutation the agent does not anticipate is the exact failure this guards against.
 
 **2. Advisory placement/structure `task check` category.** Add a category to `skills/task-tree/scripts/task_check.py` (current categories: status, dependency, rollup) that emits **advisory** findings (warn, never auto-fix) for the structural smells that the placement ladder forbids:
 
@@ -74,7 +74,7 @@ Both halves landed: the lossless `depends_on` auto-rewire in the PostToolUse hoo
 - identical declared `output` artifact owned by tasks in different top-level subtrees (split-concern / duplicate candidate). Generic basenames (`README.md`, `SKILL.md`, `task.md`, …) are excluded so a shared common filename is not a false split-concern signal — only a shared *specific* artifact fires.
 
 **4. Agent-facing docs of the new hook behavior** (so a rename's silent dep re-point is expected, not surprising), placed where the hook's existing auto-behaviors are already surfaced:
-- [`using-superRA/SKILL.md` §Task Interface](../../../skills/using-superRA/SKILL.md#L46) — the universal-interface surface every executing agent preloads: the same line that documents the status cascade now also states that a same-parent rename re-points siblings' `depends_on` edges (revise round; the scope item required this surface and it was previously missing).
+- [`using-superra/SKILL.md` §Task Interface](../../../skills/using-superra/SKILL.md#L46) — the universal-interface surface every executing agent preloads: the same line that documents the status cascade now also states that a same-parent rename re-points siblings' `depends_on` edges (revise round; the scope item required this surface and it was previously missing).
 - [`task-tree/SKILL.md`](../../../skills/task-tree/SKILL.md) move/rename line — same-parent rename auto-cascades; cross-parent move and delete strand for re-wiring.
 - [`references/commands.md` §Rename / move a task](../../../skills/task-tree/references/commands.md) — full agent-facing statement of the cascade + the non-cascading cases.
 - [`references/internals.md` §Hook Architecture](../../../skills/task-tree/references/internals.md) — implementation-facing description (helper, classifier, ordering-before-reconcile, the lossless-only boundary).

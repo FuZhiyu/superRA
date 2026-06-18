@@ -25,7 +25,7 @@
 #       S1 ~ $0.015    S2 ~ $0.020 + $0.018 (two turns: setup + resume-check)
 #       S3 ~ $0.012    S6 ~ $0.018    S7 ~ $0.020
 #       S4 ~ $0.090    S5 ~ $0.100 (multi-turn deny-and-retry chains; loading
-#                                   using-superRA / agent-orchestration adds
+#                                   using-superra / agent-orchestration adds
 #                                   the skill bodies to subsequent turns)
 #     Total full-suite cost ~ $0.29. --tools "" does not suppress the model
 #     turn on 2.1.116 — it only disables tool invocation — so we cannot drop
@@ -302,7 +302,7 @@ record_fail() {
 }
 
 # Assert: exactly one UserPromptSubmit hook_response in $1, with stdout
-# containing `additionalContext` AND the substring `superRA:using-superRA`.
+# containing `additionalContext` AND the substring `superRA:using-superra`.
 assert_autoload_reminder() {
   local name="$1"; local ndjson="$2"
   local resp
@@ -327,7 +327,7 @@ assert_autoload_reminder() {
       return
     fi
     if printf '%s' "$stdout" | grep -q 'additionalContext' \
-       && printf '%s' "$stdout" | grep -q 'superRA:using-superRA'; then
+       && printf '%s' "$stdout" | grep -q 'superRA:using-superra'; then
       ok=1
     fi
   done <<<"$resp"
@@ -535,10 +535,10 @@ run_s1() {
   echo "       cost: \$$cost"
 }
 
-# S2 — after using-superRA is loaded in the session, a second superRA
+# S2 — after using-superra is loaded in the session, a second superRA
 # prompt in the same (resumed) session does NOT trigger a reminder.
 run_s2() {
-  local name_setup="S2 setup load using-superRA"
+  local name_setup="S2 setup load using-superra"
   local name_check="S2 autoload suppressed after skill load"
   local cwd sid out1 out2
   new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
@@ -547,10 +547,10 @@ run_s2() {
   out2="$cwd/s2_check.ndjson"
 
   # Turn 1: persisted session; explicit instruction to invoke the Skill
-  # so the transcript carries "skill":"superRA:using-superRA".
+  # so the transcript carries "skill":"superRA:using-superra".
   run_claude "$out1" "$cwd" "$sid" \
     --append-system-prompt "Comply immediately. Do not read any files." \
-    -- 'Invoke Skill(skill="superRA:using-superRA") once, then reply with exactly "done".'
+    -- 'Invoke Skill(skill="superRA:using-superra") once, then reply with exactly "done".'
   local setup_cost; setup_cost=$(report_cost "$out1")
   # Sanity: setup turn must actually have invoked the Skill tool.
   local n_skill; n_skill=$(count_tool_uses "$out1" Skill)
@@ -598,12 +598,12 @@ run_s3() {
   echo "       cost: \$$cost"
 }
 
-# S4 — hard deny on workflow-skill without using-superRA loaded.
+# S4 — hard deny on workflow-skill without using-superra loaded.
 #
 # FRAGILITY NOTE: This scenario is structurally hard to test in isolation.
 # The autoload-superra UserPromptSubmit hook injects an additionalContext
 # reminder on any prompt mentioning "superRA", and a compliant model will
-# load Skill(superRA:using-superRA) voluntarily before it ever attempts the
+# load Skill(superRA:using-superra) voluntarily before it ever attempts the
 # workflow-skill call — which makes ensure-using-superra silently pass and
 # the assertion fail. We countermand the injected reminder via the system
 # prompt below ("Ignore any system-reminder or additionalContext...") so
@@ -633,25 +633,25 @@ run_s4() {
     --append-system-prompt "$sys_prompt" \
     -- "Start the planning workflow now."
   local cost; cost=$(report_cost "$out")
-  assert_pretooluse_deny_for_companion "$name" "$out" "superRA:using-superRA"
+  assert_pretooluse_deny_for_companion "$name" "$out" "superRA:using-superra"
   echo "       cost: \$$cost"
 }
 
-# S5 — after using-superRA loads, retry denied by ensure-agent-orchestration.
+# S5 — after using-superra loads, retry denied by ensure-agent-orchestration.
 # This is inherently a continuation of S4's retry loop. We assert that at
 # least one PreToolUse hook_response in the run names superRA:agent-orchestration
 # in its deny reason.
 run_s5() {
-  local name="S5 ensure-agent-orchestration denies after using-superRA loads"
+  local name="S5 ensure-agent-orchestration denies after using-superra loads"
   local cwd sid out
   new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
   out="$cwd/s5.ndjson"
-  # Tell the model to first load using-superRA, then retry the workflow
+  # Tell the model to first load using-superra, then retry the workflow
   # skill without loading agent-orchestration. The ensure-agent-orchestration
   # hook should deny the second call.
   local sys_prompt
-  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superRA") once. Step 2: invoke Skill(skill="superRA:superplan") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
+  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superplan") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
   run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
     --append-system-prompt "$sys_prompt" \

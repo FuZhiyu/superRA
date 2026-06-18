@@ -20,7 +20,7 @@ Make `skills/task-tree/scripts/task_read.py` surface a task's **unresolved comme
 - Do **not** adopt the "optional import, skip if missing" pattern as the final state — under `python3` it would skip every time, which the researcher explicitly rejected. (A defensive guard for a genuinely-malformed/absent sidecar is fine; missing-pyyaml is not an acceptable reason to silently show nothing.)
 - Verify: `python3 skills/task-tree/scripts/task_read.py --path <a-task-with-comments>` prints the Open Comments section with full blocks, with **no** `uv`/`~/.venv`.
 
-**Coordination — one-clause cross-edit to `using-superRA/SKILL.md §Task Interface`.** That section (authored by `lean-interface/01`, approved) mandates `task_read` as the read path. Add a single clause noting `task_read` also surfaces unresolved comments anchored to the task, so an agent knows to act on them. Keep it to one clause (DRY/Necessity). Flag this added clause in your `## Results` so `lean-interface/05-coverage-audit` accounts for it in its git-snapshot baseline.
+**Coordination — one-clause cross-edit to `using-superra/SKILL.md §Task Interface`.** That section (authored by `lean-interface/01`, approved) mandates `task_read` as the read path. Add a single clause noting `task_read` also surfaces unresolved comments anchored to the task, so an agent knows to act on them. Keep it to one clause (DRY/Necessity). Flag this added clause in your `## Results` so `lean-interface/05-coverage-audit` accounts for it in its git-snapshot baseline.
 
 **Validation:**
 - `python3` invocation surfaces unresolved comments with full blocks; orphaned ones show preview + orphaned note; zero-comment tasks show no section.
@@ -29,7 +29,7 @@ Make `skills/task-tree/scripts/task_read.py` surface a task's **unresolved comme
 - No regression to existing `task_read` output (ancestor context, frontmatter, sections, sibling deps) — diff a no-comment task before/after.
 - The one-clause `§Task Interface` cross-edit is present and noted for the coverage audit.
 
-**Output:** `skills/task-tree/scripts/task_read.py`; one-clause edit to `skills/using-superRA/SKILL.md`.
+**Output:** `skills/task-tree/scripts/task_read.py`; one-clause edit to `skills/using-superra/SKILL.md`.
 
 ## Results
 
@@ -46,7 +46,7 @@ Make `skills/task-tree/scripts/task_read.py` surface a task's **unresolved comme
 
 The JSON-writer route handles *new* and *migrated* files, but the read path still has to cope with any **legacy** block-YAML sidecar it has not yet migrated (the route does not by itself make those readable under bare `python3`). The objective's reliability requirement is met by combining two pieces: (1) the three legacy sidecars in the repo are migrated to JSON now, so every current task reads under bare `python3`; and (2) loading a legacy file under bare `python3` degrades gracefully — a visible note, exit 0 — rather than crashing the read, so even a future stray legacy file (e.g. one carried in from another branch) cannot break `task read`.
 
-**Cross-edit to `using-superRA/SKILL.md §Task Interface`.** Added one clause to the `task_read` read-path mandate (authored by `lean-interface/01`): it now ends "… and surfaces any unresolved comments anchored to the task so you act on them." The clause lives only in the source `SKILL.md`; no generated role reference duplicates it.
+**Cross-edit to `using-superra/SKILL.md §Task Interface`.** Added one clause to the `task_read` read-path mandate (authored by `lean-interface/01`): it now ends "… and surfaces any unresolved comments anchored to the task so you act on them." The clause lives only in the source `SKILL.md`; no generated role reference duplicates it.
 
 **Verification (all run fresh this session).** The true bare interpreter is `/usr/bin/python3` (Python 3.9.6; `import yaml` → `ModuleNotFoundError`, confirmed). The shell's `python3` is aliased to `uv run python` and has pyyaml, so it is not representative — every bare-path claim below was run with `/usr/bin/python3`.
 

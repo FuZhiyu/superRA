@@ -9,13 +9,13 @@ input:
 output:
   - README.md
   - skills/CATEGORIES.md
-  - skills/using-superRA/SKILL.md
+  - skills/using-superra/SKILL.md
 created: 2026-06-04
 ---
 
 ## Objective
 
-Register the Zotero skill in the repo surfaces that control discovery and contributor navigation. Add it as a utility skill unless implementation discovers a better owner. Update README skill tables, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` without changing workflow choreography or the Skill-Load Manifest.
+Register the Zotero skill in the repo surfaces that control discovery and contributor navigation. Add it as a utility skill unless implementation discovers a better owner. Update README skill tables, `skills/CATEGORIES.md`, and `skills/using-superra/SKILL.md` without changing workflow choreography or the Skill-Load Manifest.
 
 ### Constraints
 
@@ -35,7 +35,7 @@ Keep descriptions trigger-focused: reading, searching, retrieving, converting, a
 
 Three inventory surfaces updated; Manifest and generated agent files are untouched.
 
-- [skills/using-superRA/SKILL.md:65](../../skills/using-superRA/SKILL.md#L65) — added `zotero-paper-reader` row to the Skill Inventory table under Utility, with an explicit "not loaded by workflow agents or the Manifest" note.
+- [skills/using-superra/SKILL.md:65](../../skills/using-superra/SKILL.md#L65) — added `zotero-paper-reader` row to the Skill Inventory table under Utility, with an explicit "not loaded by workflow agents or the Manifest" note.
 - [skills/CATEGORIES.md:47](../../skills/CATEGORIES.md#L47) — added `zotero-paper-reader` row to the Utility table with a trigger-focused description matching the skill's frontmatter.
 - [README.md:89](../../README.md#L89) — added `zotero-paper-reader` row to the Utility Skills table; description covers trigger conditions (reading, finding, summarizing, analyzing by title/author/DOI/topic) and lists library query capabilities, consistent with the skill's frontmatter.
 
@@ -43,7 +43,7 @@ Three inventory surfaces updated; Manifest and generated agent files are untouch
 
 When the conversion step behind `zotero-paper-reader` was vendored in-repo (see [06-vendor-mistral-skill](../06-vendor-mistral-skill/task.md)), a matching Utility row was added to the same three surfaces, each describing it as a user-invocable standalone skill needing `MISTRAL_API_KEY`, the conversion step behind `zotero-paper-reader`, and not loaded by workflow agents or the Manifest:
 
-- [skills/using-superRA/SKILL.md:66](../../skills/using-superRA/SKILL.md#L66)
+- [skills/using-superra/SKILL.md:66](../../skills/using-superra/SKILL.md#L66)
 - [skills/CATEGORIES.md:48](../../skills/CATEGORIES.md#L48)
 - [README.md:90](../../README.md#L90)
 

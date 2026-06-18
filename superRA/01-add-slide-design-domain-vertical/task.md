@@ -25,7 +25,7 @@ created: 2026-05-26
   Add a minimal Beamer overlay template demonstrating roadmap frame reuse, overlay commands, backup links, and `\includeonlyframes` fast iteration. Add `check_slide_layout.py` for LaTeX log parsing and PDF bounding-box triage.
 
 - **Step 4: Wire skill discovery and docs**
-  Update `skills/using-superRA/SKILL.md`, `skills/superplan/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, and add/wire `tests/skill-triggering/prompts/slide-design.txt`.
+  Update `skills/using-superra/SKILL.md`, `skills/superplan/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, and add/wire `tests/skill-triggering/prompts/slide-design.txt`.
 
 - **Step 5: Verify implementation**
   Run syntax, layout, ignore, and diff checks. Leave any environment-specific tooling limitation recorded.
@@ -58,7 +58,7 @@ created: 2026-05-26
 - `README.md`
 - `skills/CATEGORIES.md`
 - `skills/superplan/SKILL.md`
-- `skills/using-superRA/SKILL.md`
+- `skills/using-superra/SKILL.md`
 - `tests/skill-triggering/run-all.sh`
 
 ### Verification
@@ -75,4 +75,4 @@ created: 2026-05-26
 
 - Integration protection is script-level rather than result-drift-based: the change adds a skill-trigger prompt, wires it into `run-all.sh`, validates the helper script, and verifies the bundled Beamer template.
 - The source guide is copied to ignored `inspo/slide-design-guide/slide_deck_design.tex` on the development environment; it is local reference material, not a packaged skill artifact.
-- **Provenance.** This vertical was extracted from branch `superRA-slides-making` (post-sync state, commit `c96f8bcc`) onto `slide-design-vertical`, a fresh branch cut from `main`. The extraction ports the slide-design skill directory, the wiring rows (`using-superRA`, `superplan` Phase 2 verticals table, `CATEGORIES.md`, `README.md`, skill-triggering test), and this vertical's task tree, so the branch's diff against `main` contains only slide-design work. The development branch retains the original better-handoff lineage; this branch owns the PR to `main`.
+- **Provenance.** This vertical was extracted from branch `superRA-slides-making` (post-sync state, commit `c96f8bcc`) onto `slide-design-vertical`, a fresh branch cut from `main`. The extraction ports the slide-design skill directory, the wiring rows (`using-superra`, `superplan` Phase 2 verticals table, `CATEGORIES.md`, `README.md`, skill-triggering test), and this vertical's task tree, so the branch's diff against `main` contains only slide-design work. The development branch retains the original better-handoff lineage; this branch owns the PR to `main`.

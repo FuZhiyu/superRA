@@ -50,7 +50,7 @@ Scope: full-product documentation — landing/pitch, quickstart tutorial, resear
 - [skills/task-tree/scripts/templates/base.html](../../skills/task-tree/scripts/templates/base.html) — SPA shell: hash routing, `STANDALONE_FRAGMENTS`, nav sidebar, theme tokens
 - [README.md](../../README.md) — source content for the reference pages and the `09-readme-front-door` restructure
 - [skills/task-tree/references/task-file-contract.md](../../skills/task-tree/references/task-file-contract.md) — authority the human-facing task-tree reference pages point to
-- [skills/using-superRA/SKILL.md](../../skills/using-superRA/SKILL.md) — skill inventory and manifest authority for the reference section
+- [skills/using-superra/SKILL.md](../../skills/using-superra/SKILL.md) — skill inventory and manifest authority for the reference section
 
 ## Planner Guidance
 

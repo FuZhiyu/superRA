@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-superRA runs every project through three phases — **PLAN → IMPLEMENT → INTEGRATE** — and each phase has a skill that teaches the agent how to carry it out. The phases are domain-agnostic: the same shape governs a data analysis, a theory derivation, or a writing pass, and the [domain skill](#/03-concepts/04-skills-and-agents) supplies the discipline that applies inside each phase. The authoritative behavior for each phase lives in its skill — [superplan](skills/superplan/SKILL.md), [superimplement](skills/superimplement/SKILL.md), and [superintegrate](skills/superintegrate/SKILL.md) — with the shared, cross-phase disciplines in [using-superRA](skills/using-superRA/SKILL.md).
+superRA runs every project through three phases — **PLAN → IMPLEMENT → INTEGRATE** — and each phase has a skill that teaches the agent how to carry it out. The phases are domain-agnostic: the same shape governs a data analysis, a theory derivation, or a writing pass, and the [domain skill](#/03-concepts/04-skills-and-agents) supplies the discipline that applies inside each phase. The authoritative behavior for each phase lives in its skill — [superplan](skills/superplan/SKILL.md), [superimplement](skills/superimplement/SKILL.md), and [superintegrate](skills/superintegrate/SKILL.md) — with the shared, cross-phase disciplines in [using-superra](skills/using-superra/SKILL.md).
 
 ## The three phases
 

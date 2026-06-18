@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-superRA is built from **skills** and **agents**. A skill is a unit of instruction the agent loads when it is relevant; an agent is a role — implementer or reviewer — that loads the skills it needs for the task in front of it. Skills split into three working categories, and an agent assembles the right set for each step rather than carrying everything at once. The authoritative grouping is in [CATEGORIES.md](skills/CATEGORIES.md), and the agent-facing map from each stage to its required skills is the Skill-Load Manifest in [using-superRA](skills/using-superRA/SKILL.md). The [Reference › Skills and Agents](#/05-reference/04-skills-and-agents) page lists every skill as a lookup.
+superRA is built from **skills** and **agents**. A skill is a unit of instruction the agent loads when it is relevant; an agent is a role — implementer or reviewer — that loads the skills it needs for the task in front of it. Skills split into three working categories, and an agent assembles the right set for each step rather than carrying everything at once. The authoritative grouping is in [CATEGORIES.md](skills/CATEGORIES.md), and the agent-facing map from each stage to its required skills is the Skill-Load Manifest in [using-superra](skills/using-superra/SKILL.md). The [Reference › Skills and Agents](#/05-reference/04-skills-and-agents) page lists every skill as a lookup.
 
 ## Three kinds of skill
 

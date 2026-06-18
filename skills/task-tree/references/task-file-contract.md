@@ -38,7 +38,7 @@ Dependent siblings are ordered peers, not inherited context. Read a dependency's
 
 ## Hierarchy Management Commands
 
-The mutation command surface — `task create`, `task rename`, `task dep add/remove`, bulk status ops, and the move/rename cascade rules — lives in `references/commands.md`. Single-field edits, including `status`, go through direct edit per `using-superRA/SKILL.md` §Task Interface.
+The mutation command surface — `task create`, `task rename`, `task dep add/remove`, bulk status ops, and the move/rename cascade rules — lives in `references/commands.md`. Single-field edits, including `status`, go through direct edit per `using-superra/SKILL.md` §Task Interface.
 
 ## Stale Content Checklist
 

@@ -74,7 +74,7 @@ fi
 # (case-insensitive, whitespace-tolerant around the colon) so minor
 # format drift does not cause duplicate reminders.
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
-   && "$GREP" -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path" 2>/dev/null; then
+   && "$GREP" -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path" 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi

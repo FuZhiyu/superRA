@@ -18,7 +18,7 @@ Catch every surviving reference to the old sync-record model outside the files o
 - "handoff doc/artifact/record" framing that collides with the deprecated handoff-doc skill.
 
 Known live hits to fix (verify and reconcile, plus anything else the grep surfaces):
-- `skills/using-superRA/references/main-agent.md` — the Frontier Resolver line "Top task.md: `## Sync Map` when present …" → reference task-local `## Sync Impact`, drop Sync Map.
+- `skills/using-superra/references/main-agent.md` — the Frontier Resolver line "Top task.md: `## Sync Map` when present …" → reference task-local `## Sync Impact`, drop Sync Map.
 - `skills/CATEGORIES.md` — the `semantic-merge` row mentions recording "branch-level / task-local / file-local context" → trim to the localized record (task-local `## Sync Impact` + commit body / git log).
 
 ### Constraints
@@ -36,9 +36,9 @@ This is the downstream cleanup; expect a small number of edits. If the grep surf
 Ran the task-defined grep (`Sync Map`, `SEMANTIC_MERGE`, `Integration status`, `task block`, `handoff doc/artifact/record`) over `skills/` (excluding `task-tree/scripts/`), `CLAUDE.md`, and `skills/CATEGORIES.md`. Fixed the three in-scope sync-record hits; left the rest with explicit rationale (below). Both named known hits reconciled.
 
 **Reconciled (in scope):**
-- `skills/using-superRA/references/main-agent.md` — Frontier Resolver: dropped "Top task.md: `## Sync Map` when present" and added "any temporary `## Sync Impact` sections during integration" to the per-task-body read line (the localized sync record is per-task, not top-task).
+- `skills/using-superra/references/main-agent.md` — Frontier Resolver: dropped "Top task.md: `## Sync Map` when present" and added "any temporary `## Sync Impact` sections during integration" to the per-task-body read line (the localized sync record is per-task, not top-task).
 - `skills/CATEGORIES.md` — semantic-merge row: "records branch-level / task-local / file-local context" → "records the approved post-sync diff in the git log (commit messages) plus a temporary task-local `## Sync Impact` section on each affected task".
-- `skills/using-superRA/SKILL.md` — "executes task blocks" → "executes tasks" (the one live `task block(s)` token in scope).
+- `skills/using-superra/SKILL.md` — "executes task blocks" → "executes tasks" (the one live `task block(s)` token in scope).
 
 **Left intentionally (with rationale):**
 - `skills/semantic-merge/references/workflow-sync-author.md:40` — **excluded** (`semantic-merge/*` owned by `01`/`02`); the single "Sync Map" mention is an intentional negation ("does not reference a branch-level Sync Map (there is none)") retiring the concept, per `01`'s own Results.

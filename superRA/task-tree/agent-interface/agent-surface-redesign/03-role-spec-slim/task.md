@@ -9,9 +9,9 @@ created: 2026-06-01
 
 ## Objective
 
-Slim `agents/implementer.md` and `agents/reviewer.md` so they stop duplicating the shared task-editing interface (now in `using-superRA/SKILL.md §Task Interface`, task 01) and keep only genuinely role-specific protocol. Then regenerate the derived direct-mode references and Codex agent files. Depends on task 01 because the role specs must point at the new section.
+Slim `agents/implementer.md` and `agents/reviewer.md` so they stop duplicating the shared task-editing interface (now in `using-superra/SKILL.md §Task Interface`, task 01) and keep only genuinely role-specific protocol. Then regenerate the derived direct-mode references and Codex agent files. Depends on task 01 because the role specs must point at the new section.
 
-**Remove the duplicated shared block.** Both `agents/implementer.md §Editing Etiquette` and `agents/reviewer.md §Editing Etiquette` carry the same shared principles (inline-edit only / latest-state-not-log / cite-as-markdown-links / doc-before-report). These are now owned by `using-superRA §Task Interface`. Replace each `§Editing Etiquette` shared block with a one-line pointer to that section, and delete the `Compact etiquette below; full discipline in task-tree/references/planning.md. Load superRA:task-tree on demand…` lead-in (the shared discipline is no longer "below", and the on-demand `task-tree` load is no longer how an agent gets the interface). Keep the planning.md pointer only where genuinely needed for planner-depth (e.g., stale-content / results-shape), not as the route to basic editing.
+**Remove the duplicated shared block.** Both `agents/implementer.md §Editing Etiquette` and `agents/reviewer.md §Editing Etiquette` carry the same shared principles (inline-edit only / latest-state-not-log / cite-as-markdown-links / doc-before-report). These are now owned by `using-superra §Task Interface`. Replace each `§Editing Etiquette` shared block with a one-line pointer to that section, and delete the `Compact etiquette below; full discipline in task-tree/references/planning.md. Load superRA:task-tree on demand…` lead-in (the shared discipline is no longer "below", and the on-demand `task-tree` load is no longer how an agent gets the interface). Keep the planning.md pointer only where genuinely needed for planner-depth (e.g., stale-content / results-shape), not as the route to basic editing.
 
 **Keep (role-specific — do NOT move to the core):**
 - `implementer.md`: `### What You Own, What You Don't` (the concrete implementer ownership: `## Results` + `status` up to `implemented`), `### How You Fix Review Items on a REVISE Round` (the `→ implemented:` annotation mechanics and the example block).
@@ -25,16 +25,16 @@ These are role-specific interaction protocols, not shared interface, and must st
 ```
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py   # confirm exact subcommand/flags from its --help
 ```
-Generated targets (never hand-edit): `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. Confirm the generated direct-mode references inherit the slimmed etiquette (they currently carry the same duplicated block via the generator) and now point to `using-superRA §Task Interface`.
+Generated targets (never hand-edit): `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. Confirm the generated direct-mode references inherit the slimmed etiquette (they currently carry the same duplicated block via the generator) and now point to `using-superra §Task Interface`.
 
 **Discipline.** Apply the DRY/Necessity gate line-by-line. Do not delete a role-specific protocol line just because it mentions editing — only the *shared* principles move. If unsure whether a line is shared or role-specific, ask: would the reviewer and implementer phrase it identically? If yes, it is shared (core); if it differs by role, it stays.
 
 **Validation (must be true to be complete):**
-- The shared editing-principles block appears in exactly one place (`using-superRA §Task Interface`), not in either role spec.
+- The shared editing-principles block appears in exactly one place (`using-superra §Task Interface`), not in either role spec.
 - Each role spec still fully specifies its own ownership, annotation mechanics, and (reviewer) verdict protocol — no role behavior is lost.
 - `sync_codex_agents.py` was run; the four generated files are regenerated, committed, and consistent with the slimmed sources (verify with `git status` that they changed and were not hand-edited).
 - Step 4 is unchanged.
-- **No knowledge lost:** the only thing removed from the role specs is the *shared* editing-principles block (now in `using-superRA §Task Interface`); every role-specific protocol line survives. Task `09-coverage-audit` verifies this against a git snapshot.
+- **No knowledge lost:** the only thing removed from the role specs is the *shared* editing-principles block (now in `using-superra §Task Interface`); every role-specific protocol line survives. Task `09-coverage-audit` verifies this against a git snapshot.
 
 **Output:** `agents/implementer.md`, `agents/reviewer.md`, and the four regenerated files above.
 
@@ -51,12 +51,12 @@ Slimmed both role specs' `### Editing Etiquette` to a pointer at `superRA:using-
 - reviewer: `### Verdict` (APPROVE/REVISE), `### What You Own, What You Don't`, `### How You Write a Review` (first-review + re-review, `→ orchestrator:` handling, item-deletion authority).
 - Step 4 (the `## Conventions` / `task_read` instruction in `## Before You Start`) untouched in both specs.
 
-**Regenerated derived files** via `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` (flags confirmed from `--help`; the run writes both the `.codex/agents/*.toml` agents and the `direct-mode-*.md` references). Files changed: `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`. The two direct-mode references inherited the slimmed etiquette pointer to §Task Interface.
+**Regenerated derived files** via `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` (flags confirmed from `--help`; the run writes both the `.codex/agents/*.toml` agents and the `direct-mode-*.md` references). Files changed: `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`. The two direct-mode references inherited the slimmed etiquette pointer to §Task Interface.
 
 **Verification:**
 - `sync_codex_agents.py --scope project --check` → "All generated agent files are up to date" + "All generated direct-mode role references are up to date" (generated files match sources, not hand-edited).
 - `git status --short` → all six files modified (two sources + four generated).
-- `grep -rn "Compact etiquette\|task-tree on demand" agents/ skills/using-superRA/references/ .codex/` → no matches (stale lead-in fully removed everywhere).
+- `grep -rn "Compact etiquette\|task-tree on demand" agents/ skills/using-superra/references/ .codex/` → no matches (stale lead-in fully removed everywhere).
 - `grep "Task Interface" direct-mode-*.md` → both references point to `superRA:using-superra` §Task Interface.
 - Heading walk of both specs confirms every role-specific section survived; only the shared editing-principles block was removed.
 

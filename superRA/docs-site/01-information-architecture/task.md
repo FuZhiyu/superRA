@@ -100,15 +100,15 @@ The site is a single hash-routed standalone export; the nav tree below is the `d
 | `01-welcome/` | Landing: one-sentence pitch, why superRA, the three-phase diagram, "start here" routing. | `README.md`, mermaid phase diagram | 03-landing-and-concepts |
 | `02-quickstart/` | Tutorial: install → plan one tiny analysis → implement one task → review → see status. End to end in ~20 min. | `superplan`, `superimplement`, `task-tree/SKILL.md` | 04-quickstart-tutorial |
 | `03-concepts/` (parent) | Explanation hub. | — | 03-landing-and-concepts |
-| `03-concepts/01-the-workflow/` | The PLAN→IMPLEMENT→INTEGRATE cycle, re-entry, autonomy-with-human. | `superplan`, `superimplement`, `superintegrate`, `using-superRA` | 03-landing-and-concepts |
+| `03-concepts/01-the-workflow/` | The PLAN→IMPLEMENT→INTEGRATE cycle, re-entry, autonomy-with-human. | `superplan`, `superimplement`, `superintegrate`, `using-superra` | 03-landing-and-concepts |
 | `03-concepts/02-the-task-tree/` | Filesystem-as-hierarchy, `task.md`, sibling deps, status rollup, frontier. | `task-tree/SKILL.md`, `task-tree/references/task-file-contract.md` | 03-landing-and-concepts |
 | `03-concepts/03-roles-and-review/` | Implementer/reviewer pair, APPROVE/REVISE, adversarial review. | `agents/implementer.md`, `agents/reviewer.md`, `agent-orchestration` | 03-landing-and-concepts |
-| `03-concepts/04-skills-and-agents/` | Workflow / domain / utility skill model; when domain skills load. | `skills/CATEGORIES.md`, `using-superRA` §Skill Inventory | 03-landing-and-concepts |
+| `03-concepts/04-skills-and-agents/` | Workflow / domain / utility skill model; when domain skills load. | `skills/CATEGORIES.md`, `using-superra` §Skill Inventory | 03-landing-and-concepts |
 | `03-concepts/05-integration-and-protection/` | Drift tests, semantic merge, why integration is a distinct phase. | `result-protection`, `semantic-merge`, `superintegrate` | 03-landing-and-concepts |
 | `04-how-to/` (parent) | How-to hub (goal-oriented recipes). | — | 05-how-to-guides |
 | `04-how-to/01-install-and-set-up/` | Install on Claude Code, Codex, other harnesses. | `README.md` §Installation, `docs/README.codex.md` | 05-how-to-guides |
 | `04-how-to/02-plan-a-project/` | Scope and decompose work into a task tree; objective/guidance writing. | `superplan`, `superplan/references/task-tree-design.md` | 05-how-to-guides |
-| `04-how-to/03-work-with-task-files/` | Read/edit/hand off via task files; the agent-collaboration narrative. | `using-superRA` §Task Interface, `task-tree/references/commands.md` | 05-how-to-guides |
+| `04-how-to/03-work-with-task-files/` | Read/edit/hand off via task files; the agent-collaboration narrative. | `using-superra` §Task Interface, `task-tree/references/commands.md` | 05-how-to-guides |
 | `04-how-to/04-see-your-work/` | Dashboard: tree/DAG/kanban, live serve, artifact share. | `task-tree/SKILL.md` (dashboard), `task-tree/references/internals.md` §Dashboard | 05-how-to-guides |
 | `04-how-to/05-integrate-and-ship/` | Protect results, sync with base, refactor, open the PR. | `superintegrate`, `result-protection`, `semantic-merge`, `refactor-and-integrate` | 05-how-to-guides |
 | `04-how-to/06-resume-and-revise/` | Resume interrupted work; revise the task tree mid-flight. | `superplan` §User Feedback and Changing the Task Tree | 05-how-to-guides |
@@ -116,7 +116,7 @@ The site is a single hash-routed standalone export; the nav tree below is the `d
 | `05-reference/01-task-file/` | `task.md` anatomy: frontmatter fields, body sections. | `task-tree/references/task-file-contract.md` | 06-reference |
 | `05-reference/02-cli-commands/` | The `superra` CLI surface: query, mutate, dashboard. | `task-tree/references/commands.md` | 06-reference |
 | `05-reference/03-status-and-frontier/` | Status enum, lifecycle, rollup, frontier computation. | `task-tree/references/task-file-contract.md`, `task-tree/SKILL.md` | 06-reference |
-| `05-reference/04-skills-and-agents/` | Skill inventory and the Stage → skill load manifest, as a lookup. | `using-superRA` §Skill Inventory & §Skill-Load Manifest, `skills/CATEGORIES.md` | 06-reference |
+| `05-reference/04-skills-and-agents/` | Skill inventory and the Stage → skill load manifest, as a lookup. | `using-superra` §Skill Inventory & §Skill-Load Manifest, `skills/CATEGORIES.md` | 06-reference |
 | `05-reference/05-glossary/` | Every superRA term defined once. | (definitions; links to owning skills) | 06-reference |
 | `05-reference/06-faq/` | Common questions: harness choice, when to skip phases, public-repo data hygiene. | `README.md`, `CLAUDE.md` | 06-reference |
 | `05-reference/07-hooks/` | Hooks lookup: each hook's trigger, purpose, and Claude Code vs Codex coverage. | `hooks/` (hook sources), `docs/README.codex.md` §Hook Coverage | 06-reference |

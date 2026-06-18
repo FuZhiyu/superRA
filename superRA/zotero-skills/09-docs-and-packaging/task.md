@@ -13,7 +13,7 @@ output:
   - skills/zotero-paper-reader/references/bibtex-citations.md
   - skills/CATEGORIES.md
   - README.md
-  - skills/using-superRA/SKILL.md
+  - skills/using-superra/SKILL.md
 created: 2026-06-08
 ---
 
@@ -34,12 +34,12 @@ Update the one-line capability descriptions so they reflect bib/citation support
 
 - `skills/CATEGORIES.md`
 - `README.md`
-- `skills/using-superRA/SKILL.md` (the `zotero-paper-reader` inventory row's one-line purpose)
+- `skills/using-superra/SKILL.md` (the `zotero-paper-reader` inventory row's one-line purpose)
 
 ### Validation
 
 - The text-regression suite (task 10) asserts `SKILL.md` and the new reference mention the new commands and the key model.
-- Inventory one-liners across `CATEGORIES.md`, `README.md`, and `using-superRA/SKILL.md` stay mutually consistent and none claim the skill is Manifest-loaded.
+- Inventory one-liners across `CATEGORIES.md`, `README.md`, and `using-superra/SKILL.md` stay mutually consistent and none claim the skill is Manifest-loaded.
 
 ## Planner Guidance
 
@@ -68,7 +68,7 @@ To avoid duplication, the detailed Better BibTeX block tasks 07/08 had placed in
 
 - [skills/CATEGORIES.md](../../../skills/CATEGORIES.md) — Utility row now lists BibTeX export, `\cite`/`[@key]` insertion, master-`.bib` sync, and bibliography rendering (Better BibTeX citekeys by default); "User-invocable standalone; not loaded by workflow agents" retained.
 - [README.md](../../../README.md) — skill table row extended with the citation tooling clause.
-- [skills/using-superRA/SKILL.md](../../../skills/using-superRA/SKILL.md) — the `zotero-paper-reader` §Skill Inventory row extended with citation tooling; still states "Not loaded by workflow agents or the Manifest". Verified the skill does **not** appear in the Skill-Load Manifest table.
+- [skills/using-superra/SKILL.md](../../../skills/using-superra/SKILL.md) — the `zotero-paper-reader` §Skill Inventory row extended with citation tooling; still states "Not loaded by workflow agents or the Manifest". Verified the skill does **not** appear in the Skill-Load Manifest table.
 
 ### Verification
 

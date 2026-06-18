@@ -48,4 +48,4 @@ Depends on `move-hook` so the documented move behavior matches what shipped (the
 
 ## Review Notes
 
-> 1. [MINOR] `## Results` cite `task-tree/SKILL.md §How to Edit a Task` and `references/planning.md` as the live edit-guidance surfaces; both were removed/dissolved by the later agent-surface redesign — the interface now lives in [using-superRA/SKILL.md](../../../../skills/using-superRA/SKILL.md) §Task Interface and the contract in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md). Lightly clean the citations.
+> 1. [MINOR] `## Results` cite `task-tree/SKILL.md §How to Edit a Task` and `references/planning.md` as the live edit-guidance surfaces; both were removed/dissolved by the later agent-surface redesign — the interface now lives in [using-superra/SKILL.md](../../../../skills/using-superra/SKILL.md) §Task Interface and the contract in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md). Lightly clean the citations.

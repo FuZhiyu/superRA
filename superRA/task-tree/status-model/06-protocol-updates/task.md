@@ -49,11 +49,11 @@ Update all agent role specs and workflow skills to use the unified `status` fiel
 - §Primary tracker: update field reference
 - §Status clear instructions: now just reset `status` instead of clearing `review_status` and `integration_status` separately
 
-**Using-superRA references:**
+**Using-superra references:**
 
-`skills/using-superRA/references/direct-mode-implementer.md`: same changes as implementer.md
-`skills/using-superRA/references/direct-mode-reviewer.md`: same changes as reviewer.md
-`skills/using-superRA/references/main-agent.md`: update frontmatter reading instructions, remove `## Workflow Status` references
+`skills/using-superra/references/direct-mode-implementer.md`: same changes as implementer.md
+`skills/using-superra/references/direct-mode-reviewer.md`: same changes as reviewer.md
+`skills/using-superra/references/main-agent.md`: update frontmatter reading instructions, remove `## Workflow Status` references
 
 **Other skill references:**
 
@@ -68,8 +68,8 @@ Updated 11 files to replace the `status` + `review_status` + `integration_status
 
 - [agents/implementer.md](../../../../agents/implementer.md) -- §What You Own: collapsed three field bullets into one (`status:` with transition ownership note). §Update the Task and Commit and §How You Fix Review Items: removed `review_status: implemented` from commit instructions.
 - [agents/reviewer.md](../../../../agents/reviewer.md) -- §What You Own: replaced `review_status:` and `integration_status:` with single `status:` bullet covering both implementation and integration review transitions. §Verdict: `review_status: approved/revise` -> `status: approved/revise`. §How You Write a Review: same. §Pre-Commit Self-Check: simplified to `status:` only. Report example: `review_status` -> `status`.
-- [skills/using-superRA/references/direct-mode-implementer.md](../../../../skills/using-superRA/references/direct-mode-implementer.md) -- parallel changes to implementer.md.
-- [skills/using-superRA/references/direct-mode-reviewer.md](../../../../skills/using-superRA/references/direct-mode-reviewer.md) -- parallel changes to reviewer.md.
+- [skills/using-superra/references/direct-mode-implementer.md](../../../../skills/using-superra/references/direct-mode-implementer.md) -- parallel changes to implementer.md.
+- [skills/using-superra/references/direct-mode-reviewer.md](../../../../skills/using-superra/references/direct-mode-reviewer.md) -- parallel changes to reviewer.md.
 
 **Workflow skills (4 files):**
 
@@ -80,6 +80,6 @@ Updated 11 files to replace the `status` + `review_status` + `integration_status
 
 **Other references (3 files):**
 
-- [skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md) -- §Workflow Frontier Resolver: frontmatter field list simplified to `status`, `depends_on`; removed `review_status` / `integration_status` from preservation and return-value language.
+- [skills/using-superra/references/main-agent.md](../../../../skills/using-superra/references/main-agent.md) -- §Workflow Frontier Resolver: frontmatter field list simplified to `status`, `depends_on`; removed `review_status` / `integration_status` from preservation and return-value language.
 - [skills/writing/references/planning.md](../../../../skills/writing/references/planning.md) -- `review_status:` -> `status:` in retrofit description.
 - [skills/writing/references/long-form-review.md](../../../../skills/writing/references/long-form-review.md) -- `review_status: revise` -> `status: revise` in dispatch convention; `integration_status` paragraph replaced with unified `status` note.

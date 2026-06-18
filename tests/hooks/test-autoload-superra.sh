@@ -61,7 +61,7 @@ print(json.dumps({
 
   # JSON-validity assertion: every non-empty hook payload must parse as
   # JSON. Without this, a malformed reminder like
-  #   {"additionalContext":"...Skill(skill="superRA:using-superRA")..."}
+  #   {"additionalContext":"...Skill(skill="superRA:using-superra")..."}
   # slips past a plain `grep -q 'additionalContext'` check even though
   # the harness would drop it. Check before the expect/got comparison
   # so we fail loudly on invalid JSON regardless of the expected class.
@@ -109,7 +109,7 @@ run_case "V3 superrant"  expect-silent "no superrant behavior here"
 run_case "V3 superplanet" expect-silent "the superplanetary survey"
 
 # V4: already loaded (transcript shows a Skill invocation) -> silent
-loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superRA"}}]}}'
+loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superra"}}]}}'
 run_case "V4 already-loaded" expect-silent "superRA again, what now?" "$loaded_transcript"
 
 lowercase_loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superra"}}]}}'

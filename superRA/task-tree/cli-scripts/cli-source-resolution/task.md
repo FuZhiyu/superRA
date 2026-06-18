@@ -44,7 +44,7 @@ Three defects motivate this rework. The first is the original report; the second
 4. **GitHub last-resort fallback without a package build.** Since `uv run --script` cannot fetch a git subdirectory, the GitHub branch becomes: shallow-clone the repo to a cache dir (e.g. under the user cache), then `uv run --script <clone>/skills/task-tree/scripts/cli.py …`. The clone is the only network step and only fires when no env var, checkout, or installed cache exists. The pin (ref) lives only in `wrapper_resolver.py`.
 
 5. **Agent interface — the committed wrapper is the universal entry; subagents never load task-tree.**
-   - **Universal call form lives in `using-superRA §Task Interface`** (the only skill every agent — including implementer/reviewer subagents — preloads). Update it so the canonical read/edit invocation is the committed `<task-root>/superra` wrapper (e.g. `superRA/superra task read <path>`), which self-resolves and needs no skill load, no plugin path, and no PATH install. Subagents do **not** load `task-tree`; tree-level tooling stays load-on-demand for orchestrators/planners only. Do not duplicate the call form into role specs — point to the universal interface.
+   - **Universal call form lives in `using-superra §Task Interface`** (the only skill every agent — including implementer/reviewer subagents — preloads). Update it so the canonical read/edit invocation is the committed `<task-root>/superra` wrapper (e.g. `superRA/superra task read <path>`), which self-resolves and needs no skill load, no plugin path, and no PATH install. Subagents do **not** load `task-tree`; tree-level tooling stays load-on-demand for orchestrators/planners only. Do not duplicate the call form into role specs — point to the universal interface.
    - **The wrapper must exist before any subagent is dispatched.** `superplan` creates `<task-root>/superra` at tree-creation time (via the bootstrap form below) and commits it with the tree, so every downstream agent finds a working `superRA/superra`.
    - **Bootstrap form is planner/main-only.** The first call in a fresh project — which creates the wrapper — uses the loaded task-tree skill directory: `uv run --script <task-tree skill-dir>/scripts/cli.py wrapper init`, following the `<skill-dir>` substitution convention already used by sibling skills. Documented in `task-tree/SKILL.md` and wired into `superplan`'s tree-creation step. After the wrapper exists, everything uses `<task-root>/superra`.
 
@@ -56,7 +56,7 @@ Three defects motivate this rework. The first is the original report; the second
 
 ### Constraints
 
-- **Subagents (implementer/reviewer) load only `using-superRA` and `report-in-markdown`, never `task-tree`.** Any CLI knowledge an executing agent needs to read or edit its task must live in `using-superRA §Task Interface` and resolve through the committed wrapper — not through the task-tree skill, a skill-dir form, or a PATH `superra`.
+- **Subagents (implementer/reviewer) load only `using-superra` and `report-in-markdown`, never `task-tree`.** Any CLI knowledge an executing agent needs to read or edit its task must live in `using-superra §Task Interface` and resolve through the committed wrapper — not through the task-tree skill, a skill-dir form, or a PATH `superra`.
 - **No hardcoded plugin/cache/version paths in any committed artifact.** The wrapper and hook resolve at runtime from their own on-disk location.
 - **Single-source the resolution chain and run-line in `wrapper_resolver.py`.** Duplicated resolver/run logic between the wrapper and the hook is the primary drift risk.
 
@@ -68,7 +68,7 @@ Three defects motivate this rework. The first is the original report; the second
 - `superRA/superra dashboard` launches via `uv run --script plan_dashboard.py` and renders templates/vendor from `__file__`-relative paths.
 - Resolver picks env var → checkout → Claude manifest → Codex glob → GitHub clone, in order; speed gate holds (no full-disk walk).
 - GitHub branch shallow-clones and runs `uv run --script <clone>/…/cli.py` when no local source exists.
-- A simulated subagent with only `using-superRA` loaded can read its task via `superRA/superra task read <path>`; no active doc tells a subagent to load `task-tree` to read a task.
+- A simulated subagent with only `using-superra` loaded can read its task via `superRA/superra task read <path>`; no active doc tells a subagent to load `task-tree` to read a task.
 - After `superplan` creates a tree, `<task-root>/superra` is present, executable, and committed.
 - `skills/task-tree/pyproject.toml` is removed and nothing in `skills`/`hooks`/`README.md` references it or `uv tool install` as the normal path.
 - `superra wrapper init` writes an executable, resolver-carrying wrapper; re-run is byte-identical; committed `hooks/task-hook` is byte-identical to the generator.
@@ -81,7 +81,7 @@ Three defects motivate this rework. The first is the original report; the second
 
 Keep the resolver and run-line single-sourced in `wrapper_resolver.py` — render both the wrapper and the hook from it, embedded (not sourced), since the wrapper lives where it cannot source from the plugin before resolving it.
 
-Generated role/Codex artifacts are out of scope unless a change touches canonical agent specs. Item 5 edits `using-superRA §Task Interface` (a skill, not an agent spec) and `superplan` — these are not generated. If any edit reaches `agents/implementer.md` or `agents/reviewer.md`, regenerate via `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` rather than hand-editing.
+Generated role/Codex artifacts are out of scope unless a change touches canonical agent specs. Item 5 edits `using-superra §Task Interface` (a skill, not an agent spec) and `superplan` — these are not generated. If any edit reaches `agents/implementer.md` or `agents/reviewer.md`, regenerate via `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` rather than hand-editing.
 
 ## Results
 
@@ -114,7 +114,7 @@ Removed `skills/task-tree/pyproject.toml` and `scripts/__init__.py` (the version
 
 ### Agent interface and bootstrap
 
-- `using-superRA §Task Interface` ([../../../../skills/using-superRA/SKILL.md:45](../../../../skills/using-superRA/SKILL.md#L45)) now names the committed `./superRA/superra task read <path>` wrapper as the canonical read/edit form for every agent (main/implementer/reviewer), explicitly noting it needs no skill load, plugin path, or PATH install — verified by reading this very task through the wrapper with only that interface.
+- `using-superra §Task Interface` ([../../../../skills/using-superra/SKILL.md:45](../../../../skills/using-superra/SKILL.md#L45)) now names the committed `./superRA/superra task read <path>` wrapper as the canonical read/edit form for every agent (main/implementer/reviewer), explicitly noting it needs no skill load, plugin path, or PATH install — verified by reading this very task through the wrapper with only that interface.
 - `superplan §Creating Tasks` ([../../../../skills/superplan/SKILL.md:99-117](../../../../skills/superplan/SKILL.md#L99-L117)) creates the wrapper first at tree-creation time via the planner-only bootstrap `uv run --script <skill-dir>/scripts/cli.py wrapper init`, then uses `./superRA/superra …` for all subsequent calls, so every downstream agent finds a working wrapper.
 - The bootstrap form and the `<skill-dir>` substitution convention are documented in `task-tree/SKILL.md` ([../../../../skills/task-tree/SKILL.md:43](../../../../skills/task-tree/SKILL.md#L43)) and `references/internals.md §Setup`.
 
@@ -129,7 +129,7 @@ Removed `skills/task-tree/pyproject.toml` and `scripts/__init__.py` (the version
 - **python3 fallback / stdlib-only core.** `python3 cli.py task tree` ran the core successfully under a system `python3` that has no `pyyaml` installed, proving the lazy import and the uv-free fallback. Pinned by `test_python3_fallback_runs_core_without_third_party_deps`.
 - **Dashboard route.** `./superRA/superra dashboard export` and `uv run --script plan_dashboard.py dashboard export` both rendered a standalone HTML (markdown-it + `window.STANDALONE = true`) with templates/vendor loaded from `__file__`-relative paths. Pinned by `test_uv_run_script_exports_dashboard_from_file_relative_assets`.
 - **Resolver order + GitHub fail-fast/clone.** Bash probes of the rendered resolver confirm env var → `DIR:`, Claude-manifest-over-codex, codex highest-semver within depth bound, and skip-cache-lacking-`cli.py`. **Revise round:** with `GITHUB_REF_HAS_SUBDIR="0"`, an empty environment now makes `_superra_resolve_source` return non-zero with no output (fail fast, no clone) — pinned by `test_resolver_fails_fast_when_no_source_and_pin_lacks_subdir`. With the flag forced to `"1"`, it emits `GIT:…@main` (`test_resolver_emits_github_spec_when_pin_carries_subdir`) and the GitHub branch, driven against a local bare remote (no network), shallow-clones to the user cache and resolves to `<clone>/skills/task-tree` (`test_resolver_github_branch_clones_then_resolves_loose_script`).
-- **Subagent read.** Read this task through `./superRA/superra task read …` with only the `using-superRA` interface — no `task-tree` load.
+- **Subagent read.** Read this task through `./superRA/superra task read …` with only the `using-superra` interface — no `task-tree` load.
 - **Byte-identity.** Regenerated `superRA/superra` and `hooks/task-hook`; both diff-clean against the generator. `test_committed_hook_shim_matches_generator`, `test_committed_wrapper_matches_generator`, and `test_generated_wrapper_and_hook_are_valid_bash` pass.
 
 ### Version-robust autodetect (lazy-iterdir guard)

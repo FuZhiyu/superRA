@@ -39,7 +39,7 @@ The task tree is now the primary handoff mechanism for the superRA workflow. The
 
 Key outcomes across the workstream:
 
-- **[agent-surface-redesign](agent-surface-redesign/task.md):** The universal task interface was folded into `using-superRA §Task Interface`; role specs were restructured to a parallel skeleton; the reporting model collapsed onto commit = summary / return = status + SHA. Nine subtasks; coverage audit confirmed no knowledge lost.
+- **[agent-surface-redesign](agent-surface-redesign/task.md):** The universal task interface was folded into `using-superra §Task Interface`; role specs were restructured to a parallel skeleton; the reporting model collapsed onto commit = summary / return = status + SHA. Nine subtasks; coverage audit confirmed no knowledge lost.
 - **[comment-surfacing](comment-surfacing/task.md):** Researcher-pinned dashboard comments are now surfaced in `task_read.py`, visible to every dispatched agent.
 - **[core-and-hooks](core-and-hooks/task.md):** Topological sort, validation functions, and PostToolUse hook parity for Codex shell mutations.
 - **[handoff-doc](handoff-doc/task.md):** handoff-doc skill deprecated; content merged into task-tree + role specs.

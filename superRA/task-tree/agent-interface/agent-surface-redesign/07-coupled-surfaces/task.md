@@ -9,9 +9,9 @@ created: 2026-06-01
 
 ## Objective
 
-Finalize the coupled agent-facing surfaces the user partially edited so they cohere with the redesigned specs and strand no guidance. Scope: [skills/using-superRA/SKILL.md](../../../../../skills/using-superRA/SKILL.md) §Task Interface and §Skill-Load Manifest, and [skills/report-in-markdown/SKILL.md](../../../../../skills/report-in-markdown/SKILL.md).
+Finalize the coupled agent-facing surfaces the user partially edited so they cohere with the redesigned specs and strand no guidance. Scope: [skills/using-superra/SKILL.md](../../../../../skills/using-superra/SKILL.md) §Task Interface and §Skill-Load Manifest, and [skills/report-in-markdown/SKILL.md](../../../../../skills/report-in-markdown/SKILL.md).
 
-**using-superRA §Task Interface.** Fix the dangling "Tasks" sentence fragment the user left mid-edit. Make §Task Interface instructions-only (how to read and edit your assigned task) and point out for the rest: per-role ownership now lives in the role specs' "What You Own"; tree tooling is the load-on-demand `task-tree`. Ensure the ownership-boundary principle (edit only what your role owns; raise another role's content rather than overwriting) stays reachable — either as a one-line principle here or a pointer to the role specs. Keep the load-on-demand `task-tree` pointer the user re-added.
+**using-superra §Task Interface.** Fix the dangling "Tasks" sentence fragment the user left mid-edit. Make §Task Interface instructions-only (how to read and edit your assigned task) and point out for the rest: per-role ownership now lives in the role specs' "What You Own"; tree tooling is the load-on-demand `task-tree`. Ensure the ownership-boundary principle (edit only what your role owns; raise another role's content rather than overwriting) stays reachable — either as a one-line principle here or a pointer to the role specs. Keep the load-on-demand `task-tree` pointer the user re-added.
 
 **report-in-markdown.** The user removed the §Load map and the "permanent artifacts only" note on baseline-io. Do not strand the load-condition guidance it carried: relocate "load `rich-content.md` for figures/math/tables" and "`baseline-io.md` applies to permanent standalone artifacts" into the References section as one-line "load when" conditions (or into the consuming surfaces). Confirm the known consumers still reach the right reference — `econ-data-analysis`, `theory-modeling`, `writing`, `superintegrate`, `task-tree/references/planning.md`, and the implementer §Self-Check figures line. Keep the user's strengthened file-reference rule ("Always cite source files as markdown links…").
 
@@ -21,13 +21,13 @@ Finalize the coupled agent-facing surfaces the user partially edited so they coh
 
 ## Planner Guidance
 
-This task edits `skills/using-superRA/SKILL.md` after task 01 has already edited it (01 added the planning-review manifest row and may have touched the report-in-markdown skills line) — work from the post-01 state and integrate rather than revert those changes. The domain-add-ons "when" conditions to migrate are in the current §Domain add-ons table; the Skill Inventory table to receive them is §Skill Inventory.
+This task edits `skills/using-superra/SKILL.md` after task 01 has already edited it (01 added the planning-review manifest row and may have touched the report-in-markdown skills line) — work from the post-01 state and integrate rather than revert those changes. The domain-add-ons "when" conditions to migrate are in the current §Domain add-ons table; the Skill Inventory table to receive them is §Skill Inventory.
 
 ## Results
 
 Three coupled surfaces updated.
 
-**[skills/using-superRA/SKILL.md](../../../../../skills/using-superRA/SKILL.md):**
+**[skills/using-superra/SKILL.md](../../../../../skills/using-superra/SKILL.md):**
 
 - §Task Interface: fixed the dangling "Tasks" fragment → complete Edit instruction; added ownership-boundary principle as a one-liner pointing to role specs §What You Own; replaced double blank + verbose task-tree paragraph with a clean one-liner.
 - §Skill Inventory domain rows: migrated the "when the task involves…" trigger conditions from §Domain add-ons into the `econ-data-analysis`, `theory-modeling`, and `writing` descriptions — triggers and skill description now co-located.

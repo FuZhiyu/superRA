@@ -48,7 +48,7 @@ Incorporate the motivating examples as evidence without making them special-case
 ### Verification
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/SKILL.md skills/superplan/references/task-tree-design.md superRA/task-tree/planning-redesign/task-tree-design/02-tree-design-protocol/task.md` passed: all three files reported `clean`.
 - `./superRA/superra task check` passed: `All checks passed. No issues found.`
-- `rg -n "task-tree/references/planning|references/planning\\.md" skills/superplan skills/task-tree skills/using-superRA agents README.md AGENTS.md -g '*.md' -g '*.toml'` returned no matches for the old task-tree planning reference in the active ownership surfaces checked.
+- `rg -n "task-tree/references/planning|references/planning\\.md" skills/superplan skills/task-tree skills/using-superra agents README.md AGENTS.md -g '*.md' -g '*.toml'` returned no matches for the old task-tree planning reference in the active ownership surfaces checked.
 
 ## Review Notes
 

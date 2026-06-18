@@ -22,7 +22,7 @@ The authoritative behavior is in this feature's root [`task.md`](../task.md) sem
 
 ### Coherence check before completing
 
-- Re-run the generated-artifact grep (`grep -rn` the status enum across `skills/using-superRA/references/`, `.codex/agents/`, `agents/`). If any generated file echoes the enum, do NOT hand-edit it — update its source/generator and run `sync_codex_agents.py`. As of planning this returned nothing; confirm it still does.
+- Re-run the generated-artifact grep (`grep -rn` the status enum across `skills/using-superra/references/`, `.codex/agents/`, `agents/`). If any generated file echoes the enum, do NOT hand-edit it — update its source/generator and run `sync_codex_agents.py`. As of planning this returned nothing; confirm it still does.
 - Confirm no other prose site enumerates the status set without `postponed` (grep for the other status names across `skills/` and `README.md`).
 
 ## Results
@@ -39,7 +39,7 @@ The authoritative behavior is in this feature's root [`task.md`](../task.md) sem
 
 ### Coherence check
 
-- **Generated-artifact grep** across `skills/using-superRA/references/`, `.codex/agents/`, and `agents/` found no echo of the status enum (only incidental prose mentions of single workflow states in `main-agent.md`). No generated file echoes the enum, so no `sync_codex_agents.py` regeneration is required — confirms the planning-time finding still holds.
+- **Generated-artifact grep** across `skills/using-superra/references/`, `.codex/agents/`, and `agents/` found no echo of the status enum (only incidental prose mentions of single workflow states in `main-agent.md`). No generated file echoes the enum, so no `sync_codex_agents.py` regeneration is required — confirms the planning-time finding still holds.
 - **Prose-enumeration grep** across `skills/` and `README.md`: no prose site enumerates the status set without `postponed`. Beyond the four planned sites, the grep surfaced a fifth enum echo — the `Task` dataclass status comment at `internals.md:49` — which was updated for coherence. Script and dashboard-template sites (`scripts/*.py`, `templates/*.html`) already carry `postponed` from [11-postponed-core-semantics](../11-postponed-core-semantics/task.md) and [12-postponed-rendering-surfaces](../12-postponed-rendering-surfaces/task.md); `task_check.py` imports `VALID_STATUSES` so its enum validation auto-flows.
 
 ### Verification

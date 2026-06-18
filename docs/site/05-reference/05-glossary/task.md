@@ -34,7 +34,7 @@ A branch task's displayed status is computed from its children, not stored indep
 **Stage**
 The `Stage:` field in an agent dispatch that determines which skills are loaded.
 Valid values: `implementation`, `planning-review`, `protection`, `sync`, `integration`, `documentation`.
-See [Skills and Agents Reference](#/05-reference/04-skills-and-agents) and [skills/using-superRA/SKILL.md §Skill-Load Manifest](skills/using-superRA/SKILL.md).
+See [Skills and Agents Reference](#/05-reference/04-skills-and-agents) and [skills/using-superra/SKILL.md §Skill-Load Manifest](skills/using-superra/SKILL.md).
 
 **Domain skill**
 A skill that carries vertical-specific discipline for a research domain (data analysis, theory/modeling, writing).
@@ -54,7 +54,7 @@ See [Concepts: Integration and Protection](#/03-concepts/05-integration-and-prot
 **Direct mode**
 An execution mode where the main agent implements a task itself rather than dispatching a subagent implementer/reviewer pair.
 Direct mode is appropriate for small, clearly-scoped tasks; subagent mode is the recommended default.
-See [skills/using-superRA/SKILL.md §Execution Modes](skills/using-superRA/SKILL.md).
+See [skills/using-superra/SKILL.md §Execution Modes](skills/using-superra/SKILL.md).
 
 **Subagent mode**
 The default execution mode: the main agent dispatches a separate implementer subagent and a separate reviewer subagent for each task, enforcing adversarial review.

@@ -66,6 +66,8 @@ These are defaults, not rules. Use your discretion and honor any explicit user p
 
 Parallel dispatch is worthwhile for independent tasks or reviewers covering disjoint work. Tasks with all `Depends on:` lines satisfied and no shared mutable state are natural candidates. **Prefer background dispatch.**
 
+Claude Code: dispatch role agents fire-and-return — never assign a `name:` to a `superRA:implementer` / `superRA:reviewer`. A named `Agent` call silently drops the `subagent_type` role spec, so the agent comes up generic.
+
 Parallel agents **must** run in separate worktrees, one per agent, created before dispatch. The branch name carries a `/parallel/` infix (`<current-branch>-agent/parallel/<slug>`) so the `merge-guard` hook exempts the source ref on merge-back. Create, place, and remove worktrees per `references/worktree-harness-fallback.md`. In Claude Code, do **not** use the `Agent` tool's `isolation: "worktree"` parameter — it branches off main's HEAD, so the subagent cannot see in-flight state; branch off the current branch instead.
 
 Pass the absolute worktree path via the dispatch `Worktree:` field, plus this `Additionally:` steering:

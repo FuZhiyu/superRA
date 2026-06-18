@@ -197,6 +197,6 @@ When the task tree changes — details updated, tasks added/removed/restructured
 3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-6. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
+6. **Resolve the next frontier.** Run `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
 
 Do not resume the in-flight task before the change is committed — it is not real until then — and do not treat an invalidated milestone as license to clear unrelated approved tasks.

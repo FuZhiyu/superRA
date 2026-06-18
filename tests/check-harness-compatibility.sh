@@ -67,23 +67,23 @@ assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h i
 PY
 
 section "Shared harness adapters"
-test -f skills/using-superRA/references/claude-tools.md
-test -f skills/using-superRA/references/codex-instructions.md
-test -f skills/using-superRA/references/direct-mode-implementer.md
-test -f skills/using-superRA/references/direct-mode-reviewer.md
+test -f skills/using-superra/references/claude-tools.md
+test -f skills/using-superra/references/codex-instructions.md
+test -f skills/using-superra/references/direct-mode-implementer.md
+test -f skills/using-superra/references/direct-mode-reviewer.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 python3 - <<'PY'
 import re
 from pathlib import Path
-text = Path("skills/using-superRA/SKILL.md").read_text(encoding="utf-8")
+text = Path("skills/using-superra/SKILL.md").read_text(encoding="utf-8")
 m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
-assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
+assert m and m.group(1) == "using-superra", f"using-superra SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
 using_text = text
 planning_text = Path("skills/superplan/SKILL.md").read_text(encoding="utf-8")
 refactor_text = Path("skills/refactor-and-integrate/SKILL.md").read_text(encoding="utf-8")
-assert "`theory-modeling`" in using_text, "using-superRA must list theory-modeling"
-assert "superRA:theory-modeling" in using_text, "using-superRA manifest must reference theory-modeling"
+assert "`theory-modeling`" in using_text, "using-superra must list theory-modeling"
+assert "superRA:theory-modeling" in using_text, "using-superra manifest must reference theory-modeling"
 assert "`superRA:theory-modeling`" in planning_text, "superplan must route theory-modeling"
 # Per Task 7 (domain-neutral workflow/utility skills): refactor-and-integrate must NOT name a specific
 # domain's integration reference; the active domain skill's stage-load table routes it.
@@ -98,15 +98,15 @@ section "Direct mode role references"
 python3 - <<'PY'
 from pathlib import Path
 
-main_agent = Path("skills/using-superRA/references/main-agent.md").read_text(encoding="utf-8")
+main_agent = Path("skills/using-superra/references/main-agent.md").read_text(encoding="utf-8")
 assert "references/direct-mode-implementer.md" in main_agent, "main-agent direct mode must load direct-mode-implementer.md"
 assert "references/direct-mode-reviewer.md" in main_agent, "main-agent direct mode must load direct-mode-reviewer.md"
 assert "agents/implementer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/implementer.md"
 assert "agents/reviewer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/reviewer.md"
 
 for path, source in [
-    ("skills/using-superRA/references/direct-mode-implementer.md", "agents/implementer.md"),
-    ("skills/using-superRA/references/direct-mode-reviewer.md", "agents/reviewer.md"),
+    ("skills/using-superra/references/direct-mode-implementer.md", "agents/implementer.md"),
+    ("skills/using-superra/references/direct-mode-reviewer.md", "agents/reviewer.md"),
 ]:
     text = Path(path).read_text(encoding="utf-8")
     lowered = text.lower()

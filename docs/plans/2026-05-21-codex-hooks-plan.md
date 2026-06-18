@@ -38,7 +38,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 
 ### Module-level docs walked
 - [docs/README.codex.md](../README.codex.md) (HEAD at 08b68c8): Codex-specific install and verification guide. Update when Codex plugin packaging or named-agent setup changes.
-- [skills/using-superRA/references/codex-instructions.md](../../skills/using-superRA/references/codex-instructions.md) (HEAD at 08b68c8): Codex adapter for superRA workflow behavior and tool-name mappings. It confirms named agents remain separate from plugin packaging.
+- [skills/using-superra/references/codex-instructions.md](../../skills/using-superra/references/codex-instructions.md) (HEAD at 08b68c8): Codex adapter for superRA workflow behavior and tool-name mappings. It confirms named agents remain separate from plugin packaging.
 - [skills/handoff-doc/SKILL.md](../../skills/handoff-doc/SKILL.md) (HEAD at 08b68c8): Handoff docs must be latest-state-only, inline edited, and used as the durable record.
 - [skills/report-in-markdown/SKILL.md](../../skills/report-in-markdown/SKILL.md) (HEAD at 08b68c8): Markdown file references should use markdown links with line anchors.
 
@@ -71,7 +71,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 **Sync status:** No-op against `origin/main`; `BASE_HEAD_SHA=08b68c85dd49c414e6c5811aa21c764c50b1988b` is already an ancestor of `HEAD`.
-**Final diff self-check:** `git diff 08b68c85dd49c414e6c5811aa21c764c50b1988b..HEAD`; surviving change classes are Codex hook packaging, hook script behavior, docs, tests, version bump, handoff docs, Codex adapter guidance, and parallel-worktree placement guidance. Suspicious hunks: version-managed manifest changes are justified by the public Codex plugin hook surface; `skills/using-superRA/references/codex-instructions.md` isolates Codex-specific worktree ownership so spawned Codex agents enter orchestrator-created worktrees instead of internal scratch paths; `skills/agent-orchestration/references/worktree-harness-fallback.md` moves ephemeral parallel worktrees under `${TMPDIR:-/tmp}` to avoid polluting repo-local worktree directories while preserving project-level override support. No unrelated hunks.
+**Final diff self-check:** `git diff 08b68c85dd49c414e6c5811aa21c764c50b1988b..HEAD`; surviving change classes are Codex hook packaging, hook script behavior, docs, tests, version bump, handoff docs, Codex adapter guidance, and parallel-worktree placement guidance. Suspicious hunks: version-managed manifest changes are justified by the public Codex plugin hook surface; `skills/using-superra/references/codex-instructions.md` isolates Codex-specific worktree ownership so spawned Codex agents enter orchestrator-created worktrees instead of internal scratch paths; `skills/agent-orchestration/references/worktree-harness-fallback.md` moves ephemeral parallel worktrees under `${TMPDIR:-/tmp}` to avoid polluting repo-local worktree directories while preserving project-level override support. No unrelated hunks.
 
 **Script:** Hook scripts under `hooks/`; test scripts under `tests/hooks/`; packaging in [.codex-plugin/plugin.json](../../.codex-plugin/plugin.json).
 **Input:** Existing Claude hook scripts/config, Codex hook documentation, current superRA Codex plugin manifest.

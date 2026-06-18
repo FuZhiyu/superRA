@@ -32,10 +32,10 @@ Authored the landing page and the explanation (Concepts) section per the approve
 |---|---|---|
 | Landing | [docs/site/01-welcome](../../../docs/site/01-welcome/task.md) | `README.md`; live mermaid phase diagram (seeded from `README.md`) |
 | Concepts hub | [docs/site/03-concepts](../../../docs/site/03-concepts/task.md) | routes to the five concept pages |
-| The Workflow | [.../01-the-workflow](../../../docs/site/03-concepts/01-the-workflow/task.md) | `superplan`, `superimplement`, `superintegrate`, `using-superRA` |
+| The Workflow | [.../01-the-workflow](../../../docs/site/03-concepts/01-the-workflow/task.md) | `superplan`, `superimplement`, `superintegrate`, `using-superra` |
 | The Task Tree | [.../02-the-task-tree](../../../docs/site/03-concepts/02-the-task-tree/task.md) | `task-tree/SKILL.md`, `task-tree/references/task-file-contract.md` |
 | Roles and Review | [.../03-roles-and-review](../../../docs/site/03-concepts/03-roles-and-review/task.md) | `agents/implementer.md`, `agents/reviewer.md`, `agent-orchestration` |
-| Skills and Agents | [.../04-skills-and-agents](../../../docs/site/03-concepts/04-skills-and-agents/task.md) | `skills/CATEGORIES.md`, `using-superRA` |
+| Skills and Agents | [.../04-skills-and-agents](../../../docs/site/03-concepts/04-skills-and-agents/task.md) | `skills/CATEGORIES.md`, `using-superra` |
 | Integration and Protection | [.../05-integration-and-protection](../../../docs/site/03-concepts/05-integration-and-protection/task.md) | `superintegrate`, `result-protection`, `semantic-merge`, `refactor-and-integrate` |
 
 Every concept page names at least one authoritative source file via a repo-file link, and the landing page embeds the README's mermaid PLAN→IMPLEMENT→INTEGRATE diagram (a live diagram, per the contract's "prefer the live mermaid diagram over a raster"). Internal navigation uses hash links `#/<doc-path>`; repo-file links to skill/agent files are written as repo-relative path targets for the export to re-base (no hardcoded GitHub URLs), per contract §3.
@@ -52,7 +52,7 @@ Every concept page names at least one authoritative source file via a repo-file 
 The task `## Objective`'s concept-page list was drafted before the IA was finalized and says "at minimum (final list per IA)", explicitly deferring the page set to the IA. The IA (binding, researcher-approved 2026-06-11) scaffolded exactly five `03-concepts/*` pages, which I authored. Two items named in the objective draft are not standalone concept pages in the approved IA, and I handled them as the IA directs rather than inventing pages outside the scaffold:
 
 - **"Collaborate with agents through task files" (`## Results`/`## Review Notes`):** the IA homes this narrative at **How-To › Work With Task Files** (`04-how-to/03`, owned by `05-how-to-guides`), not Concepts. I covered the concept lightly on the Task Tree page (which sections each role owns) and cross-linked to that how-to guide rather than duplicating the narrative here.
-- **"Execution-modes note (subagent vs direct)":** the IA has no standalone execution-modes concept page; this is `using-superRA` territory. I wove the relevant framing into The Workflow and Roles and Review pages (separate implementer/reviewer agents, orchestrator coordination) instead of adding an un-scaffolded page.
+- **"Execution-modes note (subagent vs direct)":** the IA has no standalone execution-modes concept page; this is `using-superra` territory. I wove the relevant framing into The Workflow and Roles and Review pages (separate implementer/reviewer agents, orchestrator coordination) instead of adding an un-scaffolded page.
 
 Both choices keep the Concepts section matching the approved scaffold and avoid creating a second authority — which is the route that satisfies the objective's "per the approved IA" framing.
 

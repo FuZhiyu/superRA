@@ -14,7 +14,7 @@ Redesigned the superRA planning workflow (`skills/superplan/SKILL.md`, formerly 
 2. **Plan update mechanism** — Dropped `## Decisions` log; replaced with self-sufficient objective rewrites plus `## Revision Notes` as a temporary delta signal (same cleanup lifecycle as review notes).
 3. **Harness plan mode compatibility** — `skills/superplan/references/harness-plan-mode.md` teaches agents to use harness plan mode with direct `superRA/` output. Eliminates the two-step migration.
 4. **Terminology convention** — "Plan" is the verb; everything in `superRA/` is a task. Documented in `CLAUDE.md §Terminology`, `superplan/SKILL.md`, task-tree references, and swept across all remaining skill files.
-5. **PLAN.md remnant cleanup** — Completed migration from PLAN.md/RESULTS.md references to `superRA/` task files across `main-agent.md`, `using-superRA`, `superimplement`, `superintegrate`, `agent-orchestration`, `agents/`, `README.md`, `CATEGORIES.md`.
+5. **PLAN.md remnant cleanup** — Completed migration from PLAN.md/RESULTS.md references to `superRA/` task files across `main-agent.md`, `using-superra`, `superimplement`, `superintegrate`, `agent-orchestration`, `agents/`, `README.md`, `CATEGORIES.md`.
 6. **Review and planning protocol** — Added `## Planner Guidance` body section; made implementation review objective-first; added `Stage: planning-review` to the manifest; extended planning review to cover tree design quality (`task-tree-design.md` policy).
 
 ## Results
@@ -35,10 +35,10 @@ Twelve children across six concerns delivered the planning workflow redesign. Al
 **Concern 4 — Terminology convention and migration prep:**
 - [consolidation](consolidation/task.md) — Consolidated `skills/planning-workflow/references/consolidation.md` (now at `skills/superplan/references/consolidation.md`) and moved terminology convention into `CLAUDE.md §Terminology`.
 - [migration-prep](migration-prep/task.md) — Added `plan_migrate.py` parser expectations and normalization checklist to `skills/task-tree/references/internals.md`.
-- [main-agent-update](main-agent-update/task.md) — Rewrote `skills/using-superRA/references/main-agent.md` to replace all PLAN.md/RESULTS.md references with `superRA/` task-tree operations; renamed §Changes of the Plan to §Changes of the Task Tree.
+- [main-agent-update](main-agent-update/task.md) — Rewrote `skills/using-superra/references/main-agent.md` to replace all PLAN.md/RESULTS.md references with `superRA/` task-tree operations; renamed §Changes of the Plan to §Changes of the Task Tree.
 
 **Concern 5 — PLAN.md remnant cleanup (planmd-sweep):**
-- [planmd-sweep](planmd-sweep/task.md) — Swept PLAN.md/RESULTS.md and "plan as noun" references from `superimplement`, `superintegrate`, `using-superRA`, `agent-orchestration`, `agents/`, `README.md`, `CATEGORIES.md`; regenerated Codex named-agent artifacts.
+- [planmd-sweep](planmd-sweep/task.md) — Swept PLAN.md/RESULTS.md and "plan as noun" references from `superimplement`, `superintegrate`, `using-superra`, `agent-orchestration`, `agents/`, `README.md`, `CATEGORIES.md`; regenerated Codex named-agent artifacts.
 
 **Concern 6 — Review and planning protocol:**
 - [review-planning-protocol](review-planning-protocol/task.md) — Six children shipped: added `## Planner Guidance` body section; made reviewer evaluation objective-first; added `Stage: planning-review` to manifest; required material deviation reporting in `## Results`; updated `task_read.py` ancestor rendering and task anatomy; renamed render header to `=== Context ===` and added focused tree.

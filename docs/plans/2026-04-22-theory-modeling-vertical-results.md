@@ -26,7 +26,7 @@
 **Status:** Implemented (review fixes incorporated)
 
 ### Key Findings
-- Added `theory-modeling` to the `using-superRA` inventory and manifest, the `planning-workflow` routing table, and the `refactor-and-integrate` domain-specific integration pointers.
+- Added `theory-modeling` to the `using-superra` inventory and manifest, the `planning-workflow` routing table, and the `refactor-and-integrate` domain-specific integration pointers.
 - Generalized the planning template and exit-plan-mode reminder so a second planning hard gate is first-class rather than a data-only exception.
 - Updated contributor/runtime docs (`README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`) to present theory/modeling as an implemented vertical, added `.agents/skills/theory-modeling`, and extended `tests/check-harness-compatibility.sh` with discovery/wiring assertions.
 
@@ -42,7 +42,7 @@
 ### Key Findings
 - `bash tests/check-harness-compatibility.sh` passed after the final Task 3 fixes. The merge-quality portion now requires the generalized Tier 3 phrases `sample construction / model setup`, `specifications / solution concepts`, `data processing / derivation logic`, `results / headline outputs`, and `active domain-discipline artifacts`, and explicitly fails if stale data-only phrases such as `econometric specifications` or `removing data discipline artifacts` reappear.
 - The same harness-compatibility run re-ran the embedded Codex agent generation checks (`python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` and `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`), and both passed.
-- A targeted smoke check passed for repo-local discovery and routing semantics: `.agents/skills/theory-modeling` resolves to `../../skills/theory-modeling`, `planning-workflow` routes to `superRA:theory-modeling`, `using-superRA` lists the vertical in its manifest, and the `Model Inventory / Assumption Map` hard gate remains present in the theory-modeling planning reference.
+- A targeted smoke check passed for repo-local discovery and routing semantics: `.agents/skills/theory-modeling` resolves to `../../skills/theory-modeling`, `planning-workflow` routes to `superRA:theory-modeling`, `using-superra` lists the vertical in its manifest, and the `Model Inventory / Assumption Map` hard gate remains present in the theory-modeling planning reference.
 
 ### Notes
 - Remaining risk: this pass was structural and workflow-facing. It did not run a live Claude/Codex end-to-end dispatch session against a toy modeling prompt in this turn.
@@ -59,10 +59,10 @@ from pathlib import Path
 link = Path('.agents/skills/theory-modeling')
 assert link.is_symlink(), '.agents/skills/theory-modeling must be a symlink'
 assert os.readlink(link) == '../../skills/theory-modeling', os.readlink(link)
-using_text = Path('skills/using-superRA/SKILL.md').read_text(encoding='utf-8')
+using_text = Path('skills/using-superra/SKILL.md').read_text(encoding='utf-8')
 planning_text = Path('skills/planning-workflow/SKILL.md').read_text(encoding='utf-8')
 theory_planning_text = Path('skills/theory-modeling/references/planning.md').read_text(encoding='utf-8')
-assert 'superRA:theory-modeling' in using_text, 'using-superRA manifest must mention theory-modeling'
+assert 'superRA:theory-modeling' in using_text, 'using-superra manifest must mention theory-modeling'
 assert '`superRA:theory-modeling`' in planning_text, 'planning-workflow routing must mention theory-modeling'
 assert 'Model Inventory / Assumption Map' in theory_planning_text, 'theory-modeling planning reference must expose the hard gate'
 print('theory-modeling discovery/routing smoke check passed')
@@ -145,12 +145,12 @@ PY
 - Cleanup: dropped the redundant load-directive lines and the parallel "If data analysis: ... If theory/modeling: ..." stop-here paragraphs in `planning-workflow` Phase 1; collapsed §Remember and §Self-Review per-domain branches into one domain-neutral instruction; routed the artifact-format note in Phase 3 and the step-cycle reference in Phase 4 through the active domain skill instead of naming `econ-data-analysis` directly. `refactor-and-integrate` and `result-protection` now state that the active domain skill's stage-load table is the routing source.
 - Examples drawn from a particular domain (e.g., the Phase 4 step shapes naming "raw holdings data" or "Euler equation"; the Self-Review item-1 inventory examples; the §Remember bullet's "data: row counts" / "theory: notation" examples once collapsed into the active-domain pointer's parenthetical) were retained where they illustrate a domain-neutral concept.
 - Trigger column of the Phase 1 Currently-implemented-verticals table retained — it is routing input, not a redundant load directive. The "Planning reference" column was dropped because it restated the domain skill's own load map.
-- `using-superRA/SKILL.md` Skill Inventory and Discovery rows for both verticals retained (these are discovery surfaces, not duplicated load directives).
+- `using-superra/SKILL.md` Skill Inventory and Discovery rows for both verticals retained (these are discovery surfaces, not duplicated load directives).
 
 ### Verification
 - `bash tests/check-harness-compatibility.sh`: PASS (42 / 42; 0 failed). Updated the assertion at `tests/check-harness-compatibility.sh:69` from "refactor-and-integrate must POINT TO theory-modeling integration guidance" to "refactor-and-integrate must STAY DOMAIN-NEUTRAL" (negative assertions on both `theory-modeling/references/integration.md` and `econ-data-analysis/references/integration.md` substrings).
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated `.codex/agents/superra_reviewer.toml` and `skills/using-superRA/references/direct-mode-reviewer.md` from the updated `agents/reviewer.md`. The Codex agent generation test passes (`Ran 6 tests in 0.302s; OK`).
-- `grep -rn -E "(econ-data-analysis|theory-modeling)/references/" skills/{planning,implementation,integration}-workflow/ skills/agent-orchestration/ skills/refactor-and-integrate/ skills/result-protection/ skills/handoff-doc/ skills/semantic-merge/ skills/using-superRA/SKILL.md agents/`: no surviving per-domain `references/X.md` load directives in workflow/utility skills or canonical role specs.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated `.codex/agents/superra_reviewer.toml` and `skills/using-superra/references/direct-mode-reviewer.md` from the updated `agents/reviewer.md`. The Codex agent generation test passes (`Ran 6 tests in 0.302s; OK`).
+- `grep -rn -E "(econ-data-analysis|theory-modeling)/references/" skills/{planning,implementation,integration}-workflow/ skills/agent-orchestration/ skills/refactor-and-integrate/ skills/result-protection/ skills/handoff-doc/ skills/semantic-merge/ skills/using-superra/SKILL.md agents/`: no surviving per-domain `references/X.md` load directives in workflow/utility skills or canonical role specs.
 
 ### Notes
 - Minimum net diff: only the load-directive lines were touched in each file; the surrounding workflow choreography, review protocol, and gated checklists are untouched.
@@ -271,7 +271,7 @@ discipline.
 ### Notes
 
 - **Halt-and-redispatch citation.** PLAN spec named
-  `using-superRA/SKILL.md:92` as the citation target for the
+  `using-superra/SKILL.md:92` as the citation target for the
   `Stage: sync` halt-and-redispatch shape. Verification at implementation
   time showed line 92 carries only "`Stage: sync` is branch-level," not
   the halt-and-redispatch text. The closest authoritative source for the
