@@ -4,6 +4,7 @@ status: not-started
 depends_on: 
   - 01-ia-and-scaffold
   - 03-utility-skills
+  - 04-task-tree-reference-nesting
   - 06-workflows
 
 tags: []
