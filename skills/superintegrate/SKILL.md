@@ -57,7 +57,7 @@ Drift tests are the default protection mechanism, guarding key results through S
    Which should be protected? Any to add or remove?
    ```
 3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template. Drift tests reference task paths, not task numbers.
-4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
+4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
 6. **Commit tests and task.md updates.**
 7. **Flip `Drift tests created`** in root task.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
@@ -223,7 +223,7 @@ Agent(subagent_type: "superRA:implementer"):
     reviewer finding.
 ```
 
-Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
+For non-minor fixes that require reviewer re-dispatch per `agent-orchestration` §Handling Reviewer Feedback, include narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
 
 ### Step 5: Close Integrate
 
@@ -292,7 +292,7 @@ Agent(subagent_type: "superRA:reviewer"):
     <prior-round adjudication notes if re-dispatching>
 ```
 
-Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to the code, re-enter Integrate.
+On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a documentation finding traces to the code, re-enter Integrate.
 
 On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
 

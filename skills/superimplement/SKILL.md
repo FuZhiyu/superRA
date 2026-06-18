@@ -21,7 +21,7 @@ Default is **subagent mode**: one implementer subagent per task, fresh context p
 2. **Go through frontier work units:**
    a. Dispatch one task or a same-parent bundle per `agent-orchestration` §Dispatch Templates. Answer context questions, re-dispatch if needed.
    b. Dispatch reviewer subagent for the same task or bundle (one comprehensive pass per task).
-   c. **APPROVE** → next frontier recompute. **REVISE** → fix reviewer-found blocking findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE.
+   c. **APPROVE** → next frontier recompute. **REVISE** → adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback. Loop until APPROVE.
 3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `superintegrate` on merge/PR.
 
@@ -167,6 +167,6 @@ Both roles run the `implementation` Stage (`superRA:using-superra` §Skill-Load 
 ## Red Flags
 
 - Skipping review, even in direct mode.
-- Advancing past a task whose review has open issues or whose status is not `approved` — a REVISE task is complete only once re-review promotes it to APPROVED.
+- Advancing past a task whose review has open issues or whose status is not `approved` — a REVISE task is complete only after `agent-orchestration` §Handling Reviewer Feedback resolves the review notes and the task is `approved`.
 - Accepting "looks fine" without verification, or ignoring implementer input-quality or methodology concerns.
-- Asking the user whether to fix blocking findings instead of iterating REVISE → fix → re-review automatically.
+- Asking the user whether to fix blocking findings instead of running the REVISE adjudication/fix loop automatically.
