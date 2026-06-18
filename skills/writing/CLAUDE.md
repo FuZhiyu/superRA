@@ -27,7 +27,7 @@ Mode determines the loaded references and therefore the authority grant. Do not 
 - `references/style.md` owns sentence- and paragraph-level style heuristics.
 - `references/structure.md` owns structure-level heuristics and is loaded only when drafting or authorized restructuring is in scope.
 - `references/consistency/*.md` owns dimension-specific review checks and output details.
-- `references/long-form-review.md` owns multi-lane review orchestration, PLAN-only review retrofit, and review-time indices.
+- `references/long-form-review.md` owns multi-lane review orchestration, review-only task trees, and review-time indices.
 - `references/refactor-and-compile.md` owns document-wide prose refactors and build/compile discipline.
 - `references/integration.md` owns behavior specific to writing work riding `superintegrate`.
 
@@ -39,7 +39,7 @@ Standalone writing invocations terminate at edit plus commit, or findings plus c
 
 Multi-lane review may dispatch one reviewer per lane, but the dispatch mechanics belong to `agent-orchestration`; `writing` supplies the lane files and the long-form-review reference.
 
-The PLAN-only long-form review retrofit (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no PLAN-only-exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
+The review-only task-tree path (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no writing-specific exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
 
 ## Extension rules
 

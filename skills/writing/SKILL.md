@@ -31,11 +31,11 @@ The document's audience has the document itself plus venue-appropriate backgroun
 
 Then check each sentence against the set: every term is in the set or defined at first use; every reference resolves from the set; every temporal cue is internal to the document's narrative ("we next turn to robustness"), not external to the editing process ("the table now defines"). The line-level markers and replacements that operationalize this are the safety net in `references/style.md §Audience: write to the reader, not the conversation`; the audience model is the primary discipline.
 
-## Project Conventions in the handoff doc / CLAUDE.md
+## Project Conventions in the task tree / CLAUDE.md
 
 A paper's writing-side conventions are paper-specific choices among defensible alternatives that a fresh agent would otherwise re-infer and silently re-decide each session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) → `CLAUDE.md` (project-permanent). Place the surface on the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project — so every writing agent inherits it via the ancestor chain. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability.
+**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) -> `CLAUDE.md` (project-permanent). Place the surface on the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project — so every writing agent inherits it via the ancestor chain. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability.
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
@@ -51,7 +51,7 @@ A paper's writing-side conventions are paper-specific choices among defensible a
 
 **Excluded:** math notation (symbol → meaning, equation numbering) is owned by `theory-modeling`'s Notation Conventions table — a sibling subsection inside `## Project Conventions`; section/caption capitalization and page-layout macros are venue / template territory.
 
-**Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-lane review do not auto-scan.
+**Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them on the manuscript-governing task or `CLAUDE.md` before substantive editing. Routine polish and single-lane review do not auto-scan.
 
 **Scanning is unspecified.** Agents inventory using the detection language in `references/consistency/*.md` and `references/style.md`; there is no separate scan procedure.
 
@@ -80,11 +80,11 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 | `references/style.md` | Sentence- or paragraph-level edits; language/style review; every Polish and Draft self-check. |
 | `references/structure.md` | Structure review, drafting a section, or polish that authorizes restructuring. |
 | `references/consistency/*.md` (8 dimensions: terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper) | Review or polish targets that consistency dimension. |
-| `references/planning.md` | PLAN phase for large writing work; defines the writing header and PLAN-only long-form review retrofit. |
+| `references/planning.md` | PLAN phase for large writing work; defines the writing header and review-only task tree path. |
 | `references/long-form-review.md` | Multi-lane review (style/language, structure, or more than one consistency dimension), `deep` thoroughness, or full-paper / pre-submission scope. |
 | `references/refactor-and-compile.md` | Find-replace across the document, build/compile any time edits are made. |
 | `references/integration.md` | The writing task is riding `superintegrate`. |
 
 ## Coupling to superRA workflows
 
-Most writing work is standalone — terminate at edit + commit, or findings + commit. Larger work (whole-section drafts, whole-paper revisions, R&R passes) routes through `superplan` with `references/planning.md`. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `superimplement`, findings live in task-local `## Review Notes` (`references/long-form-review.md`).
+Most writing work is standalone — terminate at edit + commit, or findings + commit. Larger work (whole-section drafts, whole-paper revisions, R&R passes) routes through `superplan` with `references/planning.md`. Multi-lane, deep, full-paper, or pre-submission review creates a review-only task subtree: the draft already exists, reviewers inspect it through `superimplement`, and findings live in task-local `## Review Notes` (`references/long-form-review.md`).

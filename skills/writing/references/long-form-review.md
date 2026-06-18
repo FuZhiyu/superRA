@@ -12,9 +12,9 @@ Review lanes are:
 - **Structure:** `structure.md`
 - **Consistency:** one lane per relevant `consistency/<dim>.md`
 
-## Task Tree Retrofit
+## Review Task Tree
 
-Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document (header rows and retrofit mechanics in `planning.md §Retrofitting a Review Plan`), then dispatches reviewers through superimplement. One task per review lane or deep-review perspective; each task names the target file/section and the lane reference to load.
+Long-form review treats the user's existing draft as the artifact under review. The orchestrator enters through the review-only task tree defined in `planning.md §Review Task Trees`, then dispatches reviewers through superimplement. One task per review lane or deep-review perspective; each task names the target file/section and the lane reference to load.
 
 ## Task Granularity
 
@@ -30,8 +30,8 @@ Dispatch through `agent-orchestration`'s canonical reviewer template. Keep `Stag
 
 Reviewers write task-local review notes (not a shared findings section) and set `status: revise` or `approved`. Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format; language/style and structure reviewers use `review.md`'s finding format with `Fix:` per `review.md §Fix tiers`.
 
-Do not dispatch a reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes.
+Do not create a shared `review.md` or reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes on the manuscript-governing task.
 
 ## Review-Time Indices
 
-Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section on the manuscript-governing task when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.
+Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section on the manuscript-governing task when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.

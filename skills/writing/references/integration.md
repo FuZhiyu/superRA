@@ -38,5 +38,5 @@ When the writing task also produced numbers (a methodology revision that re-ran 
 - `[BLOCKING]` Gate 4: every hunk traceable to a task, decision, or chat request.
 - `[BLOCKING]` If the task also produced numbers: data-analysis integration discipline applied per `econ-data-analysis/references/integration.md`.
 - `[ADVISORY]` Build warnings enumerated (new vs pre-existing) with one-line triage rationale.
-- `[ADVISORY]` Outline changes listed in handoff with their authorization source.
+- `[ADVISORY]` Outline changes listed with their authorization source.
 - `[ADVISORY]` Pre-submission hygiene (widows, orphans, overfull hboxes) addressed when applicable.

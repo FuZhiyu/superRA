@@ -181,7 +181,7 @@ Walked top to bottom for every sentence-level edit. The rules are heuristics, no
 - Transitions placed near paragraph start.
 - First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
 
-### Handoff
+### Status Return
 
 - `[BLOCKING]` Every applied rule is traceable to a specific problem in the source text (no over-application).
-- Edits that touched more than diction (i.e., changed sentence structure) noted in handoff so the author can confirm voice preservation.
+- Edits that touched more than diction (i.e., changed sentence structure) noted in the status return or task body so the author can confirm voice preservation.

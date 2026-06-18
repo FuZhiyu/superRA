@@ -296,13 +296,13 @@ assert_contains \
   '`references/planning.md` | PLAN phase for large writing work'
 
 assert_contains \
-  "Writing planning reference declares PLAN-only retrofit marker" \
+  "Writing planning reference declares review-only task-tree marker" \
   "skills/writing/references/planning.md" \
-  "**Writing workflow:** Long-form review retrofit (review-only; no ## Results)"
+  "**Writing workflow:** Review-only task tree"
 
 assert_absent \
-  "Planning workflow does not own writing PLAN-only retrofit marker" \
-  "Long-form review retrofit" \
+  "Planning workflow does not own writing review-only marker" \
+  "Review-only task tree" \
   "skills/superplan/SKILL.md"
 
 assert_absent \
@@ -316,8 +316,8 @@ assert_absent \
   "skills/superplan/SKILL.md"
 
 assert_absent \
-  "Implementation workflow does not own writing PLAN-only retrofit" \
-  "Long-form review retrofit" \
+  "Implementation workflow does not own writing review-only task tree" \
+  "Review-only task tree" \
   "skills/superimplement/SKILL.md"
 
 assert_absent \

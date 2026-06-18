@@ -32,11 +32,11 @@ Infer thoroughness from scope; ask via `AskUserQuestion` only when ambiguous.
 
 ## Multi-lane reviews
 
-When the scope spans more than one lane (language/style, structure, or any consistency dimension), dispatch **one reviewer per lane in parallel**. Each reviewer loads only the lane file(s) it needs: `style.md`, `structure.md`, or one `consistency/*.md` file. One generalist reviewer loaded with every lane produces shallower findings than focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the shared review-doc protocol.
+When the scope spans more than one lane (language/style, structure, or any consistency dimension), dispatch **one reviewer per lane in parallel**. Each reviewer loads only the lane file(s) it needs: `style.md`, `structure.md`, or one `consistency/*.md` file. One generalist reviewer loaded with every lane produces shallower findings than focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the review task-tree protocol.
 
 ## Review-as-planning
 
-When findings will drive subsequent edits, shape the report as a task list — each finding a task an implementer can pick up. Use the standard task format (`task-tree/references/task-file-contract.md`) when findings survive across sessions or dispatches; a chat-only report suffices for same-session iteration. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
+When findings will drive subsequent edits in the same session, shape the chat report as an actionable list. When findings must survive across sessions or dispatches, create or update task-tree tasks instead of a standalone review file; accepted findings live in task-local `## Review Notes` until a follow-up Polish task applies them. If the requester says "now go fix these" in a standalone session, the findings list becomes the explicit Polish scope directly — don't re-author.
 
 ## Intent comments as yardstick
 

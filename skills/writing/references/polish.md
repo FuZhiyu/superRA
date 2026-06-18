@@ -4,7 +4,7 @@
 
 ## Input shapes
 
-Across all three shapes: if `## Project Conventions` is in play in a handoff doc, treat its writing-side rows as the established choice during triage — divergences from them are findings to fix or surface, not free authorial calls (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`).
+Across all three shapes: if `## Project Conventions` is in play in the task tree, treat its writing-side rows as the established choice during triage — divergences from them are findings to fix or surface, not free authorial calls (per `SKILL.md §Project Conventions in the task tree / CLAUDE.md`).
 
 ### A — Unstaged edits
 

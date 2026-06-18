@@ -2,7 +2,7 @@
 
 > Load at the PLAN phase when large writing work enters the superRA workflow: whole-section drafts, whole-paper revisions, R&R passes, or long-form / multi-lane review.
 
-Most writing work stays standalone. This reference only covers writing work large enough to need durable task blocks, reviewer dispatch, or cross-session handoff.
+Most writing work stays standalone. This reference only covers writing work large enough to need durable tasks, reviewer dispatch, or cross-session continuity.
 
 ## Hard Gate
 
@@ -13,7 +13,7 @@ Before task drafting, collect enough context to populate the writing header fiel
 Add a writing-specific section to the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project:
 
 ```markdown
-**Writing workflow:** <Long-form review retrofit (review-only; no ## Results) | Draft / Polish workflow>
+**Writing workflow:** <Review-only task tree | Draft / Polish workflow>
 
 **Writing targets:** <files and sections in scope>
 
@@ -25,26 +25,25 @@ Add a writing-specific section to the `## Objective` of the task whose subtree i
 
 **Build command:** <latexmk / quarto / project command, or "not applicable" with reason>
 
-**Writing output:** <review notes in task ## Review Notes | edited manuscript | drafted section>
+**Writing output:** <task-local ## Review Notes | edited manuscript | drafted section>
 ```
 
-Use only the rows that apply. For long-form review retrofit, write this row exactly so downstream workflows can recognize the review-only path:
+Use only the rows that apply. For review-only trees, write this row exactly so downstream workflows can recognize the path:
 
 ```markdown
-**Writing workflow:** Long-form review retrofit (review-only; no ## Results)
+**Writing workflow:** Review-only task tree
 ```
 
-## Retrofitting a Review Plan
+## Review Task Trees
 
-Long-form review treats the user's existing draft as the implementation under review. The planner retroactively creates the task tree around that artifact:
+Long-form review treats the user's existing draft as the artifact under review. The planner creates a review-only task subtree around that artifact:
 
 - one task per review lane or deep-review perspective;
 - each task points at the target file/section and loaded lane reference;
-- `status:` starts `not-started`, then reviewers set it to `revise` with task-local review notes or `approved`;
-- no `## Results` sections are created; findings belong in task-local `## Review Notes`.
+- `status:` starts `not-started`, then reviewers set it to `revise` with task-local review notes or `approved`.
 
-This path uses superimplement for reviewer dispatch and status handling, not for implementer output production. It is a writing-owned exception: do not modify superimplement — enter with a task tree carrying the exact review-only rows above, and treat task-local `## Review Notes` as the sole durable findings surface.
+This path uses superimplement for reviewer dispatch and status handling, not for implementer output production. It is a writing-owned exception: do not modify superimplement — enter with a task tree carrying the exact review-only row above, and treat task-local `## Review Notes` as the sole durable findings surface. Do not create a shared `review.md`, `RESULTS.md`, or equivalent findings file.
 
 ## Project Conventions
 
-Populate `## Project Conventions` with the writing-side conventions visible in the target, using the categories and acid tests in `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. Summarize durable project guidance here rather than duplicating it in task blocks.
+Populate `## Project Conventions` with the writing-side conventions visible in the target, using the categories and acid tests in `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. Summarize durable project guidance here rather than duplicating it in task blocks.
