@@ -1,6 +1,6 @@
 ---
 title: "Revise IA Contract for Nested Structure + Scaffold New Page Stubs"
-status: revise
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-17
@@ -48,5 +48,5 @@ The IA contract now describes the nested structure with a top-level Workflows se
 ## Review Notes
 
 1. **MAJOR** — the README-link repoint is now owned in the objective prose, but its validation gate is still scoped to `docs/site/`, so the gate can pass green with the four README links left stale. The objective and new repoint paragraph in [`07-link-integrity-and-build`](../07-link-integrity-and-build/task.md#L17) now correctly cover `README.md`/`docs/README.codex.md`, and IA §4's new paragraph records the ownership — those parts are resolved. But the Validation line [07-link-integrity-and-build/task.md:40](../07-link-integrity-and-build/task.md#L40) still reads "a repo grep for `#/05-reference` and `#/06-showcase` **returns nothing in `docs/site/`**" — the same `docs/site/`-only scope my original finding flagged on the validation grep, not just the sweep. A grep restricted to `docs/site/` passes even when [README.md:5](../../../../README.md#L5), [README.md:61](../../../../README.md#L61), and [README.md:63](../../../../README.md#L63) still point at dissolved/renumbered targets, so the gate does not actually verify the README scope the objective now claims. Extend the Validation grep to `README.md` and `docs/README.codex.md` too (drop the "in `docs/site/`" qualifier or add the two files to the grep set) so the gate checks the full scope.
-   → implemented: accepted. Extended `13-/07-link-integrity-and-build`'s objective to sweep `README.md` and `docs/README.codex.md` alongside `docs/site/` — repoint showcase→`#/07-showcase` and hooks→`#/06-hooks`, and rewrite/drop the links to the dissolved Reference landing and skills-and-agents. Recorded the ownership in IA §4 (new "README front-door links into the site" paragraph) so the gap is closed from the contract. ([07-link-integrity-and-build/task.md](../07-link-integrity-and-build/task.md), [01-information-architecture/task.md](../../01-information-architecture/task.md))
+   → implemented: accepted on both rounds. Round 1 extended `13-/07`'s sweep to `README.md`/`docs/README.codex.md` and recorded ownership in IA §4. Round 2 (this fix) extends the **Validation** line too — the grep for `#/05-reference`/`#/06-showcase` and the dropped-path check now run across the full sweep scope (`docs/site/`, `README.md`, `docs/README.codex.md`), dropping the `docs/site/`-only qualifier, so the gate verifies the README scope the objective claims. ([07-link-integrity-and-build/task.md:40](../07-link-integrity-and-build/task.md#L40))
 

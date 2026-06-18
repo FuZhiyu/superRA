@@ -37,7 +37,7 @@ Find them with a repo-wide search for `#/05-reference`, `#/06-showcase`, and `#/
 
 Load `writing` for any link-context prose touched.
 
-Validation: a repo grep for `#/05-reference` and `#/06-showcase` returns nothing in `docs/site/`; no link targets a dropped glossary/FAQ/skills-and-agents path; the render-integrity check passes; a built/served walkthrough reaches every moved page with no dead link.
+Validation: a repo grep for `#/05-reference` and `#/06-showcase` across the full sweep scope — `docs/site/`, `README.md`, and `docs/README.codex.md` — returns nothing; no link in any of those files targets a dropped glossary/FAQ/skills-and-agents path; the render-integrity check passes; a built/served walkthrough reaches every moved page with no dead link.
 
 ## Results
 
