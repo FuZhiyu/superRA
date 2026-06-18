@@ -12,9 +12,9 @@ A domain skill gives the agent the methodology for your kind of research and giv
 
 Three domain skills ship today. Each has its own page below.
 
-- [econ-data-analysis](#/03-domain-skills/01-econ-data-analysis) — for any work on economic, financial, or panel data: importing, cleaning, merging, building variables, regressions, figures.
-- [theory-modeling](#/03-domain-skills/02-theory-modeling) — for deriving, solving, verifying, or proving anything mathematical.
-- [writing](#/03-domain-skills/03-writing) — for drafting, polishing, proofreading, or reviewing prose a human will read.
+- [econ-data-analysis](#/03-domain-skills/01-econ-data-analysis) — enforces describe-before-transform on every data step (merges, filters, variable construction, regressions), so a silent one-to-many fan-out or a missing-as-zero coding gets caught at the step that caused it instead of in a draft.
+- [theory-modeling](#/03-domain-skills/02-theory-modeling) — runs derivations through four ordered gates (objects and notation, assumptions, derivations, verification), so one symbol can't quietly mean two things and an assumption can't be back-filled after the algebra needs it.
+- [writing](#/03-domain-skills/03-writing) — polishes prose while holding your argument, claims, and terminology sovereign, so an "improve the writing" pass tightens wording without rewriting what you said or leaking the chat into the draft.
 
 ## On the roadmap
 
