@@ -1,6 +1,6 @@
 ---
 title: "Re-narrate the Quickstart Around the Real Study"
-status: implemented
+status: approved
 depends_on:
   - 02-progression-exports
   - 03-rewrite-showcase-page
