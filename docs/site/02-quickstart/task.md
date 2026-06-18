@@ -101,7 +101,7 @@ Click any task to read its objective and results in place — the same `## Objec
 
 ![Dashboard task detail for the panel task: the Objective and the Results the implementer wrote and the reviewer checked.](attachments/dashboard-task-detail.png)
 
-Because the results live in committed task files rather than the chat, they survive as a durable handoff even after the agent session that produced them ends. Each task is a plain markdown file (`superRA/01-simulate-panel/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [Reference › Task File](#/05-reference/01-task-file).
+Because the results live in committed task files rather than the chat, they survive as a durable handoff even after the agent session that produced them ends. Each task is a plain markdown file (`superRA/01-simulate-panel/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [The Task File](#/04-utility-skills/01-task-tree/01-task-file).
 
 #### Superintegrate
 
@@ -128,4 +128,4 @@ You have run a full cycle. Two further pieces of discipline each have a page —
 - **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, writing, and more, and how a domain skill loads on top of any phase.
 - **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.
 
-For lookups — a field, a flag, a status, a command — the [Reference](#/05-reference) section has the exact definitions with links to the files that own them. To see a real, full-size project rather than this toy, open the [Showcase](#/06-showcase).
+For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To see a real, full-size project rather than this toy, open the [Showcase](#/07-showcase).

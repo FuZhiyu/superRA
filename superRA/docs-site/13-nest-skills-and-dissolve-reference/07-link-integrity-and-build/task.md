@@ -1,6 +1,6 @@
 ---
 title: "Site-Wide Link Repoint + Build/Render-Integrity Verification"
-status: not-started
+status: implemented
 depends_on: 
   - 02-domain-skills
   - 03-utility-skills
@@ -41,3 +41,33 @@ Validation: a repo grep for `#/05-reference` and `#/06-showcase` across the full
 
 ## Results
 
+Swept the full scope (`docs/site/`, `README.md`, `docs/README.codex.md`) for stale hash links, repointed every one, removed the emptied `05-reference/` parent, and verified the build through both a static doc-mode export and a live doc-mode serve.
+
+**Links repointed.** `docs/README.codex.md` carries no site deep-links, so it needed no edits; the changed files are the three doc pages and `README.md`.
+
+| File | Stale link | New target |
+|---|---|---|
+| [07-showcase/task.md:19](../../../../docs/site/07-showcase/task.md) | `#/05-reference/03-status-and-frontier` | `#/04-utility-skills/01-task-tree/03-status-and-frontier` |
+| [07-showcase/task.md:21](../../../../docs/site/07-showcase/task.md) | `#/05-reference/03-status-and-frontier` | `#/04-utility-skills/01-task-tree/03-status-and-frontier` |
+| [07-showcase/task.md:23](../../../../docs/site/07-showcase/task.md) | `#/05-reference/01-task-file` | `#/04-utility-skills/01-task-tree/01-task-file` |
+| [02-quickstart/task.md:104](../../../../docs/site/02-quickstart/task.md) | `#/05-reference/01-task-file` | `#/04-utility-skills/01-task-tree/01-task-file` |
+| [02-quickstart/task.md:131](../../../../docs/site/02-quickstart/task.md) | `#/05-reference` (dissolved) + `#/06-showcase` | rewrote to point at `#/05-workflows`, the three task-tree lookup subpages, and `#/07-showcase` |
+| [01-welcome/task.md:96](../../../../docs/site/01-welcome/task.md) | `#/05-reference` (dissolved) | rewrote the Start-here bullet to point at the new `#/05-workflows` section |
+| [01-welcome/task.md:97](../../../../docs/site/01-welcome/task.md) | `#/06-showcase` | `#/07-showcase` |
+| [README.md:5](../../../../README.md) | `#/05-reference` (dissolved) + `#/06-showcase` | `#/05-workflows` + `#/07-showcase` |
+| [README.md:61](../../../../README.md) | `#/05-reference/04-skills-and-agents` (dropped) | dropped the trailing clause; the two overview pages already carry the skill inventory and the Stage→load map is internal |
+| [README.md:63](../../../../README.md) | `#/05-reference/07-hooks` | `#/06-hooks` |
+
+The dropped glossary (`#/05-reference/05-glossary`) and FAQ (`#/05-reference/06-faq`) targets had no live links in scope — their facts were already folded into the relevant pages by tasks `04`/`05`, so there was nothing to retarget. No in-page anchor into an old flat skills page survived (a search for the old anchor phrasing and for bare-fragment `](#...)` links returned nothing).
+
+**Empty parent removed.** [docs/site/05-reference/](../../../../docs/site/05-reference/) held only its dissolved landing `task.md` after tasks `04`/`05` moved or dropped every child; removed it with `git rm -r`.
+
+**Validation — link integrity.** Repo greps for `#/05-reference` and `#/06-showcase` across `docs/site/`, `README.md`, and `docs/README.codex.md` return nothing; a grep for any `glossary`/`faq`/`skills-and-agents` hash target returns nothing. Cross-checking every rendered hash-link target against the embedded node-path set: 23 distinct targets used, all resolve to a real node — zero dead links.
+
+**Validation — render integrity.** Ran `check_markdown.py` over all 25 doc pages: every page reports `clean`.
+
+**Validation — real build, not file://.**
+- Static doc-mode export built clean: `plan_dashboard.py generate --plan-root docs/site --doc-mode` → 2.2 MB single-file HTML, exit 0. Every moved target path (`04-utility-skills/01-task-tree/{01-task-file,02-cli-commands,03-status-and-frontier,04-dashboard}`, `05-workflows[/01-plan,02-implement,03-integrate]`, `06-hooks`, `07-showcase`) is present in the embedded tree; every dropped/old path (`05-reference*`, `06-showcase`) is absent.
+- Live doc-mode serve (`dashboard --root docs/site --doc-mode`) returned `200` on `/`; the `/api/search-index` the nav and client-side search build from lists exactly the 25 real pages with correct nesting (task-tree detail pages 3-deep, workflows nested, hooks/showcase top-level) and contains no `05-reference` or `06-showcase` entry. This is the real user path: the live nav resolves moved targets and excludes dropped ones.
+
+Verification commands are re-runnable from the repo root; the build artifact lives at `/tmp/superra-docsite-build/index.html` (generated, not committed).

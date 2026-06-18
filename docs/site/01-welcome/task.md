@@ -93,7 +93,7 @@ Five ideas carry most of the discipline.
 - To try it, start with the [Quickstart](#/02-quickstart): one tiny analysis end to end in about twenty minutes. You meet the task tree, dispatch, review, and status by doing rather than reading.
 - For which discipline fits your work, the [Domain Skills](#/03-domain-skills) page introduces each one — data analysis, theory modeling, academic writing — with the single idea that tells you whether it applies.
 - For the tools the workflow composes, the [Utility Skills](#/04-utility-skills) page covers the task tree, intent-aware merging, result protection, and the rest of the domain-neutral layer.
-- To look up a field, flag, status, or command, the [Reference](#/05-reference) section has the exact definitions, with links to the skill files that own them.
-- The [Showcase](#/06-showcase) embeds a real superRA task tree, exported by the same dashboard that renders this site.
+- For more on the three phases — what each does for you and what you decide along the way — the [Workflows](#/05-workflows) section covers plan, implement, and integrate one page at a time.
+- The [Showcase](#/07-showcase) embeds a real superRA task tree, exported by the same dashboard that renders this site.
 
 superRA is open source and built for researchers comfortable with git and an AI harness. Installation and contribution details live in the project [README](README.md).

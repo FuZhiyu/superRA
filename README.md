@@ -2,7 +2,7 @@
 
 > ⚠️ **Breaking change (0.2.0):** the three workflow phase skills were renamed — `planning-workflow` → `superplan`, `implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate` — to avoid colliding with Claude Code's Workflow tool / `/workflows`. Update any saved `Skill(superRA:planning-workflow|implementation-workflow|integration-workflow)` calls to the new ids, and refresh globally-installed Codex agents by rerunning `codex-superra-setup`. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note.
 
-**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Reference](http://fuzhiyu.me/superRA/#/05-reference), and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/06-showcase).
+**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Workflows](http://fuzhiyu.me/superRA/#/05-workflows) section, and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/07-showcase).
 
 superRA turns AI coding agents into disciplined research assistants. It ships:
 
@@ -58,9 +58,9 @@ The project's state lives in a task tree — a directory of small `task.md` file
 
 ## Skills, Agents, and Hooks
 
-superRA ships **domain skills** — currently data analysis, theory modeling, and academic writing, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages walk each skill and its design idea; the [reference](http://fuzhiyu.me/superRA/#/05-reference/04-skills-and-agents) lists every skill and the Stage → skill load map.
+superRA ships **domain skills** — currently data analysis, theory modeling, and academic writing, with literature review and simulation on the roadmap — that load on top of the workflow when a task touches their domain, plus **utility skills** for markdown reports, result-protecting drift tests, semantic branch merges, gated integration refactors, and worktree data sync. The [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages walk each skill and its design idea.
 
-The work is carried out by an implementer and a reviewer (introduced in the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart)). superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/05-reference/07-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
+The work is carried out by an implementer and a reviewer (introduced in the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart)). superRA installs [lifecycle hooks](http://fuzhiyu.me/superRA/#/06-hooks) for Claude Code and Codex that nudge agents toward the right skill at the right moment.
 
 ## Installation
 
