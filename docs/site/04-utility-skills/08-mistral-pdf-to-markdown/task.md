@@ -18,7 +18,7 @@ The page range is the main cost and runtime lever: the API bills per page and ru
 
 This is the conversion step behind the [Zotero reader](#/04-utility-skills/07-zotero-paper-reader). When the PDF has a clean text layer and no scans, figures, or columns to recover, name the local `pdf` skill instead — it reads faster and without API cost.
 
-### The key
+### The API key
 
 The script calls a paid API and stops with `Error: Mistral API key not found` if it cannot locate a key. It checks, in order: the `MISTRAL_API_KEY` environment variable, a `paper-reader.mistral_api_key` entry in `.claude/agent-contract.yaml` or `~/.config/agent-contract/config.yaml`, then `MISTRAL_API_KEY=...` in `Notes/.env`. Never commit the key; the environment variable or a gitignored `Notes/.env` are the intended homes.
 
