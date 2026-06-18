@@ -30,7 +30,7 @@ Workstream rollup (as of 2026-06-10):
 
 Integration of `writing-review-task-trees` into trunk `better-handoff` (2026-06-18). Scope: [task-tree/agent-interface/writing-review-task-trees](task-tree/agent-interface/writing-review-task-trees/task.md), the writing-domain deep-review task-tree workflow update. Completion disposition from superimplement Step 4: proceed with integration. `BASE_REF=better-handoff` (researcher confirmed).
 
-- [ ] Drift tests created
+- [x] Drift tests created — Protect: key results are workflow-behavior contracts for the writing domain, not numeric outputs. Researcher confirmed the proposed set with no additions: long-form/deep review routes through review-only task trees, shared review-doc findings are retired, the planning marker is `**Writing workflow:** Review-only task tree`, and stale runtime `handoff` wording is absent from writing references. Protection is the updated `tests/test-sync-integration-contract.sh` coverage plus the full task-tree suite already green on the approved branch (56/56 contract checks; 690 task-tree tests passed).
 - [ ] Integrated
 - [ ] Docs finalized
 - [ ] Final action
