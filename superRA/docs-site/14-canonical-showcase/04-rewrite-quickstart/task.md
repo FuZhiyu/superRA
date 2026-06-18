@@ -1,6 +1,6 @@
 ---
 title: "Re-narrate the Quickstart Around the Real Study"
-status: not-started
+status: implemented
 depends_on:
   - 02-progression-exports
   - 03-rewrite-showcase-page
@@ -29,4 +29,25 @@ Hold the page's structure (Superplan → Superimplement → Watch & read → Sup
 
 ## Results
 
-_Not started._
+Re-narrated [docs/site/02-quickstart/task.md](../../../../docs/site/02-quickstart/task.md) so the real CAPM-vs-FF3 study is its single running example and the workflow arc is spined by **links to the live progression exports** instead of embedded screenshots. The intro and running-example framing already named the real study (from an earlier pass); this pass removed the screenshot scaffolding and the toy/screenshot framing that remained.
+
+**Embeds → live links.** Replaced all five embedded dashboard PNGs with bare relative links to the three progression exports, placed at the natural points in the arc:
+
+- **Superplan section** → `[Open the freshly-planned tree →](showcase-after-planning.html)` (the all-`not-started` frontier; invites clicking a task and the dependency-graph view).
+- **Superimplement section** → `[Open the study mid-implement →](showcase-mid-implement.html)` (the mixed-status moment; invites clicking the `implemented` task to see results awaiting review).
+- **Watch & read section** → `[Open the finished study →](showcase-analysis-tree.html)` (all-`approved`) plus a deep link `[Read the finished regression task →](showcase-analysis-tree.html#/02-analysis)`. The Kanban board has no URL route, so the prose tells the reader to toggle the view switch at the top of the page rather than linking it.
+
+The links are bare relative hrefs (basename only), matching `02-progression-exports`'s `--doc-local-link` registration; verified in the build that none was rebased to a GitHub blob URL.
+
+**Toy/screenshot sweep.** No `toy`, `simulated`, `screenshot`, or "same arc on a real project" remnants remain (`grep -niE` clean). There was no separate `#### The same arc on a real project` coda to fold — the whole page is now the real study, so the three progression links are the spine of Superplan / Superimplement / Watch with no duplicated link. The inline `## Results` block and the closing Showcase pointer were already faithful to the real study (panel 754 months × 29 cols, 1:1 inner merge, market premium 0.597%/mo, vol 4.47%/mo — matching [showcase-analysis/01-data](../../../showcase-analysis/01-data/task.md)).
+
+**Orphaned PNGs deleted.** Removed all five PNGs under `13-real-analysis-showcase/02-quickstart-screenshots/attachments/` (`showcase-after-planning.png`, `showcase-mid-implement.png`, `showcase-complete.png`, `showcase-task-detail.png`, `showcase-kanban.png`). `grep -rn` over `docs/**` finds zero references to any of them.
+
+**Verification (built the site to a scratch dir and inspected the rendered output, not just the source).**
+
+- `bash docs/build_site.sh /tmp/qs-build` produced all four files (`index.html`, `showcase-analysis-tree.html`, `showcase-after-planning.html`, `showcase-mid-implement.html`).
+- Extracted the quickstart task body from the embedded JSON in `index.html`: **0 `.png` references, 0 `![` image embeds** — no dashboard screenshots survive. All three progression links and the `#/02-analysis` deep link present exactly once each and not rebased to blob URLs.
+- All three link targets exist and are non-trivial (1.1 / 1.7 / 1.9 MB); the `02-analysis` route is present in `showcase-analysis-tree.html` (4 occurrences), so the deep link resolves.
+- `report-in-markdown` self-diagnose on the quickstart page: clean.
+
+**Caveat — stale sibling task (out of my scope).** The approved task [13-real-analysis-showcase/02-quickstart-screenshots](../../13-real-analysis-showcase/02-quickstart-screenshots/task.md) captured and embedded the five PNGs I just deleted; its `## Results` and table now reference attachments that no longer exist, and its deliverable (screenshots embedded in the Quickstart) is superseded by this `14-canonical-showcase` subtree. It is a different, already-`approved` task, so I did not edit it. The orchestrator/planner should retire or annotate it. The task spec's grep target (`docs/**`) is clean; the dangling references are confined to `superRA/docs-site/...` task files.

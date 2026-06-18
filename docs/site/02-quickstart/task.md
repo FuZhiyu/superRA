@@ -10,7 +10,7 @@ created: 2026-06-11
 
 Run this on day one. You install superRA, point it at a project, and push one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, integrate the result. Every core idea — the task tree, the dashboard, adversarial review, status, integration — arrives inline as you reach it. By the end you have used the mechanics, not read definitions.
 
-The running example is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section. The data are public — straight from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) — so the whole example reproduces on your machine. Every screenshot is the dashboard rendering this exact study, read straight from its git history; you can open the finished tree yourself in the [Showcase](#/06-showcase).
+The running example is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section. The data are public — straight from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) — so the whole example reproduces on your machine. As you walk the three phases below, each milestone links a live, explorable export of this exact study at that moment in its workflow — the real dashboard, captured straight from the project's git history, with every task clickable and every view switchable. The finished tree is the [Showcase](#/06-showcase).
 
 ### Prerequisite
 
@@ -63,9 +63,9 @@ You read the tree on the **dashboard** — the human view of those same committe
 ./superRA/superra dashboard
 ```
 
-A live, auto-updating dashboard opens in your browser, runs in the background, and exits once idle. The default **Workspace** view shows the tree with status pills and the parent rollup. Here is the study right after planning — three tasks under one root, every one `not-started` (grey) and the rollup reading 0 of 3:
+A live, auto-updating dashboard opens in your browser, runs in the background, and exits once idle. The default **Workspace** view shows the tree with status pills and the parent rollup. Here is this study right after planning — three tasks under one root, every one `not-started` (grey) and the rollup reading 0 of 3. Open it and click a task to read the objective the planner wrote; switch to the dependency-graph view to see which task must finish before the next can start:
 
-![Dashboard Workspace view of the asset-pricing study right after planning: the task tree in the sidebar with status pills all not-started, the root objective, and the rollup reading 0 of 3.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-after-planning.png)
+[Open the freshly-planned tree →](showcase-after-planning.html)
 
 #### Superimplement
 
@@ -96,25 +96,23 @@ Re-running superRA/showcase-analysis/run_all.sh reproduces every output.
   market volatility 4.47%/mo — so downstream regressions start from clean data.
 ```
 
-The dashboard shows the loop in flight. Mid-run, the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`:
+The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written and waiting on review:
 
-![Dashboard Workspace view mid-implement: the panel task approved, the regression task implemented and awaiting review, the writeup not-started, the parent rolled up to in-progress.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-mid-implement.png)
+[Open the study mid-implement →](showcase-mid-implement.html)
 
 #### Watch progress and read results
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. The **Kanban** view shows every task as a card in a column by status — the at-a-glance "what is where" across the whole tree:
+The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task has survived its review, the whole tree is `approved` (green) and the rollup reads 3 of 3 — the state INTEGRATE picks up:
 
-![Dashboard Kanban view of the asset-pricing study: the three tasks sorted into status columns.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-kanban.png)
+[Open the finished study →](showcase-analysis-tree.html)
 
-Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked. Here is the regression task open, with its objective math and results:
+This is the completed tree, every task green. Toggle the **Kanban** view (the view switch at the top of the page) to see every task as a card in a column by status — the at-a-glance "what is where" across the whole tree.
 
-![Dashboard task detail for the regression task: the Objective with the CAPM and FF3 specifications and the Results the implementer wrote and the reviewer checked.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-task-detail.png)
+Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked. The regression-and-GRS task opens straight to its objective math and the results the implementer wrote and the reviewer checked:
+
+[Read the finished regression task →](showcase-analysis-tree.html#/02-analysis)
 
 Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/showcase-analysis/01-data/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [Reference › Task File](#/05-reference/01-task-file).
-
-Once every task has survived its review, the whole tree is `approved` (green) and the rollup reads 3 of 3 — the state INTEGRATE picks up:
-
-![Dashboard Workspace view with the study complete: all three tasks approved, rollup 3 of 3.](../../../superRA/docs-site/13-real-analysis-showcase/02-quickstart-screenshots/attachments/showcase-complete.png)
 
 #### Superintegrate
 
