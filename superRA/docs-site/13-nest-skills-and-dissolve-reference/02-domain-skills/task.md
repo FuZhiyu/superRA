@@ -1,6 +1,6 @@
 ---
 title: "Domain Skills: Overview + One Page Per Skill"
-status: approved
+status: not-started
 depends_on: 
   - 01-ia-and-scaffold
 
