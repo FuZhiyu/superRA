@@ -172,10 +172,10 @@ test -f skills/theory-modeling/references/integration.md
 python3 - <<'PY'
 from pathlib import Path
 
-# (ii) Every skill under skills/ has a corresponding .agents/skills/ symlink.
+# (ii) Every real skill under skills/ has a corresponding .agents/skills/ symlink.
 skills_root = Path("skills")
 agents_root = Path(".agents/skills")
-canonical = {p.name for p in skills_root.iterdir() if p.is_dir()}
+canonical = {p.parent.name for p in skills_root.glob("*/SKILL.md")}
 exposed = {p.name for p in agents_root.iterdir() if p.is_symlink() or p.is_dir()}
 missing = canonical - exposed
 if missing:

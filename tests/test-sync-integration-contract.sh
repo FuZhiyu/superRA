@@ -137,12 +137,12 @@ assert_contains \
 assert_contains \
   "Integration review does not re-review semantic coherence" \
   "skills/superintegrate/SKILL.md" \
-  "Do not recreate incoming-intent"
+  "incoming-intent research or re-review semantic coherence"
 
 assert_contains \
-  "Skill manifest keeps Sync branch-level" \
-  "skills/using-superRA/SKILL.md" \
-  '`Stage: sync` is branch-level'
+  "Integration workflow keeps Sync branch-level" \
+  "skills/superintegrate/SKILL.md" \
+  'Sync uses `Stage: sync` with generic sync author / sync reviewer agents'
 
 assert_contains \
   "Skill manifest routes Protect to result protection" \
@@ -165,44 +165,49 @@ assert_contains \
   "skills/result-protection/references/drift-test-quality.md"
 
 assert_contains \
-  "Plan anatomy defines Sync Map section" \
+  "Deprecated plan anatomy points to task-file contract" \
   "skills/handoff-doc/references/plan-anatomy.md" \
-  "## Sync Map"
+  "skills/task-tree/references/task-file-contract.md"
 
 assert_contains \
-  "Plan anatomy says Integrate does not turn Sync notes into backlog" \
-  "skills/handoff-doc/references/plan-anatomy.md" \
-  "It does not re-review semantic sync or turn Sync notes into a backlog."
+  "Task-file contract keeps Sync Impact temporary" \
+  "skills/task-tree/references/task-file-contract.md" \
+  '**`## Sync Impact`** — conditional, integration-phase-only, temporary.'
 
 assert_contains \
-  "Plan anatomy keeps Sync impact task-local and temporary" \
-  "skills/handoff-doc/references/plan-anatomy.md" \
-  '**`**Sync impact:**`** is temporary Sync/Integrate scaffolding'
+  "Integration closeout removes Sync Impact" \
+  "skills/superintegrate/SKILL.md" \
+  'remove every temporary task-local `## Sync Impact` section'
+
+assert_absent \
+  "Branch-level Sync Map is retired from runtime surfaces" \
+  "## Sync Map" \
+  skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md superRA/task.md
 
 assert_contains \
-  "Workflow sync author owns the Sync Map format" \
+  "Workflow sync author keeps branch narrative in git log" \
   "skills/semantic-merge/references/workflow-sync-author.md" \
-  "## Sync Map"
+  "The branch-level narrative — incoming intent, resolution thesis, cluster breakdown — is carried by the merge commit message plus any propagation commit messages, i.e. the git log"
 
 assert_contains \
-  "Workflow sync author records pre-sync merge base" \
+  "Workflow sync author records pre-sync base input" \
   "skills/semantic-merge/references/workflow-sync-author.md" \
-  "**Pre-sync merge base:**"
+  "PRE_SYNC_BASE_SHA"
 
 assert_contains \
-  "Workflow sync author records synced base head" \
+  "Workflow sync author records synced base head input" \
   "skills/semantic-merge/references/workflow-sync-author.md" \
-  "**Synced base head:**"
+  "BASE_HEAD_SHA"
 
 assert_contains \
-  "Workflow sync author records sync commits" \
+  "Workflow sync author lands sync commits" \
   "skills/semantic-merge/references/workflow-sync-author.md" \
-  "**Sync commits:**"
+  "Land the merge commit plus any propagation commits needed to reach semantic coherence"
 
 assert_contains \
   "Workflow sync author defines task-local Sync impact" \
   "skills/semantic-merge/references/workflow-sync-author.md" \
-  '**Sync impact:** Cluster `<cluster-id>` explains <task-specific post-sync context>.'
+  "## Sync Impact"
 
 assert_contains \
   "Task-local Sync impact is not an Integrate todo list" \
@@ -210,19 +215,19 @@ assert_contains \
   "not an Integrate to-do list"
 
 assert_contains \
-  "Workflow sync reviewer verifies Sync Map and impact context" \
+  "Workflow sync reviewer verifies git-log thesis and impact context" \
   "skills/semantic-merge/references/workflow-sync-reviewer.md" \
-  "Check the Sync Map against the diff and incoming intent."
+  "Confirm the branch-level thesis is carried by the sync commit messages (the git log), not buried in task-local sections."
 
 assert_contains \
-  "Workflow sync reviewer records Sync review status" \
+  "Workflow sync reviewer returns verdict and reviewed commits" \
   "skills/semantic-merge/references/workflow-sync-reviewer.md" \
-  'record the verdict in `**Sync review status:**`'
+  "Return the verdict plus the reviewed sync commit SHA(s)."
 
 assert_contains \
-  "Standalone semantic merge owns standalone record format" \
+  "Standalone semantic merge records resolution in commit body" \
   "skills/semantic-merge/references/standalone-merge.md" \
-  "## Codebase Context"
+  "The commit body captures the resolution thesis"
 
 assert_contains \
   "Semantic merge scope boundary defers codebase coherence" \
@@ -268,7 +273,7 @@ assert_contains \
 assert_contains \
   "Integration reviewer consumes Sync impact context" \
   "agents/reviewer.md" \
-  'As **integration reviewer**, consume task-local `**Sync impact:**`'
+  "In Integrate, any Sync-impact-driven item also records the sync cluster"
 
 assert_contains \
   "Integration reviewer uses BASE_HEAD_SHA pruning sweep" \
@@ -283,7 +288,7 @@ assert_contains \
 assert_contains \
   "Planning workflow routes writing to planning reference" \
   "skills/superplan/SKILL.md" \
-  'load `skills/writing/references/planning.md`'
+  '`superRA:writing`'
 
 assert_contains \
   "Writing skill exposes planning reference" \

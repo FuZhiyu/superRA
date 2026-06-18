@@ -62,6 +62,7 @@ Identify the domain of the work and load the matching domain skill's planning re
 | Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` |
 | Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` |
 | Writing | task involves editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
+| Slide design | task involves creating, revising, polishing, or reviewing research slide decks, Beamer presentations, seminar/conference/lecture slides, slide structure, titles, bullets, overlays, backup slides, or slide layout/overflow issues | `superRA:slide-design` |
 
 **Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 3.** The researcher must approve the domain skill's planning-stage inventory artifact before any task structure is drafted.
 

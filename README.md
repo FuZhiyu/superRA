@@ -24,7 +24,7 @@ AI agents are fast but undisciplined:
 - After several iterations, the results quietly drift from the original, and neither you nor the agent can reconstruct why.
 - Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
 
-superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
+superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations; for slide design, reason from the audience's context before optimizing the slide. And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
 
 ## The Plan-Implement-Integrate Workflow
 

@@ -79,9 +79,10 @@ Both axes load *in addition to* the always-loaded `superRA:using-superra` and `s
 
 | Skill | Load when the task… |
 |---|---|
-| `econ-data-analysis` | involves data analysis |
-| `theory-modeling` | derives, solves, verifies, or proves anything mathematical |
-| `writing` | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill)|
+| `econ-data-analysis` (`superRA:econ-data-analysis`) | involves data analysis |
+| `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
+| `writing` (`superRA:writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
+| `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
 
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the adapter reference for the current harness under `references/`.
