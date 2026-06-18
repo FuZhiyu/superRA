@@ -1,6 +1,6 @@
 ---
 title: "Dissolve Reference: Promote Hooks, Drop Glossary/FAQ/skills-and-agents, Renumber Showcase"
-status: implemented
+status: approved
 depends_on: 
   - 01-ia-and-scaffold
   - 03-utility-skills
