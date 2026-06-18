@@ -1,6 +1,6 @@
 ---
 title: "Retire the Demo Tree and Rewire the Build to Two Files"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-17
