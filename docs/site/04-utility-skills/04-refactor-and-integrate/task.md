@@ -20,7 +20,7 @@ This skill reworks a correct-but-rough branch so it fits the project and lands a
 
 **The Final Diff Self-Check** is the trail it leaves before returning. It recomputes the governing range, summarizes the ordinary hunks by class ("utility reuse in scripts", "README currency"), and justifies suspicious ones by file and line — edits to `skills/*` or `agents/*`, base-side restorations, broad rewrites, anything justified only by Sync impact. The trail goes in the task's `## Results` when there is one, otherwise in the status return. A no-change result still leaves the trail; under `superintegrate` the integration reviewer recomputes the same range and a missing or stale trail is blocking even when no code changed.
 
-One boundary worth knowing: it does not resolve methodological questions. Different control sets, variable definitions, sample filters, or normalization choices are research decisions, and it escalates those to you rather than picking one. It prunes form, not method.
+It does not resolve methodological questions. Different control sets, variable definitions, sample filters, or normalization choices are research decisions, and it escalates those to you rather than picking one. It prunes form, not method.
 
 Inside the superRA workflow it runs automatically at the `superintegrate` Integrate step, after the base sync, against the post-sync baseline. Standalone, point it at a rough branch and name the range to prune against:
 

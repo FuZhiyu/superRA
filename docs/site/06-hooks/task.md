@@ -9,7 +9,7 @@ created: 2026-06-11
 ## Objective
 
 superRA ships lifecycle hooks that run automatically in the background of your harness session.
-They are guards and reminders, not enforcement boundaries — the discipline system handles enforcement.
+They act as guards and reminders. Enforcement is handled by the discipline system.
 Hook source files live in [hooks/](hooks/); harness-specific wiring is in [hooks/hooks.json](hooks/hooks.json) (Claude Code), [hooks/hooks-codex.json](hooks/hooks-codex.json) (Codex), and [hooks/hooks-cursor.json](hooks/hooks-cursor.json) (Cursor).
 
 ## Hook table
@@ -26,7 +26,7 @@ Hook source files live in [hooks/](hooks/); harness-specific wiring is in [hooks
 
 ## Coverage notes
 
-Claude Code has the richest hook surface: six of the seven hooks fire — all except `codex-plan-stop`, which is the Codex-side replacement for `exit-plan-mode`.
+Claude Code fires six of the seven hooks: all except `codex-plan-stop`, which is the Codex-side replacement for `exit-plan-mode`.
 Codex does not intercept `Skill` calls or plan-mode exit, so the two `ensure-*` gates and `exit-plan-mode` are absent; `codex-plan-stop` covers the plan-materialization reminder instead, and Codex shell interception (`task-hook`) is incomplete, making task-tree reconciliation best-effort there.
 Cursor wires `autoload-superra`, `merge-guard`, both `ensure-*` gates, and `exit-plan-mode`, but carries no `task-hook`, so task-tree reconciliation does not run on Cursor.
 

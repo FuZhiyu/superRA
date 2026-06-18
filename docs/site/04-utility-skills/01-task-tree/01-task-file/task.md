@@ -15,7 +15,7 @@ The frontmatter you touch by hand is short. `title` is the name shown in the tre
 Below the frontmatter, a task carries named `## ` sections, each owned by one role so two agents never fight over the same prose:
 
 - **`## Objective`** — what you write when you scope the task: its goal, plus optional `### Context`, `### Conventions`, and `### Constraints` that the whole subtree inherits. Implementers read it but do not rewrite it.
-- **`## Results`** — what the implementer writes: findings, the evidence that verifies them, caveats, and any deviation from your guidance. This is where you read what a finished task actually found.
+- **`## Results`** — what the implementer writes: findings, the evidence that verifies them, caveats, and any deviation from your guidance. A finished task reports what it found here.
 - **`## Review Notes`** — the reviewer's open findings; present only while items are unresolved, removed on approval.
 
 A scoped leaf looks like this:

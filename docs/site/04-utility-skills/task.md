@@ -12,7 +12,7 @@ Utility skills are domain-neutral capabilities the workflow and agents compose a
 
 Agents are taught to reach for the right one automatically as the workflow runs. You can also request any of them explicitly, by name, in plain language.
 
-Each page below leads with what the skill gives you, then the moment you would reach for it, and links to its `SKILL.md` as the authority for the details; the grouping lives in [CATEGORIES.md](skills/CATEGORIES.md).
+Each page below describes what the skill does, then when you would use it, and links to its `SKILL.md` as the authority for the details; the grouping lives in [CATEGORIES.md](skills/CATEGORIES.md).
 
 - [**task-tree**](#/04-utility-skills/01-task-tree) — keeps project state in git-tracked files instead of the chat scrollback, computing the tree with rollup status, the tasks ready to start now, the dependency DAG, and a live dashboard, so a fresh session resumes from the files rather than reconstructing state and getting it wrong.
 - [**semantic-merge**](#/04-utility-skills/02-semantic-merge) — resolves a merge, rebase, or cherry-pick by what each side meant rather than which lines arrived last, so a tightened filter or a protected coefficient isn't silently reverted when the other side touched the same region for an unrelated reason.

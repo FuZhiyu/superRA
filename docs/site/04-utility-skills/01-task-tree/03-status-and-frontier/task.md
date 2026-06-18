@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-Status is how you see, at a glance, where every task sits — and the frontier is how you know what to work on next. Both are computed from the tree, so you read them rather than maintain them.
+Status shows where every task sits; the frontier shows what to work on next. Both are computed from the tree, so you read them rather than maintain them.
 
 A leaf task moves through the implement-review cycle:
 
@@ -31,7 +31,7 @@ You rarely set these by hand — the agents do, as they pick up, finish, and rev
 
 A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all its active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded from the rollup. Flip one leaf and every ancestor updates on its own.
 
-The **frontier** is the payoff: the set of leaf tasks ready to dispatch right now — `not-started` (or an interrupted `in-progress`) with every `depends_on` sibling already `approved`.
+The **frontier** is the set of leaf tasks ready to dispatch right now: `not-started` (or an interrupted `in-progress`) with every `depends_on` sibling already `approved`.
 
 ```bash
 ./superRA/superra task frontier

@@ -16,7 +16,7 @@ created: 2026-06-11
 ./superRA/superra task read 01-data/02-merge     # one task with its full inherited context
 ```
 
-`task read` is how you give an agent context. It does not just print the file — it injects the ancestor chain, the status of every sibling the task depends on, and any unresolved comments pinned to the task, so the agent arrives oriented. The dispatch prompts throughout superRA assume you read tasks this way.
+`task read` is how you give an agent context. Beyond printing the file, it injects the ancestor chain, the status of every sibling the task depends on, and any unresolved comments pinned to the task, so the agent arrives oriented. The dispatch prompts throughout superRA assume you read tasks this way.
 
 When you scope or restructure work, you create and move tasks:
 
@@ -31,7 +31,7 @@ When you scope or restructure work, you create and move tasks:
 
 Use `task move` rather than a raw `mv`: it carries markdown links and sibling `depends_on` edges through the rename so nothing dangles.
 
-Comments are the channel for steering a task without editing its body — you pin a note to a task, and it surfaces inline the next time anyone runs `task read` on it (and on the dashboard). You resolve a comment once it is addressed:
+Comments steer a task without editing its body. You pin a note to a task, and it surfaces inline the next time anyone runs `task read` on it (and on the dashboard). You resolve a comment once it is addressed:
 
 ```bash
 ./superRA/superra task comment list 01-data/02-merge        # unresolved comments

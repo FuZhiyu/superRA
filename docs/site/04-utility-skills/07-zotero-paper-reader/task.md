@@ -8,7 +8,7 @@ created: 2026-06-17
 
 ## Objective
 
-Ask a bare agent to "read Reis (2021) on inflation expectations and cite it here" and it has no path to your library. It reaches for whatever it can fetch off the web — often the wrong version, a preprint, or a summary confabulated from the title — and when you ask it to cite, it invents a BibTeX key that does not match the one your `.bib` already uses. That last failure is the expensive one: the citation compiles cleanly, looks right, and resolves to a dangling reference only at submission time.
+Ask a bare agent to "read Reis (2021) on inflation expectations and cite it here" and it has no path to your library. It reaches for whatever it can fetch off the web — often the wrong version, a preprint, or a summary confabulated from the title — and when you ask it to cite, it invents a BibTeX key that does not match the one your `.bib` already uses. That last failure is costly because the citation compiles cleanly, looks right, and resolves to a dangling reference only at submission time.
 
 This skill drives your actual Zotero library through one bundled tool, `scripts/zotero_tool.py` (run via `uv run --script <skill-dir>/scripts/zotero_tool.py …`). It runs against the Zotero Desktop local API by default — no credentials, no network — and falls back to the Zotero Web API when desktop Zotero is closed. Every command emits JSON for the agent to read; every read or citation command accepts `--library <group-id>` to target a group library instead of My Library. Credentials, when the Web-API path needs them, are never echoed into the transcript.
 

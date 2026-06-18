@@ -8,7 +8,7 @@ created: 2026-06-17
 
 ## Objective
 
-A domain skill gives the agent the methodology for your kind of research and gives the reviewer the standard to hold the work to. With a data task loaded, the agent describes the panel before it builds a variable, and the reviewer checks that it did; with a theory task, it defines its symbols before it manipulates them, and the reviewer checks that too. The discipline is the one you would apply by hand — superRA makes it run on every task and survive an adversarial second read.
+A domain skill gives the agent the methodology for your kind of research and gives the reviewer the standard to hold the work to. With a data task loaded, the agent describes the panel before it builds a variable, and the reviewer checks that it did; with a theory task, it defines its symbols before it manipulates them, and the reviewer checks that too. The discipline is the one you would apply by hand. superRA makes it run on every task and hold up under an adversarial second read.
 
 Three domain skills ship today. Each has its own page below.
 

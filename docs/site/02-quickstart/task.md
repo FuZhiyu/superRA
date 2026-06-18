@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-Run this on day one. You install superRA, point it at a project, and push one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, integrate the result. Every core idea — the task tree, the dashboard, adversarial review, status, integration — arrives inline as you reach it. By the end you have used the mechanics, not read definitions.
+Run this on day one. You install superRA, point it at a project, and push one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, integrate the result. Every core idea — the task tree, the dashboard, adversarial review, status, integration — arrives inline as you reach it. By the end you have used the mechanics rather than read definitions of them.
 
 The running example is a toy size-and-momentum sort on *simulated* equity returns — a small, public-safe analysis, no real data. Every command on this page was run as shown; every screenshot is the dashboard rendering this exact project.
 
@@ -29,14 +29,14 @@ claude plugin install superRA@superRA
 
 Codex needs a second step — the named agents — covered in the [Codex install notes](docs/README.codex.md). The full install reference (updating, the local-clone path for forking) lives in the project [README](README.md).
 
-The fastest way to feel superRA is to point it at work you already have. Take an existing project (commit everything first if you haven't), start Claude Code, and ask it something like:
+The quickest way to try superRA is to point it at work you already have. Take an existing project (commit everything first if you haven't), start Claude Code, and ask it something like:
 
 ```text
 Use superRA and retroactively create task trees for [what I'm working on],
 and show me the dashboard.
 ```
 
-The word that turns it on is **`superra`**. Say it and the agents follow the workflow instead of improvising. That is the whole trigger — `superra`, or one of the phase words below.
+The trigger is the word **`superra`**: with it in the prompt, the agents follow the workflow instead of improvising. That word, or one of the phase words below, is all it takes.
 
 ### A typical workflow
 
@@ -74,9 +74,9 @@ Now run a task. Ask Claude to `superimplement`:
 superimplement @superRA/01-simulate-panel.
 ```
 
-Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, the panel simulation — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently* — the actual files and diff, not the implementer's summary — and returns one of two verdicts. **APPROVE** advances the task; **REVISE** sends numbered, specific findings back for a fix pass. Work never advances past a `REVISE`, however small the task looks. Review is not skippable.
+Every task runs through an **implementer–reviewer pair** — superRA's central discipline. The implementer does the work — here, the panel simulation — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently* — the actual files and diff, not the implementer's summary — and returns one of two verdicts. **APPROVE** advances the task; **REVISE** sends numbered, specific findings back for a fix pass. Work never advances past a `REVISE`, however small the task looks. Review is not skippable.
 
-The reviewer is adversarial by design. Its job is to find what the implementer missed, not to rubber-stamp. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to hunt for failure catches the silent bad merge, the wrong aggregation, the unreproducible output. So whatever advances through a superRA project has survived a second, hostile read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
+The reviewer is adversarial by design. Its job is to find what the implementer missed, not to rubber-stamp. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances through a superRA project has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
 
 The implementer writes its findings straight into the task file, so the panel task's `## Results` reads like this:
 
@@ -93,7 +93,7 @@ Simulated the panel in code/01_simulate_panel.py from seed 42 and wrote data/pan
 
 #### Watch progress and read results
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. The **Kanban** view shows every task as a card in a column by status — the at-a-glance "what is where" across the whole tree:
+The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. The **Kanban** view shows every task as a card in a column by status, giving an at-a-glance read of what is where across the whole tree:
 
 ![Dashboard Kanban view: tasks sorted into Not Started, In Progress, and Approved columns.](attachments/dashboard-kanban.png)
 
@@ -101,11 +101,11 @@ Click any task to read its objective and results in place — the same `## Objec
 
 ![Dashboard task detail for the panel task: the Objective and the Results the implementer wrote and the reviewer checked.](attachments/dashboard-task-detail.png)
 
-Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/01-simulate-panel/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [Reference › Task File](#/05-reference/01-task-file).
+Because the results live in committed task files rather than the chat, they survive as a durable handoff even after the agent session that produced them ends. Each task is a plain markdown file (`superRA/01-simulate-panel/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [Reference › Task File](#/05-reference/01-task-file).
 
 #### Superintegrate
 
-The tasks are done and approved — the work is correct. But a correct result is not the same as one landed safely. The INTEGRATE phase folds the work into your codebase so the results stay reproducible and coherent for the long haul. Trigger it the same way: ask Claude to `superintegrate`.
+The tasks are done and approved, so the work is correct. A correct result still has to be landed safely. The INTEGRATE phase folds the work into your codebase so the results stay reproducible and coherent over the long term. Trigger it the same way: ask Claude to `superintegrate`.
 
 It is a phase of its own, not a final `git commit`, because each stage guards against a different way good work goes wrong after it is done:
 
@@ -123,7 +123,7 @@ Research is rarely linear, and superRA does not force it to be. The phases form 
 
 ### Where to go next
 
-You have run a full cycle. The two pieces of discipline that do most of the work — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on — each have a page:
+You have run a full cycle. Two further pieces of discipline each have a page — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on:
 
 - **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, writing, and more, and how a domain skill loads on top of any phase.
 - **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.

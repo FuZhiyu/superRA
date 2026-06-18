@@ -8,7 +8,7 @@ created: 2026-06-17
 
 ## Objective
 
-Hand a bare agent a data file and "merge these two panels and run the regression," and it writes the merge, runs the regression, and reports a coefficient. What it skips is everything in between: it never checks whether the join key is unique on both sides, so a one-to-many merge silently fans 40,000 rows into 180,000; it never logs the row count before and after, so the inflation is invisible; it treats missing returns as zero because that made the column numeric; and it never looks at the tails, so one fat-fingered price of 9999 drags the mean and tilts the slope. Each is a clean-looking run that produces a wrong number — and a wrong number that looks clean survives into a draft.
+Hand a bare agent a data file and "merge these two panels and run the regression," and it writes the merge, runs the regression, and reports a coefficient. What it skips is everything in between: it never checks whether the join key is unique on both sides, so a one-to-many merge silently fans 40,000 rows into 180,000; it never logs the row count before and after, so the inflation is invisible; it treats missing returns as zero because that made the column numeric; and it never looks at the tails, so one fat-fingered price of 9999 drags the mean and tilts the slope. Each is a clean-looking run that produces a wrong number, and a wrong number that looks clean survives into a draft.
 
 This skill makes that failure hard to commit quietly. Its center is one rule, the **Iron Law: no transformation without prior description.** Before the agent merges, filters, aggregates, or constructs a variable, it characterizes what it is holding — panel and time IDs, unique-ID and unique-period counts, balancedness, types, missingness, and the tail percentiles (p1/p5/p95/p99) that catch outliers. That describe step produces a baseline; the transformation runs against it; a validate step re-describes the affected variables and checks the result against the baseline. Describe, analyze, and validate run on every step, not once at the end, so when a number moves you can name the step that moved it. The discipline is the same whether the code is Python, Julia, R, or Stata.
 
@@ -16,7 +16,7 @@ You do not invoke it by name. It loads automatically on any data task — import
 
 ## What it forces the agent to do
 
-**Describe before and after.** On every input, before the first transformation: panel structure (panel ID, time ID, counts, date range, balancedness), variable diagnostics on the key variables (mean/median/std plus the p1/p5/p95/p99 tails), data types, and per-variable missingness. After every merge, filter, construction, or aggregation, it re-runs describe on the affected variables and compares — an unexpected distribution shift flags silent corruption.
+**Describe before and after.** On every input, before the first transformation: panel structure (panel ID, time ID, counts, date range, balancedness), variable diagnostics on the key variables (mean/median/std plus the p1/p5/p95/p99 tails), data types, and per-variable missingness. After every merge, filter, construction, or aggregation, it re-runs describe on the affected variables and compares; an unexpected distribution shift flags silent corruption.
 
 **One operation per step, with row-count logging.** No chaining merge + filter + construct into one untraceable cell. Every sample-changing operation prints `before → after` so a dropped or duplicated row is visible at the step that caused it.
 
@@ -51,7 +51,7 @@ A construction-and-tabulation task runs the same loop end to end:
 
 The agent describes the extract, flags the winsorization cutoff in a markdown cell, logs the rows affected, and re-describes leverage after winsorizing before it tabulates anything.
 
-When you plan a multi-step study with `superplan`, the skill adds a **Data Inventory hard gate**: it will not draft task structure until it has explored your data directories, inventoried what exists (path, format, rows × columns, key variables, date range, source), surfaced gaps, suggested concrete sources (WRDS, FRED, IMF WEO, replication packages) for what is missing, and gotten your sign-off. This is where "I'll assume we have X and check later" gets blocked. Planning also designs sensitivity checks as their own tasks.
+When you plan a multi-step study with `superplan`, the skill adds a **Data Inventory hard gate**: it will not draft task structure until it has explored your data directories, inventoried what exists (path, format, rows × columns, key variables, date range, source), surfaced gaps, suggested concrete sources (WRDS, FRED, IMF WEO, replication packages) for what is missing, and gotten your sign-off. The gate blocks "I'll assume we have X and check later." Planning also designs sensitivity checks as their own tasks.
 
 Analysis scripts come back in notebook format (jupytext percent for Python; QuartoNotebookRunner for Julia — not jupytext, which breaks `include()` and `@__DIR__`), with a markdown cell stating intent and expectations before each code cell and findings after. Figures land in the task's `attachments/` and findings are written into the task's `## Results`. If the agent transformed before it described, that is a reviewable violation, not a judgment call — the baseline either exists or it does not.
 

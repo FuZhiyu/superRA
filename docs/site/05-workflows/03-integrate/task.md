@@ -8,9 +8,9 @@ created: 2026-06-17
 
 ## Objective
 
-The tasks are approved, so the work is correct — but correct is not the same as landed safely. INTEGRATE folds the work into your codebase so the results stay reproducible and coherent for the long haul, then ships it. Say `superintegrate` to enter the phase.
+The tasks are approved, so the work is correct, but correct work can still break when it lands on a shared base. INTEGRATE folds the work into your codebase so the results stay reproducible and coherent over time, then ships it. Say `superintegrate` to enter the phase.
 
-It is a phase of its own, not a final `git commit`, because each step guards against a different way good work goes wrong after it is done:
+It is a separate phase rather than a final `git commit` because each step addresses a different way work degrades after it is approved:
 
 1. **Protect** — pin the key results with small automated checks, so a later refactor that moves a number you care about fails loudly instead of slipping through silently.
 2. **Sync** — fold in your base branch by intent, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`.
@@ -18,7 +18,7 @@ It is a phase of its own, not a final `git commit`, because each step guards aga
 4. **Document** — mature the task findings into documentation a future reader can follow.
 5. **Finish** — ship by PR or fast-forward, then clean up.
 
-**The decisions along the way are yours.** superRA runs the steps and surfaces the choices that belong to you: which results are the key ones to protect, which branch to sync against, an intent-changing conflict it will not resolve silently, and meaningful drift it sees after a sync or refactor. It stops and asks at those points rather than guessing. The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
+The key decisions stay with you. superRA runs the steps and surfaces the choices that belong to you: which results are the key ones to protect, which branch to sync against, an intent-changing conflict it will not resolve silently, and meaningful drift it sees after a sync or refactor. It stops and asks at those points rather than guessing. The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
 
 ### When can I skip INTEGRATE?
 
