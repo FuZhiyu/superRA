@@ -1,6 +1,6 @@
 ---
 title: "Build the task-tree Detail Subpages: task-file / CLI / status / dashboard"
-status: implemented
+status: revise
 depends_on: 
   - 03-utility-skills
 
@@ -53,3 +53,7 @@ No relocated page lost a user-facing fact; the status enum, lifecycle, rollup ru
 **Deviation from guidance:** the objective suggested `./superRA/superra task move --root docs/site …` as one move option; I used `git mv` (the objective's stated alternative) because doc nodes have no `depends_on` edges or inbound `#/…` links from siblings that the move command would need to carry, so the simpler raw move plus the one manual link fix is sufficient and lower-risk.
 
 Verification: `report-in-markdown` self-diagnose clean on all four pages; doc-mode export of `docs/site` succeeds and contains all four page titles, the dashboard page's three new section headings, and every referenced node path.
+
+## Review Notes
+
+1. **MAJOR** — [03-status-and-frontier/task.md:40](../../../../docs/site/04-utility-skills/01-task-tree/03-status-and-frontier/task.md#L40) tells the researcher to run `./superRA/superra task check --propagate-all` to recompute rollups, but that command does not exist: `task check` accepts only `--root`/`--json`/`--category`, and argparse rejects the flag (`error: unrecognized arguments: --propagate-all`). The actual rollup-recompute commands are `task status propagate` and `task status fix`, which the sibling CLI page lists correctly. This is an inherited error from the old reference page, but the rewrite ships a non-working command in user docs. Fix: replace with `./superRA/superra task status propagate` (or point to `task status fix`), matching what the CLI page already documents.
