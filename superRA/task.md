@@ -28,6 +28,13 @@ Workstream rollup (as of 2026-06-10):
 
 ## Workflow Status
 
+Integration of `writing-review-task-trees` into trunk `better-handoff` (2026-06-18). Scope: [task-tree/agent-interface/writing-review-task-trees](task-tree/agent-interface/writing-review-task-trees/task.md), the writing-domain deep-review task-tree workflow update. Completion disposition from superimplement Step 4: proceed with integration. `BASE_REF=better-handoff` (researcher confirmed).
+
+- [ ] Drift tests created
+- [ ] Integrated
+- [ ] Docs finalized
+- [ ] Final action
+
 Integration of `better-handoff-doc` into trunk `better-handoff` (2026-06-15). Whole-branch scope (researcher decision): the docs-site build plus the dashboard readability redesign. `BASE_REF=better-handoff`. The integration review ran against `221a7934..HEAD` while the trunk sat at `221a7934`. At finish the trunk had advanced one commit to `38eb36ef` ("sharpen skill descriptions and finish the manifest-restructure sweep"), so `BASE_HEAD_SHA` was re-resolved to `38eb36ef` and the work re-synced against it (see Final action below). Final action: squash-merge into `better-handoff` (researcher decision).
 
 - [x] Drift tests created — Protect: behavioral contracts are the key results for this tooling branch; protection = the full dashboard suite (684 passed / 2 skipped on HEAD), now including the readability round's locks (`TestRawHtmlSanitization` HTML-sanitization security gate plus the doc-mode / typography structural checks in `test_dashboard.py`). No new drift tests authored — every task is approved with no scope change, and authoring is scoped to non-approved/related tasks.
