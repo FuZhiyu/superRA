@@ -33,6 +33,16 @@ Inspect before changing anything:
 
 If the worktree is dirty with unrelated changes, preserve them reversibly with a named stash before any sync operation and report the stash in the status return. Stop and clarify only when the repository is already mid-operation (unresolved merge, in-flight rebase, detached HEAD) in a way that makes intent ambiguous.
 
+### Scope the merge first
+
+Grounding (Step 1) gives the conflict status, the touched-file set, and the incoming range — size the work from them before investigating intent in depth. A merge is **trivial** when all three hold:
+
+- it applies with no conflicts,
+- the incoming range touches no file the current branch also changed since the merge base, and
+- nothing incoming renames, moves, or redefines an identifier, path, schema, or output that current-branch code references.
+
+For a trivial merge, land it and run the stale-reference sweep (Step 6) bounded to that near-empty reach — the sweep is what confirms the third condition held. Intent synthesis, the resolution plan, and escalation have no overlapping cluster to act on; skip them and record a clean sync. Treat the merge at full depth the moment any condition fails — a conflict, an overlapping file, or a rename reaching current-branch code. When unsure whether overlap or a rename reaches current-branch code, treat it as non-trivial: the full path costs investigation time, a wrong skip costs a silent semantic break.
+
 ### 2. Investigate intent on both sides
 
 Read commit messages, diffs, and any task tree or docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
@@ -93,7 +103,7 @@ Run targeted checks for touched subsystems where cheap and relevant. Fix stale r
 
 ## Semantic Coherence Checklist
 
-Shared gated checklist. All modes walk it: the implementer as pre-handoff self-check, the reviewer as verification. It defines when semantic-merge is done — the merge's meaning is fully represented in the tree. Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepted; `[ADVISORY]` items may be flagged without blocking.
+Shared gated checklist. All modes walk it: the implementer as pre-handoff self-check, the reviewer as verification. It defines when semantic-merge is done — the merge's meaning is fully represented in the tree. Walk every item. A merge scoped trivial per §Scope the merge first satisfies the intent-preservation and resolution items by construction — there is no overlapping cluster to classify or synthesize — so confirm the verification items and move on; the stale-reference sweep is what validates the trivial scoping. `[BLOCKING]` items must be satisfied for the sync to be accepted; `[ADVISORY]` items may be flagged without blocking.
 
 **Intent preservation:**
 

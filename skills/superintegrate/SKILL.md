@@ -37,7 +37,7 @@ Legitimate stop points (fold every answer into the relevant task objective **bef
 
 **Load `superRA:agent-orchestration` before writing any dispatch prompt.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; do not restate load lists in prompts.
 
-Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference.
+A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference; a trivial Sync lands inline in Direct mode (Step 3).
 
 ## Protect
 
@@ -64,7 +64,7 @@ Drift tests are the default protection mechanism, guarding key results through S
 
 ## Sync
 
-Sync brings the branch onto the current base before refactor starts. It is serialized: one generic sync author followed by one generic sync reviewer, no parallelization.
+Sync brings the branch onto the current base before refactor starts. A trivial sync (per Step 3) lands inline in Direct mode; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization.
 
 ### Step 1: Resolve the target base
 
@@ -107,11 +107,13 @@ BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 - `PRE_SYNC_BASE_SHA` is evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
 - `BASE_HEAD_SHA` is the post-sync governing baseline for Integrate: `BASE_HEAD_SHA..HEAD`.
 
-### Step 3: Dispatch the sync author when needed
+### Step 3: Sync the branch when needed
 
 If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced. Record a no-op in the workflow notes if useful and proceed to Integrate.
 
-Otherwise dispatch one generic sync author:
+Otherwise size the sync against `semantic-merge §Scope the merge first`. When it scopes trivial, announce the Direct-mode switch and land the merge inline following that section, then skip the author and reviewer dispatch that follow and proceed to Integrate — its reviewer pass over `BASE_HEAD_SHA..HEAD` verifies the landed merge.
+
+When the sync is non-trivial, dispatch one generic sync author:
 
 ```text
 Agent(generic):
