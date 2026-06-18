@@ -8,7 +8,7 @@ Created `hooks/autoload-superra` (extensionless bash, `chmod +x`) and `tests/hoo
 
 - Parses stdin UserPromptSubmit JSON via python3, extracting `prompt` and `transcript_path` as tab-separated so `IFS=$'\t' read` splits cleanly even when the prompt contains spaces.
 - Fast-path `grep -iqE '(^|[^[:alnum:]])super[-_ ]?ra([^[:alnum:]]|$)'` on the prompt. No match → `{}`.
-- Transcript gate: `grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"` — case-insensitive, whitespace-tolerant around the colon so minor format drift does not produce duplicate reminders. Match → `{}`. Fails-open when transcript_path is missing or empty (V5).
+- Transcript gate: `grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path"` — case-insensitive, whitespace-tolerant around the colon so minor format drift does not produce duplicate reminders. Match → `{}`. Fails-open when transcript_path is missing or empty (V5).
 - JSON-escapes the reminder text through `python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'` before splicing into the payload, so inner `"` / `\` in the reminder cannot invalidate the JSON. The three-way platform branch (`CURSOR_PLUGIN_ROOT` / `CLAUDE_PLUGIN_ROOT` / fallback) matches `merge-guard`, `ask-user-question-logger`, and `exit-plan-mode` while emitting the already-quoted JSON string.
 
 Regression suite (`tests/hooks/test-autoload-superra.sh`, 16 vectors — V6 family added per review finding 3; every non-empty payload asserted via `python3 -m json.tool` per finding 2):
@@ -34,7 +34,7 @@ PASS  V6d non-ascii                                      (got reminder)
 Passed: 16    Failed: 0
 ```
 
-The V4b vector ("transcript shows `superRA:planning-workflow` loaded but not `using-superRA`") deliberately triggers the reminder — the transcript gate is specifically about the master skill. V6a–d cover JSON-special and non-ASCII prompts; the hook does not embed the prompt into its output, but the vectors fence against a future regression that would.
+The V4b vector ("transcript shows `superRA:planning-workflow` loaded but not `using-superra`") deliberately triggers the reminder — the transcript gate is specifically about the master skill. V6a–d cover JSON-special and non-ASCII prompts; the hook does not embed the prompt into its output, but the vectors fence against a future regression that would.
 
 ## Task 2: Register the hook in hooks.json and hooks-cursor.json
 
@@ -63,7 +63,7 @@ The two test drivers each run 16 vectors covering all six families listed in Tas
 PASS  V1 non-Skill Bash                                  (got silent)
 PASS  V1 non-Skill Read                                  (got silent)
 PASS  V2 Skill handoff-doc                               (got silent)
-PASS  V2 Skill using-superRA itself                      (got silent)
+PASS  V2 Skill using-superra itself                      (got silent)
 PASS  V2 Skill agent-orchestration                       (got silent)
 PASS  V2 Skill empty                                     (got silent)
 PASS  V3a planning-workflow no-transcript                (got deny)
@@ -86,7 +86,7 @@ Passed: 16    Failed: 0
 PASS  V1 non-Skill Bash                                  (got silent)
 PASS  V1 non-Skill Read                                  (got silent)
 PASS  V2 Skill handoff-doc                               (got silent)
-PASS  V2 Skill using-superRA                             (got silent)
+PASS  V2 Skill using-superra                             (got silent)
 PASS  V2 Skill agent-orchestration                       (got silent)
 PASS  V2 Skill empty                                     (got silent)
 PASS  V3a planning-workflow no-transcript                (got deny)
@@ -103,7 +103,7 @@ PASS  V6 deny-reason round-trip                          (got deny)
 Passed: 16    Failed: 0
 ```
 
-V3 uses the *other* companion's transcript fixture — e.g. the `ensure-using-superra` V3 vectors pass a transcript that only shows `superRA:agent-orchestration` being loaded, and the hook correctly denies because it specifically guards `superRA:using-superRA`. This locks in that each hook's companion check is independent.
+V3 uses the *other* companion's transcript fixture — e.g. the `ensure-using-superra` V3 vectors pass a transcript that only shows `superRA:agent-orchestration` being loaded, and the hook correctly denies because it specifically guards `superRA:using-superra`. This locks in that each hook's companion check is independent.
 
 ## Task 4: Register the two new hooks in hooks.json and hooks-cursor.json
 
@@ -144,7 +144,7 @@ The driver therefore asserts on the *set* of `stdout` payloads per event rather 
 
 ### Cost discipline
 
-The dispatch proposed `--tools ""` + `--append-system-prompt` to make hook-only scenarios free of model turns. **This did not work on 2.1.116** — the model still takes one turn per `claude -p` invocation even with zero tools enabled; `--tools ""` only prevents tool *invocation*, not the turn itself. As fallback the driver passes `--model haiku` on every invocation. Observed cost: ~$0.01–$0.02 per hook-only scenario; ~$0.09–$0.10 each for S4/S5 (multi-turn deny-and-retry chains pull the full bodies of `using-superRA` and `agent-orchestration` into subsequent turns).
+The dispatch proposed `--tools ""` + `--append-system-prompt` to make hook-only scenarios free of model turns. **This did not work on 2.1.116** — the model still takes one turn per `claude -p` invocation even with zero tools enabled; `--tools ""` only prevents tool *invocation*, not the turn itself. As fallback the driver passes `--model haiku` on every invocation. Observed cost: ~$0.01–$0.02 per hook-only scenario; ~$0.09–$0.10 each for S4/S5 (multi-turn deny-and-retry chains pull the full bodies of `using-superra` and `agent-orchestration` into subsequent turns).
 
 ### Full-suite output
 
@@ -158,7 +158,7 @@ PASS  S1 autoload reminder fires on superRA                        (reminder inj
        cost: $0.0150
 
 === S2 ===
-PASS  S2 setup load using-superRA                                  (setup skill loaded)
+PASS  S2 setup load using-superra                                  (setup skill loaded)
 PASS  S2 autoload suppressed after skill load                      (silent as expected)
        setup cost: $0.0194    check cost: $0.0180
 
@@ -171,22 +171,22 @@ PASS  S6 non-workflow Skill passes through both gates silently     (all PreToolU
        cost: $0.0181
 
 === S4 (FULL) ===
-PASS  S4 ensure-using-superra denies workflow skill                (deny with superRA:using-superRA in reason)
+PASS  S4 ensure-using-superra denies workflow skill                (deny with superRA:using-superra in reason)
        cost: $0.0893
 
 === S5 (FULL) ===
-PASS  S5 ensure-agent-orchestration denies after using-superRA loads (deny with superRA:agent-orchestration in reason)
+PASS  S5 ensure-agent-orchestration denies after using-superra loads (deny with superRA:agent-orchestration in reason)
        cost: $0.0988
 
 
 Passed: 7    Failed: 0
 ```
 
-Total cost: ~$0.27. Pre/post `~/.claude/projects/` diff empty (NO_LEAK). S4 and S5 are the dominant cost: each runs a multi-turn deny-and-retry sequence that loads `using-superRA` and (S5 only) `agent-orchestration`, both of which add their full skill bodies to every subsequent turn's input.
+Total cost: ~$0.27. Pre/post `~/.claude/projects/` diff empty (NO_LEAK). S4 and S5 are the dominant cost: each runs a multi-turn deny-and-retry sequence that loads `using-superra` and (S5 only) `agent-orchestration`, both of which add their full skill bodies to every subsequent turn's input.
 
 ### S4 fragility (deferred design issue, accepted)
 
-S4 is structurally hard to test in isolation because `autoload-superra` injects a `superRA:using-superRA` reminder into the user-prompt context, and a compliant model loads the companion before reaching the workflow-skill call — which makes `ensure-using-superra` silently pass and the assertion fail. The driver works around this by instructing the model in its system prompt to *ignore the injected reminder* and proceed straight to `Skill(superRA:planning-workflow)`. Haiku obeys, so S4 currently passes.
+S4 is structurally hard to test in isolation because `autoload-superra` injects a `superRA:using-superra` reminder into the user-prompt context, and a compliant model loads the companion before reaching the workflow-skill call — which makes `ensure-using-superra` silently pass and the assertion fail. The driver works around this by instructing the model in its system prompt to *ignore the injected reminder* and proceed straight to `Skill(superRA:planning-workflow)`. Haiku obeys, so S4 currently passes.
 
 The cleaner fix would suppress the `UserPromptSubmit` hook for S4's invocation only, but Claude Code's `--settings` JSON merges array-shaped settings (including hooks) across scopes rather than overriding them, so the obvious `--settings '{"hooks":{"UserPromptSubmit":[]}}'` trick does not strip plugin-registered hooks. Per the 2026-04-21 user decision (PLAN.md §Decisions), the residual fragility is accepted: the deny *logic* is already covered by the stdin-synthesis unit test in `tests/hooks/test-ensure-using-superra.sh`, and S5 redundantly covers the `PreToolUse:Skill` *wiring* against the live CLI. If a future model regresses S4 by preferring injected reminders over its system prompt, the disposition path (delete S4) is documented inline in the test's S4 docstring.
 

@@ -19,7 +19,7 @@ The current resolver's real value added is narrow:
 
 The lengthy named-state taxonomy is not the core mechanism. Agents can usually infer "what comes next" from a canonical workflow map if the docs give them the map, the evidence to inspect, the decision object to produce, and the hard gates they may not bypass.
 
-There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -> INTEGRATE cycle and adaptive/composable idea, but runtime agents may not read README. The compact operational overview should live in a loaded runtime surface such as `skills/using-superRA/SKILL.md`, with `main-agent.md` carrying the main-agent-specific resolver mechanism.
+There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -> INTEGRATE cycle and adaptive/composable idea, but runtime agents may not read README. The compact operational overview should live in a loaded runtime surface such as `skills/using-superra/SKILL.md`, with `main-agent.md` carrying the main-agent-specific resolver mechanism.
 
 ---
 
@@ -28,20 +28,20 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 **Status:** Approved.
 
 ### Findings
-- Added `skills/using-superRA/SKILL.md` `## Runtime Workflow Map`, which gives loaded agents the PLAN -> IMPLEMENT -> INTEGRATE order without importing README-level product explanation.
+- Added `skills/using-superra/SKILL.md` `## Runtime Workflow Map`, which gives loaded agents the PLAN -> IMPLEMENT -> INTEGRATE order without importing README-level product explanation.
 - The overview states the adaptive re-entry principle: enter at the earliest invalid layer for the affected task frontier while preserving unrelated approved work.
 - The resolver value proposition is now explicit: inspect durable evidence, compute the affected frontier, route to the owning workflow, and enforce non-negotiable gates.
 
 ### Files Changed
-- `skills/using-superRA/SKILL.md`
-- `skills/using-superRA/references/main-agent.md`
+- `skills/using-superra/SKILL.md`
+- `skills/using-superra/references/main-agent.md`
 
 ## Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 
 **Status:** Approved.
 
 ### Findings
-- Replaced the resolver's named `needs ...` outcome list with an ordered mechanism in `skills/using-superRA/references/main-agent.md`.
+- Replaced the resolver's named `needs ...` outcome list with an ordered mechanism in `skills/using-superra/references/main-agent.md`.
 - Preserved the evidence contract: git state, handoff-doc presence and consistency, workflow rollups, decisions, upstream intent, task dependencies/statuses/review notes, and RESULTS.md sections.
 - Preserved the decision object: affected frontier, preserved-approved tasks, invalidated milestones, next owner/layer, and required stop point.
 - Kept explicit safety invariants for the predictable failure modes: no global `Current state` field, no unlogged material decisions, no clearing unrelated task statuses, no implementation advancement without review/adjudication, no integration before reproducibility/disposition, and no merge/PR before integration/docs/freshness gates.
@@ -50,7 +50,7 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 - The plan-change boundary is explicit: material plan changes route to `planning-workflow §User Feedback and Changing Plans`, then the resolver runs again after the docs are updated.
 
 ### Files Changed
-- `skills/using-superRA/references/main-agent.md`
+- `skills/using-superra/references/main-agent.md`
 
 ## Task 3: Simplify Workflow Call Sites Around the Mechanism
 
@@ -75,16 +75,16 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ### Findings
 - The modified resolver reads as a mechanism: evidence first, affected-frontier calculation, ordered owner routing, and safety invariants.
-- The loaded runtime overview is in `skills/using-superRA/SKILL.md`, not only README or AGENTS.
-- Ownership boundaries remain aligned with AGENTS.md: `using-superRA` owns the shared workflow map, `main-agent.md` owns the resolver, workflow skills own local gates, `agent-orchestration` owns dispatch/status mechanics, and `handoff-doc` owns document semantics.
+- The loaded runtime overview is in `skills/using-superra/SKILL.md`, not only README or AGENTS.
+- Ownership boundaries remain aligned with AGENTS.md: `using-superra` owns the shared workflow map, `main-agent.md` owns the resolver, workflow skills own local gates, `agent-orchestration` owns dispatch/status mechanics, and `handoff-doc` owns document semantics.
 - Design-text search no longer finds the old resolver state labels in modified resolver/call-site prose. Remaining hits are intentional non-taxonomy uses: the explicit `Current state` prohibition, local `skip` / `re-entry` wording in workflow gates and adapter/domain skills, and unrelated discard/AskUserQuestion wording.
 - The next audit will add reviewer feedback specifically on clarity and the boundary between resolver routing and the change-plan protocol.
 - A focused reviewer pass approved the clarity revision, including the diagnosis/routing distinction, change-plan boundary, workflow-status rollups, and task-local status preservation.
 
 ### Verification Commands
-- `rg -n "needs plan repair|needs implementation|awaiting review|needs validation|Current state|state machine|skip|resume|re-entry|if .* then|under .* condition" skills/using-superRA skills/*/SKILL.md`
+- `rg -n "needs plan repair|needs implementation|awaiting review|needs validation|Current state|state machine|skip|resume|re-entry|if .* then|under .* condition" skills/using-superra skills/*/SKILL.md`
 - `git diff --check`
-- `uv run python /Users/zhiyufu/Dropbox/app_settings/dotfiles/claude/.claude/skills/.system/skill-creator/scripts/quick_validate.py <modified-skill-folder>` for `skills/using-superRA`, `skills/planning-workflow`, `skills/implementation-workflow`, `skills/integration-workflow`, and `skills/agent-orchestration`
+- `uv run python /Users/zhiyufu/Dropbox/app_settings/dotfiles/claude/.claude/skills/.system/skill-creator/scripts/quick_validate.py <modified-skill-folder>` for `skills/using-superra`, `skills/planning-workflow`, `skills/implementation-workflow`, `skills/integration-workflow`, and `skills/agent-orchestration`
 
 ## Task 5: Document "Teach the Protocol, Don't Prescribe Each Action" Principle
 
@@ -97,9 +97,9 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 ### Files Changed
 - `CLAUDE.md`
 
-## Task 6: Audit Agent Role Specs and `using-superRA` Surfaces
+## Task 6: Audit Agent Role Specs and `using-superra` Surfaces
 
-**Status:** IMPLEMENTED — scope covered role specs (`agents/implementer.md`, `agents/reviewer.md`), the master skill (`skills/using-superRA/SKILL.md`), and every reference under `skills/using-superRA/references/`. Generated direct-mode role references were regenerated from the updated source specs per `CLAUDE.md §Architectural Patterns`.
+**Status:** IMPLEMENTED — scope covered role specs (`agents/implementer.md`, `agents/reviewer.md`), the master skill (`skills/using-superra/SKILL.md`), and every reference under `skills/using-superra/references/`. Generated direct-mode role references were regenerated from the updated source specs per `CLAUDE.md §Architectural Patterns`.
 
 ### Summary of Cuts and Pointers
 
@@ -122,20 +122,20 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 - KEPT — §Severity Levels (authoritative severity rubric), §Verdict protocol (non-default ordering constraint), §How You Write a Review first-review and re-review procedures (non-default), §CRITICAL severity invariant, §Pre-Commit Self-Check, §Report Format.
 - Also fixed a stray `into dispatch prompts.` fragment in the frontmatter description (dangling orphan from a prior edit).
 
-**`skills/using-superRA/SKILL.md`** — 1 line tightened.
+**`skills/using-superra/SKILL.md`** — 1 line tightened.
 - Trimmed the over-long paragraph describing where handoff-doc discipline lives (it is now one sentence pointing at the role-spec compact etiquette and `superRA:handoff-doc`).
 - KEPT — Runtime Workflow Map, Commit Hygiene, Skill Inventory, Skill-Load Manifest, Instruction Priority. These are all authoritative content owned by this skill.
 
-**`skills/using-superRA/references/main-agent.md`** — §Execution Modes collapsed from 28 lines to 10 lines.
+**`skills/using-superra/references/main-agent.md`** — §Execution Modes collapsed from 28 lines to 10 lines.
 - DELETED — the Codex-agent block at the bottom of §Execution Modes (lines 139-153 pre-edit). It was a near-duplicate of `codex-instructions.md §Delegation Priority in Codex` with a typo (`spwawn`) and a dangling orphan fragment ("when the workflow allows it and the user requested it, the task is trivial, or agent tools are unavailable."). Replaced with a single-line POINTER: "Codex agents: MUST load `references/codex-instructions.md` immediately."
 - KEPT — §Session Start Actions, §Load the Handoff-Doc Skill, §Workflow Frontier Resolver (Task 2 owner), §Changes of the Plan (pointer), §Three Pause Classes, §Proceed Without Asking, §Banned Phrasings, §One Question at a Time, §Log Before You Act. All behavior-shaping; most are authoritative for their concern.
 - KEPT — Subagent-default sentence and the direct-mode protocol bullets. Behavior-shaping (they shape when the main agent dispatches vs stays inline).
 
-**`skills/using-superRA/references/codex-instructions.md`** — no edits. Audit pass confirmed this file is the authoritative owner of Codex delegation priority, warm-agent lifecycle, and tool-map content; every line is either a non-default constraint or a tool-name mapping. POINTER target check: `main-agent.md`'s §Execution Modes now cites this file correctly.
+**`skills/using-superra/references/codex-instructions.md`** — no edits. Audit pass confirmed this file is the authoritative owner of Codex delegation priority, warm-agent lifecycle, and tool-map content; every line is either a non-default constraint or a tool-name mapping. POINTER target check: `main-agent.md`'s §Execution Modes now cites this file correctly.
 
-**`skills/using-superRA/references/claude-tools.md`, `copilot-tools.md`, `gemini-tools.md`** — no edits. These are adapter tool-name mapping tables; every row is behavior-shaping (the tool-name mapping is the content).
+**`skills/using-superra/references/claude-tools.md`, `copilot-tools.md`, `gemini-tools.md`** — no edits. These are adapter tool-name mapping tables; every row is behavior-shaping (the tool-name mapping is the content).
 
-**`skills/using-superRA/references/direct-mode-implementer.md`, `direct-mode-reviewer.md`** — regenerated from the updated source specs. Per `CLAUDE.md §Architectural Patterns` (Generated artifacts stay generated), these are not hand-edited. The generator now:
+**`skills/using-superra/references/direct-mode-implementer.md`, `direct-mode-reviewer.md`** — regenerated from the updated source specs. Per `CLAUDE.md §Architectural Patterns` (Generated artifacts stay generated), these are not hand-edited. The generator now:
 1. No longer reads a `## Stage → skills and references` section (removed from source per Task 6); direct-mode's own §Before You Start step 1 carries the manifest-load instruction.
 2. Produces a compact direct-mode §Before You Start that mirrors the trimmed subagent version — POINTER style, no example nested bullets.
 3. Keeps `cleanup_implementer_handoff` and `cleanup_reviewer_handoff` pattern-replace helpers. The implementer helper rewrites the §How You Fix Review Items opener (subagent source at `agents/implementer.md:97` references "first dispatch" and a "re-dispatch prompt" one-line delta, neither of which exists in direct mode) and strips the Parallel worktree dispatch paragraph (`agents/implementer.md:134`, a subagent dispatch-field concept) entirely. The reviewer helper rewrites the `## Upstream Intent` ownership paragraph (`agents/reviewer.md:109`) so the round context is sourced from `PLAN.md` / the current session rather than "from the dispatch." Both helpers fail loudly with `ValueError` when their expected source strings disappear — regenerator drift becomes a test failure, not a silent leak. The reviewer-side `strip_subsection` of §Report Format and the "ad-hoc default" deletion are also kept because those fragments still appear in the subagent body.
@@ -146,16 +146,16 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 - `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — 5 tests pass (generator idempotency, direct-mode round-trip, managed-header presence, conflict handling, regenerate-hint).
 - `git diff --check` — clean.
 - Cross-check: every POINTER inserted this round points at content that actually exists at the cited source — `superRA:handoff-doc` carries the full editing-etiquette discipline; `econ-data-analysis/SKILL.md` carries Data-First principles under `§The Iron Law` and the `[BLOCKING]` / `[ADVISORY]` gated checklists; `codex-instructions.md §Delegation Priority in Codex` carries the Codex named-agent rule.
-- Leak grep: `grep -nE "first dispatch|re-dispatch prompt|Parallel worktree dispatch|Worktree.*field set|in the dispatch|orchestrator passes the round context" skills/using-superRA/references/direct-mode-*.md` returns no matches after cleanup — the preface's "no dispatch prompt" sentence is the only dispatch-word occurrence, and it is intentional.
+- Leak grep: `grep -nE "first dispatch|re-dispatch prompt|Parallel worktree dispatch|Worktree.*field set|in the dispatch|orchestrator passes the round context" skills/using-superra/references/direct-mode-*.md` returns no matches after cleanup — the preface's "no dispatch prompt" sentence is the only dispatch-word occurrence, and it is intentional.
 
 ### Files Changed
 
 - `agents/implementer.md`
 - `agents/reviewer.md`
-- `skills/using-superRA/SKILL.md`
-- `skills/using-superRA/references/main-agent.md`
-- `skills/using-superRA/references/direct-mode-implementer.md` (regenerated)
-- `skills/using-superRA/references/direct-mode-reviewer.md` (regenerated)
+- `skills/using-superra/SKILL.md`
+- `skills/using-superra/references/main-agent.md`
+- `skills/using-superra/references/direct-mode-implementer.md` (regenerated)
+- `skills/using-superra/references/direct-mode-reviewer.md` (regenerated)
 - `skills/codex-superra-setup/scripts/sync_codex_agents.py`
 - `.codex/agents/superra_implementer.toml` (regenerated)
 - `.codex/agents/superra_reviewer.toml` (regenerated)
@@ -295,7 +295,7 @@ Verified every POINTER introduced in Tasks 7 and 8 resolves to a real anchor car
 
 Task 7 pointers verified:
 - `planning-workflow §Living Plan and Results Docs` → `handoff-doc §references/results-anatomy.md` — `results-anatomy.md` exists with full template, pre-allocated stub discipline at line 26 and §Section ownership at line 87.
-- `planning-workflow §Execution Handoff` → `using-superra §Execution Modes` — present at `skills/using-superRA/SKILL.md:68-70`; chains to `main-agent.md §Execution Modes` at lines 126-138.
+- `planning-workflow §Execution Handoff` → `using-superra §Execution Modes` — present at `skills/using-superra/SKILL.md:68-70`; chains to `main-agent.md §Execution Modes` at lines 126-138.
 - `implementation-workflow §Step 1` / §Autonomy → `main-agent.md §Workflow Frontier Resolver` — present at `main-agent.md:25-70`.
 - `integration-workflow §Phase Map` — `§Frontier Entry` deleted; replacement single-paragraph notice at lines 15-27 is self-contained and the Phase Map itself carries what the deleted section narrated.
 
@@ -361,7 +361,7 @@ Three of four anti-pattern categories show no regression. Category (b) has one c
 
 **Role-spec condensation (researcher WIP `93fda71`).** Accepted the researcher's manual edits to `agents/implementer.md` and `agents/reviewer.md`: shorter §Dispatch Inputs opening, new framing that `PLAN.md` is authoritative unless the dispatch explicitly overrides it (replaces the longer "treat paraphrased content as over-specification" wording with equivalent behavior-shaping content), unified handoff-doc compact etiquette, and a new "Remove superseded content, don't stack it" bullet that already matches `handoff-doc/SKILL.md §The Four Principles`. Typo `authorative → authoritative` fixed. Fixed two remaining rough edges: the missing period in `agents/implementer.md` frontmatter description ("agent Used" → "agent. Used", now matching `reviewer.md`'s frontmatter shape) and an inconsistent blank line in the compact-etiquette list that separated the fourth bullet ("Doc before report") from the first three in both files — collapsed to a single continuous 4-item list.
 
-**Downstream regeneration.** Ran `sync_codex_agents.py --scope project`; regenerated `skills/using-superRA/references/direct-mode-implementer.md`, `direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. Generator tests: `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — 5/5 pass. Leak grep (`first dispatch|re-dispatch prompt|parallel worktree dispatch|in the dispatch`) on the regenerated direct-mode refs — clean.
+**Downstream regeneration.** Ran `sync_codex_agents.py --scope project`; regenerated `skills/using-superra/references/direct-mode-implementer.md`, `direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`. Generator tests: `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — 5/5 pass. Leak grep (`first dispatch|re-dispatch prompt|parallel worktree dispatch|in the dispatch`) on the regenerated direct-mode refs — clean.
 
 ### Files Changed
 
@@ -370,8 +370,8 @@ Three of four anti-pattern categories show no regression. Category (b) has one c
 - `skills/econ-data-analysis/references/integrate-drift-tests.md` (tolerance rubric inserted)
 - `skills/refactor-and-integrate/references/drift-test-quality.md` (rubric replaced with pointer; checklist reworded)
 - `skills/refactor-and-integrate/references/codebase-integration.md` (inverted cross-ref + HTML comment removed)
-- `skills/using-superRA/references/direct-mode-implementer.md` (regenerated)
-- `skills/using-superRA/references/direct-mode-reviewer.md` (regenerated)
+- `skills/using-superra/references/direct-mode-implementer.md` (regenerated)
+- `skills/using-superra/references/direct-mode-reviewer.md` (regenerated)
 - `.codex/agents/superra_implementer.toml` (regenerated)
 - `.codex/agents/superra_reviewer.toml` (regenerated)
 - `PLAN.md` (Task 10 added, decision log entry, Workflow Status sub-comment)
@@ -381,7 +381,7 @@ Three of four anti-pattern categories show no regression. Category (b) has one c
 
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py`
-- `grep -Ei "first dispatch|re-dispatch prompt|parallel worktree dispatch|in the dispatch" skills/using-superRA/references/direct-mode-*.md`
+- `grep -Ei "first dispatch|re-dispatch prompt|parallel worktree dispatch|in the dispatch" skills/using-superra/references/direct-mode-*.md`
 
 ## Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
 
@@ -407,4 +407,4 @@ Because `CLAUDE.md` is auto-loaded for any edit in this repo, the gate propagate
 Post-APPROVE items the reviewer flagged or surfaced for orchestrator judgment; deferred rather than blocking the integration flip. Track here so the next editor under the teach-the-protocol gate can sweep them.
 
 - **`test_sync_codex_agents.py` hardening** (Task 6 MINOR #5). Add a smoke assertion that direct-mode outputs do not contain dispatch-only wording (`first dispatch`, `re-dispatch prompt`, `Worktree: field`, `in the dispatch` outside the opening "no dispatch prompt" preface). The restored `cleanup_*_handoff` helpers already `raise ValueError` when their source-text targets drift, so the current silent-regression class is covered; this test would belt-and-brace that.
-- **Reviewer compact-etiquette bullet example** (Phase B integration review MINOR). `agents/reviewer.md:98` and its generator copy `skills/using-superRA/references/direct-mode-reviewer.md:89` use `→ implemented:` as the illustrative action in the shared boundary-preservation rule, but `→ implemented:` is implementer-only. The underlying rule (stay within the assigned task block, preserve `---` separators and `### Task N:` headings) is correct for reviewers too; the example should be reworked to a reviewer action (e.g., "when writing or removing a review-notes blockquote"). Requires regen of the direct-mode copy via `sync_codex_agents.py --scope project`.
+- **Reviewer compact-etiquette bullet example** (Phase B integration review MINOR). `agents/reviewer.md:98` and its generator copy `skills/using-superra/references/direct-mode-reviewer.md:89` use `→ implemented:` as the illustrative action in the shared boundary-preservation rule, but `→ implemented:` is implementer-only. The underlying rule (stay within the assigned task block, preserve `---` separators and `### Task N:` headings) is correct for reviewers too; the example should be reworked to a reviewer action (e.g., "when writing or removing a review-notes blockquote"). Requires regen of the direct-mode copy via `sync_codex_agents.py --scope project`.

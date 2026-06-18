@@ -96,7 +96,7 @@ assert_absent_regex \
 
 assert_contains \
   "Skill manifest routes Sync to semantic merge" \
-  "skills/using-superRA/SKILL.md" \
+  "skills/using-superra/SKILL.md" \
   '| `sync` | `superintegrate` Sync | `semantic-merge` |'
 
 assert_contains \
@@ -141,12 +141,12 @@ assert_contains \
 
 assert_contains \
   "Skill manifest keeps Sync branch-level" \
-  "skills/using-superRA/SKILL.md" \
+  "skills/using-superra/SKILL.md" \
   '`Stage: sync` is branch-level'
 
 assert_contains \
   "Skill manifest routes Protect to result protection" \
-  "skills/using-superRA/SKILL.md" \
+  "skills/using-superra/SKILL.md" \
   '| `protection` | `superintegrate` Protect | `result-protection` |'
 
 assert_contains \

@@ -16,7 +16,7 @@ permalink: "docs/plans/2026-04-22-direct-mode-role-references-results"
 This follow-up closes the remaining direct-mode accessibility gap on the
 Codex dispatch-preference branch. The main agent now loads the
 direct-mode implementer and reviewer protocol from the shared
-`skills/using-superRA/references/` surface rather than depending on raw
+`skills/using-superra/references/` surface rather than depending on raw
 `agents/implementer.md` / `agents/reviewer.md`, and the harness
 compatibility check now guards that path against regression. The
 permanent plan companion is
@@ -25,11 +25,11 @@ permanent plan companion is
 ## Permanent Artifacts
 
 - The direct-mode implementer mirror is
-  [../../skills/using-superRA/references/direct-mode-implementer.md](../../skills/using-superRA/references/direct-mode-implementer.md).
+  [../../skills/using-superra/references/direct-mode-implementer.md](../../skills/using-superra/references/direct-mode-implementer.md).
 - The direct-mode reviewer mirror is
-  [../../skills/using-superRA/references/direct-mode-reviewer.md](../../skills/using-superRA/references/direct-mode-reviewer.md).
+  [../../skills/using-superra/references/direct-mode-reviewer.md](../../skills/using-superra/references/direct-mode-reviewer.md).
 - The main-agent direct-mode load rule is
-  [../../skills/using-superRA/references/main-agent.md](../../skills/using-superRA/references/main-agent.md).
+  [../../skills/using-superra/references/main-agent.md](../../skills/using-superra/references/main-agent.md).
 - Contributor guidance for the manual-mirror rule is
   [../../CLAUDE.md](../../CLAUDE.md).
 - The drift guard and compatibility gate are in
@@ -62,7 +62,7 @@ permanent plan companion is
   already an ancestor of the current branch, so no mechanical merge
   commit was needed during Phase B.
 - Phase B found one cumulative-diff cleanup item: trailing whitespace in
-  `skills/using-superRA/references/main-agent.md`. After that fix,
+  `skills/using-superra/references/main-agent.md`. After that fix,
   `git diff --check addc9ca7fe1bdbedb080d92095facb649074c1e4..HEAD` and
   the full compatibility suite both passed.
 

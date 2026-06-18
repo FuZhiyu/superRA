@@ -8,9 +8,9 @@
 
 **Data Inventory:** Not applicable. This change edits package documentation, skill references, role specs, and generator-owned files only.
 
-**Conventions:** Preserve one source of truth per concern per `CLAUDE.md §Ownership Boundaries`: `using-superRA` owns cross-stage overview + Skill-Load Manifest + Execution Modes; `main-agent.md` owns main-agent autonomy + re-entry mechanism; workflow skills own local phase gates; `agent-orchestration` owns dispatch-prompt shape + reviewer-feedback adjudication + relay protocol; `handoff-doc` owns document state semantics + anatomy templates + User Decisions Log; `refactor-and-integrate` owns generic drift-test + refactor + integration + merge-quality discipline; `econ-data-analysis` owns data-analysis domain discipline including the drift-test tolerance rubric (relocated from `refactor-and-integrate` in Task 10 because calibration is econ-specific). One-way pointer flow: domain → cross-cutting, not the reverse.
+**Conventions:** Preserve one source of truth per concern per `CLAUDE.md §Ownership Boundaries`: `using-superra` owns cross-stage overview + Skill-Load Manifest + Execution Modes; `main-agent.md` owns main-agent autonomy + re-entry mechanism; workflow skills own local phase gates; `agent-orchestration` owns dispatch-prompt shape + reviewer-feedback adjudication + relay protocol; `handoff-doc` owns document state semantics + anatomy templates + User Decisions Log; `refactor-and-integrate` owns generic drift-test + refactor + integration + merge-quality discipline; `econ-data-analysis` owns data-analysis domain discipline including the drift-test tolerance rubric (relocated from `refactor-and-integrate` in Task 10 because calibration is econ-specific). One-way pointer flow: domain → cross-cutting, not the reverse.
 
-**Output:** Trimmed runtime skill/reference docs, condensed role specs (`agents/*.md`), regenerated direct-mode references (`skills/using-superRA/references/direct-mode-*.md`) and Codex TOMLs (`.codex/agents/*.toml`) produced from the updated sources via `sync_codex_agents.py`, expanded `CLAUDE.md` (teach-the-protocol principle + gate + Design Audit Checklist line), relocated drift-test tolerance rubric, and this `PLAN.md` / `RESULTS.md` pair.
+**Output:** Trimmed runtime skill/reference docs, condensed role specs (`agents/*.md`), regenerated direct-mode references (`skills/using-superra/references/direct-mode-*.md`) and Codex TOMLs (`.codex/agents/*.toml`) produced from the updated sources via `sync_codex_agents.py`, expanded `CLAUDE.md` (teach-the-protocol principle + gate + Design Audit Checklist line), relocated drift-test tolerance rubric, and this `PLAN.md` / `RESULTS.md` pair.
 
 **Expected Results / Hypotheses:** (1) Agents reading the runtime surface should understand the PLAN → IMPLEMENT → INTEGRATE cycle, why re-entry is adaptive, and how to compute the next safe frontier without needing an enumerated scenario tree; the resolver's value added is limited to evidence discipline, affected-frontier calculation, workflow-owner routing, and non-negotiable gates. (2) Every remaining instruction line in `skills/*` and `agents/*` passes the DRY + Necessity tests — the remaining surface is behavior-shaping, not hortatory or redundant. (3) No behavior agents depend on was lost: deleted content is either generally inferrable or recoverable from an authoritative owner via a surviving pointer. (4) Generator regeneration is deterministic and the direct-mode refs carry no dispatch-only wording.
 
@@ -39,8 +39,8 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 - `/README.md`: user-facing project design belongs there. Runtime skills may carry a concise operational overview only where agents actually load it.
 
 ### Relevant skill/reference files
-- `skills/using-superRA/SKILL.md`: owns the runtime skill inventory, Skill-Load Manifest, and should carry the compact canonical workflow/adaptability overview loaded by all superRA agents.
-- `skills/using-superRA/references/main-agent.md`: owns main-agent session start, autonomy, direct mode, and the re-entry mechanism.
+- `skills/using-superra/SKILL.md`: owns the runtime skill inventory, Skill-Load Manifest, and should carry the compact canonical workflow/adaptability overview loaded by all superRA agents.
+- `skills/using-superra/references/main-agent.md`: owns main-agent session start, autonomy, direct mode, and the re-entry mechanism.
 - `skills/planning-workflow/SKILL.md`: owns plan creation and the material plan-change protocol, including which task-local statuses and rollup milestones are invalidated.
 - `skills/implementation-workflow/SKILL.md`: owns implementation, review, and reproducibility mechanics after the resolver selects an implementation/review frontier.
 - `skills/integration-workflow/SKILL.md`: owns Phase A-D integration mechanics after the resolver selects an integration/documentation/finalization frontier.
@@ -108,12 +108,12 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 **Integration status:** APPROVED
 
 **Script:** Not applicable; documentation/reference edit.
-**Input:** `README.md`, `AGENTS.md`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent.md`.
+**Input:** `README.md`, `AGENTS.md`, `skills/using-superra/SKILL.md`, `skills/using-superra/references/main-agent.md`.
 **Output:** Concise runtime overview plus a clear statement of what the resolver adds.
 
 - [x] **Step 1: Add the loaded overview**
 
-Add a compact PLAN -> IMPLEMENT -> INTEGRATE overview and adaptability statement to the runtime surface agents actually read, preferably `skills/using-superRA/SKILL.md`. Keep it procedural and avoid duplicating README-owned product explanation.
+Add a compact PLAN -> IMPLEMENT -> INTEGRATE overview and adaptability statement to the runtime surface agents actually read, preferably `skills/using-superra/SKILL.md`. Keep it procedural and avoid duplicating README-owned product explanation.
 
 - [x] **Step 2: Define the resolver's value added**
 
@@ -129,7 +129,7 @@ Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies o
 **Integration status:** APPROVED
 
 **Script:** Not applicable; documentation/reference edit.
-**Input:** `skills/using-superRA/references/main-agent.md`.
+**Input:** `skills/using-superra/references/main-agent.md`.
 **Output:** Shorter resolver that returns a decision object and selects the next owner by walking the canonical workflow order.
 
 - [x] **Step 1: Keep the evidence contract**
@@ -223,22 +223,22 @@ Add a subsection titled "Teach the Protocol, Don't Prescribe Each Action" after 
 
 Add a single-line check to `## Design Audit Checklist`: for every added line, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
 
-### Task 6: Audit Agent Role Specs and `using-superRA` Surfaces
+### Task 6: Audit Agent Role Specs and `using-superra` Surfaces
 **Depends on:** Task 5
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
-**Input:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md` and all files under `skills/using-superRA/references/` (including `main-agent.md`, `codex-instructions.md`, `claude-tools.md`, and any generated `direct-mode-*.md` — edit source specs and regenerate rather than editing generated files directly).
+**Input:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superra/SKILL.md` and all files under `skills/using-superra/references/` (including `main-agent.md`, `codex-instructions.md`, `claude-tools.md`, and any generated `direct-mode-*.md` — edit source specs and regenerate rather than editing generated files directly).
 **Output:** Trimmed role specs / runtime surfaces, a findings note in `RESULTS.md` summarizing what was cut, replaced with a pointer, or kept with rationale. Verify generated direct-mode reference files are regenerated from their canonical agent specs.
 
 - [x] **Step 1: Survey each file line by line**
 
-Walked `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md`, and every file under `skills/using-superRA/references/` against the CLAUDE.md §Teach the Protocol principle. KEEP / POINTER / DELETE classifications recorded in `RESULTS.md` Task 6 findings; the heaviest over-prescription was in `agents/implementer.md` (§Stage → skills / §What the dispatch carries wrappers, §Data-First Discipline duplication of `econ-data-analysis`, full §Editing Etiquette duplication of `handoff-doc`), `agents/reviewer.md` (mirror of the same), and `main-agent.md` §Execution Modes (near-duplicate of `codex-instructions.md` §Delegation Priority with a typo and a dangling fragment).
+Walked `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superra/SKILL.md`, and every file under `skills/using-superra/references/` against the CLAUDE.md §Teach the Protocol principle. KEEP / POINTER / DELETE classifications recorded in `RESULTS.md` Task 6 findings; the heaviest over-prescription was in `agents/implementer.md` (§Stage → skills / §What the dispatch carries wrappers, §Data-First Discipline duplication of `econ-data-analysis`, full §Editing Etiquette duplication of `handoff-doc`), `agents/reviewer.md` (mirror of the same), and `main-agent.md` §Execution Modes (near-duplicate of `codex-instructions.md` §Delegation Priority with a typo and a dangling fragment).
 
 - [x] **Step 2: Apply the edits and regenerate**
 
-Trimmed DELETEs and converted POINTERs in `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md`, and `main-agent.md` §Execution Modes (now one subagent-default sentence plus a direct-mode protocol block plus a single-line Codex pointer at `references/codex-instructions.md`). Updated `skills/codex-superra-setup/scripts/sync_codex_agents.py` to match the new source shape (removed the `## Stage → skills and references` section lookup now that source was trimmed; collapsed the two cleanup_* functions whose pattern-match targets no longer exist; trimmed the direct-mode `## Before You Start` prose in-place). Regenerated `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml`; `sync_codex_agents.py --scope project --check` and `test_sync_codex_agents.py` both pass.
+Trimmed DELETEs and converted POINTERs in `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superra/SKILL.md`, and `main-agent.md` §Execution Modes (now one subagent-default sentence plus a direct-mode protocol block plus a single-line Codex pointer at `references/codex-instructions.md`). Updated `skills/codex-superra-setup/scripts/sync_codex_agents.py` to match the new source shape (removed the `## Stage → skills and references` section lookup now that source was trimmed; collapsed the two cleanup_* functions whose pattern-match targets no longer exist; trimmed the direct-mode `## Before You Start` prose in-place). Regenerated `skills/using-superra/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml`; `sync_codex_agents.py --scope project --check` and `test_sync_codex_agents.py` both pass.
 
 - [x] **Step 3: Verify no behavior was lost**
 
@@ -326,7 +326,7 @@ Deleted the `> **Data-analysis work:** also load econ-data-analysis/references/i
 
 - [x] **Step 3: Propagate role-spec condensation**
 
-Accepted the researcher's manual condensation of `agents/implementer.md` and `agents/reviewer.md` (WIP commit `93fda71`): shorter §Dispatch Inputs opening, clearer `PLAN.md`-authoritative rule, unified handoff-doc compact etiquette (including the new "Remove superseded content, don't stack it" bullet already authoritative in `handoff-doc §The Four Principles`). Fixed the typo `authorative → authoritative` in `agents/implementer.md` Before-You-Start bullet 3. Additional rough-edge fixes on the re-dispatch pass: restored the missing period in `agents/implementer.md` frontmatter description (`agent Used` → `agent. Used`, matching `reviewer.md`); collapsed the inconsistent blank line inside the compact-etiquette list that separated the fourth bullet ("Doc before report") from the first three in both role files into a single continuous 4-item list. Regenerated `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` via `sync_codex_agents.py --scope project`; `sync_codex_agents.py --scope project --check` is clean, `test_sync_codex_agents.py` 5/5 pass.
+Accepted the researcher's manual condensation of `agents/implementer.md` and `agents/reviewer.md` (WIP commit `93fda71`): shorter §Dispatch Inputs opening, clearer `PLAN.md`-authoritative rule, unified handoff-doc compact etiquette (including the new "Remove superseded content, don't stack it" bullet already authoritative in `handoff-doc §The Four Principles`). Fixed the typo `authorative → authoritative` in `agents/implementer.md` Before-You-Start bullet 3. Additional rough-edge fixes on the re-dispatch pass: restored the missing period in `agents/implementer.md` frontmatter description (`agent Used` → `agent. Used`, matching `reviewer.md`); collapsed the inconsistent blank line inside the compact-etiquette list that separated the fourth bullet ("Doc before report") from the first three in both role files into a single continuous 4-item list. Regenerated `skills/using-superra/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` via `sync_codex_agents.py --scope project`; `sync_codex_agents.py --scope project --check` is clean, `test_sync_codex_agents.py` 5/5 pass.
 
 ### Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
 **Depends on:** Task 5

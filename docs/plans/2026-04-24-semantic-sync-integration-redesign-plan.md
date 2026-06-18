@@ -6,7 +6,7 @@
 >
 > **Required gate:** Main landed the "Teach the Protocol, Don't Prescribe Each Action" gate. Every surviving edit under `skills/*` or `agents/*` must pass the DRY and Necessity tests line by line. Implementers run the minimum-net-diff self-check against `BASE_HEAD_SHA..HEAD`; reviewers verify the same diff before approval.
 >
-> **Generated artifacts - do not hand-edit:** `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, and `.codex/agents/superra_reviewer.toml` are generated from `agents/implementer.md`, `agents/reviewer.md`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`. Regenerate with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`, then verify with `--check` and `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py`.
+> **Generated artifacts - do not hand-edit:** `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, and `.codex/agents/superra_reviewer.toml` are generated from `agents/implementer.md`, `agents/reviewer.md`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`. Regenerate with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`, then verify with `--check` and `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py`.
 
 **Objective:** Redesign superRA integration so semantic sync is a standalone utility skill, workflow Sync uses generic agents plus semantic-merge mode references, and downstream task agents receive sync intent through task-local annotations.
 
@@ -151,7 +151,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md`, generated direct-mode refs, generated Codex TOMLs.
+**Files:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superra/SKILL.md`, generated direct-mode refs, generated Codex TOMLs.
 **Output:** Canonical role contracts stay task-oriented; Sync-specific behavior lives in semantic-merge references. Generated role artifacts were refreshed from canonical sources.
 
 ---
@@ -173,7 +173,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files:** `skills/semantic-merge/SKILL.md`, semantic-merge mode references, `skills/refactor-and-integrate/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/SKILL.md`, `CLAUDE.md`, `README.md`, `skills/CATEGORIES.md`.
+**Files:** `skills/semantic-merge/SKILL.md`, semantic-merge mode references, `skills/refactor-and-integrate/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superra/SKILL.md`, `CLAUDE.md`, `README.md`, `skills/CATEGORIES.md`.
 **Output:** Semantic-merge owns techniques for semantic coherence and commit chains; refactor-and-integrate owns techniques for codebase coherence and minimum net diff. Format specs live in their owning mode references.
 
 **Verification:** Targeted legacy-term scans returned no live design matches. Codex generator checks and `git diff --check` passed.
@@ -198,7 +198,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files:** `skills/semantic-merge/SKILL.md`, semantic-merge mode references, `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, `CLAUDE.md`, `RESULTS.md`.
+**Files:** `skills/semantic-merge/SKILL.md`, semantic-merge mode references, `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superra/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, `CLAUDE.md`, `RESULTS.md`.
 **Output:** Sync Map clusters, task-local `**Sync impact:**`, and standalone `SEMANTIC_MERGE.md` records explain the approved post-sync diff. Integrate / refactor-and-integrate use those notes as context while reviewing codebase coherence against `BASE_HEAD_SHA..HEAD`.
 
 ---
@@ -208,7 +208,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Files:** `skills/result-protection/SKILL.md`, `skills/result-protection/references/*`, `skills/using-superRA/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/econ-data-analysis/SKILL.md`, `skills/econ-data-analysis/references/integrate-drift-tests.md`, tests that route Protect / drift-test behavior.
+**Files:** `skills/result-protection/SKILL.md`, `skills/result-protection/references/*`, `skills/using-superra/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/econ-data-analysis/SKILL.md`, `skills/econ-data-analysis/references/integrate-drift-tests.md`, tests that route Protect / drift-test behavior.
 **Input:** User decision above; existing `skills/refactor-and-integrate/references/drift-test-quality.md`; `skills/econ-data-analysis`'s stage-scoped-reference style.
 **Output:** Result protection is a standalone utility skill. Integration Protect dispatches this skill for key-result protection; drift tests are documented as the current/default protection mechanism, not the whole concept. `refactor-and-integrate` no longer owns drift-test quality.
 
@@ -216,7 +216,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
   Created `skills/result-protection/` with a lean skill body and a drift-test quality reference carrying red-green, tolerance, independence, and expectation-update gates. The legacy `refactor-and-integrate` copy remains untouched in this worktree because Task 10 owns that cleanup.
 
 - [x] **Step 2: Route Protect to result protection**
-  Routed `Stage: protection` to `result-protection` and `Stage: sync` to `semantic-merge` in `using-superRA`, updated Protect choreography to key-result protection vocabulary, and kept drift-test wording for the concrete default mechanism and suite runs.
+  Routed `Stage: protection` to `result-protection` and `Stage: sync` to `semantic-merge` in `using-superra`, updated Protect choreography to key-result protection vocabulary, and kept drift-test wording for the concrete default mechanism and suite runs.
 
 - [x] **Step 3: Preserve domain add-ons**
   Kept data-analysis key-result selection, tolerance, and failure-mode guidance in `econ-data-analysis`; only the generic drift-test quality pointer moved to `result-protection`.
