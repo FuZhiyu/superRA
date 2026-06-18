@@ -89,7 +89,7 @@ if grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcr
 fi
 
 # Deny branch: instruct Claude to load the companion first, then retry.
-reason="The superRA workflow skill \"$skill\" requires the master skill \"$COMPANION\" to be loaded first. Invoke Skill(skill=\"$COMPANION\") now, then retry the original Skill(skill=\"$skill\") call. The master skill carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every workflow task depends on."
+reason="\"$skill\" requires the master skill \"$COMPANION\" loaded first. Load it, then retry \"$skill\"."
 
 # JSON-escape the reason through python3 json.dumps so any inner `"` or
 # `\` in the text cannot break the payload. `json.dumps` returns the

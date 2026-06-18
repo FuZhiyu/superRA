@@ -45,7 +45,7 @@ fi
 
 # Detect actual merge/rebase/cherry-pick commands
 if echo "$command" | grep -qE '(^|\s)git (merge|rebase|cherry-pick)(\s|$)'; then
-  context="<IMPORTANT>STOP. You are about to run a bare git merge/rebase/cherry-pick. In a research project, you MUST invoke superRA:semantic-merge first to classify conflicts by research impact and protect analysis results. Do not proceed with a mechanical merge.</IMPORTANT>"
+  context="<IMPORTANT>Bare git merge/rebase/cherry-pick detected. Invoke superRA:semantic-merge first to integrate intentionally rather than mechanically.</IMPORTANT>"
 
   # Platform-appropriate output format (matches session-start pattern)
   if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
