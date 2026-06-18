@@ -8,16 +8,16 @@ created: 2026-06-11
 
 ## Objective
 
-Status shows where every task sits; the frontier shows what to work on next. Both are computed from the tree, so you read them rather than maintain them.
+Status and the frontier are both computed from the tree. When you ask the agent to plan, implement, and review, the picture updates on its own — you read it, you do not maintain it.
 
-A leaf task moves through the implement-review cycle:
+A leaf task moves through the implement-review cycle, and the agent drives every step:
 
 ```
 not-started → in-progress → implemented → approved
                                         ↘ revise → implemented → approved
 ```
 
-You rarely set these by hand — the agents do, as they pick up, finish, and review work. An implementer takes a task to `implemented`; a reviewer sends it back to `revise` with findings or signs it off as `approved`. The two statuses that are yours to set are scope decisions: `archived` (dropped from scope, treated as resolved so dependents can proceed) and `postponed` (parked; blocks its dependents until you reset it to `not-started`).
+The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (treated as resolved so dependents can proceed); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
 
 | Status | What it means for you |
 |---|---|
@@ -29,14 +29,19 @@ You rarely set these by hand — the agents do, as they pick up, finish, and rev
 | `archived` | You dropped it from scope. |
 | `postponed` | You parked it. |
 
-A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all its active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded from the rollup. Flip one leaf and every ancestor updates on its own.
+A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded. One leaf flips and every ancestor updates.
 
-The **frontier** is the set of leaf tasks ready to dispatch right now: `not-started` (or an interrupted `in-progress`) with every `depends_on` sibling already `approved`.
+The **frontier** is what to work on next: the leaf tasks ready to dispatch right now — `not-started` (or an interrupted `in-progress`) with every `depends_on` sibling already `approved`. Ask "what's ready next?" and the agent reads the frontier; as tasks reach `approved`, the work they blocked enters it.
+
+The authoritative contract — transition ownership, the exact rollup algorithm, and edge cases — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).
+
+### Commands, to inspect or repair the tree yourself
+
+The agent runs these under the hood; run them yourself to look at the frontier or fix stored statuses directly:
 
 ```bash
-./superRA/superra task frontier
+./superRA/superra task frontier      # leaf tasks ready to dispatch now
+./superRA/superra task status fix    # recompute rollups from the leaves
 ```
 
-This is what you dispatch next. As tasks reach `approved`, the work they were blocking enters the frontier, so the list always reflects what can start now. If you have made bulk edits or touched files directly, `./superRA/superra task status fix` recomputes the stored rollups from the leaf statuses.
-
-The authoritative contract — ownership of each transition, the exact rollup algorithm, and the all-parked edge cases — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).
+Run `status fix` when bulk edits or direct file changes have left the stored rollups out of sync with the leaf statuses.

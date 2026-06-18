@@ -8,31 +8,40 @@ created: 2026-06-17
 
 ## Objective
 
-The dashboard is the visual side of the task tree: a browser view of your whole project that updates as work happens, plus a way to hand a collaborator a frozen snapshot of it. You launch it once and leave it open while you work.
+A browser view of your whole task tree that refreshes itself as agents work, so you read the run from it instead of reconstructing the state from chat or task files. Ask the agent to bring it up:
 
-```bash
-./superRA/superra dashboard        # start the live view (background; reuses a running server)
-./superRA/superra dashboard stop   # shut it down
+```text
+Open the superRA dashboard and point me at what is in review.
 ```
 
-It opens onto three views of the same tree. The **tree** shows every task with its rolled-up status, so you see the whole project at once. The **DAG** draws the `depends_on` edges within a subtree, so the ordering constraints are visible rather than remembered. The **kanban** board sorts tasks by status (not-started, in progress, in review, approved), so you watch work move across the columns as agents pick it up and reviewers sign it off. The server watches your task files and refreshes the open page on its own, so the view tracks the work without a manual reload. A **search box** filters across every task and page by title and content, which is how you jump to a task in a large tree instead of scrolling.
+It opens three views of the same tree: a **tree** with rolled-up status, a **DAG** of the `depends_on` edges, and a **kanban** board that sorts tasks by status so you watch work move across the columns. A search box filters by title and content for jumping around a large tree.
 
 ### A shareable snapshot
 
-You can freeze the current state into a single self-contained HTML file and hand it to anyone:
+To hand someone the project state (an advisor, coauthor, referee), ask for an export:
 
-```bash
-./superRA/superra dashboard export --output dashboard.html
+```text
+Export the dashboard to a file I can send.
 ```
 
-The result is one file — the tree, all task bodies, math, and images inlined, with working deep links — that a collaborator opens in a browser with no superRA install, no server, and no repo checkout. It is a browsable snapshot of project state: what is done, what is in flight, and what each finished task found. (This documentation site is itself one such export, built from a task tree.) Because the export carries every word of every `task.md`, treat it like the repo it came from — on a public project, keep real subject IDs, private group names, query results, and internal paths out of task bodies, and use placeholder or hypothetical content in examples. Anything in a task is in the snapshot you share.
+The result is one self-contained HTML file — tree, task bodies, math, and images inlined, with working deep links — that opens in any browser with no superRA install, server, or repo checkout. (This documentation site is one such export.) The export carries every word of every `task.md`, so anything in a task is in the snapshot you share: on a public project keep real subject IDs, private group names, query results, and internal paths out of task bodies.
 
 ### Comments: steering without editing
 
-Comments let you steer a task without editing its body. You pin a note to a specific task — a correction, a question, a constraint you want the next agent to honor — and resolve it once it is addressed. A pinned comment surfaces inline whenever anyone runs [`task read`](#/04-utility-skills/01-task-tree/02-cli-commands) on that task and shows on the dashboard, so your steering reaches the agent that picks the task up next without your rewriting the objective.
+Pin a note to a specific task (a correction, question, or constraint) to steer it without editing the objective. The comment shows on the dashboard and surfaces inline whenever anyone runs [`task read`](#/04-utility-skills/01-task-tree/02-cli-commands) on that task, so it reaches the agent that picks the task up next. Resolve it once addressed.
 
 ### Running in parallel across worktrees
 
-When you split a project across several git worktrees to run tasks in parallel, the live dashboard resolves whichever worktree you are viewing — different browser tabs can show different worktrees off the same server. The code is versioned per worktree, but the data usually is not, so keep the non-git files in step with [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) rather than copying them by hand.
+When you split a project across git worktrees to run tasks in parallel, the live dashboard resolves whichever worktree you are viewing, so different browser tabs can show different worktrees off one server. Code is versioned per worktree but data usually is not, so keep the non-git files in step with [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) rather than copying by hand.
+
+### The commands behind it
+
+What the agent runs, and what you can run yourself from a project terminal:
+
+```bash
+./superRA/superra dashboard                          # start the live view (background; reuses a running server)
+./superRA/superra dashboard stop                     # shut it down
+./superRA/superra dashboard export --output dashboard.html   # freeze the current state to one self-contained HTML file
+```
 
 The dashboard's serving model, port derivation, and export internals are in the [`task-tree`](skills/task-tree/SKILL.md) skill and its references.
