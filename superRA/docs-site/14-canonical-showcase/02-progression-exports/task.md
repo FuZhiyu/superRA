@@ -1,6 +1,6 @@
 ---
 title: "Build Historical-State Live Exports From Committed Fixtures"
-status: implemented
+status: approved
 depends_on:
   - 01-retire-and-rewire
 tags: []
