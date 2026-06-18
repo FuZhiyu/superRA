@@ -37,6 +37,6 @@ The **frontier** is the payoff: the set of leaf tasks ready to dispatch right no
 ./superRA/superra task frontier
 ```
 
-This is what you dispatch next. As tasks reach `approved`, the work they were blocking enters the frontier, so the list always reflects what can start now. If you have made bulk edits or touched files directly, `./superRA/superra task check --propagate-all` recomputes the stored rollups.
+This is what you dispatch next. As tasks reach `approved`, the work they were blocking enters the frontier, so the list always reflects what can start now. If you have made bulk edits or touched files directly, `./superRA/superra task status fix` recomputes the stored rollups from the leaf statuses.
 
 The authoritative contract — ownership of each transition, the exact rollup algorithm, and the all-parked edge cases — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).

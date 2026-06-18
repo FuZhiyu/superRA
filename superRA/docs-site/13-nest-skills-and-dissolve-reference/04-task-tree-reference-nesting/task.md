@@ -1,6 +1,6 @@
 ---
 title: "Build the task-tree Detail Subpages: task-file / CLI / status / dashboard"
-status: revise
+status: implemented
 depends_on: 
   - 03-utility-skills
 
@@ -57,3 +57,4 @@ Verification: `report-in-markdown` self-diagnose clean on all four pages; doc-mo
 ## Review Notes
 
 1. **MAJOR** — [03-status-and-frontier/task.md:40](../../../../docs/site/04-utility-skills/01-task-tree/03-status-and-frontier/task.md#L40) tells the researcher to run `./superRA/superra task check --propagate-all` to recompute rollups, but that command does not exist: `task check` accepts only `--root`/`--json`/`--category`, and argparse rejects the flag (`error: unrecognized arguments: --propagate-all`). The actual rollup-recompute commands are `task status propagate` and `task status fix`, which the sibling CLI page lists correctly. This is an inherited error from the old reference page, but the rewrite ships a non-working command in user docs. Fix: replace with `./superRA/superra task status propagate` (or point to `task status fix`), matching what the CLI page already documents.
+   → implemented: replaced with `./superRA/superra task status fix` ("recomputes the stored rollups from the leaf statuses"). Verified live — the old flag is rejected by argparse; `task status fix` exits 0. ([03-status-and-frontier/task.md:40](../../../../docs/site/04-utility-skills/01-task-tree/03-status-and-frontier/task.md#L40))
