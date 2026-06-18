@@ -1,6 +1,6 @@
 ---
 title: "Site-Wide Link Repoint + Build/Render-Integrity Verification"
-status: implemented
+status: approved
 depends_on: 
   - 02-domain-skills
   - 03-utility-skills
