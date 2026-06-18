@@ -1,6 +1,6 @@
 ---
 title: "Build the task-tree Detail Subpages: task-file / CLI / status / dashboard"
-status: not-started
+status: implemented
 depends_on: 
   - 03-utility-skills
 
@@ -36,3 +36,20 @@ Validation: the four children render under `01-task-tree`; relocated pages keep 
 
 ## Results
 
+Built the four detail subpages under [`04-utility-skills/01-task-tree/`](#/04-utility-skills/01-task-tree). All four render in a doc-mode export and every cross-page link resolves to a node path that exists in the tree (verified by exporting `docs/site` and grepping the output).
+
+**Relocated and rewrote three pages.** Moved with `git mv` (doc nodes carry no real `depends_on`, so a raw move plus manual link fix is correct), then rewrote each from reference-style tables toward a lead-with-the-task orientation that pushes the exhaustive contract to the linked authority:
+
+- [`01-task-file`](#/04-utility-skills/01-task-tree/01-task-file) (was `05-reference/01-task-file`) — now opens on the three places a researcher actually works (frontmatter, `## Objective`, `## Results`), describes the body sections by ownership, and keeps the minimal-leaf example; the full key-by-key contract is a pointer to `task-file-contract.md`. Repointed its internal status link from `#/05-reference/03-status-and-frontier` to the new sibling path.
+- [`02-cli-commands`](#/04-utility-skills/01-task-tree/02-cli-commands) (was `05-reference/02-cli-commands`) — leads with the three constant commands (`task tree` / `task frontier` / `task read`), then create/move, comments, and diagnostics; full surface points to `commands.md`. Corrected the dashboard invocation to `./superRA/superra dashboard` (the page had carried `task dashboard` framing in passing) and links to the new dashboard page.
+- [`03-status-and-frontier`](#/04-utility-skills/01-task-tree/03-status-and-frontier) (was `05-reference/03-status-and-frontier`) — reframed as what the researcher sees and decides: the two statuses that are theirs to set (`archived`/`postponed`) vs. the dispatch-cycle ones agents drive, rollup stated as a consequence, frontier as the payoff. Authority pointer to `task-file-contract.md` retained.
+
+No relocated page lost a user-facing fact; the status enum, lifecycle, rollup rules, frontier definition, command surface, comments, and field/section anatomy all survive in tighter form.
+
+**Authored the new dashboard page.** [`04-dashboard`](#/04-utility-skills/01-task-tree/04-dashboard) covers the live tree/DAG/kanban views with SSE auto-refresh, client-side search, the self-contained static export (`./superRA/superra dashboard export --output dashboard.html`, noting this site is one such export), task comments as the human-in-the-loop steering channel, and parallel worktrees (pointing to [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) rather than re-explaining). The export-sharing data-hygiene fact from the soon-to-be-dropped FAQ folds in here — "treat the snapshot like the repo it came from; keep real IDs/paths out of task bodies on a public project" — so task `05` can drop the standalone FAQ with that fact already homed. Did not document the docs branch/version switcher (`10-version-switcher` is postponed); the live dashboard's per-worktree resolution, which is built, is described instead.
+
+**Parent linkage already satisfied.** The `task-tree` skill page (`04-utility-skills/01-task-tree`, owned by approved task `03`) already links down to all four children at their final nested paths, so no edit to that page was needed.
+
+**Deviation from guidance:** the objective suggested `./superRA/superra task move --root docs/site …` as one move option; I used `git mv` (the objective's stated alternative) because doc nodes have no `depends_on` edges or inbound `#/…` links from siblings that the move command would need to carry, so the simpler raw move plus the one manual link fix is sufficient and lower-risk.
+
+Verification: `report-in-markdown` self-diagnose clean on all four pages; doc-mode export of `docs/site` succeeds and contains all four page titles, the dashboard page's three new section headings, and every referenced node path.
