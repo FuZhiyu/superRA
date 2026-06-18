@@ -31,7 +31,7 @@ Rewrote [docs/site/06-showcase/task.md](../../../../docs/site/06-showcase/task.m
 
 **Verification:**
 
-- All five `#/` hash targets (`02-quickstart`, `04-utility-skills`, `05-reference/03-status-and-frontier`, `05-reference/01-task-file`) and both repo-file links (`skills/task-tree/SKILL.md`, `skills/task-tree/scripts/plan_dashboard.py`) resolve — checked each path exists on disk.
+- All four distinct `#/` hash targets (`02-quickstart`, `04-utility-skills`, `05-reference/03-status-and-frontier`, `05-reference/01-task-file`) and both repo-file links (`skills/task-tree/SKILL.md`, `skills/task-tree/scripts/plan_dashboard.py`) resolve — checked each path exists on disk.
 - `report-in-markdown` self-diagnose: `docs/site/06-showcase/task.md: clean`.
 - Build command verbatim-matches the approved `docs/build_site.sh` showcase export (`--plan-root superRA --root showcase-analysis`).
 - Voice held: no rhetorical hooks or AI-flavored intensifiers added; reused the existing real-study prose.
