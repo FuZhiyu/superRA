@@ -8,7 +8,7 @@ created: 2026-06-17
 
 ## Objective
 
-Delete the simulated demo tree and reduce the site build to two exports: `index.html` (docs, doc-mode) and `showcase-analysis-tree.html` (real study, full chrome).
+Delete the simulated demo tree and reduce the site build to two exports: `index.html` (docs, doc-mode) and `showcase-analysis-tree.html` (real study, full chrome). (Sibling [02-progression-exports](../02-progression-exports/task.md) later extends this same script with two more fixture-built exports for the Quickstart; this task's scope is the demo retirement and the two-export baseline.)
 
 - **Delete** the entire `docs/showcase-demo/` directory (the simulated tree, its `make_figure.py`, and the committed figure under `03-size-sort-returns/attachments/`).
 - **Rewrite** [docs/build_site.sh](../../../../docs/build_site.sh):
