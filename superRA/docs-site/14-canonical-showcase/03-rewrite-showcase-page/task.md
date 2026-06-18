@@ -1,6 +1,6 @@
 ---
 title: "Rewrite the Showcase Page Around the Real Study Only"
-status: implemented
+status: approved
 depends_on:
   - 01-retire-and-rewire
 tags: []
