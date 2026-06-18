@@ -10,7 +10,7 @@ created: 2026-06-11
 
 Run this on day one. You install superRA, point it at a project, and push one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, integrate the result. Every core idea — the task tree, the dashboard, adversarial review, status, integration — arrives inline as you reach it. By the end you have used the mechanics rather than read definitions of them.
 
-The running example is a toy size-and-momentum sort on *simulated* equity returns — a small, public-safe analysis, no real data. Every command on this page was run as shown; every screenshot is the dashboard rendering this exact project.
+The running example is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section. The data are public — straight from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) — so the whole example reproduces on your machine. As you walk the three phases below, each milestone links a live, explorable export of this exact study at that moment in its workflow — the real dashboard, captured straight from the project's git history, with every task clickable and every view switchable. The finished tree is the [Showcase](#/07-showcase).
 
 ### Prerequisite
 
@@ -40,19 +40,20 @@ The trigger is the word **`superra`**: with it in the prompt, the agents follow 
 
 ### A typical workflow
 
-The rest of this page walks one piece of work through all three phases. The example below starts a fresh toy analysis rather than adopting existing work, so you see planning from scratch.
+The rest of this page walks one piece of work through all three phases. The example below starts the asset-pricing study from scratch rather than adopting existing work, so you see planning from the first task.
 
 #### Superplan
 
 Tell Claude what you want to work on in plain language and ask it to plan. Skip your harness's plan mode; the word `superplan` puts it on the planning track:
 
 ```text
-Using superRA, superplan a small toy analysis: simulate a monthly equity
-panel, sort firms into size and momentum portfolios, and report the long-short
-momentum spread. Keep it to a handful of tasks on simulated data.
+Using superRA, superplan an asset-pricing study on public Ken French data:
+download the factors and the 25 size-B/M portfolios, estimate CAPM and the
+Fama-French 3-factor model, and run the GRS joint test. Keep it to a handful
+of tasks.
 ```
 
-Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root. The task tree holds the project's state. Instead of keeping the plan in one agent's context window, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
+Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root: build the panel, run the regressions and the GRS test, and write up the result. The task tree holds the project's state. Instead of keeping the plan in one agent's context window, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
 
 Planning is autonomous but stops at one gate: before any code is written, the planner shows you the proposed decomposition and waits. Read the objectives and approve. The planner commits the tree to `superRA/`, so the structure is in git before execution starts. How task trees get scoped and decomposed is in [superplan](skills/superplan/SKILL.md).
 
@@ -62,19 +63,19 @@ You read the tree on the **dashboard** — the human view of those same committe
 ./superRA/superra dashboard
 ```
 
-A live, auto-updating dashboard opens in your browser, runs in the background, and exits once idle. The default **Workspace** view shows the tree with status pills and the parent rollup. Here is the toy project right after planning — three tasks under one root:
+A live, auto-updating dashboard opens in your browser, runs in the background, and exits once idle. The default **Workspace** view shows the tree with status pills and the parent rollup. Here is this study right after planning — three tasks under one root, every one `not-started` (grey) and the rollup reading 0 of 3. Open it and click a task to read the objective the planner wrote; switch to the dependency-graph view to see which task must finish before the next can start:
 
-![Dashboard Workspace view of the toy project: the task tree in the sidebar with status pills, the root objective, and subtask cards.](attachments/dashboard-workspace.png)
+[Open the freshly-planned tree →](showcase-after-planning.html)
 
 #### Superimplement
 
 Now run a task. Ask Claude to `superimplement`:
 
 ```text
-superimplement @superRA/01-simulate-panel.
+superimplement @superRA/showcase-analysis/01-data.
 ```
 
-Every task runs through an **implementer–reviewer pair** — superRA's central discipline. The implementer does the work — here, the panel simulation — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently* — the actual files and diff, not the implementer's summary — and returns one of two verdicts. **APPROVE** advances the task; **REVISE** sends numbered, specific findings back for a fix pass. Work never advances past a `REVISE`, however small the task looks. Review is not skippable.
+Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently* — the actual files and diff, not the implementer's summary — and returns one of two verdicts. **APPROVE** advances the task; **REVISE** sends numbered, specific findings back for a fix pass. Work never advances past a `REVISE`, however small the task looks. Review is not skippable.
 
 The reviewer is adversarial by design. Its job is to find what the implementer missed, not to rubber-stamp. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances through a superRA project has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
 
@@ -83,25 +84,35 @@ The implementer writes its findings straight into the task file, so the panel ta
 ```text
 ## Results
 
-Simulated the panel in code/01_simulate_panel.py from seed 42 and wrote data/panel.csv.
+Built the baseline monthly panel end-to-end from public Ken French data.
+Re-running superRA/showcase-analysis/run_all.sh reproduces every output.
 
-- 12,000 firm-months: 200 firms × 60 months, no gaps.
-- Mean monthly return -0.07%, SD 4.05% — the idiosyncratic noise dominates,
-  with a persistent per-firm effect (SD 0.6%/month) that the momentum sort can pick up.
-- log_size is a static per-firm draw (mean 6.02, SD 1.22), used as the size proxy in the next task.
+- data/ff_panel.parquet: 754 months × 29 columns, indexed by month-end date
+  over 1963-07 → 2026-04. Columns: Mkt-RF, SMB, HML, RF plus the 25 portfolio
+  excess-return series.
+- Merge: 1:1 inner join on the month index, 1198 → 1198 rows, 0 unmatched.
+  No within-sample month gaps; no missing values over the baseline sample.
+- Factor magnitudes match published scales — market premium 0.597%/mo,
+  market volatility 4.47%/mo — so downstream regressions start from clean data.
 ```
+
+The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written and waiting on review:
+
+[Open the study mid-implement →](showcase-mid-implement.html)
 
 #### Watch progress and read results
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. The **Kanban** view shows every task as a card in a column by status, giving an at-a-glance read of what is where across the whole tree:
+The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out — you rarely need the chat or the files directly. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task has survived its review, the whole tree is `approved` (green) and the rollup reads 3 of 3 — the state INTEGRATE picks up:
 
-![Dashboard Kanban view: tasks sorted into Not Started, In Progress, and Approved columns.](attachments/dashboard-kanban.png)
+[Open the finished study →](showcase-analysis-tree.html)
 
-Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked:
+This is the completed tree, every task green. Toggle the **Kanban** view (the view switch at the top of the page) to see every task as a card in a column by status — the at-a-glance "what is where" across the whole tree.
 
-![Dashboard task detail for the panel task: the Objective and the Results the implementer wrote and the reviewer checked.](attachments/dashboard-task-detail.png)
+Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked. The regression-and-GRS task opens straight to its objective math and the results the implementer wrote and the reviewer checked:
 
-Because the results live in committed task files rather than the chat, they survive as a durable handoff even after the agent session that produced them ends. Each task is a plain markdown file (`superRA/01-simulate-panel/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [The Task File](#/04-utility-skills/01-task-tree/01-task-file).
+[Read the finished regression task →](showcase-analysis-tree.html#/02-analysis)
+
+Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/showcase-analysis/01-data/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also renders a dependency DAG and lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [The Task File](#/04-utility-skills/01-task-tree/01-task-file).
 
 #### Superintegrate
 
@@ -128,4 +139,4 @@ You have run a full cycle. Two further pieces of discipline each have a page —
 - **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, writing, and more, and how a domain skill loads on top of any phase.
 - **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.
 
-For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To see a real, full-size project rather than this toy, open the [Showcase](#/07-showcase).
+For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To open and click through the finished study this page walked you through — the live task tree with its regression tables, figures, and full review history — go to the [Showcase](#/07-showcase).

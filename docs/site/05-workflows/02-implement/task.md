@@ -11,7 +11,7 @@ created: 2026-06-17
 IMPLEMENT runs the task tree. Say `superimplement` and superRA works through the **frontier** — every task whose dependencies are satisfied — one task at a time, recording results in each `task.md` as it goes. You watch and read it all on the [dashboard](#/04-utility-skills/01-task-tree/04-dashboard); you rarely need the chat.
 
 ```text
-superimplement @superRA/01-simulate-panel.
+superimplement @superRA/showcase-analysis/01-data.
 ```
 
 **Every task runs through an implementer–reviewer pair.** The implementer does the work, writes what it found into the task's `## Results`, and hands off. A separate **reviewer** then inspects the committed result independently (the actual files and diff, not the implementer's summary) and returns one of two verdicts: **APPROVE** advances the task to `approved`; **REVISE** sends numbered, specific findings back for a fix pass. Work does not advance past a REVISE, regardless of how small the task looks, and review is not skippable.
