@@ -1,6 +1,6 @@
 ---
 name: result-protection
-description: Utility skill for protecting key research results from unintended changes, especially during integration, branch sync, refactoring, or future maintenance. Use when selecting, creating, refreshing, or reviewing key-result protection; the current/default mechanism is drift or regression tests.
+description: Protect key research results from unintended drift. Use when selecting, creating, refreshing, or reviewing regression or drift tests for important outputs.
 ---
 
 # Result Protection

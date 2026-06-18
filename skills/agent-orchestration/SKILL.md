@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Requires `superRA:using-superra` loaded first. Use when dispatching agents in the superRA workflow. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / INTEGRATE).
+description: Coordinate superRA agents and handoffs. Requires superRA:using-superra. Use to dispatch roles, run parallel agents, choose reviewers, or preserve workflow state.
 ---
 
 # Agent Orchestration

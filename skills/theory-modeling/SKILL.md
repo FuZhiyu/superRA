@@ -1,12 +1,6 @@
 ---
 name: theory-modeling
-description: >
-  Use PROACTIVELY for mathematical-modeling work — stating assumptions,
-  deriving optimality conditions, solving equilibria, comparative statics,
-  proofs, numerical verification, or renderable model notes. Triggers
-  include "derive the model", "solve the equilibrium", "check the proof",
-  "write the FOCs", "verify the comparative statics", or any task where
-  algebra and assumptions must stay explicit.
+description: Mathematical-modeling discipline. Use for assumptions, FOCs, equilibria, proofs, comparative statics, numerical checks, or renderable model notes.
 user-invocable: true
 ---
 

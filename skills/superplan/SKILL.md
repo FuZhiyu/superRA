@@ -1,6 +1,6 @@
 ---
 name: superplan
-description: "Requires `superRA:using-superra` loaded first. Use when starting new research work, adding work to an existing task tree, or revising one. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", an empty working directory, or an existing `superRA/` that needs new tasks or restructuring."
+description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, or reflecting material decisions in the task tree."
 ---
 
 # superplan — the PLAN phase

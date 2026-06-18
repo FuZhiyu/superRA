@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when refactoring code for codebase integration, reviewing post-sync branch quality, auditing project docs, pruning a governing diff to minimum net diff, or using task-local Sync impact as justification evidence.
+description: Codebase integration discipline. Use when refactoring for local conventions, reviewing post-sync quality, auditing project docs, pruning diffs, or using Sync Impact evidence.
 ---
 
 # Refactor and Integrate

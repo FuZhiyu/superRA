@@ -1,6 +1,6 @@
 ---
 name: codex-superra-setup
-description: Use when installing or refreshing superRA's named Codex agents in project scope (.codex/agents) or global scope (~/.codex/agents).
+description: Install or refresh generated superRA named Codex agents in project (.codex/agents) or global (~/.codex/agents) scope.
 ---
 
 # Codex superRA Setup

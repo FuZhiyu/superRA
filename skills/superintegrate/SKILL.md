@@ -1,6 +1,6 @@
 ---
 name: superintegrate
-description: Requires `superRA:using-superra` loaded first. Use when a task tree is code-complete and reproducibility-verified and the user wants to finish, PR, or land the work — protecting key results, syncing with the base, refactoring for codebase fit, maturing results into permanent records, or final PR/cleanup. Triggers include "integrate", "prepare this for PR", "protect key results", "sync with main and refactor", "mature the results", "open the PR", or the transition from `superimplement`'s completion menu.
+description: "Integrate code-complete superRA work. Requires superRA:using-superra. Use for result protection, base sync, codebase-fit refactors, permanent records, cleanup, or PR preparation."
 ---
 
 # superintegrate — the INTEGRATE phase

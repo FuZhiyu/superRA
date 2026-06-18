@@ -1,6 +1,6 @@
 ---
 name: writing
-description: Use PROACTIVELY for reviewing, polishing, proofreading, consistency-checking, or drafting prose a human will read in an academic paper or manuscript. Triggers by mode. Review — "review §X", "check my citations", "consistency sweep". Polish — "polish §X", "tighten this paragraph", "proofread", "apply these review findings". Draft — "draft the methods section", "write up these notes". Language/format-agnostic (LaTeX, Markdown, Quarto, plain text).
+description: Academic prose support. Use for reviewing, polishing, proofreading, consistency checks, citation checks, or drafting manuscript text in LaTeX, Markdown, Quarto, or plain text.
 user-invocable: true
 ---
 

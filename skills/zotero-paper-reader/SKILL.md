@@ -1,6 +1,6 @@
 ---
 name: zotero-paper-reader
-description: 'Read and analyze academic papers from the user''s Zotero library, and generate citations from it. Use proactively to read, find, summarize, or analyze a paper by title, author, DOI, or topic; for library queries (metadata and full-text search, collections, tags, DOI-to-key lookup, attachments, user or group libraries); and for citation work (BibTeX export, inserting `\cite`/`[@key]` into a draft, master-`.bib` sync, bibliography rendering — Better BibTeX citekeys by default).'
+description: "Use Zotero to find, read, summarize, cite, or export academic papers. Use for paper lookup, library searches, attachments, BibTeX, and draft citation work."
 user-invocable: true
 ---
 

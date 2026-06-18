@@ -1,12 +1,6 @@
 ---
 name: econ-data-analysis
-description: >
-  Use PROACTIVELY for data analysis on economic, financial, or panel
-  data — importing, cleaning, merging, filtering, constructing variables,
-  aggregating, summary stats, regressions, or figures. Triggers include
-  panel data, "merge these datasets", "run regression", "clean this
-  data", "construct variable X", or any data file with unknown structure.
-  Language-agnostic (Python, Julia, R, Stata).
+description: Economic data-analysis discipline. Use for importing, cleaning, merging, filtering, variables, aggregation, summary stats, regressions, or figures on economic, financial, or panel data.
 user-invocable: true
 ---
 

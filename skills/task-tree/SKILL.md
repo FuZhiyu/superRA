@@ -1,12 +1,6 @@
 ---
 name: task-tree
-description: >
-  Directory-tree task tooling — operate on a superRA/ task tree: query the
-  frontier/DAG/tree, create and restructure tasks, run bulk status ops,
-  serve the dashboard, or migrate legacy PLAN.md + RESULTS.md. Load on
-  demand by orchestrators, planners, and contributors. Triggers include
-  "show the frontier", "show the task DAG", "create a task tree",
-  "generate the dashboard", "migrate the plan".
+description: Operate on superRA/ task trees. Use to query frontier, DAG, or tree views; create or restructure tasks; edit statuses; serve dashboards; or migrate legacy PLAN.md/RESULTS.md.
 user-invocable: true
 ---
 

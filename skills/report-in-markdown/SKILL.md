@@ -1,6 +1,6 @@
 ---
 name: report-in-markdown
-description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports — inline rules for source-file citations, LaTeX math, and tables, plus optional references for figures and standalone-report IO.
+description: Markdown style guide for task files, status reports, and standalone reports. Use when writing or revising Markdown with source citations, figures, math, or tables.
 user-invocable: true
 ---
 

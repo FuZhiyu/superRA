@@ -1,6 +1,6 @@
 ---
 name: superimplement
-description: Requires `superRA:using-superra` loaded first. Use when a `superRA/` task tree is ready to implement via an implementer-reviewer pair, when resuming a tree with mixed `implemented` / `revise` / not-started tasks, or when the work is code-complete and you want to verify reproducibility and present completion options. Triggers include "execute the plan", "run task N", "implement this", "finish this work", or a `revise` state needing adjudication before re-dispatch.
+description: "Implement a superRA task tree. Requires superRA:using-superra. Use to dispatch implementer/reviewer pairs, resume mixed task statuses, handle revise states, or verify code-complete work."
 ---
 
 # superimplement — the IMPLEMENT phase

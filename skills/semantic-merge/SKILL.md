@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: "Use before `git merge`, `git rebase`, or `git cherry-pick`, or when syncing a feature/work branch with its base before integration. Triggers include bare `git merge` / `git rebase` / `git cherry-pick` (flagged by the merge-guard hook), \"sync with main\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve each side's intent."
+description: Semantic branch integration. Use before git merge, rebase, or cherry-pick, or when syncing branches where conflicts or overlapping intent must be resolved deliberately.
 ---
 
 # Semantic Merge
