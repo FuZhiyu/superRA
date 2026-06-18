@@ -1,6 +1,6 @@
 ---
 title: "Build Historical-State Live Exports From Committed Fixtures"
-status: not-started
+status: implemented
 depends_on:
   - 01-retire-and-rewire
 tags: []
@@ -29,4 +29,51 @@ The fixtures are intentionally frozen historical snapshots — they are **not** 
 
 ## Results
 
-_Not started._
+Two frozen historical fixtures are committed under [docs/showcase-fixtures/](../../../../docs/showcase-fixtures/), and [docs/build_site.sh](../../../../docs/build_site.sh) now emits four pages: `index.html`, `showcase-analysis-tree.html` (complete state, unchanged), `showcase-after-planning.html`, and `showcase-mid-implement.html`. CI ([.github/workflows/docs-site.yml](../../../../.github/workflows/docs-site.yml)) rebuilds when `docs/showcase-fixtures/**` changes.
+
+### Fixtures and how to regenerate them
+
+Both fixtures are the `showcase-analysis` subtree as it stood at a past commit, extracted with `git show` and never disturbing the live tree. The statuses at each source commit were verified against the spec before extraction.
+
+- **after-planning** (`de25a122`, freshly-planned frontier) — four `task.md` files, all `status: not-started`, no `## Results`, no figures:
+
+  ```sh
+  ap=docs/showcase-fixtures/after-planning/showcase-analysis
+  mkdir -p "$ap" "$ap"/{01-data,02-analysis,03-writeup}
+  git show de25a122:superRA/showcase-analysis/task.md             > "$ap/task.md"
+  git show de25a122:superRA/showcase-analysis/01-data/task.md     > "$ap/01-data/task.md"
+  git show de25a122:superRA/showcase-analysis/02-analysis/task.md > "$ap/02-analysis/task.md"
+  git show de25a122:superRA/showcase-analysis/03-writeup/task.md  > "$ap/03-writeup/task.md"
+  ```
+
+- **mid-implement** (`805a247e`, 01-data approved / 02-analysis implemented / 03-writeup not-started, parent rolled up to in-progress) — same four `task.md` files plus only `02-analysis/attachments/` (the four figures the export inlines from 02-analysis's Results); the analysis code/data files and 03-writeup attachments are not rendered by a dashboard export, so they are omitted:
+
+  ```sh
+  mi=docs/showcase-fixtures/mid-implement/showcase-analysis
+  mkdir -p "$mi" "$mi"/{01-data,02-analysis/attachments,03-writeup}
+  git show 805a247e:superRA/showcase-analysis/task.md             > "$mi/task.md"
+  git show 805a247e:superRA/showcase-analysis/01-data/task.md     > "$mi/01-data/task.md"
+  git show 805a247e:superRA/showcase-analysis/02-analysis/task.md > "$mi/02-analysis/task.md"
+  git show 805a247e:superRA/showcase-analysis/03-writeup/task.md  > "$mi/03-writeup/task.md"
+  for f in fig1_alpha_grids fig2_realized_vs_predicted fig3_cumulative_factors fig4_ff3_hml_loadings; do
+    git show "805a247e:superRA/showcase-analysis/02-analysis/attachments/$f.png" > "$mi/02-analysis/attachments/$f.png"
+  done
+  ```
+
+The fixtures are intentionally frozen — they are **not** synced with later edits to the live `showcase-analysis` prose; the staleness shows the tree at a past moment. The build-script header comment near the fixture exports flags this so a future reader does not "fix" the drift, and points back here for the capture commands.
+
+### Build wiring
+
+The two new exports use the same full-chrome `generate` (never `--doc-mode`) and `--repo-file-prefix superRA/showcase-analysis` as the complete-state export, so in-task repo-file links resolve to the live tree. The `index.html` doc-mode build gained `--doc-local-link showcase-after-planning.html` and `--doc-local-link showcase-mid-implement.html` so the Quickstart's links to them stay relative. The required-input check, output-verification loop, final echo, and header comment all cover the four output files.
+
+### Validation
+
+`docs/build_site.sh <scratch>` exited 0 and wrote all four files non-empty: `index.html` (2.29 MB), `showcase-analysis-tree.html` (1.95 MB), `showcase-after-planning.html` (1.17 MB), `showcase-mid-implement.html` (1.68 MB).
+
+Headless system-Chrome renders (`--headless --screenshot`) of the rendered DOM, not a file-exists check:
+
+- **after-planning** — root pill `not-started (0/3)`; all three children `not-started`; no inlined figures (`data:image/png` count = 0 in the export).
+- **mid-implement** — root pill `in-progress (1/3)`; 01-data `approved` (green), 02-analysis `implemented` (yellow), 03-writeup `not-started` (grey). Deep-linking `#/02-analysis` renders its four matplotlib figures inlined (alpha grids, realized-vs-predicted, cumulative factors, HML loadings) plus result tables; `data:image/png` count = 4 in the export, matching the four 02-analysis attachments.
+- Both pages render with full task-tracker chrome — sidebar status pills, DAG legend, the Subtasks Kanban cards, and the Kanban toggle.
+
+`git diff --stat superRA/showcase-analysis` is empty (the live tree is untouched), and the fixture PNGs are not gitignored (`git check-ignore` reports them not ignored), so they commit.

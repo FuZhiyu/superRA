@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Build the superRA documentation site into a single output directory.
 #
-# Produces two self-contained HTML files the GitHub Pages deploy serves:
-#   index.html                  the docs tree (docs/site) in doc-mode  — the site entry
-#   showcase-analysis-tree.html the real CAPM-vs-FF3 study tree (full chrome)
+# Produces four self-contained HTML files the GitHub Pages deploy serves:
+#   index.html                   the docs tree (docs/site) in doc-mode — the site entry
+#   showcase-analysis-tree.html  the real CAPM-vs-FF3 study tree, complete state (full chrome)
+#   showcase-after-planning.html the same study right after planning, all tasks not-started
+#   showcase-mid-implement.html  the same study mid-implement, mixed task statuses + figures
 #
-# The showcase framing page links to showcase-analysis-tree.html by relative
-# basename, so it must sit beside index.html; --doc-local-link keeps that
-# link relative instead of rebasing it to the repo blob base.
+# The two progression pages are built from FROZEN HISTORICAL FIXTURES under
+# docs/showcase-fixtures/, not from the live tree: they capture the
+# showcase-analysis subtree as it stood at two past commits (after-planning and
+# mid-implement) so the Quickstart can link live, explorable views of the study
+# at three workflow moments. These fixtures are deliberately NOT kept in sync
+# with later edits to the live superRA/showcase-analysis prose — the staleness
+# is the point (each page shows the tree at a past moment). Do not "fix" the
+# drift. Regenerate a fixture only to re-pin it to a (different) source commit;
+# the capture commands are recorded in the task that built them
+# (superRA/docs-site/14-canonical-showcase/02-progression-exports/task.md).
+#
+# The showcase framing/quickstart pages link to the three showcase exports by
+# relative basename, so they must sit beside index.html; --doc-local-link keeps
+# those links relative instead of rebasing them to the repo blob base.
 #
 # Repo-file authority links on the docs site resolve repo-root-relative against
 # --repo-file-base (the GitHub blob URL at the built ref). The ref defaults to
@@ -31,6 +44,8 @@ gen="skills/task-tree/scripts/plan_dashboard.py"
 
 docs_tree="docs/site"
 dev_tree="superRA"
+fixture_after_planning="docs/showcase-fixtures/after-planning"
+fixture_mid_implement="docs/showcase-fixtures/mid-implement"
 
 # --- Resolve the repo-file base (GitHub blob URL at the built ref) ----------
 sha="${GITHUB_SHA:-$(git rev-parse HEAD)}"
@@ -45,7 +60,9 @@ fi
 repo_file_base="${REPO_FILE_BASE:-https://github.com/${repo_slug}/blob/${sha}}"
 
 # --- Verify every required input exists before touching the output ----------
-for tree in "$docs_tree" "$dev_tree"; do
+for tree in "$docs_tree" "$dev_tree" \
+            "$fixture_after_planning/showcase-analysis" \
+            "$fixture_mid_implement/showcase-analysis"; do
   if [ ! -d "$tree" ]; then
     echo "build_site: missing task tree: $tree" >&2
     exit 1
@@ -78,7 +95,9 @@ run_gen \
   --doc-mode \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$docs_tree" \
-  --doc-local-link showcase-analysis-tree.html
+  --doc-local-link showcase-analysis-tree.html \
+  --doc-local-link showcase-after-planning.html \
+  --doc-local-link showcase-mid-implement.html
 
 # --- 2. Showcase export (full task-tracker chrome, never doc-mode) ----------
 # The real asset-pricing study is a subtree of superRA, so scope the full repo
@@ -90,12 +109,34 @@ run_gen \
   --repo-file-base "$repo_file_base" \
   --repo-file-prefix "$dev_tree/showcase-analysis"
 
-# --- Verify the two files landed --------------------------------------------
-for f in index.html showcase-analysis-tree.html; do
+# --- 3 & 4. Progression exports from frozen historical fixtures -------------
+# Built from docs/showcase-fixtures/, not the live tree, so each captures the
+# study at a past workflow moment. --repo-file-prefix points the in-task repo
+# links at the live superRA/showcase-analysis tree, matching the complete-state
+# export above. Full chrome (never --doc-mode), exactly like the complete state.
+# These fixtures are intentionally frozen and NOT synced to later live edits —
+# see the header comment before "fixing" any drift.
+run_gen \
+  --plan-root "$fixture_after_planning" \
+  --root showcase-analysis \
+  --output "$out_dir/showcase-after-planning.html" \
+  --repo-file-base "$repo_file_base" \
+  --repo-file-prefix "$dev_tree/showcase-analysis"
+
+run_gen \
+  --plan-root "$fixture_mid_implement" \
+  --root showcase-analysis \
+  --output "$out_dir/showcase-mid-implement.html" \
+  --repo-file-base "$repo_file_base" \
+  --repo-file-prefix "$dev_tree/showcase-analysis"
+
+# --- Verify all four files landed -------------------------------------------
+for f in index.html showcase-analysis-tree.html \
+         showcase-after-planning.html showcase-mid-implement.html; do
   if [ ! -s "$out_dir/$f" ]; then
     echo "build_site: export produced no $f" >&2
     exit 1
   fi
 done
 
-echo "build_site: wrote $out_dir/{index,showcase-analysis-tree}.html"
+echo "build_site: wrote $out_dir/{index,showcase-analysis-tree,showcase-after-planning,showcase-mid-implement}.html"
