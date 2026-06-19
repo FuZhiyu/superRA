@@ -1,6 +1,6 @@
 ---
 title: "Add Orchestrator Behavior Smoke"
-status: not-started
+status: implemented
 depends_on:
   - 06-ci-safe-contract-tests
 tags: []
@@ -27,3 +27,22 @@ Use structural transcript evidence, not prose claims. Claude evidence may be rol
 
 ## Results
 
+Added the opt-in orchestrator behavior smoke verifying `superimplement` dispatch behavior on the smallest realistic mock frontier.
+
+- [tests/harness-instruction-following/orchestrator-live-smoke.sh](../../../../../tests/harness-instruction-following/orchestrator-live-smoke.sh) — gated on `RUN_LIVE_HARNESS=1`; `HARNESS=claude` (default) or `HARNESS=codex`. Seeds the bundled `bundle-two-tasks` fixture (same shallow same-parent leaf bundle, so the smoke tests dispatch behavior, not implementation quality), prompts the main agent with `superimplement`, and captures the transcript. Claude path: `claude -p` with the in-tree plugin dir, stream-json, hook events. Codex path: `codex exec --json --ephemeral` with a temporary autoload-hook profile.
+- [tests/harness-instruction-following/check_orchestrator_smoke.py](../../../../../tests/harness-instruction-following/check_orchestrator_smoke.py) — evaluator reusing `transcript_assertions.check_orchestrator_dispatches`: requires an implementer subagent dispatch event and a reviewer subagent dispatch event for the frontier. When the harness exposes no dispatch events, it records the documented direct-mode fallback (the agent naming `direct mode` and a `reviewer` dispatch) and passes-with-skip rather than failing on invisible behavior; a silent inline implementation with neither dispatch nor fallback fails.
+- The shared `orchestrator_prompt` helper lives in [tests/harness-instruction-following/live_smoke_lib.sh](../../../../../tests/harness-instruction-following/live_smoke_lib.sh) (committed with 03 as foundational shared setup).
+
+**Structural-evidence sources (per planner guidance):** Claude dispatch shows as `Task`/`Agent` tool events carrying `subagent_type`; Codex shows as `spawn_agent(agent_type="superra_implementer"/"superra_reviewer")`. `_agent_type_aliases` in the shared parser bridges `superra_*` ↔ `superRA:*` naming. No prose claims are asserted.
+
+**Harness-evidence limitation (documented in the script header and README):** if a harness cannot expose subagent dispatch events at all, the evaluator falls back to the documented direct-mode exception path (skip-pass) rather than failing on invisible behavior, per the planner guidance.
+
+**Verified without live credentials** (live model calls not run — no spend authorized in this session):
+- Gate-off no-op: bare `bash orchestrator-live-smoke.sh` prints SKIP and exits 0.
+- Green case: `check_orchestrator_smoke.py --harness codex` passes against the committed `samples/codex-jsonl.orchestrator.jsonl` (implementer + reviewer `spawn_agent` events) — "orchestrator dispatch events observed".
+- Fallback case: a transcript naming `direct mode` + `reviewer` with no dispatch events passes-with-skip (exit 0, limitation recorded).
+- Red case: a transcript that implements inline with neither dispatch nor fallback exits 1 (missing implementer + reviewer events).
+- `bash -n` syntax-clean; unknown `HARNESS` value exits 2; `--harness` arg validation rejects bad input.
+- Full CI-safe suite green: `pytest tests/harness-instruction-following` → 23 passed.
+
+**Not run:** the live `superimplement` orchestrator turn (requires logged-in CLI + multi-turn subagent spend). The script is ready; running it is a manual step. Driving a main agent to actually dispatch subagents in headless mode is the most non-deterministic path; the evaluator's skip-pass fallback is the documented safety valve for harnesses that do not surface dispatch events in their transcript.
