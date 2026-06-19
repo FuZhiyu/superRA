@@ -212,6 +212,14 @@ superra task migrate upgrade
 
 Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent — safe to run multiple times.
 
+### Consolidate legacy status fields
+
+```bash
+superra task migrate upgrade-status
+```
+
+Consolidates the legacy `review_status`/`integration_status` fields into the single `status` field (precedence: `integration_status` > `review_status` > existing `status`). Supports `--dry-run` to preview changes.
+
 ## Dashboard: `plan_dashboard.py`
 
 The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file.
@@ -280,7 +288,7 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Rename a task directory (cascades to sibling `depends_on`) |
-| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; `--fix-status` auto-corrects status enums |
+| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; use `task status fix` to repair branch status fields |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |

@@ -220,7 +220,7 @@ For direct mode (orchestrator executes the step itself), see `superRA:using-supe
 
 ## Handling Implementer Status
 
-Act on the implementer's returned status, at every Stage (implementation, drift-test, integration, maturation):
+Act on the implementer's returned status, at every Stage (implementation, protection, integration, maturation):
 
 - **DONE:** Proceed to review.
 - **DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
