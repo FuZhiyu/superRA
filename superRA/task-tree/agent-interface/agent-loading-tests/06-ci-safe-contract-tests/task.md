@@ -1,6 +1,6 @@
 ---
 title: "Add CI-Safe Contract Tests"
-status: implemented
+status: approved
 depends_on:
   - 01-load-contract-audit
   - 02-fixtures-and-parser
