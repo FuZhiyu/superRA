@@ -1,6 +1,6 @@
 ---
 title: "Document Matrix And CI Boundary"
-status: implemented
+status: approved
 depends_on:
   - 03-claude-live-smoke
   - 04-codex-live-smoke
