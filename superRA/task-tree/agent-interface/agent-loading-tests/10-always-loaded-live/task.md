@@ -15,9 +15,9 @@ Verify live, in both harnesses, that **both** always-loaded skills load on a rea
 Deliverables:
 
 - A fixture role dispatch (reuse `bundle-two-tasks` shape) and assertions that, for each harness, evidence both always-loaded skills:
-  - **Claude** via the 08 SDK harness — `report-in-markdown` may surface through `InstructionsLoaded` or a `Skill` tool_use; if neither fires, fall back to a canary the `report-in-markdown` body prescribes.
+  - **Claude** — both skills are preloaded via agent frontmatter `skills: [...]`, NOT through the `Skill` tool, so neither fires the `Skill` hook (confirmed live: `InstructionsLoaded` is not a real SDK hook event; see [08 Revision Notes](../08-claude-sdk-load-harness/task.md)). Evidence them two ways: (1) the 08 **static frontmatter contract** check (both `agents/implementer.md` and `agents/reviewer.md` declare both skills), and (2) a **live behavioral canary** via the 08 harness dispatching the real `superRA:implementer` — a fixture output value producible only if the preloaded skill's body was in context (a `report-in-markdown` file-link/citation or figure/table rule applied; a `using-superra` task-read-via-wrapper behavior).
   - **Codex** via the 09 canary convention — a fixture output value producible only by following a `report-in-markdown` rule (e.g. its file-link/citation or figure/table format) and a `using-superra` behavior.
-- Both checks assert the skills are evidenced **before** the first edit/write.
+- The behavioral canary asserts the skill's rule was applied in the produced artifact; the static check asserts the declared contract.
 
 Success criteria: both always-loaded skills are evidenced loaded in both harnesses on the dispatched role turn; the red case (a required always-loaded skill not evidenced) fails.
 

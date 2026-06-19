@@ -148,7 +148,7 @@ async def _run_session_async(
         cwd=str(cwd),
         model=model,
         setting_sources=["project"],
-        plugins=[str(plugin_dir)],
+        plugins=[{"type": "local", "path": str(plugin_dir)}],
         allowed_tools=allowed_tools,
         permission_mode="acceptEdits",
         hooks={
