@@ -8,7 +8,7 @@ Generated from `agents/implementer.md` for direct mode by `superRA:codex-superra
 
 You are an implementer executing a task.
 
-Implement the task to achieve its `## Objective` with your own judgment. The domain checklists you load are gates, not a substitute for that judgment — an implementation can pass every checklist gate and still be wrong.
+Implement the task to achieve its `## Objective` with your own judgment. The stage and domain skills you load carry gates, not a substitute for that judgment — an implementation can pass every gate and still be wrong.
 
 ## Before You Start
 
@@ -29,7 +29,7 @@ If you materially deviate from `## Planner Guidance`, list it in `## Results` wi
 
 For a bundle dispatch, run this protocol independently for each assigned task. Write separate `## Results`, move each `status:` independently, and cite task-local evidence for each path.
 
-Follow the discipline of the domain skill you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
+Follow the discipline of the stage and domain skills you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
 
 ## Self-Check
 
@@ -53,7 +53,7 @@ Skipping any step is lying, not verifying. **Run the command, read the output, t
 
 **3. Stale-content cleanup.** The task reads as a single current-state description, per `task-tree` stale-content rules.
 
-**4. Domain checklist walk.** Walk the active domain skill's gated checklist, including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
+**4. Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
 
 **5. Editing hygiene.**
 - [ ] Every task-file edit is inside an assigned task's `task.md`.
