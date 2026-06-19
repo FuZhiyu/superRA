@@ -103,6 +103,41 @@ def test_load_contract_indexes_every_ci_safe_contract_area():
         assert classification in by_area[area]["classification"]
 
 
+def test_every_load_contract_entry_carries_covered_by():
+    """Each LC entry names the test(s)/scripts that exercise it.
+
+    Keeps the audit and the suite in sync: a new contract entry without a
+    ``covered_by`` block, or a block missing a layer it claims to satisfy via
+    ``classification``, fails here rather than drifting silently from the README
+    matrix.
+    """
+    contract = read_json("tests/harness-instruction-following/load_contract.json")
+    # Each classification token maps to one or more required covered_by groups.
+    # A group is a set of acceptable layer keys (any one populated satisfies it):
+    # the fixture token accepts either the ``ci_safe_fixture`` or ``fixture_unit``
+    # key. ``manual_live_both`` requires both single-harness layers, so it lists
+    # two groups.
+    classification_to_groups = {
+        "ci_safe_static": [("ci_safe_static",)],
+        "ci_safe_fixture": [("ci_safe_fixture", "fixture_unit")],
+        "manual_live_claude": [("manual_live_claude",)],
+        "manual_live_codex": [("manual_live_codex",)],
+        "manual_live_both": [("manual_live_claude",), ("manual_live_codex",)],
+    }
+    for entry in contract["entries"]:
+        lc_id = entry["id"]
+        covered = entry.get("covered_by")
+        assert isinstance(covered, dict) and covered, (
+            f"{lc_id} has no covered_by block"
+        )
+        for token in entry["classification"]:
+            for group in classification_to_groups[token]:
+                assert any(covered.get(layer) for layer in group), (
+                    f"{lc_id} classification {token!r} requires a populated "
+                    f"covered_by entry among {group}"
+                )
+
+
 def test_skill_load_manifest_contract_matches_audit():
     manifest = read_text("skills/using-superra/SKILL.md")
 

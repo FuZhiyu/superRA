@@ -26,7 +26,24 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit",
+          "test_always_loaded_live.py::test_green_static_backbone_real_role_specs",
+          "sdk_load_evidence.py::check_always_loaded_frontmatter"
+        ],
+        "fixture_unit": [
+          "test_always_loaded_live.py (introspection + codex canary evaluators on synthetic inputs)"
+        ],
+        "manual_live_claude": [
+          "always_loaded_live.py (autoload introspection canary; zero Skill-tool loads is the expected signal)"
+        ],
+        "manual_live_codex": [
+          "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (body-load canary; built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified (both always-loaded skills present via frontmatter autoload). Codex live not yet run."
+      }
     },
     {
       "id": "LC002",
@@ -43,7 +60,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (stage evaluator + per-stage codex canaries on synthetic inputs)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py (per-stage Skill-tool + planning-review Read-channel canary)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py per-stage CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified for all four non-empty stages. See LC007-LC010 for per-stage detail. Codex live not yet run."
+      }
     },
     {
       "id": "LC003",
@@ -60,7 +92,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + multi-domain every-match + per-domain codex canaries on synthetic inputs)"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py (per-domain Skill-tool canary + multi-domain every-match canary)"
+        ],
+        "manual_live_codex": [
+          "domain_loads_live.py per-domain CanarySpec list (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified for all four domains plus the multi-domain every-match rule. See LC011-LC014 for per-domain detail. Codex live not yet run."
+      }
     },
     {
       "id": "LC004",
@@ -77,7 +124,17 @@
       "classification": [
         "ci_safe_static",
         "manual_live_codex"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read",
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (Harness adapters pointer)"
+        ],
+        "manual_live_codex": [
+          "codex-live-smoke.sh + orchestrator-live-smoke.sh HARNESS=codex (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Codex-only live row; not yet run. Static contract verifies the adapter pointer and Codex tool map are present."
+      }
     },
     {
       "id": "LC005",
@@ -99,7 +156,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read"
+        ],
+        "fixture_unit": [
+          "test_transcript_assertions.py (task-read-before-write ordering parser); test_contract.py::test_parser_contract_samples_and_negative_ordering_cases"
+        ],
+        "manual_live_claude": [
+          "claude-live-smoke.sh + check_loading_smoke.py (superra task read before first edit)"
+        ],
+        "manual_live_codex": [
+          "codex-live-smoke.sh + check_loading_smoke.py (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified via the loading smoke ordering assertion. Codex live not yet run."
+      }
     },
     {
       "id": "LC006",
@@ -120,7 +192,13 @@
       ],
       "classification": [
         "ci_safe_static"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_codex_generated_agent_drift_check_is_ci_safe (runs sync_codex_agents.py --check)"
+        ],
+        "notes": "Fully CI-covered; no live row by design."
+      }
     },
     {
       "id": "LC007",
@@ -139,7 +217,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (planning-review row)"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (Read-channel reference suffix matcher; stage evaluator green/red)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py STAGE_ROWS[planning-review] (reference loaded via Read; introspection canary)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py planning-review CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: planning-review reads its reference (Read channel, not the Skill tool). Codex live not yet run."
+      }
     },
     {
       "id": "LC008",
@@ -157,7 +250,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (protection -> result-protection row)"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (stage evaluator + protection codex canary)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py STAGE_ROWS[protection] (result-protection via Skill tool)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py protection CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: protection loads result-protection. Codex live not yet run."
+      }
     },
     {
       "id": "LC009",
@@ -175,7 +283,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (sync -> semantic-merge row)"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (stage evaluator + sync codex canary)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py STAGE_ROWS[sync] (semantic-merge via Skill tool)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py sync CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: sync loads semantic-merge. The author/reviewer mode-reference sub-selection is static-only, not separately live-asserted. Codex live not yet run."
+      }
     },
     {
       "id": "LC010",
@@ -194,7 +317,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (integration -> refactor-and-integrate row)"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (stage evaluator + integration codex canary)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py STAGE_ROWS[integration] (refactor-and-integrate via Skill tool)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py integration CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: integration loads refactor-and-integrate. Codex live not yet run."
+      }
     },
     {
       "id": "LC011",
@@ -213,7 +351,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (econ-data-analysis domain row)"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + econ codex canary)"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py DOMAIN_ROWS[econ-data-analysis] (Skill tool, superRA:-qualified)"
+        ],
+        "manual_live_codex": [
+          "domain_loads_live.py econ-data-analysis CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: data-wording task loads econ-data-analysis. Codex live not yet run."
+      }
     },
     {
       "id": "LC012",
@@ -231,7 +384,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (theory-modeling domain row)"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + theory codex canary + multi-domain every-match case)"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + writing) every-match canary"
+        ],
+        "manual_live_codex": [
+          "domain_loads_live.py theory-modeling CanarySpec + multi-domain list canary (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and writing. Codex live not yet run."
+      }
     },
     {
       "id": "LC013",
@@ -249,7 +417,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (writing domain row)"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + writing codex canary + multi-domain every-match case)"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py DOMAIN_ROWS[writing] + multi-domain (theory-modeling + writing) every-match canary"
+        ],
+        "manual_live_codex": [
+          "domain_loads_live.py writing CanarySpec + multi-domain list canary (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: prose task loads writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only. Codex live not yet run."
+      }
     },
     {
       "id": "LC014",
@@ -268,7 +451,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (slide-design domain row)"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + slide-design codex canary)"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py DOMAIN_ROWS[slide-design] (Skill tool, superRA:-qualified)"
+        ],
+        "manual_live_codex": [
+          "domain_loads_live.py slide-design CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Claude live-verified: slide/Beamer task loads slide-design. Beamer sub-reference routing is static-only. Codex live not yet run."
+      }
     },
     {
       "id": "LC015",
@@ -289,7 +487,20 @@
       "classification": [
         "ci_safe_fixture",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_fixture": [
+          "test_bundle_fixture.py (real task_read.py against bundle-two-tasks)",
+          "test_contract.py::test_task_read_fixture_contract_surfaces_context_without_dependency_results"
+        ],
+        "manual_live_claude": [
+          "claude-live-smoke.sh + check_loading_smoke.py (agent consumes inherited context before the artifact write)"
+        ],
+        "manual_live_codex": [
+          "codex-live-smoke.sh + check_loading_smoke.py (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Ancestor-context surfacing is fully fixture-covered (deterministic). Live consumption is proxied by the loading smoke ordering, Claude-verified. Codex live not yet run."
+      }
     },
     {
       "id": "LC016",
@@ -310,7 +521,19 @@
       "classification": [
         "ci_safe_fixture",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_fixture": [
+          "test_bundle_fixture.py (unresolved-comment surfacing in task_read output)"
+        ],
+        "manual_live_claude": [
+          "claude-live-smoke.sh (comment surfacing reachable via the bundled task read; no separate live assertion that the agent acts on the comment)"
+        ],
+        "manual_live_codex": [
+          "codex-live-smoke.sh (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Comment surfacing is fully fixture-covered. Whether the agent acts on a surfaced comment is not separately live-asserted (proxy via the loading smoke only)."
+      }
     },
     {
       "id": "LC017",
@@ -329,7 +552,14 @@
       ],
       "classification": [
         "ci_safe_fixture"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_fixture": [
+          "test_bundle_fixture.py (Sibling Dependencies block + JSON dependencies[] with effective_status)",
+          "test_contract.py::test_task_read_fixture_contract_surfaces_context_without_dependency_results"
+        ],
+        "notes": "Fully fixture-covered; no live row by design."
+      }
     },
     {
       "id": "LC018",
@@ -347,7 +577,20 @@
       "classification": [
         "ci_safe_fixture",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_fixture": [
+          "test_bundle_fixture.py (dependency Results sentinel never leaks into target context)",
+          "test_contract.py::test_task_read_fixture_contract_surfaces_context_without_dependency_results"
+        ],
+        "manual_live_claude": [
+          "claude-live-smoke.sh + check_loading_smoke.py (artifact asserts dependency_results_excluded sentinel absent)"
+        ],
+        "manual_live_codex": [
+          "codex-live-smoke.sh + check_loading_smoke.py (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Non-inheritance is fully fixture-covered and additionally checked by the live loading smoke artifact field. Claude-verified; Codex live not yet run."
+      }
     },
     {
       "id": "LC019",
@@ -368,7 +611,22 @@
         "ci_safe_static",
         "ci_safe_fixture",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (event sets, matchers, commands)"
+        ],
+        "ci_safe_fixture": [
+          "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (same test asserts wired commands)"
+        ],
+        "manual_live_claude": [
+          "not separately asserted live — PostToolUse hook feedback is observable only when task-hook emits; covered by registry-wiring static checks"
+        ],
+        "manual_live_codex": [
+          "Codex Bash hook coverage is best-effort (SF003); live tests do not depend on catching every shell mutation"
+        ],
+        "notes": "Registry wiring is fully CI-covered. Live PostToolUse feedback is not separately asserted (static-only by design per SF003); not a coverage gap in the load contract."
+      }
     },
     {
       "id": "LC020",
@@ -387,7 +645,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static"
+        ],
+        "fixture_unit": [
+          "test_transcript_assertions.py (dispatch detection + documented-fallback gating); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
+        ],
+        "manual_live_claude": [
+          "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events, or documented direct-mode fallback) — built/CI-tested; live run not part of the 08-12 expansion"
+        ],
+        "manual_live_codex": [
+          "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Orchestrator dispatch smoke is built and its parser/fixtures are CI-covered. The Claude live orchestrator run was not part of the 08-12 always-loaded/stage/domain live verification; Codex live not yet run."
+      }
     },
     {
       "id": "LC021",
@@ -405,7 +678,22 @@
       "classification": [
         "ci_safe_static",
         "manual_live_both"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static (dispatch-template fields)"
+        ],
+        "fixture_unit": [
+          "test_transcript_assertions.py + test_contract.py::test_parser_contract_samples_and_negative_ordering_cases (dispatch detection samples)"
+        ],
+        "manual_live_claude": [
+          "orchestrator-live-smoke.sh + check_orchestrator_smoke.py — built/CI-tested; live run not part of the 08-12 expansion"
+        ],
+        "manual_live_codex": [
+          "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Dispatch-template surfaces fully static-covered; dispatch detection fixture-covered. Status-progression assertion is part of the orchestrator smoke (built, live run pending for both harnesses)."
+      }
     },
     {
       "id": "LC022",
@@ -423,7 +711,16 @@
       "classification": [
         "ci_safe_static",
         "manual_live_codex"
-      ]
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static (Codex named-agent priority + tool map present)"
+        ],
+        "manual_live_codex": [
+          "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Codex-only live row; the SubagentStart dispatch log supersedes JSONL spawn detection (codex emits no spawn_agent item). Not yet run."
+      }
     }
   ],
   "static_findings": [
