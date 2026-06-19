@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the Claude Agent-SDK skill-load evidence layer.
 
-Drives :mod:`sdk_load_evidence` on synthetic hook records — no live call, and
-``claude_agent_sdk`` is never imported. Covers the green case plus the two red
-cases the parent objective names (required skill missing; skill loaded only after
-the first edit), and the always-loaded-via-InstructionsLoaded channel.
+Drives :mod:`sdk_load_evidence` on synthetic hook records and on the real
+in-repo role specs — no live model call, and ``claude_agent_sdk`` is never
+imported. Covers:
+
+- on-demand skill ordering: green plus the two red cases the parent objective
+  names (required skill missing; skill loaded only after the first edit);
+- the static always-loaded frontmatter contract (green against the real role
+  specs; red against a synthetic spec missing a skill);
+- the reusable behavioral-canary checker task 10 consumes (green + red).
 """
 
 from __future__ import annotations
@@ -14,12 +19,18 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from sdk_load_evidence import (  # noqa: E402
+    ALWAYS_LOADED_SKILLS,
+    BehavioralCanarySpec,
     SkillLoadReport,
+    check_always_loaded_frontmatter,
+    check_behavioral_canary,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
+    parse_frontmatter_skills,
 )
 
 
@@ -30,12 +41,16 @@ def test_default_ci_path_never_imports_claude_agent_sdk():
     assert importlib.util.find_spec("sdk_load_evidence") is not None
 
 
+# --------------------------------------------------------------------------- #
+# On-demand skill-load ordering
+# --------------------------------------------------------------------------- #
+
+
 def test_green_required_skills_load_before_first_edit():
     evidence = evidence_from_hook_records(
         skill_tool_events=[
-            ("using-superra", 0),
-            ("report-in-markdown", 1),
-            ("econ-data-analysis", 2),
+            ("econ-data-analysis", 0),
+            ("writing", 1),
         ],
         edit_event_indices=[5],
     )
@@ -44,45 +59,18 @@ def test_green_required_skills_load_before_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["using-superra", "report-in-markdown", "econ-data-analysis"],
+        ["econ-data-analysis", "writing"],
     )
 
     report.assert_ok()
-    assert len(report.observations) == 3
-
-
-def test_green_always_loaded_skill_via_instructions_loaded_channel():
-    # An always-loaded skill can surface via InstructionsLoaded (a SKILL.md load)
-    # rather than a Skill tool_use, and must still satisfy the requirement.
-    evidence = evidence_from_hook_records(
-        skill_tool_events=[("econ-data-analysis", 2)],
-        instructions_loaded_events=[
-            {
-                "file_path": "skills/report-in-markdown/SKILL.md",
-                "event_index": 0,
-                "memory_type": "skill",
-                "load_reason": "always_loaded",
-                "skill_name": "report-in-markdown",
-            },
-        ],
-        edit_event_indices=[5],
-    )
-    report = SkillLoadReport()
-
-    check_skills_loaded_before_first_edit(
-        report,
-        evidence,
-        ["report-in-markdown", "econ-data-analysis"],
-    )
-
-    report.assert_ok()
+    assert len(report.observations) == 2
 
 
 def test_red_required_skill_never_loaded():
-    # report-in-markdown is claimed always-loaded; if it never appears, that is a
-    # real loading-contract finding to escalate — the assertion must fail.
+    # A stage/domain skill the manifest should trigger never loads — a real
+    # loading-contract finding to escalate; the assertion must fail.
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("using-superra", 0)],
+        skill_tool_events=[("econ-data-analysis", 0)],
         edit_event_indices=[3],
     )
     report = SkillLoadReport()
@@ -90,12 +78,12 @@ def test_red_required_skill_never_loaded():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["using-superra", "report-in-markdown"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert not report.ok
     assert len(report.missing) == 1
-    assert "report-in-markdown" in report.missing[0]
+    assert "writing" in report.missing[0]
     assert "never loaded" in report.missing[0]
 
 
@@ -103,7 +91,7 @@ def test_red_skill_loaded_only_after_first_edit():
     # The skill loaded, but after the agent already started editing — the
     # load-before-mutation invariant is violated.
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("using-superra", 0), ("econ-data-analysis", 4)],
+        skill_tool_events=[("econ-data-analysis", 0), ("writing", 4)],
         edit_event_indices=[2],
     )
     report = SkillLoadReport()
@@ -111,12 +99,12 @@ def test_red_skill_loaded_only_after_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["using-superra", "econ-data-analysis"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert not report.ok
     assert len(report.missing) == 1
-    assert "econ-data-analysis" in report.missing[0]
+    assert "writing" in report.missing[0]
     assert "before the first edit" in report.missing[0]
 
 
@@ -124,12 +112,12 @@ def test_no_edit_session_counts_any_load_as_before_edit():
     # A session that never edits has no boundary, so any load passes the ordering
     # check (the read-only / pure-read fixture path).
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("using-superra", 0)],
+        skill_tool_events=[("econ-data-analysis", 0)],
         edit_event_indices=[],
     )
     report = SkillLoadReport()
 
-    check_skills_loaded_before_first_edit(report, evidence, ["using-superra"])
+    check_skills_loaded_before_first_edit(report, evidence, ["econ-data-analysis"])
 
     report.assert_ok()
 
@@ -144,11 +132,137 @@ def test_all_failures_collected_together():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["using-superra", "writing"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert len(report.missing) == 2
-    assert "using-superra" in report.missing[0]
+    assert "econ-data-analysis" in report.missing[0]
     assert "never loaded" in report.missing[0]
     assert "writing" in report.missing[1]
     assert "before the first edit" in report.missing[1]
+
+
+# --------------------------------------------------------------------------- #
+# Always-loaded frontmatter contract (static)
+# --------------------------------------------------------------------------- #
+
+
+def test_parse_frontmatter_inline_list():
+    text = (
+        "---\n"
+        "name: implementer\n"
+        "skills: [superRA:using-superra, superRA:report-in-markdown]\n"
+        "---\n"
+        "body\n"
+    )
+    assert parse_frontmatter_skills(text) == [
+        "superRA:using-superra",
+        "superRA:report-in-markdown",
+    ]
+
+
+def test_parse_frontmatter_block_list():
+    text = (
+        "---\n"
+        "name: implementer\n"
+        "skills:\n"
+        "  - superRA:using-superra\n"
+        "  - superRA:report-in-markdown\n"
+        "---\n"
+        "body\n"
+    )
+    assert parse_frontmatter_skills(text) == [
+        "superRA:using-superra",
+        "superRA:report-in-markdown",
+    ]
+
+
+def test_parse_frontmatter_no_block():
+    assert parse_frontmatter_skills("no frontmatter here") == []
+
+
+def test_green_always_loaded_frontmatter_real_role_specs():
+    # The real agents/implementer.md and agents/reviewer.md must both declare
+    # both always-loaded skills — this is the live preloaded-skill contract.
+    report = SkillLoadReport()
+    check_always_loaded_frontmatter(report, REPO_ROOT)
+    report.assert_ok()
+    # two specs x two skills
+    assert len(report.observations) == 4
+
+
+def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
+    # A role spec missing report-in-markdown is a regressed preloaded contract.
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "implementer.md").write_text(
+        "---\nname: implementer\nskills: [superRA:using-superra]\n---\nbody\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "agents" / "reviewer.md").write_text(
+        "---\nname: reviewer\n"
+        "skills: [superRA:using-superra, superRA:report-in-markdown]\n---\nbody\n",
+        encoding="utf-8",
+    )
+    report = SkillLoadReport()
+    check_always_loaded_frontmatter(report, tmp_path)
+
+    assert not report.ok
+    assert len(report.missing) == 1
+    assert "implementer.md" in report.missing[0]
+    assert "superRA:report-in-markdown" in report.missing[0]
+
+
+def test_red_always_loaded_frontmatter_missing_file(tmp_path):
+    report = SkillLoadReport()
+    check_always_loaded_frontmatter(report, tmp_path)
+    # both specs absent → one missing-file failure each
+    assert len(report.missing) == 2
+    assert all("not found" in m for m in report.missing)
+
+
+def test_always_loaded_skills_constant_is_qualified():
+    # The contract checks the plugin-qualified names that appear in frontmatter.
+    assert ALWAYS_LOADED_SKILLS == (
+        "superRA:using-superra",
+        "superRA:report-in-markdown",
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Behavioral canary (reusable checker; fixtures owned by task 10)
+# --------------------------------------------------------------------------- #
+
+
+def test_green_behavioral_canary_rule_applied():
+    # report-in-markdown prescribes file refs as markdown links with line anchors.
+    spec = BehavioralCanarySpec(
+        skill="superRA:report-in-markdown",
+        rule="file references cited as markdown links with line anchors",
+        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
+    )
+    output = "See [sdk_load_harness.py:42](sdk_load_harness.py#L42) for the hook."
+    report = SkillLoadReport()
+
+    check_behavioral_canary(report, spec, output)
+
+    report.assert_ok()
+    assert len(report.observations) == 1
+
+
+def test_red_behavioral_canary_rule_absent():
+    # Output uses a backtick path instead of the prescribed markdown-link form —
+    # the preloaded skill rule did not shape it.
+    spec = BehavioralCanarySpec(
+        skill="superRA:report-in-markdown",
+        rule="file references cited as markdown links with line anchors",
+        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
+    )
+    output = "See `sdk_load_harness.py` line 42 for the hook."
+    report = SkillLoadReport()
+
+    check_behavioral_canary(report, spec, output)
+
+    assert not report.ok
+    assert len(report.missing) == 1
+    assert "superRA:report-in-markdown" in report.missing[0]
+    assert "did not shape the output" in report.missing[0]
