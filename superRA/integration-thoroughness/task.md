@@ -18,6 +18,8 @@ This workstream installs the agreed fix: a ternary, asymmetric prune rule (never
 
 Scope: `skills/refactor-and-integrate/SKILL.md` (discipline), `agents/implementer.md` + its generated artifacts (combined-role permission), `skills/superintegrate/SKILL.md` (choreography). Built on top of commit `b0865e11`, which already generalized the reviewer/implementer verdict gates from "domain" to "stage and domain" skills.
 
+A follow-on, [04-objective-and-method-redesign](04-objective-and-method-redesign/task.md), reworks the same skill's effectiveness: it makes the skill open with its objective (maintainability through codebase consistency and a minimum reviewable diff) and teach the identification method behind each technique, rather than naming checklist goals. It preserves the ternary prune behavior installed by 01 while dropping the asymmetry explanation prose, and adds a domain-agnostic consolidation/simplification technique.
+
 ### Conventions
 
 - This is superRA-internal skill-authoring work with no implemented domain vertical. Load `skill-creator` before editing any `skills/*/SKILL.md`, and self-apply the `CLAUDE.md §Teach the Protocol` DRY + Necessity gate to every added line.
