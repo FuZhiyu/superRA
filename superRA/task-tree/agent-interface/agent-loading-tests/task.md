@@ -12,6 +12,8 @@ Design and implement a small, durable test suite for superRA agent instruction-f
 
 The scope is the agent-interface contract, not prose quality. The tests must avoid asserting generated prose. Prefer structural evidence: manifest and role-surface text, generated-agent drift checks, hook outputs, transcript tool events, `superra task read` output, sentinel files, and output artifacts whose values can only be produced after reading the required file.
 
+Bundle related checks so one dispatch can test multiple behaviors. The live Claude and Codex smokes should run a compact multi-requirement scenario before adding one-off probes: one agent turn should need task-read context, dependency visibility, comment surfacing, external marker-file reads, and at least one manifest or role-surface load expectation whose evidence can be checked structurally. Keep the assigned task itself superficial and very quick: it should only require reading the fixture context and writing a tiny evidence JSON artifact, not solving a real coding or research problem.
+
 ### Required Behavior To Cover
 
 - Baseline role requirements from `agents/implementer.md` and `agents/reviewer.md`: load skills per the `superRA:using-superra` Skill-Load Manifest and read each assigned task with `superra task read <path>` before code/file work.
@@ -24,6 +26,7 @@ The scope is the agent-interface contract, not prose quality. The tests must avo
 
 - Live model calls are manual-only. Do not add Claude or Codex live tests to default CI.
 - Use the dumbest/cheapest available harness settings: Claude defaults to `CLAUDE_MODEL=haiku`; Codex uses a configurable `CODEX_MODEL` and documents that this repo does not currently prescribe a cheapest Codex model.
+- The live bundled task should complete in one short agent turn under normal conditions. Avoid prompts that invite broad codebase exploration, real implementation, package installs, long test suites, or domain reasoning.
 - Keep reusable transcript parsing in Python under `tests/harness-instruction-following/`, not embedded shell heredocs.
 - Keep deterministic hook-only and fixture tests CI-safe.
 - Treat ambiguous terminology drift, such as `Stage: protection` versus older `drift-test` wording, as a static lint or follow-up finding rather than a live-agent behavior assertion.
@@ -34,12 +37,13 @@ Recommended target layout:
 
 - `tests/harness-instruction-following/parse_harness_jsonl.py`
 - `tests/harness-instruction-following/assertions.py`
+- `tests/harness-instruction-following/test_contract.py`
 - `tests/harness-instruction-following/run-claude.sh`
 - `tests/harness-instruction-following/run-codex.sh`
+- `tests/fixtures/task-trees/bundle-two-tasks/`
 - `tests/fixtures/task-trees/minimal-superra/`
 - `tests/fixtures/task-trees/review-round/`
-- `tests/fixtures/task-trees/bundle-two-tasks/`
 
-Use existing scripts as style references: `tests/hooks/test-e2e-cli.sh` for Claude stream JSON and `tests/hooks/test-codex-e2e-cli.sh` for Codex JSONL. The implementation may revise locations if an adjacent existing test directory is a better fit, but it must preserve the CI/manual boundary.
+Use existing scripts as style references: `tests/hooks/test-e2e-cli.sh` for Claude stream JSON and `tests/hooks/test-codex-e2e-cli.sh` for Codex JSONL. The implementation may revise locations if an adjacent existing test directory is a better fit, but it must preserve the CI/manual boundary. Build `bundle-two-tasks` as the primary live fixture and keep smaller fixtures for parser/unit isolation. The fixture task should look realistic in shape, with ordinary `task.md` files, dependency metadata, comments, marker files, and role/stage dispatch text, but the required work should be no more than copying sentinel values into an evidence JSON file.
 
 ## Results

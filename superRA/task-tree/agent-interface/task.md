@@ -1,6 +1,6 @@
 ---
 title: "Task-Tree Agent Interface"
-status: approved
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -46,3 +46,7 @@ Key outcomes across the workstream:
 - **[integ-workflow](integ-workflow/task.md):** `superintegrate` is `.plan/`-native, with gated consolidation assessment and results maturation into the highest-level touched task.
 - **[planning-workflow](planning-workflow/task.md):** `superplan` outputs a `.plan/` task tree instead of PLAN.md.
 - **[task-edit-discipline](../task-edit-discipline/task.md):** Move hook, skill guidance, and revision-note warning align the hook with direct task mutation.
+
+## Revision Notes
+
+2026-06-19: Added [agent-loading-tests](agent-loading-tests/task.md) as a new scoped test-design subtree. This reopens the approved agent-interface workstream only for instruction-following and file-loading verification; the earlier approved implementation results above remain historical rollup context.
