@@ -65,6 +65,29 @@ def test_codex_sample_orchestrator_dispatch_events():
     assert report.observations == ["orchestrator dispatch events observed"]
 
 
+def test_claude_agent_dispatch_events_are_structural():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:implementer"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:reviewer"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_orchestrator_dispatches(report, events)
+
+    report.assert_ok()
+    assert report.observations == ["orchestrator dispatch events observed"]
+
+
 def test_orchestrator_fallback_is_skip_not_failure():
     events = parse_json_events(
         json.dumps({
@@ -82,6 +105,97 @@ def test_orchestrator_fallback_is_skip_not_failure():
 
     report.assert_ok()
     assert report.skipped
+
+
+def test_task_read_narration_without_command_event_fails():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "assistant",
+                "message": (
+                    "I will run superra task read "
+                    "agent-loading-bundle/02-primary-loading-task."
+                ),
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "loading-evidence.json"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_task_reads_before_write(
+        report,
+        events,
+        ["agent-loading-bundle/02-primary-loading-task"],
+    )
+
+    assert len(report.missing) == 1
+    assert "command event invoking superra task read" in report.missing[0]
+
+
+def test_required_reads_must_precede_any_write_by_default():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "notes.md"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Bash",
+                "input": {
+                    "command": (
+                        "./superRA/superra task read "
+                        "agent-loading-bundle/02-primary-loading-task"
+                    )
+                },
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Read",
+                "input": {"file_path": "markers/primary-marker.txt"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_task_reads_before_write(
+        report,
+        events,
+        ["agent-loading-bundle/02-primary-loading-task"],
+    )
+    check_file_reads_before_write(
+        report,
+        events,
+        ["markers/primary-marker.txt"],
+    )
+
+    assert len(report.missing) == 2
+    assert "02-primary-loading-task" in report.missing[0]
+    assert "markers/primary-marker.txt" in report.missing[1]
+
+
+def test_orchestrator_dispatch_narration_without_tool_event_fails():
+    events = parse_json_events(
+        json.dumps({
+            "type": "assistant",
+            "message": (
+                "I should dispatch superra_implementer and "
+                "superra_reviewer subagents."
+            ),
+        })
+    )
+    report = AssertionReport()
+
+    check_orchestrator_dispatches(report, events)
+
+    assert len(report.missing) == 2
+    assert "missing implementer event" in report.missing[0]
+    assert "missing reviewer event" in report.missing[1]
 
 
 def test_missing_requirements_are_collected_together():

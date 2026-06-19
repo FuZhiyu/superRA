@@ -42,6 +42,21 @@ WRITE_EVENT_NEEDLES = (
     "write_file",
 )
 
+SHELL_TOOL_NAMES = {
+    "bash",
+    "exec_command",
+    "shell",
+}
+
+CLAUDE_AGENT_TOOL_NAMES = {
+    "agent",
+    "task",
+}
+
+CODEX_SPAWN_TOOL_NAMES = {
+    "spawn_agent",
+}
+
 MUTATING_COMMAND_RE = re.compile(
     r"(^|\s)(apply_patch|cat\s+<<|tee\s+|touch\s+|mv\s+|cp\s+|rm\s+|"
     r"python3?\s+-\s*<<|perl\s+-0?pi\b|sed\s+-i\b)"
@@ -111,6 +126,32 @@ class TranscriptEvent:
         if lowered_tools & READ_TOOL_NAMES:
             return True
         return any(_command_reads_path(command, path) for command in self.commands)
+
+    def is_task_read_of(self, task_path: str) -> bool:
+        lowered_tools = {name.lower() for name in self.tool_names}
+        if self.commands and not lowered_tools:
+            return any(_command_runs_task_read(command, task_path)
+                       for command in self.commands)
+        if not lowered_tools & SHELL_TOOL_NAMES:
+            return False
+        return any(_command_runs_task_read(command, task_path)
+                   for command in self.commands)
+
+    def is_dispatch_of(self, agent_type: str) -> bool:
+        lowered_tools = {name.lower() for name in self.tool_names}
+        if lowered_tools & CODEX_SPAWN_TOOL_NAMES:
+            return self._has_agent_type(agent_type)
+        if lowered_tools & CLAUDE_AGENT_TOOL_NAMES:
+            return self._has_agent_type(agent_type)
+        return False
+
+    def _has_agent_type(self, agent_type: str) -> bool:
+        expected = _agent_type_aliases(agent_type)
+        return any(
+            key.lower() in {"agent_type", "agenttype", "subagent_type", "subagenttype"}
+            and value.lower() in expected
+            for key, value in self.key_values
+        )
 
 
 @dataclass
@@ -198,19 +239,39 @@ def check_event_before_write(
     )
 
 
+def check_task_read_before_write(
+    report: AssertionReport,
+    events: Sequence[TranscriptEvent],
+    task_path: str,
+    *,
+    write_path: str | None = None,
+) -> None:
+    boundary = first_write_index(events, write_path=write_path)
+    found = next(
+        (event for event in events[:boundary]
+         if event.is_task_read_of(task_path)),
+        None,
+    )
+    report.require(
+        found is not None,
+        f"task read for {task_path}: expected command event invoking "
+        f"superra task read {task_path} before first write"
+        + (f" to {write_path}" if write_path else ""),
+    )
+
+
 def check_task_reads_before_write(
     report: AssertionReport,
     events: Sequence[TranscriptEvent],
     task_paths: Iterable[str],
     *,
-    write_path: str = "loading-evidence.json",
+    write_path: str | None = None,
 ) -> None:
     for task_path in task_paths:
-        check_event_before_write(
+        check_task_read_before_write(
             report,
             events,
-            f"task read for {task_path}",
-            ["superra task read", task_path],
+            task_path,
             write_path=write_path,
         )
 
@@ -220,13 +281,14 @@ def check_file_reads_before_write(
     events: Sequence[TranscriptEvent],
     paths: Iterable[str],
     *,
-    write_path: str = "loading-evidence.json",
+    write_path: str | None = None,
 ) -> None:
     boundary = first_write_index(events, write_path=write_path)
     for path in paths:
         report.require(
             any(event.is_read_of(path) for event in events[:boundary]),
-            f"file read for {path}: expected read before first write to {write_path}",
+            f"file read for {path}: expected read before first write"
+            + (f" to {write_path}" if write_path else ""),
         )
 
 
@@ -240,9 +302,11 @@ def check_orchestrator_dispatches(
 ) -> None:
     """Require implementer/reviewer dispatch evidence or record fallback."""
 
-    has_implementer = any(event.contains_all(implementer_needles)
+    implementer_type = implementer_needles[0]
+    reviewer_type = reviewer_needles[0]
+    has_implementer = any(event.is_dispatch_of(implementer_type)
                           for event in events)
-    has_reviewer = any(event.contains_all(reviewer_needles)
+    has_reviewer = any(event.is_dispatch_of(reviewer_type)
                        for event in events)
     if has_implementer and has_reviewer:
         report.observations.append("orchestrator dispatch events observed")
@@ -338,3 +402,22 @@ def _command_reads_path(command: str, path: str) -> bool:
         return False
     read_tokens = ("cat ", "sed ", "nl ", "rg ", "grep ", "python ", "python3 ")
     return any(token in command for token in read_tokens)
+
+
+def _command_runs_task_read(command: str, task_path: str) -> bool:
+    pattern = re.compile(
+        r"(?<![\w-])superra\s+task\s+read\s+"
+        + re.escape(task_path)
+        + r"(?=$|\s|[;&|])",
+        re.IGNORECASE,
+    )
+    return bool(pattern.search(command))
+
+
+def _agent_type_aliases(agent_type: str) -> set[str]:
+    lowered = agent_type.lower()
+    aliases = {lowered}
+    if lowered.startswith("superra_"):
+        role = lowered.removeprefix("superra_")
+        aliases.add(f"superra:{role}")
+    return aliases
