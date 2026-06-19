@@ -32,7 +32,7 @@ The validate step checks numbers against internal consistency by default. You ca
 
 If the rebuilt spread comes out at half the published value, the problem is in your sample construction — a wrong breakpoint, a sign error, a missing delisting return — and you find it on a number someone has already vetted, not on your headline result.
 
-To find those anchors, compose with [`zotero-paper-reader`](../../../../docs/site/04-utility-skills/07-zotero-paper-reader/task.md): ask the agent to search your Zotero library for papers that use the same dataset and build external-validation tests from the numbers they report.
+To find those anchors, compose with [`zotero-paper-reader`](#/04-utility-skills/07-zotero-paper-reader): ask the agent to search your Zotero library for papers that use the same dataset and build external-validation tests from the numbers they report.
 
 ### Planning a multi-step study
 
