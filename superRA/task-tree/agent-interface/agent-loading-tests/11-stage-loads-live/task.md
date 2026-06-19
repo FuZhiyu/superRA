@@ -44,7 +44,19 @@ The live SDK dispatch is mildly nondeterministic — default `CLAUDE_MODEL=sonne
 
 ## Results
 
-CI-safe layer green (full harness suite: 101 passed, was 78 — +23 this task). The live path is built and gated; the orchestrator runs it (no network on the implementer path). Exact live commands handed back below.
+CI-safe layer green (full harness suite: 110 passed). The live path is built and gated; the orchestrator runs it (no network on the implementer path). Exact live commands handed back below.
+
+### Live-run outcome and the false-negative fix
+
+The orchestrator ran the live path against the subscription. **The loading contract is healthy: every stage actually loads its manifest skill/reference** — `planning-review` read its reference, and `protection`/`sync`/`integration` each loaded their skill. This is **not** an LC002/LC007–LC010 loading-contract gap.
+
+The live run exposed a **test bug (false negative)** instead. The `Skill` tool records a load plugin-qualified (`superRA:result-protection`), while the manifest table (`STAGE_ROWS`) names skills bare (`result-protection`), so `evaluate_stage_load`'s `skill not in evidence.loaded_skill_names` missed the real load:
+
+```
+FAIL: protection: required skill 'result-protection' never loaded (observed: ['superRA:result-protection', 'superRA:using-superra'])
+```
+
+Fix (correctness, not assertion-relaxing): skill-name matching now normalizes the leading `<plugin>:` prefix on **both** sides, so either spelling matches. `normalize_skill_name` in [sdk_load_evidence.py](../../../../../tests/harness-instruction-following/sdk_load_evidence.py#L170) strips one leading `<plugin>:` segment; `SkillLoadEvidence.loaded_skill_names`, `first_load_index`, and (via it) `loaded_before_first_edit` are now prefix-insensitive, and `check_skills_loaded_before_first_edit` normalizes the queried name. `loaded_skill_names_raw` preserves the unqualified-as-recorded set for diagnostics. `STAGE_ROWS` was **not** hardcoded to qualified names — normalizing is robust to how the manifest vs the `Skill` tool spell names. The negative direction is unchanged: a genuinely-absent skill is still reported missing.
 
 ### What was built
 
@@ -62,13 +74,13 @@ CI-safe layer green (full harness suite: 101 passed, was 78 — +23 this task). 
 
 - **Fixtures** under [tests/fixtures/task-trees/stage-loads](../../../../../tests/fixtures/task-trees/stage-loads): one shared root + one shared leaf body (`stage-loads-task`) reused across stages (only the dispatch `Stage:` line differs), plus per-stage `expected/<stage>.expected.json` for fixture-sanity. The leaf task is superficial (read context, write one tiny JSON). Verified the wrapper `superra task read stage-loads-task` resolves from the workspace root.
 
-- **CI-safe unit tests** [test_stage_loads_live.py](../../../../../tests/harness-instruction-following/test_stage_loads_live.py): table integrity vs the manifest; dispatch prompt carries the `Stage:` line; green per stage (both channels); red (skill never loaded, reference never read, load after first edit); negatives (green when no stage skill; red over-load); read-path suffix matcher (absolute matches, sibling/non-segment do not); per-stage Codex canary green/red; committed-artifact fixture sanity; CI-path imports no SDK/codex. Read-channel evidence-model tests added to [test_sdk_load_evidence.py](../../../../../tests/harness-instruction-following/test_sdk_load_evidence.py).
+- **CI-safe unit tests** [test_stage_loads_live.py](../../../../../tests/harness-instruction-following/test_stage_loads_live.py): table integrity vs the manifest; dispatch prompt carries the `Stage:` line; green per stage (both channels); red (skill never loaded, reference never read, load after first edit); negatives (green when no stage skill; red over-load); read-path suffix matcher (absolute matches, sibling/non-segment do not); per-stage Codex canary green/red; committed-artifact fixture sanity; CI-path imports no SDK/codex. **Plugin-qualified-vs-bare equivalence cases** (the live-run false-negative regression): a `superRA:`-qualified load satisfies a bare stage expectation across all four skill stages, the over-load check fires on a qualified negative-stage load, and a genuinely-absent skill is still rejected amid qualified observations. Read-channel and prefix-normalization evidence-model tests added to [test_sdk_load_evidence.py](../../../../../tests/harness-instruction-following/test_sdk_load_evidence.py) (`normalize_skill_name`, qualified↔bare symmetry, negative still rejects).
 
 - **Docs**: [README.md](../../../../../tests/harness-instruction-following/README.md) coverage-matrix row + a per-stage detail section (two channels, the opt-in Read hook, the suffix matcher, the live command). README passes the markdown self-diagnose.
 
 ### Verification
 
-- `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following/` → **101 passed** (baseline before this task: 78).
+- `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following/` → **110 passed**.
 - `python3 tests/harness-instruction-following/stage_loads_live.py` (no gate) → `SKIP … opt-in`, exit 0.
 - `python3 -c "import stage_loads_live"` → no `claude_agent_sdk` in `sys.modules` (CI-safe import boundary).
 
@@ -80,4 +92,4 @@ RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
   python tests/harness-instruction-following/stage_loads_live.py
 ```
 
-On the first live run, confirm: (a) the `Skill` hook fires for stage-skill loads inside the dispatched subagent (08 reported this confirmed, tagged `subagent_skill_tool`); (b) the new `Read` hook fires for the `planning-review` reference read and the tool_input path key is `file_path` (the harness reads it defensively, so a different key degrades, not crashes). The Codex per-stage canary runs through the 09 dispatch convention. A stage that reliably does not load its manifest skill/reference is a real LC002/LC007–LC010 finding to escalate, not an assertion to relax.
+The first live run already confirmed: (a) the `Skill` hook fires for stage-skill loads inside the dispatched subagent (loads observed plugin-qualified, e.g. `superRA:result-protection`); (b) the new `Read` hook fires for the `planning-review` reference read. All four stages load their manifest skill/reference. The false-negative match bug (qualified-vs-bare) is fixed above, so the re-run should now PASS all four stages. The Codex per-stage canary runs through the 09 dispatch convention. A stage that reliably does not load its manifest skill/reference would be a real LC002/LC007–LC010 finding to escalate, not an assertion to relax.

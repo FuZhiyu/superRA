@@ -74,6 +74,22 @@ class ReadLoadRecord:
     source: str = "read_tool"
 
 
+def normalize_skill_name(name: str) -> str:
+    """Strip the ``superRA:`` (or any ``<plugin>:``) prefix from a skill name.
+
+    The Skill-Load Manifest and the test tables name skills bare
+    (``result-protection``); the ``Skill`` tool records them plugin-qualified
+    (``superRA:result-protection``). Both spell the same skill, so every
+    skill-name comparison normalizes both sides through this helper — a load
+    recorded as ``superRA:result-protection`` satisfies an expected
+    ``result-protection`` and vice versa. Only the leading ``<plugin>:`` segment
+    is stripped (one colon), leaving any colon inside a name untouched.
+    """
+
+    _, sep, rest = name.partition(":")
+    return rest if sep else name
+
+
 @dataclass
 class SkillLoadEvidence:
     """Structured evidence from one Claude Agent-SDK session.
@@ -82,6 +98,11 @@ class SkillLoadEvidence:
     by the unit test from synthetic records. ``first_edit_index`` is the event
     index of the first edit/write tool_use, or ``None`` when the session
     performed no edit.
+
+    Skill-name lookups (:attr:`loaded_skill_names`, :meth:`first_load_index`,
+    :meth:`loaded_before_first_edit`) are plugin-prefix-insensitive: the queried
+    name and the recorded name are both normalized via :func:`normalize_skill_name`
+    so a manifest-bare name matches a ``Skill``-tool plugin-qualified load.
     """
 
     skill_loads: list[SkillLoadRecord] = field(default_factory=list)
@@ -91,7 +112,18 @@ class SkillLoadEvidence:
 
     @property
     def loaded_skill_names(self) -> set[str]:
-        """Every on-demand skill name the ``Skill`` hook observed loading."""
+        """Every on-demand skill name the ``Skill`` hook observed loading.
+
+        Plugin-prefix-stripped (via :func:`normalize_skill_name`) so membership
+        tests against manifest-bare names match regardless of whether the load
+        was recorded as ``superRA:result-protection`` or ``result-protection``.
+        """
+
+        return {normalize_skill_name(record.name) for record in self.skill_loads}
+
+    @property
+    def loaded_skill_names_raw(self) -> set[str]:
+        """Every on-demand skill name exactly as the ``Skill`` hook recorded it."""
 
         return {record.name for record in self.skill_loads}
 
@@ -143,12 +175,18 @@ class SkillLoadEvidence:
         return "\n".join(self.assistant_texts)
 
     def first_load_index(self, skill_name: str) -> int | None:
-        """Earliest event index at which ``skill_name`` was observed loading."""
+        """Earliest event index at which ``skill_name`` was observed loading.
 
+        Plugin-prefix-insensitive: ``result-protection`` matches a load recorded
+        as ``superRA:result-protection`` and vice versa (see
+        :func:`normalize_skill_name`).
+        """
+
+        target = normalize_skill_name(skill_name)
         indices = [
             record.event_index
             for record in self.skill_loads
-            if record.name == skill_name
+            if normalize_skill_name(record.name) == target
         ]
         return min(indices) if indices else None
 
@@ -231,7 +269,7 @@ def check_skills_loaded_before_first_edit(
 
     loaded = evidence.loaded_skill_names
     for skill in required_skills:
-        if skill not in loaded:
+        if normalize_skill_name(skill) not in loaded:
             report.missing.append(
                 f"required skill {skill!r} never loaded "
                 f"(observed: {sorted(loaded)})"

@@ -118,6 +118,68 @@ def test_green_skill_stage_loaded_before_edit():
     assert len(report.observations) == 1
 
 
+def test_green_skill_stage_loaded_as_plugin_qualified_name():
+    # Live regression: the Skill tool records loads plugin-qualified
+    # (superRA:result-protection), the manifest table names them bare
+    # (result-protection). The qualified load must satisfy the bare expectation —
+    # the loads are real, so this must be green, not a false negative.
+    row = stage_row("protection")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:result-protection", 0)],
+        edit_event_indices=[3],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    report.assert_ok()
+
+
+def test_green_all_skill_stages_loaded_plugin_qualified():
+    # The exact live-run shape: every stage skill recorded with the superRA:
+    # prefix plus the always-loaded using-superra; all four stages must pass.
+    for stage, qualified in (
+        ("protection", "superRA:result-protection"),
+        ("sync", "superRA:semantic-merge"),
+        ("integration", "superRA:refactor-and-integrate"),
+    ):
+        row = stage_row(stage)
+        evidence = evidence_from_hook_records(
+            skill_tool_events=[(qualified, 0), ("superRA:using-superra", 1)],
+            edit_event_indices=[3],
+        )
+        report = StageLoadReport()
+        evaluate_stage_load(report, row, evidence)
+        report.assert_ok()
+
+
+def test_red_skill_stage_genuinely_absent_still_rejected_with_qualified_observations():
+    # The negative still holds after normalization: a stage whose skill genuinely
+    # never loaded fails even when other plugin-qualified skills are present.
+    row = stage_row("sync")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:result-protection", 0), ("superRA:using-superra", 1)],
+        edit_event_indices=[3],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    assert not report.ok
+    assert "semantic-merge" in report.missing[0]
+    assert "never loaded" in report.missing[0]
+
+
+def test_red_negative_stage_over_load_detected_when_qualified():
+    # The over-load check also normalizes: a plugin-qualified stage skill on a
+    # negative stage is still an over-load finding.
+    row = stage_row("implementation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:refactor-and-integrate", 0)],
+        edit_event_indices=[2],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    assert not report.ok
+    assert "over-load" in report.missing[0]
+
+
 def test_red_skill_stage_never_loaded():
     # The stage skill the manifest should trigger never loads — a real
     # LC007–LC010 finding; the assertion must fail.

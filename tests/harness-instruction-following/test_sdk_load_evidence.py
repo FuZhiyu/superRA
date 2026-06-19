@@ -30,6 +30,7 @@ from sdk_load_evidence import (  # noqa: E402
     check_behavioral_canary,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
+    normalize_skill_name,
     parse_frontmatter_skills,
 )
 
@@ -140,6 +141,66 @@ def test_all_failures_collected_together():
     assert "never loaded" in report.missing[0]
     assert "writing" in report.missing[1]
     assert "before the first edit" in report.missing[1]
+
+
+# --------------------------------------------------------------------------- #
+# Plugin-prefix-insensitive skill-name matching
+# --------------------------------------------------------------------------- #
+
+
+def test_normalize_skill_name_strips_plugin_prefix():
+    assert normalize_skill_name("superRA:result-protection") == "result-protection"
+    assert normalize_skill_name("result-protection") == "result-protection"
+    # Only the leading <plugin>: segment is stripped (one colon).
+    assert normalize_skill_name("superRA:a:b") == "a:b"
+
+
+def test_loaded_skill_names_strips_plugin_prefix():
+    # The Skill tool records loads plugin-qualified; the property normalizes so a
+    # bare manifest name matches.
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:result-protection", 0)],
+    )
+    assert evidence.loaded_skill_names == {"result-protection"}
+    assert evidence.loaded_skill_names_raw == {"superRA:result-protection"}
+
+
+def test_qualified_load_satisfies_bare_expected_skill():
+    # Live regression: expected bare `result-protection` is satisfied by an
+    # observed plugin-qualified `superRA:result-protection` load. The load is
+    # real, so this must be green, not a false negative.
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:result-protection", 0)],
+        edit_event_indices=[3],
+    )
+    report = SkillLoadReport()
+    check_skills_loaded_before_first_edit(report, evidence, ["result-protection"])
+    report.assert_ok()
+
+
+def test_bare_load_satisfies_qualified_expected_skill():
+    # Symmetric: expected qualified name satisfied by an observed bare load.
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("semantic-merge", 0)],
+        edit_event_indices=[3],
+    )
+    report = SkillLoadReport()
+    check_skills_loaded_before_first_edit(report, evidence, ["superRA:semantic-merge"])
+    report.assert_ok()
+
+
+def test_qualified_observations_still_reject_genuinely_absent_skill():
+    # Normalization must not turn the negative case green: a skill that genuinely
+    # never loaded is still reported missing even amid plugin-qualified loads.
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:result-protection", 0), ("superRA:using-superra", 1)],
+        edit_event_indices=[3],
+    )
+    report = SkillLoadReport()
+    check_skills_loaded_before_first_edit(report, evidence, ["semantic-merge"])
+    assert not report.ok
+    assert "semantic-merge" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
