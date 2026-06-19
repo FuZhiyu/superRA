@@ -39,7 +39,7 @@ Standalone writing invocations terminate at edit plus commit, or findings plus c
 
 Multi-lane review may dispatch one reviewer per lane, but the dispatch mechanics belong to `agent-orchestration`; `writing` supplies the lane files and the long-form-review reference.
 
-The review-only task-tree path (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no writing-specific exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
+The review-only task-tree path (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no writing-specific exception prose.
 
 ## Extension rules
 
