@@ -1,6 +1,6 @@
 ---
 title: "Add Codex Live Smoke"
-status: implemented
+status: approved
 depends_on:
   - 06-ci-safe-contract-tests
 tags: []
