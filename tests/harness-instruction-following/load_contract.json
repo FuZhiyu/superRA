@@ -1,0 +1,484 @@
+{
+  "schema_version": 1,
+  "purpose": "Compact audit of superRA agent load and handoff contracts for future CI-safe fixture tests and manual live harness smokes.",
+  "check_classes": {
+    "ci_safe_static": "Parse committed source files or generated files. No model call.",
+    "ci_safe_fixture": "Run deterministic local CLI or hook fixture. No model call.",
+    "manual_live_claude": "Requires a Claude live transcript/tool-event run.",
+    "manual_live_codex": "Requires a Codex live transcript/tool-event run.",
+    "manual_live_both": "Requires live transcript/tool-event runs in both Claude and Codex."
+  },
+  "entries": [
+    {
+      "id": "LC001",
+      "area": "manifest-always-loaded",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L58-L66",
+        "agents/implementer.md#L1-L9",
+        "agents/reviewer.md#L1-L10"
+      ],
+      "trigger": "Any superRA dispatch or direct-mode role session.",
+      "expected_evidence": [
+        "source manifest names superRA:using-superra and superRA:report-in-markdown as always loaded",
+        "role frontmatter lists those skills",
+        "live transcript shows the role loads/reads both before task file or code edits"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC002",
+      "area": "manifest-stage-loads",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L67-L76"
+      ],
+      "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or documentation.",
+      "expected_evidence": [
+        "static parse finds exact stage rows and load targets",
+        "live transcript for non-empty stage rows shows the target skill/reference loaded before action",
+        "implementation and documentation rows produce no extra stage-skill expectation"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC003",
+      "area": "manifest-domain-loads",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L78-L85"
+      ],
+      "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, or slide-design work.",
+      "expected_evidence": [
+        "static parse finds the four domain rows",
+        "fixture prompts can include unambiguous task text for each domain",
+        "live transcript shows every matching domain skill loaded, including multiple matches when applicable"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC004",
+      "area": "harness-adapter-routing",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L87-L100",
+        "skills/using-superra/references/codex-instructions.md#L64-L77"
+      ],
+      "trigger": "A loaded superRA instruction names Claude-oriented tools or Codex is the active harness.",
+      "expected_evidence": [
+        "static parse finds adapter-reference pointer and Codex tool map",
+        "Codex live transcript uses request_user_input/update_plan/spawn_agent/send_input equivalents where applicable"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_codex"
+      ]
+    },
+    {
+      "id": "LC005",
+      "area": "role-task-read-contract",
+      "source_paths": [
+        "agents/implementer.md#L13-L17",
+        "agents/reviewer.md#L14-L18",
+        "skills/using-superra/references/direct-mode-implementer.md#L13-L20",
+        "skills/using-superra/references/direct-mode-reviewer.md#L13-L22",
+        ".codex/agents/superra_implementer.toml#L17-L20",
+        ".codex/agents/superra_reviewer.toml#L17-L23"
+      ],
+      "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch, or enters direct mode for one task.",
+      "expected_evidence": [
+        "static parse confirms canonical and generated surfaces require Skill-Load Manifest use before code and superra task read per task",
+        "generated surfaces identify their canonical source",
+        "live transcript shows superra task read <path> before code or artifact edits"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC006",
+      "area": "generated-agent-drift",
+      "source_paths": [
+        "agents/implementer.md",
+        "agents/reviewer.md",
+        "skills/using-superra/references/direct-mode-implementer.md#L1-L8",
+        "skills/using-superra/references/direct-mode-reviewer.md#L1-L8",
+        ".codex/agents/superra_implementer.toml#L1-L8",
+        ".codex/agents/superra_reviewer.toml#L1-L8",
+        "skills/codex-superra-setup/scripts/sync_codex_agents.py"
+      ],
+      "trigger": "Canonical role specs change, or generated role surfaces are checked.",
+      "expected_evidence": [
+        "static drift check regenerates direct-mode references and .codex agent TOML into a temp tree and compares bytes",
+        "generated headers retain source and regeneration notice"
+      ],
+      "classification": [
+        "ci_safe_static"
+      ]
+    },
+    {
+      "id": "LC007",
+      "area": "stage-planning-review",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L71-L71",
+        "skills/superplan/references/planning-review.md#L1-L24",
+        "agents/reviewer.md#L19-L20"
+      ],
+      "trigger": "Reviewer dispatch has Stage: planning-review.",
+      "expected_evidence": [
+        "static parse confirms planning-review row points to skills/superplan/references/planning-review.md",
+        "live reviewer transcript shows the reference loaded and planning-review protocol used instead of implementation diff review",
+        "no task status change occurs in planning-review"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC008",
+      "area": "stage-protection",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L73-L73",
+        "skills/result-protection/SKILL.md#L10-L23"
+      ],
+      "trigger": "Dispatch has Stage: protection.",
+      "expected_evidence": [
+        "static parse confirms manifest loads result-protection",
+        "static parse confirms drift/regression reference routing for the active mechanism",
+        "live transcript shows result-protection loaded before writing or reviewing protection tests"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC009",
+      "area": "stage-sync",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L74-L74",
+        "skills/semantic-merge/SKILL.md#L12-L20"
+      ],
+      "trigger": "Dispatch has Stage: sync, or semantic-merge is invoked directly.",
+      "expected_evidence": [
+        "static parse confirms manifest loads semantic-merge for sync",
+        "static parse confirms exactly one mode reference is selected by call path",
+        "live workflow-sync transcript shows workflow-sync author/reviewer reference selection"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC010",
+      "area": "stage-integration",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L75-L75",
+        "skills/refactor-and-integrate/SKILL.md#L16-L17",
+        "skills/refactor-and-integrate/SKILL.md#L47-L58"
+      ],
+      "trigger": "Dispatch has Stage: integration.",
+      "expected_evidence": [
+        "static parse confirms manifest loads refactor-and-integrate",
+        "static parse confirms active domain skill may add integration references",
+        "live transcript or task Results records Final Diff Self-Check when integration work runs"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC011",
+      "area": "domain-econ-data-analysis",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L82-L82",
+        "skills/econ-data-analysis/SKILL.md#L11-L22",
+        "skills/econ-data-analysis/SKILL.md#L130-L133"
+      ],
+      "trigger": "Task imports, cleans, merges, filters, constructs variables, aggregates, summarizes, regresses, or figures economic/financial/panel data.",
+      "expected_evidence": [
+        "static parse confirms manifest trigger and stage-scoped reference table",
+        "fixture task with data wording should lead transcript to load econ-data-analysis",
+        "if implementation edits notebooks/scripts, transcript or output shows relevant implementer reference use"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC012",
+      "area": "domain-theory-modeling",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L83-L83",
+        "skills/theory-modeling/SKILL.md#L11-L22"
+      ],
+      "trigger": "Task derives, solves, verifies, or proves mathematical/modeling content.",
+      "expected_evidence": [
+        "static parse confirms manifest trigger and stage-scoped reference table",
+        "fixture task with proof/derivation wording should lead transcript to load theory-modeling",
+        "integration/protection stage tests account for terminology finding SF002"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC013",
+      "area": "domain-writing",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L84-L84",
+        "skills/writing/SKILL.md#L58-L86"
+      ],
+      "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
+      "expected_evidence": [
+        "static parse confirms manifest trigger and mode-routing table",
+        "fixture Markdown/prose task should lead transcript to load writing",
+        "reference loads depend on Review/Polish/Draft classification rather than all files at once"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC014",
+      "area": "domain-slide-design",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L85-L85",
+        "skills/slide-design/SKILL.md#L11-L25",
+        "skills/slide-design/SKILL.md#L86-L92"
+      ],
+      "trigger": "Task designs, reviews, creates, revises, or fixes research slides or Beamer source.",
+      "expected_evidence": [
+        "static parse confirms manifest trigger and stage-scoped references",
+        "fixture slide/Beamer task should lead transcript to load slide-design",
+        "Beamer fixture should show applicable Beamer/layout reference or script use"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC015",
+      "area": "task-read-ancestor-context",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L40-L45",
+        "skills/task-tree/scripts/task_read.py#L29-L77",
+        "skills/task-tree/scripts/task_read.py#L204-L217",
+        "skills/task-tree/scripts/task_read.py#L286-L302",
+        "skills/task-tree/references/task-file-contract.md#L31-L35"
+      ],
+      "trigger": "Agent or test runs superra task read <path>.",
+      "expected_evidence": [
+        "CI fixture output contains focused context and each ancestor full Objective with nested Context/Conventions/Constraints",
+        "JSON fixture output has ancestors[].objective and ancestors[].sections",
+        "manual transcript shows agent consumed inherited context before editing"
+      ],
+      "classification": [
+        "ci_safe_fixture",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC016",
+      "area": "task-read-comments",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L44-L44",
+        "skills/task-tree/scripts/task_read.py#L104-L150",
+        "skills/task-tree/scripts/task_read.py#L235-L255",
+        "skills/task-tree/scripts/task_read.py#L331-L354",
+        "skills/task-tree/scripts/_comments.py#L174-L212"
+      ],
+      "trigger": "Target task has unresolved comments.yaml sidecar entries.",
+      "expected_evidence": [
+        "CI fixture output surfaces unresolved comments with full anchored block, preview/body, orphaned flag, and degraded sentinel when applicable",
+        "resolved comments are absent",
+        "manual transcript shows agent notices surfaced comments when task read includes them"
+      ],
+      "classification": [
+        "ci_safe_fixture",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC017",
+      "area": "task-read-dependency-status",
+      "source_paths": [
+        "skills/task-tree/scripts/task_read.py#L80-L102",
+        "skills/task-tree/scripts/task_read.py#L257-L266",
+        "skills/task-tree/scripts/task_read.py#L318-L329",
+        "skills/task-tree/references/task-file-contract.md#L23-L35"
+      ],
+      "trigger": "Target task has depends_on entries naming sibling tasks.",
+      "expected_evidence": [
+        "CI fixture human output contains Sibling Dependencies with slug, effective status, and title",
+        "CI fixture JSON output contains dependencies[] with status and effective_status",
+        "missing sibling dependencies surface as NOT FOUND"
+      ],
+      "classification": [
+        "ci_safe_fixture"
+      ]
+    },
+    {
+      "id": "LC018",
+      "area": "dependency-results-non-inheritance",
+      "source_paths": [
+        "skills/task-tree/references/task-file-contract.md#L31-L35",
+        "skills/agent-orchestration/SKILL.md#L91-L96",
+        "skills/task-tree/scripts/task_read.py#L318-L329"
+      ],
+      "trigger": "A target task depends on a sibling whose Results section contains sentinel text.",
+      "expected_evidence": [
+        "CI fixture task-read output includes dependency status metadata but not dependency Results sentinel text",
+        "manual downstream dispatch includes explicit steering or objective text if dependency Results must be read"
+      ],
+      "classification": [
+        "ci_safe_fixture",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC019",
+      "area": "hook-registries",
+      "source_paths": [
+        "hooks/hooks.json#L1-L79",
+        "hooks/hooks-codex.json#L1-L55",
+        "skills/task-tree/references/internals.md#L93-L115",
+        "tests/check-harness-compatibility.sh#L37-L66"
+      ],
+      "trigger": "Plugin hook manifests are installed or task.md / markdown files are edited through harness tools.",
+      "expected_evidence": [
+        "CI static check parses hook registries under hooks/ and confirms UserPromptSubmit, PreToolUse, PostToolUse, and Codex Stop where expected",
+        "CI hook fixtures invoke task-hook wrapper for Edit|Write/apply_patch and Bash matchers",
+        "manual live transcript can confirm PostToolUse hook feedback when task-hook emits feedback"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "ci_safe_fixture",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC020",
+      "area": "workflow-superimplement-orchestration",
+      "source_paths": [
+        "skills/superimplement/SKILL.md#L12-L27",
+        "skills/superimplement/SKILL.md#L77-L91",
+        "skills/superimplement/SKILL.md#L163-L166"
+      ],
+      "trigger": "User invokes superimplement or implementation workflow over a task tree.",
+      "expected_evidence": [
+        "static parse confirms subagent mode default, direct-mode exceptions, and required agent-orchestration load before dispatch prompt",
+        "manual live transcript shows main agent loads superimplement and agent-orchestration, dispatches implementer then reviewer for non-trivial work",
+        "manual live transcript documents direct-mode fallback only when allowed"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC021",
+      "area": "agent-orchestration-dispatch-templates",
+      "source_paths": [
+        "skills/agent-orchestration/SKILL.md#L85-L156",
+        "skills/agent-orchestration/SKILL.md#L203-L219"
+      ],
+      "trigger": "Orchestrator dispatches implementer/reviewer or bundle, or handles status transitions.",
+      "expected_evidence": [
+        "static parse confirms required dispatch fields for implementer, reviewer, bundled variants, and planning reviewer",
+        "manual live transcript shows Task: or Tasks:, Stage:, Git range for reviewer, and no aggregate bundle verdict",
+        "manual live transcript shows status-driven progression from implemented to reviewer and approved to next task"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ]
+    },
+    {
+      "id": "LC022",
+      "area": "codex-orchestration-adapter",
+      "source_paths": [
+        "skills/using-superra/references/codex-instructions.md#L9-L31",
+        "skills/using-superra/references/codex-instructions.md#L52-L83"
+      ],
+      "trigger": "Codex main agent dispatches role agents in a superRA workflow.",
+      "expected_evidence": [
+        "static parse confirms named-agent priority and direct-mode fallback boundaries",
+        "static parse confirms named agent setup guidance and tool map",
+        "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer or documented fallback"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_codex"
+      ]
+    }
+  ],
+  "static_findings": [
+    {
+      "id": "SF001",
+      "severity": "minor",
+      "area": "hook-path-terminology",
+      "source_paths": [
+        "superRA/task-tree/agent-interface/agent-loading-tests/01-load-contract-audit/task.md",
+        "hooks/hooks.json",
+        "hooks/hooks-codex.json",
+        "skills/task-tree/references/internals.md#L93-L95"
+      ],
+      "finding": "The task objective names hook registries as hooks.json and hooks-codex.json, while committed registries live under hooks/hooks.json and hooks/hooks-codex.json.",
+      "proposed_owner": "task-tree",
+      "test_implication": "Tests should target the actual hooks/ paths and may add a static docs lint if future prose uses root-level paths ambiguously."
+    },
+    {
+      "id": "SF002",
+      "severity": "major",
+      "area": "stage-terminology",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L73-L73",
+        "skills/result-protection/SKILL.md#L16-L18",
+        "skills/theory-modeling/SKILL.md#L17-L19",
+        "skills/agent-orchestration/SKILL.md#L221-L224"
+      ],
+      "finding": "Current manifest uses Stage: protection, but several references still use drift-test as a stage name or parenthetical synonym.",
+      "proposed_owner": "using-superra / result-protection / theory-modeling / agent-orchestration",
+      "test_implication": "Treat as static terminology lint/follow-up. Live harness tests should assert protection from the manifest, not drift-test behavior."
+    },
+    {
+      "id": "SF003",
+      "severity": "minor",
+      "area": "codex-hook-enforcement-boundary",
+      "source_paths": [
+        "skills/task-tree/references/internals.md#L113-L115",
+        "hooks/hooks-codex.json#L24-L42"
+      ],
+      "finding": "Codex Bash hook coverage is documented as best-effort rather than a complete enforcement boundary.",
+      "proposed_owner": "task-tree",
+      "test_implication": "Keep Codex Bash hook assertions to registry wiring and fixture invocation. Do not make manual live tests depend on catching every shell mutation."
+    },
+    {
+      "id": "SF004",
+      "severity": "minor",
+      "area": "direct-mode-observability",
+      "source_paths": [
+        "skills/superimplement/SKILL.md#L12-L15",
+        "skills/superimplement/SKILL.md#L89-L90",
+        "skills/using-superra/references/codex-instructions.md#L24-L31"
+      ],
+      "finding": "Direct-mode exceptions are policy choices observable in transcripts only when the main agent states the fallback reason or dispatch path.",
+      "proposed_owner": "agent-orchestration / using-superra",
+      "test_implication": "Manual live tests should accept either subagent dispatch evidence or explicit allowed fallback evidence, not infer fallback from absence of spawn events alone."
+    }
+  ]
+}

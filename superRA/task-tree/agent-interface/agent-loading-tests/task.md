@@ -1,6 +1,6 @@
 ---
 title: "Agent Loading Tests"
-status: not-started
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-19
