@@ -32,6 +32,25 @@ Coverage splits across four layers. The first three run in default CI; the fourt
 
 **Manual live smokes** drive a real Claude or Codex agent through the bundled fixture and assert structural transcript evidence with the shared parser. See below.
 
+### Claude skill-load-by-name harness (Agent SDK, manual)
+
+Claude's `claude -p` stream does not give skill-load-by-name evidence the shared parser can tie to the manifest, and filesystem `PreToolUse` hooks do not fire under `claude -p` (issue #40506). So skill loading is verified through the Python `claude-agent-sdk` driven with **in-process hooks** — a `PreToolUse(matcher="Skill")` hook recording each loaded skill by name and event index, and an `InstructionsLoaded` hook recording CLAUDE.md / rules / always-loaded-skill loads. The split is deliberate:
+
+- [sdk_load_evidence.py](sdk_load_evidence.py) — CI-safe evidence model + assertions (`SkillLoadEvidence`, `check_skills_loaded_before_first_edit`). Never imports `claude-agent-sdk`; never makes a model call. Always-loaded skills satisfy a required-skill assertion through either the `Skill` tool channel or the `InstructionsLoaded` channel.
+- [sdk_load_harness.py](sdk_load_harness.py) — the live runner. The **only** module that imports `claude-agent-sdk`, and the import is deferred into `run_skill_load_session`, so the default `pytest` path never touches it. Gated on `RUN_LIVE_HARNESS=1`, default `CLAUDE_MODEL=haiku`. Supply the SDK on the live path with `uv run --with claude-agent-sdk`.
+- [test_sdk_load_evidence.py](test_sdk_load_evidence.py) — CI-safe unit test driving the evidence/assertion layer on synthetic hook records: a green case, the always-loaded-via-`InstructionsLoaded` case, and the two red cases (required skill never loaded; skill loaded only after the first edit).
+
+The downstream live smokes (always-loaded / per-stage / per-domain skill coverage) call `run_skill_load_session` and assert on the returned evidence — they consume the harness, not raw SDK calls. A required skill that never loads (e.g. `report-in-markdown`) is a real finding in the loading contract to escalate, not a reason to weaken the assertion.
+
+Smoke-check the live path standalone:
+
+```bash
+RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+  python tests/harness-instruction-following/sdk_load_harness.py
+```
+
+**`--include-hook-events` audit.** Audited against CLI 2.1.183: it is a real, documented flag ("Include all hook lifecycle events in the output stream (only works with --output-format=stream-json)"), not a no-op — it surfaces hook lifecycle events such as the `UserPromptSubmit` autoloads. It does not make filesystem `PreToolUse` hooks fire under `claude -p`, so it gives no skill-load-by-name evidence; that is what the Agent SDK harness above provides. The existing `claude-live-smoke.sh` / `orchestrator-live-smoke.sh` keep the flag for debugging visibility and do not assert on the extra events.
+
 ## Running the CI-safe layers
 
 ```bash

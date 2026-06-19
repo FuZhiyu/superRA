@@ -17,6 +17,13 @@
 # Model: CLAUDE_MODEL (default haiku) for Claude; CODEX_MODEL (no canonical
 # cheapest model in this repo) for Codex.
 #
+# --include-hook-events (audited): a real, documented `claude -p` flag (confirmed
+# in CLI 2.1.183 `--help`: "Include all hook lifecycle events in the output
+# stream"). It surfaces hook lifecycle events (e.g. the UserPromptSubmit
+# autoloads) into the stream — not a no-op — but does not make filesystem
+# PreToolUse hooks fire under `claude -p`. Kept for debugging visibility; this
+# smoke keys off Task/Agent dispatch tool events, not the hook events.
+#
 # Harness-evidence limitation: dispatch evidence is structural, never prose
 # claims. Claude exposes subagent dispatch as Task/Agent tool events carrying a
 # subagent_type; Codex exposes it as spawn_agent(agent_type="superra_implementer"

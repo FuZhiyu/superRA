@@ -13,6 +13,16 @@
 #
 # Model: defaults to CLAUDE_MODEL=haiku (cheapest). Override with CLAUDE_MODEL.
 #
+# --include-hook-events (audited): a real, documented `claude -p` flag (confirmed
+# in CLI 2.1.183 `--help`: "Include all hook lifecycle events in the output
+# stream (only works with --output-format=stream-json)"). It is NOT a no-op — it
+# surfaces hook lifecycle events (e.g. the UserPromptSubmit autoload hooks) into
+# the stream. It does NOT make filesystem PreToolUse hooks fire under `claude -p`
+# (issue #40506), so it does not give skill-load-by-name evidence here; that comes
+# from the in-process SDK harness (sdk_load_harness.py). Kept because it is
+# harmless and exposes the autoloads for debugging; this smoke does not assert on
+# the extra events.
+#
 # Harness-evidence limitation: Claude's stream-json exposes Bash and Read tool
 # events but does NOT emit a structural event for `Skill(...)` skill loading in
 # a way the shared parser can tie to the manifest by name here. Rather than
