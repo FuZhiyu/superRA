@@ -1,6 +1,6 @@
 ---
 title: "Always-Loaded Skills Live Coverage"
-status: implemented
+status: revise
 depends_on:
   - 08-claude-sdk-load-harness
   - 09-codex-canary-and-dispatch-hook
@@ -77,3 +77,9 @@ RUN_LIVE_HARNESS=1 bash tests/harness-instruction-following/always-loaded-codex-
 ### Note on the 08 harness extension
 
 To capture the introspection *answer* (which 08's `run_skill_load_session` previously dropped — it only recorded skill loads), I added an additive `capture_text` opt-in to 08's harness/evidence (`SkillLoadEvidence.assistant_texts` + an `AssistantMessage`/`TextBlock` accumulation in the session loop). This consumes the harness rather than re-implementing the `Skill`-hook evidence capture; default callers (the ordering smokes) are unaffected (`capture_text=False`).
+
+## Review Notes
+
+1. **MAJOR** — [sdk_load_harness.py:203-206](../../../../../tests/harness-instruction-following/sdk_load_harness.py#L203-L206): `capture_text` accumulates **every** `AssistantMessage` text block in the session, without distinguishing the dispatched subagent's text from the **top-level orchestrator model's** text. The introspection canary's whole validity rests on the answer coming from the *dispatched `superRA:implementer`* (whose frontmatter autoloads `report-in-markdown`), but the top-level SDK driver is not a role agent and does not autoload that skill. The dispatch prompt only instructs the top-level to "Dispatch … then stop," so if the top-level model recites the file-citation rule from general knowledge (or fails to dispatch and answers the introspection question directly), that recital is captured into `assistant_texts` and `evaluate_introspection_canary` passes — even though the implementer's autoload contract was not exercised. This defeats the task's regression-guard purpose: a future break in implementer autoload could still pass the live canary on a top-level recital. The capture should isolate subagent text (e.g. filter on the SDK `AssistantMessage.parent_tool_use_id` being non-`None`, the same subagent discriminator `_is_subagent_load` already relies on for the `Skill` hook), so only the dispatched agent's answer feeds the canary. Note the SDK is not installed in this sandbox, so confirm the exact attribution field on the first live run; the code comment at line 203-206 states the intent ("check the dispatched agent's *answer*") but the implementation captures all text.
+
+2. **MINOR** — [always_loaded_live.py:100-107](../../../../../tests/harness-instruction-following/always_loaded_live.py#L100-L107): the discriminating regex's second lookahead `(?=.*\b(?:not|never|...)\b.*\bback ?ticks?\b)` matches when *any* negation word and the word "backticks" both appear, however far apart and unrelated. An answer like "Do not use full URLs; cite the file in backticks and the line" (a wrong, model-default-style answer that happens to contain a stray negation plus "backticks" plus "anchor") would falsely pass. The committed test cases are all correct and the common model-default answer (backticks, no negation) is still rejected, so this is a low-likelihood over-match, but tightening the contrast clause to require the negation to govern "backticks" (e.g. a bounded gap, or `not\s+(?:\w+\s+){0,3}back ?ticks?`) would make the discrimination robust.
