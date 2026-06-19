@@ -10,6 +10,7 @@ Coverage splits across four layers. The first three run in default CI; the fourt
 |---|---|---|---|---|
 | Skill-Load Manifest always-loaded + stage + domain rows | [test_contract.py::test_skill_load_manifest_contract_matches_audit](test_contract.py#L106) | — | — | loading smokes (indirect; see limitation below) |
 | Both always-loaded skills (`using-superra` + `report-in-markdown`, LC001) in the dispatched role's context | [test_always_loaded_live.py::test_green_static_backbone_real_role_specs](test_always_loaded_live.py#L209) (static frontmatter contract — the deterministic backbone) + [test_always_loaded_live.py](test_always_loaded_live.py) canary-evaluator green/red | — | — | Claude introspection canary ([always_loaded_live.py](always_loaded_live.py)); Codex body-load canary ([always-loaded-codex-smoke.sh](always-loaded-codex-smoke.sh)) |
+| Each non-empty stage loads its manifest skill/reference; `implementation`/`documentation` load none (LC002, LC007–LC010) | [test_stage_loads_live.py](test_stage_loads_live.py) stage-evaluator green/red per stage + negative cases | — | — | Claude per-stage canary ([stage_loads_live.py](stage_loads_live.py)); Codex per-stage body-load canary (orchestrator-run per [09](../../superRA/task-tree/agent-interface/agent-loading-tests/09-codex-canary-and-dispatch-hook/task.md) convention) |
 | Role + generated surfaces require manifest and `superra task read` | [test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read](test_contract.py#L128) | — | — | loading smokes (indirect) |
 | Generated `.codex/agents/*.toml` stay aligned with role specs | [test_contract.py::test_codex_generated_agent_drift_check_is_ci_safe](test_contract.py#L158) | — | — | — |
 | Hook registries: Claude vs Codex event sets, matchers, commands | [test_contract.py::test_hook_registry_boundaries_for_claude_and_codex](test_contract.py#L180) | — | same test | — |
@@ -69,6 +70,26 @@ Smoke-check the live path standalone:
 RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
   python tests/harness-instruction-following/sdk_load_harness.py
 ```
+
+### Per-stage skill-load live coverage (LC002, LC007–LC010, manual)
+
+Each non-empty workflow stage must load the skill or reference the Skill-Load Manifest assigns it before stage action; the two negative stages (`implementation`, `documentation`) must load no extra stage skill. One parametrized table ([stage_loads_live.py](stage_loads_live.py)::`STAGE_ROWS`) is the single source of truth — `planning-review → skills/superplan/references/planning-review.md`, `protection → result-protection`, `sync → semantic-merge`, `integration → refactor-and-integrate` — so adding a future stage is a one-row change. One fixture body ([tests/fixtures/task-trees/stage-loads](../fixtures/task-trees/stage-loads)) is reused across every stage; only the dispatch `Stage:` line differs.
+
+Two evidence channels, because the stage manifest entries load through different tools:
+
+- **Stage skills** (`result-protection`, `semantic-merge`, `refactor-and-integrate`) load via the `Skill` tool, so 08's `PreToolUse(matcher="Skill")` hook records them by name — the same channel as the ordering smoke. The evaluator reuses 08's `SkillLoadEvidence`.
+- **The `planning-review` reference** is a file loaded via `Read`, not the `Skill` tool, so the `Skill` hook cannot see it. Task 11 extends 08's harness additively with an opt-in `PreToolUse(matcher="Read")` hook (`run_skill_load_session(..., capture_reads=True)`) that records read paths into `SkillLoadEvidence.read_loads`; the evaluator matches the manifest reference path against the captured reads by path-segment suffix (the SDK payload carries the plugin-install absolute path, not the manifest-relative one). The hook is default-off so existing callers are unaffected, and `claude-agent-sdk` stays off the CI import path. The exact `Read` tool_input path key (expected `file_path`) is confirmed on the first live run.
+
+On **Codex** (no skill-load event), each stage carries a per-stage `CanarySpec` ([stage_loads_live.py](stage_loads_live.py)) whose skill-unique token is a discriminating concept that stage's body prescribes (`drift test`, `intent conflict`, `minimum net diff`, `handoff-readiness`), recorded at the artifact field `stage_canary` — only producible if the stage skill/reference body loaded. The negative stages set `stage_canary` to `none`.
+
+[test_stage_loads_live.py](test_stage_loads_live.py) drives the stage evaluator and the per-stage canaries on synthetic inputs — green per stage (skill and read channels), red (stage skill never loaded; reference never read; load after the first edit), the negative cases (no stage skill loaded → green; a stage skill loaded on `implementation`/`documentation` → red over-load), the read-path suffix matcher, and a fixture-sanity check that each committed expected artifact satisfies its canary. No model call, no SDK/codex-cli import. Run the live Claude per-stage canary (default `sonnet`, pass@k; only the orchestrator runs it — no network on the implementer path):
+
+```bash
+RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+  python tests/harness-instruction-following/stage_loads_live.py
+```
+
+A stage that reliably does **not** load its manifest skill/reference is a real LC002/LC007–LC010 finding to record and escalate, not an assertion to relax.
 
 **`--include-hook-events` audit.** Audited against CLI 2.1.183: it is a real, documented flag ("Include all hook lifecycle events in the output stream (only works with --output-format=stream-json)"), not a no-op — it surfaces hook lifecycle events such as the `UserPromptSubmit` autoloads. It does not make filesystem `PreToolUse` hooks fire under `claude -p`, so it gives no skill-load-by-name evidence; that is what the Agent SDK harness above provides. The existing `claude-live-smoke.sh` / `orchestrator-live-smoke.sh` keep the flag for debugging visibility and do not assert on the extra events.
 

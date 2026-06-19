@@ -266,3 +266,44 @@ def test_red_behavioral_canary_rule_absent():
     assert len(report.missing) == 1
     assert "superRA:report-in-markdown" in report.missing[0]
     assert "did not shape the output" in report.missing[0]
+
+
+# --------------------------------------------------------------------------- #
+# Read-channel evidence (reference loads via the Read tool; task 11)
+# --------------------------------------------------------------------------- #
+
+_REF = "skills/superplan/references/planning-review.md"
+
+
+def test_read_channel_records_path_and_orders_before_edit():
+    evidence = evidence_from_hook_records(
+        read_tool_events=[(f"/install/{_REF}", 1)],
+        edit_event_indices=[3],
+    )
+    assert evidence.read_paths == {f"/install/{_REF}"}
+    assert evidence.first_read_index(_REF) == 1
+    assert evidence.read_before_first_edit(_REF) is True
+
+
+def test_read_channel_after_edit_is_not_before():
+    evidence = evidence_from_hook_records(
+        read_tool_events=[(f"/install/{_REF}", 5)],
+        edit_event_indices=[2],
+    )
+    assert evidence.read_before_first_edit(_REF) is False
+
+
+def test_read_channel_no_edit_counts_any_read_as_before():
+    evidence = evidence_from_hook_records(
+        read_tool_events=[(f"/install/{_REF}", 0)],
+        edit_event_indices=[],
+    )
+    assert evidence.read_before_first_edit(_REF) is True
+
+
+def test_read_channel_missing_reference_returns_none():
+    evidence = evidence_from_hook_records(
+        read_tool_events=[("/install/skills/superplan/SKILL.md", 0)],
+    )
+    assert evidence.first_read_index(_REF) is None
+    assert evidence.read_before_first_edit(_REF) is False

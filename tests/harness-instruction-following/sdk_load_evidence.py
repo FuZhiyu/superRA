@@ -52,6 +52,28 @@ class SkillLoadRecord:
     source: str = "skill_tool"
 
 
+@dataclass(frozen=True)
+class ReadLoadRecord:
+    """One observed file read via the ``Read`` tool.
+
+    The second evidence channel: stage references such as
+    ``skills/superplan/references/planning-review.md`` are loaded via ``Read``,
+    not the ``Skill`` tool, so the ``Skill`` hook never sees them. A
+    ``PreToolUse(matcher="Read")`` hook records every read path here so a
+    reference-file load expectation can be checked the same way a skill load is.
+
+    ``path`` is the raw file path from the ``Read`` tool_input (whatever the SDK
+    payload carried). ``event_index`` orders the read against skill loads and the
+    first edit. ``source`` mirrors :class:`SkillLoadRecord`: ``"read_tool"`` for a
+    top-level read, ``"subagent_read_tool"`` for a read inside a dispatched
+    subagent.
+    """
+
+    path: str
+    event_index: int
+    source: str = "read_tool"
+
+
 @dataclass
 class SkillLoadEvidence:
     """Structured evidence from one Claude Agent-SDK session.
@@ -65,12 +87,49 @@ class SkillLoadEvidence:
     skill_loads: list[SkillLoadRecord] = field(default_factory=list)
     first_edit_index: int | None = None
     assistant_texts: list[str] = field(default_factory=list)
+    read_loads: list[ReadLoadRecord] = field(default_factory=list)
 
     @property
     def loaded_skill_names(self) -> set[str]:
         """Every on-demand skill name the ``Skill`` hook observed loading."""
 
         return {record.name for record in self.skill_loads}
+
+    @property
+    def read_paths(self) -> set[str]:
+        """Every file path the ``Read`` hook observed reading."""
+
+        return {record.path for record in self.read_loads}
+
+    def first_read_index(self, ref_path: str) -> int | None:
+        """Earliest event index at which a path ending in ``ref_path`` was read.
+
+        Matched by suffix so a manifest-relative reference path
+        (``skills/superplan/references/planning-review.md``) matches the absolute
+        or workspace-relative path the SDK ``Read`` payload carries — the agent
+        reads it through the plugin install path, not the manifest-relative one.
+        """
+
+        indices = [
+            record.event_index
+            for record in self.read_loads
+            if _read_path_matches(record.path, ref_path)
+        ]
+        return min(indices) if indices else None
+
+    def read_before_first_edit(self, ref_path: str) -> bool:
+        """True if ``ref_path`` was read before the first edit/write.
+
+        A session with no edit counts any read as "before the edit" — there is
+        no edit to precede (mirrors :meth:`loaded_before_first_edit`).
+        """
+
+        read_index = self.first_read_index(ref_path)
+        if read_index is None:
+            return False
+        if self.first_edit_index is None:
+            return True
+        return read_index < self.first_edit_index
 
     @property
     def assistant_text(self) -> str:
@@ -106,6 +165,33 @@ class SkillLoadEvidence:
         if self.first_edit_index is None:
             return True
         return load_index < self.first_edit_index
+
+
+def _normalize_read_path(path: str) -> str:
+    """Normalize a read path for suffix matching: forward slashes, no leading ./."""
+
+    p = str(path).replace("\\", "/")
+    while p.startswith("./"):
+        p = p[2:]
+    return p
+
+
+def _read_path_matches(observed: str, ref_path: str) -> bool:
+    """True if ``observed`` is the same file as the manifest-relative ``ref_path``.
+
+    The manifest names a repo-relative reference path; the SDK ``Read`` payload
+    carries the path the agent actually opened (absolute or workspace-relative
+    through the plugin install). Match by path-segment suffix so
+    ``.../skills/superplan/references/planning-review.md`` satisfies the manifest
+    entry ``skills/superplan/references/planning-review.md`` without a substring
+    false positive on an unrelated path that merely contains the same characters.
+    """
+
+    obs = _normalize_read_path(observed).split("/")
+    ref = _normalize_read_path(ref_path).split("/")
+    if not ref:
+        return False
+    return obs[-len(ref):] == ref
 
 
 @dataclass
@@ -235,22 +321,30 @@ def extract_agent_answers(
 def evidence_from_hook_records(
     skill_tool_events: Sequence[tuple[str, int]] = (),
     edit_event_indices: Sequence[int] = (),
+    read_tool_events: Sequence[tuple[str, int]] = (),
 ) -> SkillLoadEvidence:
     """Build evidence from synthetic hook records (test + harness shared path).
 
     ``skill_tool_events`` is ``(skill_name, event_index)`` pairs from
-    ``PreToolUse(matcher="Skill")`` callbacks. ``edit_event_indices`` is the
-    event indices of edit/write tool_use blocks; the minimum is the first edit.
+    ``PreToolUse(matcher="Skill")`` callbacks. ``read_tool_events`` is
+    ``(read_path, event_index)`` pairs from ``PreToolUse(matcher="Read")``
+    callbacks (the reference-load channel). ``edit_event_indices`` is the event
+    indices of edit/write tool_use blocks; the minimum is the first edit.
     """
 
     skill_loads = [
         SkillLoadRecord(name=name, event_index=index, source="skill_tool")
         for name, index in skill_tool_events
     ]
+    read_loads = [
+        ReadLoadRecord(path=path, event_index=index, source="read_tool")
+        for path, index in read_tool_events
+    ]
     first_edit_index = min(edit_event_indices) if edit_event_indices else None
     return SkillLoadEvidence(
         skill_loads=skill_loads,
         first_edit_index=first_edit_index,
+        read_loads=read_loads,
     )
 
 

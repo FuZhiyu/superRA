@@ -19,6 +19,14 @@ must be live-probed (see :func:`run_skill_load_session` and the standalone smoke
 below, which print per-load source so the orchestrator can confirm subagent
 loads are captured).
 
+The stage smoke (11) needs a second channel: the ``planning-review`` reference
+loads via ``Read``, not the ``Skill`` tool, so the ``Skill`` hook cannot see it.
+:func:`run_skill_load_session` therefore takes an opt-in ``capture_reads`` flag
+that additively registers a ``PreToolUse(matcher="Read")`` hook recording read
+paths into :attr:`~sdk_load_evidence.SkillLoadEvidence.read_loads`. It is
+default-off so the existing callers are unaffected, and the exact ``Read``
+tool_input path key (expected ``file_path``) is confirmed on the first live run.
+
 There is **no ``InstructionsLoaded`` hook**: it is not a registrable
 ``claude_agent_sdk`` ``HookEvent`` (the union is ``PreToolUse``, ``PostToolUse``,
 ``PostToolUseFailure``, ``UserPromptSubmit``, ``Stop``, ``SubagentStop``,
@@ -58,6 +66,7 @@ import os
 from pathlib import Path
 
 from sdk_load_evidence import (
+    ReadLoadRecord,
     SkillLoadEvidence,
     SkillLoadRecord,
     extract_agent_answers,
@@ -116,6 +125,25 @@ def _skill_name_from_tool_input(input_data) -> str:
     )
 
 
+def _read_path_from_tool_input(input_data) -> str:
+    """Recover the file path from a ``Read`` PreToolUse payload.
+
+    Defensive on key name (``file_path``/``path``/``filename``) so a minor SDK
+    payload-shape difference degrades to ``<unknown>`` rather than crashing. The
+    exact key (expected ``file_path``) should be confirmed against the installed
+    SDK on the first live run that exercises the ``planning-review`` reference
+    read — the orchestrator runs the live path.
+    """
+
+    tool_input = input_data.get("tool_input", {}) if isinstance(input_data, dict) else {}
+    return str(
+        tool_input.get("file_path")
+        or tool_input.get("path")
+        or tool_input.get("filename")
+        or "<unknown>"
+    )
+
+
 def _is_subagent_load(input_data) -> bool:
     """Did this hook fire for tool use inside a Task-dispatched subagent?
 
@@ -142,6 +170,7 @@ async def _run_session_async(
     agent_type: str,
     allowed_tools: list[str],
     capture_text: bool,
+    capture_reads: bool,
 ) -> SkillLoadEvidence:
     # Deferred import: keeps claude_agent_sdk off every default-CI import path.
     from claude_agent_sdk import (  # type: ignore import-not-found
@@ -165,11 +194,30 @@ async def _run_session_async(
         )
         return {}
 
+    async def on_read_pretooluse(input_data, tool_use_id, context):
+        index = counter.take()
+        path = _read_path_from_tool_input(input_data)
+        source = "subagent_read_tool" if _is_subagent_load(input_data) else "read_tool"
+        evidence.read_loads.append(
+            ReadLoadRecord(path=path, event_index=index, source=source)
+        )
+        return {}
+
     async def on_edit_pretooluse(input_data, tool_use_id, context):
         index = counter.take()
         if evidence.first_edit_index is None:
             evidence.first_edit_index = index
         return {}
+
+    pretooluse = [
+        HookMatcher(matcher="Skill", hooks=[on_skill_pretooluse]),
+        HookMatcher(matcher="Edit|Write", hooks=[on_edit_pretooluse]),
+    ]
+    # Additive, opt-in: the Read channel records reference-file loads (e.g. the
+    # planning-review reference, which loads via Read not the Skill tool). Default
+    # callers leave it off so existing smokes are unaffected.
+    if capture_reads:
+        pretooluse.append(HookMatcher(matcher="Read", hooks=[on_read_pretooluse]))
 
     options = ClaudeAgentOptions(
         cwd=str(cwd),
@@ -178,12 +226,7 @@ async def _run_session_async(
         plugins=[{"type": "local", "path": str(plugin_dir)}],
         allowed_tools=allowed_tools,
         permission_mode="acceptEdits",
-        hooks={
-            "PreToolUse": [
-                HookMatcher(matcher="Skill", hooks=[on_skill_pretooluse]),
-                HookMatcher(matcher="Edit|Write", hooks=[on_edit_pretooluse]),
-            ],
-        },
+        hooks={"PreToolUse": pretooluse},
     )
 
     # Dispatch the real plugin role agent rather than running the prompt at the
@@ -221,6 +264,7 @@ def run_skill_load_session(
     agent_type: str = DEFAULT_AGENT_TYPE,
     allowed_tools: list[str] | None = None,
     capture_text: bool = False,
+    capture_reads: bool = False,
 ) -> SkillLoadEvidence:
     """Run one live SDK session that dispatches the real role agent.
 
@@ -228,6 +272,13 @@ def run_skill_load_session(
     manifest-driven on-demand loads fire, and returns the structured skill-load
     evidence captured by the in-process ``Skill`` hook (including loads inside
     the dispatched subagent, tagged via ``SkillLoadRecord.source``).
+
+    Set ``capture_reads=True`` to additionally register a
+    ``PreToolUse(matcher="Read")`` hook recording read paths into
+    ``SkillLoadEvidence.read_loads`` — the second evidence channel needed by the
+    per-stage smoke (11) for the ``planning-review`` reference, which loads via
+    ``Read`` (not the ``Skill`` tool). Default callers leave it off; existing
+    smokes are unaffected.
 
     Set ``capture_text=True`` to capture the dispatched subagent's *answer* from
     the Agent/Task ``ToolResultBlock`` (its content) into
@@ -263,6 +314,7 @@ def run_skill_load_session(
             agent_type=agent_type,
             allowed_tools=resolved_tools,
             capture_text=capture_text,
+            capture_reads=capture_reads,
         )
     )
 

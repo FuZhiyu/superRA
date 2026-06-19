@@ -1,6 +1,6 @@
 ---
 title: "Per-Stage Skill Loads Live Coverage"
-status: not-started
+status: implemented
 depends_on:
   - 08-claude-sdk-load-harness
   - 09-codex-canary-and-dispatch-hook
@@ -41,3 +41,43 @@ Two distinct evidence channels (this is load-bearing for the harness work):
 - **The `planning-review` reference** is a file loaded via `Read`, not the `Skill` tool, so the `Skill` hook will NOT see it. Extend 08's harness additively with a `PreToolUse(matcher="Read")` hook that records read paths (default-off / opt-in so existing callers are unaffected, SDK import stays off the CI path), and assert the manifest reference path was read inside the dispatched agent. Confirm the exact `Read` tool_input path key on the first live run; the orchestrator runs the live path.
 
 The live SDK dispatch is mildly nondeterministic — default `CLAUDE_MODEL=sonnet` (haiku was flaky at issuing the Task dispatch) and assert across a small pass@k window, not a single shot. A stage that reliably does **not** load its manifest skill/reference is a real LC002/LC007–LC010 finding to record and escalate, not an assertion to relax — this is the heart of what the task verifies.
+
+## Results
+
+CI-safe layer green (full harness suite: 101 passed, was 78 — +23 this task). The live path is built and gated; the orchestrator runs it (no network on the implementer path). Exact live commands handed back below.
+
+### What was built
+
+- **Single source of truth: the parametrized stage table** in [stage_loads_live.py](../../../../../tests/harness-instruction-following/stage_loads_live.py) (`STAGE_ROWS`). One row per stage with `{stage, expected_skill_or_refpath, channel, codex_canary}`; adding a future stage is a one-row change. Rows: `planning-review → skills/superplan/references/planning-review.md` (read channel), `protection → result-protection`, `sync → semantic-merge`, `integration → refactor-and-integrate` (skill channel), and the two negatives `implementation` / `documentation` (`channel=none`). Verified against [skills/using-superra/SKILL.md](../../../../../skills/using-superra/SKILL.md) manifest rows 71/73–75.
+
+- **Two evidence channels (load-bearing).** Stage *skills* load via the `Skill` tool → caught by 08's existing `PreToolUse(matcher="Skill")` hook (reused, not re-implemented). The `planning-review` *reference* loads via `Read`, not `Skill`, so the `Skill` hook cannot see it. I extended 08's harness additively: a new opt-in `PreToolUse(matcher="Read")` hook recorded into a new `read_loads` channel on `SkillLoadEvidence`.
+  - [sdk_load_evidence.py](../../../../../tests/harness-instruction-following/sdk_load_evidence.py): added `ReadLoadRecord`, `SkillLoadEvidence.read_loads` / `read_paths` / `first_read_index` / `read_before_first_edit`, a `_read_path_matches` path-segment-suffix matcher (absolute/plugin-install path matches the manifest-relative ref without substring false positives), and a `read_tool_events` param on `evidence_from_hook_records`.
+  - [sdk_load_harness.py](../../../../../tests/harness-instruction-following/sdk_load_harness.py): `run_skill_load_session(..., capture_reads=True)` registers the Read hook. **Default-off** so every existing caller (the ordering smoke, the task-10 introspection canary) is unaffected; `claude-agent-sdk` import stays deferred and off the CI path. The Read tool_input path key is read defensively (`file_path` → `path` → `filename`), to be confirmed `file_path` on the first live run.
+
+- **Claude evaluator** `evaluate_stage_load` (+ `evaluate_all_stage_loads`): skill channel = manifest skill loaded before first edit; read channel = manifest reference read before first edit; negative channel = **no** stage skill loaded (a stage-skill load on `implementation`/`documentation` is a real over-load finding). A non-stage skill (e.g. a domain skill) on a negative stage does not trip it.
+
+- **Manual-only live entry** `run_claude_stage_canary` / `_main`: consumes 08's `run_skill_load_session` (with `capture_reads=True`), gated on `RUN_LIVE_HARNESS=1`, default `CLAUDE_MODEL=sonnet`, pass@k window (`attempts=3`). Bare run prints `SKIP` and exits 0 (confirmed).
+
+- **Codex side: per-stage canaries** following the 09 convention — each stage's `CanarySpec` keys on a skill-unique discriminating concept its body prescribes (`drift test`, `intent conflict`, `minimum net diff`, `handoff-readiness`) recorded at artifact field `stage_canary`; negatives use `none`.
+
+- **Fixtures** under [tests/fixtures/task-trees/stage-loads](../../../../../tests/fixtures/task-trees/stage-loads): one shared root + one shared leaf body (`stage-loads-task`) reused across stages (only the dispatch `Stage:` line differs), plus per-stage `expected/<stage>.expected.json` for fixture-sanity. The leaf task is superficial (read context, write one tiny JSON). Verified the wrapper `superra task read stage-loads-task` resolves from the workspace root.
+
+- **CI-safe unit tests** [test_stage_loads_live.py](../../../../../tests/harness-instruction-following/test_stage_loads_live.py): table integrity vs the manifest; dispatch prompt carries the `Stage:` line; green per stage (both channels); red (skill never loaded, reference never read, load after first edit); negatives (green when no stage skill; red over-load); read-path suffix matcher (absolute matches, sibling/non-segment do not); per-stage Codex canary green/red; committed-artifact fixture sanity; CI-path imports no SDK/codex. Read-channel evidence-model tests added to [test_sdk_load_evidence.py](../../../../../tests/harness-instruction-following/test_sdk_load_evidence.py).
+
+- **Docs**: [README.md](../../../../../tests/harness-instruction-following/README.md) coverage-matrix row + a per-stage detail section (two channels, the opt-in Read hook, the suffix matcher, the live command). README passes the markdown self-diagnose.
+
+### Verification
+
+- `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following/` → **101 passed** (baseline before this task: 78).
+- `python3 tests/harness-instruction-following/stage_loads_live.py` (no gate) → `SKIP … opt-in`, exit 0.
+- `python3 -c "import stage_loads_live"` → no `claude_agent_sdk` in `sys.modules` (CI-safe import boundary).
+
+### Handoff: exact live commands (orchestrator runs; no network on implementer path)
+
+```bash
+# Claude per-stage skill-load canary (default sonnet, pass@k):
+RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+  python tests/harness-instruction-following/stage_loads_live.py
+```
+
+On the first live run, confirm: (a) the `Skill` hook fires for stage-skill loads inside the dispatched subagent (08 reported this confirmed, tagged `subagent_skill_tool`); (b) the new `Read` hook fires for the `planning-review` reference read and the tool_input path key is `file_path` (the harness reads it defensively, so a different key degrades, not crashes). The Codex per-stage canary runs through the 09 dispatch convention. A stage that reliably does not load its manifest skill/reference is a real LC002/LC007–LC010 finding to escalate, not an assertion to relax.
