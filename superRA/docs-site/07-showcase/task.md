@@ -9,6 +9,8 @@ created: 2026-06-10
 
 ## Objective
 
+> The demo tree and the superRA dev-tree export described below were later retired by [14-canonical-showcase](../14-canonical-showcase/task.md), which leaves the real [showcase-analysis](../../showcase-analysis/task.md) study as the sole showcase tree. This task's record stands as the history of what shipped at the time.
+
 Produce the showcase that lets a visitor *see* the task tree instead of reading about it:
 
 - **A curated demo task tree** — a small, realistic, public-safe hypothetical research analysis (a handful of tasks with objectives, results, review notes, a figure, statuses mid-flight) — committed as a source tree and exported with the standard (non-doc-mode) standalone export so the full task-tracker UI shows: status pills, rollup, DAG, kanban.

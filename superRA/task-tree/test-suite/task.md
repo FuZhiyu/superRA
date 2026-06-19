@@ -6,7 +6,6 @@ depends_on:
   - cli-scripts
   - migration
   - dashboard
-  - auto-rebuild
 tags: []
 script: skills/task-tree/scripts/
 created: 2026-05-23

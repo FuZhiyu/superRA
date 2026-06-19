@@ -8,61 +8,92 @@ created: 2026-06-11
 
 ## Objective
 
-superRA turns an AI coding agent into a disciplined research assistant. You bring a research question; superRA gives the agent a workflow that plans the work, implements it under adversarial review, and integrates the result into your codebase without letting the findings quietly drift. It runs on Claude Code, Codex, or any harness that supports skills and subagents.
+superRA turns an AI coding agent into a disciplined research assistant. You bring a research question; superRA gives the agent a workflow that plans the work, implements it under adversarial review, and integrates the result into your codebase without letting the findings drift. It runs on Claude Code, Codex, or any harness that supports skills and subagents.
 
 What it is:
 
-- A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. Because the whole project state lives in the tree it renders, the dashboard doubles as a handoff surface: you, or a fresh agent session a week later, can pick up exactly where work left off. You are viewing one right now — this documentation site is itself built on the dashboard.
+- A **task-tree dashboard** — a live tree, dependency DAG, and kanban view of your project that auto-updates as work progresses, so you both monitor and steer it. The whole project state lives in the tree it renders, so the dashboard also serves as a handoff surface: you, or a fresh agent session a week later, pick up where work left off. This site is itself built on the dashboard.
 - An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
-- **Domain skills** that teach agents the right discipline for the research work at hand, enforced as they go — currently data analysis, theory modeling, academic writing, and slide design.
+- **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design.
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They generate far more code than anyone will carefully review. They drift as the context window fills — and starting fresh loses the thread of what was done and why. They silently drop half the sample before a regression runs, then report "everything looks good". superRA brings discipline to the agent at every step: no result ships without adversarial review, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent rather than a pile of single-shot outputs.
+AI agents are fast but undisciplined. They generate more code than anyone will carefully review. They drift as the context window fills, and starting fresh loses the thread of what was done and why. They drop half the sample before a regression runs, then report "everything looks good". superRA brings discipline at every step: no result ships without adversarial review, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent, not a pile of single-shot outputs.
 
 ## Why not an existing framework like Superpowers?
 
-[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the current direction pushes hard to remove the human from the loop. Social-science research needs a different rhythm: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
+[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the trend pushes hard to remove the human from the loop. Social-science research needs a different rhythm: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
 
 ## How it works
 
 superRA organizes every project into three phases — **PLAN → IMPLEMENT → INTEGRATE**.
 
-<div style="display:flex;gap:18px;align-items:stretch;margin:1.4em 0;font-family:var(--font-text);max-width:560px;">
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">PLAN</strong>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">scope &middot; task decomposition &middot; <code style="font-family:var(--font-mono);font-size:0.9em;">superRA/</code> task tree</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">IMPLEMENT</strong> <span style="font-size:13px;color:var(--text-mute);">(per task)</span>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">implementer &#8644; reviewer loop<br/>APPROVE advances &middot; REVISE loops back</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="width:100%;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;background:var(--bg-card);padding:14px 18px;box-shadow:var(--shadow-sm);">
-      <strong style="font-family:var(--font-display);font-size:17px;color:var(--accent);letter-spacing:0.02em;">INTEGRATE</strong>
-      <div style="font-size:14px;color:var(--text-mid);line-height:1.5;margin-top:4px;">Protect results &middot; Sync with base &middot; Integrate/refactor &middot; Document &middot; Finish</div>
-    </div>
-    <div style="font-size:18px;color:var(--text-mute);line-height:1;padding:6px 0;" aria-hidden="true">&darr;</div>
-    <div style="border:1px solid var(--st-ok-t);border-radius:999px;background:var(--st-ok);color:var(--st-ok-t);padding:6px 22px;font-family:var(--font-display);font-size:15px;font-weight:600;">finished</div>
-  </div>
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:2px dashed var(--accent);padding-left:14px;color:var(--accent);font-size:13px;font-style:italic;text-align:center;line-height:1.4;">
-    <span aria-hidden="true" style="font-size:20px;">&#8624;</span>
-    plan change<br/>loops back to PLAN
-  </div>
+<div style="margin:1.4em auto;max-width:560px;">
+<svg viewBox="0 0 560 324" style="width:100%;height:auto;font-family:var(--font-text);" role="img" aria-label="PLAN, IMPLEMENT, and INTEGRATE phase boxes in a vertical flow down to a finished state, with two dashed 'plan change' edges looping back from IMPLEMENT and INTEGRATE into PLAN.">
+  <defs>
+    <marker id="ra-loop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"/></marker>
+    <marker id="ra-down" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--text-mute)"/></marker>
+  </defs>
+
+  <path d="M 170 122 C 118 122, 114 46, 168 46" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ra-loop)"/>
+  <path d="M 170 214 C 72 214, 72 34, 168 34" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ra-loop)"/>
+
+  <line x1="356" y1="70" x2="356" y2="94" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+  <line x1="356" y1="162" x2="356" y2="186" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+  <line x1="356" y1="254" x2="356" y2="278" stroke="var(--text-mute)" stroke-width="1.5" marker-end="url(#ra-down)"/>
+
+  <g>
+    <rect x="170" y="6" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="14" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="29" style="font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">PLAN</text>
+    <text x="188" y="47" style="font-size:13px;fill:var(--text-mid);">scope &middot; task decomposition</text>
+    <text x="188" y="62" style="font-size:13px;fill:var(--text-mid);"><tspan style="font-family:var(--font-mono);font-size:11.5px;">superRA/</tspan> task tree</text>
+  </g>
+
+  <g>
+    <rect x="170" y="98" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="106" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="121" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">IMPLEMENT<tspan style="font-family:var(--font-text);font-size:11px;font-weight:400;fill:var(--text-mute);"> (per task)</tspan></text>
+    <text x="188" y="139" style="font-size:13px;fill:var(--text-mid);">implementer &#8644; reviewer loop</text>
+    <text x="188" y="154" style="font-size:13px;fill:var(--text-mid);">APPROVE advances &middot; REVISE loops back</text>
+  </g>
+
+  <g>
+    <rect x="170" y="190" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
+    <rect x="171" y="198" width="3" height="46" rx="1.5" fill="var(--accent)"/>
+    <text x="188" y="213" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">INTEGRATE</text>
+    <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Protect results &middot; Sync with base</text>
+    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Integrate/refactor &middot; Document &middot; Finish</text>
+  </g>
+
+  <rect x="298" y="282" width="116" height="36" rx="18" fill="var(--st-ok)" stroke="var(--st-ok-t)"/>
+  <text x="356" y="305" text-anchor="middle" style="font-family:var(--font-display);font-size:14px;font-weight:600;fill:var(--st-ok-t);">finished</text>
+
+  <rect x="88" y="75" width="60" height="15" fill="var(--bg)"/>
+  <text x="118" y="86" text-anchor="middle" style="font-size:10.5px;font-style:italic;fill:var(--accent);">plan change</text>
+  <rect x="44" y="118" width="60" height="15" fill="var(--bg)"/>
+  <text x="74" y="129" text-anchor="middle" style="font-size:10.5px;font-style:italic;fill:var(--accent);">plan change</text>
+</svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work only advances on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-aware (never a blind merge), refactored to fit the codebase, documented, and shipped. The phases form a cycle, not a pipeline: a discovery while implementing or a scope change after merge routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
+In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped. The phases form a cycle, not a pipeline: a discovery while implementing, or a scope change after merge, routes back to planning and resumes at the right point, leaving unrelated finished work untouched.
 
-Three ideas carry most of the discipline. An **implementer–reviewer pair** sits at every step, so no result ships without an independent second look. **Domain skills** teach the agent the right protocol for the work at hand — for data analysis, never transform data before describing it; for theory, define objects and assumptions before manipulating equations. And the **task tree** keeps the project's state in committed files you can read at any time, so a fresh agent — or you, a week later — can open the repo and resume from the files and git history alone.
+## Design Philosophy
+
+Five ideas carry most of the discipline.
+
+- **Everything important is in the repo.** Every task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. *Why it matters:* a fresh agent session, or you a week later, resumes from the repo alone. You never lose the thread between sessions or get locked into one long conversation.
+- **Adversarial review at every step.** A separate reviewer agent must `APPROVE` each task before it advances; a `REVISE` loops the work back until it passes. *Why it matters:* it catches the "everything looks good" failure — the agent drops half the sample before running the regression — which is the biggest risk of fast AI output.
+- **Domain discipline, enforced as the work happens.** A domain skill applies your field's methodology while the agent works — describe-before-transform for data, assumptions-before-algebra for theory — and the reviewer re-checks it. *Why it matters:* you get methodology you can defend, not just code that runs.
+- **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins. *Why it matters:* the agent keeps moving without supervision, and interruptions are reserved for the judgment calls only a researcher can make.
+- **Composable and adaptive.** superRA hands the agent reusable mechanisms it assembles for the situation rather than a fixed script, and the phases form a cycle, not a pipeline — discoveries and scope changes route back to the right point, leaving finished work untouched. A new research type is one new domain skill, not a workflow fork. *Why it matters:* the tool bends to research's exploratory rhythm and grows with your work.
 
 ## Start here
 
-- New to superRA and want to try it? The [Quickstart](#/02-quickstart) runs one tiny analysis end to end in about twenty minutes — you will meet the task tree, dispatch, review, and status by doing rather than reading.
-- Want the model behind what you saw? The [Concepts](#/03-concepts) section explains the workflow, the task tree, the implementer–reviewer loop, how skills and agents fit together, and what the integration phase protects.
-- Have a specific job in mind? The [How-To guides](#/04-how-to) cover named journeys — installing, planning a project, working with task files, watching progress on the dashboard, and integrating and shipping.
-- Looking up a field, flag, status, or command? The [Reference](#/05-reference) section has the exact definitions, with links to the skill files that own them.
-- Want proof it is real? The [Showcase](#/06-showcase) embeds an actual superRA task tree exported by the same dashboard that renders this site.
+- To try it, start with the [Quickstart](#/02-quickstart): one tiny analysis end to end in about twenty minutes. You meet the task tree, dispatch, review, and status by doing rather than reading.
+- For which discipline fits your work, the [Domain Skills](#/03-domain-skills) page introduces each one — data analysis, theory modeling, academic writing, slide design — with the single idea that tells you whether it applies.
+- For the tools the workflow composes, the [Utility Skills](#/04-utility-skills) page covers the task tree, intent-aware merging, result protection, and the rest of the domain-neutral layer.
+- For more on the three phases — what each does for you and what you decide along the way — the [Workflows](#/05-workflows) section covers plan, implement, and integrate one page at a time.
+- The [Showcase](#/07-showcase) embeds a real superRA task tree, exported by the same dashboard that renders this site.
 
 superRA is open source and built for researchers comfortable with git and an AI harness. Installation and contribution details live in the project [README](README.md).
