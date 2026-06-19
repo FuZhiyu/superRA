@@ -43,7 +43,3 @@ Recommended target layout:
 Use existing scripts as style references: `tests/hooks/test-e2e-cli.sh` for Claude stream JSON and `tests/hooks/test-codex-e2e-cli.sh` for Codex JSONL. The implementation may revise locations if an adjacent existing test directory is a better fit, but it must preserve the CI/manual boundary.
 
 ## Results
-
-## Review Notes
-
-1. [BLOCKING] The subtree does not assign ownership for the CI-safe static/hook assertions required by the parent objective. The parent requires structural checks over manifest/role text, generated-agent drift, hook outputs, stage/domain/direct-mode surfaces, and task-read context behavior ([task.md:11-29](task.md#L11-L29)), but the children only create an audit artifact ([01-load-contract-audit/task.md:11-26](01-load-contract-audit/task.md#L11-L26)), parser/fixture infrastructure for live transcripts ([02-fixtures-and-parser/task.md:12-32](02-fixtures-and-parser/task.md#L12-L32)), manual live smokes, and documentation. The docs task even expects static CI checks and hook unit tests to exist ([05-docs-ci-boundary/task.md:13-27](05-docs-ci-boundary/task.md#L13-L27)), but no prerequisite child produces them. Fix by adding a CI-safe test child, or expanding an existing child objective, to implement deterministic assertions that check the audit/contract against `skills/using-superra/SKILL.md`, role specs, direct-mode/generated Codex surfaces, hook registries, and task-read fixtures; wire downstream dependencies so the live and documentation tasks consume those outputs.
