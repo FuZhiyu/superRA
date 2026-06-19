@@ -100,9 +100,12 @@ INTROSPECTION_CANARY = BehavioralCanarySpec(
     pattern=(
         r"(?is)"  # case-insensitive, dotall
         r"(?=.*\b(?:line\s+)?anchors?\b)"  # mentions anchors / line anchors
-        # contrasts against backtick-wrapped paths with a negation/contrast word
+        # contrasts against backtick-wrapped paths: the negation/contrast word
+        # must GOVERN "backticks" within a bounded gap (<=3 words), so a stray
+        # negation elsewhere in the sentence plus an unrelated "backticks" does
+        # not falsely satisfy the contrast.
         r"(?=.*\b(?:not|never|instead\s+of|rather\s+than|avoid)\b"
-        r".*\bback ?ticks?\b)"
+        r"(?:\s+\w+){0,3}\s+back ?ticks?\b)"
         r".*"
     ),
 )

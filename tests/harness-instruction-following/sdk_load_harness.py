@@ -60,6 +60,7 @@ from pathlib import Path
 from sdk_load_evidence import (
     SkillLoadEvidence,
     SkillLoadRecord,
+    extract_agent_answers,
 )
 
 
@@ -144,10 +145,8 @@ async def _run_session_async(
 ) -> SkillLoadEvidence:
     # Deferred import: keeps claude_agent_sdk off every default-CI import path.
     from claude_agent_sdk import (  # type: ignore import-not-found
-        AssistantMessage,
         ClaudeAgentOptions,
         HookMatcher,
-        TextBlock,
         query,
     )
 
@@ -195,15 +194,20 @@ async def _run_session_async(
         f"instruction, then stop:\n\n{prompt}"
     )
 
-    async for message in query(prompt=dispatch_prompt, options=options):
-        # The hooks accumulate the skill-load evidence; messages are otherwise
-        # drained to completion. When capture_text is set (the task-10
-        # introspection canary), also accumulate assistant text blocks so the
-        # canary can check the dispatched agent's *answer*, not just its loads.
-        if capture_text and isinstance(message, AssistantMessage):
-            for block in message.content:
-                if isinstance(block, TextBlock):
-                    evidence.assistant_texts.append(block.text)
+    # The hooks accumulate the skill-load evidence as messages stream; collect
+    # the messages so capture_text can extract the dispatched subagent's answer.
+    messages = [message async for message in query(prompt=dispatch_prompt, options=options)]
+
+    if capture_text:
+        # Capture the dispatched subagent's *answer* from the Agent/Task
+        # tool-result block — NOT all assistant text. Subagent text does not
+        # stream as parented AssistantMessages by default; its answer arrives as
+        # the content of the Agent/Task ToolResultBlock. extract_agent_answers
+        # isolates the dispatched implementer's answer from the top-level
+        # driver's own text and fails closed (returns []) when no dispatch
+        # occurred — so the introspection canary fails rather than passing on a
+        # top-level recital.
+        evidence.assistant_texts.extend(extract_agent_answers(messages))
 
     return evidence
 
@@ -225,11 +229,15 @@ def run_skill_load_session(
     evidence captured by the in-process ``Skill`` hook (including loads inside
     the dispatched subagent, tagged via ``SkillLoadRecord.source``).
 
-    Set ``capture_text=True`` to also accumulate the dispatched agent's assistant
-    text into ``SkillLoadEvidence.assistant_texts`` — needed by the task-10
-    always-loaded introspection canary, which checks the *answer* the agent gives
-    (its recited file-citation rule) against zero ``Skill`` loads. Default
-    callers (the ordering smokes) leave it off and ignore the field.
+    Set ``capture_text=True`` to capture the dispatched subagent's *answer* from
+    the Agent/Task ``ToolResultBlock`` (its content) into
+    ``SkillLoadEvidence.assistant_texts`` — needed by the task-10 always-loaded
+    introspection canary, which checks the answer the dispatched implementer
+    gives (its recited file-citation rule) against zero ``Skill`` loads. Capturing
+    from the tool-result block isolates the subagent's answer from the top-level
+    driver's own text and fails closed when no dispatch occurs (no tool result →
+    no captured answer → canary fails). Default callers (the ordering smokes)
+    leave it off and ignore the field.
 
     Raises ``RuntimeError`` if the live gate (``RUN_LIVE_HARNESS=1``) is not set,
     so a CI run that imports this module by mistake fails loudly rather than

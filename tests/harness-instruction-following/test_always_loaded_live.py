@@ -42,7 +42,62 @@ from codex_load_evidence import CanaryReport, evaluate_canaries  # noqa: E402
 from sdk_load_evidence import (  # noqa: E402
     SkillLoadReport,
     evidence_from_hook_records,
+    extract_agent_answers,
 )
+
+
+# --------------------------------------------------------------------------- #
+# Synthetic SDK message/block stand-ins (duck-typed; no claude_agent_sdk import)
+# --------------------------------------------------------------------------- #
+
+
+class _ToolUse:
+    """Stand-in for an SDK ToolUseBlock (Agent/Task dispatch call)."""
+
+    def __init__(self, name, id):
+        self.name = name
+        self.id = id
+
+
+class _ToolResult:
+    """Stand-in for an SDK ToolResultBlock carrying the subagent's answer."""
+
+    def __init__(self, tool_use_id, content):
+        self.tool_use_id = tool_use_id
+        self.content = content
+
+
+class _TextBlock:
+    """Stand-in for a top-level assistant TextBlock (must NOT be captured)."""
+
+    def __init__(self, text):
+        self.text = text
+
+
+class _Message:
+    """Stand-in for an SDK message exposing a ``content`` block list."""
+
+    def __init__(self, content):
+        self.content = content
+
+
+def _answer_from_dispatch(answer_text):
+    """Build the captured answer the way the live harness does.
+
+    Reflects the real capture path: the dispatched subagent's answer arrives as
+    the content of an Agent/Task tool-result block (matched by tool_use_id),
+    while the top-level driver's own text is a separate TextBlock that must be
+    ignored. ``extract_agent_answers`` is the exact function the harness loop
+    calls, so the synthetic green case is sourced the same way live capture is.
+    """
+
+    messages = [
+        _Message([_TextBlock("top-level driver chatter, do not capture this")]),
+        _Message([_ToolUse("Task", "tu_1")]),
+        _Message([_ToolResult("tu_1", answer_text)]),
+    ]
+    answers = extract_agent_answers(messages)
+    return "\n".join(answers)
 
 
 def test_default_ci_path_never_imports_sdk_or_codex():
@@ -65,7 +120,9 @@ def _no_loads():
 
 
 def test_green_introspection_rule_recited_with_zero_loads():
-    answer = (
+    # The answer is sourced from the dispatched subagent's Agent/Task tool-result
+    # block (the live capture path), not from arbitrary assistant text.
+    answer = _answer_from_dispatch(
         "I cite source files as markdown links with line anchors, like "
         "[file.py:42](file.py#L42), and never as backtick-wrapped paths."
     )
@@ -73,6 +130,35 @@ def test_green_introspection_rule_recited_with_zero_loads():
     evaluate_introspection_canary(report, answer, _no_loads())
     report.assert_ok()
     assert len(report.observations) == 1
+
+
+def test_extract_isolates_subagent_answer_from_top_level_text():
+    # The top-level driver's TextBlock must never be captured; only the Agent/Task
+    # tool-result content (the dispatched subagent's answer) is.
+    messages = [
+        _Message([_TextBlock("top-level recital of some rule — must be ignored")]),
+        _Message([_ToolUse("Task", "tu_1")]),
+        _Message([_ToolResult("tu_1", "the dispatched implementer's answer")]),
+    ]
+    answers = extract_agent_answers(messages)
+    assert answers == ["the dispatched implementer's answer"]
+
+
+def test_red_introspection_no_dispatch_no_captured_answer():
+    # Dispatch never occurred (no Agent/Task tool-result): extract returns [], so
+    # the canary sees an empty answer and fails closed — a future break in
+    # implementer autoload cannot pass on a top-level recital.
+    messages = [
+        _Message([_TextBlock(
+            "I cite files as markdown links with line anchors, not backticks."
+        )]),
+    ]
+    answers = extract_agent_answers(messages)
+    assert answers == []
+    report = IntrospectionCanaryReport()
+    evaluate_introspection_canary(report, "\n".join(answers), _no_loads())
+    assert not report.ok
+    assert any("did not shape the answer" in m for m in report.missing)
 
 
 def test_red_introspection_no_rule_answer():
@@ -100,6 +186,20 @@ def test_red_introspection_anchor_without_backtick_contrast_is_not_enough():
     report = IntrospectionCanaryReport()
     evaluate_introspection_canary(report, answer, _no_loads())
     assert not report.ok
+
+
+def test_red_introspection_stray_negation_not_governing_backticks():
+    # A wrong, model-default-style answer that happens to contain a stray negation
+    # ("not"), the word "backticks", and "anchor" — but the negation does not
+    # govern "backticks" (they are far apart). The bounded-gap contrast must
+    # reject it rather than falsely passing.
+    answer = _answer_from_dispatch(
+        "Do not use full URLs; cite the file path in backticks and the line anchor."
+    )
+    report = IntrospectionCanaryReport()
+    evaluate_introspection_canary(report, answer, _no_loads())
+    assert not report.ok
+    assert any("did not shape the answer" in m for m in report.missing)
 
 
 def test_red_introspection_rule_recited_but_skill_loaded_on_demand():

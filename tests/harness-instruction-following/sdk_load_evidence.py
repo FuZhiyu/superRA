@@ -164,6 +164,74 @@ def check_skills_loaded_before_first_edit(
             )
 
 
+AGENT_TOOL_NAMES = ("Task", "Agent")
+
+
+def _block_text(content) -> str:
+    """Flatten a tool-result ``content`` payload into plain text.
+
+    The SDK delivers ``ToolResultBlock.content`` either as a string or as a list
+    of content items (dicts ``{"type": "text", "text": ...}`` or objects with a
+    ``.text`` attribute). Concatenate the text parts so the dispatched subagent's
+    answer is recovered regardless of which shape the Agent/Task result uses.
+    """
+
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    parts: list[str] = []
+    for item in content:
+        if isinstance(item, dict):
+            text = item.get("text")
+        else:
+            text = getattr(item, "text", None)
+        if isinstance(text, str):
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def extract_agent_answers(
+    messages: Iterable[object],
+    *,
+    agent_tool_names: Sequence[str] = AGENT_TOOL_NAMES,
+) -> list[str]:
+    """Pull the dispatched subagent's answer text from a message stream.
+
+    Subagent text does not stream as parented assistant messages by default; the
+    dispatched agent's answer arrives as the content of the Agent/Task
+    ``ToolResultBlock``. This walks the message stream's content blocks, tracks
+    the tool-use ids of Agent/Task dispatch calls, and returns the text of the
+    matching tool-result blocks — isolating the dispatched implementer's answer
+    from the top-level driver's own assistant text. Returns ``[]`` when no Agent
+    dispatch occurred (fail-closed: nothing to feed the canary).
+
+    Duck-typed so it runs both on real ``claude_agent_sdk`` blocks and on
+    synthetic stand-ins in CI: a content block is treated as a tool-use when it
+    exposes ``name`` + ``id``, and as a tool-result when it exposes
+    ``tool_use_id`` + ``content``.
+    """
+
+    agent_tool_use_ids: set[str] = set()
+    answers: list[str] = []
+    for message in messages:
+        content = getattr(message, "content", None)
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            name = getattr(block, "name", None)
+            block_id = getattr(block, "id", None)
+            if name in agent_tool_names and block_id is not None:
+                agent_tool_use_ids.add(block_id)
+                continue
+            tool_use_id = getattr(block, "tool_use_id", None)
+            if tool_use_id is not None and tool_use_id in agent_tool_use_ids:
+                text = _block_text(getattr(block, "content", None))
+                if text:
+                    answers.append(text)
+    return answers
+
+
 def evidence_from_hook_records(
     skill_tool_events: Sequence[tuple[str, int]] = (),
     edit_event_indices: Sequence[int] = (),
