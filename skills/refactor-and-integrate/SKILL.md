@@ -23,7 +23,7 @@ The active domain skill's stage-load table routes any domain-specific integratio
 
 Use `git diff <BASE_HEAD_SHA>..HEAD` in normal superintegrate after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
-Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail below.
+Review the governing diff line by line, and prune asymmetrically: deletion drops a hunk from the governing diff so no later reviewer sees what vanished, whereas a kept hunk stays reviewable, so the dangerous direction is gated and uncertainty defaults to keep. A hunk that is confident junk — debug prints, reformatting, speculative abstraction, a dead helper, where reverting loses no real work — is reverted. A hunk justified by one of the sources in para 1 is kept and cites that source. A hunk that is scope-ambiguous yet plausibly load-bearing is kept and raised, never reverted on your own authority: a hunk genuinely needed but covered by no source is evidence the task tree is stale, which routes to `superplan §User Feedback and Changing the Task Tree`. The same warrant gates base-current deletions and relocations. A no-change diff still requires the Final Diff Self-Check trail below.
 
 ## Project Doc Audit
 
@@ -52,7 +52,7 @@ Implementers run this immediately before every return or commit, including no-ch
 2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
-5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
+5. **Prune asymmetrically** per §Minimum Net Diff: confident junk is reverted; a justified hunk is kept and cites its source; a scope-ambiguous but plausibly load-bearing hunk is kept and raised (as a `## Review Notes` item when a task file exists, else in the status return), never silently deleted.
 6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `status` is not `approved` and tasks explicitly reopened by accepted review findings.
 
 The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
