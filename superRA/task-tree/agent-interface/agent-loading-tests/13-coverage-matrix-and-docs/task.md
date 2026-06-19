@@ -29,3 +29,5 @@ Success criteria: the README matrix accounts for LC001–LC022 with accurate lay
 ## Planner Guidance
 
 Where a contract remains static-only or proxy-only by harness limitation (e.g. codex skill-load), say so explicitly in the matrix rather than implying live-by-name coverage. If any LC0xx is still uncovered after 08–12, list it as a known gap, not a silent omission.
+
+When recording the CI boundary, add a CI-safe regression test that locks in the deferred-import isolation — assert that importing `sdk_load_harness` (and the 09 codex harness) does not pull `claude_agent_sdk` / codex-cli into `sys.modules` and makes no model call. Task 08's reviewer verified this isolation manually; without a test it can silently regress.
