@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "domains": ["writing"],
+  "domain_canaries": ["audience model"]
+}

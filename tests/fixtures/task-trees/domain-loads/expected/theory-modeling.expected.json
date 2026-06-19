@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "domains": ["theory-modeling"],
+  "domain_canaries": ["comparative statics"]
+}
