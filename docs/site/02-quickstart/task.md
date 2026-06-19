@@ -12,7 +12,7 @@ Run this on day one. You install superRA, point it at a project, and push one pi
 
 ### Prerequisite
 
-**git** is the one real prerequisite — as it is for any agentic coding workflow. The agent commits as it works, and you read and steer through the history. A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills) skill keeps non-git-controlled data in sync across those isolated worktrees.
+**git** is the one real prerequisite — as it is for any agentic coding workflow. The agent commits as it works, and you read and steer through the history. A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) skill keeps non-git-controlled data in sync across those isolated worktrees.
 
 superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). 
 
