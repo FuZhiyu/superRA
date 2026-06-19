@@ -9,6 +9,7 @@ Coverage splits across four layers. The first three run in default CI; the fourt
 | Requirement | Static CI check | Fixture / parser unit test | Hook unit test | Manual live smoke |
 |---|---|---|---|---|
 | Skill-Load Manifest always-loaded + stage + domain rows | [test_contract.py::test_skill_load_manifest_contract_matches_audit](test_contract.py#L106) | — | — | loading smokes (indirect; see limitation below) |
+| Both always-loaded skills (`using-superra` + `report-in-markdown`, LC001) in the dispatched role's context | [test_always_loaded_live.py::test_green_static_backbone_real_role_specs](test_always_loaded_live.py#L209) (static frontmatter contract — the deterministic backbone) + [test_always_loaded_live.py](test_always_loaded_live.py) canary-evaluator green/red | — | — | Claude introspection canary ([always_loaded_live.py](always_loaded_live.py)); Codex body-load canary ([always-loaded-codex-smoke.sh](always-loaded-codex-smoke.sh)) |
 | Role + generated surfaces require manifest and `superra task read` | [test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read](test_contract.py#L128) | — | — | loading smokes (indirect) |
 | Generated `.codex/agents/*.toml` stay aligned with role specs | [test_contract.py::test_codex_generated_agent_drift_check_is_ci_safe](test_contract.py#L158) | — | — | — |
 | Hook registries: Claude vs Codex event sets, matchers, commands | [test_contract.py::test_hook_registry_boundaries_for_claude_and_codex](test_contract.py#L180) | — | same test | — |
@@ -41,6 +42,26 @@ Claude's `claude -p` stream does not give skill-load-by-name evidence the shared
 - [test_sdk_load_evidence.py](test_sdk_load_evidence.py) — CI-safe unit test driving the evidence/assertion/contract/canary layer on synthetic records and the real role specs: on-demand ordering green + two red cases (required skill never loaded; skill loaded only after the first edit); the frontmatter contract green (real specs) + red (missing skill / missing file); the behavioral canary green + red.
 
 The downstream live smokes (always-loaded / per-stage / per-domain skill coverage) call `run_skill_load_session` and assert on the returned evidence — they consume the harness, not raw SDK calls. A required skill that never loads (e.g. `report-in-markdown`) is a real finding in the loading contract to escalate, not a reason to weaken the assertion.
+
+### Always-loaded skill live coverage (LC001, manual)
+
+Both always-loaded skills (`using-superra`, `report-in-markdown`) must be in the dispatched role's context before any task-file or code edit. The two harnesses establish this differently because their loading mechanisms differ:
+
+- **Claude autoloads** both skills via the agents' frontmatter `skills: [...]`, so an autoloaded skill is *invisible* to the `Skill` PreToolUse hook — **zero `Skill`-tool loads is the expected, correct signal, not a failure**. The Claude side evidences the contract two ways: (1) the **static frontmatter contract** ([sdk_load_evidence.py](sdk_load_evidence.py)::`check_always_loaded_frontmatter`, reused via [always_loaded_live.py](always_loaded_live.py)::`check_claude_always_loaded_static`) — the deterministic CI backbone; and (2) a **live discriminating introspection canary** that dispatches the real `superRA:implementer` and asks it to state its markdown file-citation rule *without loading any skill or reading any file*, then checks the answer recites `report-in-markdown`'s anchor-link rule (links *with line anchors*, *not* backtick-wrapped paths) **with zero `Skill` loads of that skill**. The rule is chosen to discriminate against the model default: a bare file-link format would not, so the canary keys off the "line anchors" requirement *and* the explicit "not backticks" contrast, and rejects a `NO_RULE` or backtick-path answer. The introspection prompt, the discriminating `BehavioralCanarySpec`, and the evaluator live in [always_loaded_live.py](always_loaded_live.py).
+- **Codex does not autoload**, so a frontmatter-only skill never enters context; the role-spec body instruction is what loads the always-loaded skills. The Codex side uses 09's canary convention ([codex_load_evidence.py](codex_load_evidence.py)): per-skill `CanarySpec` rows whose skill-unique tokens are only producible if the skill body loaded — `report-in-markdown` running its own `check_markdown.py` self-diagnose CLI, and `using-superra`'s `superra task read` wrapper convention — each checked in a `command_execution` or at an artifact field. This exercises the role-spec body-load path that substitutes for Claude's autoload. Fixture: [tests/fixtures/task-trees/always-loaded-canary](../fixtures/task-trees/always-loaded-canary); evaluator: [check_always_loaded_smoke.py](check_always_loaded_smoke.py).
+
+The live SDK dispatch is mildly nondeterministic (it leans on the top-level model to issue the Task dispatch), so the Claude introspection canary defaults to `CLAUDE_MODEL=sonnet` (sonnet dispatched reliably; haiku was flaky) and runs a small pass@k retry window (`attempts`, default 3), passing if any attempt recites the rule. A genuine failure — the rule absent from a reliable dispatch, or a non-zero always-loaded `Skill` load — is a real LC001 loading-contract finding to escalate, not an assertion to relax.
+
+[test_always_loaded_live.py](test_always_loaded_live.py) drives both evaluators (Claude introspection green + the NO_RULE / backtick-default / anchor-without-contrast / autoload-violation red cases; Codex canary green + red) plus the static backbone on synthetic inputs — no model call, no SDK/codex-cli import. Run the live canaries:
+
+```bash
+# Claude introspection canary (default sonnet for reliable dispatch; pass@k):
+RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+  python tests/harness-instruction-following/always_loaded_live.py
+
+# Codex always-loaded body-load canary (set CODEX_MODEL or use the CLI default):
+RUN_LIVE_HARNESS=1 bash tests/harness-instruction-following/always-loaded-codex-smoke.sh
+```
 
 Smoke-check the live path standalone:
 

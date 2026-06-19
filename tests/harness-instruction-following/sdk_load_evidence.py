@@ -64,12 +64,24 @@ class SkillLoadEvidence:
 
     skill_loads: list[SkillLoadRecord] = field(default_factory=list)
     first_edit_index: int | None = None
+    assistant_texts: list[str] = field(default_factory=list)
 
     @property
     def loaded_skill_names(self) -> set[str]:
         """Every on-demand skill name the ``Skill`` hook observed loading."""
 
         return {record.name for record in self.skill_loads}
+
+    @property
+    def assistant_text(self) -> str:
+        """All assistant text blocks from the session, joined.
+
+        Empty unless the live runner was asked to capture text (the introspection
+        canary in task 10 needs the dispatched agent's *answer*, not just its
+        skill loads). Other callers ignore it.
+        """
+
+        return "\n".join(self.assistant_texts)
 
     def first_load_index(self, skill_name: str) -> int | None:
         """Earliest event index at which ``skill_name`` was observed loading."""

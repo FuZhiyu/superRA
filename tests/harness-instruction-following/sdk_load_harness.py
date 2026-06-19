@@ -140,11 +140,14 @@ async def _run_session_async(
     plugin_dir: Path,
     agent_type: str,
     allowed_tools: list[str],
+    capture_text: bool,
 ) -> SkillLoadEvidence:
     # Deferred import: keeps claude_agent_sdk off every default-CI import path.
     from claude_agent_sdk import (  # type: ignore import-not-found
+        AssistantMessage,
         ClaudeAgentOptions,
         HookMatcher,
+        TextBlock,
         query,
     )
 
@@ -192,9 +195,15 @@ async def _run_session_async(
         f"instruction, then stop:\n\n{prompt}"
     )
 
-    async for _message in query(prompt=dispatch_prompt, options=options):
-        # The hooks accumulate the evidence; messages are drained to completion.
-        pass
+    async for message in query(prompt=dispatch_prompt, options=options):
+        # The hooks accumulate the skill-load evidence; messages are otherwise
+        # drained to completion. When capture_text is set (the task-10
+        # introspection canary), also accumulate assistant text blocks so the
+        # canary can check the dispatched agent's *answer*, not just its loads.
+        if capture_text and isinstance(message, AssistantMessage):
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    evidence.assistant_texts.append(block.text)
 
     return evidence
 
@@ -207,6 +216,7 @@ def run_skill_load_session(
     plugin_dir: Path | str | None = None,
     agent_type: str = DEFAULT_AGENT_TYPE,
     allowed_tools: list[str] | None = None,
+    capture_text: bool = False,
 ) -> SkillLoadEvidence:
     """Run one live SDK session that dispatches the real role agent.
 
@@ -214,6 +224,12 @@ def run_skill_load_session(
     manifest-driven on-demand loads fire, and returns the structured skill-load
     evidence captured by the in-process ``Skill`` hook (including loads inside
     the dispatched subagent, tagged via ``SkillLoadRecord.source``).
+
+    Set ``capture_text=True`` to also accumulate the dispatched agent's assistant
+    text into ``SkillLoadEvidence.assistant_texts`` — needed by the task-10
+    always-loaded introspection canary, which checks the *answer* the agent gives
+    (its recited file-citation rule) against zero ``Skill`` loads. Default
+    callers (the ordering smokes) leave it off and ignore the field.
 
     Raises ``RuntimeError`` if the live gate (``RUN_LIVE_HARNESS=1``) is not set,
     so a CI run that imports this module by mistake fails loudly rather than
@@ -238,6 +254,7 @@ def run_skill_load_session(
             plugin_dir=resolved_plugin,
             agent_type=agent_type,
             allowed_tools=resolved_tools,
+            capture_text=capture_text,
         )
     )
 
