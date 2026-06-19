@@ -237,12 +237,12 @@ assert_contains \
 assert_contains \
   "Refactor and integrate uses Sync impact as evidence only" \
   "skills/refactor-and-integrate/SKILL.md" \
-  "use it to justify existing post-sync hunks; it does not create new refactor targets."
+  "it does not create new refactor targets"
 
 assert_contains \
-  "Refactor and integrate requires line by line governing diff review" \
+  "Refactor and integrate requires hunk-by-hunk governing diff review" \
   "skills/refactor-and-integrate/SKILL.md" \
-  "Review the governing diff line by line."
+  "Walk the governing diff hunk by hunk"
 
 assert_absent \
   "Refactor and integrate no longer owns drift-test quality" \
