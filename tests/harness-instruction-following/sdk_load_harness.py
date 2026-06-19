@@ -115,27 +115,21 @@ def _skill_name_from_tool_input(input_data) -> str:
     )
 
 
-def _is_subagent_context(context) -> bool:
-    """Best-effort: did this hook fire for tool use inside a dispatched subagent?
+def _is_subagent_load(input_data) -> bool:
+    """Did this hook fire for tool use inside a Task-dispatched subagent?
 
-    The SDK passes a hook context; subagent tool-lifecycle hooks carry a parent
-    tool-use id / agent marker. Key names are not pinned across SDK versions, so
-    this probes the plausible spellings and degrades to ``False`` (top-level)
-    rather than crashing. It feeds the ``source`` tag only — the orchestrator
-    live-probes the actual delivery and confirms subagent loads are captured.
+    The subagent attribution lives in the hook ``input_data`` (the SDK's
+    ``_SubagentContextMixin``), not the ``context`` argument (which is just
+    ``{'signal': None}``). Per the SDK, ``agent_id`` is "present only when the
+    hook fires from inside a Task-spawned sub-agent; absent on the main thread",
+    so it is the reliable discriminator; ``agent_type`` corroborates. Live-probed
+    against the installed SDK: a subagent ``Skill`` load carries
+    ``agent_id`` + ``agent_type='superRA:implementer'`` in ``input_data``.
     """
 
-    if context is None:
+    if not isinstance(input_data, dict):
         return False
-    for attr in ("parent_tool_use_id", "agent_type", "agent_id", "subagent_type"):
-        value = getattr(context, attr, None)
-        if value:
-            return True
-    if isinstance(context, dict):
-        for key in ("parent_tool_use_id", "agent_type", "agent_id", "subagent_type"):
-            if context.get(key):
-                return True
-    return False
+    return bool(input_data.get("agent_id") or input_data.get("agent_type"))
 
 
 async def _run_session_async(
@@ -163,7 +157,7 @@ async def _run_session_async(
         # source tags where the load happened so the orchestrator can confirm,
         # on the live path, that loads inside the dispatched subagent are
         # captured (the linchpin for the 11/12 stage/domain smokes).
-        source = "subagent_skill_tool" if _is_subagent_context(context) else "skill_tool"
+        source = "subagent_skill_tool" if _is_subagent_load(input_data) else "skill_tool"
         evidence.skill_loads.append(
             SkillLoadRecord(name=name, event_index=index, source=source)
         )
