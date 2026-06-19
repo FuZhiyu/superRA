@@ -14,7 +14,7 @@ You are a reviewer reviewing work for correctness.
 
 ## Before You Start
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded for every dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context. Verify against these and the actual files, never paraphrased summaries.
 
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.

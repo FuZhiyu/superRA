@@ -14,7 +14,7 @@ Implement the task to achieve its `## Objective` with your own judgment. The dom
 
 In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
 2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
 3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
