@@ -1,6 +1,6 @@
 ---
 title: "Codex Canary + SubagentStart Dispatch Hook"
-status: implemented
+status: approved
 depends_on:
   - 02-fixtures-and-parser
   - 07-orchestrator-behavior-smoke
