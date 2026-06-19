@@ -53,7 +53,7 @@ Implementers run this immediately before every return or commit, including no-ch
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Prune asymmetrically** per §Minimum Net Diff: confident junk is reverted; a justified hunk is kept and cites its source; a scope-ambiguous but plausibly load-bearing hunk is kept and raised (as a `## Review Notes` item when a task file exists, else in the status return), never silently deleted.
-6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `status` is not `approved` and tasks explicitly reopened by accepted review findings.
+6. **Respect the dispatch scope.** Refactor implementer and integration reviewer act on the reopened or changed tasks in the dispatch, plus any `approved` task the branch-wide surviving-diff sweep reopens when it surfaces an unjustified hunk touching that task.
 
 The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
 

@@ -35,12 +35,12 @@ The resolver only diagnoses and routes — the workflow owning the selected laye
 
 - Affected frontier: tasks and workflow layer(s) that need work.
 - Preserved-approved tasks: tasks whose `status` remains `approved`.
-- Next safe workflow owner and entry layer: planning, implementation / review, validation / completion, integration, documentation, or final merge / PR.
+- Next safe workflow owner and entry layer: planning, implementation / review, validation / completion, integration, maturation, or final merge / PR.
 - Required stop point: any researcher decision or irreparable contradiction that must be resolved before action.
 
 **Choose the next safe action:**
 
-1. Compare the decision with the canonical workflow order: task-tree repair or change protocol -> implementation / review -> reproducibility verification -> superimplement Step 4 disposition -> integration -> documentation -> final merge / PR.
+1. Compare the decision with the canonical workflow order: task-tree repair or change protocol -> implementation / review -> reproducibility verification -> superimplement Step 4 disposition -> integration -> maturation -> final merge / PR.
 2. Enter the earliest invalid layer for the affected frontier. Invoke the workflow skill that owns that layer; the workflow then runs its local mechanics and gates.
 3. For implementation or review, work only on tasks whose dependencies are satisfied and whose local status is not valid for that layer.
 4. If all affected implementation tasks are approved but reproducibility or the Step 4 disposition is missing, enter `superimplement` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
@@ -53,7 +53,7 @@ The resolver only diagnoses and routes — the workflow owning the selected laye
 - Do not clear unrelated task-local statuses when only a changed task's downstream is affected.
 - Do not advance past implementation work without reviewer approval or documented adjudication of blocking review items.
 - Do not enter integration before implementation reproducibility and the Step 4 disposition are current.
-- Do not merge or open a PR before integration, documentation, and base-freshness gates are valid for the current frontier.
+- Do not merge or open a PR before integration, maturation, and base-freshness gates are valid for the current frontier.
 
 ## Changes of the Task Tree
 
@@ -68,7 +68,7 @@ Stop and use `AskUserQuestion` (plain text if the harness lacks the tool) for ex
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, task tree with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
-3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `superimplement` Step 4; drift-test selection at `superintegrate` Protect; doc disposition at `superintegrate` Document; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
+3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `superimplement` Step 4; drift-test selection at `superintegrate` Protect; the distillation question at `superintegrate` Mature & Consolidate; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
 
 The common test: the agent cannot answer from code and data alone, and the answer shapes downstream work another agent could not reconstruct without it.
 

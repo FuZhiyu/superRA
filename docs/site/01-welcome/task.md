@@ -63,7 +63,7 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
     <rect x="171" y="198" width="3" height="46" rx="1.5" fill="var(--accent)"/>
     <text x="188" y="213" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">INTEGRATE</text>
     <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Protect results &middot; Sync with base</text>
-    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Integrate/refactor &middot; Document &middot; Finish</text>
+    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Refactor &middot; Mature &amp; consolidate &middot; Finish</text>
   </g>
 
   <rect x="298" y="282" width="116" height="36" rx="18" fill="var(--st-ok)" stroke="var(--st-ok-t)"/>

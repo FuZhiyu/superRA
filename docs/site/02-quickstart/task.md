@@ -126,7 +126,7 @@ Superintegration consists of five stages, and each stage guards against a differ
 1. **Protect** — pin the key results with small automated checks, so a later refactor that moves a number you care about fails loudly instead of slipping through silently.
 2. **Sync** — fold in your base branch by intent, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`.
 3. **Refactor** — fit the work to your codebase with a minimal, reviewable diff instead of a pile of single-shot scripts.
-4. **Document** — mature the task findings into documentation a future reader can follow.
+4. **Mature & Consolidate** — settle the task tree's shape (fold finished scaffolding into the tasks that own it, prune what is not worth keeping) and mature the surviving findings into documentation a future reader can follow.
 5. **Finish** — ship by PR or merge.
 
 The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).

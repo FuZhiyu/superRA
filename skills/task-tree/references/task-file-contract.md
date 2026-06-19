@@ -56,7 +56,19 @@ Results live in each task's `## Results` section. The same section matures throu
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. Re-implementation replaces a task's results; it does not append history.
 - When implementation materially deviates from `## Planner Guidance`, `## Results` states the guidance not followed, the chosen route, and why it still satisfies `## Objective`.
-- **Stage 2 — Permanent record (INTEGRATE Document).** Findings stay in task files; the matured reader-facing narrative is synthesized upward into the highest task the integration actually touched, per affected subtree — not the global root, not a separate report doc — with links down to the leaf tasks holding per-task evidence. Leaf `## Results` stay as lightly-cleaned evidence and caveats.
+- **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** Each touched task's `## Results` is distilled to one of the dispositions below. The structural fold that moves or removes the task is `skills/superplan/references/consolidation.md`'s; the disposition here sets how much of the results survive. The disposition is chosen in the merged stage's combined proposal and arrives to the implementer as a `## Revision Notes` instruction on the affected task; `superintegrate/SKILL.md` §Mature & Consolidate owns when and who decides.
+
+### Maturation Disposition Menu
+
+Distilling a task's `## Results` at Stage 2 picks one disposition:
+
+- **Mature** — synthesize the substantive findings into a reader-facing narrative at the durable home: the highest task the integration actually touched, per affected subtree — not the global root, not a separate report doc — with links down to the leaf tasks holding per-task evidence, whose `## Results` stay as lightly-cleaned evidence and caveats. The default for key or substantive results. A *short retained subsection* — a few findings kept in place rather than synthesized upward — is the lighter end of this disposition when a full narrative would over-state minor work.
+- **Trim-to-pointer** — when a task's own output *is* a document (a report, rendered note, manuscript section), reduce its `## Results` to a one-line pointer to that document, so the document is the single source of truth instead of a summary that duplicates it and drifts.
+- **Drop** — when a task is a minor fix not worth surfacing as a feature, trim heavily or drop its `## Results`, because each retained file is added drift surface to maintain.
+
+When the consolidation fold removes a task's directory (Merge or Flatten), its distilled results move into the **target** task's `## Results` at the chosen level — a one-line note, a short subsection, or folded into the target's narrative. Nothing is left behind in the deleted directory.
+
+**Guardrail:** key results selected at Protect (`result-protection`) are never dropped. Trimming and dropping apply to non-key, low-value, or document-duplicated results only.
 
 ### Per-task results template
 
@@ -89,7 +101,7 @@ Omit subsections that do not apply.
 - **Planner** — creates task.md with `## Results` section (empty or with placeholder text).
 - **Implementer** — fills and updates `## Results` during execution. On subsequent iterations, replaces the section's prior content in place.
 - **Reviewer** — verifies the assigned task's `## Results` are substantive enough before approval. Concerns are raised in `## Review Notes`.
-- **Orchestrator** — during IMPLEMENT, updates the immediate parent's `## Results` when an approved child produced a major result worth surfacing for monitoring; at INTEGRATE Document, synthesizes the matured narrative into the highest touched task per affected subtree.
+- **Orchestrator** — during IMPLEMENT, updates the immediate parent's `## Results` when an approved child produced a major result worth surfacing for monitoring; at INTEGRATE Mature & Consolidate, proposes each touched task's disposition (§Maturation Disposition Menu) and records it as a `## Revision Notes` instruction for the implementer to execute.
 - **Standalone author** — everything.
 
 Summaries riding higher than a leaf — monitoring rollups and the matured narrative — link down to leaf task files rather than copying every finding up the tree.

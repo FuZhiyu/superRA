@@ -8,15 +8,15 @@ description: "Integrate code-complete superRA work. Requires superRA:using-super
 Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified branch through five steps:
 
 ```
-Protect   -> protect key results (default: drift tests)
-Sync      -> bring the branch onto the current base via semantic-merge
-Integrate -> refactor with Sync context (do-then-verify), then pass integration review
-           -> [consolidation gate] judge the tree clean-enough vs needs-a-pass before Document
-Document  -> mature task.md ## Results sections for reader-facing clarity
-Finish    -> final freshness check, PR or fast-forward, and cleanup
+Protect              -> protect key results (default: drift tests)
+Sync                 -> bring the branch onto the current base via semantic-merge
+Integrate            -> refactor with Sync context (do-then-verify), then pass integration review
+Mature & Consolidate -> distil each touched task: where its content lands + how
+                        much of its ## Results survives, decided as one act
+Finish               -> final freshness check, PR or fast-forward, and cleanup
 
 Any step -> superplan §User Feedback and Changing the Task Tree
-           when scope, methodology, task structure, or APPROVED status changes materially
+           when scope, methodology, task structure, or task status changes materially
 ```
 
 **Announce at start:** "I'm using the superintegrate skill to prepare this work for integration."
@@ -30,7 +30,7 @@ Legitimate stop points (fold every answer into the relevant task objective **bef
 - **Protect:** key-result protection confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
 - **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the first-pass self-review or the integration reviewer.
-- **Document:** maturation scope when project guidance is silent.
+- **Mature & Consolidate:** the distillation question, one per touched subtree, always fires before any execution — even a clean subtree gets an explicit confirm.
 - **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
 ## Dispatch Convention
@@ -43,7 +43,7 @@ A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer a
 
 Drift tests are the default protection mechanism, guarding key results through Sync, Integrate, Finish, and future work. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `status:` not `approved` plus orchestrator-declared related tasks from `superplan §User Feedback and Changing the Task Tree`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to the tasks this integration reopens or changes — reopened/changed tasks plus orchestrator-declared related tasks from `superplan §User Feedback and Changing the Task Tree`; running the suite is not scoped.
 
 ### Steps
 
@@ -255,68 +255,68 @@ Run the full drift-test suite again. When it passes and integration review is AP
 - remove every temporary task-local `## Sync Impact` section, unless a lasting task assumption still belongs in the task.md — in which case fold that assumption into the task's `## Objective` and remove the section. Then run `superra task check` (warn-only `sync-impact` category) and confirm it flags no surviving `## Sync Impact`.
 - commit the closeout edit; that commit plus the in-scope tasks' `status: approved` is the record that Integrate closed.
 
-## Consolidation Gate
+## Mature & Consolidate
 
-Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage.
+Once Integrate closes, every task this integration touched is a distillation candidate: its work is settled and verified. For each touched task, decide and execute as **one act** the structural fold (content merged into the parent, kept as its own task, directory removed) together with the results altitude (dropped / a folded pointer or one-line note / a short retained subsection / a matured reader-facing narrative at the durable home). Run this stage once, after Integrate, on final results — the fold actions are atomic over objective + results + directory and must not run on pre-Integrate state.
 
-1. Load `superplan/references/task-tree-design.md` and apply its durable-home and update-task lifecycle rules to the affected tree before Document. The check is **whole-tree within the affected tree**, not frontier-internal: compare every task and subtree, including approved and in-flight update tasks, against its parent and other candidate durable owners. Run `superra task tree`, `superra task dag`, and `superra task check --category placement`; use the placement warnings as advisory evidence alongside the manual survey.
-2. Record the verdict — clean-enough or needs-a-pass, one line — in the commit message for this gate (the Document closeout commit when clean-enough, or the consolidation commit when needs-a-pass) so a later session sees the judgment was made in git.
-3. A clean-enough verdict is invalid while a temporary update task survives as a misplaced durable subtree, or while an action-verb parent that should mature into a stable concern remains framed as the update episode. On needs-a-pass, load `superplan/references/consolidation.md` and run its survey → classify → propose → approve → execute protocol (atomic commit), then enter Document on the consolidated tree. Material merge, prune, restructure, mature/rename, and status-invalidating scope expansion still route through `superplan §User Feedback and Changing the Task Tree` — the gate triggers the assessment, it does not grant authority to restructure approved work unilaterally.
+Screening and the user-facing proposal are orchestrator inline work, not a dispatched implementer, because consolidation is user-involving. Execution is dispatched.
 
-## Document
+### Step 1: Screen the whole affected tree (mandatory)
 
-Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-tree/references/task-file-contract.md` §Results Shape).
+Load `superplan/references/task-tree-design.md` and survey every task and subtree the integration touched — including approved and in-flight update tasks — against its parent and other candidate durable owners. Run `superra task tree`, `superra task dag`, and `superra task check --category placement`; treat placement warnings as advisory evidence alongside the manual survey. Identify every update-task, action-verb parent, and misplacement, and per touched subtree draft the distillation: each task's durable home, the structure change that realizes it, and the altitude its `## Results` distils to. Key results selected at Protect are never dropped; when a task's own output *is* a document, distil its `## Results` to a pointer to that document.
 
-### Step 1: Identify maturation scope
+### Step 2: Ask the distillation question, one per touched subtree (always fires)
 
-Walk the `superRA/` tree and identify the highest-level task this integration touched per affected subtree — those are the homes that carry the matured narrative — plus any leaf tasks whose `## Results` still need light evidence cleanup. Trivial results (e.g., "renamed variable, no findings") need no maturation. The default home for each affected subtree is its highest touched task; ask only when project guidance is silent on whether to confirm a different home:
+Ask one options-with-recommendation question per touched subtree (`AskUserQuestion`, plain text if unavailable), across as many calls as the harness per-call limit takes. The question always fires — a clean subtree still gets one, with the recommended option carrying no fold ("keep as-is, mature at <home>"). Each question's options are that subtree's candidate consolidation actions plus an explicit keep-as-is option that lets the user veto; mark the orchestrator's screened recommendation first. The recommended option states the proposed structural action(s) and the resulting `## Results` altitude:
 
 ```text
-This integration touched these subtrees; the matured narrative defaults
-to each subtree's highest touched task:
-- [highest-touched-task-1: one-line summary]
-- [highest-touched-task-2: one-line summary]
-
-Confirm these as the maturation homes, or name a different home per subtree?
+Subtree <subtree-path> — consolidate how?
+  ▸ [Recommended] Fold <task-a> into <parent> (results → one-line note);
+    drop <task-c> (already in <parent> diff); <task-b> matures at <home>
+  ▸ Keep all tasks as-is; mature each in place
+  ▸ <other meaningful variant — e.g. a different durable home for <task-b>>
 ```
 
-Fold the answer into the relevant highest-touched task's `## Results` / `## Revision Notes` before dispatching.
+Material tree changes route through `superplan §User Feedback and Changing the Task Tree` for explicit approval — pruning a task whose result a reader would expect, merging substantive concerns, or a scope-expansion that invalidates downstream. Routine distillation is the recommended default the user can veto. Execution cannot begin before the answer.
 
-### Step 2: Dispatch doc-writer
+### Step 3: Record, then dispatch execution
+
+Fold each subtree's decision into `## Revision Notes` on the affected tasks, then dispatch implementer(s) to execute the distillation — structural folds and results altitude together, per subtree (fan out per subtree when large):
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
-  Stage: documentation
-  Task: Mature results for reader-facing clarity
-  Tasks in scope: <task paths whose results need maturation>
+  Stage: maturation
+  Task: Execute the distillation for <subtree-path>
+  Tasks in scope: <task paths in this subtree>
 
-  Additionally: mature each in-scope task's `## Results` section per
-    `task-tree/references/task-file-contract.md` §Results Shape: fact-check against
-    code outputs, restructure for reader clarity, materialize figures when
-    needed using `report-in-markdown`, and ensure notation consistency across
-    tasks. Edit task.md files in place. Land recoverable commits (one per
-    task or logical group) and report which sub-commits landed.
+  Additionally: execute the recorded `## Revision Notes` distillation —
+    structural folds per `superplan/references/consolidation.md`, and the
+    `## Results` altitude per `task-tree/references/task-file-contract.md`
+    §Results Shape (drop / pointer / short subsection / matured narrative),
+    materializing figures with `report-in-markdown` where a matured home needs
+    them. Edit task.md files in place; land one recoverable commit per task or
+    logical group and report which sub-commits landed.
 ```
 
-### Step 3: Dispatch doc-reviewer
+### Step 4: Whole-tree review
+
+Dispatch one whole-tree reviewer for structure (not parallelized); results distillation may fan out per subtree when large:
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: documentation
-  Task: Review matured results
+  Stage: maturation
+  Task: Verify consolidated structure and distilled results
   Git range: <BASE_SHA>..<HEAD_SHA>
-  Tasks in scope: <same task paths>
+  Tasks in scope: <whole affected tree>
 
-  Additionally: Review each in-scope task's `## Results` section per
-    `task-tree/references/task-file-contract.md` §Results Shape, including Stage 2
-    maturation at the highest-touched-task narrative homes, retained leaf
-    evidence, and task-local figure attachments.
+  Additionally: verify the consolidated structure — no update-task or
+    action-verb scaffolding left stranded, placement clean, Protect key
+    results retained — and the distilled `## Results` per
+    `task-tree/references/task-file-contract.md` §Results Shape.
     <prior-round adjudication notes if re-dispatching>
 ```
 
-On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a documentation finding traces to the code, re-enter Integrate.
-
-On APPROVE, commit the matured docs.
+On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a finding traces to the code, re-enter Integrate. On APPROVE, commit the consolidated, matured tree.
 
 ## Finish
 
@@ -367,13 +367,14 @@ Report what was published or landed and what was cleaned up.
 ## When to Lighten
 
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to an inline pruning sweep plus a short reviewer pass.
-- **Small changes:** Keep the same six steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
+- **Small changes:** Keep the same five steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** The assessment gate always runs, but a clean-enough tree skips the consolidation pass entirely — see §Consolidation Gate.
+- **Task tree consolidation:** The distillation question always fires, but a clean subtree's content scales to zero — an explicit confirm, no structural fold — see §Mature & Consolidate.
 
 ## Red Flags
 
 - Refactoring before Sync when the base has advanced, or using `PRE_SYNC_BASE_SHA` (not `BASE_HEAD_SHA`) as the post-sync minimum-net-diff baseline.
 - Parallelizing Sync, or parallelizing refactor before Sync lands.
 - Reviewing the post-sync diff before the codebase-fit pass produced it, or closing Integrate with no Final-Diff-Self-Check trail.
+- Reaching Mature & Consolidate execution without the distillation question's answer, or running the fold on pre-Integrate state instead of final results.
 - Entering Finish without re-checking whether the base advanced since Integrate.
