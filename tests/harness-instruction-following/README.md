@@ -87,12 +87,12 @@ The Claude smokes need a logged-in `claude` CLI; the Codex smokes need a logged-
 
 ### Expected orchestrator dispatch evidence per harness
 
-The evaluator keys off the harness's own dispatch event shape, never a prose claim:
+The evaluator keys off the harness's own dispatch signal, never a prose claim:
 
-- **Claude** exposes a subagent dispatch as a `Task` / `Agent` tool event carrying a `subagent_type` of `superRA:implementer` or `superRA:reviewer`.
-- **Codex** exposes it as `spawn_agent(agent_type="superra_implementer" / "superra_reviewer")`.
+- **Claude** exposes a subagent dispatch as a `Task` / `Agent` tool event carrying a `subagent_type` of `superRA:implementer` or `superRA:reviewer`. The smoke keys off these events.
+- **Codex** exposes neither a `spawn_agent` item in the JSONL nor any skill-load event, so dispatch is observed out-of-band: a `SubagentStart` hook (one entry per agent type as the matcher) appends each dispatched agent type to a dispatch log via [subagent_start_hook.py](subagent_start_hook.py). The codex orchestrator smoke passes the log to the evaluator with `--dispatch-log` and asserts both `superra_implementer` and `superra_reviewer` appear in it. This supersedes JSONL-based dispatch detection for the codex path; the claude path is unchanged. The hook disambiguates by the agent-type payload field, not `session_id`.
 
-The smoke passes when both an implementer and a reviewer dispatch event are present.
+The smoke passes when both an implementer and a reviewer dispatch are observed (claude: dispatch events; codex: SubagentStart log sentinels).
 
 **When the documented-exception fallback is acceptable.** If a harness cannot expose subagent dispatch events at all, the smoke passes-with-skip only when a single transcript event both names a direct-mode switch with reviewer preservation *and* names one of `superimplement`'s three documented direct-mode exceptions: the harness lacks subagent support, the user explicitly requested direct mode, or the task is documented as trivial enough for direct mode. Bare co-occurrence of "direct mode" and "reviewer" without a documented exception does not qualify — a fabricated or undocumented reason fails the smoke, so a genuinely missing dispatch cannot be masked. A main agent that silently implements inline with neither dispatch events nor a documented fallback fails.
 
@@ -100,7 +100,7 @@ The smoke passes when both an implementer and a reviewer dispatch event are pres
 
 Some behaviors are subjective or unobservable, so the suite covers them statically or not at all rather than asserting them on a model:
 
-- **Whether a specific skill or reference was loaded into the model's context.** Neither harness emits a structural skill-load event the parser can tie to the manifest by name. The loading smokes therefore assert the strongest available observables — task-read command events, marker read events, and an artifact whose sentinel values can only be produced after reading the required context — and leave manifest / role-surface load expectations to the CI-safe static contract tests.
+- **Whether a specific skill or reference was loaded into the model's context.** Neither harness emits a structural skill-load event the parser can tie to the manifest by name. The loading smokes therefore assert the strongest available observables — task-read command events, marker read events, and an artifact whose sentinel values can only be produced after reading the required context — and leave manifest / role-surface load expectations to the CI-safe static contract tests. On **Claude**, the SDK harness ([sdk_load_evidence.py](sdk_load_evidence.py)) recovers skill-load-by-name evidence via in-process hooks. On **Codex** (no skill-load event at all), the stage/domain/always-loaded smokes (10–12) use the **canary / side-effect convention** in [codex_load_evidence.py](codex_load_evidence.py): a `CanarySpec` names a skill-unique token the fixture task can only emit if the skill body loaded — either in a prescribed command (a `command_execution` in the JSONL) or at a field of the output artifact — and `evaluate_canary` scans both sources. An absent canary is a real "skill body did not load" finding to escalate.
 - **The quality or correctness of generated prose.** Out of scope by design; the contract is the interface, not the writing.
 - **Direct-mode policy choices beyond the documented-exception signal.** Direct-mode exceptions are observable only when the agent states the fallback reason and dispatch path (load-contract SF004), so the orchestrator smoke accepts either dispatch evidence or an explicit documented fallback, and never infers a fallback from the absence of spawn events.
 - **Terminology drift** such as `Stage: protection` versus older `drift-test` wording (load-contract SF002), and root-level vs `hooks/` registry paths (SF001). These are static lint / follow-up findings, not live-agent behavior assertions.

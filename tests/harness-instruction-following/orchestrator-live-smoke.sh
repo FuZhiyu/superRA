@@ -95,15 +95,26 @@ elif [ "$HARNESS" = codex ]; then
   CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
   CODEX_PROFILE_FILE="$CODEX_HOME_DIR/${CODEX_PROFILE_NAME}.config.toml"
   mkdir -p "$CODEX_HOME_DIR"
-  python3 - "$REPO_ROOT" "$CODEX_PROFILE_FILE" <<'PY'
+  # Codex JSONL hides spawn_agent, so dispatch is observed out-of-band via a
+  # SubagentStart hook (matcher = agent type) that appends each dispatched agent
+  # type to this log. This supersedes JSONL-based dispatch detection for the
+  # codex orchestrator path; the claude path still keys off Task/Agent events.
+  SUBAGENT_LOG="$TMPROOT/codex-dispatch.log"
+  : >"$SUBAGENT_LOG"
+  python3 - "$REPO_ROOT" "$CODEX_PROFILE_FILE" "$LIB_DIR/subagent_start_hook.py" "$SUBAGENT_LOG" <<'PY'
 import sys
-repo, out = sys.argv[1], sys.argv[2]
+repo, out, hook_script, subagent_log = sys.argv[1:5]
 
 def cmd(name):
     return (
         f'env PLUGIN_ROOT="{repo}" CLAUDE_PLUGIN_ROOT="{repo}" '
         f'/bin/sh "{repo}/hooks/run-hook.cmd" {name}'
     )
+
+def subagent_cmd():
+    # Run the SubagentStart hook directly (it is a PEP 723-free stdlib script),
+    # passing the dispatch-log path via env. The payload arrives on stdin.
+    return f'env SUPERRA_SUBAGENT_LOG="{subagent_log}" python3 "{hook_script}"'
 
 def toml_string(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -112,7 +123,15 @@ with open(out, "w", encoding="utf-8") as f:
     f.write("[[hooks.UserPromptSubmit]]\n")
     f.write("[[hooks.UserPromptSubmit.hooks]]\n")
     f.write('type = "command"\n')
-    f.write(f"command = {toml_string(cmd('autoload-superra'))}\n")
+    f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
+    # One SubagentStart hook per agent type (matcher = agent type). The hook
+    # disambiguates by the agent-type payload field, not session_id.
+    for agent_type in ("superra_implementer", "superra_reviewer"):
+        f.write("[[hooks.SubagentStart]]\n")
+        f.write(f'matcher = "{agent_type}"\n')
+        f.write("[[hooks.SubagentStart.hooks]]\n")
+        f.write('type = "command"\n')
+        f.write(f"command = {toml_string(subagent_cmd())}\n\n")
 PY
   MODEL_ARGS=()
   if [ -n "${CODEX_MODEL:-}" ]; then
@@ -141,6 +160,8 @@ if [ $rc -ne 0 ]; then
   exit 1
 fi
 
-python3 "$LIB_DIR/check_orchestrator_smoke.py" \
-  --harness "$HARNESS" \
-  --transcript "$OUT"
+CHECK_ARGS=(--harness "$HARNESS" --transcript "$OUT")
+if [ "$HARNESS" = codex ]; then
+  CHECK_ARGS+=(--dispatch-log "$SUBAGENT_LOG")
+fi
+python3 "$LIB_DIR/check_orchestrator_smoke.py" "${CHECK_ARGS[@]}"
