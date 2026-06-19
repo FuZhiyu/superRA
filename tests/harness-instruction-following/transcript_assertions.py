@@ -298,9 +298,20 @@ def check_orchestrator_dispatches(
     *,
     implementer_needles: Sequence[str] = ("superra_implementer",),
     reviewer_needles: Sequence[str] = ("superra_reviewer",),
-    fallback_needles: Sequence[str] | None = None,
+    fallback_exception_needles: Sequence[str] | None = None,
+    fallback_required_needles: Sequence[str] = (),
 ) -> None:
-    """Require implementer/reviewer dispatch evidence or record fallback."""
+    """Require implementer/reviewer dispatch evidence or record fallback.
+
+    The skip-pass fallback is taken only when a single event carries every
+    needle in ``fallback_required_needles`` (the direct-mode + reviewer-
+    preservation signal) *and* at least one needle from
+    ``fallback_exception_needles`` (the documented direct-mode exceptions: no
+    harness subagent support, explicit user override, or task triviality). Mere
+    keyword co-occurrence of "direct mode" and "reviewer" no longer qualifies —
+    a genuinely documented exception must be named, so a fabricated reason
+    cannot mask a missing dispatch.
+    """
 
     implementer_type = implementer_needles[0]
     reviewer_type = reviewer_needles[0]
@@ -312,10 +323,14 @@ def check_orchestrator_dispatches(
         report.observations.append("orchestrator dispatch events observed")
         return
 
-    if fallback_needles and any(event.contains_all(fallback_needles)
-                                for event in events):
+    if fallback_exception_needles and any(
+        event.contains_all(fallback_required_needles)
+        and event.contains_any(fallback_exception_needles)
+        for event in events
+    ):
         report.skipped.append(
-            "subagent dispatch events unavailable; documented fallback observed"
+            "subagent dispatch events unavailable; documented direct-mode "
+            "exception observed with reviewer preserved"
         )
         return
 

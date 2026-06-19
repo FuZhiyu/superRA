@@ -9,9 +9,11 @@ implementing inline:
 - a reviewer subagent dispatch event after it.
 
 When the harness cannot expose subagent dispatch events at all, the run records
-the documented fallback (the agent stating it is using direct mode for one of
-the documented exceptions, with reviewer dispatch still preserved) and skips
-rather than failing on invisible behavior.
+the documented fallback only if the transcript names a direct-mode switch with
+reviewer preservation AND names one of the three documented direct-mode
+exceptions (no harness subagent support, explicit user override, or documented
+task triviality), then skips rather than failing on invisible behavior. A
+fabricated or undocumented "direct mode" reason does not qualify and fails.
 
 Usage:
     check_orchestrator_smoke.py --harness {claude,codex} --transcript <path>
@@ -36,12 +38,27 @@ from transcript_assertions import (  # noqa: E402
     parse_codex_jsonl,
 )
 
-# Needles that mark a documented direct-mode fallback in transcript text:
-# the three documented exceptions in superimplement (no subagent support,
-# explicit user override, documented task triviality). Detected only as a
-# co-occurring pair so a stray "direct mode" mention does not mask a missing
-# dispatch — the agent must both name direct mode and a documented reason.
-FALLBACK_NEEDLES = ("direct mode", "reviewer")
+# The skip-pass fallback is taken only when a single transcript event names a
+# direct-mode switch with reviewer preservation (FALLBACK_REQUIRED_NEEDLES) AND
+# names at least one of superimplement's three documented direct-mode exceptions
+# (FALLBACK_EXCEPTION_NEEDLES: no harness subagent support, explicit user
+# override, or documented task triviality). Requiring a documented exception —
+# not bare "direct mode" + "reviewer" co-occurrence — keeps a fabricated or
+# undocumented reason from masking a genuinely missing subagent dispatch.
+FALLBACK_REQUIRED_NEEDLES = ("direct mode", "reviewer")
+FALLBACK_EXCEPTION_NEEDLES = (
+    "no subagent",
+    "no harness subagent",
+    "lacks subagent",
+    "harness lacks subagent",
+    "without subagent",
+    "subagents unavailable",
+    "user requested",
+    "user override",
+    "user explicitly",
+    "trivial",
+    "triviality",
+)
 
 
 def main() -> int:
@@ -59,7 +76,8 @@ def main() -> int:
     check_orchestrator_dispatches(
         report,
         events,
-        fallback_needles=FALLBACK_NEEDLES,
+        fallback_exception_needles=FALLBACK_EXCEPTION_NEEDLES,
+        fallback_required_needles=FALLBACK_REQUIRED_NEEDLES,
     )
 
     for note in report.observations:

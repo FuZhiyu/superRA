@@ -92,7 +92,10 @@ def test_orchestrator_fallback_is_skip_not_failure():
     events = parse_json_events(
         json.dumps({
             "type": "assistant",
-            "message": "Direct mode fallback: harness lacks subagent events.",
+            "message": (
+                "Switching to direct mode: the harness lacks subagent "
+                "events, so I will play the reviewer role in-session."
+            ),
         })
     )
     report = AssertionReport()
@@ -100,11 +103,41 @@ def test_orchestrator_fallback_is_skip_not_failure():
     check_orchestrator_dispatches(
         report,
         events,
-        fallback_needles=["Direct mode fallback", "harness lacks subagent"],
+        fallback_exception_needles=["lacks subagent", "trivial"],
+        fallback_required_needles=["direct mode", "reviewer"],
     )
 
     report.assert_ok()
     assert report.skipped
+
+
+def test_orchestrator_fallback_rejects_fabricated_reason():
+    # Names "direct mode" and "reviewer" but no documented exception — the
+    # exact masking the Objective forbids. Must fail, not skip-pass.
+    events = parse_json_events(
+        json.dumps({
+            "type": "assistant",
+            "message": (
+                "I feel like using direct mode today, and I will pretend "
+                "to be a reviewer too."
+            ),
+        })
+    )
+    report = AssertionReport()
+
+    check_orchestrator_dispatches(
+        report,
+        events,
+        fallback_exception_needles=[
+            "lacks subagent", "user override", "trivial",
+        ],
+        fallback_required_needles=["direct mode", "reviewer"],
+    )
+
+    assert not report.skipped
+    assert len(report.missing) == 2
+    assert "missing implementer event" in report.missing[0]
+    assert "missing reviewer event" in report.missing[1]
 
 
 def test_task_read_narration_without_command_event_fails():
