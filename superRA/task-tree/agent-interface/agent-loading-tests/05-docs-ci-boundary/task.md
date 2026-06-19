@@ -5,6 +5,7 @@ depends_on:
   - 03-claude-live-smoke
   - 04-codex-live-smoke
   - 06-ci-safe-contract-tests
+  - 07-orchestrator-behavior-smoke
 tags: []
 created: 2026-06-19
 ---
@@ -18,6 +19,7 @@ The documentation should state:
 - Which requirements are covered by static CI checks, fixture/parser unit tests, hook unit tests, and manual live harness tests.
 - How to run the Claude smoke on Haiku and how to override the model.
 - How to run the Codex smoke with `CODEX_MODEL`.
+- How to run the orchestrator-behavior smoke for `superimplement`, what dispatch evidence is expected in each harness, and when a harness-supported fallback is acceptable.
 - Which behaviors are intentionally not tested through model prose or live assertions because they are subjective or unobservable.
 - Why live tests are opt-in and excluded from CI.
 

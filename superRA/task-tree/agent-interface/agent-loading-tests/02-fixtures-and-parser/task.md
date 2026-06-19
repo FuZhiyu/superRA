@@ -28,6 +28,7 @@ The parser/assertion layer should support:
 - Claude stream JSON from `claude -p --include-hook-events --output-format=stream-json --verbose`.
 - Codex JSONL from `codex exec --json`.
 - Structural checks for required file/tool events, especially `superra task read <path>`, before any write/edit/file-change event.
+- Structural checks for orchestrator events in a `superimplement` scenario, such as Claude role-agent dispatch or Codex `spawn_agent(agent_type="superra_implementer")` / `spawn_agent(agent_type="superra_reviewer")`, with documented skip/fallback handling when a harness cannot expose subagent events.
 - Artifact checks for sentinel values emitted by the agent into a small JSON file.
 - Bundled assertions that report all missing behaviors from one run, rather than failing after the first missing sentinel.
 

@@ -18,6 +18,7 @@ At minimum, cover:
 - Domain skills `econ-data-analysis`, `theory-modeling`, `writing`, and `slide-design`.
 - `task_read.py` / `task-file-contract.md` behavior for ancestor context, comments, dependency status, and dependency result non-inheritance.
 - Hook registries in `hooks.json` and `hooks-codex.json`.
+- Workflow-orchestrator behavior from `skills/superimplement/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and `skills/using-superra/references/codex-instructions.md`: `superimplement` default subagent mode, required `agent-orchestration` load before dispatch, implementer/reviewer dispatch templates, and documented direct-mode/fallback exceptions.
 
 ## Planner Guidance
 
@@ -26,4 +27,3 @@ Prefer a compact checked-in artifact such as `tests/harness-instruction-followin
 If the audit finds inconsistent stage terminology or an untestable requirement, record it as a static finding with a proposed owner rather than forcing it into live-agent tests.
 
 ## Results
-
