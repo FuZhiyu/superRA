@@ -1,6 +1,6 @@
 ---
 title: "Add CI-Safe Contract Tests"
-status: not-started
+status: implemented
 depends_on:
   - 01-load-contract-audit
   - 02-fixtures-and-parser
@@ -30,3 +30,22 @@ Prefer `tests/harness-instruction-following/test_contract.py` plus fixture data 
 Do not add live harness commands to CI. These tests should run under the same local pytest path used for other repository tests, or be easy to include there later without credentials.
 
 ## Results
+
+Implemented deterministic CI-safe contract coverage in [test_contract.py](../../../../../tests/harness-instruction-following/test_contract.py#L81-L378). The tests do not call Claude, Codex, or live models; they parse committed source, run local fixture CLIs, and use the existing transcript parser helpers.
+
+Coverage added:
+
+- Load-contract audit indexing, Skill-Load Manifest stage/domain rows, always-loaded skills, and the generic harness-adapter reference pointer are asserted from committed files ([test_contract.py:81](../../../../../tests/harness-instruction-following/test_contract.py#L81)).
+- Canonical role specs, direct-mode references, and checked-in Codex agent TOMLs are checked for Skill-Load Manifest and `superra task read <path>` instructions, plus generated-source headers ([test_contract.py:128](../../../../../tests/harness-instruction-following/test_contract.py#L128)).
+- Codex generated-agent drift is protected by invoking the existing generator `--check` path from the contract suite ([test_contract.py:158](../../../../../tests/harness-instruction-following/test_contract.py#L158)).
+- Claude and Codex hook registry boundaries are parsed statically: Claude retains hard loading gates, while Codex omits Claude-only gates and wires autoload, merge guard, task hook, and plan Stop hooks ([test_contract.py:180](../../../../../tests/harness-instruction-following/test_contract.py#L180)).
+- Workflow-orchestrator dispatch contracts are asserted across `superimplement`, `agent-orchestration`, and the Codex adapter mapping to `superra_implementer` / `superra_reviewer` ([test_contract.py:216](../../../../../tests/harness-instruction-following/test_contract.py#L216)).
+- The fixture `superra task read` behavior, parser ordering behavior, Codex orchestrator sample dispatches, and live-fixture cheapness constraints are covered in the same deterministic test module ([test_contract.py:240](../../../../../tests/harness-instruction-following/test_contract.py#L240)).
+
+Verification:
+
+- `uv run --with pytest python -m pytest tests/harness-instruction-following` passed: 23 tests.
+- `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 7 tests.
+- `bash tests/hooks/test-ensure-using-superra.sh` passed: 16 cases.
+- `bash tests/hooks/test-ensure-agent-orchestration.sh` passed: 16 cases.
+- `bash tests/hooks/test-codex-hooks.sh` passed: 15 cases.
