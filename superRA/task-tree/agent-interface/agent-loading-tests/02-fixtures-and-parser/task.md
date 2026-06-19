@@ -1,6 +1,6 @@
 ---
 title: "Build Fixtures And Transcript Parser"
-status: implemented
+status: revise
 depends_on:
   - 01-load-contract-audit
 tags: []
@@ -51,3 +51,11 @@ Implemented the deterministic harness-instruction infrastructure without adding 
 ### Verification
 
 - `uv run --with pytest python -m pytest tests/harness-instruction-following` — 9 passed.
+
+## Review Notes
+
+1. [MAJOR] The task-read assertion accepts prose as structural evidence. [check_task_reads_before_write](../../../../../tests/harness-instruction-following/transcript_assertions.py#L201-L215) delegates to [check_event_before_write](../../../../../tests/harness-instruction-following/transcript_assertions.py#L179-L198), which only requires an event haystack containing `"superra task read"` and the path. An assistant message like "I will run superra task read agent-loading-bundle/02-primary-loading-task" before a write satisfies the check even though no tool/command event occurred. This violates the objective's requirement for structural file/tool evidence. Require a shell/tool event whose command actually invokes `superra task read <path>`, and add a negative test where assistant narration alone must fail.
+
+2. [MAJOR] The default ordering check ignores writes to files other than `loading-evidence.json`. [check_task_reads_before_write](../../../../../tests/harness-instruction-following/transcript_assertions.py#L201-L215) and [check_file_reads_before_write](../../../../../tests/harness-instruction-following/transcript_assertions.py#L218-L230) both pass `write_path="loading-evidence.json"` into [first_write_index](../../../../../tests/harness-instruction-following/transcript_assertions.py#L289-L299), so a transcript can edit source code or another artifact before any required task/marker read and still pass as long as the required reads precede the final evidence artifact write. The objective asks for required reads before any write/edit/file-change event and the fixture forbids code edits. Make the default boundary the first write event of any path, or add a separate no-extra-writes assertion that fails on earlier non-artifact writes.
+
+3. [MAJOR] Orchestrator dispatch evidence can also pass on assistant prose. [check_orchestrator_dispatches](../../../../../tests/harness-instruction-following/transcript_assertions.py#L233-L265) searches every event for `superra_implementer` and `superra_reviewer`, without verifying a Claude role-agent dispatch, a Codex `spawn_agent` tool call, or an explicit documented fallback event. A plain assistant message saying it should dispatch both roles is recorded as "orchestrator dispatch events observed." Tighten this to recognized dispatch tool/event shapes, keep fallback evidence distinct, and add a negative prose-only test.
