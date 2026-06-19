@@ -1,6 +1,6 @@
 ---
 title: "Claude Agent-SDK Skill-Load Harness"
-status: implemented
+status: approved
 depends_on:
   - 02-fixtures-and-parser
 tags: []
@@ -67,24 +67,3 @@ RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
 - **Both 11/12 linchpins confirmed.** The harness dispatches the real `superRA:implementer` (full message stream showed `Agent subagent_type=superRA:implementer`), the dispatched implementer loads `superRA:using-superra` via the `Skill` tool *inside the subagent*, and the `Skill` PreToolUse hook fires for that subagent tool use and captures it by name, before the first edit. Two consecutive runs printed `superRA:using-superra [event 0, subagent_skill_tool]`, `first edit index: 1`, OK.
 - **Subagent attribution is in the hook `input_data`, not the `context` arg.** The `context` arg is `{'signal': None}`; the subagent fields (`agent_id`, `agent_type='superRA:implementer'`) live on the hook `input_data` (the SDK `_SubagentContextMixin`; `agent_id` is documented as present only inside a Task-spawned subagent). The original `_is_subagent_context(context)` checked the wrong argument and mis-tagged subagent loads as top-level; the orchestrator fixed it to `_is_subagent_load(input_data)` keying off `agent_id`/`agent_type`, re-ran live, and confirmed correct `subagent_skill_tool` tagging. The `Skill` tool_input key for the name is `skill` (confirmed live).
 - **Known flakiness (manual-smoke caveat, relevant to 10/11/12):** the standalone smoke leans on a weak top-level model (haiku) to both issue the Task dispatch and load a skill via the `Skill` tool. Across four live runs the captured load varied (`task-tree`; `using-superra`×3; one run captured nothing). The mechanism is sound, but the live smokes are not single-shot deterministic — 10/11/12 should assert across retries / pass@k or use strongly skill-triggering fixture wording, not a single-run equality. The always-loaded contract itself is covered deterministically by the CI-safe static frontmatter check; the live observation of `using-superra` via the hook is corroborating, not the sole evidence.
-
-## Revision Notes
-
-The orchestrator ran the live SDK path against the user's subscription (`claude-agent-sdk` 0.x / Claude Code 2.1.183). The run invalidated two assumptions the original design and the research doc carried. Both are real findings, not test flakes.
-
-1. **`InstructionsLoaded` is not a registrable `claude-agent-sdk` hook event.** The SDK `HookEvent` union is exactly: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `UserPromptSubmit`, `Stop`, `SubagentStop`, `PreCompact`, `Notification`, `SubagentStart`, `PermissionRequest`. Registering an `InstructionsLoaded` hook is a silent no-op (the live run captured `instructions_loaded: 0`). Remove that hook and the `InstructionsLoaded`-derived skill-name channel.
-
-2. **Always-loaded skills are preloaded via agent frontmatter `skills: [...]`, not loaded through the `Skill` tool.** `agents/implementer.md` and `agents/reviewer.md` both declare `skills: [superRA:using-superra, superRA:report-in-markdown]`. Preloaded skills do not emit a `Skill` tool_use, so the `Skill` PreToolUse hook cannot see them, and the init/system message lists only *available* skills, not per-agent preloaded ones. Cover them by the static frontmatter contract check + the live behavioral canary (task 10), not the hook.
-
-What the live run confirmed works (keep):
-- The `Skill` PreToolUse hook captures on-demand loads by name — proven: an explicit `Skill('superRA:using-superra')` was recorded as `('superRA:using-superra', 'skill_tool')`.
-- The plugin resolves and the real `superRA:implementer` / `superRA:reviewer` agents are dispatchable (present in the SDK init `agents` list). The harness should dispatch the real agent so manifest loads actually fire.
-
-Already fixed this turn (incorporated, do not redo): `plugins=` must be `[{"type": "local", "path": ...}]` (SdkPluginConfig), not a bare path string — the bare-string form raised `TypeError: string indices must be integers`. This fix is committed with these notes.
-
-Re-implementation scope (preserve the CI-safe evidence model, gating, and unit-test scaffold; change only the live mechanism):
-- Drop the `InstructionsLoaded` hook and its derived-name path from `sdk_load_evidence.py` / `sdk_load_harness.py`; stop unioning the two channels.
-- Dispatch the real plugin agent in `run_skill_load_session` (via the Task/Agent tool or an `agents=` `AgentDefinition` carrying the role prompt + `skills:`), and **verify the `Skill` hook fires for tool use inside the dispatched subagent** — this is the linchpin for 11/12; probe it on the live path before claiming it.
-- Add a CI-safe static checker that parses `agents/implementer.md` + `agents/reviewer.md` frontmatter and asserts both always-loaded skills are declared in `skills:` (green + red unit tests).
-- Add the reusable behavioral-canary checker task 10 consumes (proof a preloaded skill's rule was applied); leave the fixtures to 10.
-- Update [load-testing-research.md](../../../../../tests/harness-instruction-following/references/load-testing-research.md): correct the `InstructionsLoaded` claim and the always-loaded detection approach to match these findings.
