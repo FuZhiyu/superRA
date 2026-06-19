@@ -1,6 +1,6 @@
 ---
 title: "Claude Agent-SDK Skill-Load Harness"
-status: implemented
+status: approved
 depends_on:
   - 02-fixtures-and-parser
 tags: []
