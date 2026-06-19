@@ -1,6 +1,6 @@
 ---
 title: "Build Fixtures And Transcript Parser"
-status: not-started
+status: implemented
 depends_on:
   - 01-load-contract-audit
 tags: []
@@ -39,3 +39,15 @@ Keep parser tests CI-safe by feeding committed sample transcripts or synthetic J
 Avoid transcript-shape assumptions beyond what existing harness scripts already depend on; share recursive string/event search helpers where possible. Keep fixture setup local and cheap: copy or generate only a handful of files into a temporary workspace.
 
 ## Results
+
+Implemented the deterministic harness-instruction infrastructure without adding live model runners.
+
+### Key Findings
+
+- Added the bundled disposable task tree fixture at [tests/fixtures/task-trees/bundle-two-tasks/README.md](../../../../../tests/fixtures/task-trees/bundle-two-tasks/README.md). It includes root, parent, primary-target, and secondary-target context sentinels; an approved sibling dependency with title/status metadata and an excluded `## Results` sentinel; a JSON `comments.yaml` unresolved comment sentinel; marker files; and [expected/loading-evidence.expected.json](../../../../../tests/fixtures/task-trees/bundle-two-tasks/expected/loading-evidence.expected.json).
+- Added reusable transcript parsing and assertion helpers in [transcript_assertions.py](../../../../../tests/harness-instruction-following/transcript_assertions.py). The helpers parse Claude stream JSON and Codex JSONL, preserve event order, check required task/file reads before writes, check orchestrator dispatch or documented fallback evidence, and compare expected artifact scalar values while collecting all missing evidence in one report.
+- Added CI-safe parser and fixture tests in [test_transcript_assertions.py](../../../../../tests/harness-instruction-following/test_transcript_assertions.py) and [test_bundle_fixture.py](../../../../../tests/harness-instruction-following/test_bundle_fixture.py). The tests use committed synthetic transcript samples and local `task_read.py`; no live Claude/Codex calls are run.
+
+### Verification
+
+- `uv run --with pytest python -m pytest tests/harness-instruction-following` — 9 passed.

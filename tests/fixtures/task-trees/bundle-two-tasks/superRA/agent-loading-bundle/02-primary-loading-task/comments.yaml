@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "author": "fixture-reviewer",
+    "timestamp": "2026-06-19T00:00:00",
+    "resolved": false,
+    "anchor": {
+      "section": "Objective",
+      "block_index": 1,
+      "text_preview": "PRIMARY_TARGET_SENTINEL_COBALT"
+    },
+    "body": "COMMENT_SENTINEL_AMBER"
+  }
+]
