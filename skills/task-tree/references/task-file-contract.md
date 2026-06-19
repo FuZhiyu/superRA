@@ -11,7 +11,6 @@ Every `task.md` — root, branch, or leaf — uses the same body sections. The t
 - **`## Objective`** — the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. The top task's objective frames the project-level goal and scope; a branch task's objective frames its subtree's goal.
 - **`## Planner Guidance`** — optional advisory suggestions or exploration notes, useful but not binding.
 - **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval.
-- **`## Workflow Status`** — integration-phase progress record, present only on the root task during INTEGRATE. Carries checkboxes for the four superintegrate milestones (`Drift tests created`, `Integrated`, `Docs finalized`, and the final action). These checkboxes are an integration-phase-only exception to the "no checkboxes in tasks" rule — they track cross-stage workflow state, not implementation steps, and are written and flipped by the orchestrator during INTEGRATE. Remove the section after Finish.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
 Branch tasks (those with children) do not carry `script`, `input`, or `output` — those belong on leaf tasks.
@@ -28,7 +27,6 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`, `tags`
 - **`## Results`** is implementer-owned. Updated with findings, verification evidence, caveats, and material `## Planner Guidance` deviations during execution. See §Results Shape.
 - **`## Revision Notes`** carries the delta signal when a task objective is updated: what changed, why, and how significant (trivial/mechanical vs. substantive). It is temporary, with the same lifecycle as `## Review Notes`. `validate_plan` warns when an `approved` task still carries a non-empty `## Revision Notes` section; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On approval, the reviewer removes the section content entirely.
-- **`## Workflow Status`** is orchestrator-owned on the root task during INTEGRATE only. See §Task Anatomy for the full contract. Not present in normal task files; `superplan §Phase 3` must not create it.
 
 ## Context Inheritance
 

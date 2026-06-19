@@ -23,7 +23,7 @@ Any step -> superplan §User Feedback and Changing the Task Tree
 
 ## Stop Points
 
-The Workflow Frontier Resolver chooses where to enter. Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier just because a rollup milestone was unchecked.
+The Workflow Frontier Resolver chooses where to enter. Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — each step's completion is recorded by its commit and the per-task `status` it leaves behind, so a resumed session reads progress from git and statuses, not from a tracker section.
 
 Legitimate stop points (fold every answer into the relevant task objective **before** acting):
 
@@ -59,8 +59,7 @@ Drift tests are the default protection mechanism, guarding key results through S
 3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template. Drift tests reference task paths, not task numbers.
 4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
-6. **Commit tests and task.md updates.**
-7. **Flip `Drift tests created`** in root task.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
+6. **Commit tests and task.md updates** once all confirmed key results are protected and the full drift-test suite passes. The protection commit is the record that Protect is done.
 
 ## Sync
 
@@ -88,7 +87,7 @@ Is that correct, or did it split from a release branch, co-authored track,
 or sibling branch?
 ```
 
-Record the confirmed `BASE_REF` in root task.md before fetching, computing anchors, or dispatching.
+Confirm `BASE_REF` before fetching, computing anchors, or dispatching. It is a working value for this integration pass, not a stored field — the sync merge commit records which base was synced (and pins `BASE_HEAD_SHA` as its base-side parent), so a resumed session recovers it from git rather than from a task section.
 
 ### Step 2: Compute sync anchors
 
@@ -109,7 +108,7 @@ BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 
 ### Step 3: Sync the branch when needed
 
-If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced. Record a no-op in the workflow notes if useful and proceed to Integrate.
+If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced — proceed to Integrate.
 
 Otherwise size the sync against `semantic-merge §Scope the merge first`. When it scopes trivial, announce the Direct-mode switch and land the merge inline following that section, then skip the author and reviewer dispatch that follow and proceed to Integrate — its reviewer pass over `BASE_HEAD_SHA..HEAD` verifies the landed merge.
 
@@ -232,15 +231,14 @@ For non-minor fixes that require reviewer re-dispatch per `agent-orchestration` 
 Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
 - remove every temporary task-local `## Sync Impact` section, unless a lasting task assumption still belongs in the task.md — in which case fold that assumption into the task's `## Objective` and remove the section. Then run `superra task check` (warn-only `sync-impact` category) and confirm it flags no surviving `## Sync Impact`.
-- flip `Integrated` in root task.md §Workflow Status
-- commit the closeout doc edit
+- commit the closeout edit; that commit plus the in-scope tasks' `status: approved` is the record that Integrate closed.
 
 ## Consolidation Gate
 
 Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage.
 
 1. Load `superplan/references/task-tree-design.md` and apply its durable-home and update-task lifecycle rules to the affected tree before Document. The check is **whole-tree within the affected tree**, not frontier-internal: compare every task and subtree, including approved and in-flight update tasks, against its parent and other candidate durable owners. Run `superra task tree`, `superra task dag`, and `superra task check --category placement`; use the placement warnings as advisory evidence alongside the manual survey.
-2. Record the verdict — clean-enough or needs-a-pass, one line — in the durable integration record in root task.md §Workflow Status so a later session sees the judgment was made.
+2. Record the verdict — clean-enough or needs-a-pass, one line — in the commit message for this gate (the Document closeout commit when clean-enough, or the consolidation commit when needs-a-pass) so a later session sees the judgment was made in git.
 3. A clean-enough verdict is invalid while a temporary update task survives as a misplaced durable subtree, or while an action-verb parent that should mature into a stable concern remains framed as the update episode. On needs-a-pass, load `superplan/references/consolidation.md` and run its survey → classify → propose → approve → execute protocol (atomic commit), then enter Document on the consolidated tree. Material merge, prune, restructure, mature/rename, and status-invalidating scope expansion still route through `superplan §User Feedback and Changing the Task Tree` — the gate triggers the assessment, it does not grant authority to restructure approved work unilaterally.
 
 ## Document
@@ -296,7 +294,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a documentation finding traces to the code, re-enter Integrate.
 
-On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
+On APPROVE, commit the matured docs.
 
 ## Finish
 
@@ -304,7 +302,9 @@ Finish executes the user's completion choice from `superimplement`. The `superRA
 
 ### Step 1: Freshness check
 
-Fetch the recorded `BASE_REF` when it is a remote-tracking ref and check whether it advanced since Integrate:
+`BASE_REF` and `BASE_HEAD_SHA` carry over within a session. On a resumed session, recover them from the sync merge commit: its base-side parent is `BASE_HEAD_SHA`, and the commit message records the base that was synced. If Sync was a no-op (the branch was already current), use the pre-Integrate base ref directly.
+
+Fetch `BASE_REF` when it is a remote-tracking ref and check whether it advanced since Integrate:
 
 ```bash
 REMOTE=${BASE_REF%%/*}
@@ -315,13 +315,9 @@ fi
 CURRENT_BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
-If `CURRENT_BASE_HEAD_SHA` differs from the recorded `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
+If `CURRENT_BASE_HEAD_SHA` differs from `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
 
-### Step 2: Mark final action
-
-Flip the final workflow checkbox in root task.md §Workflow Status in the same commit that performs the final action.
-
-### Step 3: Publish or land
+### Step 2: Publish or land
 
 For a PR:
 
@@ -340,7 +336,7 @@ git merge --ff-only <analysis-branch>
 
 Run the project pipeline or targeted verification on the final tree. If it fails, investigate before cleanup.
 
-### Step 4: Cleanup
+### Step 3: Cleanup
 
 If the work used a worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree; see `superRA:worktree-data-sync` for data teardown.
 
