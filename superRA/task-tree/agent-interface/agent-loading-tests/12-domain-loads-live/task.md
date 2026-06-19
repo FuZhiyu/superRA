@@ -33,3 +33,5 @@ Success criteria: each domain skill is evidenced loaded on its triggering fixtur
 ## Planner Guidance
 
 Parametrize over a `{domain_skill, trigger_wording}` table. The multi-domain case is the load-bearing one — it proves the "load every matching domain" rule, not just first-match. Keep trigger wording close to the manifest's own trigger phrasing so the test reflects the documented contract.
+
+All domain skills load via the `Skill` tool → caught by 08's `PreToolUse(matcher="Skill")` hook, tagged `subagent_skill_tool` (orchestrator-confirmed live that the hook fires for loads inside the dispatched subagent). Reuse it; no Read-hook/reference case here (unlike task 11's `planning-review`). The live SDK dispatch is mildly nondeterministic — default `CLAUDE_MODEL=sonnet`, assert across a small pass@k window, not a single shot. A domain whose triggering wording reliably does **not** load its skill (or the multi-domain case loading only one of several matching skills) is a real LC003/LC011–LC014 finding to record and escalate, not an assertion to relax.
