@@ -1,6 +1,6 @@
 ---
 title: "Per-Domain Skill Loads Live Coverage"
-status: implemented
+status: approved
 depends_on:
   - 08-claude-sdk-load-harness
   - 09-codex-canary-and-dispatch-hook
