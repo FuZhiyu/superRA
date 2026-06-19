@@ -917,6 +917,125 @@ class TestTaskRename:
         assert task2.depends_on == ["01-first"]
 
 
+class TestTaskMoveLinkSweep:
+    """Path resolution on move: inbound links anywhere in the tree, plus outbound
+    links from moved files, are rewritten automatically."""
+
+    def _append(self, md: Path, line: str) -> None:
+        md.write_text(md.read_text(encoding="utf-8") + line, encoding="utf-8")
+
+    def test_move_rewrites_inbound_link(self, plan_root):
+        # A sibling elsewhere in the tree links INTO the task being moved.
+        self._append(plan_root / "02-second" / "task.md",
+                     "\nSee [load step](../01-first/task.md).\n")
+        task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+        body = (plan_root / "02-second" / "task.md").read_text(encoding="utf-8")
+        assert "../01-first-renamed/task.md" in body
+        assert "../01-first/task.md" not in body
+
+    def test_move_leaves_unrelated_inbound_links_untouched(self, plan_root):
+        # A link that does NOT point into the moved subtree must stay byte-identical
+        # — the inbound sweep must not re-normalize unrelated links.
+        self._append(plan_root / "03-third" / "task.md",
+                     "\nSee [sib](../02-second/task.md) and [self](./task.md).\n")
+        before = (plan_root / "03-third" / "task.md").read_text(encoding="utf-8")
+        task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+        after = (plan_root / "03-third" / "task.md").read_text(encoding="utf-8")
+        assert after == before
+
+    def test_move_handles_anchor_angle_and_fenced_links(self, plan_root):
+        # Angle-bracketed inbound link with a #anchor must be re-pointed; a link
+        # inside a fenced code block must be left alone even though it targets the
+        # moved subtree.
+        self._append(
+            plan_root / "02-second" / "task.md",
+            "\nSee [s](<../01-first/task.md#sec>).\n\n```\n[x](../01-first/task.md)\n```\n",
+        )
+        task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+        body = (plan_root / "02-second" / "task.md").read_text(encoding="utf-8")
+        assert "(<../01-first-renamed/task.md#sec>)" in body
+        assert "[x](../01-first/task.md)" in body  # fenced link untouched
+
+    def test_move_rewrites_outbound_link_on_depth_change(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        (root / "01-a").mkdir()
+        _write_task_md(root / "01-a" / "task.md", "A", "not-started")
+        (root / "02-b").mkdir()
+        _write_task_md(root / "02-b" / "task.md", "B", "not-started")
+        (root / "03-mover").mkdir()
+        _write_task_md(root / "03-mover" / "task.md", "Mover", "not-started",
+                       objective="See [b](../02-b/task.md).")
+        task_rename.rename_task(root, "03-mover", "01-a/03-mover")
+        body = (root / "01-a" / "03-mover" / "task.md").read_text(encoding="utf-8")
+        # Moved one level deeper: the relative hop to 02-b grows by one `../`.
+        assert "../../02-b/task.md" in body
+
+
+class TestTaskMoveCrossParentDeps:
+    """Cross-parent moves drop sibling-only depends_on edges they strand, warning
+    on each drop instead of aborting."""
+
+    def test_drops_moved_task_stranded_dep(self, plan_with_branches, capsys):
+        # 02-merge depends on its sibling 01-load. Moving it under 02-estimation
+        # strands that edge (no 01-load sibling there) — drop it and warn.
+        task_rename.rename_task(plan_with_branches,
+                                "01-data-prep/02-merge", "02-estimation/01-merge")
+        moved = _task_io.parse_task(
+            plan_with_branches / "02-estimation" / "01-merge" / "task.md")
+        assert moved.depends_on == []
+        assert "dropped stranded depends_on '01-load'" in capsys.readouterr().err
+
+    def test_drops_sibling_stranded_dep(self, plan_with_branches, capsys):
+        # 02-merge stays put and depends on 01-load. Moving 01-load out from under
+        # 01-data-prep strands 02-merge's edge — drop it from the sibling and warn.
+        task_rename.rename_task(plan_with_branches,
+                                "01-data-prep/01-load", "02-estimation/01-load")
+        merge = _task_io.parse_task(
+            plan_with_branches / "01-data-prep" / "02-merge" / "task.md")
+        assert merge.depends_on == []
+        err = capsys.readouterr().err
+        assert "dropped stranded depends_on '01-load' from sibling 02-merge" in err
+
+    def test_drops_self_edge_on_destination_slug(self, tmp_path, capsys):
+        # The moved task's own edge names the slug it will occupy at the
+        # destination — a self-dependency once moved, so it is dropped.
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        (root / "01-a").mkdir()
+        _write_task_md(root / "01-a" / "task.md", "A", "not-started")
+        (root / "02-b").mkdir()
+        _write_task_md(root / "02-b" / "task.md", "B", "not-started")
+        (root / "01-a" / "01-mover").mkdir()
+        _write_task_md(root / "01-a" / "01-mover" / "task.md", "Mover", "not-started",
+                       depends_on=["02-mover"])
+        task_rename.rename_task(root, "01-a/01-mover", "02-b/02-mover")
+        moved = _task_io.parse_task(root / "02-b" / "02-mover" / "task.md")
+        assert moved.depends_on == []
+        assert "dropped stranded depends_on '02-mover'" in capsys.readouterr().err
+
+    def test_keeps_dep_that_resolves_under_destination(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        (root / "01-a").mkdir()
+        _write_task_md(root / "01-a" / "task.md", "A", "not-started")
+        (root / "02-b").mkdir()
+        _write_task_md(root / "02-b" / "task.md", "B", "not-started")
+        (root / "02-b" / "01-dep").mkdir()
+        _write_task_md(root / "02-b" / "01-dep" / "task.md", "Dep", "approved")
+        (root / "01-a" / "01-mover").mkdir()
+        _write_task_md(root / "01-a" / "01-mover" / "task.md", "Mover", "not-started",
+                       depends_on=["01-dep"])
+        # 01-dep is already a sibling under the destination parent 02-b, so the edge
+        # resolves there and must survive the move.
+        task_rename.rename_task(root, "01-a/01-mover", "02-b/02-mover")
+        moved = _task_io.parse_task(root / "02-b" / "02-mover" / "task.md")
+        assert moved.depends_on == ["01-dep"]
+
+
 class TestTaskAddResult:
     def test_add_finding(self, plan_root):
         task_add_result.add_result(
@@ -2431,6 +2550,58 @@ class TestTaskHook:
         assert result.returncode == 0
         moved = _task_io.parse_task(root / "02-second" / "task.md")
         assert moved.depends_on == ["01-first-renamed"]
+
+    def test_bash_same_parent_rename_rewrites_inbound_links(self, plan_root):
+        """A same-parent `mv` re-points relative links into the renamed task.
+
+        The shared link core that `superra task move` uses also runs in the hook's
+        confident rename branch, so a raw `mv` that breaks a sibling's link into the
+        renamed task is repaired the same lossless way the depends_on cascade is.
+        """
+        root = plan_root
+        md = root / "02-second" / "task.md"
+        md.write_text(md.read_text(encoding="utf-8")
+                      + "\nSee [first](../01-first/task.md).\n", encoding="utf-8")
+        src = root / "01-first"
+        dst = root / "01-first-renamed"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        body = (root / "02-second" / "task.md").read_text(encoding="utf-8")
+        assert "../01-first-renamed/task.md" in body
+        assert "../01-first/task.md" not in body
+        assert "Auto-rewrote relative markdown links" in json.loads(result.stdout)["additionalContext"]
+
+    def test_bash_cross_parent_move_does_not_rewrite_links(self, plan_with_branches):
+        """A cross-parent raw `mv` is ambiguous, so the hook leaves links untouched.
+
+        Link auto-rewrite lives only in the confident same-parent rename branch;
+        a re-parent falls through to warn-only, preserving the never-auto-mutate-on-
+        ambiguous-state invariant.
+        """
+        root = plan_with_branches
+        md = root / "02-estimation" / "task.md"
+        md.write_text(md.read_text(encoding="utf-8")
+                      + "\nSee [merge](../01-data-prep/02-merge/task.md).\n", encoding="utf-8")
+        before = md.read_text(encoding="utf-8")
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        # The inbound link is left as-is (now dangling) — surfaced, not silently fixed.
+        assert (root / "02-estimation" / "task.md").read_text(encoding="utf-8") == before
+        assert "Auto-rewrote relative markdown links" not in json.loads(result.stdout)["additionalContext"]
 
     def test_bash_cross_parent_move_does_not_cascade(self, plan_with_branches):
         """A cross-parent move warns and never auto-rewires (not a rename)."""

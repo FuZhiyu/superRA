@@ -354,6 +354,32 @@ def _handle_bash(data: dict) -> None:
                 f"depends_on rewire failed for rename {old_slug} -> {new_slug} "
                 f"(non-fatal): {exc}"
             )
+        # Same maintenance class as the depends_on cascade: a rename can break
+        # relative Markdown links pointing into or out of the renamed task.
+        # Computed post-move (the subtree now lives at parent_dir/new_slug), so
+        # moved_root is the destination.
+        try:
+            link_root = task_io._find_plan_root(parent_dir)
+            if link_root is not None:
+                link_rewrites = task_io.compute_move_link_rewrites(
+                    link_root,
+                    parent_dir / old_slug,
+                    parent_dir / new_slug,
+                    moved_root=parent_dir / new_slug,
+                )
+                for path, content in link_rewrites.items():
+                    path.write_text(content, encoding="utf-8")
+                if link_rewrites:
+                    rewire_feedback.append(
+                        f"Auto-rewrote relative markdown links in "
+                        f"{len(link_rewrites)} file(s) after rename "
+                        f"'{old_slug}' -> '{new_slug}'."
+                    )
+        except Exception as exc:
+            rewire_feedback.append(
+                f"link rewrite failed for rename {old_slug} -> {new_slug} "
+                f"(non-fatal): {exc}"
+            )
 
     plan_roots: list[Path] = []
     seen: set[Path] = set()
