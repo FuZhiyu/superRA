@@ -43,6 +43,6 @@ Added the opt-in Claude live smoke plus the shared infrastructure the Codex (04)
 - Evaluator green case: passes against the committed `samples/claude-stream.bundle.jsonl` with the expected artifact.
 - Evaluator red cases all exit 1: task read after write, artifact never written, artifact with `dependency_results_excluded=false`.
 - `bash -n` syntax-clean; `--harness` arg validation rejects bad input (exit 2).
-- Full CI-safe suite still green: `pytest tests/harness-instruction-following` → 23 passed.
+- Full CI-safe suite still green: `pytest tests/harness-instruction-following` → 27 passed.
 
-**Not run:** the live `claude -p` turn (requires logged-in CLI + API spend). The script is ready; running it is a manual step.
+**Live run executed:** `RUN_LIVE_HARNESS=1 bash claude-live-smoke.sh` on `CLAUDE_MODEL=haiku` (claude CLI 2.1.183) — `PASS claude loading smoke: all required evidence present` (cost $0.0481). The haiku agent ran both `superra task read` calls and all three marker reads before the artifact write, and the artifact matched the expected sentinels. The Claude path needed no script fixes.

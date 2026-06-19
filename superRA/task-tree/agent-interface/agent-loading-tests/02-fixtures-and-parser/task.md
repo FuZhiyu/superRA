@@ -48,6 +48,13 @@ Implemented the deterministic harness-instruction infrastructure without adding 
 - Added reusable transcript parsing and assertion helpers in [transcript_assertions.py](../../../../../tests/harness-instruction-following/transcript_assertions.py). The helpers parse Claude stream JSON and Codex JSONL, preserve event order, require `superra task read <path>` evidence from structural command/tool events, require task and marker reads before the first write event by default, check Claude `Agent` role dispatch or Codex `spawn_agent` dispatch separately from documented fallback evidence, and compare expected artifact scalar values while collecting all missing evidence in one report.
 - Added CI-safe parser and fixture tests in [test_transcript_assertions.py](../../../../../tests/harness-instruction-following/test_transcript_assertions.py) and [test_bundle_fixture.py](../../../../../tests/harness-instruction-following/test_bundle_fixture.py). The tests use committed synthetic transcript samples and local `task_read.py`; no live Claude/Codex calls are run. Negative tests now cover prose-only task-read narration, pre-read writes to non-artifact files, and prose-only orchestrator dispatch narration.
 
+### Real-Harness Robustness Fixes (from live smoke runs)
+
+Driving real `codex exec --json` output through the parser during the live smokes (03/04/07) surfaced two ways the committed synthetic samples did not represent real harness output. Both are fixed in `transcript_assertions.py` with regression tests:
+
+- **Non-JSON banner lines.** Real codex prints `Reading additional input from stdin...` before the JSONL stream begins. `parse_json_events` now skips lines not shaped like a JSON object/array, but still raises on a `{`/`[`-shaped line that fails to parse, so a genuinely corrupt event stream is not silently dropped (`test_parser_skips_non_json_banner_lines`, `test_parser_still_raises_on_corrupt_json_event`).
+- **Quote-/wrapper-terminated task-read commands.** Real codex wraps the command as `zsh -lc './superRA/superra task read <path>'`, so the task path is reached through the wrapper path and terminated by a closing quote rather than whitespace. `_command_runs_task_read`'s trailing boundary now accepts a quote, not just whitespace/EOL/operator (`test_task_read_detected_in_wrapped_quoted_command`).
+
 ### Verification
 
-- `uv run --with pytest python -m pytest tests/harness-instruction-following` — 13 passed.
+- `uv run --with pytest python -m pytest tests/harness-instruction-following` — 27 passed.

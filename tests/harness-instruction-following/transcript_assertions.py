@@ -177,7 +177,15 @@ class AssertionReport:
 
 
 def parse_json_events(text: str) -> list[TranscriptEvent]:
-    """Parse line-delimited JSON or a JSON list/object into ordered events."""
+    """Parse line-delimited JSON or a JSON list/object into ordered events.
+
+    Real harness CLIs interleave non-JSON banner/log lines with the event
+    stream (e.g. codex prints "Reading additional input from stdin..." before
+    the JSONL begins), so lines that are not shaped like a JSON object or array
+    are skipped. A line that does look like JSON (starts with `{` or `[`) but
+    fails to parse is still a hard error, so a genuinely corrupt event stream is
+    not silently dropped.
+    """
 
     raw_events: list[JsonValue] = []
     stripped = text.strip()
@@ -188,7 +196,8 @@ def parse_json_events(text: str) -> list[TranscriptEvent]:
         parsed = json.loads(stripped)
     except json.JSONDecodeError:
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if not line.strip():
+            candidate = line.strip()
+            if not candidate or candidate[0] not in "{[":
                 continue
             try:
                 raw_events.append(json.loads(line))
@@ -420,10 +429,13 @@ def _command_reads_path(command: str, path: str) -> bool:
 
 
 def _command_runs_task_read(command: str, task_path: str) -> bool:
+    # The leading `superra` may be reached through the wrapper path
+    # (`./superRA/superra task read ...`); the trailing boundary may be a
+    # quote because harnesses wrap the command (`zsh -lc '... task read <path>'`).
     pattern = re.compile(
         r"(?<![\w-])superra\s+task\s+read\s+"
         + re.escape(task_path)
-        + r"(?=$|\s|[;&|])",
+        + r"""(?=$|[\s;&|'"])""",
         re.IGNORECASE,
     )
     return bool(pattern.search(command))

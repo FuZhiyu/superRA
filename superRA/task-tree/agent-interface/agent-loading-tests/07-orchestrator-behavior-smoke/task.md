@@ -44,6 +44,8 @@ Added the opt-in orchestrator behavior smoke verifying `superimplement` dispatch
 - Fallback rejection (fabricated reason): a transcript naming `direct mode` + `reviewer` with no documented exception ("I feel like using direct mode today, and I will pretend to be a reviewer too") now exits 1 (missing implementer + reviewer events) instead of skip-passing — the skip-pass requires a documented-exception needle, not bare keyword co-occurrence.
 - Red case: a transcript that implements inline with neither dispatch nor fallback exits 1 (missing implementer + reviewer events).
 - `bash -n` syntax-clean; unknown `HARNESS` value exits 2; `--harness` arg validation rejects bad input.
-- Full CI-safe suite green: `pytest tests/harness-instruction-following` → 24 passed.
+- Full CI-safe suite green: `pytest tests/harness-instruction-following` → 27 passed.
 
-**Not run:** the live `superimplement` orchestrator turn (requires logged-in CLI + multi-turn subagent spend). The script is ready; running it is a manual step. Driving a main agent to actually dispatch subagents in headless mode is the most non-deterministic path; the evaluator's skip-pass fallback is the documented safety valve for harnesses that do not surface dispatch events in their transcript.
+**Live run executed (Claude harness):** `RUN_LIVE_HARNESS=1 bash orchestrator-live-smoke.sh` on haiku (claude CLI 2.1.183) — `PASS claude orchestrator smoke: implementer + reviewer dispatch events present`. The main agent dispatched both an implementer and a reviewer subagent for the frontier rather than implementing inline. The same `MODEL_ARGS[@]`-under-`set -u` empty-array bug fixed in 04 was pre-emptively fixed in this script's codex branch (`"${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"}"`).
+
+**Not run live:** the `HARNESS=codex` orchestrator path (codex subagent-dispatch evidence depends on `spawn_agent` events the codex CLI may not surface; the documented skip-pass fallback is the safety valve). The Claude orchestrator path is the primary contract and passes live.

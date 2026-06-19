@@ -115,7 +115,7 @@ PY
     --dangerously-bypass-hook-trust \
     --ask-for-approval never \
     --sandbox workspace-write \
-    "${MODEL_ARGS[@]}" \
+    "${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"}" \
     exec \
     --json \
     --ephemeral \

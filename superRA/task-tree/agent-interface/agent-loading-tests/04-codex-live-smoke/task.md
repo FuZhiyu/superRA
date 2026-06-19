@@ -41,4 +41,7 @@ Added the opt-in Codex live smoke running the same bundled mock task as the Clau
 - The shared evaluator (`check_loading_smoke.py --harness codex`) green/red behavior is verified under 03 (same code path; Codex JSONL parses through the same `parse_codex_jsonl`/`transcript_assertions` used for the orchestrator codex sample).
 - `codex` CLI confirmed on PATH (`codex-cli 0.140.0`).
 
-**Not run:** the live `codex exec` turn (requires logged-in CLI + model spend). The script is ready; running it is a manual step.
+**Live run executed:** `RUN_LIVE_HARNESS=1 bash codex-live-smoke.sh` (codex-cli 0.140.0, CLI default model) — `PASS codex loading smoke: all required evidence present`. The agent ran both `./superRA/superra task read <path>` calls and the marker reads before the artifact write. Two real defects only the live run could surface were found and fixed:
+
+- **`MODEL_ARGS[@]` unbound under `set -u`** when `CODEX_MODEL` is unset (an empty bash array expanded with `"${MODEL_ARGS[@]}"` errors). Fixed to `"${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"}"` in `codex-live-smoke.sh`.
+- **Parser/detection gaps** in `transcript_assertions.py` (owned by 02), since real `codex exec --json` output differs from the committed synthetic samples: it prefixes a non-JSON banner line (`Reading additional input from stdin...`) and wraps the command as `zsh -lc './superRA/superra task read <path>'` so the path is quote-terminated. See 02 Results for the parser fixes.
