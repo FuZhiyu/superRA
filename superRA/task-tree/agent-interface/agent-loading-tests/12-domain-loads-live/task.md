@@ -1,0 +1,35 @@
+---
+title: "Per-Domain Skill Loads Live Coverage"
+status: not-started
+depends_on:
+  - 08-claude-sdk-load-harness
+  - 09-codex-canary-and-dispatch-hook
+tags: []
+created: 2026-06-19
+---
+
+## Objective
+
+Verify live, in both harnesses, that a domain-worded fixture task loads its domain skill (contracts LC003, LC011–LC014):
+
+- `econ-data-analysis` — task wording about importing/cleaning/merging/regressing data
+- `theory-modeling` — task wording about deriving/solving/proving
+- `writing` — task wording about drafting/polishing reader-facing prose
+- `slide-design` — task wording about creating/revising slides/Beamer
+
+Include a **multi-domain** fixture whose wording matches more than one domain (e.g. derive a result *and* write it up) and assert **all** matching domain skills load, since the manifest requires loading every matching domain.
+
+Deliverables:
+
+- A parametrized set of domain fixtures (a minimal task whose objective text unambiguously triggers one domain) plus the multi-domain fixture, each with an assertion that the expected domain skill(s) are evidenced loaded — Claude via the 08 SDK skill-load hook, Codex via the 09 canary.
+
+Success criteria: each domain skill is evidenced loaded on its triggering fixture in both harnesses; the multi-domain case loads all matching skills; a red case (domain skill not loaded on triggering wording) fails.
+
+### Constraints
+
+- Manual-only; consume the 08/09 harnesses.
+- Keep fixture tasks shallow — domain-triggering *wording* without requiring real domain work (no actual regression, proof, or deck). The target is the load, not the output.
+
+## Planner Guidance
+
+Parametrize over a `{domain_skill, trigger_wording}` table. The multi-domain case is the load-bearing one — it proves the "load every matching domain" rule, not just first-match. Keep trigger wording close to the manifest's own trigger phrasing so the test reflects the documented contract.

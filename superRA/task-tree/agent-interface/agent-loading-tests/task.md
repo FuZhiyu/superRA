@@ -1,6 +1,6 @@
 ---
 title: "Agent Loading Tests"
-status: approved
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-19
@@ -11,6 +11,12 @@ created: 2026-06-19
 Design and implement a small, durable test suite for superRA agent instruction-following, file-loading, and workflow-orchestrator behavior across Claude and Codex. The suite should answer: when a dispatch, role spec, stage, domain, task tree, or workflow trigger asks an agent to load a file, run `superra task read`, or dispatch a subagent by default, does the harness expose enough structural evidence that the agent did it before acting?
 
 The scope is the agent-interface contract, not prose quality. The tests must avoid asserting generated prose. Prefer structural evidence: manifest and role-surface text, generated-agent drift checks, hook outputs, transcript tool events, `superra task read` output, sentinel files, and output artifacts whose values can only be produced after reading the required file.
+
+### Context
+
+The first implementation pass (tasks 01–07) delivered the CI-safe static/fixture layer plus live smokes for the **implementation / task-read / dispatch** slice using observable proxies. Tasks 08–13 extend live coverage to the rest of the `manual_live_*` contracts the audit catalogued in [load_contract.json](../../../../../tests/harness-instruction-following/load_contract.json) but the smokes do not yet exercise: every always-loaded skill **by name** (`using-superra` **and** `report-in-markdown`, LC001), every non-empty **stage** load (planning-review/protection/sync/integration, LC002/LC007–LC010), and every **domain** load (econ-data-analysis/theory-modeling/writing/slide-design, LC003/LC011–LC014).
+
+Mechanism (researcher-approved) and the harness constraints that force it are recorded in [load-testing-research.md](../../../../../tests/harness-instruction-following/references/load-testing-research.md). In short: skill/context loading is not directly observable from raw transcripts, so the suite verifies it through (a) **Claude: the Python `claude-agent-sdk` driven with in-process `PreToolUse(matcher="Skill")` + `InstructionsLoaded` hooks**, giving real skill-load-by-name evidence reliably in headless mode (filesystem hooks do not fire under `claude -p`); and (b) **Codex: canary/side-effect proxies** (a skill-unique observable action only producible if the skill body loaded) plus a **`SubagentStart` hook** for subagent dispatch, since codex JSONL exposes neither skill loads nor subagent spawns. A failing load assertion (e.g. `report-in-markdown` never loads) is a real finding in the loading contract to escalate, not a reason to weaken the test.
 
 Bundle related checks so one dispatch can test multiple behaviors. The live Claude and Codex smokes should run a compact multi-requirement scenario before adding one-off probes: one agent turn should need task-read context, dependency visibility, comment surfacing, external marker-file reads, and at least one manifest or role-surface load expectation whose evidence can be checked structurally. Keep the assigned task itself superficial and very quick: it should only require reading the fixture context and writing a tiny evidence JSON artifact, not solving a real coding or research problem.
 
