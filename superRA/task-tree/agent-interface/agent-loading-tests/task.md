@@ -46,5 +46,3 @@ The suite lives under [tests/harness-instruction-following/](../../../../../test
 **Deferred-import CI boundary.** [test_deferred_import_isolation.py](../../../../../tests/harness-instruction-following/test_deferred_import_isolation.py) locks in that importing any live-harness module pulls neither `claude_agent_sdk` nor a codex-cli client into `sys.modules` and makes no model call — the SDK import stays deferred inside the live entry point, so the default CI path never touches it.
 
 **Verification:** CI-safe suite green — `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following` → 140 passed. Generated-agent drift check clean (`sync_codex_agents.py --scope project --check`).
-
-## Review Notes
