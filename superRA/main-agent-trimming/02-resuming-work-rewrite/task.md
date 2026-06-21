@@ -1,6 +1,6 @@
 ---
 title: "Rewrite main-agent.md: Resuming Work Model + Pause/Proceed Trim + Drop Inbound Pointers"
-status: implemented
+status: approved
 depends_on: ["01-frontier-completeness"]
 tags: []
 created: 2026-06-21

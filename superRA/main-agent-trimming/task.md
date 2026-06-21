@@ -1,6 +1,6 @@
 ---
 title: "Main-Agent Trimming: Status+Git Resume Model, Less Prescription"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-21
