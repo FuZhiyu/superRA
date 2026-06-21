@@ -148,7 +148,7 @@ def test_skill_load_manifest_contract_matches_audit():
     assert "| `protection` | `superintegrate` Protect | `result-protection` |" in manifest
     assert "| `sync` | `superintegrate` Sync | `semantic-merge` |" in manifest
     assert "| `integration` | `superintegrate` Integrate | `refactor-and-integrate` |" in manifest
-    assert "| `documentation` | `superintegrate` Document | — |" in manifest
+    assert "| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `writing` (prose-heavy maturation) |" in manifest
     for skill in (
         "econ-data-analysis",
         "theory-modeling",

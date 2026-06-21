@@ -5,11 +5,12 @@ Drives the stage evaluator and the per-stage Codex canaries on synthetic inputs 
 no model call, no ``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-stage evaluator** (:func:`stage_loads_live.evaluate_stage_load`):
-  green for each non-empty stage (skill channel via the Skill hook; the
-  ``planning-review`` reference via the opt-in Read hook); red when the stage skill
-  never loads, when the reference is never read, and when a load lands after the
-  first edit; and the negative stages (``implementation`` / ``documentation``)
-  green when no stage skill loaded, red when one did (over-load).
+  green for each non-empty stage (skill channel via the Skill hook, including the
+  multi-skill ``maturation`` stage; the ``planning-review`` reference via the
+  opt-in Read hook); red when a guaranteed stage skill never loads, when the
+  reference is never read, and when a load lands after the first edit; and the
+  negative stage (``implementation``) green when no stage skill loaded, red when
+  one did (over-load).
 - **Codex per-stage canaries** (09's :func:`codex_load_evidence.evaluate_canary`):
   green when the stage skill's skill-unique token is at the artifact field, red
   when absent (skill body did not load).
@@ -64,8 +65,8 @@ def test_default_ci_path_never_imports_sdk_or_codex():
 
 
 def test_table_matches_manifest_stage_rows():
-    # The four non-empty stages and the two negative stages are all present, with
-    # the manifest skill/reference each maps to. A drift here means the table no
+    # Every non-empty stage and the sole negative stage are present, with the
+    # manifest skill(s)/reference each maps to. A drift here means the table no
     # longer matches skills/using-superra/SKILL.md.
     by_stage = {row.stage: row for row in STAGE_ROWS}
     assert by_stage["planning-review"].channel == CHANNEL_READ
@@ -73,15 +74,23 @@ def test_table_matches_manifest_stage_rows():
         by_stage["planning-review"].expected
         == "skills/superplan/references/planning-review.md"
     )
-    assert by_stage["protection"].expected == "result-protection"
-    assert by_stage["sync"].expected == "semantic-merge"
-    assert by_stage["integration"].expected == "refactor-and-integrate"
+    assert by_stage["protection"].expected_skills == ("result-protection",)
+    assert by_stage["sync"].expected_skills == ("semantic-merge",)
+    assert by_stage["integration"].expected_skills == ("refactor-and-integrate",)
+    # maturation is the positive multi-skill stage: task-tree + superplan always
+    # load; writing is conditional ("prose-heavy maturation") so it is NOT a
+    # guaranteed-load assertion.
+    assert by_stage["maturation"].channel == CHANNEL_SKILL
+    assert by_stage["maturation"].expected_skills == ("task-tree", "superplan")
+    assert "writing" not in by_stage["maturation"].expected_skills
     assert by_stage["implementation"].channel == CHANNEL_NONE
-    assert by_stage["documentation"].channel == CHANNEL_NONE
+    assert "documentation" not in by_stage
     assert ALL_STAGE_SKILLS == {
         "result-protection",
         "semantic-merge",
         "refactor-and-integrate",
+        "task-tree",
+        "superplan",
     }
 
 
@@ -208,6 +217,58 @@ def test_red_skill_stage_loaded_after_first_edit():
 
 
 # --------------------------------------------------------------------------- #
+# Claude evaluator: multi-skill positive stage (maturation)
+# --------------------------------------------------------------------------- #
+
+
+def test_green_maturation_both_guaranteed_skills_loaded_before_edit():
+    # maturation always loads task-tree + superplan; both present before the first
+    # edit → green, one observation per guaranteed skill.
+    row = stage_row("maturation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[
+            ("superRA:task-tree", 0),
+            ("superRA:superplan", 1),
+        ],
+        edit_event_indices=[3],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    report.assert_ok()
+    assert len(report.observations) == 2
+
+
+def test_green_maturation_holds_without_conditional_writing():
+    # writing is conditional ("prose-heavy maturation"); a maturation run that
+    # loads only the two guaranteed skills (no writing) must still be green —
+    # writing is never asserted as a guaranteed load.
+    row = stage_row("maturation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("task-tree", 0), ("superplan", 1)],
+        edit_event_indices=[3],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    report.assert_ok()
+    assert "writing" not in " ".join(report.missing)
+
+
+def test_red_maturation_one_guaranteed_skill_missing():
+    # task-tree loaded but superplan did not — a real over/under-load finding on a
+    # multi-skill stage; the missing guaranteed skill must be reported.
+    row = stage_row("maturation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("task-tree", 0)],
+        edit_event_indices=[3],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    assert not report.ok
+    assert "superplan" in report.missing[0]
+    assert "never loaded" in report.missing[0]
+
+
+# --------------------------------------------------------------------------- #
 # Claude evaluator: read-channel stage (planning-review reference)
 # --------------------------------------------------------------------------- #
 
@@ -275,7 +336,7 @@ def test_read_path_suffix_matches_absolute_not_substring_false_positive():
 
 
 # --------------------------------------------------------------------------- #
-# Claude evaluator: negative stages (implementation / documentation)
+# Claude evaluator: negative stage (implementation)
 # --------------------------------------------------------------------------- #
 
 
@@ -294,7 +355,7 @@ def test_green_negative_stage_no_stage_skill_loaded():
 
 
 def test_red_negative_stage_loaded_a_stage_skill():
-    row = stage_row("documentation")
+    row = stage_row("implementation")
     evidence = evidence_from_hook_records(
         skill_tool_events=[("refactor-and-integrate", 0)],
         edit_event_indices=[2],
@@ -304,6 +365,21 @@ def test_red_negative_stage_loaded_a_stage_skill():
     assert not report.ok
     assert "over-load" in report.missing[0]
     assert "refactor-and-integrate" in report.missing[0]
+
+
+def test_red_negative_stage_loaded_a_maturation_skill():
+    # ALL_STAGE_SKILLS now includes the maturation skills, so a maturation skill
+    # loaded on the negative stage is an over-load too.
+    row = stage_row("implementation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("task-tree", 0)],
+        edit_event_indices=[2],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    assert not report.ok
+    assert "over-load" in report.missing[0]
+    assert "task-tree" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -325,13 +401,17 @@ def test_evaluate_all_green_across_all_stages():
         "integration": evidence_from_hook_records(
             skill_tool_events=[("refactor-and-integrate", 0)],
         ),
+        "maturation": evidence_from_hook_records(
+            skill_tool_events=[("task-tree", 0), ("superplan", 1)],
+        ),
         "implementation": evidence_from_hook_records(),
-        "documentation": evidence_from_hook_records(),
     }
     report = StageLoadReport()
     evaluate_all_stage_loads(report, evidence_by_stage)
     report.assert_ok()
-    assert len(report.observations) == len(STAGE_ROWS)
+    # One observation per stage row, plus one extra for maturation's second
+    # guaranteed skill (task-tree + superplan).
+    assert len(report.observations) == len(STAGE_ROWS) + 1
 
 
 def test_evaluate_all_reports_missing_evidence_for_a_stage():
@@ -400,11 +480,11 @@ def test_committed_expected_artifacts_satisfy_canaries():
 
 
 def test_negative_stage_expected_artifacts_use_none_sentinel():
-    for stage in ("implementation", "documentation"):
-        expected = json.loads(
-            (FIXTURE_ROOT / "expected" / f"{stage}.expected.json").read_text(
-                encoding="utf-8"
-            )
+    stage = "implementation"
+    expected = json.loads(
+        (FIXTURE_ROOT / "expected" / f"{stage}.expected.json").read_text(
+            encoding="utf-8"
         )
-        assert expected["stage"] == stage
-        assert expected["stage_canary"] == "none"
+    )
+    assert expected["stage"] == stage
+    assert expected["stage_canary"] == "none"

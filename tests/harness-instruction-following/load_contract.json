@@ -51,11 +51,12 @@
       "source_paths": [
         "skills/using-superra/SKILL.md#L67-L76"
       ],
-      "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or documentation.",
+      "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or maturation.",
       "expected_evidence": [
         "static parse finds exact stage rows and load targets",
-        "live transcript for non-empty stage rows shows the target skill/reference loaded before action",
-        "implementation and documentation rows produce no extra stage-skill expectation"
+        "live transcript for non-empty stage rows shows the target skill(s)/reference loaded before action",
+        "the maturation row loads task-tree + superplan (writing conditional, prose-heavy maturation only)",
+        "the implementation row produces no extra stage-skill expectation"
       ],
       "classification": [
         "ci_safe_static",
@@ -69,12 +70,12 @@
           "test_stage_loads_live.py (stage evaluator + per-stage codex canaries on synthetic inputs)"
         ],
         "manual_live_claude": [
-          "stage_loads_live.py (per-stage Skill-tool + planning-review Read-channel canary)"
+          "stage_loads_live.py (per-stage Skill-tool + planning-review Read-channel canary; maturation as a multi-skill Skill-tool stage)"
         ],
         "manual_live_codex": [
           "stage_loads_live.py per-stage CanarySpec (built/CI-tested, live-pending — no credentials yet)"
         ],
-        "notes": "Claude live-verified for all four non-empty stages. See LC007-LC010 for per-stage detail. Codex live not yet run."
+        "notes": "Claude live-verified for the four single-target non-empty stages. See LC007-LC010 for per-stage detail and LC023 for the maturation multi-skill stage (added on the trunk sync, fixture-covered, live-pending). Codex live not yet run."
       }
     },
     {
@@ -332,6 +333,41 @@
           "stage_loads_live.py integration CanarySpec (built/CI-tested, live-pending — no credentials yet)"
         ],
         "notes": "Claude live-verified: integration loads refactor-and-integrate. Codex live not yet run."
+      }
+    },
+    {
+      "id": "LC023",
+      "area": "stage-maturation",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L76-L76",
+        "skills/task-tree/SKILL.md",
+        "skills/superplan/SKILL.md",
+        "skills/writing/SKILL.md"
+      ],
+      "trigger": "Dispatch has Stage: maturation.",
+      "expected_evidence": [
+        "static parse confirms manifest loads task-tree + superplan always, and writing conditionally (prose-heavy maturation)",
+        "live transcript shows task-tree and superplan loaded before action; writing is not a guaranteed load",
+        "the over-load check treats task-tree and superplan as stage skills (a maturation skill on the negative implementation stage is an over-load)"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_both"
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_contract_matches_audit (maturation -> task-tree, superplan, writing row)"
+        ],
+        "fixture_unit": [
+          "test_stage_loads_live.py (multi-skill stage evaluator: both guaranteed skills required, writing conditional; maturation codex canary)"
+        ],
+        "manual_live_claude": [
+          "stage_loads_live.py STAGE_ROWS[maturation] (task-tree + superplan via Skill tool; multi-skill positive stage)"
+        ],
+        "manual_live_codex": [
+          "stage_loads_live.py maturation CanarySpec (built/CI-tested, live-pending — no credentials yet)"
+        ],
+        "notes": "Added on the better-handoff trunk sync (commit 929dad65 renamed documentation -> maturation and made it a positive multi-skill stage). Fixture-covered; live run pending for both harnesses."
       }
     },
     {

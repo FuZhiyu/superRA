@@ -37,6 +37,10 @@ skill/reference body prescribes — knowable only from that body:
 - `sync` → `intent conflict`
 - `integration` → `minimum net diff`
 - `planning-review` → `handoff-readiness`
+- `maturation` → `frontier`
 
-For `implementation` and `documentation` there is no extra stage skill; set
-`stage_canary` to `none`.
+For `maturation`, load the skills the manifest maps that stage to (`task-tree`,
+`superplan`; `writing` only for prose-heavy maturation); `frontier` is a concept
+unique to the always-loaded `task-tree` body.
+
+For `implementation` there is no extra stage skill; set `stage_canary` to `none`.

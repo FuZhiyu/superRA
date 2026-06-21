@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """Per-stage skill-load live coverage (task 11), CI-safe core + manual live entry.
 
-Verifies that each non-empty workflow stage loads the skill/reference the
+Verifies that each non-empty workflow stage loads the skill(s)/reference the
 Skill-Load Manifest assigns it before stage action (load-contracts LC002,
-LC007–LC010), in both harnesses, and that the two negative stages
-(``implementation`` / ``documentation``) carry no extra stage-skill expectation:
+LC007–LC010), in both harnesses, and that the sole negative stage
+(``implementation``) carries no extra stage-skill expectation:
 
 - ``planning-review`` → ``skills/superplan/references/planning-review.md``
 - ``protection``      → ``result-protection``
 - ``sync``            → ``semantic-merge``
 - ``integration``     → ``refactor-and-integrate``
+- ``maturation``      → ``task-tree`` + ``superplan`` (always); ``writing``
+  conditional ("prose-heavy maturation"), so it is not a guaranteed load
+
+``maturation`` is the one positive stage whose manifest row loads **multiple**
+skills, so its row carries a tuple of expected skill names; the single-skill
+positive rows and the read-channel row are unchanged.
 
 One parametrized table (:data:`STAGE_ROWS`) is the single source of truth, so
 adding a future stage is a one-row change. Each row names the expected evidence
@@ -62,16 +68,23 @@ CHANNEL_NONE = "none"  # negative stage: no extra stage-skill expectation
 
 @dataclass(frozen=True)
 class StageRow:
-    """One ``{stage, expected_skill_or_refpath}`` parametrization row.
+    """One ``{stage, expected_skill(s)_or_refpath}`` parametrization row.
 
     - ``stage`` is the ``Stage:`` value the dispatch carries.
-    - ``expected`` is the manifest skill *name* (e.g. ``"result-protection"``) for
-      a ``CHANNEL_SKILL`` row, or the reference *path* (e.g.
-      ``"skills/superplan/references/planning-review.md"``) for a ``CHANNEL_READ``
-      row, or ``None`` for a negative stage.
+    - For a ``CHANNEL_SKILL`` row, ``expected_skills`` holds the manifest skill
+      *name(s)* the stage **always** loads (e.g. ``("result-protection",)`` for a
+      single-skill stage, ``("task-tree", "superplan")`` for the multi-skill
+      ``maturation`` stage). A skill the manifest marks conditional (``writing``
+      on ``maturation``) is **not** listed — it must not be a guaranteed-load
+      assertion. ``expected`` is ``None`` for skill-channel rows.
+    - For a ``CHANNEL_READ`` row, ``expected`` is the reference *path* (e.g.
+      ``"skills/superplan/references/planning-review.md"``) and ``expected_skills``
+      is empty.
+    - For a negative stage, both ``expected`` is ``None`` and ``expected_skills``
+      is empty.
     - ``channel`` selects how the evaluator looks for the evidence.
     - ``codex_canary`` is the per-stage Codex :class:`CanarySpec` whose
-      skill-unique token is only producible if the stage skill/reference body
+      skill-unique token is only producible if a stage skill/reference body
       loaded; ``None`` for a negative stage.
     """
 
@@ -79,6 +92,7 @@ class StageRow:
     expected: str | None
     channel: str
     codex_canary: CanarySpec | None
+    expected_skills: tuple[str, ...] = ()
 
 
 # --------------------------------------------------------------------------- #
@@ -118,6 +132,17 @@ CODEX_PLANNING_REVIEW_CANARY = CanarySpec(
     in_command=False,
     in_artifact_field=_STAGE_CANARY_FIELD,
 )
+# maturation loads task-tree + superplan (always) and writing (conditional). The
+# canary anchors on a concept unique to one *always-loaded* maturation skill —
+# task-tree's `frontier` view — so the token is producible only if that body
+# reached context. We do NOT anchor on writing (conditional) lest a maturation
+# run that legitimately skips the prose-heavy load red the canary.
+CODEX_MATURATION_CANARY = CanarySpec(
+    skill="task-tree",
+    token="frontier",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -133,32 +158,48 @@ STAGE_ROWS: tuple[StageRow, ...] = (
     ),
     StageRow(
         stage="protection",
-        expected="result-protection",
+        expected=None,
         channel=CHANNEL_SKILL,
         codex_canary=CODEX_PROTECTION_CANARY,
+        expected_skills=("result-protection",),
     ),
     StageRow(
         stage="sync",
-        expected="semantic-merge",
+        expected=None,
         channel=CHANNEL_SKILL,
         codex_canary=CODEX_SYNC_CANARY,
+        expected_skills=("semantic-merge",),
     ),
     StageRow(
         stage="integration",
-        expected="refactor-and-integrate",
+        expected=None,
         channel=CHANNEL_SKILL,
         codex_canary=CODEX_INTEGRATION_CANARY,
+        expected_skills=("refactor-and-integrate",),
     ),
-    # Negative stages: no extra stage-skill expectation.
+    # Positive multi-skill stage: maturation always loads task-tree + superplan.
+    # writing is conditional ("prose-heavy maturation"), so it is deliberately
+    # absent from expected_skills — only the guaranteed loads are asserted.
+    StageRow(
+        stage="maturation",
+        expected=None,
+        channel=CHANNEL_SKILL,
+        codex_canary=CODEX_MATURATION_CANARY,
+        expected_skills=("task-tree", "superplan"),
+    ),
+    # Negative stage: no extra stage-skill expectation.
     StageRow(stage="implementation", expected=None, channel=CHANNEL_NONE, codex_canary=None),
-    StageRow(stage="documentation", expected=None, channel=CHANNEL_NONE, codex_canary=None),
 )
 
 # All stage skill names, for the negative-case "no stage skill loaded" check.
+# Flattens every positive skill-channel row's expected_skills, including the
+# multi-skill maturation row, so a maturation skill loaded on the negative stage
+# is caught as an over-load.
 ALL_STAGE_SKILLS: frozenset[str] = frozenset(
-    row.expected
+    skill
     for row in STAGE_ROWS
-    if row.channel == CHANNEL_SKILL and row.expected is not None
+    if row.channel == CHANNEL_SKILL
+    for skill in row.expected_skills
 )
 
 
@@ -200,15 +241,17 @@ def evaluate_stage_load(
 ) -> None:
     """Check one stage's manifest load against captured SDK evidence.
 
-    - ``CHANNEL_SKILL``: the manifest skill must have loaded via the ``Skill``
-      tool before the first edit (08's ordering check, applied to the stage
-      skill).
+    - ``CHANNEL_SKILL``: every skill in ``expected_skills`` must have loaded via
+      the ``Skill`` tool before the first edit (08's ordering check, applied to
+      each guaranteed-load stage skill). A multi-skill stage (``maturation``)
+      requires all of its guaranteed loads; a conditional skill is not listed, so
+      its absence is never a failure here.
     - ``CHANNEL_READ``: the manifest reference path must have been read via the
       ``Read`` tool before the first edit (08's opt-in Read channel). Requires the
       session to have been run with ``capture_reads=True``.
-    - ``CHANNEL_NONE``: the negative stages must load **none** of the stage
-      skills — a stage-skill load on ``implementation`` / ``documentation`` is a
-      real over-load finding.
+    - ``CHANNEL_NONE``: the negative stage must load **none** of the stage
+      skills — a stage-skill load on ``implementation`` is a real over-load
+      finding.
 
     A clear failure names the stage and the missing/late/unexpected evidence.
     A reliable failure is a real LC002/LC007–LC010 finding to escalate, not an
@@ -216,23 +259,23 @@ def evaluate_stage_load(
     """
 
     if row.channel == CHANNEL_SKILL:
-        skill = row.expected
-        if skill not in evidence.loaded_skill_names:
-            report.missing.append(
-                f"stage {row.stage!r}: required skill {skill!r} never loaded "
-                f"(observed skill loads: {sorted(evidence.loaded_skill_names)})"
-            )
-        elif not evidence.loaded_before_first_edit(skill):
-            report.missing.append(
-                f"stage {row.stage!r}: skill {skill!r} loaded at event "
-                f"{evidence.first_load_index(skill)} but the first edit/write was "
-                f"at event {evidence.first_edit_index} — must load before the "
-                f"first edit"
-            )
-        else:
-            report.observations.append(
-                f"stage {row.stage!r}: skill {skill!r} loaded before first edit"
-            )
+        for skill in row.expected_skills:
+            if skill not in evidence.loaded_skill_names:
+                report.missing.append(
+                    f"stage {row.stage!r}: required skill {skill!r} never loaded "
+                    f"(observed skill loads: {sorted(evidence.loaded_skill_names)})"
+                )
+            elif not evidence.loaded_before_first_edit(skill):
+                report.missing.append(
+                    f"stage {row.stage!r}: skill {skill!r} loaded at event "
+                    f"{evidence.first_load_index(skill)} but the first edit/write "
+                    f"was at event {evidence.first_edit_index} — must load before "
+                    f"the first edit"
+                )
+            else:
+                report.observations.append(
+                    f"stage {row.stage!r}: skill {skill!r} loaded before first edit"
+                )
 
     elif row.channel == CHANNEL_READ:
         ref = row.expected
@@ -396,8 +439,8 @@ def _main() -> int:
     import tempfile
 
     # Only the non-empty stages have a load expectation worth a live shot; the
-    # negative stages are covered by the CI-safe unit test (asserting no stage
-    # skill loads), so a live run focuses on the four positive stages.
+    # negative stage is covered by the CI-safe unit test (asserting no stage
+    # skill loads), so a live run focuses on the positive stages.
     positive = [r.stage for r in STAGE_ROWS if r.channel != CHANNEL_NONE]
     failures: list[str] = []
     for stage in positive:
