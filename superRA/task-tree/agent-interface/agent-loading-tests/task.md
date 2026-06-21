@@ -1,6 +1,6 @@
 ---
 title: "Agent Loading Tests"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-19

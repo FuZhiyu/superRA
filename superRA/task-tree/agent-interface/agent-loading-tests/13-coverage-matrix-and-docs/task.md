@@ -1,6 +1,6 @@
 ---
 title: "Coverage Matrix + Contract Annotation"
-status: implemented
+status: approved
 depends_on:
   - 10-always-loaded-live
   - 11-stage-loads-live
