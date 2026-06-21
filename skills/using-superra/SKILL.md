@@ -49,7 +49,7 @@ So `git log` reads as the workflow trace, every commit subject follows one gramm
 - **`<STATE>`** — the verdict or status this commit lands, verbatim from the agent's §Report Format (no new vocabulary): `implement` lands `DONE` | `CONCERNS` | `BLOCKED` | `NEEDS-CTX`; `review` lands `APPROVE` | `REVISE`. `integrate` and `plan` are multi-step *phases*, not single-verdict dispatches — their glanceable state is the sub-step name carried in `<scope>`, owned and enumerated by `superintegrate` / `superplan`. Maintenance commits omit `<STATE>`.
 - **`<scope>`** — the task-path locator (e.g. `data-preparation/merge`) for a run commit; the component for a maintenance commit.
 
-`status:` frontmatter remains the single source of *current* truth (it mutates with the task); the subject's `<STATE>` records what *this commit* did at commit time (immutable history). They answer different questions and do not compete; the status return stays minimal (status enum + SHA).
+`<STATE>` records what this commit did; the task's live status stays in `status:` frontmatter.
 
 The body is the **dispatch delta** — what changed this turn and why. It is history scoped to this commit; it is **not** a copy of `## Results` / `## Review Notes` (those are the task's current self-contained state) and not the full task state.
 
