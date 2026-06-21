@@ -239,6 +239,19 @@ The wrapper's `dashboard` subcommand routes straight to `plan_dashboard.py` via 
 
 The server provides SSE hot-reload, auto-updating when the viewed worktree's task files change. Port is derived deterministically from the git common directory (range 8100–8999; the plan-root path is the no-git fallback), so all of a repo's worktrees share one server. That server resolves any worktree per request: the active worktree rides the browser URL as `?wt=<worktree-basename>` (absent means the launch worktree), and the selector does in-page navigation, not a server-wide switch — so two tabs can view different worktrees on one port without interfering. `--port N` overrides. The static `generate` subcommand is deprecated — use live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 
+### Headless ensure-running and task URLs
+
+`superra dashboard --no-open` is the browser-free, idempotent way to guarantee a server is up: it reuses a healthy background server — printing `Dashboard already running at http://localhost:<port>` — or starts one detached and prints `Dashboard running at http://localhost:<port>`. The reuse check reads the repo-scoped PID file, so this one command both reports whether a server was already running and leaves one running either way; the printed `localhost:<port>` is the live URL.
+
+A specific task's URL extends that base — task path in the hash, worktree in `?wt=`:
+
+```
+http://localhost:<port>/?wt=<worktree-basename>#/<task-path>
+```
+
+- `<task-path>` — the task-root-relative locator, exactly the `superra task read` argument (no `superRA/` prefix), e.g. `data-preparation/merge`; empty for the tree root.
+- `?wt=` — selects the worktree (the `?wt=` rule above); drop it for the launch worktree.
+
 ### GitHub Actions artifact sharing
 
 Install the managed artifact workflow from the repository root:
