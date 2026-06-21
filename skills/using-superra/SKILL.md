@@ -37,6 +37,22 @@ Before staging:
 
 If you see unfamiliar uncommitted changes and cannot tell whether they are legitimate pending work (from the main agent between dispatches, or the user editing manually) or stale junk, stop and ask the orchestrator (if you are a subagent) or the user (if you are the main agent) — do not unilaterally discard or commit them.
 
+### Commit subject grammar
+
+So `git log` reads as the workflow trace, every commit subject follows one grammar:
+
+```
+<stage>(<scope>): <STATE> — <summary>
+```
+
+- **`<stage>`** — the workflow verb (`plan`, `implement`, `review`, `integrate`, `sync`) for a task-run commit, or a maintenance type (`fix` / `feat` / `refactor` / `docs` / `test` / `chore` / `ci`) for work outside a task run.
+- **`<STATE>`** — the verdict or status this commit lands, verbatim from the agent's §Report Format (no new vocabulary): `implement` lands `DONE` | `CONCERNS` | `BLOCKED` | `NEEDS-CTX`; `review` lands `APPROVE` | `REVISE`. `integrate` and `plan` are multi-step *phases*, not single-verdict dispatches — their glanceable state is the sub-step name carried in `<scope>`, owned and enumerated by `superintegrate` / `superplan`. Maintenance commits omit `<STATE>`.
+- **`<scope>`** — the task-path locator (e.g. `data-preparation/merge`) for a run commit; the component for a maintenance commit.
+
+`status:` frontmatter remains the single source of *current* truth (it mutates with the task); the subject's `<STATE>` records what *this commit* did at commit time (immutable history). They answer different questions and do not compete; the status return stays minimal (status enum + SHA).
+
+The body is the **dispatch delta** — what changed this turn and why. It is history scoped to this commit; it is **not** a copy of `## Results` / `## Review Notes` (those are the task's current self-contained state) and not the full task state.
+
 ## Task Interface
 
 Tasks are managed task trees in the `superRA/` directory. For basic I/O, this section is sufficient. For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.

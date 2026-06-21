@@ -149,7 +149,7 @@ For each newly created task — especially a root-level one — state the existi
 
 ### Execution Handoff
 
-Commit the `superRA/` directory atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
+Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initial tree authoring; see §User Feedback and Changing the Task Tree for the full sub-step set). Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
 
 ## Substantive Questions
 
@@ -196,7 +196,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work by Durable Home and §Objective rewrites on scope expansion. After task edits, rewrite any field in root task.md that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
-5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
+5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.
 6. **Resolve the next frontier.** Run `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
 
 Do not resume the in-flight task before the change is committed — it is not real until then — and do not treat an invalidated milestone as license to clear unrelated approved tasks.

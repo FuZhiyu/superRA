@@ -1,6 +1,6 @@
 ---
 title: "Encode Workflow State in the Commit Subject + Sharpen the Body DRY Boundary"
-status: not-started
+status: implemented
 depends_on:
   - 08-report-commit-model
 tags: []
@@ -77,3 +77,33 @@ This is a focused, surgical documentation change to one skill section, two role-
 Resist scope creep: do **not** retro-rewrite historical commit messages, and do **not** add a body template — the body stays free prose. The grammar-shape decision (conventional-commits `<stage>(<scope>):` short form, scope = task-path locator) is settled per the user's confirmed previews; do not reopen it.
 
 The integrate/plan sub-step names (`protect|sync|fit|mature|finish`, `add|revise|rollup|review`) are the one piece of genuinely new vocabulary — confirm they match the actual step headings in `superintegrate`/`superplan` as you place them, and keep them owned by those skills (do not duplicate the list into `using-superra`).
+
+## Results
+
+The commit-subject grammar now lives as one cross-stage invariant, with each multi-step phase owning its sub-step token list and each role spec carrying only its per-site example.
+
+**Shared invariant — `using-superra` §Commit Hygiene** ([SKILL.md:40-54](../../../../../skills/using-superra/SKILL.md#L40-L54)): added a `### Commit subject grammar` block with the `<stage>(<scope>): <STATE> — <summary>` spec. It enumerates the stage verbs and maintenance types, the `implement`/`review` `<STATE>` vocabulary (verbatim from §Report Format), and the `<scope>` locator. `integrate`/`plan` are named as multi-step phases whose sub-step token is **owned and enumerated by `superintegrate`/`superplan`** — the list is *not* duplicated here (per planner guidance). The block closes by reconciling with task 08: `status:` frontmatter stays the single source of current truth, the subject `<STATE>` records what *this commit* did (immutable history), status return stays minimal. The sharpened body DRY clause lands here once: the body is the dispatch delta, **not** a copy of `## Results` / `## Review Notes`.
+
+**Role-spec §Commit example lines (per-site content only):**
+- Implementer ([implementer.md:101-105](../../../../../agents/implementer.md#L101-L105)): example reshaped to `implement(<task-path>): <STATE> — <delta>` with inline `# STATE = DONE | CONCERNS | BLOCKED — per §Report Format`; the superseded "Keep status out of the subject" sentence deleted; body clause sharpened to point at `## Results`.
+- Reviewer ([reviewer.md:108-112](../../../../../agents/reviewer.md#L108-L112)): example reshaped to `review(<task-path>): <STATE> — <delta>` with `# STATE = APPROVE | REVISE — per §Report Format`; "Keep the verdict out of the subject" sentence deleted; body clause sharpened to point at `## Review Notes`.
+
+Both specs keep their existing §Commit pointer to `using-superra` §Commit Hygiene (the grammar is not restated there).
+
+**Phase owners — sub-step tokens placed inline where each step is described:**
+- `superintegrate` ([SKILL.md:26](../../../../../skills/superintegrate/SKILL.md#L26)): §Stop Points carries the authoritative one-line enumeration `integrate(<step>)` with `protect | sync | fit | mature | finish` (the `fit` token names the "Integrate" refactor-to-fit step, since `integrate(integrate)` would be redundant). Each of the five step descriptions then carries a concise inline subject mention at its commit point (Protect step 6, Sync intro, Integrate close step 6, Mature & Consolidate APPROVE commit, Finish closeout). A dispatched sync (its own `Stage: sync`) commits under the `sync` verb; an inline Direct-mode sync lands as `integrate(sync)`. No separate table added.
+- `superplan` ([SKILL.md:199](../../../../../skills/superplan/SKILL.md#L199)): §User Feedback step 5 commit title updated from `plan: …` to `plan(<sub-step>): …` with the `add | revise | rollup | review` set enumerated inline (this update-task path is `plan(revise)`; a planning-review verdict commit is `plan(review): APPROVE|REVISE — …`). Execution Handoff (§Phase 4) tags initial tree authoring as `plan(add): …` and points to the full set.
+
+**Generated artifacts (`[BLOCKING]`)** — regenerated via `sync_codex_agents.py --scope project`; all four updated and verified to carry the new §Commit example lines:
+- `skills/using-superra/references/direct-mode-implementer.md`, `direct-mode-reviewer.md`
+- `.codex/agents/superra_implementer.toml`, `superra_reviewer.toml`
+
+No generator/test matcher change was needed: the generator splices §Handoff (which contains §Commit) structurally by top-level section and never string-matched the deleted "Keep status/verdict out of the subject" sentences; `grep` confirmed the test file has no such string.
+
+**Verification:**
+- `sync_codex_agents.py --scope project --check` → clean (all generated agents + direct-mode refs up to date)
+- `uv run --with pytest --with pyyaml python -m pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` → 7 passed
+- `task_check.py --plan-root superRA` → all checks passed
+- `check_markdown.py skills/using-superra/SKILL.md` → clean
+
+**DRY + Necessity self-check:** the grammar block exists once (`using-superra`); the integrate/plan token lists live only in their owning skills; the role specs carry only the example line + a scoped one-line body clause (the per-site content the objective authorizes). No body template was added — the body stays free prose. Historical commit messages were not rewritten.

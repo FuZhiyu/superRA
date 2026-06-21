@@ -100,10 +100,10 @@ Stage code + assigned task.md files in a **single atomic commit**, following `su
 
 ```bash
 git add [code files] superRA/<task-path>/task.md
-git commit -m "implement task <task-path>: <delta>"
+git commit -m "implement(<task-path>): <STATE> — <delta>"   # STATE = DONE | CONCERNS | BLOCKED — per §Report Format
 ```
 
-Keep status out of the subject — it lives in `status:` frontmatter. The body is the delta: what changed this dispatch and why, not the full task state.
+The body is the dispatch delta — what changed this dispatch and why; it is **not** a copy of `## Results` and not the full task state.
 
 ## Report Format
 

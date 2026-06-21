@@ -23,7 +23,7 @@ Any step -> superplan §User Feedback and Changing the Task Tree
 
 ## Stop Points
 
-The Workflow Frontier Resolver chooses where to enter. Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — each step's completion is recorded by its commit and the per-task `status` it leaves behind, so a resumed session reads progress from git and statuses, not from a tracker section.
+The Workflow Frontier Resolver chooses where to enter. Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — each step's completion is recorded by its commit and the per-task `status` it leaves behind, so a resumed session reads progress from git and statuses, not from a tracker section. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
 
 Legitimate stop points (fold every answer into the relevant task objective **before** acting):
 
@@ -59,11 +59,11 @@ Drift tests are the default protection mechanism, guarding key results through S
 3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template. Drift tests reference task paths, not task numbers.
 4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
-6. **Commit tests and task.md updates** once all confirmed key results are protected and the full drift-test suite passes. The protection commit is the record that Protect is done.
+6. **Commit tests and task.md updates** once all confirmed key results are protected and the full drift-test suite passes. The protection commit (`integrate(protect): …`) is the record that Protect is done.
 
 ## Sync
 
-Sync brings the branch onto the current base before refactor starts. A trivial sync (per Step 3) lands inline in Direct mode; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization.
+Sync brings the branch onto the current base before refactor starts. A trivial sync (per Step 3) lands inline in Direct mode; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization. A dispatched sync (its own `Stage: sync`) commits under the `sync` stage verb; an inline Direct-mode sync lands as `integrate(sync): …` per §Stop Points.
 
 ### Step 1: Resolve the target base
 
@@ -253,7 +253,7 @@ For non-minor fixes that require reviewer re-dispatch per `agent-orchestration` 
 Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
 - remove every temporary task-local `## Sync Impact` section, unless a lasting task assumption still belongs in the task.md — in which case fold that assumption into the task's `## Objective` and remove the section. Then run `superra task check` (warn-only `sync-impact` category) and confirm it flags no surviving `## Sync Impact`.
-- commit the closeout edit; that commit plus the in-scope tasks' `status: approved` is the record that Integrate closed.
+- commit the closeout edit (`integrate(fit): …`); that commit plus the in-scope tasks' `status: approved` is the record that Integrate closed.
 
 ## Mature & Consolidate
 
@@ -316,11 +316,11 @@ Agent(subagent_type: "superRA:reviewer"):
     <prior-round adjudication notes if re-dispatching>
 ```
 
-On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a finding traces to the code, re-enter Integrate. On APPROVE, commit the consolidated, matured tree.
+On REVISE, adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback until APPROVE. If a finding traces to the code, re-enter Integrate. On APPROVE, commit the consolidated, matured tree (`integrate(mature): …`).
 
 ## Finish
 
-Finish executes the user's completion choice from `superimplement`. The `superRA/` directory is committed as-is — it is part of the permanent branch record.
+Finish executes the user's completion choice from `superimplement`. The `superRA/` directory is committed as-is — it is part of the permanent branch record; any closeout commit here lands as `integrate(finish): …` per §Stop Points.
 
 ### Step 1: Freshness check
 

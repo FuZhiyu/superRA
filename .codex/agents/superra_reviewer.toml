@@ -108,10 +108,10 @@ When `## Review Notes` is empty, remove the section entirely and (with `## Revis
 Stage assigned task.md files only, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
-git commit -m "review task <task-path>: <delta>"
+git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format
 ```
 
-Keep the verdict out of the subject — it lives in `status:`. The body is the delta: what you changed this dispatch and why, not the full review.
+The body is the dispatch delta — what you changed this dispatch and why; it is **not** a copy of `## Review Notes` and not the full review.
 
 ## Report Format
 
