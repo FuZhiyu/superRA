@@ -25,13 +25,11 @@ Task-tree design judgment — placement, task splitting, context distillation, u
 
 Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
 
-**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work by Durable Home. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise make the work the first root-level task.
+**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work in the Existing Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise make the work the first root-level task.
 
 **2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
 **3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
-
-Placement and depth are independent: work can clearly belong under an existing task yet still need thorough planning, and an uncertain tree location does not make the work hard to plan. Exploration may force either to be revisited.
 
 **Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing — wrong placement creates rework, wrong depth wastes effort or misses complexity.
 
@@ -55,20 +53,9 @@ Revisit the entry assessment if exploration shows placement or depth needs adjus
 
 Identify the domain of the work and load the matching domain skill's planning reference, which carries the domain's hard gates and templates.
 
-**Currently implemented verticals:**
-
-| Vertical | Trigger | Domain skill |
-|---|---|---|
-| Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` |
-| Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` |
-| Writing | task involves editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
-| Slide design | task involves creating, revising, polishing, or reviewing research slide decks, Beamer presentations, seminar/conference/lecture slides, slide structure, titles, bullets, overlays, backup slides, or slide layout/overflow issues | `superRA:slide-design` |
-
 **Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 3.** The researcher must approve the domain skill's planning-stage inventory artifact before any task structure is drafted.
 
-If the task is in a domain without an implemented vertical: proceed to Phase 3, but flag the gap to the researcher.
-
-**Scope check:** A root-level task is a whole workstream (see `references/task-tree-design.md` §Root-task definition). If the work covers multiple genuinely independent workstreams, suggest a separate root-level task for each, producing complete results on its own; work related to an existing workstream nests under it by the placement descent rather than landing at root.
+If the task is in a domain without an implemented domain skill: proceed to Phase 3, but flag the gap to the researcher.
 
 ## Phase 3: Design & Task Decomposition
 
@@ -100,7 +87,7 @@ Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree
 
 ### Task Dependencies
 
-Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes and `references/task-tree-design.md` §Placing Work by Durable Home for semantics.
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes and `references/task-tree-design.md` §Parent and sibling context for semantics.
 
 Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
@@ -135,7 +122,18 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose between `Review mode: handoff-readiness` and `Review mode: design-review` (defined in `references/planning-review.md` §Review Mode); use `agent-orchestration` §Dispatch Templates for the dispatch shape.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step:
+
+**Planning reviewer:**
+```
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: planning-review
+  Task: <task path or root>
+  Review mode: handoff-readiness | design-review
+  Context: <exploration synthesis, inline or path>
+```
+
+The two review modes are defined in `references/planning-review.md` §Review Mode.
 
 REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
@@ -193,10 +191,10 @@ When the task tree changes — details updated, tasks added/removed/restructured
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work by Durable Home and §Objective rewrites on scope expansion. After task edits, rewrite any field in root task.md that no longer matches the new tree.
+2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in root task.md that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.
-6. **Resolve the next frontier.** Run `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
+6. **Resume.** The reset tasks reappear on `task frontier`; continue the implement loop on the affected frontier (`using-superra/references/main-agent.md` §Resuming Work).
 
 Do not resume the in-flight task before the change is committed — it is not real until then — and do not treat an invalidated milestone as license to clear unrelated approved tasks.

@@ -140,14 +140,14 @@ Research is rarely linear, and superRA does not force it to be. The phases form 
 In practice that means you can edit the tree at any time, in plain language. Add a task to a tree that is already running:
 
 ```text
-Using superRA, add a task under showcase-analysis for a robustness check
+Using superplan, add a task under showcase-analysis for a robustness check
 on the post-2000 subsample, depending on the regression task.
 ```
 
 Revise a task's objective as your understanding shifts:
 
 ```text
-Using superRA, update the regression task to also report Newey-West
+Using superplan, update the regression task to also report Newey-West
 standard errors.
 ```
 

@@ -76,8 +76,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Concern | Owner |
 | --- | --- |
 | Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
-| Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md` (planner-facing dispatch context stays in `thorough-planning.md` §Planning Review) |
-| Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
+| Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
+| Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |

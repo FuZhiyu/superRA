@@ -63,43 +63,31 @@ A task should be the right size for independent dispatch and review.
 
 Name tasks by their goal: "Merge holdings with characteristics," not "Run merge script."
 
-## Placing Work by Durable Home
+## Placing Work in the Existing Tree
 
-Place work by the durable home that should own the result after integration: the implementation surface, artifact family, and future maintenance concern. Historical provenance is evidence, not ownership. Widen an existing owner before adding breadth; an existing objective is an editable current-state contract, not a closed historical scope.
+For each identified objective, we perform the following steps to place the work in the existing tree. We prefer depth over breadth, updating existing tasks over creating new separate tasks.
 
-Branch for independent review value, then use `depends_on` only for prerequisite ordering. Parent objectives are inherited shared context. Dependent sibling tasks are ordered peers whose results are read only when the downstream objective needs them.
+### Recursive descent into the most related tasks
 
-The presumption is modify or merge the task that already owns the concern. Creating a new task — especially a root-level task — is the justified exception.
+Start at the root under `./superRA` and walk down. At each node, split on whether it is a branch or a leaf.
 
-Use motivating cases as evidence for the general rule: a semantic `task move` command belongs under the CLI command surface that will maintain it, while its restructuring provenance belongs in context; a niche status-model update such as `postponed-status` belongs under the status model / task-tree concern that owns it, not as a level-1 workstream.
-
-### Recursive descent
-
-Walk from the root. Descend into a node only because the work relates to that node's concern, so at every node the question is not whether the work belongs there but how deep it lands. Split on leaf vs. branch first.
-
-**Branch** (a node with children):
-
-- A child's concern covers the work: descend into that child and recurse.
-- An existing child owns the durable concern but its objective is too narrow: widen that child objective, add `## Revision Notes` when the change is non-obvious, and recurse.
+If the current node is a **branch** (a node with children):
+- The objective is covered by an existing child's objective: descend into that child and recurse.
+- The objective is related to an existing child's but that child's objective is too narrow: widen the child's objective to cover the new work, add `## Revision Notes` when the change is non-obvious, then descend and recurse.
 - Existing and new work are peers under an unrepresented broader concern: create the broader parent, move both under it, and give the parent the shared objective context.
-- No child covers the work: add a new child under this node. At the root, that child is a new root-level workstream; record which existing child's concern you read and why it does not cover the work.
+- No existing child is related to the objective: create a new subtask under this node. At the root, that subtask is a new root-level workstream — record which existing child's concern you read and why it does not cover the work.
 
-**Leaf** (a node with no children):
+If the current node is a **leaf** (a node with no children):
 
 - Simple extension: update it in place and flip its status from `approved` to `revise`. Rewrite its objective to be self-sufficient with both old and new scope.
 - Complex extension: nest a subtask under it.
 
-A sibling is just a new child of the shared parent. There is no "unrelated at the leaf" case: you reach a leaf only by descending through related concerns.
 
 ### Objective rewrites on scope expansion
 
 When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.
 
 For simple changes, reopen the existing owning task or affected tasks, rewrite objectives, add revision notes, and reset affected approved tasks plus transitive downstream dependents to `not-started` by orchestrator judgment so they re-enter the frontier. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
-
-### Root-task definition
-
-A root-level task is a whole workstream or project. A narrow feature related to an existing workstream nests by the descent above and cannot land at root unless it is genuinely unrelated to everything in the tree.
 
 ### Parent and sibling context
 
@@ -121,9 +109,7 @@ Anti-patterns: creating a new task for a scope extension of an existing task; la
 When creating `superRA/` from existing work:
 
 1. Read the existing code and results to understand what was done.
-2. Create the top `task.md` with the project objective and any project-wide scoped conventions.
-3. Create child tasks that mirror the logical structure of the existing work, not the file layout.
-4. Set status to `approved` for tasks whose work is complete and verified.
-5. Set status to `implemented` for tasks whose work is done but not yet reviewed.
-6. Populate `## Results` from existing findings.
-7. Run `superra dashboard` to launch the dashboard.
+2. Place each logical unit of work by the §Placing Work in the Existing Tree descent above, mirroring the logical structure of the work rather than the file layout.
+3. Set status to `approved` for tasks whose work is complete and verified.
+4. Set status to `implemented` for tasks whose work is done but not yet reviewed.
+5. Populate `## Results` from existing findings.
