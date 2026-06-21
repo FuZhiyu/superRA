@@ -115,7 +115,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 Done by the orchestrator alone, at every workflow stage:
 
-- **Task sequencing and dispatch inside the selected frontier.** The main agent's Workflow Frontier Resolver chooses the workflow/frontier; this skill sizes, bundles, and dispatches the work inside that frontier.
+- **Task sequencing and dispatch inside the selected frontier.** The main agent selects which frontier to work; this skill sizes, bundles, and dispatches the work inside it.
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** Re-dispatch when context is missing; escalate researcher-owned blockers through the active workflow's pause rules.
 - **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, research-related decision, CRITICAL override. Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious.

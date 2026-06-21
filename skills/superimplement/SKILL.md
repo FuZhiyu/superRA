@@ -55,14 +55,14 @@ After the branch check, confirm the `superRA/` directory exists with a root `tas
 
 All conjuncts must succeed. The first confirms the root task exists; the rest confirm tracking and a clean worktree.
 
-**If the check fails, the task tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases. After the repair commit, run `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
+**If the check fails, the task tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases, which end by resuming on the affected frontier.
 
 Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
 ### Step 1: Load and Review Plan
 
 1. Read the root `superRA/task.md` and run `superra task tree` to see the full task tree with statuses.
-2. **Resolve entry** via `using-superra/references/main-agent.md` §Workflow Frontier Resolver if not already done; continue here only when it selects implementation, review, reproducibility verification, or the Step 4 disposition. If all tasks are already `approved`, skip dispatch and start at Step 3 so approved work is verified and disposition-logged before integration.
+2. **Confirm there is implementation work.** Continue here when the frontier has tasks to implement, review, or fix, or when reproducibility or the Step 4 disposition is still pending. If all tasks are already `approved`, skip dispatch and start at Step 3 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the active task or its ancestor chain.
 4. **Read the scoped `### Conventions` / `### Context` / `### Constraints` context in the active task's objective and its ancestor chain** (anatomy: `task-tree/references/task-file-contract.md` §Context Inheritance). When a task the frontier will touch lacks the inherited convention context an agent needs, walk the relevant docs and distill it into the objective of the lowest governing task now (`superplan/references/task-tree-design.md` §Context Distillation) — commit before dispatching subagents.
 5. Review the task tree critically — identify any questions or concerns:
@@ -140,7 +140,7 @@ Fold the researcher's answer into the relevant task objective (rewriting it to b
 **Execute the user's choice:**
 
 - **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`.
-- **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the task-tree edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
+- **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; it ends by resuming on the affected frontier.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <work-branch>`, and — if the work was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
@@ -154,9 +154,9 @@ Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
 
 The autonomy contract is in `superRA:using-superra/references/main-agent.md` (main-agent only). This section lists the **superimplement-specific stop points** that plug into its pause classes.
 
-- **Step 4 completion menu.** User-defined workflow milestone (see Step 4 above for the four options).
-- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`; after the task-tree edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
+- **Step 4 completion menu.** Pre-set workflow gate — pause class 2 (see Step 4 above for the four options).
+- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class 1 in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`. Pause class 1 in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); fold the answer into the relevant task objective **before** acting on it.
 

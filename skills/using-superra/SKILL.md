@@ -23,7 +23,7 @@ SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 2. `superimplement` executes tasks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
 3. `superintegrate` protects key results, syncs and refactors against the integration base, consolidates the task tree and matures its results, and performs the final merge / PR / cleanup action.
 
-The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. Main agents run the §Workflow Frontier Resolver in `references/main-agent.md` to inspect durable evidence, compute the affected frontier, route to the owning workflow, and enforce gates before advancement.
+The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session resumes from durable state — task `status` plus the git log — re-entering at the earliest unfinished layer for the affected frontier while preserving unrelated approved work. Main agents follow `references/main-agent.md` §Resuming Work.
 
 ## Commit Hygiene
 
