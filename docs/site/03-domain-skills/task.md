@@ -10,7 +10,7 @@ created: 2026-06-17
 
 A domain skill gives the agent the methodology for your kind of research and gives the reviewer the standard to hold the work to. With a data task loaded, the agent describes the panel before it builds a variable, and the reviewer checks that it did; with a theory task, it defines its symbols before it manipulates them, and the reviewer checks that too. The discipline is the one you would apply by hand. superRA makes it run on every task and hold up under an adversarial second read.
 
-Four domain skills ship today. Each has its own page below.
+Four domain skills ship today.
 
 - [econ-data-analysis](#/03-domain-skills/01-econ-data-analysis) — enforces describe-before-transform on every data step (merges, filters, variable construction, regressions), so a silent one-to-many fan-out or a missing-as-zero coding gets caught at the step that caused it instead of in a draft.
 - [theory-modeling](#/03-domain-skills/02-theory-modeling) — runs derivations through four ordered gates (objects and notation, assumptions, derivations, verification), so one symbol can't quietly mean two things and an assumption can't be back-filled after the algebra needs it.

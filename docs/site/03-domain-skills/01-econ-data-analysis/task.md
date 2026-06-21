@@ -12,7 +12,7 @@ Hand a bare agent a data file and "merge these two panels and run the regression
 
 This skill makes that failure hard to commit quietly through one rule, the **Iron Law: no transformation without prior description.** Before merging, filtering, aggregating, or constructing a variable, the agent characterizes what it is holding (a baseline); the transformation runs against it; a validate step re-describes the affected variables and checks them against the baseline. Describe, analyze, and validate run on every step, not once at the end, so when a number moves you can name the step that moved it. It loads automatically on data work, so you do not name it.
 
-## How to use
+## Tips on how to use
 
 The agent loads this skill automatically once data analysis is involved, so you do not name it. What you control is how much the validate step has to check against: the more you tell it to expect, the more it can catch. Two habits make the difference.
 
