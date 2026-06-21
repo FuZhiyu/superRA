@@ -21,6 +21,10 @@ Success criteria: both role-spec bodies carry the conditional-load instruction n
 - `agents/*.md` are generated-artifact sources. After editing, run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` — it regenerates `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`. The direct-mode "Before You Start" text is hard-coded in the generator (`render_*_direct_mode_before_you_start`), not copied from the source body — update it there too.
 - The bootstrap load instruction must live in the role-spec body (the agent reads it before it has loaded `using-superra`), not inside `using-superra`.
 
+## Revision Notes
+
+**Mature & Consolidate decision (researcher-approved).** Keep this task in place; mature its `## Results` by removing the transient "Integration self-check (`git diff 1739a8ff..HEAD`)" paragraph (an integration-pass artifact, not durable state), retaining the durable mechanism account and the live-evidence paragraph.
+
 ## Results
 
 Implemented in direct mode by the orchestrator.
