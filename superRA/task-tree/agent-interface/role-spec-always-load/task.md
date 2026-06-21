@@ -1,6 +1,6 @@
 ---
 title: "Explicit Body Load for Always-Loaded Skills (Non-Autoload Harnesses)"
-status: approved
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-19
@@ -29,3 +29,5 @@ Implemented in direct mode by the orchestrator.
 - Updated the two hard-coded direct-mode templates in [sync_codex_agents.py](../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py) to match, then regenerated all four artifacts; `--check` is clean.
 
 **Live evidence (orchestrator ran the SDK harness against the subscription, sonnet):** a dispatched real `superRA:implementer`, asked to state its markdown file-citation rule **without loading any skill or reading any file**, answered "markdown links with line anchors, not backtick-wrapped paths" with **zero `Skill`-tool loads** — proving `report-in-markdown` is autoloaded into context via the frontmatter `skills:` field in Claude. The conditional wording therefore no-ops correctly in Claude (no double-load) and is the load mechanism for non-autoload harnesses (Codex). The `Skill` PreToolUse hook is blind to autoloaded skills by construction, so always-loaded coverage must use a discriminating behavioral canary (task 10), not the hook.
+
+**Integration self-check (`git diff 1739a8ff..HEAD`):** the role-spec change surface is [agents/implementer.md](../../../../agents/implementer.md), [agents/reviewer.md](../../../../agents/reviewer.md), the generator [sync_codex_agents.py](../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py) (both hard-coded direct-mode templates), and the four regenerated artifacts (`.codex/agents/superra_{implementer,reviewer}.toml`, `direct-mode-{implementer,reviewer}.md`). All hunks tie to this objective; the source-body and generator-template wording match and the regenerated artifacts are in sync (`sync_codex_agents.py --scope project --check` clean). Host-fit and DRY+Necessity gate pass: the added instruction encodes the non-default conditional-load mechanism for non-autoload harnesses, behavior the agent would not infer on its own. No suspicious hunks.
