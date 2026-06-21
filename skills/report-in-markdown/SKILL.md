@@ -41,7 +41,7 @@ Two patterns render as broken output in the dashboard with no error, so the rend
 - **Blank-line-separate every display `$$` block.** Put a blank line above and below the `$$` fence lines, and none inside the block. The dashboard renders with `markdown-it-texmath` `delimiters: 'dollars'`, whose `$$` block rule cannot interrupt an open paragraph. A text line directly above the opening `$$` leaves a paragraph open, and the equation is swallowed into that paragraph instead of rendering as a standalone block.
 - **Write KaTeX-undefined operators as `\operatorname{...}`.** Operators that work in a LaTeX `.tex` document — `\diag`, `\cov`, `\var`, `\corr`, `\Cov`, `\Var`, `\E`, `\plim`, `\argmin`, `\argmax`, `\sgn`, `\tr`, `\rank` — are undefined in KaTeX and render as an error. Use `\operatorname{diag}`, `\operatorname{Cov}`, etc.
 
-Run the self-diagnose CLI on any markdown file to catch both before committing (it only reports, never edits):
+The task hook runs this same check automatically on edited `.md` files under a task root and surfaces non-blocking feedback. For standalone markdown, or when no hook ran, use the self-diagnose CLI (it only reports, never edits):
 
 ```
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
