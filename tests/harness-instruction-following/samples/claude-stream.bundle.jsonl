@@ -1,0 +1,6 @@
+{"type":"tool_use","name":"Bash","input":{"command":"./superRA/superra task read agent-loading-bundle/02-primary-loading-task"}}
+{"type":"tool_use","name":"Bash","input":{"command":"./superRA/superra task read agent-loading-bundle/03-secondary-loading-task"}}
+{"type":"tool_use","name":"Read","input":{"file_path":"markers/primary-marker.txt"}}
+{"type":"tool_use","name":"Read","input":{"file_path":"markers/secondary-marker.txt"}}
+{"type":"tool_use","name":"Read","input":{"file_path":"markers/shared-marker.json"}}
+{"type":"tool_use","name":"Write","input":{"file_path":"loading-evidence.json"}}

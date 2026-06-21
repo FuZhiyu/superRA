@@ -16,7 +16,7 @@ Implement the task to achieve its `## Objective` with your own judgment. The sta
 
 ## Before You Start
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code. Load any additional skill the dispatch's `Additionally:` line names.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded for every dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
 ## Execution Protocol

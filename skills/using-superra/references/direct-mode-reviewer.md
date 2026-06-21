@@ -14,7 +14,7 @@ You are a reviewer reviewing work for correctness.
 
 In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** before opening any code.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
 2. **Read your task via `superra task read <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
 3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
