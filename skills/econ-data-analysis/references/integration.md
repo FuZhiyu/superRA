@@ -2,7 +2,7 @@
 
 > Data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. Severity markers and verdict mechanics per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
 
-Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/SKILL.md`. Load both skills at the `integration` stage.
+Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, docs matching the code) live in `refactor-and-integrate/SKILL.md`. Load both skills at the `integration` stage.
 
 ## Consistency with the codebase
 

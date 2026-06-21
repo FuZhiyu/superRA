@@ -63,7 +63,7 @@ superRA organizes every project into three phases — **PLAN → IMPLEMENT → I
     <rect x="171" y="198" width="3" height="46" rx="1.5" fill="var(--accent)"/>
     <text x="188" y="213" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">INTEGRATE</text>
     <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Protect results &middot; Sync with base</text>
-    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Integrate/refactor &middot; Document &middot; Finish</text>
+    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Refactor &middot; Mature &amp; consolidate &middot; Finish</text>
   </g>
 
   <rect x="298" y="282" width="116" height="36" rx="18" fill="var(--st-ok)" stroke="var(--st-ok-t)"/>
@@ -84,7 +84,7 @@ Five ideas carry most of the discipline.
 
 - **Everything important is in the repo.** Every task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. *Why it matters:* a fresh agent session, or you a week later, resumes from the repo alone. You never lose the thread between sessions or get locked into one long conversation.
 - **Adversarial review at every step.** A separate reviewer agent must `APPROVE` each task before it advances; a `REVISE` loops the work back until it passes. *Why it matters:* it catches the "everything looks good" failure — the agent drops half the sample before running the regression — which is the biggest risk of fast AI output.
-- **Domain discipline, enforced as the work happens.** A domain skill applies your field's methodology while the agent works — describe-before-transform for data, assumptions-before-algebra for theory — and the reviewer re-checks it. *Why it matters:* you get methodology you can defend, not just code that runs.
+- **Domain discipline, enforced as the work happens.** A domain skill applies your field's methodology while the agent works — describe-before-transform for data, assumptions-before-algebra for theory — and the reviewer re-checks it. *Why it matters:* you get methodology you can defend, with code that runs.
 - **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins. *Why it matters:* the agent keeps moving without supervision, and interruptions are reserved for the judgment calls only a researcher can make.
 - **Composable and adaptive.** superRA hands the agent reusable mechanisms it assembles for the situation rather than a fixed script, and the phases form a cycle, not a pipeline — discoveries and scope changes route back to the right point, leaving finished work untouched. A new research type is one new domain skill, not a workflow fork. *Why it matters:* the tool bends to research's exploratory rhythm and grows with your work.
 

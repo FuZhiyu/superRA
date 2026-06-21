@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import os
-import re
 import sys
 from pathlib import Path
 
@@ -13,14 +11,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
     TASK_ROOT_DIRNAME,
     cascade_depends_on_rename,
+    compute_move_link_rewrites,
     parse_task,
     propagate_parent_status,
     resolve_path,
     resolve_plan_root_arg,
+    write_task,
 )
-
-MARKDOWN_LINK_RE = re.compile(r"(!?\[[^\]\n]*\]\()(<[^>\n]+>|[^)\s\n]+)(\))")
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,73 +37,6 @@ def _die(message: str) -> None:
     sys.exit(1)
 
 
-def _is_local_markdown_target(target: str) -> bool:
-    if not target or target.startswith(("#", "/")):
-        return False
-    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", target):
-        return False
-    return True
-
-
-def _split_target(target: str) -> tuple[str, str, bool]:
-    angle_wrapped = target.startswith("<") and target.endswith(">")
-    inner = target[1:-1] if angle_wrapped else target
-    split_at = len(inner)
-    for marker in ("#", "?"):
-        pos = inner.find(marker)
-        if pos != -1:
-            split_at = min(split_at, pos)
-    return inner[:split_at], inner[split_at:], angle_wrapped
-
-
-def _rewrite_markdown_links(text: str, old_md: Path, new_md: Path, from_dir: Path, to_dir: Path) -> str:
-    in_fence = False
-
-    def replace(match: re.Match[str]) -> str:
-        target = match.group(2)
-        path_part, suffix, angle_wrapped = _split_target(target)
-        if not _is_local_markdown_target(path_part):
-            return match.group(0)
-
-        old_target = (old_md.parent / path_part).resolve()
-        try:
-            target_after_move = to_dir / old_target.relative_to(from_dir.resolve())
-        except ValueError:
-            target_after_move = old_target
-
-        rel = os.path.relpath(target_after_move, new_md.parent)
-        rel = Path(rel).as_posix()
-        if rel == ".":
-            rel = ""
-        new_target = f"{rel}{suffix}"
-        if angle_wrapped:
-            new_target = f"<{new_target}>"
-        return f"{match.group(1)}{new_target}{match.group(3)}"
-
-    rewritten_lines: list[str] = []
-    for line in text.splitlines(keepends=True):
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
-            rewritten_lines.append(line)
-        elif in_fence:
-            rewritten_lines.append(line)
-        else:
-            rewritten_lines.append(MARKDOWN_LINK_RE.sub(replace, line))
-    return "".join(rewritten_lines)
-
-
-def _collect_markdown_rewrites(from_dir: Path, to_dir: Path) -> dict[Path, str]:
-    rewrites: dict[Path, str] = {}
-    for old_md in from_dir.rglob("*.md"):
-        relative = old_md.relative_to(from_dir)
-        new_md = to_dir / relative
-        original = old_md.read_text(encoding="utf-8")
-        rewritten = _rewrite_markdown_links(original, old_md, new_md, from_dir, to_dir)
-        if rewritten != original:
-            rewrites[new_md] = rewritten
-    return rewrites
-
-
 def _task_sibling_dirs(parent_dir: Path, *, skip: Path | None = None) -> list[Path]:
     return [
         d for d in parent_dir.iterdir()
@@ -122,28 +52,67 @@ def _precheck_same_parent_rename(from_dir: Path) -> None:
             _die(f"cannot parse sibling {sibling_dir / 'task.md'}: {exc}")
 
 
-def _precheck_cross_parent_move(from_dir: Path, to_dir: Path) -> None:
+def _collect_cross_parent_dep_drops(
+    from_dir: Path, to_dir: Path
+) -> tuple[list[tuple[Path, str]], list[str]]:
+    """Identify ``depends_on`` edges a cross-parent move strands.
+
+    ``depends_on`` is sibling-only, so an edge that crosses the move has no
+    correct re-pointing: the old siblings are not the new siblings. Rather than
+    abort, the caller drops these edges and warns. Parsing every involved task
+    here also gives the validate-before-mutate guarantee — a malformed sibling or
+    moved task raises before any rename.
+
+    Returns ``(sibling_drops, moved_drops)``: ``sibling_drops`` is a list of
+    ``(sibling_dir, slug)`` for old siblings that depend on the source slug;
+    ``moved_drops`` is the moved task's own ``depends_on`` entries that no longer
+    resolve under the destination parent (including a self-edge on the new slug).
+    """
     old_slug = from_dir.name
     new_slug = to_dir.name
     moved_task = parse_task(from_dir / "task.md")
 
+    sibling_drops: list[tuple[Path, str]] = []
     for sibling_dir in _task_sibling_dirs(from_dir.parent, skip=from_dir):
         sibling = parse_task(sibling_dir / "task.md")
         if old_slug in sibling.depends_on:
-            _die(
-                f"cross-parent move would strand dependency: {sibling.path} "
-                f"depends on source slug {old_slug!r}; remove or rewire it first"
-            )
+            sibling_drops.append((sibling_dir, old_slug))
 
     destination_slugs = {d.name for d in _task_sibling_dirs(to_dir.parent)}
-    for dep in moved_task.depends_on:
-        if dep == new_slug:
-            _die(f"moved task cannot depend on its destination slug {new_slug!r}")
-        if dep not in destination_slugs:
-            _die(
-                f"cross-parent move would strand dependency on {dep!r}; "
-                f"no such sibling exists under {to_dir.parent}"
+    moved_drops = [
+        dep for dep in moved_task.depends_on
+        if dep == new_slug or dep not in destination_slugs
+    ]
+    return sibling_drops, moved_drops
+
+
+def _apply_dep_drops(
+    to_dir: Path, sibling_drops: list[tuple[Path, str]], moved_drops: list[str]
+) -> list[str]:
+    """Drop the stranded edges identified before the move and report each drop.
+
+    Siblings stay in place, so they are edited at their original paths; the moved
+    task is now at ``to_dir``. Returns one human-readable warning line per edge.
+    """
+    warnings: list[str] = []
+    for sibling_dir, slug in sibling_drops:
+        sibling = parse_task(sibling_dir / "task.md")
+        sibling.depends_on = [d for d in sibling.depends_on if d != slug]
+        write_task(sibling)
+        warnings.append(
+            f"dropped stranded depends_on {slug!r} from sibling {sibling_dir.name}"
+        )
+    if moved_drops:
+        drop_set = set(moved_drops)
+        moved_task = parse_task(to_dir / "task.md")
+        moved_task.depends_on = [d for d in moved_task.depends_on if d not in drop_set]
+        write_task(moved_task)
+        for slug in moved_drops:
+            warnings.append(
+                f"dropped stranded depends_on {slug!r} from moved task {to_dir.name} "
+                f"(no such sibling under new parent)"
             )
+    return warnings
 
 
 def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
@@ -176,14 +145,20 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     old_slug = from_dir.name
     new_slug = to_dir.name
 
+    sibling_drops: list[tuple[Path, str]] = []
+    moved_drops: list[str] = []
     if from_parent == to_parent:
         _precheck_same_parent_rename(from_dir)
     else:
-        _precheck_cross_parent_move(from_dir, to_dir)
+        try:
+            sibling_drops, moved_drops = _collect_cross_parent_dep_drops(from_dir, to_dir)
+        except Exception as exc:
+            _die(f"cannot parse a task involved in the move: {exc}")
 
-    markdown_rewrites = _collect_markdown_rewrites(from_dir, to_dir)
+    # Computed before the rename, while the moved subtree is readable at from_dir.
+    link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)
     from_dir.rename(to_dir)
-    for path, content in markdown_rewrites.items():
+    for path, content in link_rewrites.items():
         path.write_text(content, encoding="utf-8")
     print(f"Moved {from_dir} -> {to_dir}")
 
@@ -191,12 +166,14 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
         for sibling_name in cascade_depends_on_rename(to_parent, old_slug, new_slug):
             print(f"  Updated depends_on in {sibling_name}")
     else:
+        for warning in _apply_dep_drops(to_dir, sibling_drops, moved_drops):
+            print(f"Warning: {warning}", file=sys.stderr)
         updated = propagate_parent_status(plan_root, from_status_path)
         updated += propagate_parent_status(plan_root, to_status_path)
         if updated:
             print(f"  Updated status rollup in {updated} ancestor task(s)")
-    if markdown_rewrites:
-        print(f"  Rewrote relative markdown links in {len(markdown_rewrites)} file(s)")
+    if link_rewrites:
+        print(f"  Rewrote relative markdown links in {len(link_rewrites)} file(s)")
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -218,7 +218,7 @@ def test_task_move_cross_parent_rewrites_relative_markdown_links(
     assert (moved / "attachments" / "chart.png").exists()
 
 
-def test_task_move_cross_parent_rejects_stranded_old_sibling_dependency(
+def test_task_move_cross_parent_drops_stranded_old_sibling_dependency(
     task_root: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -235,13 +235,16 @@ def test_task_move_cross_parent_rejects_stranded_old_sibling_dependency(
     target_parent.mkdir()
     _write_task_md(target_parent / "task.md", "Target Parent")
 
-    with pytest.raises(SystemExit) as excinfo:
-        cli.main(["task", "move", "01-parent/01-child", "03-parent/01-child", "--root", str(task_root)])
+    # depends_on is sibling-only, so the move strands 02-dependent's edge to
+    # 01-child. The move proceeds, dropping the edge and warning rather than
+    # aborting — the agent never has to pre-rewire it.
+    cli.main(["task", "move", "01-parent/01-child", "03-parent/01-child", "--root", str(task_root)])
 
-    assert excinfo.value.code == 1
-    assert "would strand dependency" in capsys.readouterr().err
-    assert child.exists()
-    assert not (target_parent / "01-child").exists()
+    assert "dropped stranded depends_on '01-child' from sibling 02-dependent" in capsys.readouterr().err
+    assert not child.exists()
+    assert (target_parent / "01-child" / "task.md").exists()
+    dependent_text = (dependent / "task.md").read_text(encoding="utf-8")
+    assert "01-child" not in dependent_text
 
 
 def test_task_move_allows_rootless_forest_destination_root(

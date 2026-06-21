@@ -58,9 +58,11 @@ superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 
 `superra task rename FROM TO` remains as a compatibility alias for same-parent renames.
 
-The move command carries the whole task directory, including `task.md`, `comments.yaml`, attachments, and descendants. Before moving, it resolves relative Markdown links in moved `.md` files against their old locations and rewrites them so they point at the same files after the move. For a same-parent rename, it also cascades sibling `depends_on: old-slug` to `new-slug`.
+The move command carries the whole task directory — `task.md`, `comments.yaml`, attachments, and descendants — and resolves relative paths and `depends_on` edges itself. Run the move directly; do not rewrite links or rewire dependencies by hand first.
 
-Cross-parent moves are stricter because `depends_on` is sibling-only. The command aborts before mutation when an old sibling depends on the source slug, or when the moved task's own `depends_on` entries would not resolve under the destination parent. Rewire those edges first with `superra task dep add` / `dep remove` or a direct task edit, then rerun the move.
+It rewrites every relative Markdown link that the move would otherwise break: links inside the moved files, and links anywhere else in the task tree that point into the moved subtree, all re-pointed to the new location.
+
+`depends_on` is sibling-only, so a cross-parent move cannot carry an edge that crosses the move. A same-parent rename cascades sibling `depends_on: old-slug` to `new-slug`. A cross-parent move drops each edge that no longer resolves under the new parent — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination — and prints a warning per drop. If a dropped edge should still hold in the new location, re-add it afterward with `superra task dep add`.
 
 The PostToolUse hook still revalidates raw filesystem moves and preserves the old same-parent auto-cascade guardrail, but it is not the canonical move mechanism. Use raw `mv` / `git mv` only for recovery from tool failure, then run `superra task check`.
 
@@ -70,7 +72,7 @@ The PostToolUse hook still revalidates raw filesystem moves and preserves the ol
 
 ```bash
 superra task check                    # validate full tree; prints findings grouped by task
-superra task check --category status  # limit to one category: status, dependency, rollup, placement
+superra task check --category status  # limit to one category: status, dependency, rollup, placement, sync-impact
 superra task status fix               # repair branch status fields to match child rollups
 superra task status propagate         # re-run parent status rollup after bulk edits
 ```

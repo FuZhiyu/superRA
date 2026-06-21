@@ -12,7 +12,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 |---|---|---|
 | `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
 | `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `superintegrate` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Document final results, then Finish with PR / fast-forward / cleanup. |
+| `superintegrate` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Mature & Consolidate the task tree and its results, then Finish with PR / fast-forward / cleanup. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
@@ -40,7 +40,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | Skill | What it provides |
 |---|---|
 | `result-protection` | Tools for protecting key research results from unintended changes; drift/regression tests are the current/default mechanism. Loaded by Protect / `Stage: protection` agents. |
-| `refactor-and-integrate` | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Loaded by integration-phase agents. |
+| `refactor-and-integrate` | Tools for **codebase coherence** — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Loaded by integration-phase agents. |
 | `report-in-markdown` | Markdown style guide for any agent writing markdown, with inline rules for source-file citations, LaTeX math, and tables, plus progressive-reveal references for figures and standalone-report IO. |
 | `semantic-merge` | Tools for **semantic coherence** in branch integration. Provides mode references for workflow sync authoring, workflow sync review, and standalone merge; resolves conflicts by intent, escalates intent-changing decisions to the user, detects and resolves stale references within the merge's reach, lands a merge commit plus propagation commits as needed to reach semantic coherence (every commit leaves existing protection passing), and records the approved post-sync diff in the git log (commit messages) plus a temporary task-local `## Sync Impact` section on each affected task. Loaded by Sync / `Stage: sync` agents. |
 | `task-tree` | Directory-tree task tooling — filesystem hierarchy as task hierarchy, `task.md` per task (objective + results), sibling-only dependencies, status rollup, frontier computation, DAG rendering, legacy migration from `PLAN.md` / `RESULTS.md`, live dashboard server, and static HTML export. Load-on-demand: SKILL.md is the tree-tooling layer for orchestrators/planners/contributors, with `references/commands.md` for the mutation command surface, `references/task-file-contract.md` for task-file mechanics, and `references/internals.md` for contributor-facing internals. Tree-design policy lives in `superplan/references/task-tree-design.md`. The executing-agent read/edit interface lives in `using-superra §Task Interface`, not here. |

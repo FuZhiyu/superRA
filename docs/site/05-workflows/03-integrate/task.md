@@ -28,9 +28,11 @@ Agent-built code tends to accrete: a one-shot script here, a near-duplicate help
 
 A tight, convention-matching change is one a reviewer can actually judge. A reviewer wading through a pile of single-use scripts and stray reformatting cannot, and waves through bugs as a result.
 
-### Document — turn the working notes into a record a stranger can read
+### Mature & Consolidate — settle the tree's shape and turn the working notes into a record a stranger can read
 
-Through PLAN and IMPLEMENT, each `task.md`'s `## Results` accumulates as a working dev log — terse, written for whoever had the full context in the moment. Document matures those findings into durable documentation: a future reader, or you in six months, should be able to open the task and follow what was done and what was found without the original context in their head. The work here is editing the existing notes for a reader who wasn't there; the analysis itself is not re-run.
+Once the code has landed, superRA settles the task tree itself. Over a project, a tree accumulates scaffolding — a small update task spun out to track a fix, a parent named for an action that is now done — and through PLAN and IMPLEMENT each `task.md`'s `## Results` accumulates as a working dev log, terse and written for whoever had the full context in the moment. This stage does both jobs at once, because they are one decision: for each task the integration touched, it decides what survives and where it lands. A finished update task folds into the task that owns its concern; an action-named parent matures into the durable home for its results; a task whose own output is a document shrinks to a pointer to that document; a minor fix not worth surfacing is dropped. The findings that remain are matured into durable documentation a future reader — or you in six months — can follow without the original context in their head.
+
+superRA always asks you to confirm this shape before it executes, even when the tree is already clean, and the work folding two tasks together or pruning a result a reader would expect is surfaced for your explicit approval. The findings are edited for a reader who wasn't there; the analysis itself is not re-run.
 
 ### Finish — re-check the base, then ship
 

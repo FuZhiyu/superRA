@@ -81,4 +81,4 @@ Field-by-field anatomy and body-section ownership live in `references/task-file-
 | View the dashboard | `./superRA/superra dashboard` (background server, reuses a running one; `--foreground`, `dashboard stop`). Mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`; see `references/commands.md §Move / rename a task`.
+Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`. It resolves the move's fallout for you — relative Markdown links across the tree and sibling-only `depends_on` edges — so run the move directly; do not rewrite links or rewire dependencies by hand first. Mechanics and the cross-parent dependency rules are in `references/commands.md §Move / rename a task`.

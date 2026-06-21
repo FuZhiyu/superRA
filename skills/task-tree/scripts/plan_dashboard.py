@@ -9,6 +9,9 @@ Usage:
     uv run plan_dashboard.py serve [--root superRA/] [--port 8080] [--no-open] [--foreground]
     uv run plan_dashboard.py stop [--root superRA/]
     uv run plan_dashboard.py generate --plan-root PATH [--output PATH]
+
+This is the low-level interface. The user-facing `dashboard` argument delegates
+here via cli.py; `generate` is the deprecated alias of `dashboard export`.
 """
 
 from __future__ import annotations

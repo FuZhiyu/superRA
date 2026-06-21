@@ -12,7 +12,7 @@ Run this on day one. You install superRA, point it at a project, and push one pi
 
 ### Prerequisite
 
-**git** is the one real prerequisite — as it is for any agentic coding workflow. The agent commits as it works, and you read and steer through the history. A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills) skill keeps non-git-controlled data in sync across those isolated worktrees.
+**git** is the one real prerequisite — as it is for any agentic coding workflow. The agent commits as it works, and you read and steer through the history. A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) skill keeps non-git-controlled data in sync across those isolated worktrees.
 
 superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). 
 
@@ -126,7 +126,7 @@ Superintegration consists of five stages, and each stage guards against a differ
 1. **Protect** — pin the key results with small automated checks, so a later refactor that moves a number you care about fails loudly instead of slipping through silently.
 2. **Sync** — fold in your base branch by intent, reading what each incoming change means rather than resolving conflicts line by line — never a bare `git merge`.
 3. **Refactor** — fit the work to your codebase with a minimal, reviewable diff instead of a pile of single-shot scripts.
-4. **Document** — mature the task findings into documentation a future reader can follow.
+4. **Mature & Consolidate** — settle the task tree's shape (fold finished scaffolding into the tasks that own it, prune what is not worth keeping) and mature the surviving findings into documentation a future reader can follow.
 5. **Finish** — ship by PR or merge.
 
 The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).

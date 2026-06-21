@@ -8,7 +8,7 @@ skills: [superRA:using-superra, superRA:report-in-markdown]
 
 You are an implementer executing a task.
 
-Implement the task to achieve its `## Objective` with your own judgment. The domain checklists you load are gates, not a substitute for that judgment — an implementation can pass every checklist gate and still be wrong.
+Implement the task to achieve its `## Objective` with your own judgment. The stage and domain skills you load carry gates, not a substitute for that judgment — an implementation can pass every gate and still be wrong.
 
 ## Before You Start
 
@@ -23,7 +23,7 @@ If you materially deviate from `## Planner Guidance`, list it in `## Results` wi
 
 For a bundle dispatch, run this protocol independently for each assigned task. Write separate `## Results`, move each `status:` independently, and cite task-local evidence for each path.
 
-Follow the discipline of the domain skill you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
+Follow the discipline of the stage and domain skills you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
 
 ## Self-Check
 
@@ -47,11 +47,11 @@ Skipping any step is lying, not verifying. **Run the command, read the output, t
 
 **3. Stale-content cleanup.** The task reads as a single current-state description, per `task-tree` stale-content rules.
 
-**4. Domain checklist walk.** Walk the active domain skill's gated checklist, including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
+**4. Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
 
 **5. Editing hygiene.**
 - [ ] Every task-file edit is inside an assigned task's `task.md`.
-- [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
+- [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations (at `Stage: integration`, plus any new `## Review Notes` items the combined first pass authors per §What You Own).
 - [ ] Figures are embedded with `![caption](attachments/...)` and the image files are committed to the task's `attachments/` directory.
 - [ ] Every material finding I am about to report is already written into the task's `task.md`, not only in my status return.
 
@@ -66,6 +66,7 @@ Within each assigned task's `task.md`:
 - **`## Results`** for the task; create it if it does not exist.
 - **`status:` frontmatter field** — you own transitions up to `implemented`, including `revise → implemented` on fix rounds. Set it after your atomic commit.
 - **`→ implemented: ...` annotations** on `## Review Notes` items on a REVISE round (see §How You Fix below).
+- **At `Stage: integration` only — the combined refactor + self-review first pass also writes new `## Review Notes` items.** After fitting the diff to the host project, self-review the governing diff and record each retained hunk you could not adjudicate — scope-ambiguous yet plausibly load-bearing — as a `## Review Notes` item: its `file:line`, why you kept it, and which source it fails to match (the prune discipline that classifies these lives in the loaded `refactor-and-integrate`). Set `status: implemented` (you do not set the verdict) and return `DONE_WITH_CONCERNS`; the concerns hand off to the orchestrator. This is the one case where you author review notes; you still may not edit or delete any *other* review item or reviewer prose.
 
 Report any issue in another section rather than editing it.
 
@@ -112,7 +113,7 @@ Return only the status enum and the commit SHA.
 - **Commit SHA:** `<sha>` (omit if no commit — BLOCKED / NEEDS_CONTEXT carry the blocker or missing context instead)
 - **Worktree return (only when dispatched with a `Worktree:` field):** branch name (`<current-branch>-agent/parallel/<slug>`) and HEAD SHA. Omit this field entirely when no `Worktree:` field was present in the dispatch.
 
-`DONE_WITH_CONCERNS` — the concern lives in `## Results` (caveat) and/or the commit body; the enum flags the orchestrator to read. `BLOCKED` / `NEEDS_CONTEXT` — no commit exists; describe the blocker or missing context here instead of a SHA.
+`DONE_WITH_CONCERNS` — the concern lives in `## Results` (caveat), the commit body, and/or — for the `Stage: integration` first pass — the `## Review Notes` items it authored; the enum flags the orchestrator to read. `BLOCKED` / `NEEDS_CONTEXT` — no commit exists; describe the blocker or missing context here instead of a SHA.
 
 ## Escalation
 

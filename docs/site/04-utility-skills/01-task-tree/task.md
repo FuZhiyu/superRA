@@ -24,7 +24,7 @@ The agent reads and edits the tree through a small committed script, `./superRA/
 
 ### Agents edit; hooks keep the tree honest
 
-The agent edits task files continuously as the work moves — flipping a status, appending a result, adding a dependency. A **hook** is a check your harness (Claude Code or Codex) runs automatically right after each edit to the tree — not a git hook, but part of the agent session; here it validates the structure (no dependency pointing at a task that does not exist, no status that contradicts its children) and recomputes the rolled-up status. The division is that the agent makes the edits and the hook catches the ones that would leave the tree inconsistent, so a careless write cannot quietly corrupt the project's recorded state. The hooks superRA ships are listed on the [Hooks page](../../06-hooks/task.md).
+The agent edits task files continuously as the work moves — flipping a status, appending a result, adding a dependency. A **hook** is a check your harness (Claude Code or Codex) runs automatically right after each edit to the tree — not a git hook, but part of the agent session; here it validates the structure (no dependency pointing at a task that does not exist, no status that contradicts its children) and recomputes the rolled-up status. The division is that the agent makes the edits and the hook catches the ones that would leave the tree inconsistent, so a careless write cannot quietly corrupt the project's recorded state. The hooks superRA ships are listed on the [Hooks page](#/06-hooks).
 
 ### Status rolls up on its own
 

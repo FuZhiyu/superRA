@@ -102,7 +102,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 **Render-integrity check.** Every edited `.md` under a task root is run through `_markdown_integrity_feedback` (imports `check()` from `report-in-markdown/scripts/md_integrity.py`): findings (display `$$` blocks not blank-line separated, TeX-only KaTeX macros) merge into the feedback payload. Checker failure is swallowed and never breaks the hook.
 
-**Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook auto-cascades sibling `depends_on` via `_task_io.cascade_depends_on_rename` before reconcile so `validate_plan` sees the rewired edges. The boundary is YAML metadata only — task content and display prefixes are never touched. Cross-parent moves, task deletes, and merges warn via normal dangling-dependency validation instead.
+**Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook performs the same lossless maintenance `superra task move` does, via the shared `_task_io` core: it cascades sibling `depends_on` (`cascade_depends_on_rename`) and re-points relative Markdown links into and out of the renamed task (`compute_move_link_rewrites`) before reconcile, so `validate_plan` sees a coherent tree. Both are mechanical repairs of the move's own breakage. Cross-parent moves, task deletes, and merges are ambiguous post-hoc state: the hook never reconstructs a clean from→to for them, so they warn via normal dangling-dependency validation rather than auto-mutating.
 
 **Dashboard.** The hook does not regenerate the dashboard. Only `superra dashboard export` writes a static file.
 
@@ -212,6 +212,14 @@ superra task migrate upgrade
 
 Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent — safe to run multiple times.
 
+### Consolidate legacy status fields
+
+```bash
+superra task migrate upgrade-status
+```
+
+Consolidates the legacy `review_status`/`integration_status` fields into the single `status` field (precedence: `integration_status` > `review_status` > existing `status`). Supports `--dry-run` to preview changes.
+
 ## Dashboard: `plan_dashboard.py`
 
 The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file.
@@ -279,8 +287,8 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | `task_add_result.py` | Append a finding to a task's `## Results` section |
 | `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
-| `task_rename.py` | Rename a task directory (cascades to sibling `depends_on`) |
-| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; `--fix-status` auto-corrects status enums |
+| `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
+| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; use `task status fix` to repair branch status fields |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |

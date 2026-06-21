@@ -21,7 +21,7 @@ SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
 1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
 2. `superimplement` executes tasks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
-3. `superintegrate` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
+3. `superintegrate` protects key results, syncs and refactors against the integration base, consolidates the task tree and matures its results, and performs the final merge / PR / cleanup action.
 
 The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. Main agents run the §Workflow Frontier Resolver in `references/main-agent.md` to inspect durable evidence, compute the affected frontier, route to the owning workflow, and enforce gates before advancement.
 
@@ -73,7 +73,7 @@ Both axes load *in addition to* the always-loaded `superRA:using-superra` and `s
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
-| `documentation` | `superintegrate` Document | — |
+| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `writing` (prose-heavy maturation) |
 
 ### Domain
 

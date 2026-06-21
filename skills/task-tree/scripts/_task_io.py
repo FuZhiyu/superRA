@@ -468,6 +468,135 @@ def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) ->
     return updated
 
 
+_MARKDOWN_LINK_RE = re.compile(r"(!?\[[^\]\n]*\]\()(<[^>\n]+>|[^)\s\n]+)(\))")
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
+
+def _is_local_markdown_target(target: str) -> bool:
+    if not target or target.startswith(("#", "/")):
+        return False
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", target):
+        return False
+    return True
+
+
+def _split_link_target(target: str) -> tuple[str, str, bool]:
+    angle_wrapped = target.startswith("<") and target.endswith(">")
+    inner = target[1:-1] if angle_wrapped else target
+    split_at = len(inner)
+    for marker in ("#", "?"):
+        pos = inner.find(marker)
+        if pos != -1:
+            split_at = min(split_at, pos)
+    return inner[:split_at], inner[split_at:], angle_wrapped
+
+
+def _rewrite_relative_links(
+    text: str,
+    old_md: Path,
+    new_md: Path,
+    from_dir: Path,
+    to_dir: Path,
+    *,
+    only_into_subtree: bool = False,
+) -> str:
+    """Rewrite relative Markdown links in ``text`` so they survive a move.
+
+    ``old_md``/``new_md`` are the file's location before/after the move. For a
+    moved file (it changes location) every local link is re-expressed from
+    ``new_md``. For a file that stays put, ``only_into_subtree`` keeps the rewrite
+    surgical: only links resolving into the moved subtree are re-pointed; every
+    other link is left byte-for-byte. Path math is lexical (``resolve()`` does not
+    require existence), so this works whether computed before or after the rename.
+    """
+    in_fence = False
+    from_dir_resolved = from_dir.resolve()
+
+    def replace(match: re.Match[str]) -> str:
+        target = match.group(2)
+        path_part, suffix, angle_wrapped = _split_link_target(target)
+        if not _is_local_markdown_target(path_part):
+            return match.group(0)
+
+        old_target = (old_md.parent / path_part).resolve()
+        try:
+            within = old_target.relative_to(from_dir_resolved)
+        except ValueError:
+            if only_into_subtree:
+                return match.group(0)
+            target_after_move = old_target
+        else:
+            target_after_move = to_dir / within
+
+        rel = os.path.relpath(target_after_move, new_md.parent)
+        rel = Path(rel).as_posix()
+        if rel == ".":
+            rel = ""
+        new_target = f"{rel}{suffix}"
+        if angle_wrapped:
+            new_target = f"<{new_target}>"
+        return f"{match.group(1)}{new_target}{match.group(3)}"
+
+    rewritten_lines: list[str] = []
+    for line in text.splitlines(keepends=True):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            rewritten_lines.append(line)
+        elif in_fence:
+            rewritten_lines.append(line)
+        else:
+            rewritten_lines.append(_MARKDOWN_LINK_RE.sub(replace, line))
+    return "".join(rewritten_lines)
+
+
+def compute_move_link_rewrites(
+    plan_root: Path, from_dir: Path, to_dir: Path, *, moved_root: Path
+) -> dict[Path, str]:
+    """Compute every relative-link rewrite a move from ``from_dir`` to ``to_dir``
+    needs so links keep resolving. Shared by the ``task move`` CLI and the
+    post-move hook; the only difference is where the moved subtree is readable —
+    ``moved_root`` is ``from_dir`` when computed before the rename (CLI) and
+    ``to_dir`` when computed after it (hook).
+
+    Returns ``{post_move_path: new_text}``: the moved subtree's own files (keyed by
+    their destination paths, outbound links re-expressed from the new depth) plus
+    every other file in ``plan_root`` whose links point into the moved subtree
+    (keyed by their unchanged paths). Files whose links are unaffected are omitted.
+    """
+    rewrites: dict[Path, str] = {}
+    from_dir_resolved = from_dir.resolve()
+    to_dir_resolved = to_dir.resolve()
+
+    for src_md in moved_root.rglob("*.md"):
+        rel = src_md.relative_to(moved_root)
+        original = src_md.read_text(encoding="utf-8")
+        rewritten = _rewrite_relative_links(
+            original, from_dir / rel, to_dir / rel, from_dir, to_dir
+        )
+        if rewritten != original:
+            rewrites[to_dir / rel] = rewritten
+
+    for md in plan_root.rglob("*.md"):
+        md_resolved = md.resolve()
+        in_subtree = False
+        for boundary in (from_dir_resolved, to_dir_resolved):
+            try:
+                md_resolved.relative_to(boundary)
+            except ValueError:
+                continue
+            in_subtree = True
+            break
+        if in_subtree:
+            continue  # part of the moved subtree (pre- or post-move) — handled above
+        original = md.read_text(encoding="utf-8")
+        rewritten = _rewrite_relative_links(
+            original, md, md, from_dir, to_dir, only_into_subtree=True
+        )
+        if rewritten != original:
+            rewrites[md] = rewritten
+    return rewrites
+
+
 def _find_plan_root(task_dir: Path) -> Path | None:
     """Walk up from a task directory to find the resolved task root.
 
