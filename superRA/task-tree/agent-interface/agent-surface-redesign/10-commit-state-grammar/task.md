@@ -1,6 +1,6 @@
 ---
 title: "Encode Workflow State in the Commit Subject + Sharpen the Body DRY Boundary"
-status: implemented
+status: approved
 depends_on:
   - 08-report-commit-model
 tags: []
