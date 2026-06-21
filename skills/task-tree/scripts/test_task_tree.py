@@ -402,27 +402,24 @@ class TestComputeFrontier:
         assert root.title == "(no root task.md)"
         assert _task_io.compute_frontier(root) == []
 
-    def test_revise_status_excluded_from_frontier(self, plan_root):
-        """A task with status 'revise' should NOT appear on the frontier.
-
-        The frontier only includes 'not-started' and 'in-progress' tasks.
-        'revise' means the task needs rework after review, but the current
-        implementation treats it as non-dispatchable until explicitly
-        moved back to 'in-progress'.
+    def test_revise_and_implemented_on_frontier(self, plan_root):
+        """'revise' (ready to fix) and 'implemented' (ready to review) are
+        actionable, so they appear on the frontier; the per-task status tells
+        the caller the next action. A dependency in either state is still NOT
+        satisfied, so its dependents stay blocked.
         """
         root = _task_io.walk_plan(plan_root)
         # 02-second depends on 01-first (approved), so deps are met.
-        # Set it to 'revise' — it should NOT appear on the frontier.
-        root.children[1].status = "revise"
-        frontier = _task_io.compute_frontier(root)
-        paths = [t.path for t in frontier]
-        assert "02-second" not in paths, (
-            "'revise' tasks should not be on the frontier; "
-            "only 'not-started' and 'in-progress' are dispatchable"
-        )
-        # 03-third depends on 02-second which is 'revise' (not approved),
-        # so 03-third should also be blocked.
-        assert "03-third" not in paths
+        for state in ("revise", "implemented"):
+            root.children[1].status = state
+            frontier = _task_io.compute_frontier(root)
+            paths = [t.path for t in frontier]
+            assert "02-second" in paths, (
+                f"'{state}' tasks are actionable and should be on the frontier"
+            )
+            # 03-third depends on 02-second which is not 'approved',
+            # so 03-third stays blocked.
+            assert "03-third" not in paths
 
     def test_diamond_dependency(self, tmp_path):
         """Diamond DAG: D(approved) -> B, D -> C, B -> A, C -> A.

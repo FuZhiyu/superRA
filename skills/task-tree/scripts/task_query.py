@@ -141,7 +141,7 @@ def print_frontier(frontier: list[Task], as_json: bool = False) -> None:
         return
 
     if not frontier:
-        print("No tasks on the frontier (all blocked or completed).")
+        print("No tasks on the frontier (all approved, blocked, or parked).")
         return
 
     for task in frontier:

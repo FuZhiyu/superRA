@@ -849,16 +849,26 @@ def propagate_parent_status(plan_root: Path, task_path: str) -> int:
 
 
 def compute_frontier(root: Task) -> list[Task]:
-    """Compute the dispatch frontier: leaf tasks ready to be worked on.
+    """Compute the dispatch frontier: leaf tasks that have actionable work now.
 
     A leaf task is on the frontier when:
-    1. Its own status is 'not-started' or 'in-progress'
-    2. All sibling dependencies have effective_status 'approved'
+    1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
+       implement), 'implemented' (ready to review), or 'revise' (ready to fix).
+       Each entry carries its status, so a caller reads the next action from it.
+    2. All sibling dependencies have effective_status 'approved' (or 'archived').
+       Note this is approved-only: a dependency that is merely 'implemented' or
+       'revise' is not satisfied, so dependents of unreviewed work stay blocked.
     3. All ancestor tasks' sibling dependencies are met (recursively)
     """
     frontier: list[Task] = []
     _collect_frontier(root, frontier, ancestors_ready=True)
     return frontier
+
+
+# Leaf statuses that represent actionable, not-yet-done work. 'approved' is done;
+# 'archived'/'postponed' are parked. The caller distinguishes implement vs review
+# vs fix work by reading each task's status.
+_ACTIONABLE_STATUSES = ("not-started", "in-progress", "implemented", "revise")
 
 
 def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -> None:
@@ -868,7 +878,7 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
             return  # synthetic placeholder for a rootless forest, not real work
         if task.status in ("archived", "postponed"):
             return  # parked tasks never appear on the frontier
-        if ancestors_ready and task.status in ("not-started", "in-progress"):
+        if ancestors_ready and task.status in _ACTIONABLE_STATUSES:
             frontier.append(task)
         return
 
