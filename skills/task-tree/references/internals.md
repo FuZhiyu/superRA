@@ -106,7 +106,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 **Dashboard.** The hook does not regenerate the dashboard. Only `superra dashboard export` writes a static file.
 
-**Feedback payload.** Validation warnings and non-fatal reconcile failures go into a PostToolUse JSON payload with both `additionalContext` and `hookSpecificOutput.additionalContext`. No-feedback paths stay silent for Claude-compatible invocations and emit `{}` when Codex requests parseable empty hook JSON.
+**Feedback payload.** Validation warnings and non-fatal reconcile failures go into a PostToolUse JSON payload under `hookSpecificOutput.additionalContext`, with `hookEventName: "PostToolUse"`. Do not also emit a top-level `additionalContext`: current Codex validates PostToolUse output against the event-specific shape and rejects that legacy sibling field. No-feedback paths stay silent for Claude-compatible invocations and emit `{}` when Codex requests parseable empty hook JSON.
 
 **Hook shim.** `hooks/task-hook` is the stable shell entry point the manifests invoke. It is a **generated** file that embeds the same source-resolution chain as the task-tree wrapper so the two cannot drift, then forwards stdin to `scripts/task_hook.py`. Both the shim and wrapper render from `scripts/wrapper_resolver.py`; regenerate the committed shim with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing it.
 

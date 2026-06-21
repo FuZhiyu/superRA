@@ -108,7 +108,6 @@ def _feedback_json(feedback: list[str]) -> str:
     )
     return json.dumps(
         {
-            "additionalContext": context,
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
                 "additionalContext": context,

@@ -2197,9 +2197,9 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stderr == ""
         data = json.loads(result.stdout)
-        context = data["additionalContext"]
+        context = data["hookSpecificOutput"]["additionalContext"]
+        assert "additionalContext" not in data
         assert data["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
-        assert data["hookSpecificOutput"]["additionalContext"] == context
         assert "Validation warning" in context
         assert "99-nonexistent" in context
 
@@ -2223,7 +2223,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         assert result.stderr == ""
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "invalid status 'banana'" in context
 
     def test_codex_apply_patch_task_md_reconciles_plan_once(self, tmp_path):
@@ -2287,8 +2287,8 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stderr == ""
         data = json.loads(result.stdout)
-        context = data["additionalContext"]
-        assert data["hookSpecificOutput"]["additionalContext"] == context
+        context = data["hookSpecificOutput"]["additionalContext"]
+        assert "additionalContext" not in data
         assert "invalid status 'bogus'" in context
 
     def test_codex_apply_patch_irrelevant_payload_exits_zero(self, tmp_path):
@@ -2407,7 +2407,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         assert result.stderr == ""
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "01-load" in context and "Validation warning" in context, (
             "dangling dependency should surface as a validation warning"
         )
@@ -2529,7 +2529,7 @@ class TestTaskHook:
             "same-parent rename must auto-cascade the sibling depends_on"
         )
         # The cascade is surfaced to the agent so the silent edit is expected.
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "Auto-rewired depends_on" in context
         assert "01-first-renamed" in context
         # No dangling-dependency validation warning should remain.
@@ -2575,7 +2575,7 @@ class TestTaskHook:
         body = (root / "02-second" / "task.md").read_text(encoding="utf-8")
         assert "../01-first-renamed/task.md" in body
         assert "../01-first/task.md" not in body
-        assert "Auto-rewrote relative markdown links" in json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewrote relative markdown links" in json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
 
     def test_bash_cross_parent_move_does_not_rewrite_links(self, plan_with_branches):
         """A cross-parent raw `mv` is ambiguous, so the hook leaves links untouched.
@@ -2601,7 +2601,7 @@ class TestTaskHook:
         assert result.returncode == 0
         # The inbound link is left as-is (now dangling) — surfaced, not silently fixed.
         assert (root / "02-estimation" / "task.md").read_text(encoding="utf-8") == before
-        assert "Auto-rewrote relative markdown links" not in json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewrote relative markdown links" not in json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
 
     def test_bash_cross_parent_move_does_not_cascade(self, plan_with_branches):
         """A cross-parent move warns and never auto-rewires (not a rename)."""
@@ -2621,7 +2621,7 @@ class TestTaskHook:
         moved = _task_io.parse_task(dst / "task.md")
         # Edge left untouched; surfaced as a dangling-dependency warning instead.
         assert moved.depends_on == ["01-load"]
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "Auto-rewired" not in context
         assert "01-load" in context and "Validation warning" in context
 
@@ -2645,7 +2645,7 @@ class TestTaskHook:
         # The dependent's edge is untouched (no silent drop).
         consumer = _task_io.parse_task(root / "02-second" / "task.md")
         assert consumer.depends_on == ["01-first"]
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "Auto-rewired" not in context
         assert "01-first" in context and "Validation warning" in context
 
@@ -2700,7 +2700,7 @@ class TestTaskHook:
         assert consumer.depends_on == ["01-first"], (
             "move-into-existing-task-dir must not be parsed as a rename"
         )
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "Auto-rewired" not in context
         # The stranded edge is surfaced as a dangling-dependency warning.
         assert "01-first" in context and "Validation warning" in context
@@ -2757,7 +2757,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         assert result.stderr == ""
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "render-integrity issue" in context
         assert "display-math-not-separated" in context
         assert str(target) in context
@@ -2771,7 +2771,7 @@ class TestTaskHook:
         payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "tex-only-macro" in context
         assert "\\operatorname" in context
 
@@ -2783,7 +2783,7 @@ class TestTaskHook:
         payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "display-math-not-separated" in context
 
     def test_edit_clean_md_is_silent(self, plan_root):
@@ -2832,7 +2832,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
         assert result.stderr == ""
-        context = json.loads(result.stdout)["additionalContext"]
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "display-math-not-separated" in context
         assert "01-child/task.md" in context
 
