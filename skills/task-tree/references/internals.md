@@ -186,7 +186,7 @@ If the count does not match the number of tasks in the file, the PLAN.md needs n
 
 1. Renumber task headings to `### Task 1: Title`, `### Task 2: Title`, etc.
 2. Fix heading levels — tasks must be `###` (not `##` or `####`).
-3. Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`, `**Script:** *(none)*`.
+3. Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`.
 4. Standardize checkboxes to `- [x]` (done) or `- [ ]` (not done) — markers like `[~]` or `[-]` are not recognized.
 5. If RESULTS.md exists, ensure headings match: `## Task N: Title` with the same numbering.
 
