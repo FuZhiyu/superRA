@@ -27,7 +27,7 @@ Read every `task.md` and build a structural picture:
 
 1. **Run `superra task tree`** and **`superra task dag`** for the structure, status distribution, and dependency graph.
 2. **Run `superra task check --category placement`.** Treat warnings as advisory prompts for manual review, not as authority to restructure.
-3. **Map each task's scope:** objective, declared `script` / `input` / `output`, `depends_on`, status, and whether it is temporary update scaffolding or a durable owner.
+3. **Map each task's scope:** objective, `depends_on`, status, and whether it is temporary update scaffolding or a durable owner.
 4. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via `superplan/references/task-tree-design.md` §Placing Work in the Existing Tree.
 5. **Identify and classify issues** from the list below. Apply `superplan/references/task-tree-design.md` §Update-Task Lifecycle whole-tree: any task whose purpose is to improve an existing task or artifact folds back by default — a **Merge** into the task it modified, or a **Mature/Rename** when it has become the durable owner of a concern. Classify approved scaffolding into one of these by default; the open question is which fold, not whether to fold.
 
@@ -52,10 +52,10 @@ For each identified issue, classify the action. Each action sets the altitude th
 
 **Merge:** Two forms, both manual (there is no `task merge` command) so the human controls how the combined nuance integrates.
 
-- *Pairwise.* Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Update scope-defining `script` / `input` / `output` fields when they no longer describe the widened owner. Use the more conservative of the two statuses. Repoint every sibling `depends_on` that referenced the removed task. Delete the absorbed directory.
+- *Pairwise.* Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched), widening its scope-defining detail so it describes the combined owner. Use the more conservative of the two statuses. Repoint every sibling `depends_on` that referenced the removed task. Delete the absorbed directory.
 - *N-way into a subtree.* When several tasks cluster on one concern with distinct deliverables, designate one parent concern and make the survivors its children (a Merge+Split composite). Roll the parent's status up conservatively from the children, and rewire every `depends_on` across the cluster — the same-parent rename rewire comes from the `restructuring-tooling` hook; fix cross-parent edges by hand. For an *update task*, the merge target is the task it modifies: fold the surviving result into its `## Results` at the chosen altitude and remove the update-task directory.
 
-**Mature/Rename:** Rewrite an action-verb task as the durable current-state concern it now owns, then rename the directory when the slug still names the update episode rather than the stable concern. Distil the task's `## Results` to the altitude the durable home warrants — a matured reader-facing narrative when this is where the work's narrative lives, a pointer when the task's own output *is* a document (one source of truth). Update scope-defining `script` / `input` / `output` fields and any sibling `depends_on` references affected by the rename. Use this for cases where an action parent should survive as the concern itself; otherwise classify it as Merge into the existing durable owner.
+**Mature/Rename:** Rewrite an action-verb task as the durable current-state concern it now owns, then rename the directory when the slug still names the update episode rather than the stable concern. Distil the task's `## Results` to the altitude the durable home warrants — a matured reader-facing narrative when this is where the work's narrative lives, a pointer when the task's own output *is* a document (one source of truth). Rewrite the scope-defining objective detail and repoint any sibling `depends_on` references affected by the rename. Use this for cases where an action parent should survive as the concern itself; otherwise classify it as Merge into the existing durable owner.
 
 **Link:** Update `depends_on` frontmatter via `superra task dep add` / `superra task dep remove`. No objective rewrite needed unless the dependency changes the task's scope.
 
@@ -67,7 +67,7 @@ For each identified issue, classify the action. Each action sets the altitude th
 
 **Restructure:** Move the task directory to its new location. Update `depends_on` references in the old and new sibling scopes. Preserve the task's status and content.
 
-**Scope Expansion Rewrite:** Follow `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. Rewrite the owning `## Objective` as the current-state contract, update scope-defining `script` / `input` / `output` fields, reset affected approved tasks and transitive downstream dependents to `not-started` when their assumptions shift, and remove stale `## Revision Notes`, review notes, or delta prose that no longer describes current state.
+**Scope Expansion Rewrite:** Follow `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. Rewrite the owning `## Objective` as the current-state contract, including its scope-defining detail, reset affected approved tasks and transitive downstream dependents to `not-started` when their assumptions shift, and remove stale `## Revision Notes`, review notes, or delta prose that no longer describes current state.
 
 ## User Approval Gate
 

@@ -11,8 +11,7 @@ Load this reference when designing, changing, consolidating, or integration-chec
 - Relevant conventions — naming, paths, units, variable definitions.
 - Constraints — what to avoid and what to preserve.
 - User or methodology decisions the implementer must preserve.
-- Input/output expectations — what data comes in and what form results take.
-- Fixed `script` / `input` / `output` expectations when they define scope.
+- Input/output expectations — what data comes in and what form results take, including the scripts, files, or artifacts that define the task's scope.
 - Validation criteria — what must be true for the task to be complete.
 
 The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (the project-level ones plus any nested in a directory the agent reads), manifest-loaded skills, the assigned task plus its ancestor chain via `superra task read`, and on-demand directory walking when a touched file needs a convention the chain does not cover. The objective's job is to make that assembled set *sufficient* — point into it so the right standing context and the right files are reachable — not to reproduce context that already lives there. See §Context Distillation for the point-vs-distill choice.

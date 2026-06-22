@@ -22,11 +22,6 @@ class Task:
     title: str
     status: str         # not-started | in-progress | implemented | revise | approved | archived | postponed
     depends_on: list[str]
-    tags: list[str]
-    script: str
-    input: list[str]
-    output: list[str]
-    created: str
     body: str           # full body text after frontmatter
     objective: str      # extracted from ## Objective
     results: str        # extracted from ## Results
@@ -156,11 +151,8 @@ Matches `## Task N: Title` headings in RESULTS.md. Task numbers must correspond 
 | `depends_on` | `**Depends on:** <value>` | Comma-separated `Task N` refs or `*(none)*` |
 | `review_status` | `**Review status:** <value>` | Legacy source field; normalized to lowercase and mapped to unified `status` |
 | `integration_status` | `**Integration status:** <value>` | Legacy source field; same normalization and mapping |
-| `script` | `**Script:** <value>` | Optional backtick wrapper stripped |
-| `input` | `**Input:** <value>` | Backtick-delimited list or comma-separated |
-| `output` | `**Output:** <value>` | Same as input |
 
-Missing fields default to empty/none. The `_extract_file_list` helper recognizes `*(none)*` as empty list, backtick-delimited items (`` `a`, `b` ``), or plain comma-separated values.
+Missing fields default to empty/none.
 
 **Status inference** — `_compute_status_from_steps`:
 

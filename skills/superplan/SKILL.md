@@ -176,7 +176,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 **Material (require this protocol):**
 
 - Adding, removing, or restructuring task directories.
-- Changing a task's objective, script, input, or output.
+- Changing a task's objective.
 - Changing the project-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge.

@@ -13,15 +13,13 @@ Every `task.md` — root, branch, or leaf — uses the same body sections. The t
 - **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
-Branch tasks (those with children) do not carry `script`, `input`, or `output` — those belong on leaf tasks.
 
 ## Field-by-Field Notes
 
-The frontmatter field set is **closed**: `title`, `status`, `depends_on`, `tags`, `script`, `input`, `output`, `created`. Any other key is discarded the next time a CLI mutation rewrites the file (including automatic ancestor-status rollups), so do not store custom metadata in frontmatter — put it in a body section instead.
+The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any other key is discarded the next time a CLI mutation rewrites the file (including automatic ancestor-status rollups), so do not store custom metadata in frontmatter — put it in a body section instead.
 
 - **`status`** is a task-local validity marker. Valid values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`, `archived`, `postponed`. Co-owned by implementer and reviewer for the dispatch lifecycle: implementer owns transitions up to `implemented` (and `revise` to `implemented` on fix rounds); reviewer owns `implemented` to `revise`, `implemented` to `approved`, and `approved` to `revise` during integration (when integration review surfaces issues in a previously approved task). `archived` and `postponed` are scope decisions set by the orchestrator / researcher, not dispatch verdicts: an `archived` task is treated as resolved/removed so its dependents proceed, while a `postponed` task is parked off the frontier and blocks its dependents until resumed. Resume a postponed task by setting its status back to `not-started`. On re-entry, the orchestrator resets tasks in the transitive downstream closure of a modified task to `not-started` by judgment; unrelated approved tasks keep their status. Exception: review-only trees (e.g. writing-workflow review lanes) skip the implementer states entirely — tasks go directly from `not-started` to `revise` or `approved` as the reviewer sets them.
 - **`depends_on`** lists sibling directory names. Dependencies are sibling-only; parent status rolls up from children automatically.
-- **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them because they define task scope.
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
 - **`## Planner Guidance`** is planner-owned and advisory. Implementers may deviate from it when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 - **`## Results`** is implementer-owned. Updated with findings, verification evidence, caveats, and material `## Planner Guidance` deviations during execution. See §Results Shape.
@@ -46,7 +44,7 @@ Common stale content to replace in place (never strike through or append "Update
 - Results sections now incorporated into the current approach.
 - Review items confirmed fixed on re-review.
 - Sibling task objectives that assume an earlier approach which has since changed.
-- Task output descriptions superseded by a later task; rewrite the earlier task's `output:` frontmatter to reflect the latest shape, and add a revision note if the change is non-obvious.
+- Task `## Objective` or `## Results` descriptions superseded by a later task; rewrite them in place to reflect the latest shape, and add a revision note if the change is non-obvious.
 
 ## Results Shape
 

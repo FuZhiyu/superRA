@@ -47,9 +47,6 @@ task-b2 → task-c
 ### <path/in/tree> — <Title>
 
 **depends_on:** [sibling-name] | (none)
-**script:** <filename or ~>
-**input:** <files or ~>
-**output:** <files or ~>
 
 **Objective:**
 <Full objective text. Written at task.md quality — complete enough that an agent reading only this entry can implement the task without additional context.>
