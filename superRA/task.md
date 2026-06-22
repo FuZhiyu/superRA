@@ -1,9 +1,7 @@
 ---
 title: "superRA"
-status: in-progress
+status: approved
 depends_on: []
-tags: []
-created: 2026-05-23
 ---
 
 ## Objective
