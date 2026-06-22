@@ -1,6 +1,6 @@
 ---
 title: "Propagate the Narrowed Field Set Across Instruction Prose"
-status: implemented
+status: revise
 depends_on:
   - 01-code-and-compat
 ---
@@ -53,3 +53,7 @@ All prose references to the five removed task-frontmatter fields (`script`, `inp
 - Field-form sweep (`^\s*(\*\*)?(script|input|output|tags|created)\s*:` over `skills/**/*.md`, `agents/**/*.md`) returns only `report-in-markdown/references/baseline-io.md` (report-artifact frontmatter `tags`, not task frontmatter).
 - Task-field prose sweep (backtick-wrapped field names) returns only out-of-domain hits: Quarto `output` kwarg in `julia-quarto-guide.md`, report `tags` in `baseline-io.md`, Zotero `tags` API in `zotero-paper-reader/SKILL.md`.
 - `python3 skills/task-tree/scripts/cli.py task check` — clean (0 errors; the single placement warning is a pre-existing, unrelated `main-agent-trimming` root-placement advisory).
+
+## Review Notes
+
+1. **MAJOR** — [internals.md:189](../../../../skills/task-tree/references/internals.md#L189) still instructs an agent preparing a legacy PLAN.md for migration to "Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`, `**Script:** *(none)*`." This tells the agent to write a `**Script:**` field the migrator no longer consumes — `FIELD_RE` in [plan_migrate.py:25-29](../../../../skills/task-tree/scripts/plan_migrate.py#L25-L29) extracts only `depends_on`, `review_status`, `integration_status`, so `**Script:** *(none)*` is dead instruction prose. This is the same file and the same migration path where you correctly dropped the `script`/`input`/`output` rows from the `FIELD_RE` table (lines 151-156), but the companion normalization-checklist line was missed. It is precisely the gap the objective targets ("no instruction tells an agent to write or maintain a field the code no longer carries"). The field-form sweep missed it because the field appears mid-line inside a backtick span (`**Script:**`, capital S), not line-anchored. Fix: drop `, **Script:** *(none)*` so the line reads "Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`." Then re-confirm no remaining `**Script:**`/`**Input:**`/`**Output:**` task-field prose survives anywhere in the active docs.
