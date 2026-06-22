@@ -62,23 +62,9 @@
   {% endfor %}
 
   {#- Metadata pills -#}
-  {% if task.depends_on or task.script or task.tags or task.input or task.output %}
+  {% if task.depends_on %}
   <div class="task-meta">
-    {% if task.depends_on %}
     <span class="meta-pill"><strong>depends:</strong> {{ task.depends_on | join(', ') }}</span>
-    {% endif %}
-    {% if task.script %}
-    <span class="meta-pill"><strong>script:</strong> {{ task.script }}</span>
-    {% endif %}
-    {% if task.tags %}
-    <span class="meta-pill"><strong>tags:</strong> {{ task.tags | join(', ') }}</span>
-    {% endif %}
-    {% if task.input %}
-    <span class="meta-pill"><strong>in:</strong> {{ task.input | join(', ') }}</span>
-    {% endif %}
-    {% if task.output %}
-    <span class="meta-pill"><strong>out:</strong> {{ task.output | join(', ') }}</span>
-    {% endif %}
   </div>
   {% endif %}
 {% endmacro %}

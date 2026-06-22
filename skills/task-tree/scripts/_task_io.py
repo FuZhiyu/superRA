@@ -94,11 +94,6 @@ class Task:
     title: str = ""
     status: str = "not-started"
     depends_on: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
-    script: str = ""
-    input: list[str] = field(default_factory=list)
-    output: list[str] = field(default_factory=list)
-    created: str = ""
     body: str = ""
     objective: str = ""
     results: str = ""
@@ -132,7 +127,7 @@ def _parse_yaml_value(raw: str) -> str | list[str]:
     """Parse a simple YAML value: scalar string, inline list, or multi-line list.
 
     ``~`` (YAML null) is normalized to an empty string at the scalar level so
-    that ``script: ~`` yields ``Task.script == ""`` (falsy) rather than the
+    that ``title: ~`` yields ``Task.title == ""`` (falsy) rather than the
     literal string ``"~"`` (truthy) which would round-trip as a bogus value.
     """
     raw = raw.strip()
@@ -303,11 +298,7 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
     are dropped on the next CLI mutation.
     """
     lines = []
-    field_order = [
-        "title", "status",
-        "depends_on", "tags", "script", "input", "output",
-        "created",
-    ]
+    field_order = ["title", "status", "depends_on"]
 
     def _serialize_field(key: str, value: str | list[str]) -> None:
         if isinstance(value, list):
@@ -392,11 +383,6 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
         title=title,
         status=status,
         depends_on=_to_list(fm.get("depends_on", [])),
-        tags=_to_list(fm.get("tags", [])),
-        script=str(fm.get("script", "")),
-        input=_to_list(fm.get("input", [])),
-        output=_to_list(fm.get("output", [])),
-        created=str(fm.get("created", "")),
         body=body,
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
@@ -421,18 +407,6 @@ def write_task(task: Task) -> None:
         fm["depends_on"] = task.depends_on
     else:
         fm["depends_on"] = []
-    if task.tags:
-        fm["tags"] = task.tags
-    else:
-        fm["tags"] = []
-    if task.script:
-        fm["script"] = task.script
-    if task.input:
-        fm["input"] = task.input
-    if task.output:
-        fm["output"] = task.output
-    if task.created:
-        fm["created"] = task.created
 
     fm_text = serialize_frontmatter(fm)
     content = f"---\n{fm_text}---\n{task.body}"

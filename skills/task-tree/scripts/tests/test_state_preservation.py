@@ -36,20 +36,14 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     review_status = kwargs.get("review_status", "~")
     integration_status = kwargs.get("integration_status", "~")
     depends_on = kwargs.get("depends_on", [])
-    tags = kwargs.get("tags", [])
     objective = kwargs.get("objective", "")
     results = kwargs.get("results", "")
     body_text = kwargs.get("body_text", "")
-    created = kwargs.get("created", "2026-01-01")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
     else:
         deps_yaml = " []"
-    if tags:
-        tags_yaml = "[" + ", ".join(tags) + "]"
-    else:
-        tags_yaml = "[]"
 
     body = ""
     if body_text:
@@ -61,8 +55,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
 
     content = (
         f'---\ntitle: "{title}"\nstatus: {status}\nreview_status: {review_status}\n'
-        f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n"
-        f"tags: {tags_yaml}\ncreated: {created}\n---\n\n{body}"
+        f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n---\n\n{body}"
     )
     path.write_text(content, encoding="utf-8")
 

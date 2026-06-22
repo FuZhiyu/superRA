@@ -39,9 +39,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="When setting status on a branch task, cascade to all descendant leaves. "
                              "Only valid for: approved, not-started, archived, postponed.")
     parser.add_argument("--title", help="Set task title")
-    parser.add_argument("--add-tag", action="append", default=[], help="Add a tag")
-    parser.add_argument("--remove-tag", action="append", default=[], help="Remove a tag")
-    parser.add_argument("--script", help="Set script path")
     parser.add_argument("--fix", action="store_true",
                         help="Scan the tree and fix status consistency mismatches "
                              "(corrects parent status fields to match rolled-up children)")
@@ -79,9 +76,6 @@ def update_task(
     status: str | None = None,
     cascade: bool = False,
     title: str | None = None,
-    add_tags: list[str] | None = None,
-    remove_tags: list[str] | None = None,
-    script: str | None = None,
 ) -> None:
     # Single containment + prefix-tolerance enforcement point for this mutator,
     # regardless of entry surface (packaged CLI or direct script). resolve_path
@@ -154,18 +148,6 @@ def update_task(
     if title is not None and title != task.title:
         task.title = title
         changed = True
-    if script is not None and script != task.script:
-        task.script = script
-        changed = True
-
-    for tag in (add_tags or []):
-        if tag not in task.tags:
-            task.tags.append(tag)
-            changed = True
-    for tag in (remove_tags or []):
-        if tag in task.tags:
-            task.tags.remove(tag)
-            changed = True
 
     if changed:
         write_task(task)
@@ -289,9 +271,6 @@ def main(argv: list[str] | None = None) -> None:
         status=args.status,
         cascade=args.cascade,
         title=args.title,
-        add_tags=args.add_tag,
-        remove_tags=args.remove_tag,
-        script=args.script,
     )
 
 

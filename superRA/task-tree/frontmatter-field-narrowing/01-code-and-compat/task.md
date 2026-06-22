@@ -1,6 +1,6 @@
 ---
 title: "Drop the Five Fields from the Data Layer, CLI, and Tests (Back-Compat Preserved)"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -27,3 +27,23 @@ Remove `script`, `input`, `output`, `tags`, and `created` from the task-tree dat
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` — all green.
 - `python3 skills/task-tree/scripts/cli.py task check` passes on this repo's own `superRA/` tree (which still contains legacy fields) — proving back-compat end to end.
 - Grep for residual attribute access (`\.script\b`, `\.input\b`, `\.output\b`, `\.tags\b`, `\.created\b`) and `"script"|"input"|"output"|"tags"|"created"` keys in active `skills/task-tree/scripts/` code; remaining hits are only the `_STALE_FIELDS` suppression entry and ordinary prose/variable names.
+
+## Results
+
+The five fields (`script`, `input`, `output`, `tags`, `created`) are gone from the data model and every read/write/validate/test path; the parser stays tolerant of legacy/unknown keys.
+
+**Code changes (verified against the working tree):**
+
+- **Data layer** (`_task_io.py`): the five fields are absent from the `Task` dataclass, `serialize_frontmatter`'s `field_order` (now `title`/`status`/`depends_on`), `write_task` (no `tags: []` write), and `parse_task` reads. `parse_frontmatter` is unchanged — it still reads every key into the dict, so unknown keys parse and are simply not picked up by `parse_task`.
+- **Readable/JSON output** (`task_read.py`, `task_query.py`): the five dropped from `field_order` and JSON; all five added to `_STALE_FIELDS` (`task_read.py:165`) so a legacy file renders cleanly.
+- **Placement smells** (`task_check.py`): the root-leaf-fields smell and the cross-subtree `output`-overlap check are removed; remaining smells are single-child-root and root-leaf-beside-branch. Docstring section ref updated to `§Placing Work in the Existing Tree`.
+- **Dashboard** (`templates/task_node.html`): the metadata-pill block reduced to the `depends` pill only; `script`/`tags`/`in`/`out` pills removed.
+- **Migration** (`plan_migrate.py`), **fixtures** (`conftest.py`, `tests/test_state_preservation.py`), **tests** (`test_task_tree.py`, `test_dashboard.py`): field support removed; dead `tags=`/`script=`/`output=` kwargs (silently ignored no-ops) stripped from fixtures; the three tests that asserted now-removed behavior (`test_placement_flags_root_with_leaf_fields`, `test_placement_flags_cross_subtree_output_overlap`, `test_placement_ignores_generic_output_overlap`) deleted.
+
+**Back-compat regression test (the executable guarantee):** `TestParseTask::test_legacy_fields_parse_and_are_dropped_on_rewrite` writes a `task.md` carrying all five retired fields plus an arbitrary unknown key (`some_future_key`), asserts it parses without error with the known fields intact, then asserts `write_task` drops all six keys and the result round-trips.
+
+**Verification:**
+
+- `pytest skills/task-tree/scripts` → **693 passed, 2 skipped** (was 3 failed before this work). Net test count −2 (3 stale tests deleted, 1 regression test added).
+- `python3 skills/task-tree/scripts/cli.py task check` parses this repo's tree — **304** tracked `task.md` files still carry legacy fields — with no field errors (only a pre-existing, unrelated `main-agent-trimming` placement warning). Back-compat proven end-to-end on real legacy data.
+- Residual-reference grep over active `skills/task-tree/scripts/*.py`: only the intentional `_STALE_FIELDS` entry and unrelated `--output`/`args.output` CLI path flags remain.

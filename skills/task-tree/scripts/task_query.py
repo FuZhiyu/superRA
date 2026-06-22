@@ -46,19 +46,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     group.add_argument("--dag", nargs="?", const="", metavar="SUBTREE", help="Render dependency DAG (Mermaid format)")
 
     parser.add_argument("--status", help="Filter by status")
-    parser.add_argument("--tag", help="Filter by tag")
     parser.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
     return parser.parse_args(argv)
 
 
-def print_tree(task: Task, indent: int = 0, status_filter: str | None = None, tag_filter: str | None = None) -> None:
+def print_tree(task: Task, indent: int = 0, status_filter: str | None = None) -> None:
     """Print an indented tree with status icons."""
     effective = task.effective_status()
     icon = STATUS_ICONS.get(effective, "?")
 
     if status_filter and effective != status_filter:
-        pass_filter = False
-    elif tag_filter and tag_filter not in task.tags:
         pass_filter = False
     else:
         pass_filter = True
@@ -81,7 +78,7 @@ def print_tree(task: Task, indent: int = 0, status_filter: str | None = None, ta
             print(f"{prefix}{icon} {task.slug}: {label}{progress}")
 
     for child in task.children:
-        print_tree(child, indent + 1, status_filter, tag_filter)
+        print_tree(child, indent + 1, status_filter)
 
 
 def _tree_node_line(task: Task, indent: int, marker: str = "") -> str:
@@ -224,11 +221,6 @@ def tree_to_json(task: Task) -> dict:
         "status": task.status,
         "effective_status": task.effective_status(),
         "depends_on": task.depends_on,
-        "tags": task.tags,
-        "script": task.script,
-        "input": task.input,
-        "output": task.output,
-        "created": task.created,
         "is_leaf": task.is_leaf,
         "body": task.body,
         "objective": sections.get("Objective", ""),
@@ -257,14 +249,12 @@ def main(argv: list[str] | None = None) -> None:
         if args.as_json:
             print(json.dumps(tree_to_json(root), indent=2))
         else:
-            print_tree(root, status_filter=args.status, tag_filter=args.tag)
+            print_tree(root, status_filter=args.status)
 
     elif args.frontier:
         frontier = compute_frontier(root)
         if args.status:
             frontier = [t for t in frontier if t.status == args.status]
-        if args.tag:
-            frontier = [t for t in frontier if args.tag in t.tags]
         print_frontier(frontier, as_json=args.as_json)
 
     elif args.dag is not None:

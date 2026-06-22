@@ -59,14 +59,13 @@ def plan_root(tmp_path):
     d1 = root / "01-first"
     d1.mkdir()
     _write_task_md(d1 / "task.md", "First Task", "approved",
-                   tags=["data"],
                    objective="Complete step 1.",
                    results="### Key Findings\n- Found 100 rows")
 
     d2 = root / "02-second"
     d2.mkdir()
     _write_task_md(d2 / "task.md", "Second Task", "not-started",
-                   depends_on=["01-first"], tags=["analysis"],
+                   depends_on=["01-first"],
                    objective="Complete step 1 and step 2.")
 
     d3 = root / "03-third"
@@ -90,14 +89,12 @@ class TestParseTask:
         assert task.title == "First Task"
         assert task.status == "approved"
         assert task.depends_on == []
-        assert task.tags == ["data"]
         assert task.path == "01-first"
         assert task.is_leaf  # no children loaded yet
 
     def test_parse_task_with_deps(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert task.depends_on == ["01-first"]
-        assert task.tags == ["analysis"]
 
     def test_parse_root(self, plan_root):
         task = _task_io.parse_task(plan_root / "task.md")
@@ -129,6 +126,42 @@ class TestParseTask:
         root_dir.mkdir()
         with pytest.raises(ValueError, match="outside the supplied plan root"):
             _task_io.parse_task(outside / "task.md", plan_root=root_dir)
+
+    def test_legacy_fields_parse_and_are_dropped_on_rewrite(self, tmp_path):
+        # Back-compat guarantee: a task.md still carrying the five retired fields
+        # (script/input/output/tags/created) plus an arbitrary unknown key parses
+        # without error; the known fields survive and the retired/unknown keys are
+        # silently discarded the next time write_task rewrites the file.
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        task_md = root_dir / "01-legacy" / "task.md"
+        task_md.parent.mkdir()
+        task_md.write_text(
+            "---\n"
+            'title: "Legacy"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "script: run.py\n"
+            "input:\n  - in.csv\n"
+            "output:\n  - out.csv\n"
+            "tags:\n  - analysis\n"
+            "created: 2024-01-01\n"
+            "some_future_key: whatever\n"
+            "---\n\n## Objective\n\nx\n",
+            encoding="utf-8",
+        )
+        task = _task_io.parse_task(task_md, plan_root=root_dir)
+        assert task.title == "Legacy"
+        assert task.status == "not-started"
+        assert task.depends_on == []
+
+        _task_io.write_task(task)
+        rewritten = task_md.read_text(encoding="utf-8")
+        for key in ("script:", "input:", "output:", "tags:", "created:",
+                    "some_future_key:"):
+            assert key not in rewritten
+        # And the rewritten file still round-trips cleanly.
+        assert _task_io.parse_task(task_md, plan_root=root_dir).title == "Legacy"
 
 
 class TestWriteTask:
@@ -520,7 +553,6 @@ class TestWriteTask:
         task2 = _task_io.parse_task(plan_root / "01-first" / "task.md")
         assert task2.title == task.title
         assert task2.status == task.status
-        assert task2.tags == task.tags
         assert task2.body == original_body
 
 
@@ -788,25 +820,6 @@ class TestTaskUpdate:
         )
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert task.status == "in-progress"
-
-    def test_update_tags(self, plan_root):
-        task_update.update_task(
-            plan_root=plan_root,
-            task_path="02-second",
-            add_tags=["new-tag"],
-        )
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        assert "new-tag" in task.tags
-        assert "analysis" in task.tags
-
-    def test_remove_tag(self, plan_root):
-        task_update.update_task(
-            plan_root=plan_root,
-            task_path="02-second",
-            remove_tags=["analysis"],
-        )
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        assert "analysis" not in task.tags
 
     def test_escaping_path_is_rejected_in_mutator(self, plan_root):
         # Containment is enforced inside the mutator, not only the CLI shim, so a
@@ -1283,10 +1296,12 @@ class TestPlanMigrate:
 
         t1 = _task_io.parse_task(output / "01-load-data" / "task.md")
         assert t1.title == "Load Data"
-        assert t1.script == "Code/01_load.py"
-        assert t1.input == ["Data/raw.csv"]
-        assert t1.output == ["Data/clean.parquet"]
         assert "1000 rows loaded" in t1.body
+        # Legacy script/input/output fields are no longer emitted by migration
+        load_content = (output / "01-load-data" / "task.md").read_text(encoding="utf-8")
+        assert "script:" not in load_content
+        assert "input:" not in load_content
+        assert "output:" not in load_content
         # Migration should produce v2 format
         content = (output / "01-load-data" / "task.md").read_text(encoding="utf-8")
         assert "## Objective" in content
@@ -1664,12 +1679,6 @@ class TestValidateFrontmatter:
         task.title = ""
         warnings = _task_validate.validate_frontmatter(task)
         assert any("title" in w for w in warnings)
-
-    def test_tags_not_list(self, plan_root):
-        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
-        task.tags = "data"  # string instead of list
-        warnings = _task_validate.validate_frontmatter(task)
-        assert any("tags" in w for w in warnings)
 
 
 class TestValidateDependencies:
@@ -3647,23 +3656,6 @@ class TestTaskCheck:
     def _placement(self, root_dir: Path):
         return task_check.run_checks(root_dir, category="placement")
 
-    def test_placement_flags_root_with_leaf_fields(self, tmp_path):
-        """A root carrying script/input/output is a leaf masquerading as project."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started",
-                       script="run.py", output=["out.csv"])
-        for slug in ("01-a", "02-b"):
-            d = root_dir / slug
-            d.mkdir()
-            _write_task_md(d / "task.md", slug, "not-started")
-        findings = self._placement(root_dir)
-        assert any(
-            f.category == "placement" and f.severity == "warning"
-            and "leaf-only field" in f.message
-            for f in findings
-        )
-
     def test_placement_flags_single_child_root(self, tmp_path):
         """A single-child root is a wrapper around one narrow task."""
         root_dir = tmp_path / "superRA"
@@ -3713,52 +3705,11 @@ class TestTaskCheck:
         findings = self._placement(root_dir)
         assert findings == []
 
-    def test_placement_flags_cross_subtree_output_overlap(self, tmp_path):
-        """An identical output owned by two subtrees signals split concern."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        # Two top-level branches, each with a leaf declaring the same output.
-        for branch_slug, leaf_slug in (("01-alpha", "01-build"), ("02-beta", "01-build")):
-            branch = root_dir / branch_slug
-            branch.mkdir()
-            _write_task_md(branch / "task.md", branch_slug, "not-started")
-            leaf = branch / leaf_slug
-            leaf.mkdir()
-            _write_task_md(leaf / "task.md", leaf_slug, "not-started",
-                           output=["shared.csv"])
-        findings = self._placement(root_dir)
-        overlap = [
-            f for f in findings
-            if "is also produced by another subtree" in f.message
-        ]
-        assert len(overlap) == 2  # one finding per owning task
-        assert all(f.severity == "warning" for f in overlap)
-
-    def test_placement_ignores_generic_output_overlap(self, tmp_path):
-        """A shared generic basename (README.md) is not a split-concern signal."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        for branch_slug, leaf_slug in (("01-alpha", "01-a"), ("02-beta", "01-b")):
-            branch = root_dir / branch_slug
-            branch.mkdir()
-            _write_task_md(branch / "task.md", branch_slug, "not-started")
-            leaf = branch / leaf_slug
-            leaf.mkdir()
-            _write_task_md(leaf / "task.md", leaf_slug, "not-started",
-                           output=["README.md"])
-        findings = self._placement(root_dir)
-        assert not any(
-            "is also produced by another subtree" in f.message for f in findings
-        )
-
     def test_placement_never_mutates(self, tmp_path):
         """task check is read-only — a placement smell does not auto-fix."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started",
-                       script="run.py")
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-only"
         d.mkdir()
         _write_task_md(d / "task.md", "Only", "not-started")

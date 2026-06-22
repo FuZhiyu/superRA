@@ -29,24 +29,18 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 def _write_task_md(path: Path, title: str, status: str, **kwargs):
     """Write a task.md file (unified status format).
 
-    kwargs: depends_on, tags, objective, results, created.
+    kwargs: depends_on, objective, results.
     For legacy test scenarios, review_status and integration_status can be
     passed to produce old-format files.
     """
     depends_on = kwargs.get("depends_on", [])
-    tags = kwargs.get("tags", [])
     objective = kwargs.get("objective", "")
     results = kwargs.get("results", "")
-    created = kwargs.get("created", "2026-01-01")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
     else:
         deps_yaml = " []"
-    if tags:
-        tags_yaml = "[" + ", ".join(tags) + "]"
-    else:
-        tags_yaml = "[]"
 
     body = f"## Objective\n\n{objective}\n"
     if results:
@@ -58,17 +52,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
         fm_lines.append(f"review_status: {kwargs['review_status']}")
     if "integration_status" in kwargs:
         fm_lines.append(f"integration_status: {kwargs['integration_status']}")
-    fm_lines.extend([
-        f"depends_on:{deps_yaml}",
-        f"tags: {tags_yaml}",
-        f"created: {created}",
-    ])
-    if "script" in kwargs:
-        fm_lines.append(f"script: {kwargs['script']}")
-    for list_field in ("input", "output"):
-        if list_field in kwargs:
-            items = kwargs[list_field]
-            fm_lines.append(f"{list_field}: [" + ", ".join(items) + "]")
+    fm_lines.append(f"depends_on:{deps_yaml}")
 
     content = "---\n" + "\n".join(fm_lines) + "\n---\n\n" + body
     path.write_text(content, encoding="utf-8")

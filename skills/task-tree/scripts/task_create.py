@@ -12,7 +12,6 @@ from _task_io import (
     TASK_ROOT_DIRNAME,
     propagate_parent_status,
     strip_root_prefix,
-    today_str,
 )
 
 
@@ -21,8 +20,6 @@ TASK_TEMPLATE = """\
 title: "{title}"
 status: not-started
 depends_on: {depends_on}
-tags: []
-{script_line}{input_line}{output_line}created: {today}
 ---
 
 ## Objective
@@ -47,9 +44,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--objective", default="", help="Task objective (one-line description)")
     parser.add_argument("--guidance", default="", help="Optional advisory Planner Guidance section")
     parser.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependency names")
-    parser.add_argument("--script", default="", help="Script path")
-    parser.add_argument("--input", nargs="*", default=[], help="Input file paths")
-    parser.add_argument("--output", nargs="*", default=[], help="Output file paths")
     return parser.parse_args(argv)
 
 
@@ -60,13 +54,8 @@ def create_task(
     objective: str = "",
     guidance: str = "",
     depends_on: list[str] | None = None,
-    script: str = "",
-    input_files: list[str] | None = None,
-    output_files: list[str] | None = None,
 ) -> Path:
     depends_on = depends_on or []
-    input_files = input_files or []
-    output_files = output_files or []
 
     # Tolerate a redundant leading task-root segment regardless of entry surface.
     task_path = strip_root_prefix(plan_root, task_path)
@@ -102,24 +91,12 @@ def create_task(
     else:
         deps_yaml = " []"
 
-    script_line = f"script: {script}\n" if script else ""
-    input_line = ""
-    if input_files:
-        input_line = "input:\n" + "".join(f"  - {f}\n" for f in input_files)
-    output_line = ""
-    if output_files:
-        output_line = "output:\n" + "".join(f"  - {f}\n" for f in output_files)
-
     safe_title = title.replace('"', '\\"')
     content = TASK_TEMPLATE.format(
         title=safe_title,
         objective=objective,
         guidance_section=f"## Planner Guidance\n\n{guidance}\n\n" if guidance else "",
         depends_on=deps_yaml,
-        script_line=script_line,
-        input_line=input_line,
-        output_line=output_line,
-        today=today_str(),
     )
 
     task_dir.mkdir(parents=False)
@@ -144,9 +121,6 @@ def main(argv: list[str] | None = None) -> None:
         objective=args.objective,
         guidance=args.guidance,
         depends_on=args.depends_on,
-        script=args.script,
-        input_files=args.input,
-        output_files=args.output,
     )
 
 

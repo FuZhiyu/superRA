@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, parse_frontmatter, serialize_frontmatter, today_str
+from _task_io import TASK_ROOT_DIRNAME, parse_frontmatter, serialize_frontmatter
 
 
 TASK_BLOCK_RE = re.compile(
@@ -26,9 +26,6 @@ FIELD_RE = {
     "depends_on": re.compile(r"^\*\*Depends on:\*\*\s*(.+)$", re.MULTILINE),
     "review_status": re.compile(r"^\*\*Review status:\*\*\s*(.+)$", re.MULTILINE),
     "integration_status": re.compile(r"^\*\*Integration status:\*\*\s*(.+)$", re.MULTILINE),
-    "script": re.compile(r"^\*\*Script:\*\*\s*`?([^`\n]+)`?\s*$", re.MULTILINE),
-    "input": re.compile(r"^\*\*Input:\*\*\s*(.+)$", re.MULTILINE),
-    "output": re.compile(r"^\*\*Output:\*\*\s*(.+)$", re.MULTILINE),
 }
 
 # Fields that are removed during status consolidation upgrade
@@ -75,17 +72,6 @@ def slugify(text: str) -> str:
     slug = re.sub(r"[\s_]+", "-", slug)
     slug = re.sub(r"-+", "-", slug)
     return slug.strip("-")[:60]
-
-
-def _extract_file_list(raw: str) -> list[str]:
-    """Parse a comma-separated or backtick-delimited file list."""
-    raw = raw.strip()
-    if not raw or raw == "*(none)*":
-        return []
-    parts = re.findall(r"`([^`]+)`", raw)
-    if parts:
-        return parts
-    return [p.strip() for p in raw.split(",") if p.strip()]
 
 
 def _parse_depends_on(raw: str) -> list[str]:
@@ -245,9 +231,6 @@ def _build_task_md(
     title: str,
     status: str,
     depends_on: list[str],
-    script: str,
-    input_files: list[str],
-    output_files: list[str],
     steps_body: str,
     results_body: str,
     review_notes: str = "",
@@ -255,7 +238,6 @@ def _build_task_md(
 ) -> str:
     """Build a task.md file content string."""
     deps = "\n" + "".join(f"  - {d}\n" for d in depends_on) if depends_on else " []"
-    today = today_str()
     escaped_title = title.replace('"', '\\"')
 
     fm_lines = [
@@ -263,22 +245,8 @@ def _build_task_md(
         f'title: "{escaped_title}"',
         f"status: {status}",
         f"depends_on:{deps}",
-        "tags: []",
-    ]
-    if script:
-        fm_lines.append(f"script: {script}")
-    if input_files:
-        fm_lines.append("input:")
-        for f in input_files:
-            fm_lines.append(f"  - {f}")
-    if output_files:
-        fm_lines.append("output:")
-        for f in output_files:
-            fm_lines.append(f"  - {f}")
-    fm_lines.extend([
-        f"created: {today}",
         "---",
-    ])
+    ]
 
     # No # Title heading (redundant with frontmatter title)
     sections = ["\n".join(fm_lines), ""]
@@ -321,7 +289,7 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     root_task_md = output_dir / "task.md"
-    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\ndepends_on: []\ntags: []\ncreated: {today_str()}\n---\n\n{header}\n"
+    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\ndepends_on: []\n---\n\n{header}\n"
     root_task_md.write_text(root_content, encoding="utf-8")
     print(f"Created {root_task_md}")
 
@@ -344,10 +312,6 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
                 if dep_num in task_num_to_slug:
                     depends_on_slugs.append(task_num_to_slug[dep_num])
 
-        script = _extract_field(body, "script")
-        input_files = _extract_file_list(_extract_field(body, "input"))
-        output_files = _extract_file_list(_extract_field(body, "output"))
-
         # Unified status: migration mapping applied inside _compute_status_from_steps
         status = _compute_status_from_steps(body)
 
@@ -359,9 +323,6 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
             title=title,
             status=status,
             depends_on=depends_on_slugs,
-            script=script,
-            input_files=input_files,
-            output_files=output_files,
             steps_body=steps_body,
             results_body=results_body,
             review_notes=review_notes,

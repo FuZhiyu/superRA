@@ -1,6 +1,6 @@
 ---
 title: "Narrow the Frontmatter Field Set to title/status/depends_on"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 

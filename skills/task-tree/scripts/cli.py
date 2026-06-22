@@ -221,7 +221,6 @@ def _run_read(args: argparse.Namespace) -> None:
 def _run_tree(args: argparse.Namespace) -> None:
     argv = _root_args(args.root) + ["--tree"]
     _append_optional(argv, "--status", args.status)
-    _append_optional(argv, "--tag", args.tag)
     if args.as_json:
         argv.append("--json")
     _module_main("task_query", argv)
@@ -258,9 +257,6 @@ def _run_create(args: argparse.Namespace) -> None:
         objective=args.objective or "",
         guidance=args.guidance or "",
         depends_on=args.depends_on,
-        script=args.script or "",
-        input_files=args.input,
-        output_files=args.output,
     )
 
 
@@ -271,9 +267,6 @@ def _run_update(args: argparse.Namespace) -> None:
         task_path=args.path,
         status=args.status,
         title=args.title,
-        add_tags=args.add_tag,
-        remove_tags=args.remove_tag,
-        script=args.script,
     )
 
 
@@ -543,7 +536,6 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     tree.add_argument("--status", help="Filter by effective status")
-    tree.add_argument("--tag", help="Filter by tag")
     tree.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
     _set_runner(tree, _run_tree)
 
@@ -586,9 +578,6 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--objective", default="", help="Task objective")
     create.add_argument("--guidance", default="", help="Optional Planner Guidance text")
     create.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependencies")
-    create.add_argument("--script", default="", help="Script path")
-    create.add_argument("--input", nargs="*", default=[], help="Input paths")
-    create.add_argument("--output", nargs="*", default=[], help="Output paths")
     _set_runner(create, _run_create)
 
     update = task_sub.add_parser("update", help="Update task frontmatter fields")
@@ -600,9 +589,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     update.add_argument("--status", choices=VALID_STATUSES, help="Set task status")
     update.add_argument("--title", help="Set task title")
-    update.add_argument("--add-tag", action="append", default=[], help="Add a tag")
-    update.add_argument("--remove-tag", action="append", default=[], help="Remove a tag")
-    update.add_argument("--script", help="Set script path")
     _set_runner(update, _run_update)
 
     status = task_sub.add_parser("status", help="Cascade or propagate task statuses")

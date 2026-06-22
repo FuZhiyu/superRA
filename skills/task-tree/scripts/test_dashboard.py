@@ -71,14 +71,13 @@ def plan_root(tmp_path):
     d1 = root / "01-first"
     d1.mkdir()
     _write_task_md(d1 / "task.md", "First Task", "approved",
-                   tags=["data"],
                    objective="Complete step 1.",
                    results="### Key Findings\n- Found 100 rows")
 
     d2 = root / "02-second"
     d2.mkdir()
     _write_task_md(d2 / "task.md", "Second Task", "not-started",
-                   depends_on=["01-first"], tags=["analysis"],
+                   depends_on=["01-first"],
                    objective="Complete step 2.")
 
     d3 = root / "03-third"
@@ -3486,7 +3485,7 @@ class TestMasterDetailPartials:
         b = root / "02-b"
         b.mkdir()
         _write_task_md(b / "task.md", "B", "not-started",
-                       depends_on=["01-a"], tags=["analysis"],
+                       depends_on=["01-a"],
                        objective="B obj.")
         x = b / "01-x"
         x.mkdir()
@@ -3563,7 +3562,6 @@ class TestMasterDetailPartials:
             r = c.get("/node/02-b")
             assert 'class="task-meta"' in r.text
             assert "<strong>depends:</strong> 01-a" in r.text
-            assert "<strong>tags:</strong> analysis" in r.text
 
     def test_node_sections_match_full_node(self, tmp_path):
         """The body-only partial emits the same section markup as the full node."""

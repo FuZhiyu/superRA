@@ -157,14 +157,13 @@ def _open_comments(target_task: Task) -> list[dict]:
 def _render_frontmatter_readable(fm: dict) -> str:
     """Render frontmatter dict as readable key: value lines."""
     lines = []
-    field_order = [
-        "title", "status",
-        "depends_on", "tags", "script", "input", "output",
-        "created",
-    ]
+    field_order = ["title", "status", "depends_on"]
     # Stale fields removed from the data model — suppress in output even if
     # still present in old task files.
-    _STALE_FIELDS = {"review_status", "integration_status", "updated"}
+    _STALE_FIELDS = {
+        "review_status", "integration_status", "updated",
+        "tags", "script", "input", "output", "created",
+    }
     seen = set()
     for key in field_order:
         if key not in fm:
@@ -307,11 +306,6 @@ def render_json(
         "status": target_task.status,
         "effective_status": target_task.effective_status(),
         "depends_on": target_task.depends_on,
-        "tags": target_task.tags,
-        "script": target_task.script,
-        "input": target_task.input,
-        "output": target_task.output,
-        "created": target_task.created,
         "sections": {k: v.strip() for k, v in sections.items()},
     }
 

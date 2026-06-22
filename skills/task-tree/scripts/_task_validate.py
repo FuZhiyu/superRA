@@ -37,10 +37,6 @@ def validate_frontmatter(task: Task) -> list[str]:
         isinstance(v, str) for v in task.depends_on
     ):
         warnings_out.append("depends_on must be a list of strings")
-    if not isinstance(task.tags, list) or not all(
-        isinstance(v, str) for v in task.tags
-    ):
-        warnings_out.append("tags must be a list of strings")
     if not task.title or not task.title.strip():
         warnings_out.append("title must be a non-empty string")
 
