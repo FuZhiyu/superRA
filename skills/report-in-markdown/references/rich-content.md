@@ -23,7 +23,7 @@ Stage 1 figures are written directly into the task's `attachments/` by the analy
 **PDF figures:** convert to PNG first, then save:
 
 ```bash
-uv run --with pdf2image python -c "
+uv run --no-project --with pdf2image python -c "
 from pdf2image import convert_from_path
 images = convert_from_path('path/to/figure.pdf')
 images[0].save('${ATTACH_DIR}/description.png')

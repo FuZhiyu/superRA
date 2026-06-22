@@ -106,16 +106,20 @@ with `jupyter kernelspec list`).
 
 ### Python
 
-If `uv` is available, prefer `uv run` — it activates the project's `.venv`
-so the kernel uses the correct packages. Requires `jupytext`, `nbconvert`,
-and `ipykernel` as dev dependencies in `pyproject.toml`.
+Execution needs a single environment that has both the rendering tools
+(`jupytext`, `nbconvert`, `ipykernel`) and the script's analysis packages, so
+the kernel's imports resolve. How that environment is provided is
+project-specific — an activated venv, a global install, or `uv run` against the
+project. Match the existing setup of the project you're in rather than imposing
+one.
 
 ```bash
-uv run jupytext --set-kernel python3 --to notebook --execute script.py
-
-# Without uv (uses whichever environment jupytext is installed in):
 jupytext --set-kernel python3 --to notebook --execute script.py
 ```
+
+Note: `uv run` (without `--script`) discovers the surrounding project and
+provisions its `.venv` — expected when rendering inside a research project, but
+it is a side effect. Don't use it for throwaway, project-independent commands.
 
 ### Julia
 
@@ -144,7 +148,8 @@ Relative paths like `Data/file.csv` resolve relative to where the script lives.
 
 Execution requires a Jupyter kernel, which binds local sockets. In Claude Code,
 the sandbox blocks socket binding. Two options:
-1. Suggest the user type `! uv run jupytext ...` (the `!` prefix bypasses sandbox)
+1. Suggest the user type `! jupytext ...` (the `!` prefix bypasses sandbox; it
+   runs in the user's own session, so their project environment applies)
 2. Run with sandbox disabled (Claude Code will prompt for permission)
 
 ## Pairing and Sync
@@ -180,8 +185,8 @@ jupyter nbconvert --to html script.ipynb --output-dir Output/
 uv pip install jupytext jupyter nbconvert ipykernel
 python -m ipykernel install --user --name python3
 
-# Python (per-project — add to pyproject.toml dev-dependencies)
-# jupytext, nbconvert, ipykernel
+# Python (per-project — add jupytext, nbconvert, ipykernel to the project's
+# own dependency manifest, following whatever setup that project uses)
 
 # Julia (run in Julia REPL)
 # using Pkg; Pkg.add("IJulia")
@@ -193,6 +198,7 @@ Verify: `jupyter kernelspec list`
 
 - **"No kernel found"**: use `--set-kernel <name>` with a name from `jupyter kernelspec list`
 - **Sandbox blocks execution**: kernels need sockets — use `!` prefix or disable sandbox
-- **Wrong Python packages**: use `uv run jupytext ...` to activate the project `.venv`
+- **Wrong Python packages**: run jupytext in the environment that holds the
+  project's packages (activate the project venv, or use the project's runner)
 - **Format not recognized**: ensure file starts with `# %%` and jupytext is installed
 - **Pairing not working**: check `jupytext.toml` or notebook metadata for correct `formats` string
