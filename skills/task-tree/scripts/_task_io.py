@@ -12,7 +12,6 @@ import os
 import re
 import warnings
 from dataclasses import dataclass, field
-from datetime import date
 from pathlib import Path
 
 
@@ -897,7 +896,3 @@ def _collect_all(task: Task, result: list[Task]) -> None:
     for child in task.children:
         result.append(child)
         _collect_all(child, result)
-
-
-def today_str() -> str:
-    return date.today().isoformat()
