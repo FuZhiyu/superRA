@@ -1,6 +1,6 @@
 ---
 title: "Unprivilege Top-Level Tasks; Make Umbrella task.md Optional"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -22,3 +22,15 @@ Redefine the canonical superRA/ task shape so top-level tasks (direct children o
 
 - Full `task-tree` script suite passes: 689 passed (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`). Removed/adjusted tests that existed only to dodge the deleted placement smells (`test_task_tree.py`).
 - Pre-existing, unrelated line-number anchor drift found but not fixed: `theory-modeling/references/integration.md`'s `[skills/superimplement/SKILL.md:135]` link was already stale before this task (points at a numbered completion-menu option, not the promotion paragraph it cites) and drifted one further line from the Step 0b edit above. Out of scope for this task.
+
+## Review Notes
+
+1. **MAJOR** — [skills/superplan/SKILL.md:102](../../../skills/superplan/SKILL.md#L102) §Create the `superRA/` Directory step 1 still reads "Create `superRA/task.md` (top task) with `## Objective` carrying the project-level goal..." as an unconditional first step for every new tree. This directly contradicts the Entry Assessment placement default this same task edited eleven lines earlier — [skills/superplan/SKILL.md:25](../../../skills/superplan/SKILL.md#L25) now says a fresh tree's first task is "the first top-level task under `superRA/`," not an umbrella. As written, every tree superplan creates from scratch still gets a forced umbrella, defeating the task's own objective ("no umbrella `superRA/task.md` is required"). Fix: make step 1 conditional on the umbrella actually being warranted (shared objective spanning every top-level task), matching the new `## Tree Shape` rule in `task-tree/references/task-file-contract.md`.
+
+2. **MAJOR** — [skills/superimplement/SKILL.md:65](../../../skills/superimplement/SKILL.md#L65) Step 1 still says "Read the root `superRA/task.md` and run `superra task tree`..." as an unconditional first read, contradicting Step 0b eight lines above ([skills/superimplement/SKILL.md:57](../../../skills/superimplement/SKILL.md#L57)) which this task rewrote to accept a tree with no umbrella at all (top-level task dirs only). An agent following Step 1 literally on such a tree tries to read a file that does not exist. Fix: generalize to reading the umbrella when present, else the top-level task set (e.g. `superra task tree` alone already surfaces the whole tree).
+
+3. **MAJOR** — [skills/theory-modeling/references/planning.md:9,31,84](../../../skills/theory-modeling/references/planning.md#L9) The Model Inventory hard gate still requires writing the inventory into "the top `superRA/task.md` objective," unconditionally, even though this task's own Results say the umbrella is optional and the canonical-table fallback is "the nearest shared ancestor" (the wording it applied to `SKILL.md`/`CLAUDE.md`/`integration.md` in the same skill). This planning.md hard gate — a workflow entry-gate squarely in the task's stated scope — was not swept and still assumes required existence.
+
+4. **MAJOR** — [skills/slide-design/references/planning.md:7](../../../skills/slide-design/references/planning.md#L7) "record the audience-context inventory in the root `.plan/task.md`" is an unconditional pre-task-decomposition step with no fallback for a tree with no umbrella. Same propagation gap as #3, unaddressed.
+
+5. **MINOR** — [skills/agent-orchestration/references/agent-teams.md:177-180](../../../skills/agent-orchestration/references/agent-teams.md#L177-L180) "lead records active team phase in root `superRA/task.md`" and the example status note both assume a root task.md exists. Lower-severity operational note, but still stale against the new optional-umbrella shape; needs a fallback (e.g. the umbrella when present, else the task governing the team's scope).
