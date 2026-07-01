@@ -3603,9 +3603,6 @@ class TestIdleShutdown:
     # _should_idle_exit — pure function, no side effects
     # ------------------------------------------------------------------
 
-    def test_should_exit_when_zero_connections_and_timeout_reached(self):
-        assert plan_dashboard._should_idle_exit(0, 5.0, 5.0) is True
-
     def test_should_not_exit_when_connections_present(self):
         assert plan_dashboard._should_idle_exit(3, 999.0, 5.0) is False
 

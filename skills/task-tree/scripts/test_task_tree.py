@@ -164,7 +164,7 @@ class TestParseTask:
         assert _task_io.parse_task(task_md, plan_root=root_dir).title == "Legacy"
 
 
-class TestWriteTask:
+class TestWriteTaskAtomic:
     def test_write_is_atomic_no_tmp_left_behind(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md", plan_root)
         task.status = "in-progress"
