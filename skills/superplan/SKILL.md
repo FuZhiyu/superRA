@@ -99,8 +99,8 @@ For the canonical task structure — recursive task anatomy and field-by-field n
 
 ### Create the `superRA/` Directory
 
-1. Create `superRA/task.md` (top task) with `## Objective` carrying the project-level goal, methodology, scope, and any project-wide scoped `### Conventions` / `### Context` / `### Constraints` subsections.
-2. Create child task directories with full objectives per §Task Structure above.
+1. If a shared `## Objective` / `### Context` genuinely spans every top-level task (`task-tree/references/task-file-contract.md` §Tree Shape), create an umbrella `superRA/task.md` carrying the project-level goal, methodology, scope, and any project-wide `### Conventions` / `### Context` / `### Constraints` subsections. Otherwise skip it.
+2. Create the top-level (and any nested) task directories with full objectives per §Task Structure above.
 
 ## Phase 4: Review & Commit
 
@@ -191,7 +191,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in an umbrella task.md, if the tree has one, that no longer matches the new tree.
+2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in a governing ancestor task that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment. Flip a directly widened `approved` task to `revise`; reset transitive downstream dependents whose inputs or assumptions shift to `not-started`. Preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.

@@ -63,7 +63,7 @@ A reader trusts a model only if every symbol has a clear meaning. Pin down the o
 
 **Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
 
-Symbols already named in the tree's canonical Notation Conventions table (the umbrella task.md when one exists, otherwise the nearest shared ancestor holding the tree's notation) are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
+Symbols already named in the tree's canonical Notation Conventions table (on the governing ancestor task holding the tree's notation) are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
 
 **Slot template** (all required except where noted):
 

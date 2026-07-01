@@ -62,7 +62,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 ### Step 1: Load and Review Plan
 
-1. Read the root `superRA/task.md` and run `superra task tree` to see the full task tree with statuses.
+1. Run `superra task tree` to see the full task tree with statuses.
 2. **Confirm there is implementation work.** Continue here when the frontier has tasks to implement, review, or fix, or when reproducibility or the Step 4 disposition is still pending. If all tasks are already `approved`, skip dispatch and start at Step 3 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the active task or its ancestor chain.
 4. **Read the scoped `### Conventions` / `### Context` / `### Constraints` context in the active task's objective and its ancestor chain** (anatomy: `task-tree/references/task-file-contract.md` §Context Inheritance). When a task the frontier will touch lacks the inherited convention context an agent needs, walk the relevant docs and distill it into the objective of the lowest governing task now (`superplan/references/task-tree-design.md` §Context Distillation) — commit before dispatching subagents.

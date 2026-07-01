@@ -174,9 +174,9 @@ Because teammates can be lost at any time, checkpointing discipline is critical:
 
 - Commit after each completed task (already required by superRA)
 - Update task files with status and result notes (already required)
-- **Additionally:** lead records active team phase in root `superRA/task.md` when spawning a team.
+- **Additionally:** lead records active team phase in the governing ancestor task when spawning a team.
 
-Example team status note in root `superRA/task.md`:
+Example team status note:
 
 ```markdown
 ## Team Status

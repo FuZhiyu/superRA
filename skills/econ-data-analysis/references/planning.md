@@ -7,7 +7,7 @@ Two planning-only concerns:
 1. **Data Inventory — the hard gate that blocks task drafting until available data is inventoried and gaps are surfaced.**
 2. **Sensitivity Analysis Design — which robustness checks matter for this specific study.**
 
-Both happen once at planning time and then live as scoped subsections on the `## Objective` of the task whose subtree the data governs — the top `superRA/task.md` for a single-workstream analysis, or the root of the data-analysis subtree when a larger project carries other workstreams.
+Both happen once at planning time and then live as scoped subsections on the `## Objective` of the governing ancestor task — the task whose subtree the data governs.
 
 ---
 

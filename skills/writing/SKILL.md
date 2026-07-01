@@ -35,7 +35,7 @@ Then check each sentence against the set: every term is in the set or defined at
 
 A paper's writing-side conventions are paper-specific choices among defensible alternatives that a fresh agent would otherwise re-infer and silently re-decide each session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) -> `CLAUDE.md` (project-permanent). Place the surface on the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project — so every writing agent inherits it via the ancestor chain. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability.
+**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) -> `CLAUDE.md` (project-permanent). Place the surface on the `## Objective` of the governing ancestor task — the task whose subtree is the manuscript — so every writing agent inherits it via the ancestor chain. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability.
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
