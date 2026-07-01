@@ -130,6 +130,6 @@ For each finding:
 - **Reject** false positives by remove it from the `Review Notes`.
 - **Escalate** issues that will materially change the direction of the task
 
-If there are active `Review Notes`, redispatch implementers and reviewers for another round. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent for token efficiency. 
+If there are active `Review Notes`, redispatch implementers and reviewers for another round. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent for token efficiency (in Claude Code, `SendMessage` to the agent's id/name; a new `Agent` call always starts cold).
 
 For a tiny fix you can verify directly, set `status: approved` inline instead.

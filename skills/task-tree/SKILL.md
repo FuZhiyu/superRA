@@ -32,7 +32,10 @@ Run the committed `./superRA/superra` wrapper (created above; contributors in th
 ./superRA/superra task frontier        # dispatchable leaf tasks
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
+./superRA/superra dashboard --no-open  # idempotent; reuses a running server or starts one, prints http://localhost:<port>
 ```
+
+**Deep-linking a task in the dashboard:** `http://localhost:<port>/?wt=<worktree-basename>#/<task-path>`. `<task-path>` is the same locator as `task read` (no `superRA/` prefix, empty for the tree root). Always include `?wt=<worktree-basename>` (the worktree root's directory name) — one dashboard server serves every worktree of the repo, keyed by this param.
 
 ## Task File Format
 
