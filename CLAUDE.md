@@ -67,7 +67,7 @@ Two tests, applied in order:
 
 ## Terminology
 
-**"Plan" is the verb, not the noun.** "Planning" refers to the superplan process — scoping and decomposing work. Everything in `superRA/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
+**"Plan" is the verb, not the noun.** "Planning" refers to the superplan process — scoping and decomposing work. Everything in `superRA/` is a **task** — top-level tasks sit directly under `superRA/`, nested tasks are their dispatchable children. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
 
 ## Ownership Boundaries
 

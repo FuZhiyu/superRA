@@ -12,7 +12,7 @@ The vertical is a **domain skill** under the existing PLAN → IMPLEMENT → INT
 
 ## Per-task ledger and user-gated canonical Notation Conventions
 
-Why the root task.md Notation Conventions table is user-gated rather than implementer-editable: notation conventions in a paper are a researcher decision. Letting an implementer edit the canonical table mid-derivation lets locally-convenient names spread silently across the project. The per-task ledger discipline forces every implementer to walk a structured slot set per symbol, which surfaces near-duplicates against canonical names before they propagate. Promotion happens at `superimplement` Step 4 under researcher confirmation.
+Why the canonical Notation Conventions table is user-gated rather than implementer-editable: notation conventions in a paper are a researcher decision. Letting an implementer edit the canonical table mid-derivation lets locally-convenient names spread silently across the project. The per-task ledger discipline forces every implementer to walk a structured slot set per symbol, which surfaces near-duplicates against canonical names before they propagate. Promotion happens at `superimplement` Step 4 under researcher confirmation.
 
 ## Falsification tests
 

@@ -15,7 +15,7 @@ Check `git log` on the most recent tasks, and load the superra task frontier `su
 
 For **tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix.
 
-On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`task-tree/references/task-file-contract.md` §status owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/task.md` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
+On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`task-tree/references/task-file-contract.md` §status owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
 
 ## Changes of the Task Tree
 

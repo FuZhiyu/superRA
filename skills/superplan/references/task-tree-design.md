@@ -64,17 +64,17 @@ Name tasks by their goal: "Merge holdings with characteristics," not "Run merge 
 
 ## Placing Work in the Existing Tree
 
-Place each identified objective in the tree by walking down from the root, preferring depth over breadth: update existing tasks over creating new separate ones.
+Place each identified objective in the tree by walking down from the top-level tasks, preferring depth over breadth: update existing tasks over creating new separate ones.
 
 ### Recursive descent into the most related tasks
 
-Start at the root under `./superRA` and walk down. At each node, split on whether it is a branch or a leaf.
+Start among the top-level tasks under `superRA/` — siblings whether or not an umbrella task groups them — and walk down. At each node, split on whether it is a branch or a leaf.
 
-If the current node is a **branch** (a node with children):
+If the current node is a **branch** (a node with children, including the top-level task set itself):
 - The objective is covered by an existing child's objective: descend into that child and recurse.
 - The objective is related to an existing child's but that child's objective is too narrow: widen the child's objective to cover the new work, add `## Revision Notes` when the change is non-obvious, then descend and recurse.
 - Existing and new work are peers under an unrepresented broader concern: create the broader parent, move both under it, and give the parent the shared objective context.
-- No existing child is related to the objective: create a new subtask under this node. At the root, that subtask is a new root-level workstream — record which existing child's concern you read and why it does not cover the work.
+- No existing child is related to the objective: create a new subtask under this node (a new top-level task when the current node is the top-level set itself) — record which existing child's concern you read and why it does not cover the work.
 
 If the current node is a **leaf** (a node with no children):
 
@@ -101,7 +101,7 @@ An update task — one whose purpose is to improve or modify an existing task or
 
 At integration, preserve validated findings in the durable owning task's `## Results`, update the owning objective if the scope changed, and remove the temporary update task. When an action-named parent such as "consolidation" becomes the long-lived owner of a concern, rename or rewrite it to the durable concern it now represents.
 
-Anti-patterns: creating a new task for a scope extension of an existing task; landing a narrow improvement at the root; nesting three or more levels deep without review value; leaving an update task standing as a separate tree after the change has shipped.
+Anti-patterns: creating a new task for a scope extension of an existing task; landing a narrow improvement as a new top-level task instead of nesting it under the concern it extends; nesting three or more levels deep without review value; leaving an update task standing as a separate tree after the change has shipped.
 
 ## Retroactive Task-Tree Creation
 

@@ -8,8 +8,7 @@ Checks:
    no cycles, flags dependencies on archived tasks.
 3. Rollup consistency — stored parent status matches compute_status()
    from children.
-4. Placement / structure — advisory smells the placement ladder forbids.
-5. Sync-impact leak — advisory warning for any task still carrying a
+4. Sync-impact leak — advisory warning for any task still carrying a
    temporary ## Sync Impact section past Integrate closeout.
 
 Exit code 0 if clean, 1 if issues found.
@@ -46,7 +45,7 @@ class Finding:
     """A single diagnostic finding."""
 
     task_path: str
-    category: str  # "status" | "dependency" | "rollup" | "placement" | "sync-impact"
+    category: str  # "status" | "dependency" | "rollup" | "sync-impact"
     severity: str  # "error" | "warning"
     message: str
 
@@ -212,63 +211,7 @@ def _check_rollup_recursive(task: Task, findings: list[Finding]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 4: Placement / structure (advisory)
-# ---------------------------------------------------------------------------
-
-def check_placement(root: Task, is_forest: bool = False) -> list[Finding]:
-    """Advisory structural smells the placement ladder forbids.
-
-    All findings are ``warning`` severity — surfaced, never auto-corrected, per
-    the "hooks warn, not auto-mutate" principle. These encode the positive
-    root-task definition (root = whole workstream) and the misplacement signal
-    from the placement task in
-    `superplan/references/task-tree-design.md §Placing Work in the Existing Tree`.
-
-    When *is_forest* is true the root is a synthetic container (no umbrella
-    ``<root>/task.md``) holding independent top-level trees, not a root task —
-    the root-task smells (single-child wrapper) do not apply, so they are
-    skipped to avoid spurious findings on a legitimate forest.
-    """
-    findings: list[Finding] = []
-
-    # Smell 2: a single-child root is a wrapper around one narrow task — the
-    # child should be the root, or the root should host the broader workstream.
-    # A single-top-level forest is legitimate (one independent tree under a
-    # container root), so this smell does not fire on a forest.
-    if not is_forest and len(root.children) == 1:
-        findings.append(Finding(
-            task_path=root.path,
-            category="placement",
-            severity="warning",
-            message=(
-                "single-child root wraps one narrow task; promote the child to "
-                "root or broaden the root to a whole workstream"
-            ),
-        ))
-
-    # Smell 3: a root-level leaf sitting beside root-level branches — a narrow
-    # feature hoisted to root instead of nesting under the workstream it relates
-    # to. Only smells when branches coexist (an all-leaf root is a flat plan).
-    root_leaves = [c for c in root.children if c.is_leaf]
-    root_branches = [c for c in root.children if not c.is_leaf]
-    if root_leaves and root_branches:
-        for leaf in root_leaves:
-            findings.append(Finding(
-                task_path=leaf.path,
-                category="placement",
-                severity="warning",
-                message=(
-                    "root-level leaf sits beside root-level branch(es); a narrow "
-                    "feature should nest under the workstream it relates to, not "
-                    "hoist to root"
-                ),
-            ))
-
-    return findings
-
-
-# ---------------------------------------------------------------------------
-# Check 5: Lingering ## Sync Impact (advisory)
+# Check 4: Lingering ## Sync Impact (advisory)
 # ---------------------------------------------------------------------------
 
 # Matches the canonical ``## Sync Impact`` heading (owned by
@@ -331,7 +274,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup", "placement", "sync-impact"],
+        choices=["status", "dependency", "rollup", "sync-impact"],
         help="Only run a specific check category",
     )
     return parser.parse_args(argv)
@@ -351,9 +294,6 @@ def run_checks(
         findings.extend(check_dependency_integrity(root))
     if category is None or category == "rollup":
         findings.extend(check_rollup_consistency(root))
-    if category is None or category == "placement":
-        is_forest = not (plan_root / "task.md").exists()
-        findings.extend(check_placement(root, is_forest=is_forest))
     if category is None or category == "sync-impact":
         findings.extend(check_sync_impact(root))
 

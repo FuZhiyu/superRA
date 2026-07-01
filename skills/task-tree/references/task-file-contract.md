@@ -4,11 +4,17 @@ Load this reference when you need the `task.md` file contract: frontmatter, body
 
 Tree-design judgment — objective writing, splitting, placement, durable homes, update-task lifecycle, context distillation, and retroactive task-tree creation — lives in `skills/superplan/references/task-tree-design.md`.
 
+## Tree Shape
+
+`superRA/` holds top-level tasks as direct subdirectories, each with its own `task.md`. An umbrella `superRA/task.md` is optional: add one only when a shared `## Objective` / `### Context` genuinely spans every top-level task, per `task-tree-design.md` §Context Distillation's lowest-ancestor rule. When present, the umbrella is an ordinary task like any other — not a privileged one.
+
+"Top-level task" describes position only (no parent), not required scope: a top-level task may be a leaf or a branch, narrow or broad, the same as any nested task.
+
 ## Task Anatomy
 
-Every `task.md` — root, branch, or leaf — uses the same body sections. The tree is recursive: a task frames its own subtree, and the top task frames the whole project only because its subtree is everything.
+Every `task.md` — top-level, branch, or leaf — uses the same body sections. The tree is recursive: a task frames its own subtree; an umbrella task, when one exists, frames the whole project only because its subtree is everything.
 
-- **`## Objective`** — the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. The top task's objective frames the project-level goal and scope; a branch task's objective frames its subtree's goal.
+- **`## Objective`** — the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. An umbrella task's objective, when one exists, frames the project-level goal and scope; otherwise each top-level task's objective frames its own concern; a branch task's objective frames its subtree's goal.
 - **`## Planner Guidance`** — optional advisory suggestions or exploration notes, useful but not binding.
 - **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.

@@ -26,7 +26,7 @@ Walk the existing derivation top-to-bottom in the reader's order:
 2. **For each displayed equation, ask: which named target does this advance?** If the answer is "we will see in three pages why this matters," the structure has deferred the goal → flag.
 3. **At every block longer than ~5–10 lines of algebra, ask: does the prose open with a one-sentence local strategy?** Sub-arguments without their own opening signpost force the reader to infer scope from algebra alone → flag. Watch for sub-sections that open directly with manipulation rather than prose, and for "we will use this below" phrasing — the term should appear when its use is named.
 4. **At every section/sub-section join, ask: does the prose name the transition?** ("Having $X$, we turn to $Y$.") Bare juxtaposition of blocks without transition prose → flag.
-5. **For each placeholder symbol introduced** (an object that does not appear in root task.md Notation Conventions and is not a canonical model object), ask: is the placeholder still doing structural work after rewrite, or did the objective-first rewrite remove its reason to exist? Surviving placeholders that no longer carry independent meaning → flag.
+5. **For each placeholder symbol introduced** (an object that does not appear in the canonical Notation Conventions table and is not a canonical model object), ask: is the placeholder still doing structural work after rewrite, or did the objective-first rewrite remove its reason to exist? Surviving placeholders that no longer carry independent meaning → flag.
 
 ### Checklist
 
@@ -96,8 +96,8 @@ Three coherence layers, each with its own authority:
 
 ### Identification protocol
 
-1. **Notation pre-flight against root task.md Notation Conventions and prior task ledgers.** For each symbol in the current task, classify:
-   - **Canonical** — already in root task.md Notation Conventions; reuse.
+1. **Notation pre-flight against the canonical Notation Conventions table and prior task ledgers.** For each symbol in the current task, classify:
+   - **Canonical** — already in the canonical Notation Conventions table; reuse.
    - **Prior-task-promoted** — in a prior task's ledger naming the same object; reuse and cite.
    - **Genuinely new** — names an object no prior surface has named; log a current-task ledger entry per Gate 1, candidate for promotion per [skills/superimplement/SKILL.md:135](../../superimplement/SKILL.md#L135).
    - **Local duplicate** — names an object an existing canonical or prior-task symbol already names → flag.

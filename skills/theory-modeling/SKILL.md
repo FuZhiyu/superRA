@@ -63,7 +63,7 @@ A reader trusts a model only if every symbol has a clear meaning. Pin down the o
 
 **Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
 
-Symbols already named in the root task.md's Notation Conventions table are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
+Symbols already named in the tree's canonical Notation Conventions table (the umbrella task.md when one exists, otherwise the nearest shared ancestor holding the tree's notation) are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
 
 **Slot template** (all required except where noted):
 
@@ -78,8 +78,8 @@ What the name carries beyond the expression:
    structural identity, named scalar cited at site X. "Shorter
    string" does not qualify.>
 Nearest existing symbol considered:
-  <from root task.md Notation Conventions, active lemma, or upstream
-   derivation in this task; "none in scope" is a falsifiable claim>
+  <from the canonical Notation Conventions table, active lemma, or
+   upstream derivation in this task; "none in scope" is a falsifiable claim>
 Why this name and not that one:
   <only if "Nearest existing" is non-empty>
 ```
@@ -110,7 +110,7 @@ The Proof-deletion test in §Falsification tests is the diagnostic move for whet
 - `[BLOCKING]` Reuse-sites slot cites every additional appearance with line or equation refs, or states "none." Claims of reuse without refs are REVISE.
 - `[BLOCKING]` Inline-alternative slot shows the actual substituted expression, not a description of it ("would be unwieldy" is not an inline alternative).
 - `[BLOCKING]` One-site symbols (Reuse sites: none) must justify via concrete content in "What the name carries" — sign meaning, structural role, named scalar cited elsewhere. One-time abbreviation fails regardless of length.
-- `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in root task.md's Notation Conventions, the active lemma, or an upstream derivation, REVISE.
+- `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in the canonical Notation Conventions table, the active lemma, or an upstream derivation, REVISE.
 - `[BLOCKING]` One entry per object. Indexed families ($x_k$ for $k=1,\dots,K$) count as one; bundling multiple distinct objects under a shared justification is REVISE.
 - `[BLOCKING]` Domains, units, and sign restrictions are stated whenever they matter for the algebra, comparative statics, or numerical checks.
 - `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
@@ -140,7 +140,7 @@ What this assumption carries beyond existing assumptions:
    existing assumption already imposes. "Cleaner statement" does
    not qualify.>
 Nearest existing assumption considered:
-  <from root task.md Assumption Map or upstream derivations>
+  <from the canonical Assumption Map or upstream derivations>
 Why state it this way and not via the existing one:
   <only if "Nearest existing" is non-empty; if a stronger version of
    the existing assumption would cover this case, prefer the synthesis>

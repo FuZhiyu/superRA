@@ -44,16 +44,17 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 ### Step 0b: Task Tree Existence Check
 
-After the branch check, confirm the `superRA/` directory exists with a root `task.md`, is tracked, and has no uncommitted modifications:
+After the branch check, confirm the `superRA/` directory exists with at least one task, is tracked, and has no uncommitted modifications:
 
 ```bash
-[ -f superRA/task.md ] \
-  && git ls-files --error-unmatch superRA/task.md >/dev/null 2>&1 \
+[ -d superRA ] \
+  && [ -n "$(find superRA -maxdepth 2 -name task.md -print -quit)" ] \
+  && git ls-files --error-unmatch -- superRA >/dev/null 2>&1 \
   && git diff --quiet -- superRA/ \
   && git diff --quiet --cached -- superRA/
 ```
 
-All conjuncts must succeed. The first confirms the root task exists; the rest confirm tracking and a clean worktree.
+All conjuncts must succeed. The first two confirm a valid tree exists (an umbrella `task.md`, top-level task dirs, or both); the rest confirm tracking and a clean worktree.
 
 **If the check fails, the task tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases, which end by resuming on the affected frontier.
 
@@ -120,7 +121,7 @@ If any check fails: fix it before proceeding. Do not present completion options 
 
 ### Step 4: Present Completion Options
 
-**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the root task.md's Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the canonical Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
 
 **Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise).
 

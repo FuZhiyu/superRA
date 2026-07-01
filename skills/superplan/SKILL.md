@@ -25,7 +25,7 @@ Task-tree design judgment — placement, task splitting, context distillation, u
 
 Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
 
-**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work in the Existing Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise make the work the first root-level task.
+**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work in the Existing Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise create the work as the first top-level task under `superRA/`.
 
 **2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
@@ -113,7 +113,7 @@ After writing the complete task tree:
 3. **Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 4. **Validation coverage:** Does every transformative task have a corresponding validation criterion in its objective?
 5. **Objective/guidance split:** See `references/task-tree-design.md` §Writing Objectives and Planner Guidance. Binding deliverables and constraints in `## Objective`; advisory hints in `## Planner Guidance`.
-6. **Handoff test:** If you stopped here and a new agent read the root task.md plus the ancestor chain of any leaf task, could they continue? Is there enough context?
+6. **Handoff test:** If you stopped here and a new agent read any leaf task's ancestor chain, could they continue? Is there enough context?
 7. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
 8. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.
 9. **Subtask coverage:** No task carries implicit sub-steps that should be separate subtasks.
@@ -143,7 +143,7 @@ Skip this step at quick and standard depth unless the user explicitly asks for a
 
 Verify the task tree aligns with the user's intent. Present the tree (via `superra task tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
 
-For each newly created task — especially a root-level one — state the existing concern you considered and why it does not cover the work, so the placement decision is visible for a human catch without enforcement machinery.
+For each newly created task — especially a new top-level one — state the existing concern you considered and why it does not cover the work, so the placement decision is visible for a human catch without enforcement machinery.
 
 ### Execution Handoff
 
@@ -191,7 +191,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in root task.md that no longer matches the new tree.
+2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in an umbrella task.md, if the tree has one, that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment. Flip a directly widened `approved` task to `revise`; reset transitive downstream dependents whose inputs or assumptions shift to `not-started`. Preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.

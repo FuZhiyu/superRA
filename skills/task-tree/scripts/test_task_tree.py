@@ -1155,10 +1155,6 @@ class TestReviewedCliTaskRootDefaults:
         child = legacy_root / "01-child"
         child.mkdir()
         _write_task_md(child / "task.md", "Child", "not-started")
-        # Second child so the placement check does not flag a single-child root.
-        child2 = legacy_root / "02-child"
-        child2.mkdir()
-        _write_task_md(child2 / "task.md", "Child Two", "not-started")
 
         monkeypatch.chdir(tmp_path)
         with pytest.raises(SystemExit) as excinfo:
@@ -3576,10 +3572,6 @@ class TestTaskCheck:
         d = root_dir / "01-a"
         d.mkdir()
         _write_task_md(d / "task.md", "A", "not-started")
-        # Second child so the placement check does not flag a single-child root.
-        d2 = root_dir / "02-b"
-        d2.mkdir()
-        _write_task_md(d2 / "task.md", "B", "not-started")
         findings = task_check.run_checks(root_dir)
         json_str = task_check.format_json(findings)
         data = json.loads(json_str)
@@ -3650,74 +3642,6 @@ class TestTaskCheck:
         # Only dependency findings
         dep_findings = task_check.run_checks(root_dir, category="dependency")
         assert all(f.category == "dependency" for f in dep_findings)
-
-    # --- Advisory placement / structure category ---
-
-    def _placement(self, root_dir: Path):
-        return task_check.run_checks(root_dir, category="placement")
-
-    def test_placement_flags_single_child_root(self, tmp_path):
-        """A single-child root is a wrapper around one narrow task."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        d = root_dir / "01-only"
-        d.mkdir()
-        _write_task_md(d / "task.md", "Only", "not-started")
-        findings = self._placement(root_dir)
-        assert any(
-            f.category == "placement" and "single-child root" in f.message
-            for f in findings
-        )
-
-    def test_placement_flags_root_leaf_beside_branch(self, tmp_path):
-        """A root-level leaf beside root-level branches is a hoisted feature."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        # A branch (has a child) ...
-        branch = root_dir / "01-workstream"
-        branch.mkdir()
-        _write_task_md(branch / "task.md", "Workstream", "not-started")
-        child = branch / "01-step"
-        child.mkdir()
-        _write_task_md(child / "task.md", "Step", "not-started")
-        # ... beside a root-level leaf.
-        leaf = root_dir / "02-feature"
-        leaf.mkdir()
-        _write_task_md(leaf / "task.md", "Feature", "not-started")
-        findings = self._placement(root_dir)
-        assert any(
-            f.category == "placement" and f.task_path == "02-feature"
-            and "beside root-level branch" in f.message
-            for f in findings
-        )
-
-    def test_placement_flat_all_leaf_root_is_clean(self, tmp_path):
-        """An all-leaf flat plan is not flagged (no branch to sit beside)."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        for slug in ("01-a", "02-b", "03-c"):
-            d = root_dir / slug
-            d.mkdir()
-            _write_task_md(d / "task.md", slug, "not-started")
-        findings = self._placement(root_dir)
-        assert findings == []
-
-    def test_placement_never_mutates(self, tmp_path):
-        """task check is read-only — a placement smell does not auto-fix."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        d = root_dir / "01-only"
-        d.mkdir()
-        _write_task_md(d / "task.md", "Only", "not-started")
-        before = (root_dir / "task.md").read_text(encoding="utf-8")
-        findings = self._placement(root_dir)
-        assert findings  # smells detected
-        after = (root_dir / "task.md").read_text(encoding="utf-8")
-        assert before == after, "task check must not mutate the tree"
 
     # --- Advisory sync-impact leak-detector category ---
 
@@ -4087,23 +4011,6 @@ class TestForestDetection:
         )
         kept = wd.filter_worktrees([info], require_plan=True)
         assert kept == [info]
-
-    def test_task_check_clean_on_forest(self, forest_root):
-        """task_check runs and the single-child placement smell does not fire on
-        a legitimate multi-top-level forest."""
-        findings = task_check.run_checks(forest_root)
-        placement = [f for f in findings if f.category == "placement"]
-        assert all("single-child root" not in f.message for f in placement)
-
-    def test_task_check_single_top_level_forest_no_smell(self, tmp_path):
-        """A forest with exactly one top-level tree must not trip the
-        single-child-root wrapper smell (which targets real root tasks)."""
-        root = tmp_path / "superRA"
-        (root / "01-only").mkdir(parents=True)
-        _write_task_md(root / "01-only" / "task.md", "Only", "not-started",
-                       objective="Only tree.")
-        findings = task_check.run_checks(root, category="placement")
-        assert all("single-child root" not in f.message for f in findings)
 
     def test_task_check_paths_root_relative_on_forest(self, forest_root):
         """task_check's own walk reports root-relative paths (its happy path no
