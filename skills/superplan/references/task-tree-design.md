@@ -64,7 +64,7 @@ Name tasks by their goal: "Merge holdings with characteristics," not "Run merge 
 
 ## Placing Work in the Existing Tree
 
-For each identified objective, we perform the following steps to place the work in the existing tree. We prefer depth over breadth, updating existing tasks over creating new separate tasks.
+Place each identified objective in the tree by walking down from the root, preferring depth over breadth: update existing tasks over creating new separate ones.
 
 ### Recursive descent into the most related tasks
 
@@ -78,7 +78,7 @@ If the current node is a **branch** (a node with children):
 
 If the current node is a **leaf** (a node with no children):
 
-- Simple extension: update it in place and flip its status from `approved` to `revise`. Rewrite its objective to be self-sufficient with both old and new scope.
+- Simple extension: update it in place.
 - Complex extension: nest a subtask under it.
 
 
@@ -86,7 +86,7 @@ If the current node is a **leaf** (a node with no children):
 
 When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.
 
-For simple changes, reopen the existing owning task or affected tasks, rewrite objectives, add revision notes, and reset affected approved tasks plus transitive downstream dependents to `not-started` by orchestrator judgment so they re-enter the frontier. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
+For simple changes, reopen the existing owning task or affected tasks and rewrite objectives with revision notes. Flip a directly widened `approved` task to `revise` so it re-enters the frontier for rework; reset transitive downstream dependents whose inputs or assumptions shift to `not-started` by orchestrator judgment. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
 
 ### Parent and sibling context
 
