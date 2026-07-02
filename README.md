@@ -1,6 +1,6 @@
 # superRA
 
-> ⚠️ **Breaking change (0.2.0):** the three workflow phase skills were renamed — `planning-workflow` → `superplan`, `implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate` — to avoid colliding with Claude Code's Workflow tool / `/workflows`. Update any saved `Skill(superRA:planning-workflow|implementation-workflow|integration-workflow)` calls to the new ids, and refresh globally-installed Codex agents by rerunning `codex-superra-setup`. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note.
+> ⚠️ **Breaking change (0.3.0):** `PLAN.md` / `RESULTS.md` are replaced by the `superRA/` task tree. Existing projects are detected and offered migration automatically (or run `superra task migrate from-plan`); to stay on the previous model, pin the install to the frozen `v0.1.2` tag. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note and full history, including the 0.2.0 workflow-skill rename.
 
 **[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Workflows](http://fuzhiyu.me/superRA/#/05-workflows) section, and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/07-showcase).
 
