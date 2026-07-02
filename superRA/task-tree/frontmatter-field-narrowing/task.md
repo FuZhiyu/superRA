@@ -14,16 +14,14 @@ Narrow the active `task.md` frontmatter schema to the three load-bearing fields 
 
 ### Constraints
 
-- Editing any `skills/*/SKILL.md` requires loading `skill-creator` first and applying the root `CLAUDE.md` DRY + Necessity gate line by line (see the docs subtask).
+- Editing any `skills/*/SKILL.md` requires loading `skill-creator` first and applying the root `CLAUDE.md` DRY + Necessity gate line by line.
 - The closed field set is single-sourced: the `serialize_frontmatter` docstring in `_task_io.py` points at `task-file-contract.md §Field-by-Field Notes`. Keep that pointer accurate.
-
-This is a code-and-tests task (`01-code-and-compat`) followed by a prose-propagation task (`02-docs-propagation`).
 
 ## Results
 
-Both children complete the objective: the frontmatter field set is narrowed to `title`/`status`/`depends_on` across the data layer, CLI, tests, and instruction prose, with legacy-field back-compat preserved and verified end to end. Per-task evidence lives in [01-code-and-compat](01-code-and-compat/task.md) and [02-docs-propagation](02-docs-propagation/task.md).
+The frontmatter field set is narrowed to `title`/`status`/`depends_on` across the data layer, CLI, tests, and instruction prose, with legacy-field back-compat preserved and verified end to end.
 
-**Final diff self-check (integration pass):** re-ran the full drift suite after this task's own governing-diff refactor pass — `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → 689 passed — and `python3 skills/task-tree/scripts/cli.py task check` → "All checks passed. No issues found." No surviving hunks under this parent path beyond what its two children own; see their self-checks for the file-level triage.
-
-## Revision Notes
-Maturation decision (2026-07-01 integration pass): fold children `01-code-and-compat` and `02-docs-propagation` into this parent — distil `## Results` to one short self-contained subsection (fields dropped, back-compat guarantee + regression test, docs propagated), remove the two child directories and the integration self-check trails.
+- **Data layer and CLI:** `script`, `input`, `output`, `tags`, `created` are gone from the `Task` dataclass, `serialize_frontmatter`, `write_task`, `parse_task`, readable/JSON output (`task_read.py`, `task_query.py`), the `task_check.py` placement smell that inspected them, `plan_migrate.py`, and the dashboard template. `parse_frontmatter` stays tolerant of unknown keys, so legacy files carrying these fields still parse without error and shed them on the next `write_task`.
+- **Back-compat regression test:** `TestParseTask::test_legacy_fields_parse_and_are_dropped_on_rewrite` in [test_task_tree.py](../../../skills/task-tree/scripts/test_task_tree.py) is the executable guarantee — a `task.md` carrying all five legacy fields plus an unknown key parses cleanly and the fields are dropped on rewrite.
+- **Docs propagated:** every prose reference to the five fields as task-frontmatter fields is removed from active instruction docs — `task-file-contract.md`, `internals.md`, `harness-plan-mode.md`, `consolidation.md`, `superplan/SKILL.md`, `task-tree-design.md` — so no instruction tells an agent to write or maintain a field the code no longer carries.
+- **Verification:** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → 689 passed; `python3 skills/task-tree/scripts/cli.py task check` clean; back-compat proven end to end against this repo's own tree (304 tracked `task.md` files still carrying legacy fields, all parsed with no errors).
