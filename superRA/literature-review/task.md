@@ -6,9 +6,9 @@ depends_on: []
 
 ## Objective
 
-Own the literature-review domain vertical. `skills/literature-review/` teaches the search → screen → synthesize discipline for **economics/finance** literature reviews, and ships an execution model with two halves: (1) a main-agent **interactive setup** that asks questions to settle the review's criteria and schema and scaffolds a paper ledger, and (2) a **fan-out** of agents that screen / summarize / classify papers in a loop-until-dry snowball. It composes existing skills rather than restating them — `zotero-paper-reader` (dedup against the library, fetch PDFs, cite/BibTeX), `mistral-pdf-to-markdown` (OCR a curated shortlist), and `writing` (any prose) — and bundles one new tool: a citation-graph + metadata client. The vertical is wired into the skill-discovery surfaces and protected by a skill-trigger test, mirroring `slide-design-vertical`.
+Own the literature-review domain vertical. `skills/literature-review/` teaches the search → screen → synthesize discipline for **economics/finance** literature reviews, and ships an execution model with two halves: (1) a main-agent **interactive setup** that asks questions to settle the review's criteria and schema and scaffolds a paper ledger, and (2) a **fan-out** of agents that screen and extract from papers in a loop-until-dry snowball. It composes existing skills rather than restating them — `zotero-paper-reader` (dedup against the library, fetch PDFs, cite/BibTeX), `mistral-pdf-to-markdown` (OCR a curated shortlist), and `writing` (any prose) — and bundles one new tool: a citation-graph + metadata client. The vertical is wired into the skill-discovery surfaces and protected by a skill-trigger test, mirroring `slide-design-vertical`.
 
-The deliverable a review produces is a **curated, provenance-tracked, classified collection** (screened set + per-paper justification + classification/extraction + gap analysis + convergence judgment), not a drafted prose review — written synthesis is a possible later increment, out of scope here.
+The deliverable a review produces is a **curated, provenance-tracked, extracted collection** (screened set + per-paper justification + quote-grounded extraction + convergence judgment), not a drafted prose review. Synthesis, classification, and gap analysis are **bespoke to each review** and out of scope for the vertical — the skill delivers the organized evidence, and any downstream map is authored per project.
 
 ### Context
 
@@ -35,6 +35,8 @@ The design is distilled from a proven manual run (a heterogeneous-investor asset
 **Econ/finance discipline.** Working-paper-first coverage (SSRN / NBER / RePEc), version-tracking, JEL codes as a scope/audit facet, and weighting by outlet tier + identification strategy — not crawlability or raw citation count.
 
 **Snowball + convergence.** Backward citation BFS from a seed set plus a forward multi-lens web sweep; the orchestrator owns dedup + frontier growth, each agent writes only its own ledger entry. Stop when a full backward round and the forward sweep add essentially no new in-scope papers; record the stopping judgment and any deliberate non-expansions.
+
+**Skill file layout — partition by loader.** The skill is loaded by two roles: the **main agent** (interactive setup + loop-until-dry orchestration) and the per-paper **implementer** (fetch metadata → screen → write its ledger entry → surface candidates). Orchestration lives in a main-agent-only reference; SKILL.md carries only the shared framing, references map, composed-skills routing, and ledger schema that both roles need; per-paper domain discipline lives in the references the implementer loads. See CLAUDE.md §Minimal, Targeted Instructions.
 
 ## Planner Guidance
 
