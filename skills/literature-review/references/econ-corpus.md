@@ -2,9 +2,9 @@
 
 Load when judging coverage and quality: working-paper-first sourcing, published-version metadata with the divergence flag, JEL codes, and weighting by outlet tier + identification strategy.
 
-## Principle: the econ corpus is not the published corpus
+## Lead with working papers, anchor metadata to the published version
 
-Economics and finance move on working papers. A result circulates as an SSRN or NBER paper for two to five years — presented, cited, and built on — before it appears in a journal, and the journal version can differ materially in sample, method, and even conclusion. A review that covers only published papers is stale in any active area. So coverage leads with the working-paper repositories, metadata is anchored to the published version of record once one exists, and quality is judged by where the work landed and how it identified its effect — not by how easily a crawler found it or how many times it has been cited.
+Economics and finance move on working papers — a result circulates as an SSRN/NBER paper for two to five years, and the published version can differ materially in sample, method, and conclusion. Coverage leads with the working-paper repositories; metadata anchors to the published version of record once one exists; quality is judged by outlet tier and identification strategy, not crawlability or citation count.
 
 ## Working-paper-first coverage
 
@@ -16,7 +16,7 @@ The primary discovery surfaces are the working-paper repositories: **SSRN**, **N
 
 Take every bibliographic field verbatim from the **published version of record** — the Crossref record resolved from the DOI (`citation_client metadata IDENTIFIER`). An agent never types metadata. A working paper with no published DOI keeps its WP metadata, taken verbatim from the source page's `citation_*` / Dublin Core tags; adopt the published Crossref record once a published version exists.
 
-When the PDF you fetched is a preprint or WP that differs from the published metadata, record the **version-divergence flag** on the entry: metadata year vs PDF year and source (e.g. metadata = *Journal of Finance* 2024; PDF = 2021 SSRN WP). This is required, not optional — WP and published versions differ materially in economics, and a reader extracting from the 2021 PDF must know the citable version is the 2024 one and may report different numbers.
+When the PDF you fetched is a preprint or WP that differs from the published metadata, record the **version-divergence flag** on the entry: metadata year vs PDF year and source (e.g. metadata = *Journal of Finance* 2024; PDF = 2021 SSRN WP). Required — the citable version and the fetched PDF may report different numbers.
 
 **Tell of a missing flag:** any entry whose metadata year and PDF year differ with no divergence flag. Check it — either the flag was dropped or the two are the same version and the year mismatch is an error.
 
@@ -36,7 +36,7 @@ Quality weighting in this corpus rests on two signals, and on neither crawlabili
 
 Tier is a signal, not a filter: a well-identified working paper outweighs a weakly-identified published one, and unpublished frontier work is included on its merits.
 
-**Identification strategy** — how the paper establishes its effect: RCT, difference-in-differences (DiD), instrumental variables (IV), regression discontinuity (RD), or a structural model. Weight by the credibility of the identification for the claim being made. **Raw citation count is not a quality signal here** — it reflects a paper's age and its field's size far more than its rigor, and it systematically undercounts recent working papers that carry the frontier.
+**Identification strategy** — how the paper establishes its effect: RCT, difference-in-differences (DiD), instrumental variables (IV), regression discontinuity (RD), or a structural model. Weight by the credibility of the identification for the claim being made. **Raw citation count is not a quality signal here** — it tracks a paper's age and field size, and undercounts the recent working papers that carry the frontier.
 
 **Identification protocol:** for each included paper, the quality note should name its outlet tier and its identification strategy — the two facts a reader needs to weight it. Two tells to flag:
 

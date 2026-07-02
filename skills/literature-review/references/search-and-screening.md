@@ -2,11 +2,11 @@
 
 Load when running discovery: the two-phase snowball, screen-first triage, the dedup cascade, and the stopping judgment.
 
-## Principle: discovery snowballs, it does not query once
+## Snowball to saturation, don't query once
 
-A single keyword query never covers an economics/finance area. Working papers circulate for years under shifting titles, indexes lag the frontier, and the terms a subliterature uses drift. The reliable coverage mechanism is **snowballing** (Wohlin's method): start from a seed set of known-relevant papers, follow citation edges outward — backward to the papers they cite, forward to the papers that cite them — screen each new paper, add the in-scope ones to the frontier, and repeat until a full round adds essentially nothing. Citation edges are higher-precision than keyword matches: a paper in the reference list of three seed papers is far more likely in scope than the tenth hit of a keyword search.
+A single keyword query never covers an economics/finance area — working papers circulate for years under shifting titles and indexes lag the frontier. Use **snowballing** (Wohlin's method): start from a seed set of known-relevant papers, follow citation edges outward — backward to the papers they cite, forward to the papers that cite them — screen each new paper, add the in-scope ones to the frontier, and repeat until a full round adds essentially nothing.
 
-Keyword and semantic search seed and supplement the snowball; they do not replace it. Lead front-line discovery with web search because the citation graph misses the newest working papers.
+Keyword and semantic search seed and supplement the snowball; they do not replace it. Lead front-line discovery with web search — the citation graph misses the newest working papers.
 
 ## Phase 1 — Backward citation BFS
 
@@ -17,7 +17,7 @@ From every in-scope paper, pull its reference list (`citation_client references 
 Forward expansion finds the descendants — newer work citing the current set. It has two sources:
 
 - **Forward citations** — `citation_client citations PAPER_ID` (S2-only; empty on an S2 outage, fall back to the web sweep).
-- **Multi-lens web sweep** — several **blind** web queries, each formulated independently and each scoped to a different surface: `site:ssrn.com`, `site:nber.org`, RePEc/IDEAS, arXiv `q-fin`/`econ`, author pages, and an unscoped WebSearch that approximates Google Scholar (which has the broadest working-paper coverage but no API). Blind means each lens is written without reference to the others' results, so they fail independently and their union covers holes no single lens catches. Union the hits and dedup — overlap is expected and is the dedup cascade's job, not a reason to run fewer lenses.
+- **Multi-lens web sweep** — several **blind** web queries, each formulated without reference to the others' results and each scoped to a different surface: `site:ssrn.com`, `site:nber.org`, RePEc/IDEAS, arXiv `q-fin`/`econ`, author pages, and an unscoped WebSearch that approximates Google Scholar (broadest working-paper coverage, no API). Union the hits and dedup — overlap is expected and is the dedup cascade's job, not a reason to run fewer lenses.
 
 Record forward hits as `discovered_via: forward-cite` or `web:<lens>`.
 

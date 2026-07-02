@@ -1,6 +1,6 @@
 ---
 title: "Layout & Coherence Refactor — Partition by Loader, Apply Skill Disciplines"
-status: not-started
+status: implemented
 depends_on: [skill-core, skill-references]
 ---
 
@@ -49,3 +49,17 @@ Every surviving line must pass, in order:
 ## Planner Guidance
 
 This is `Stage: integration` coherence work on already-approved skill files — load `skill-creator` before editing any `SKILL.md`, and treat the migration as move-then-trim, not rewrite: preserve the approved instruction content, relocate it, then apply the rubric. The main agent does the edits directly and dispatches a reviewer against this rubric.
+
+## Results
+
+Done by the main agent in Direct mode.
+
+**Partition by loader.** Migrated `## Workflow` + `## Executor template` out of SKILL.md into new `references/workflow.md` (main-agent-only, 54 lines): interactive setup, the per-paper dispatch contract, the loop-until-dry executor, and the alternative superimplement-loop executor. SKILL.md dropped 101 → 45 lines and now carries only the shared core — framing, discovery principle, the references map (with a **Loaded by** column: main agent / screening agent / extracting agent), composed-skills routing, and the ledger schema. The stopping-judgment detail stays in `search-and-screening.md`; `workflow.md` points to it rather than restating it.
+
+**Dropped synthesis & classification.** Deleted `references/synthesis-and-classification.md`. Swept its only shipped-prose cross-reference (in `grounding-and-extraction.md`); the vertical objective and SKILL.md framing now describe the deliverable as the screened + quote-grounded-extracted + convergence-judged collection. Any synthesis/gap/classification prose routes to `writing`.
+
+**Description shortened** from five sentences to three, retaining every trigger token the naive test prompt exercises (map/find/screen/snowball/curated collection/per-paper/dedup) and the single-paper `zotero-paper-reader` boundary. Inline `<!-- description too long -->` comment removed.
+
+**Rubric trim** applied to the surviving references: the `Principle:` essays in `search-and-screening.md`, `econ-corpus.md`, and `grounding-and-extraction.md` became one-instruction leads, and the inline "why it's required" justification tails were cut (divergence flag, citation-count, null-vs-nr, DOI-resolution). The identification protocols were kept — they teach the reviewer's line-by-line detection skill. `citation-client.md` is an API command surface and was left as reference material.
+
+**Verification.** All reference links resolve; `grep` for `synthesis-and-classification` / `classification-axis` in shipped prose returns nothing. The live `claude -p` trigger runner remains non-runnable on this machine (pre-existing: no `timeout` binary + CLI-flag mismatch, affects every trigger test identically) — trigger coverage checked against the shortened description instead.
