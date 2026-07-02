@@ -61,6 +61,10 @@ Both tests are diagnostic moves the reviewer runs against a slot suspected of no
 
 A reader trusts a model only if every symbol has a clear meaning. Pin down the objects and their names before manipulating them.
 
+Keep notation clear as you go. When you write up the output, review the notation you used while reasoning and replace each shorthand rather than justify keeping it: substitute its expression inline, or map it to an existing symbol. Keep a new symbol only when it clears the bar below. Shorthand left standing in the output is a defect.
+
+A new symbol earns its place two ways: it is standard notation an economist writes without prompting ($r$, $w$, $\beta$), defined at first use; or writing its expression out each time would lose real meaning — the one-site test already in the ledger's `What the name carries` slot, now applied to every new output symbol. A symbol that meets neither only adds something for the reader to track — inline it. Introducing notation that fails this bar counts against the work like an algebra error.
+
 **Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
 
 Symbols already named in the tree's canonical Notation Conventions table (on the governing ancestor task holding the tree's notation) are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
@@ -110,6 +114,7 @@ The Proof-deletion test in §Falsification tests is the diagnostic move for whet
 - `[BLOCKING]` Reuse-sites slot cites every additional appearance with line or equation refs, or states "none." Claims of reuse without refs are REVISE.
 - `[BLOCKING]` Inline-alternative slot shows the actual substituted expression, not a description of it ("would be unwieldy" is not an inline alternative).
 - `[BLOCKING]` One-site symbols (Reuse sites: none) must justify via concrete content in "What the name carries" — sign meaning, structural role, named scalar cited elsewhere. One-time abbreviation fails regardless of length.
+- `[BLOCKING]` Every new non-standard symbol in the shipped output clears the bar — standard notation, or meaning that inlining would lose per `What the name carries`. Symbols that clear neither are inlined or mapped to an existing symbol; a symbol kept without clearing the bar is REVISE.
 - `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in the canonical Notation Conventions table, the active lemma, or an upstream derivation, REVISE.
 - `[BLOCKING]` One entry per object. Indexed families ($x_k$ for $k=1,\dots,K$) count as one; bundling multiple distinct objects under a shared justification is REVISE.
 - `[BLOCKING]` Domains, units, and sign restrictions are stated whenever they matter for the algebra, comparative statics, or numerical checks.
@@ -215,6 +220,7 @@ LLM-specific excuses the gate checklists alone do not catch.
 | Excuse | Reality |
 |---|---|
 | "A/B/C is temporary; I will rename it later." | Placeholder notation spreads. Whatever the proof gets written under becomes the model. |
+| "This new symbol makes the derivation read better." | "Reads better" is not the bar. If the inlined expression carries the same meaning, the symbol is redundant — inline it. |
 | "The numerical check is only illustrative." | "Illustrative" is the dodge. Even toy checks need explicit parameters and a stated pass condition. |
 | "The CAS says it simplifies to zero." | The CAS output is not the verification. State what was checked, under which assumptions, and what the pass condition was. |
 | "I'll update the Notation Conventions table after the derivation is clean." | The table is user-gated, not implementer-editable. Log new symbols to the per-task `## Results` ledger and let the user confirm promotion. |
