@@ -26,7 +26,21 @@
 
 set -euo pipefail
 
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
+
+if [ -x /usr/bin/grep ]; then
+  GREP=/usr/bin/grep
+elif [ -x /bin/grep ]; then
+  GREP=/bin/grep
+else
+  GREP=grep
+fi
 
 # Parse prompt + transcript_path from the UserPromptSubmit JSON payload.
 # Emit tab-separated so IFS=$'\t' read cleanly splits them even when the
@@ -48,7 +62,7 @@ print(prompt + "\t" + tp)
 IFS=$'\t' read -r prompt transcript_path <<<"$parsed"
 
 # Fast path: no superRA mention -> silent.
-if ! printf '%s' "$prompt" | grep -iqE '(^|[^[:alnum:]])(super[-_ ]?ra|superplan|superimplement|superintegrate)([^[:alnum:]]|$)'; then
+if ! printf '%s' "$prompt" | "$GREP" -iqE '(^|[^[:alnum:]])(super[-_ ]?ra|superplan|superimplement|superintegrate)([^[:alnum:]]|$)' 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
@@ -60,16 +74,12 @@ fi
 # (case-insensitive, whitespace-tolerant around the colon) so minor
 # format drift does not cause duplicate reminders.
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
-   && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path"; then
+   && "$GREP" -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superra"' "$transcript_path" 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
 
-if [ -n "${PLUGIN_ROOT:-}" ]; then
-  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load `superRA:using-superra`. It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
-else
-  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superra"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
-fi
+context='The user mentioned superRA. Load superRA:using-superra if you have not already this session.'
 
 # JSON-escape the reminder text so inner double quotes / backslashes do
 # not invalidate the payload. `python3 -m json.dumps` emits the string

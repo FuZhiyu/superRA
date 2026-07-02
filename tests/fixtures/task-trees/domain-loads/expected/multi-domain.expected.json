@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "domains": ["theory-modeling", "writing"],
+  "domain_canaries": ["comparative statics", "audience model"]
+}

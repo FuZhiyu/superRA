@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "task_read_context": {
+    "root": "ROOT_CONTEXT_SENTINEL_ALPINE",
+    "parent": "PARENT_CONTEXT_SENTINEL_RIVER",
+    "primary_target": "PRIMARY_TARGET_SENTINEL_COBALT",
+    "secondary_target": "SECONDARY_TARGET_SENTINEL_LILAC",
+    "open_comment": "COMMENT_SENTINEL_AMBER"
+  },
+  "dependency_metadata": {
+    "slug": "01-approved-dependency",
+    "status": "approved",
+    "title_sentinel": "DEPENDENCY_TITLE_SENTINEL_BRASS"
+  },
+  "dependency_results_excluded": true,
+  "marker_files": {
+    "primary": "PRIMARY_MARKER_SENTINEL_OBSIDIAN",
+    "secondary": "SECONDARY_MARKER_SENTINEL_TOPAZ",
+    "shared": "SHARED_MARKER_SENTINEL_JADE"
+  },
+  "artifact_content": "ARTIFACT_SENTINEL_QUARTZ"
+}

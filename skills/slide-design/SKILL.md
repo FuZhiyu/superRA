@@ -1,12 +1,6 @@
 ---
 name: slide-design
-description: >
-  Use PROACTIVELY when creating, revising, polishing, or reviewing
-  research slide decks, Beamer presentations, seminar talks,
-  conference talks, lecture slides, visual explanations, slide
-  structure, slide titles, bullets, overlays, backup slides, or
-  slide layout/overflow issues. Beamer-first, but the communication
-  principles apply to PowerPoint, Keynote, and browser slides.
+description: Research slide communication. Use when creating, revising, polishing, or reviewing Beamer, PowerPoint, Keynote, or browser slide decks.
 user-invocable: true
 ---
 

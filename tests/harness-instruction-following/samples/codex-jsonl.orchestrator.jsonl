@@ -1,0 +1,2 @@
+{"msg":{"type":"tool_call","tool_name":"spawn_agent","arguments":{"agent_type":"superra_implementer","task":"agent-loading-bundle/02-primary-loading-task"}}}
+{"msg":{"type":"tool_call","tool_name":"spawn_agent","arguments":{"agent_type":"superra_reviewer","task":"agent-loading-bundle/02-primary-loading-task"}}}

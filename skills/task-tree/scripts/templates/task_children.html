@@ -1,0 +1,11 @@
+{#- Fragment returned by GET /task/{path}.
+    Renders the children of a task using the render_task_node macro.
+    This is a partial — no <html> wrapper.
+
+    Variables: task (Task), project_root (str)
+-#}
+{% from "task_node.html" import render_task_node %}
+
+{% for child in task.children %}
+  {{ render_task_node(child, project_root, depth=2) }}
+{% endfor %}

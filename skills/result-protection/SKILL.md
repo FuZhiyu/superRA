@@ -1,6 +1,6 @@
 ---
 name: result-protection
-description: Utility skill for protecting key research results from unintended changes, especially during integration, branch sync, refactoring, or future maintenance. Use when selecting, creating, refreshing, or reviewing key-result protection; the current/default mechanism is drift or regression tests.
+description: Protect key research results from unintended drift. Use when selecting, creating, refreshing, or reviewing regression or drift tests for important outputs.
 ---
 
 # Result Protection
@@ -15,7 +15,7 @@ Load only the reference needed for the protection mechanism in use:
 |---|---|
 | `references/drift-test-quality.md` | Writing, refreshing, or reviewing drift/regression tests for key results; always for `Stage: protection` when drift/regression tests are the mechanism. |
 
-The active domain skill's stage-load table routes any domain-specific drift-test reference at the `drift-test` (protection) stage; load it per that table.
+The active domain skill's stage-load table routes any domain-specific drift-test reference at the `protection` stage; load it per that table.
 
 ## Scope Gate
 

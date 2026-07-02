@@ -1,0 +1,13 @@
+{#- Fragment returned by GET /node/{path}.
+    Renders ONLY the body half of a single task — metadata pills + the `## `
+    markdown sections (each a data-section block with its lazy
+    <script type="text/x-markdown"> payload) — with no row and no children.
+    Shares the render_task_body macro with the full node render so section
+    markup, data-section/data-block attributes, and markdown payloads are
+    byte-for-byte the same as the index page emits.  This is a partial — no
+    <html> wrapper.
+
+    Variables: task (Task), project_root (str)
+-#}
+{% from "task_node.html" import render_task_body %}
+{{ render_task_body(task, project_root) }}

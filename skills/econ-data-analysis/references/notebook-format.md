@@ -76,8 +76,8 @@ Use **jupytext percent format**. `# %%` for code cells, `# %% [markdown]`
 for narrative.
 
 ```bash
-uv run jupytext --set-kernel python3 --to notebook --execute script.py
-uv run jupytext --set-kernel python3 --to notebook --execute script.py -o Output/script.ipynb
+jupytext --set-kernel python3 --to notebook --execute script.py
+jupytext --set-kernel python3 --to notebook --execute script.py -o Output/script.ipynb
 ```
 
 Full syntax, pairing, setup, and troubleshooting: `references/jupytext-guide.md`.
@@ -95,13 +95,14 @@ Details and setup: `references/julia-quarto-guide.md`.
 
 ## Environment and Paths
 
-- **Python**: `uv run` activates project `.venv`; kernels use project packages
+- **Python**: render in an environment carrying the project's packages so the
+  kernel resolves imports; the project's existing setup decides how
 - **Julia**: `--project=.` activates nearest `Project.toml`
 - **Data paths**: project-root-relative; confirm working directory matches
   expectations before rendering
 - **Sandbox note**: notebook rendering requires socket binding — in Claude Code,
-  suggest `! uv run jupytext ...` (the `!` prefix bypasses sandbox) or run
-  with sandbox disabled
+  suggest `! jupytext ...` (the `!` prefix bypasses sandbox and runs in the
+  user's own session) or run with sandbox disabled
 
 ## Version Control
 

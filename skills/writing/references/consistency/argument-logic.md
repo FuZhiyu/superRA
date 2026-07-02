@@ -88,7 +88,7 @@ One hedge per claim; no stacking. See `writing/references/style.md` §Single-hed
 
 ## Gated Checklist
 
-- `[BLOCKING]` **Argument spine traced.** Governing claim + sub-claims + evidence mapping documented in the handoff.
+- `[BLOCKING]` **Argument spine traced.** Governing claim + sub-claims + evidence mapping documented in task notes or the status return.
 - `[BLOCKING]` **Each main claim has matching evidence type** (descriptive / correlational / causal). Mismatches flagged.
 - `[BLOCKING]` **Causal claims** have an identification strategy stated and its assumptions named.
 - `[BLOCKING]` **Plausible alternative explanations** addressed by the paper or flagged as gaps.

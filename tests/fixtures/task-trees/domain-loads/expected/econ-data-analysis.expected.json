@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "domains": ["econ-data-analysis"],
+  "domain_canaries": ["describe before transform"]
+}

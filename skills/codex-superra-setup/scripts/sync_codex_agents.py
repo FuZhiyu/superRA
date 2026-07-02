@@ -169,21 +169,17 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
     _, _, body = read_agent_markdown(source_path)
     preface, sections = split_top_level_sections(body)
 
-    # `## Dispatch Inputs` in the source describes the subagent dispatch
-    # contract; direct mode has no dispatch, so we drop that section and
-    # substitute a direct-mode-specific `## Before You Start`. Other
-    # subagent-only fragments (dispatch prompts, re-dispatch deltas,
-    # Worktree: fields) leak into the retained sections and are rewritten
-    # below by `cleanup_*_handoff` before being spliced in.
+    # The source `## Before You Start` opens with a one-line note on the
+    # subagent dispatch prompt; direct mode has no dispatch, so we substitute
+    # a direct-mode-specific `## Before You Start`. §Handoff no longer carries
+    # dispatch-only wording, so it splices in unchanged.
     if "implementer" in spec.codex_name:
         before_you_start = render_implementer_direct_mode_before_you_start()
-        handoff = cleanup_implementer_handoff(
-            sections["## Handoff — Unified Across Stages"]
-        )
+        handoff = sections["## Handoff"]
         tail_sections = (
             sections["## Execution Protocol"],
+            sections["## Self-Check"],
             handoff,
-            sections["## Pre-Commit Self-Check"],
             sections["## Escalation"],
         )
     else:
@@ -191,13 +187,17 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
         review_protocol = sections["## Review Protocol"].replace(
             "reviewer dispatches are costly", "review passes are costly"
         )
-        role_section = sections["## Handoff — Unified Across Stages"].replace(
-            "\n\nIf your dispatch prompt does not specify a stage, default to "
+        handoff = sections["## Handoff"].replace(
+            " If your dispatch prompt does not specify a stage, default to "
             "**ad-hoc** (report-only).",
             "",
         )
-        role_section = strip_subsection(role_section, "### Report Format")
-        tail_sections = (review_protocol, role_section)
+        tail_sections = (
+            review_protocol,
+            sections["## Self-Check"],
+            handoff,
+            sections["## Report Format"],
+        )
 
     header = "\n".join(
         [
@@ -273,9 +273,14 @@ def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
     current_heading: str | None = None
     current_lines: list[str] = []
     preface_lines: list[str] = []
+    in_code_fence = False
 
     for line in body.splitlines(keepends=True):
-        if line.startswith("## "):
+        stripped = line.rstrip()
+        if stripped.startswith("```"):
+            in_code_fence = not in_code_fence
+
+        if not in_code_fence and line.startswith("## "):
             if current_heading is None:
                 if not sections:
                     preface = "".join(preface_lines).strip()
@@ -301,101 +306,29 @@ def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
 def render_implementer_direct_mode_before_you_start() -> str:
     return """## Before You Start
 
-In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`, `RESULTS.md`, the current session, and the current branch state.
+In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
-2. **Read your task source directly from `PLAN.md`** (the task block plus the relevant header context). If resuming, also read the matching `RESULTS.md` section.
-3. **Read `PLAN.md`'s `## Project Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
+2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
+3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
-The handoff-doc editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`."""
+The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time."""
 
 
 def render_reviewer_direct_mode_before_you_start() -> str:
     return """## Before You Start
 
-In direct mode there is no dispatch prompt. Review scope comes from the task block in `PLAN.md`, the matching section in `RESULTS.md`, the current diff, and the current branch state.
+In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
-1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
-2. **Read your task source directly from `PLAN.md`.** Read the task block, the implementer's step notes, any existing review-notes blockquote (with `→ implemented:` and `→ orchestrator:` annotations), and the corresponding `RESULTS.md` section.
-3. **Read `PLAN.md`'s `## Project Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
+1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
+2. **Read your task via `superra task read <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
+3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
-The handoff-doc editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`."""
+At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.
 
-
-def cleanup_implementer_handoff(section: str) -> str:
-    """Strip subagent-dispatch-only wording from the implementer handoff section."""
-    # Rewrite the §How You Fix Review Items opening paragraph. The source
-    # wording references "first dispatch", "re-dispatch prompt", and a
-    # one-line delta, none of which exist in direct mode.
-    source_opener = (
-        "On a first dispatch there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — the reviewer wrote it, and the orchestrator "
-        "may have rewritten some steps (for accepted items) or appended "
-        "`→ orchestrator: ...` notes to items it is rejecting or flagging for "
-        "a second opinion. Your re-dispatch prompt carries a one-line delta "
-        "pointing at what changed."
-    )
-    direct_opener = (
-        "On a first pass there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — it was written previously, and items may "
-        "carry `→ orchestrator: ...` notes rejecting them or flagging them for "
-        "a second opinion."
-    )
-    if source_opener not in section:
-        raise ValueError(
-            "cleanup_implementer_handoff: expected dispatch-only opener not found "
-            "in implementer §How You Fix Review Items; source may have been reworded."
-        )
-    section = section.replace(source_opener, direct_opener)
-
-    # Drop the Parallel worktree dispatch paragraph entirely — Worktree: is
-    # a subagent dispatch field.
-    worktree_block = (
-        "\n\n**Parallel worktree dispatch (`Worktree:` field set).** Return the "
-        "`<current-branch>-agent/parallel/<slug>` branch name and HEAD SHA in your status "
-        "report. Do not merge, rebase, push, or touch worktree lifecycle — the "
-        "orchestrator owns harvest-out."
-    )
-    if worktree_block not in section:
-        raise ValueError(
-            "cleanup_implementer_handoff: expected Parallel worktree dispatch "
-            "paragraph not found; source may have been reworded."
-        )
-    section = section.replace(worktree_block, "")
-    return section
-
-
-def strip_subsection(section: str, heading: str) -> str:
-    lines = section.splitlines(keepends=True)
-    start = find_heading_line(lines, heading)
-    if start is None:
-        return section
-
-    level = heading_level(heading)
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        line = lines[index]
-        if line.startswith("#") and heading_level(line.rstrip()) <= level:
-            end = index
-            break
-
-    stripped = "".join(lines[:start] + lines[end:]).rstrip()
-    return re.sub(r"\n{3,}", "\n\n", stripped)
-
-
-def find_heading_line(lines: list[str], heading: str) -> int | None:
-    for index, line in enumerate(lines):
-        if line.rstrip() == heading:
-            return index
-    return None
-
-
-def heading_level(line: str) -> int:
-    return len(line) - len(line.lstrip("#"))
+The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""
 
 
 def escape_toml_basic_string(value: str) -> str:

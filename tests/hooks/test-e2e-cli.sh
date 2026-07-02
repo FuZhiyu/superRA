@@ -8,10 +8,12 @@
 #   (a) the UserPromptSubmit / PreToolUse:Skill hooks are correctly registered,
 #   (b) Claude Code's runtime wiring delivers stdin → hook script → stdout,
 #   (c) the three-way platform output branch selected at runtime matches
-#       what the hook script emits.
+#       what the hook script emits,
+#   (d) the PostToolUse task hook runs after a real task.md edit and propagates
+#       task-tree status.
 #
 # How to run:
-#   bash tests/hooks/test-e2e-cli.sh            # all six scenarios (S1 S2 S3 S6 S4 S5)
+#   bash tests/hooks/test-e2e-cli.sh            # all seven scenarios (S1 S2 S3 S6 S7 S4 S5)
 #
 # Requirements:
 #   - claude CLI >= 2.1.116 on PATH, logged in (the suite uses the live keychain auth).
@@ -21,11 +23,11 @@
 #     (claude-haiku-4-5) to keep the per-scenario cost minimal. Observed
 #     cost on Haiku (per scenario, approximate):
 #       S1 ~ $0.015    S2 ~ $0.020 + $0.018 (two turns: setup + resume-check)
-#       S3 ~ $0.012    S6 ~ $0.018
+#       S3 ~ $0.012    S6 ~ $0.018    S7 ~ $0.020
 #       S4 ~ $0.090    S5 ~ $0.100 (multi-turn deny-and-retry chains; loading
 #                                   using-superra / agent-orchestration adds
 #                                   the skill bodies to subsequent turns)
-#     Total full-suite cost ~ $0.27. --tools "" does not suppress the model
+#     Total full-suite cost ~ $0.29. --tools "" does not suppress the model
 #     turn on 2.1.116 — it only disables tool invocation — so we cannot drop
 #     the model cost to zero. Haiku is the cheapest alternative.
 #
@@ -121,7 +123,11 @@ cleanup() {
     i=$((i+1))
   done
   # Then nuke the scratch root (NDJSON captures + scenario cwds).
-  [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ] && rm -rf "$TMPROOT"
+  if [ "${KEEP_TMPROOT:-0}" = 1 ] && [ $rc -ne 0 ]; then
+    echo "keeping temp root for failed Claude E2E run: $TMPROOT" >&2
+  elif [ -n "${TMPROOT:-}" ] && [ -d "$TMPROOT" ]; then
+    rm -rf "$TMPROOT"
+  fi
   exit $rc
 }
 trap cleanup EXIT INT TERM
@@ -242,6 +248,36 @@ with open(path) as f:
             cost = r.get("total_cost_usd") or 0.0
 print(f"{cost:.4f}")
 PYEOF
+}
+
+write_minimal_task_md() {
+  local path="$1"
+  local title="$2"
+  local status="$3"
+  mkdir -p "$(dirname "$path")"
+  cat >"$path" <<EOF
+---
+title: $title
+status: $status
+depends_on: []
+tags: []
+created: 2026-06-17
+---
+
+## Objective
+
+Runtime task-hook fixture.
+
+## Results
+
+(empty)
+EOF
+}
+
+write_minimal_task_tree() {
+  local cwd="$1"
+  write_minimal_task_md "$cwd/superRA/task.md" "Claude Hook Root" "not-started"
+  write_minimal_task_md "$cwd/superRA/01-child/task.md" "Claude Hook Child" "not-started"
 }
 
 # ---- scenario assertion helpers ---------------------------------------
@@ -388,6 +424,98 @@ assert_pretooluse_all_silent() {
   record_pass "$name" "(all PreToolUse silent)"
 }
 
+# Assert: a real Edit/Write touched superRA/01-child/task.md, Claude Code
+# emitted a PostToolUse hook_response for that edit, and the task hook propagated
+# the child status to the root task.
+assert_task_hook_edit_e2e() {
+  local name="$1"; local ndjson="$2"; local cwd="$3"
+  if python3 - "$ndjson" "$cwd" <<'PYEOF'
+import json, sys
+from pathlib import Path
+
+ndjson, cwd = sys.argv[1:]
+cwd = Path(cwd).resolve()
+root_md = cwd / "superRA" / "task.md"
+child_md = cwd / "superRA" / "01-child" / "task.md"
+
+events = []
+with open(ndjson, encoding="utf-8") as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except Exception:
+            continue
+
+post_tool = [
+    r for r in events
+    if r.get("type") == "system"
+    and r.get("subtype") == "hook_response"
+    and r.get("hook_event") == "PostToolUse"
+]
+if not post_tool:
+    raise SystemExit("no PostToolUse hook_response")
+
+for r in post_tool:
+    stdout = (r.get("stdout") or "").strip()
+    if stdout:
+        json.loads(stdout)
+
+mutating_task_paths = []
+for r in events:
+    if r.get("type") != "assistant":
+        continue
+    for c in r.get("message", {}).get("content", []) or []:
+        if c.get("type") != "tool_use" or c.get("name") not in {"Edit", "Write"}:
+            continue
+        tool_input = c.get("input", {}) or {}
+        raw_file_path = str(tool_input.get("file_path", ""))
+        if not raw_file_path.endswith("/task.md") and raw_file_path != "superRA/task.md":
+            continue
+        file_path = Path(raw_file_path)
+        if file_path.is_absolute():
+            try:
+                rel = file_path.resolve().relative_to(cwd)
+            except ValueError:
+                continue
+        else:
+            rel = file_path
+        rel_s = rel.as_posix()
+        if rel_s.startswith("superRA/") and rel_s.endswith("/task.md"):
+            mutating_task_paths.append(rel_s)
+        elif rel_s == "superRA/task.md":
+            mutating_task_paths.append(rel_s)
+unique_mutating_task_paths = sorted(set(mutating_task_paths))
+if unique_mutating_task_paths != ["superRA/01-child/task.md"]:
+    raise SystemExit(
+        "unexpected mutating task-file edits: "
+        + (", ".join(unique_mutating_task_paths) or "(none)")
+    )
+
+def status(path: Path) -> str:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+checks = {
+    "child task approved": status(child_md) == "approved",
+    "root status propagated": status(root_md) == "approved",
+    "dashboard not generated": not (root_md.parent / "dashboard.html").exists(),
+}
+failed = [name for name, ok in checks.items() if not ok]
+if failed:
+    raise SystemExit(", ".join(failed))
+PYEOF
+  then
+    record_pass "$name" "(PostToolUse + propagated status)"
+  else
+    record_fail "$name" "task-hook evidence check failed"
+  fi
+}
+
 # ---- Scenarios ---------------------------------------------------------
 
 # S1 — soft reminder fires (autoload-superra) on first superRA mention.
@@ -512,7 +640,8 @@ run_s4() {
 # S5 — after using-superra loads, retry denied by ensure-agent-orchestration.
 # This is inherently a continuation of S4's retry loop. We assert that at
 # least one PreToolUse hook_response in the run names superRA:agent-orchestration
-# in its deny reason.
+# in its deny reason. The probe uses superimplement: superplan is
+# intentionally ungated by ensure-agent-orchestration.
 run_s5() {
   local name="S5 ensure-agent-orchestration denies after using-superra loads"
   local cwd sid out
@@ -523,7 +652,7 @@ run_s5() {
   # skill without loading agent-orchestration. The ensure-agent-orchestration
   # hook should deny the second call.
   local sys_prompt
-  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superplan") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
+  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superimplement") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
   run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
     --append-system-prompt "$sys_prompt" \
@@ -560,6 +689,33 @@ run_s6() {
   echo "       cost: \$$cost"
 }
 
+# S7 — real task.md Edit triggers the PostToolUse task hook and propagates
+# status from the edited child task to the root task.
+run_s7() {
+  local name="S7 task-hook runs after task.md edit"
+  local cwd sid out
+  new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
+  write_minimal_task_tree "$cwd"
+  sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
+  out="$cwd/s7.ndjson"
+  local sys_prompt
+  sys_prompt='Use only the Read and Edit tools. Edit exactly superRA/01-child/task.md by changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok.'
+  if ! run_claude "$out" "$cwd" "$sid" \
+    --no-session-persistence \
+    --tools Read,Edit \
+    --allowedTools Read,Edit \
+    --permission-mode acceptEdits \
+    --append-system-prompt "$sys_prompt" \
+    -- "Run the task-hook edit probe now."; then
+    record_fail "$name" "claude exited nonzero"
+    tail -n 60 "$out" >&2
+    return
+  fi
+  local cost; cost=$(report_cost "$out")
+  assert_task_hook_edit_e2e "$name" "$out" "$cwd"
+  echo "       cost: \$$cost"
+}
+
 # ---- run ---------------------------------------------------------------
 
 echo "=== S1 ==="
@@ -574,13 +730,22 @@ echo
 echo "=== S6 ==="
 run_s6
 echo
+echo "=== S7 ==="
+run_s7
+echo
 
-echo "=== S4 (FULL) ==="
-run_s4
-echo
-echo "=== S5 (FULL) ==="
-run_s5
-echo
+if [ "${CLAUDE_E2E_FULL:-0}" = 1 ]; then
+  echo "=== S4 (FULL) ==="
+  run_s4
+  echo
+  echo "=== S5 (FULL) ==="
+  run_s5
+  echo
+else
+  echo "=== S4/S5 (FULL) ==="
+  echo "SKIP  set CLAUDE_E2E_FULL=1 to run brittle workflow-skill gate probes"
+  echo
+fi
 
 echo
 echo "Passed: $pass    Failed: $fail"

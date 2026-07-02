@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "stage": "planning-review",
+  "stage_canary": "handoff-readiness"
+}

@@ -1,0 +1,12 @@
+{#- Fragment returned by GET /nav/{path}.
+    Renders the navigation-only children of a task (body-free) using the
+    render_nav_node macro.  This is a partial — no <html> wrapper.  Parallels
+    task_children.html but for the master-detail sidebar.
+
+    Variables: task (Task)
+-#}
+{% from "nav_node.html" import render_nav_node %}
+
+{% for child in task.children %}
+  {{ render_nav_node(child, depth=2) }}
+{% endfor %}

@@ -12,18 +12,9 @@ Review lanes are:
 - **Structure:** `structure.md`
 - **Consistency:** one lane per relevant `consistency/<dim>.md`
 
-## PLAN.md Retrofit
+## Review Task Tree
 
-Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates PLAN.md from the target document, then dispatches reviewers through superimplement.
-
-The PLAN.md header must carry the writing planning rows from `planning.md`, including:
-
-```markdown
-**Writing workflow:** Long-form review retrofit (PLAN-only; no RESULTS.md)
-**RESULTS.md:** intentionally absent; review findings live in PLAN.md review notes
-```
-
-Task blocks follow `handoff-doc`'s standard task-block anatomy, with one task per review lane or deep-review perspective. Each task names the target file/section and the lane reference to load.
+Long-form review treats the user's existing draft as the artifact under review. The orchestrator enters through the review-only task tree defined in `planning.md §Review Task Trees`, then dispatches reviewers through superimplement. One task per review lane or deep-review perspective; each task names the target file/section and the lane reference to load.
 
 ## Task Granularity
 
@@ -37,21 +28,10 @@ Task blocks follow `handoff-doc`'s standard task-block anatomy, with one task pe
 
 Dispatch through `agent-orchestration`'s canonical reviewer template. Keep `Stage: implementation`; long-form review changes the artifact under review, not the superRA stage model.
 
-Reviewers do not append to a shared findings section. They write task-local review notes and set `**Review status:** REVISE` or `APPROVED` using the normal reviewer protocol.
+Reviewers write task-local review notes (not a shared findings section) and set `status: revise` or `approved`. Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format; language/style and structure reviewers use `review.md`'s finding format with `Fix:` per `review.md §Fix tiers`.
 
-Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format inside the review-notes item. Language/style and structure reviewers use `review.md`'s finding format and add `Fix: mechanical | conventional | authorial` using `review.md §Fix tiers`.
-
-Do not dispatch a reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes.
-
-## Workflow Status
-
-Use the normal PLAN.md workflow rollups. For PLAN-only long-form review:
-
-- `Plan approved` flips when the retrofit PLAN.md is committed.
-- `Execution complete` flips when every review task is `APPROVED`.
-- `Drift tests created`, `Integrated`, and `Docs finalized` remain unchecked unless the researcher later asks to apply edits or integrate manuscript changes.
-- `Finished` flips when PLAN.md is archived or deleted per the user's disposition.
+Do not create a shared `review.md` or reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes on the manuscript-governing task.
 
 ## Review-Time Indices
 
-Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling `## Document Map` in PLAN.md when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.
+Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section on the manuscript-governing task when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.

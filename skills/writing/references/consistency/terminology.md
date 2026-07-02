@@ -70,7 +70,7 @@ For each key term, the definition should be **explicit** (stated, not assumed th
 - `[BLOCKING]` **Term drift across sections flagged.** Any mid-paper rename of a key concept is reported with earlier and later locations.
 - `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope (`SKILL.md §Preserve substance, polish prose`).
 - `[BLOCKING]` **Variable-name drift across text and tables flagged.** Every variable used inconsistently between prose and tables is reported.
-- `[ADVISORY]` **Terminology index attached to handoff.** Even a short one (key terms + canonical forms + observed variants) makes follow-up review faster.
+- `[ADVISORY]` **Terminology index recorded.** Even a short one (key terms + canonical forms + observed variants) makes follow-up review faster.
 - `[ADVISORY]` **Glossary audit** performed if a glossary exists — orphan and unglossed-but-critical terms reported.
 - `[ADVISORY]` **Undefined technical terms flagged** when the audience is broader than pure specialists.
 

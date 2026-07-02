@@ -60,7 +60,7 @@ Flag every symbol that fails the stability test below.
 - `[BLOCKING]` **Greek-letter conflicts flagged.**
 - `[BLOCKING]` **No silent rewrites beyond scope.** For consistency-*check* tasks, report rather than fix.
 - `[ADVISORY]` **Typographic conventions consistent** — bold / italic / hat / tilde / asterisk each stable across the paper.
-- `[ADVISORY]` **Notation index attached to handoff** (short one — symbol, definition, dimensions, convention).
+- `[ADVISORY]` **Notation index recorded** (short one — symbol, definition, dimensions, convention).
 - `[ADVISORY]` **Abbreviations defined on first use** unless convention-standard for the audience.
 - `[ADVISORY]` **Code / variable names in text match variable names in equations** (soft consistency with `consistency/terminology.md`).
 

@@ -1,0 +1,6 @@
+# Incidental uv / Python artifacts under skills/task-system (no installable
+# package here — scripts run via `uv run --script`).
+.venv/
+__pycache__/
+*.egg-info/
+uv.lock

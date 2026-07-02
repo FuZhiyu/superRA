@@ -1,13 +1,6 @@
 ---
 name: worktree-data-sync
-description: >
-  Use when syncing non-git-controlled data between existing worktrees:
-  seed a new worktree from main, diff managed data, reconcile
-  post-parallel changes, or tear down seeded data. Triggers include
-  "copy data to the new worktree", "seed this worktree from main",
-  "diff the data files between worktrees", and "sync my worktree data".
-  Worktree lifecycle stays in
-  `agent-orchestration/references/worktree-harness-fallback.md`.
+description: Sync non-git data between worktrees. Use to seed, diff, reconcile, or tear down managed data for existing worktrees.
 user-invocable: true
 ---
 
@@ -150,4 +143,4 @@ For worktree removal itself (`git worktree remove`, branch deletion, and safety 
 ## See Also
 
 - `skills/agent-orchestration/references/worktree-harness-fallback.md` — worktree lifecycle (create / enter / remove), harness tools preferred, raw-git fallback, placement conventions.
-- `skills/agent-orchestration/SKILL.md` §Parallelization and Worktree Isolation — when parallel subagents each need their own worktree, and how data seeding fits into that flow.
+- `skills/agent-orchestration/references/parallel-dispatch.md` — when parallel subagents each need their own worktree, and how data seeding fits into that flow.

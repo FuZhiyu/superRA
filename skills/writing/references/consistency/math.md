@@ -86,7 +86,7 @@ For each proof:
 - `[BLOCKING]` **Proofs' assumptions match theorem statements.**
 - `[BLOCKING]` **Body ↔ appendix consistency verified** for every theorem / proposition with proof in the appendix.
 - `[ADVISORY]` **Numerical sanity checks run on at least one key derivation** — concrete values plugged in.
-- `[ADVISORY]` **Matrix-dimension / vector-dimension annotations attached** in handoff for any dimension-sensitive step.
+- `[ADVISORY]` **Matrix-dimension / vector-dimension annotations recorded** for any dimension-sensitive step.
 - `[ADVISORY]` **Boundary / edge cases discussed** where the result depends on them.
 
 ## Output format

@@ -1,5 +1,32 @@
 # superRA Release Notes
 
+## [Unreleased]
+
+## [0.3.0] - 2026-07-01
+
+### Breaking
+
+- **Task tracking model replaced: the `superRA/` task tree supersedes `PLAN.md` / `RESULTS.md`.** A single flat plan/results pair is replaced by a filesystem hierarchy of self-contained `task.md` files, each with a planner-owned `## Objective` and an implementer-owned `## Results` (recursive at every level, including nested subtasks) — `superRA/` task files are now the primary researcher-facing results record, and the old separate `RESULTS.md` / `final-form.md` maturation path is gone. Dependencies are sibling-only; parent status rolls up from children automatically. A live dashboard (`superra dashboard`) — tree, DAG, and kanban views, multi-worktree support, SSE live-updating, exportable offline snapshot — replaces the flat file as the human-facing status view. Top-level tasks are unprivileged: a `superRA/task.md` umbrella is optional, added only when a shared objective genuinely spans every top-level task.
+
+### Migration
+
+- Existing projects on `PLAN.md` / `RESULTS.md` keep working: superRA detects a legacy `PLAN.md` without a `superRA/` tree at session start and offers to migrate it via `superra task migrate from-plan`.
+- To stay on the previous model instead, pin the install to the frozen `v0.1.2` tag:
+  ```bash
+  claude plugin marketplace add FuZhiyu/superRA@v0.1.2
+  claude plugin install superRA@superRA
+  ```
+- See the [superRA docs](http://fuzhiyu.me/superRA/) for full migration details.
+
+### Added
+
+- **`postponed` task status.** New value for `task.md` `status` frontmatter that parks a task off the dispatch frontier without deleting it: a `postponed` leaf never enters the frontier, and a `postponed` task is excluded from the dashboard completion-% denominator — both mirroring `archived`. It differs from `archived` in dependency satisfaction: `archived` lets dependents proceed, while `postponed` **blocks its dependents** until the task is resumed, so `task_check.py` warns when a task depends on a postponed sibling. An all-parked branch rolls up to `postponed` if any child is postponed (else `archived`). The dashboard gains a Postponed kanban column and status badge. Set by the orchestrator / researcher as a scope-deferral decision; resume by setting the status back to `not-started`.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.0` across package, Claude, Codex, marketplace, and Gemini extension metadata via `scripts/bump-version.sh`. The minor bump (rather than a patch) marks this pre-1.0 breaking change.
+- The Cursor plugin manifest (`.cursor-plugin/plugin.json`) was removed — Cursor plugin packaging is no longer maintained. Hook scripts keep their Cursor-compatible output branches.
+
 ## [0.2.0] - 2026-05-30
 
 ### Breaking

@@ -16,21 +16,7 @@ Mode determines the loaded references and therefore the authority grant. Do not 
 
 ## Governing principle
 
-`SKILL.md` owns the unconditional writing principle:
-
-- Preserve substance: argument, logic, structure, technical claims, author intent, and tone.
-- Polish prose: wording, sentence shape, clarity, parallelism, hedging, flow, and mechanical correctness.
-- Ask before changing substance or restructuring unless the request explicitly authorizes that scope.
-
-Writing rules are additive to baseline writing competence. Add only constraints that redirect behavior a strong general editor would otherwise get wrong on shared academic drafts.
-
-## Current conventions
-
-- Inline TODOs, placeholders, crude draft phrasing, `??`, and `XXX` are work assigned to the agent inside scope.
-- Explicit `DO NOT EDIT` or equivalent hands-off markers are off-limits.
-- Intent comments live in source files (`% intent: ...` or `<!-- intent: ... -->`): Draft writes them from the user's brief; Polish preserves existing comments and does not invent new author intent; Review can use them as a yardstick.
-- Audience discipline is unconditional: document prose is written for the document's reader, not for the editing conversation or repository context.
-- Writing-side project conventions live in the active `## Project Conventions` surface: `PLAN.md` for workflow-scoped work and project `CLAUDE.md` for durable project rules.
+`SKILL.md` owns the unconditional writing principle (preserve substance, polish prose, ask before changing substance or restructuring). Writing rules are additive to baseline competence: add only constraints that redirect behavior a strong general editor would otherwise get wrong on shared academic drafts.
 
 ## Reference ownership
 
@@ -41,7 +27,7 @@ Writing rules are additive to baseline writing competence. Add only constraints 
 - `references/style.md` owns sentence- and paragraph-level style heuristics.
 - `references/structure.md` owns structure-level heuristics and is loaded only when drafting or authorized restructuring is in scope.
 - `references/consistency/*.md` owns dimension-specific review checks and output details.
-- `references/long-form-review.md` owns multi-lane review orchestration, PLAN-only review retrofit, and review-time indices.
+- `references/long-form-review.md` owns multi-lane review orchestration, review-only task trees, and review-time indices.
 - `references/refactor-and-compile.md` owns document-wide prose refactors and build/compile discipline.
 - `references/integration.md` owns behavior specific to writing work riding `superintegrate`.
 
@@ -53,15 +39,11 @@ Standalone writing invocations terminate at edit plus commit, or findings plus c
 
 Multi-lane review may dispatch one reviewer per lane, but the dispatch mechanics belong to `agent-orchestration`; `writing` supplies the lane files and the long-form-review reference.
 
-The PLAN-only long-form review retrofit (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no PLAN-only-exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
+The review-only task-tree path (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no writing-specific exception prose.
 
 ## Extension rules
 
-- Add sentence-level rules to `references/style.md`.
-- Add structure-level rules to `references/structure.md`.
-- Add dimension-specific checks to the relevant `references/consistency/*.md`.
-- Add build or document-wide refactor rules to `references/refactor-and-compile.md`.
-- Add integration-only writing behavior to `references/integration.md`.
+- Add a rule to the reference that owns its concern (see Reference ownership above).
 - Add a new knowledge file only when it has a distinct load condition that existing references cannot cover.
 - Add a new mode only when Review, Polish, and Draft cannot describe the request shape and the new mode needs a distinct workflow plus a distinct loaded reference set.
 - When changing writing-side project conventions, keep math notation owned by `theory-modeling`; writing owns prose typography, terminology, citation, numerical, cross-reference, voice, tense, and abbreviation choices.

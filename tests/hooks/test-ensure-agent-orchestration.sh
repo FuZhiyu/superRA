@@ -111,36 +111,37 @@ other_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","
 run_case "V1 non-Skill Bash"             expect-silent "Bash"  ""
 run_case "V1 non-Skill Read"             expect-silent "Read"  ""
 
-# V2: Skill tool, non-workflow skill -> silent
+# V2: Skill tool, non-gated skill -> silent. superplan is intentionally
+# ungated (it dispatches nothing at quick/standard depth), so it must pass
+# even when the transcript shows the companion was never loaded.
 run_case "V2 Skill handoff-doc"          expect-silent "Skill" "superRA:handoff-doc"
 run_case "V2 Skill using-superra"        expect-silent "Skill" "superRA:using-superra"
 run_case "V2 Skill agent-orchestration"  expect-silent "Skill" "superRA:agent-orchestration"
+run_case "V2 Skill superplan ungated"    expect-silent "Skill" "superRA:superplan"       "$other_transcript"
 run_case "V2 Skill empty"                expect-silent "Skill" ""
 
-# V3: workflow skill, companion NOT loaded -> deny
+# V3: gated workflow skill, companion NOT loaded -> deny
 #
 # Transcript present but only mentions the other companion (using-superra) —
 # this hook must still deny because it specifically guards agent-orchestration.
-run_case "V3a superplan no-transcript"    expect-deny  "Skill" "superRA:superplan"       "$other_transcript"
-run_case "V3b superimplement not-loaded" expect-deny  "Skill" "superRA:superimplement" "$other_transcript"
-run_case "V3c superintegrate not-loaded"    expect-deny  "Skill" "superRA:superintegrate"    "$other_transcript"
+run_case "V3a superimplement not-loaded" expect-deny  "Skill" "superRA:superimplement" "$other_transcript"
+run_case "V3b superintegrate not-loaded"    expect-deny  "Skill" "superRA:superintegrate"    "$other_transcript"
 
-# V4: workflow skill, companion loaded -> silent
-run_case "V4a superplan loaded"          expect-silent "Skill" "superRA:superplan"       "$loaded_transcript"
-run_case "V4b superimplement loaded"    expect-silent "Skill" "superRA:superimplement" "$loaded_transcript"
-run_case "V4c superintegrate loaded"       expect-silent "Skill" "superRA:superintegrate"    "$loaded_transcript"
+# V4: gated workflow skill, companion loaded -> silent
+run_case "V4a superimplement loaded"    expect-silent "Skill" "superRA:superimplement" "$loaded_transcript"
+run_case "V4b superintegrate loaded"       expect-silent "Skill" "superRA:superintegrate"    "$loaded_transcript"
 
 # V4d: tolerant whitespace around the colon
 tolerant_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{ "skill" : "superRA:agent-orchestration" }}]}}'
-run_case "V4d tolerant-whitespace"       expect-silent "Skill" "superRA:superplan" "$tolerant_transcript"
+run_case "V4d tolerant-whitespace"       expect-silent "Skill" "superRA:superimplement" "$tolerant_transcript"
 
 # V5: fail-open on missing transcript
-run_case "V5a transcript empty-string"   expect-silent "Skill" "superRA:superplan" "" "empty"
-run_case "V5b transcript nonexistent"    expect-silent "Skill" "superRA:superplan" "" "nonexistent"
+run_case "V5a transcript empty-string"   expect-silent "Skill" "superRA:superimplement" "" "empty"
+run_case "V5b transcript nonexistent"    expect-silent "Skill" "superRA:superimplement" "" "nonexistent"
 
 # V6: deny payload valid JSON with round-tripping reason (embedded
 # double quotes inside Skill(skill="...") exercise the json.dumps escape).
-run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:superplan" "$other_transcript"
+run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:superimplement" "$other_transcript"
 
 echo
 echo "Passed: $pass    Failed: $fail"

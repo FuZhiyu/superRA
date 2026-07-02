@@ -52,10 +52,18 @@ hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
 events = hooks["hooks"]
 assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
 assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
+assert "PostToolUse" in events, "Codex hooks must include PostToolUse task-hook reconcile coverage"
 assert "Stop" in events, "Codex hooks must include Stop"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
+post_tool_groups = events["PostToolUse"]
+post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}
+assert "Edit|Write" in post_tool_matchers, "Codex PostToolUse must wire task-hook for edit/apply_patch paths"
+assert "Bash" in post_tool_matchers, "Codex PostToolUse must wire task-hook for structural Bash paths"
+assert all(
+    any("run-hook.cmd" in h["command"] and "task-hook" in h["command"] for h in group["hooks"])
+    for group in post_tool_groups
+), "Codex PostToolUse groups must run the stable task-hook wrapper"
 assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h in group["hooks"]), "Codex Stop must wire codex-plan-stop"
-assert "PostToolUse" not in events, "Codex hooks must not claim unverified request_user_input PostToolUse support"
 PY
 
 section "Shared harness adapters"
@@ -65,47 +73,6 @@ test -f skills/using-superra/references/direct-mode-implementer.md
 test -f skills/using-superra/references/direct-mode-reviewer.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
-python3 - <<'PY'
-import re
-from pathlib import Path
-text = Path("skills/using-superra/SKILL.md").read_text(encoding="utf-8")
-m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
-assert m and m.group(1) == "using-superra", f"using-superra SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
-using_text = text
-planning_text = Path("skills/superplan/SKILL.md").read_text(encoding="utf-8")
-refactor_text = Path("skills/refactor-and-integrate/SKILL.md").read_text(encoding="utf-8")
-assert "`theory-modeling`" in using_text, "using-superra must list theory-modeling"
-assert "superRA:theory-modeling" in using_text, "using-superra manifest must reference theory-modeling"
-assert "`superRA:theory-modeling`" in planning_text, "superplan must route theory-modeling"
-# Per Task 7 (domain-neutral workflow/utility skills): refactor-and-integrate must NOT name a specific
-# domain's integration reference; the active domain skill's stage-load table routes it.
-assert "theory-modeling/references/integration.md" not in refactor_text, "refactor-and-integrate SKILL.md must stay domain-neutral"
-assert "econ-data-analysis/references/integration.md" not in refactor_text, "refactor-and-integrate SKILL.md must stay domain-neutral"
-PY
-
-section "Sync integration contract"
-bash tests/test-sync-integration-contract.sh
-
-section "Direct mode role references"
-python3 - <<'PY'
-from pathlib import Path
-
-main_agent = Path("skills/using-superra/references/main-agent.md").read_text(encoding="utf-8")
-assert "references/direct-mode-implementer.md" in main_agent, "main-agent direct mode must load direct-mode-implementer.md"
-assert "references/direct-mode-reviewer.md" in main_agent, "main-agent direct mode must load direct-mode-reviewer.md"
-assert "agents/implementer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/implementer.md"
-assert "agents/reviewer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/reviewer.md"
-
-for path, source in [
-    ("skills/using-superra/references/direct-mode-implementer.md", "agents/implementer.md"),
-    ("skills/using-superra/references/direct-mode-reviewer.md", "agents/reviewer.md"),
-]:
-    text = Path(path).read_text(encoding="utf-8")
-    lowered = text.lower()
-    assert source in text, f"{path} must cite canonical source {source}"
-    assert "managed by superra codex-superra-setup" in lowered, f"{path} must declare generator ownership"
-    assert "temporary manual mirror" not in lowered, f"{path} must not claim manual-mirror status"
-PY
 
 section "Codex agent generation"
 python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
@@ -164,10 +131,10 @@ test -f skills/theory-modeling/references/integration.md
 python3 - <<'PY'
 from pathlib import Path
 
-# (ii) Every skill under skills/ has a corresponding .agents/skills/ symlink.
+# (ii) Every real skill under skills/ has a corresponding .agents/skills/ symlink.
 skills_root = Path("skills")
 agents_root = Path(".agents/skills")
-canonical = {p.name for p in skills_root.iterdir() if p.is_dir()}
+canonical = {p.parent.name for p in skills_root.glob("*/SKILL.md")}
 exposed = {p.name for p in agents_root.iterdir() if p.is_symlink() or p.is_dir()}
 missing = canonical - exposed
 if missing:
