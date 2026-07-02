@@ -28,7 +28,7 @@ Add a `task-tree` skill to superRA that replaces flat PLAN.md/RESULTS.md task tr
 ## Results
 
 ### Key Findings
-- 19 production scripts (4 data-layer modules + 15 entry scripts) + 7 test modules; 646 tests passing, 2 skipped
+- 19 production scripts (4 data-layer modules + 15 entry scripts) + 7 test modules; 689 tests passing
 - Eliminated task/step distinction: everything is a task, leaf = no subdirectories
 - Structured ownership: `## Objective` (planner) / `## Results` (implementer, recursive)
 - Hook does validation/status propagation only — no auto-rebuild; dashboard renders on demand (live SSE server) or via explicit `superra dashboard export`
