@@ -1,6 +1,6 @@
 ---
 title: "Citation-Graph & Metadata Client"
-status: implemented
+status: approved
 depends_on: []
 ---
 
