@@ -6,7 +6,7 @@ user-invocable: true
 
 # Literature Review
 
-Domain skill for economics/finance literature reviews. A review here produces a **curated, provenance-tracked, classified collection** — a screened paper set, a per-paper justification and extraction, a classification/gap analysis, and a convergence judgment. Drafting prose from that collection is a separate, later step; the deliverable is the organized evidence, not written synthesis.
+Discipline for economics/finance literature reviews. A review here produces a **curated, provenance-tracked, classified collection** — a screened paper set, a per-paper justification and extraction, a classification/gap analysis, and a convergence judgment. Drafting prose from that collection is a separate, later step; the deliverable is the organized evidence, not written synthesis.
 
 Discovery is **web-first and multi-modal**: no single index is authoritative. Lead with the agent's own web search across several blind lenses, use the citation graph for snowballing, and take every bibliographic field verbatim from the published version of record — an agent never types metadata.
 
