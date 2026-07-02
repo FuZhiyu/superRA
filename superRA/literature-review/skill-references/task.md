@@ -1,6 +1,6 @@
 ---
 title: "Skill References — Discipline, Econ Corpus, Grounding, Synthesis"
-status: implemented
+status: approved
 depends_on: [skill-core]
 ---
 
