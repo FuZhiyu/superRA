@@ -16,7 +16,7 @@ This tutorial walks you through installing superRA, pointing it at a project, an
 
 A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) skill keeps non-git-controlled data in sync across those isolated worktrees.
 
-superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)). 
+superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)).
 
 You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard.
 
@@ -36,12 +36,11 @@ Use superRA and retroactively create task trees for [what I'm working on],
 and show me the dashboard.
 ```
 
-The trigger is the word **`superra`**: with it in the prompt, the agents follow the workflow instead of improvising. 
+The trigger is the word **`superra`**: with it in the prompt, the agents follow the workflow instead of improvising.
 
 ### A typical workflow
 
-The rest of this page walks one piece of work through all three phases. The example below is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section. 
-
+The rest of this page walks one piece of work through all three phases. The example below is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section.
 
 #### Superplan
 
@@ -54,7 +53,6 @@ Fama-French 3-factor model, and run the GRS joint test. Keep it to a handful
 of tasks.
 ```
 
-
 Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root: build the panel, run the regressions and the GRS test, and write up the result. The task tree holds the project's state. Instead of keeping the plan in one agent's context window or a temporary plan file, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
 
 Planning is autonomous but stops at one gate: before any code is written, the planner shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
@@ -62,7 +60,7 @@ Planning is autonomous but stops at one gate: before any code is written, the pl
 ```bash
 ./superRA/superra dashboard
 ```
-A live, auto-updating dashboard opens in your browser. The default **Workspace** view shows the tree, with a colored status pill on each task. 
+A live, auto-updating dashboard opens in your browser. The default **Workspace** view shows the tree, with a colored status pill on each task.
 
 Here is this study right after planning — three tasks under one root, every one `not-started` (grey), so the root rolls up to `not-started` too. Open it and click a task to read the objective the planner wrote. Read the objectives and approve — or leave a comment on the dashboard and ask the agent to revise.
 
@@ -78,7 +76,7 @@ superimplement @superRA/showcase-analysis.
 
 By default, the main agent dispatches a separate implementer subagent for each task. This keeps the main agent's context window clean, so it stays sharp and can run far longer without degrading — at the cost of more tokens than working inline. To work inline instead, ask the main agent to run in **direct mode**.
 
-Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*. 
+Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*.
 
 The reviewer is adversarial by design. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances through a superRA project has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
 

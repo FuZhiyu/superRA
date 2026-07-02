@@ -202,7 +202,7 @@ Symbolic work still needs verification. A derivation is not complete until it ha
 Cross-cutting documentation rules beyond the per-symbol / per-assumption ledgers:
 
 - `[BLOCKING]` Task `## Results` is updated in place. The task file is the record — findings live there before they appear in any status report.
-- `[BLOCKING]` Root task.md's Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the task-level ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
+- `[BLOCKING]` The canonical Notation Conventions table is **user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the task-level ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
 - `[BLOCKING]` Route human-readable equations, tables, and figures through `superRA:report-in-markdown`.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.

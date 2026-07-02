@@ -1,6 +1,5 @@
 # Codex Instructions
 
-
 ## Delegation Priority in Codex
 
 When the user invokes `superRA`, a `superRA:*workflow` skill, or

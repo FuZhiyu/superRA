@@ -23,7 +23,7 @@ AI agents are fast but undisciplined. They generate more code than anyone will c
 
 ## Why not an existing framework like Superpowers?
 
-[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the frontier of agentic-driven software engineering pushes hard to remove the human from the loop. 
+[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the frontier of agentic-driven software engineering pushes hard to remove the human from the loop.
 
 However, **social-science research needs a different rhythm**: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
 
@@ -79,7 +79,7 @@ A typical superRA workflow looks like this:
 </svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped. 
+In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped.
 
 Research is rarely this linear, though: unanticipated issues surface mid-implementation, and exploratory sessions turn up findings worth recording as tasks for later. superRA supports changing the plan on the fly, or retroactively creating tasks to be reviewed and integrated.
 

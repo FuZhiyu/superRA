@@ -19,7 +19,6 @@ Every `task.md` — top-level, branch, or leaf — uses the same body sections. 
 - **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
-
 ## Field-by-Field Notes
 
 The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any other key is discarded the next time a CLI mutation rewrites the file (including automatic ancestor-status rollups), so do not store custom metadata in frontmatter — put it in a body section instead.

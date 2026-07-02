@@ -1,6 +1,6 @@
 ---
 title: "Narrow the Frontmatter Field Set to title/status/depends_on"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -18,3 +18,9 @@ Narrow the active `task.md` frontmatter schema to the three load-bearing fields 
 - The closed field set is single-sourced: the `serialize_frontmatter` docstring in `_task_io.py` points at `task-file-contract.md §Field-by-Field Notes`. Keep that pointer accurate.
 
 This is a code-and-tests task (`01-code-and-compat`) followed by a prose-propagation task (`02-docs-propagation`).
+
+## Results
+
+Both children complete the objective: the frontmatter field set is narrowed to `title`/`status`/`depends_on` across the data layer, CLI, tests, and instruction prose, with legacy-field back-compat preserved and verified end to end. Per-task evidence lives in [01-code-and-compat](01-code-and-compat/task.md) and [02-docs-propagation](02-docs-propagation/task.md).
+
+**Final diff self-check (integration pass):** re-ran the full drift suite after this task's own governing-diff refactor pass — `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → 689 passed — and `python3 skills/task-tree/scripts/cli.py task check` → "All checks passed. No issues found." No surviving hunks under this parent path beyond what its two children own; see their self-checks for the file-level triage.

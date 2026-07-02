@@ -1,6 +1,6 @@
 ---
 title: "Propagate the Narrowed Field Set Across Instruction Prose"
-status: approved
+status: implemented
 depends_on:
   - 01-code-and-compat
 ---
@@ -53,4 +53,6 @@ All prose references to the five removed task-frontmatter fields (`script`, `inp
 
 - Field-form sweep (`^\s*(\*\*)?(script|input|output|tags|created)\s*:` over `skills/**/*.md`, `agents/**/*.md`) returns only `report-in-markdown/references/baseline-io.md` (report-artifact frontmatter `tags`, not task frontmatter).
 - Task-field prose sweep (backtick-wrapped field names) returns only out-of-domain hits: Quarto `output` kwarg in `julia-quarto-guide.md`, report `tags` in `baseline-io.md`, Zotero `tags` API in `zotero-paper-reader/SKILL.md`.
-- `python3 skills/task-tree/scripts/cli.py task check` — clean (0 errors; the single placement warning is a pre-existing, unrelated `main-agent-trimming` root-placement advisory).
+- `python3 skills/task-tree/scripts/cli.py task check` — clean at this task's own commit (0 errors; one pre-existing, unrelated `main-agent-trimming` placement advisory). The `task-tree/top-level-task-shape` task later dropped the `placement` check category entirely, so the current authoritative result is "All checks passed. No issues found." — re-verified in this integration pass.
+
+**Final diff self-check (integration pass):** `git diff b57cb16b..HEAD -- skills/task-tree/references/task-file-contract.md skills/task-tree/references/internals.md skills/superplan/references/harness-plan-mode.md skills/superplan/references/consolidation.md skills/superplan/SKILL.md skills/superplan/references/task-tree-design.md`; every surviving hunk is a prose-propagation fix tracing to this task's Objective (dropping script/input/output/tags/created prose, retargeting section pointers). Fixed one leftover formatting artifact from this task's own edit: a double blank line left in `task-file-contract.md` after the "Branch tasks … do not carry `script`/`input`/`output`" bullet was deleted ([task-file-contract.md:20-21](../../../../skills/task-tree/references/task-file-contract.md#L20-L21) before the fix). No other suspicious hunks; the residual `**Script:**` sweep and field-form greps still return only out-of-domain hits after the later top-level-task-shape and terminology-sweep commits. Full suite: `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → 689 passed.

@@ -81,7 +81,6 @@ If the current node is a **leaf** (a node with no children):
 - Simple extension: update it in place.
 - Complex extension: nest a subtask under it.
 
-
 ### Objective rewrites on scope expansion
 
 When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.

@@ -6,14 +6,14 @@ Before your first substantive response:
 
 - Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-tree` §CLI Setup.
 - Run `./superRA/superra task tree` for the full status summary.
-- Ensure the live dashboard is up for this repo without opening a browser: run `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached, and prints `…localhost:<port>`). 
+- Ensure the live dashboard is up for this repo without opening a browser: run `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached, and prints `…localhost:<port>`).
 - If `PLAN.md` exists without a `superRA/` directory, the project predates the `superRA/` task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer migration via `superra task migrate from-plan`, and point them to the superRA docs at http://fuzhiyu.me/superRA/ for details.
 
 ## Resuming Work
 
-Check `git log` on the most recent tasks, and load the superra task frontier `superra task frontier`.
+There is no durable workflow-stage to look up. The frontmatter field set is closed and INTEGRATE keeps no stage marker, so task `status` plus the git log *are* the state — "which phase are we in" (implemented-or-not, integrated-or-not) is read from statuses and commits, never from a file field. Resuming is therefore status-driven, and mixed state is normal:
 
-For **tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix.
+- **Tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix.
 
 On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`task-tree/references/task-file-contract.md` §status owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
 
@@ -23,13 +23,7 @@ When the task tree changes materially — a task added, removed, or restructured
 
 ## Surfacing the Live Dashboard
 
-After any action that changes what the tree shows the researcher — a structural or material edit (add / remove / move / replan / update a task), a status transition that completes a stage, or maturation / consolidation — give the user the affected task's live URL so they can watch it update:
-
-```
-http://localhost:<port>/?wt=<worktree-basename>#/<task-path>
-```
-
-`<port>` is from the launch line in §Session Start Actions; always include `?wt=<worktree-basename>` — this worktree's directory name (`basename` of the worktree root); `<task-path>` is the `superra task read` locator (no `superRA/` prefix, empty for the tree root).
+After any action that changes what the tree shows the researcher — a structural or material edit (add / remove / move / replan / update a task), a status transition that completes a stage, or maturation / consolidation — give the user the affected task's live URL so they can watch it update, using the deep-link scheme from `superRA:task-tree` §Reading the Tree. `<port>` is from the dashboard-launch line in §Session Start Actions above.
 
 ## Proceeding and Pausing
 

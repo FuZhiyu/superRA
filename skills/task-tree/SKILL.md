@@ -8,7 +8,7 @@ user-invocable: true
 
 ## Core Concepts
 
-- Every subdirectory under `./superRA` with a `task.md` file is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`. 
+- Every subdirectory under `./superRA` with a `task.md` file is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`.
 - The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
 - **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
 - **Parent task status rolls up** from children automatically — a parent is `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded from the rollup computation.
@@ -76,7 +76,7 @@ Field-by-field anatomy and body-section ownership live in `references/task-file-
 | Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
 | Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
-| dashboard internals and details dashboard |  `references/internals.md`|
+| Dashboard server mechanics (idempotent ensure-running, task URLs, artifact export) | `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
 Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`. It resolves the move's fallout for you — relative Markdown links across the tree and sibling-only `depends_on` edges — so run the move directly; do not rewrite links or rewire dependencies by hand first. Mechanics and the cross-parent dependency rules are in `references/commands.md §Move / rename a task`.

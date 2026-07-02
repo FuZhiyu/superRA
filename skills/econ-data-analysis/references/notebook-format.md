@@ -80,9 +80,6 @@ jupytext --set-kernel python3 --to notebook --execute script.py
 jupytext --set-kernel python3 --to notebook --execute script.py -o Output/script.ipynb
 ```
 
-Run jupytext in an environment that has both the rendering tools and the
-script's analysis packages; how that environment is provided is project-specific.
-
 Full syntax, pairing, setup, and troubleshooting: `references/jupytext-guide.md`.
 
 ## Rendering: Julia

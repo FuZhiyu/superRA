@@ -1,14 +1,7 @@
 ---
 title: "Render-integrity rule: inline $…$ math split across a line break"
-status: approved
+status: implemented
 depends_on: []
-tags: []
-output:
-  - skills/report-in-markdown/scripts/md_integrity.py
-  - skills/report-in-markdown/scripts/test_md_integrity.py
-  - skills/report-in-markdown/scripts/check_markdown.py
-  - skills/report-in-markdown/SKILL.md
-created: 2026-07-01
 ---
 
 ## Objective
@@ -42,3 +35,5 @@ Add a third render-integrity rule to the checker so it catches inline `$…$` ma
 ## Results
 
 Added the `inline-math-line-break` render-integrity rule (odd count of unescaped inline `$` per line, with `$$` runs and `\$` currency excluded before counting parity) — see `_inline_dollar_odd` in [md_integrity.py](../../skills/report-in-markdown/scripts/md_integrity.py), the test matrix in [test_md_integrity.py](../../skills/report-in-markdown/scripts/test_md_integrity.py), and the authoring rule in [SKILL.md](../../skills/report-in-markdown/SKILL.md). Flows to both `check_markdown.py` and the PostToolUse hook via `check()` with no call-site changes. Live sweep across the task tree and docs found one real break — four hard-wrapped spans in [docs/plans/2026-04-22-theory-modeling-vertical-results.md](../../docs/plans/2026-04-22-theory-modeling-vertical-results.md), re-flowed onto single lines — the rest false positives (shell expansions, currency).
+
+**Final diff self-check (integration pass):** `git diff b57cb16b..HEAD -- skills/report-in-markdown/scripts/md_integrity.py skills/report-in-markdown/scripts/test_md_integrity.py skills/report-in-markdown/scripts/check_markdown.py skills/report-in-markdown/SKILL.md docs/plans/2026-04-22-theory-modeling-vertical-results.md superRA/render-integrity-inline-math/task.md`. Every surviving hunk traces to this task's Objective: the new `_inline_dollar_odd` rule and its wiring into `check()`, the test matrix, the docstring/SKILL authoring-rule updates, and the one real re-flowed doc break. No debug artifacts, no scope creep. Reviewed the parity-counting logic against the fence/inline-code/display-`$$`/escaped-`\$` exemption cases in the Objective and Planner Guidance — all hold on inspection and are covered by the test matrix. Dropped this task's own stale legacy frontmatter (`tags: []`, `output:`, `created:`) down to the closed `title`/`status`/`depends_on` set while touching the file, per `task-tree/frontmatter-field-narrowing`'s back-compat design (fields shed naturally on next rewrite). No scope-ambiguous hunks found. Re-verified: `uv run --with pytest --script skills/report-in-markdown/scripts/test_md_integrity.py` → 29 passed; `python3 skills/report-in-markdown/scripts/check_markdown.py $(git diff b57cb16b..HEAD --name-only -- '*.md')` → all clean.
