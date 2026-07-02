@@ -33,3 +33,6 @@ Redefine the canonical superRA/ task shape so top-level tasks (direct children o
 - [skills/using-superra/references/codex-instructions.md](../../../skills/using-superra/references/codex-instructions.md) and [skills/superplan/references/task-tree-design.md:82-83](../../../skills/superplan/references/task-tree-design.md#L82-L83) — leftover double-blank-lines from unrelated maintenance-commit deletions; collapsed.
 
 None of these were scope-ambiguous — all traced to identifiable maintenance-commit regressions with an unambiguous fix, so no `## Review Notes` items were needed. Full suite re-verified after all fixes: 689 passed; `python3 skills/task-tree/scripts/cli.py task check` → "All checks passed. No issues found."; `check_markdown.py` over every touched `.md` file in the governing diff → all clean.
+
+## Revision Notes
+Maturation decision (2026-07-01 integration pass): fold this task into the `task-tree` parent — merge its result into the parent's `## Results` at short-note altitude and remove this directory. Sweep stale sibling content the fold exposes: `restructuring-tooling`'s title/Results still claim the placement detector this task removed.

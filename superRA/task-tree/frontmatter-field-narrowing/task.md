@@ -24,3 +24,6 @@ This is a code-and-tests task (`01-code-and-compat`) followed by a prose-propaga
 Both children complete the objective: the frontmatter field set is narrowed to `title`/`status`/`depends_on` across the data layer, CLI, tests, and instruction prose, with legacy-field back-compat preserved and verified end to end. Per-task evidence lives in [01-code-and-compat](01-code-and-compat/task.md) and [02-docs-propagation](02-docs-propagation/task.md).
 
 **Final diff self-check (integration pass):** re-ran the full drift suite after this task's own governing-diff refactor pass — `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → 689 passed — and `python3 skills/task-tree/scripts/cli.py task check` → "All checks passed. No issues found." No surviving hunks under this parent path beyond what its two children own; see their self-checks for the file-level triage.
+
+## Revision Notes
+Maturation decision (2026-07-01 integration pass): fold children `01-code-and-compat` and `02-docs-propagation` into this parent — distil `## Results` to one short self-contained subsection (fields dropped, back-compat guarantee + regression test, docs propagated), remove the two child directories and the integration self-check trails.
