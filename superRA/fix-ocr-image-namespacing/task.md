@@ -1,6 +1,6 @@
 ---
 title: "Fix per-paper image namespacing in mistral-pdf-to-markdown"
-status: implemented
+status: approved
 depends_on: []
 ---
 
