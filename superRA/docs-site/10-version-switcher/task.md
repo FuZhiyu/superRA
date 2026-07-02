@@ -2,8 +2,6 @@
 title: "Docs Branch/Version Switcher (Reuse Worktree-Switch UI)"
 status: postponed
 depends_on: []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective
