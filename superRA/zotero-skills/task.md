@@ -60,3 +60,7 @@ The MCP-free `zotero-paper-reader` skill is complete and verified, and now self-
 - **Citation insertion + bibliography** ([08-cite-and-bibliography](08-cite-and-bibliography/task.md)) — `cite` inserts `\cite{key}` (`--tex`) / `[@key]` (`--markdown`) and syncs the entry; `bibliography` renders formatted references. Draft and marker validation now happens before `.bib` mutation.
 - **Docs + packaging** ([09-docs-and-packaging](09-docs-and-packaging/task.md)) — `SKILL.md` stays a lean routing surface, depth lives in `references/bibtex-citations.md`; CATEGORIES/README/using-superra inventories updated; skill remains a standalone Utility (not Manifest-loaded).
 - **BibTeX/citation verification** ([10-bibtex-verification](10-bibtex-verification/task.md)) — credential-free suites cover the new commands, BBT-default / built-in-fallback model, master-`.bib` sync, no-secret-leak invariant, and documentation surfaces; a generic live smoke test confirmed the BBT key match, idempotent sync, draft insertion, `.bib`-protection ordering, and fallback.
+
+## Revision Notes
+
+- 2026-07-01 — Researcher-approved consolidation (Mature & Consolidate): collapse to this single `task.md`; delete the ten child directories. Distil `## Results` to a short narrative of the shipped skills (`skills/zotero-paper-reader/`, `skills/mistral-pdf-to-markdown/`). Self-contained: plain inline-code repo paths only — no markdown links outside `superRA/`, no links to deleted children. Normalize frontmatter to `title`/`status`/`depends_on`.

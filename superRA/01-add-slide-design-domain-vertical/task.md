@@ -76,3 +76,7 @@ created: 2026-05-26
 - Integration protection is script-level rather than result-drift-based: the change adds a skill-trigger prompt, wires it into `run-all.sh`, validates the helper script, and verifies the bundled Beamer template.
 - The source guide is copied to ignored `inspo/slide-design-guide/slide_deck_design.tex` on the development environment; it is local reference material, not a packaged skill artifact.
 - **Provenance.** This vertical was extracted from branch `superRA-slides-making` (post-sync state, commit `c96f8bcc`) onto `slide-design-vertical`, a fresh branch cut from `main`. The extraction ports the slide-design skill directory, the wiring rows (`using-superra`, `superplan` Phase 2 verticals table, `CATEGORIES.md`, `README.md`, skill-triggering test), and this vertical's task tree, so the branch's diff against `main` contains only slide-design work. The development branch retains the original better-handoff lineage; this branch owns the PR to `main`.
+
+## Revision Notes
+
+- 2026-07-01 — Researcher-approved consolidation (Mature & Consolidate): rename this directory to `slide-design-vertical`, collapse to the single `task.md` (delete the nine child directories), and distil `## Results` to a short narrative pointing at `skills/slide-design/`. Self-contained: plain inline-code repo paths only — no markdown links outside `superRA/`, no links to deleted children. Normalize frontmatter to `title`/`status`/`depends_on`, dropping the legacy `script`/`input`/`output` fields (whose `input` cites a file outside the repo).
