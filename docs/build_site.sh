@@ -14,9 +14,21 @@
 # at three workflow moments. These fixtures are deliberately NOT kept in sync
 # with later edits to the live superRA/showcase-analysis prose — the staleness
 # is the point (each page shows the tree at a past moment). Do not "fix" the
-# drift. Regenerate a fixture only to re-pin it to a (different) source commit;
-# the capture commands are recorded in the task that built them
-# (superRA/docs-site/14-canonical-showcase/02-progression-exports/task.md).
+# drift. Regenerate a fixture only to re-pin it to a (different) source commit,
+# by re-extracting the showcase-analysis subtree from that commit with
+# `git show` (never disturbing the live tree):
+#
+#   fx=docs/showcase-fixtures/after-planning/showcase-analysis  # or mid-implement/...
+#   mkdir -p "$fx"/{01-data,02-analysis,03-writeup}
+#   for f in task.md 01-data/task.md 02-analysis/task.md 03-writeup/task.md; do
+#     git show "<sha>:superRA/showcase-analysis/$f" > "$fx/$f"
+#   done
+#
+# The mid-implement fixture additionally carries 02-analysis/attachments/*.png
+# (the figures its Results embed), extracted the same way into
+# .../02-analysis/attachments/; analysis code/data files are not rendered by
+# the export and are omitted. Current pins: after-planning = de25a122,
+# mid-implement = 805a247e.
 #
 # The showcase framing/quickstart pages link to the three showcase exports by
 # relative basename, so they must sit beside index.html; --doc-local-link keeps
