@@ -12,7 +12,7 @@
 Convert PDF to Markdown using Mistral OCR API.
 
 Usage:
-    python convert_pdf_to_markdown.py <input.pdf> <output.md> [--pages "1-5"]
+    python convert_pdf_to_markdown.py <input.pdf> <output-target> [--pages "1-5"]
 """
 
 import argparse
@@ -220,7 +220,7 @@ def convert_pdf_to_markdown(pdf_path, output_path, page_selection=None):
 
     Args:
         pdf_path: Path to input PDF
-        output_path: Path to output markdown file
+        output_path: Path to output markdown file or conversion directory
         page_selection: Optional page selection string
     """
     pdf_path = Path(pdf_path)
@@ -273,13 +273,13 @@ def main():
         description="Convert PDF to Markdown using Mistral OCR API"
     )
     parser.add_argument("input_pdf", help="Input PDF file path")
-    parser.add_argument("output_md", help="Output Markdown file path")
+    parser.add_argument("output_target", help="Output markdown path or conversion directory")
     parser.add_argument("--pages", help='Page selection: "1,3,5" or "1-5"', default=None)
 
     args = parser.parse_args()
 
     try:
-        convert_pdf_to_markdown(args.input_pdf, args.output_md, args.pages)
+        convert_pdf_to_markdown(args.input_pdf, args.output_target, args.pages)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
