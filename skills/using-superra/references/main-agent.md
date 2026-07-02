@@ -15,7 +15,7 @@ There is no durable workflow-stage to look up. The frontmatter field set is clos
 
 - **Tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix.
 
-On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`task-tree/references/task-file-contract.md` §status owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
+On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`superplan/references/task-tree-design.md` §Objective rewrites on scope expansion owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
 
 ## Changes of the Task Tree
 
@@ -23,7 +23,13 @@ When the task tree changes materially — a task added, removed, or restructured
 
 ## Surfacing the Live Dashboard
 
-After any action that changes what the tree shows the researcher — a structural or material edit (add / remove / move / replan / update a task), a status transition that completes a stage, or maturation / consolidation — give the user the affected task's live URL so they can watch it update, using the deep-link scheme from `superRA:task-tree` §Reading the Tree. `<port>` is from the dashboard-launch line in §Session Start Actions above.
+After any action that changes what the tree shows the researcher — a structural or material edit (add / remove / move / replan / update a task), a status transition that completes a stage, or maturation / consolidation — give the user the affected task's live URL so they can watch it update:
+
+```
+http://localhost:<port>/?wt=<worktree-basename>#/<task-path>
+```
+
+`<port>` is from the launch line in §Session Start Actions; always include `?wt=<worktree-basename>` — this worktree's directory name (`basename` of the worktree root); `<task-path>` is the `superra task read` locator (no `superRA/` prefix, empty for the tree root).
 
 ## Proceeding and Pausing
 

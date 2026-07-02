@@ -99,6 +99,36 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
+## Agent Load Surface
+
+What each agent loads in a session. This section documents the architecture for contributors auditing instruction weight; the **Skill-Load Manifest in `using-superra` remains the authoritative runtime map** — change behavior there, not here. "Mandatory" = required by the workflow, a frontmatter autoload, or a hook; "typical" = most sessions, conditional on the work.
+
+**Main agent (orchestrator):**
+
+| Load | When | Weight |
+|---|---|---|
+| `using-superra` + `references/main-agent.md` | session start (hook-reminded on any superRA mention) | Mandatory |
+| `report-in-markdown` | with `using-superra` — the always-loaded pair | Mandatory |
+| Phase workflow skill (`superplan` / `superimplement` / `superintegrate`) | phase entry | Mandatory |
+| `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` is ungated — it instructs the load at its one dispatch point) | Mandatory when dispatching |
+| One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
+| `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |
+| Domain skill(s) per the manifest | when the work touches that domain | Typical |
+| `superplan/references/task-tree-design.md` | planning, replan, consolidation screening | Typical |
+| `agent-orchestration/references/parallel-dispatch.md` | only when parallel-dispatching or isolating a worktree | On demand |
+
+**Dispatched subagent (implementer / reviewer):**
+
+| Load | How | Weight |
+|---|---|---|
+| Role spec (`agents/implementer.md` / `agents/reviewer.md`) | `subagent_type` at dispatch | Mandatory |
+| `using-superra` + `report-in-markdown` | frontmatter `skills:` autoload in Claude Code; role-body load instruction in Codex | Mandatory |
+| Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
+| Domain skill(s) per the manifest | manifest | Typical |
+| Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |
+
+Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contract.md`, or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role spec, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `agent-orchestration` is never subagent-loaded.
+
 ## Skill Authoring Guidelines
 
 - Load `skill-creator` before editing any `skills/*/SKILL.md`.

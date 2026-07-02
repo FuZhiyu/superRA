@@ -122,4 +122,4 @@ The same protocol (survey, classify, propose, approve, execute atomically) appli
 
 **Standalone:** The user asks to clean up the tree. The consolidator runs every step itself — survey, author the proposal, get approval, execute.
 
-**During integration:** `superintegrate` §Mature & Consolidate owns the choreography — it screens the whole touched tree once after Integrate closes, drives the distillation question that always fires, records decisions as `## Revision Notes`, and dispatches an implementer who applies the actions and mechanics defined here. The implementer executes the structural fold and the `## Results` altitude together on final results.
+**During integration:** `superintegrate/references/mature-consolidate.md` owns the choreography — it screens the whole touched tree once after Integrate closes, drives the distillation question that always fires, records decisions as `## Revision Notes`, and dispatches an implementer who applies the actions and mechanics defined here. The implementer executes the structural fold and the `## Results` altitude together on final results.

@@ -640,7 +640,8 @@ run_s4() {
 # S5 — after using-superra loads, retry denied by ensure-agent-orchestration.
 # This is inherently a continuation of S4's retry loop. We assert that at
 # least one PreToolUse hook_response in the run names superRA:agent-orchestration
-# in its deny reason.
+# in its deny reason. The probe uses superimplement: superplan is
+# intentionally ungated by ensure-agent-orchestration.
 run_s5() {
   local name="S5 ensure-agent-orchestration denies after using-superra loads"
   local cwd sid out
@@ -651,7 +652,7 @@ run_s5() {
   # skill without loading agent-orchestration. The ensure-agent-orchestration
   # hook should deny the second call.
   local sys_prompt
-  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superplan") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
+  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superimplement") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
   run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
     --append-system-prompt "$sys_prompt" \

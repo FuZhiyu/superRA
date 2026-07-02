@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# PreToolUse hook: hard-gate the three superRA phase skills'
-# (superRA:superplan, superRA:superimplement, superRA:superintegrate)
-# Skill calls on superRA:agent-orchestration being loaded first.
+# PreToolUse hook: hard-gate the two dispatching superRA phase skills'
+# (superRA:superimplement, superRA:superintegrate) Skill calls on
+# superRA:agent-orchestration being loaded first. superRA:superplan is
+# intentionally ungated — at quick/standard depth it dispatches nothing;
+# its SKILL.md instructs the load at its one dispatch point (§Agent Review).
 #
 # Fires on every PreToolUse event. Only acts when:
 #   tool_name == "Skill" AND
-#   tool_input.skill in {superRA:superplan,
-#                        superRA:superimplement,
+#   tool_input.skill in {superRA:superimplement,
 #                        superRA:superintegrate}
 # and the session transcript does NOT already show a Skill invocation
 # for superRA:agent-orchestration. In that case the hook emits a
@@ -18,9 +19,9 @@
 #
 # Test vectors (see tests/hooks/test-ensure-agent-orchestration.sh):
 #   V1  tool_name="Bash"                                     -> {}
-#   V2  skill="superRA:handoff-doc"                          -> {}
-#   V3  skill="superRA:superplan", not loaded        -> deny
-#   V4  skill="superRA:superplan", already loaded    -> {}
+#   V2  skill="superRA:handoff-doc" or "superRA:superplan"   -> {}
+#   V3  skill="superRA:superimplement", not loaded           -> deny
+#   V4  skill="superRA:superimplement", already loaded       -> {}
 #   V5  transcript_path empty / nonexistent                  -> {}
 #   V6  deny payload is valid JSON with round-tripping reason
 
@@ -74,9 +75,9 @@ if [ "$tool_name" != "Skill" ]; then
   exit 0
 fi
 
-# Fast path: only act on the three workflow skills.
+# Fast path: only act on the two dispatching workflow skills.
 case "$skill" in
-  superRA:superplan|superRA:superimplement|superRA:superintegrate)
+  superRA:superimplement|superRA:superintegrate)
     ;;
   *)
     printf '{}\n'

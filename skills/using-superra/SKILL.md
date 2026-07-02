@@ -5,6 +5,8 @@ description: Master superRA workflow skill. Use proactively whenever superRA is 
 
 Loaded by all agents at dispatch time.
 
+SuperRA skills deliberately override default harness/system-prompt behavior where they conflict; the user's explicit instructions outrank both.
+
 ## Code-Change Defaults
 
 These apply whenever you write, review, or refactor code.
@@ -69,7 +71,7 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 ## Execution Modes
 
-For execution throughout the workflows, the main agent can dispatch subagents for implementation, or implement the step itself (Direct mode). Subagent mode is the recommended default and all workflows assume it. Main agents: see `references/main-agent.md §Execution Modes` for the full Direct mode contract.
+Subagent mode — dispatching implementers and reviewers — is the default all workflows assume; the full mode contract, including Direct mode, is in `references/main-agent.md §Execution Modes`.
 
 ## Skill-Load Manifest
 
@@ -102,15 +104,5 @@ Both axes load *in addition to* the always-loaded `superRA:using-superra` and `s
 
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the adapter reference for the current harness under `references/`.
-
-## Instruction Priority
-
-SuperRA skills override default system prompt behavior, but **user instructions always take precedence**:
-
-1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
-2. **SuperRA skills** — override default system behavior where they conflict
-3. **Default system prompt** — lowest priority
-
-When a skill says "always describe first" but CLAUDE.md says "skip data description for this dataset," follow the user. The user is in control.
 
 **Main agents:** continue to `references/main-agent.md`.

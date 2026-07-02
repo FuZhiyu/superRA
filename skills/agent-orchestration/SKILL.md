@@ -43,38 +43,13 @@ One agent owns one task. Use when the task needs deep context (cross-file grep, 
 
 ### Model Tier Selection
 
-Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex).
-
-**Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
-
-- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what the objective says.
-- **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
-- **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
-- **Heavy context synthesis.** Many files/skills must be reconciled in one head.
-
-For Claude agents, Fable is reserved for the most challenging, expensive tasks; use it only when the task has substantial unknowns or very high complexity.
-
-These are defaults, not rules. Use your discretion and honor any explicit user preference.
+Default to the medium tier (Sonnet in Claude Code, medium thinking in Codex). Step up (Opus / deep thinking) when any of these apply: the spec emerges mid-task rather than from the objective; silent-error risk is high (results-bearing code where a wrong output ships without obvious failure); the dispatch is an adversarial first-pass review (lower-tier agents over-comply; narrow re-review of a cited fix stays medium); or heavy context synthesis reconciles many files/skills in one head. Fable is reserved for the most challenging, expensive tasks. These are defaults, not rules — honor any explicit user preference.
 
 ---
 
 ## Parallelization and Worktree Isolation
 
-Parallel dispatch is worthwhile for independent tasks or reviewers covering disjoint work. Tasks with all `Depends on:` lines satisfied and no shared mutable state are natural candidates. **Prefer background dispatch.**
-
-Claude Code: dispatch role agents fire-and-return — never assign a `name:` to a `superRA:implementer` / `superRA:reviewer`. A named `Agent` call silently drops the `subagent_type` role spec, so the agent comes up generic.
-
-Parallel agents **must** run in separate worktrees, one per agent, created before dispatch. The branch name carries a `/parallel/` infix (`<current-branch>-agent/parallel/<slug>`) so the `merge-guard` hook exempts the source ref on merge-back. Create, place, and remove worktrees per `references/worktree-harness-fallback.md`. In Claude Code, do **not** use the `Agent` tool's `isolation: "worktree"` parameter — it branches off main's HEAD, so the subagent cannot see in-flight state; branch off the current branch instead.
-
-Pass the absolute worktree path via the dispatch `Worktree:` field, plus this `Additionally:` steering:
-
-> *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
-
-**Seeding data in.** Use `worktree-data-sync` in `--mode seed`. **Always pass `--from "$(pwd)"` (or an explicit path)** — `sync_worktree_data.py`'s `--from` default points at the main worktree, not the orchestrator's analysis worktree.
-
-**Harvest-out and conflicts.** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Task boundaries are set ex-ante, so parallel branches are mechanically disjoint and typically merge cleanly. Resolve trivial adjacent conflicts inline; escalate material ones to the researcher.
-
-Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in the task tree — git (`git worktree list`, `git branch`) is the source of truth.
+Before dispatching agents in parallel or isolating an agent in its own worktree, load `references/parallel-dispatch.md` — parallel agents require per-agent worktrees, and the seeding and harvest rules live there.
 
 ---
 
@@ -84,9 +59,11 @@ Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` s
 
 Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or task content. Never include `Work from:` — cwd is implicit.
 
+Claude Code: dispatch role agents fire-and-return — never assign a `name:` to a `superRA:implementer` / `superRA:reviewer`. A named `Agent` call silently drops the `subagent_type` role spec, so the agent comes up generic.
+
 Use a bundle only for same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent. Keep dependent siblings out of the same implementation bundle unless the upstream task is already `approved`; `depends_on` sequences tasks whose outputs or findings are prerequisites.
 
-At the dispatch boundary, parent objectives are inherited shared context. Dependency status does not inject sibling results; when a downstream task needs an upstream finding, output, sample, variable, or decision, dispatch steering or the downstream objective names the approved dependency `## Results` to read.
+At the dispatch boundary, parent objectives are inherited shared context; sibling results are not injected. When a downstream task consumes an upstream result, dispatch steering or the downstream objective names the approved dependency `## Results` to read.
 
 **Implementer:**
 ```

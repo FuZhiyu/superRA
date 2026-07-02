@@ -4,8 +4,7 @@
 
 When the user invokes `superRA`, a `superRA:*workflow` skill, or
 `superRA:agent-orchestration`, treat that as an explicit user preference
-for the named-agent workflow in Codex. Under
-`superRA:using-superra` §Instruction Priority, that user choice outranks
+for the named-agent workflow in Codex; that user choice outranks
 Codex's generic default caution about spawning agents.
 
 - When a workflow step says to dispatch an implementer or reviewer, spawn

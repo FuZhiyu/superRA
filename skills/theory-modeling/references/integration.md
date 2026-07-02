@@ -99,14 +99,14 @@ Three coherence layers, each with its own authority:
 1. **Notation pre-flight against the canonical Notation Conventions table and prior task ledgers.** For each symbol in the current task, classify:
    - **Canonical** — already in the canonical Notation Conventions table; reuse.
    - **Prior-task-promoted** — in a prior task's ledger naming the same object; reuse and cite.
-   - **Genuinely new** — names an object no prior surface has named; log a current-task ledger entry per Gate 1, candidate for promotion per [skills/superimplement/SKILL.md:124](../../superimplement/SKILL.md#L124).
+   - **Genuinely new** — names an object no prior surface has named; log a current-task ledger entry per Gate 1, candidate for promotion per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114).
    - **Local duplicate** — names an object an existing canonical or prior-task symbol already names → flag.
 2. **Prior-result pre-flight.** For each derived equation or named statement, search prior tasks for a name match (a prior lemma now re-derived under a different name) or a content match (a prior displayed equation algebraically equivalent under canonical notation) → flag if found.
 3. **Prose integration pass.** Re-read the section immediately preceding the new task's section and compare terminology, assumption phrasing, register, and notation usage. Style breaks at the join → flag.
 
 ### Checklist
 
-- `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a Step 4 promotion candidate (per [skills/superimplement/SKILL.md:124](../../superimplement/SKILL.md#L124)). Local duplicates → REVISE — replace with the upstream symbol and document the rename if relevant.
+- `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a Step 4 promotion candidate (per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114)). Local duplicates → REVISE — replace with the upstream symbol and document the rename if relevant.
 - `[BLOCKING]` **Prior-result pre-flight.** Equivalent equations and named statements established in prior tasks are cited and reused, not re-derived. Specializations of a prior result state the relationship explicitly ("Lemma 2.3 specialized to the symmetric case yields …").
 - `[BLOCKING]` **Prose-integration check.** Terminology, assumption phrasing, register, and notation conventions match the surrounding sections. Style breaks at section transitions are REVISE.
 - `[BLOCKING]` **Document-code consistency.** If the model feeds papers, slides, notes, or downstream artifacts in the repo, numerical and methodological inconsistencies between the refactored work and those artifacts are reconciled or flagged in the task's `## Results` when reconciliation is out of scope.
@@ -132,7 +132,7 @@ Diff the pre-refactor and post-refactor versions of every modified artifact. For
 - `[BLOCKING]` **Verification checks survive.** Substitution checks, limiting cases, and simple numerical examples from the original work are present in the refactored code or notes and were rerun successfully.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored work; failures are adjudicated per `references/integrate-drift-tests.md`.
 - `[BLOCKING]` **Rendered markdown/LaTeX matches the refactored code.** Equation blocks, symbols, and case labels match the live derivation and numerical outputs.
-- `[BLOCKING]` **The canonical Notation Conventions table contains only user-confirmed promotions** (per [skills/superimplement/SKILL.md:124](../../superimplement/SKILL.md#L124)). Orphan entries — symbols added to the canonical table without a logged user confirmation — are REVISE.
+- `[BLOCKING]` **The canonical Notation Conventions table contains only user-confirmed promotions** (per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114)). Orphan entries — symbols added to the canonical table without a logged user confirmation — are REVISE.
 
 ### Utility reuse and documented deviations
 

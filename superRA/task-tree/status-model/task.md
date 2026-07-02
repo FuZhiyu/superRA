@@ -17,7 +17,7 @@ The task tree uses one status field. Older `review_status` and `integration_stat
 
 ## Design Spec
 
-Design-time record for the task status model. The living owner of the status enum and lifecycle is [`task-file-contract.md`](../../../skills/task-tree/references/task-file-contract.md) §Field-by-Field Notes, per `CLAUDE.md` §Ownership Boundaries; that file is what agents load. This spec records the design decisions made here and is the authoritative reference for the subtasks that implemented those decisions.
+Design-time record for the task status model. The living owner of the status enum and lifecycle is [`task-file-contract.md`](../../../skills/task-tree/references/task-file-contract.md) §Task Anatomy, per `CLAUDE.md` §Ownership Boundaries; that file is what agents load. This spec records the design decisions made here and is the authoritative reference for the subtasks that implemented those decisions.
 
 ### Field Definition
 

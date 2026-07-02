@@ -292,7 +292,7 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
     """Serialize a frontmatter dict back to YAML text (without --- delimiters).
 
     The frontmatter field set is closed (see
-    ``references/task-file-contract.md`` §Field-by-Field Notes): only the
+    ``references/task-file-contract.md`` §Task Anatomy): only the
     canonical fields below are serialized, so unknown keys a hand edit adds
     are dropped on the next CLI mutation.
     """

@@ -15,7 +15,7 @@ Narrow the active `task.md` frontmatter schema to the three load-bearing fields 
 ### Constraints
 
 - Editing any `skills/*/SKILL.md` requires loading `skill-creator` first and applying the root `CLAUDE.md` DRY + Necessity gate line by line.
-- The closed field set is single-sourced: the `serialize_frontmatter` docstring in `_task_io.py` points at `task-file-contract.md §Field-by-Field Notes`. Keep that pointer accurate.
+- The closed field set is single-sourced: the `serialize_frontmatter` docstring in `_task_io.py` points at `task-file-contract.md §Task Anatomy`. Keep that pointer accurate.
 
 ## Results
 

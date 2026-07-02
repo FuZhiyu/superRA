@@ -96,7 +96,7 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Parallelization and Worktree Isolation:
+When dispatching parallel agents that need isolated workspaces, follow `references/parallel-dispatch.md`:
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.

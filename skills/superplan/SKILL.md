@@ -87,7 +87,7 @@ Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree
 
 ### Task Dependencies
 
-Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes and `references/task-tree-design.md` §Parent and sibling context for semantics.
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Task Anatomy and `references/task-tree-design.md` §Parent and sibling context for semantics.
 
 Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
@@ -122,7 +122,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step:
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt.
 
 **Planning reviewer:**
 ```
@@ -153,10 +153,6 @@ Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initi
 
 At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
 
-## Retroactive Task-Tree Creation
-
-Survey existing code, outputs, and notebooks and create one task per logical unit of work done. The full workflow — including how to set status for complete vs. unreviewed work — is in `references/task-tree-design.md` §Retroactive Task-Tree Creation.
-
 ## Living Task Tree
 
 **The task tree is NOT a static spec.** Work reveals surprises; the task tree evolves in place.
@@ -167,7 +163,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 ### `superRA/` Is the Task Tracker
 
-`superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite`. Any work that is part of the project (a new task, discovered subtask, methodology check, sensitivity run, refactor pass) lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. `TodoWrite` is only a transient within-session view — it does not persist, so it cannot carry tasks or coordinate work across sessions. When the two disagree, `superRA/` is right.
+`superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite` (a transient within-session view that does not persist). Any work that is part of the project lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. When the two disagree, `superRA/` is right.
 
 ## User Feedback and Changing the Task Tree
 
@@ -190,11 +186,11 @@ When the task tree changes — details updated, tasks added/removed/restructured
 
 **Protocol:**
 
-1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
+1. **Confirm intent.** A passing remark in chat is not authorization. Ask (`AskUserQuestion`) to confirm the researcher wants the change.
 2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in a governing ancestor task that no longer matches the new tree.
-3. **Update statuses** by orchestrator judgment. Flip a directly widened `approved` task to `revise`; reset transitive downstream dependents whose inputs or assumptions shift to `not-started`. Preserve unrelated `approved` tasks.
+3. **Update statuses** by orchestrator judgment, per `references/task-tree-design.md` §Objective rewrites on scope expansion.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.
-6. **Resume.** The reset tasks reappear on `task frontier`; continue the implement loop on the affected frontier (`using-superra/references/main-agent.md` §Resuming Work).
+6. **Resume** on the affected frontier per `using-superra/references/main-agent.md` §Resuming Work.
 
 Do not resume the in-flight task before the change is committed — it is not real until then — and do not treat an invalidated milestone as license to clear unrelated approved tasks.

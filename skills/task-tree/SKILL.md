@@ -64,7 +64,7 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 > [MAJOR] Inner join used instead of left join
 ```
 
-Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Field-by-Field Notes.
+Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Task Anatomy.
 
 ## Routing — operate on the tree
 
