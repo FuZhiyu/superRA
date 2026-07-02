@@ -1,6 +1,6 @@
 ---
 title: "Zotero Add — Save Discovered Papers Locally"
-status: revise
+status: approved
 depends_on: [citation-metadata-client]
 ---
 
@@ -54,9 +54,5 @@ Three new subcommands ([zotero_tool.py](../../../skills/zotero-paper-reader/scri
 
 ### Caveats
 
-- **One stray smoke-test item** remains in the personal **My Library** (Zotero item key `6N43WVM2`, title "zotero-add SMOKE TEST (safe to delete)"). No write-scoped key is configured, and neither the read-only local `/api` nor the connector can delete, so it could not be removed programmatically — **please delete it manually in Zotero.**
+- **One stray smoke-test item** titled "zotero-add SMOKE TEST (safe to delete)" remains in the personal **My Library**. No write-scoped key is configured, and neither the read-only local `/api` nor the connector can delete, so it could not be removed programmatically — **please delete it manually in Zotero.**
 - Live cloud Web-API write is unverified (no key on this machine); it is covered only by the injected-client offline test.
-
-## Review Notes
-
-1. **CRITICAL — real personal-library data committed to the public repo.** The `## Results` → Caveats section names a real Zotero item key from the user's personal My Library ([task.md caveat](../../../superRA/literature-review/zotero-add/task.md)): the smoke-test item key is quoted verbatim in the committed task file. This repo is public; per the no-personal-data rule, no real item key (or group id/name/count/query result) may appear in any committed file. Scrub the specific item key from the caveat — keep the cleanup ask, but refer to the item only by its synthetic title (which the implementer authored) and by its My-Library location, not by its real key, e.g. "a stray smoke-test item titled 'zotero-add SMOKE TEST (safe to delete)' remains in My Library — please delete it manually." The rest of `## Results` (synthetic DOIs/titles/authors, placeholder keys `DUPKEY01`/`NEWKEY01`/etc.) is clean; only the real item key must go.
