@@ -8,7 +8,7 @@ depends_on: []
 
 Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE research workflow, its task-tree tooling and dashboard, handoff artifacts, and the domain/utility skill library. Active workstreams nest as subtrees under this root.
 
-The largest in-progress workstream is the handoff system — task tracking, planning artifacts, and human-readable visualization — whose integration history is recorded under ## Integration Notes below. Separate skill-development workstreams nest alongside it, including [zotero-skills](zotero-skills/task.md) (the MCP-free Zotero paper-reading skill, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` conversion skill), [01-add-slide-design-domain-vertical](01-add-slide-design-domain-vertical/task.md) (the slide-design domain vertical), and [showcase-analysis](showcase-analysis/task.md) (a real CAPM-vs-FF3 empirical asset-pricing study run end-to-end through the workflow to serve as the documentation showcase, wired into the docs site under [docs-site/13-real-analysis-showcase](docs-site/13-real-analysis-showcase/task.md)).
+The largest in-progress workstream is the handoff system — task tracking, planning artifacts, and human-readable visualization — whose integration history is recorded under ## Integration Notes below. Separate skill-development workstreams nest alongside it, including [zotero-skills](zotero-skills/task.md) (the MCP-free Zotero paper-reading skill, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` conversion skill), [slide-design-vertical](slide-design-vertical/task.md) (the slide-design domain vertical), and [showcase-analysis](showcase-analysis/task.md) (a real CAPM-vs-FF3 empirical asset-pricing study run end-to-end through the workflow to serve as the documentation showcase, wired into the docs site under [docs-site/13-real-analysis-showcase](docs-site/13-real-analysis-showcase/task.md)).
 
 ### Conventions
 
@@ -21,7 +21,7 @@ Workstream rollup (as of 2026-06-10):
 
 - [task-tree](task-tree/task.md) — the handoff-system workstream: task-tree CLI and data layer, live SSE dashboard server, hooks, migration, and the `task-tree` skill docs. Most subtrees approved and integrated onto the trunk `better-handoff`; current round is record-repair on stale task records.
 - [zotero-skills](zotero-skills/task.md) — Zotero paper-reading, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` skill; landed via PRs #31/#33.
-- [01-add-slide-design-domain-vertical](01-add-slide-design-domain-vertical/task.md) — slide-design domain vertical with audience-context discipline, Beamer starter assets, layout-triage script, discovery-surface wiring, and trigger tests; landed via PR #35 and synced from `origin/main`.
+- [slide-design-vertical](slide-design-vertical/task.md) — slide-design domain vertical with audience-context discipline, Beamer starter assets, layout-triage script, discovery-surface wiring, and trigger tests; landed via PR #35 and synced from `origin/main`.
 - [sync-better-handoff](sync-better-handoff/task.md) — freshness re-sync of trunk `better-handoff` (42 commits) into this doc-redesign branch: merge all incoming skill/hook/test/code changes, then fold the post-fork features (slide-design vertical, writing deep-review, the `using-superra` case fix) into the redesigned doc IA.
 - Closed integrations are listed one line each under ## Integration Notes, linking down to the per-task records that carry full detail.
 
