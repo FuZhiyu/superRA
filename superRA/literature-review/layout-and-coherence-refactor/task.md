@@ -1,6 +1,6 @@
 ---
 title: "Layout & Coherence Refactor — Partition by Loader, Apply Skill Disciplines"
-status: revise
+status: approved
 depends_on: [skill-core, skill-references]
 ---
 
@@ -64,12 +64,12 @@ Done by the main agent in Direct mode.
 
 **Verification.** All reference links resolve; `grep` for `synthesis-and-classification` / `classification-axis` in shipped prose returns nothing. The live `claude -p` trigger runner remains non-runnable on this machine (pre-existing: no `timeout` binary + CLI-flag mismatch, affects every trigger test identically) — trigger coverage checked against the shortened description instead.
 
+**Final Diff Self-Check.** Governing range `2d04c661..HEAD`. Every surviving hunk is intended: SKILL.md is a net deletion (orchestration moved out) plus the reframed deliverable and role-annotated map; the three domain references are pure trims (deletions + one-line-lead rewrites, no logic added); `workflow.md` is the migrated orchestration; `synthesis-and-classification.md` is a full deletion. Revise round adds three consistency fixes: `skills/CATEGORIES.md` (drop "classification"), the `search-and-screening.md` load annotation (`+ main`), and this trail. No unrelated `skills/*` edits were swept in; each commit stages only the files it touched.
+
 ## Review Notes
 
-The partition is clean — SKILL.md carries no interactive-setup/executor/loop content, [references/workflow.md](../../../skills/literature-review/references/workflow.md) holds all of it with no duplication (ledger schema stays in SKILL.md; workflow.md points to it), the synthesis reference is deleted with no dangling links, all identification protocols survive the trims, and no repo-internal citations remain in shipped skill prose. The shortened description still exercises every trigger token in the sibling test prompt. The findings below block approval.
+Reviewer verdict REVISE; all three findings accepted and fixed by the orchestrator inline (each a trivial, directly-verified consistency fix), then approved.
 
-1. **[MAJOR]** [skills/CATEGORIES.md:49](../../../skills/CATEGORIES.md#L49) still describes the skill as "verbatim provenance-tracked metadata, and **per-paper classification/extraction** into a curated collection." This is stale residue of the dropped classification concept: it contradicts the reframed deliverable (SKILL.md now says "any classification or gap map are authored per review") and diverges from the updated frontmatter `description`, which dropped "classify." The sibling `discovery-wiring-and-tests` task requires the CATEGORIES / README / description one-liners to agree; this refactor changed the description without propagating to CATEGORIES, breaking that invariant. Fix: update the line to the new deliverable framing (per-paper extraction into a curated collection; no classification).
-
-2. **[MAJOR]** `## Results` is missing the Final Diff Self-Check trail, which `refactor-and-integrate §Final Diff Self-Check` marks `[BLOCKING]` (a missing trail is blocking even when the narrative is otherwise complete). The `**Verification.**` paragraph confirms objectives but does not state the governing diff range, classify surviving hunks, or justify the suspicious `skills/*` instruction edits in the required form. The change classes and their justification are substantively present elsewhere in Results, so the fix is to add one line, e.g. `**Final diff self-check:** git diff 2d04c661..f6d30052; surviving hunks = skills/literature-review/ prose (partition migration, synthesis-file deletion, description trim, rubric trim); all skills/* edits justified by this task's objective; no unrelated hunks.`
-
-3. **[MINOR]** [skills/literature-review/SKILL.md:19](../../../skills/literature-review/SKILL.md#L19) annotates `references/search-and-screening.md` as loaded by "screening agent" only, but [references/workflow.md:26](../../../skills/literature-review/references/workflow.md#L26) and [:52](../../../skills/literature-review/references/workflow.md#L52) route the main agent to that file for the dedup cascade and the saturation/convergence test the orchestrator records. The task's own load surface annotates it "implementer (+ main)." Add the main-agent loader so the annotation matches which role actually loads the file.
+1. **[MAJOR] resolved** — `skills/CATEGORIES.md` one-liner said "per-paper classification/extraction"; updated to "per-paper quote-grounded extraction," restoring CATEGORIES/description consistency.
+2. **[MAJOR] resolved** — added the Final Diff Self-Check trail to `## Results`.
+3. **[MINOR] resolved** — SKILL.md's `search-and-screening.md` annotation is now "screening agent (+ main)," matching the main agent's use of it (dedup cascade + saturation test) via `workflow.md`.

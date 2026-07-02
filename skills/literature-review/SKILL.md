@@ -16,7 +16,7 @@ Load per workflow point, not all at once. The main agent orchestrates from `work
 | Reference | Loaded by | Load when |
 |---|---|---|
 | `references/workflow.md` | main agent | orchestrating a review — interactive setup, the loop-until-dry fan-out, and the executor. |
-| `references/search-and-screening.md` | screening agent | running discovery — snowball (backward citation BFS + forward multi-lens web sweep), screen-first triage, the dedup cascade, and the stopping/convergence judgment. |
+| `references/search-and-screening.md` | screening agent (+ main) | running discovery — snowball (backward citation BFS + forward multi-lens web sweep), screen-first triage, the dedup cascade, and the stopping/convergence judgment. |
 | `references/econ-corpus.md` | screening agent | judging coverage and quality — working-paper-first sourcing (SSRN / NBER / RePEc), published-version metadata with the WP-divergence flag, JEL codes, and weighting by outlet tier + identification strategy. |
 | `references/grounding-and-extraction.md` | extracting agent | extracting from a paper — DOI resolution before trusting a cite, the quote-grounded concept matrix, and honest null vs "not reported". |
 | `references/citation-client.md` | main agent + agents | calling the bundled citation-graph + metadata client — subcommands (`search`, `references`, `citations`, `metadata`, `dedup`, `health`) and their JSON shapes. |
