@@ -135,7 +135,7 @@ _superra_resolve_source() {
   # 5. GitHub fallback (the only pin; needs network on first clone). Fail fast
   #    while the pinned ref does not yet carry skills/task-tree — cloning the
   #    whole repo only to fail the cli.py test is pure waste.
-  if [ "0" = "1" ]; then
+  if [ "1" = "1" ]; then
     printf 'GIT:%s@%s\n' "https://github.com/FuZhiyu/superRA.git" "main"
     return 0
   fi

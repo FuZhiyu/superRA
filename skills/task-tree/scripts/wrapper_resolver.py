@@ -66,17 +66,16 @@ LEGACY_SKILL_SUBDIR = "skills/task-system"
 GITHUB_SUBDIR = CANONICAL_SKILL_SUBDIR
 # Pin lives only here. It may lag the installed version; it is a last resort
 # used only when no local checkout and no installed plugin cache exist.
-# Deliberately tracks `main`, the eventual public default branch: this work
-# merges there later. Until then `main` does not yet carry skills/task-tree,
-# which is acceptable because the fallback only fires when no local install
-# exists at all. Do NOT repoint to a feature/trunk branch.
+# Deliberately tracks `main`, the public default branch. Do NOT repoint to a
+# feature/trunk branch.
 GITHUB_REF = "main"
 
-# Flip to "1" once GITHUB_REF actually carries CANONICAL_SKILL_SUBDIR. Until
-# then the GitHub branch fails fast (no shallow clone) rather than cloning the
-# whole repo only to fail the cli.py existence test — the clone is pure waste
-# while the pinned ref lacks the subdir.
-GITHUB_REF_HAS_SUBDIR = "0"
+# "1" while GITHUB_REF carries CANONICAL_SKILL_SUBDIR (it does since the
+# task-tree work merged to main). If the pin is ever repointed to a ref that
+# lacks the subdir, flip back to "0" so the GitHub branch fails fast (no
+# shallow clone) rather than cloning the whole repo only to fail the cli.py
+# existence test.
+GITHUB_REF_HAS_SUBDIR = "1"
 
 # TTL (seconds) gating the refresh `git fetch` once a clone exists. Without it,
 # every `superra` call and every PostToolUse hook fire in fallback mode is a

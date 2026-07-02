@@ -620,16 +620,16 @@ def test_resolver_fails_fast_when_no_source_and_pin_lacks_subdir(
     tmp_path: Path,
     resolver_env: dict[str, str],
 ) -> None:
-    # While GITHUB_REF_HAS_SUBDIR is "0" the pinned ref does not yet carry
-    # skills/task-tree, so the GitHub branch fails fast (no `GIT:` spec, no
-    # shallow clone) rather than cloning the whole repo only to fail the cli.py
-    # existence test.
+    # With GITHUB_REF_HAS_SUBDIR forced to "0" (a pinned ref that does not
+    # carry skills/task-tree), the GitHub branch fails fast (no `GIT:` spec,
+    # no shallow clone) rather than cloning the whole repo only to fail the
+    # cli.py existence test.
     if shutil.which("bash") is None:
         pytest.skip("bash required")
-    assert wrapper_resolver.GITHUB_REF_HAS_SUBDIR == "0"
+    snippet = _render_resolver_with_subdir_flag("0")
 
     result = subprocess.run(
-        ["bash", "-c", _resolver_probe_script()],
+        ["bash", "-c", "set -uo pipefail\n" + snippet + "\n_superra_resolve_source\n"],
         env=resolver_env,
         cwd=str(tmp_path),
         capture_output=True,
