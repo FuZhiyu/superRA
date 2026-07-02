@@ -26,17 +26,28 @@ uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.
 # Convert specific pages
 uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.md --pages "1-5"
 uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.md --pages "1,3,5"
+
+# Reconvert every PDF in a directory in place (re-OCRs; requires the API key).
+# For each <name>.pdf it writes <name>.md and figures under images/<name>/.
+# Use to repair a collection whose figures were flattened by an older version.
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py --reconvert-dir path/to/collection
 ```
 
 ## Output Structure
 
+Extracted images are namespaced **per paper** in an `images/<md-stem>/` subfolder named after the output `.md` filename stem, so converting several papers into one output directory never collides on identically-numbered `img-N.jpeg` files:
+
 ```
 Output/PDFConversions/
-├── document.md          # Markdown with text and image references
+├── paper_alpha.md       # references images/paper_alpha/img-N.jpeg
+├── paper_beta.md        # references images/paper_beta/img-N.jpeg
 └── images/
-    ├── img-0.jpeg      # Extracted images
-    ├── img-1.jpeg
-    └── ...
+    ├── paper_alpha/
+    │   ├── img-0.jpeg
+    │   └── img-1.jpeg
+    └── paper_beta/
+        ├── img-0.jpeg
+        └── ...
 ```
 
 ## Usage in Code
@@ -60,10 +71,10 @@ print(result.stdout)
 ## Key Features
 
 - **Markdown formatting**: Preserves headers, lists, and structure
-- **Image extraction**: Saves images to `images/` subfolder automatically
+- **Image extraction**: Saves images to a per-paper `images/<md-stem>/` subfolder automatically
 - **Page selection**: Extract specific pages or ranges
 - **Scanned PDF support**: True OCR capability for image-based PDFs
-- **Relative paths**: Image references use `![...](images/img-X.jpeg)`
+- **Relative paths**: Image references use `![...](images/<md-stem>/img-X.jpeg)`
 
 ## Requirements
 
@@ -127,8 +138,8 @@ Warning: Page 100 out of range, skipping
 
 ## Notes
 
-- Images are saved as JPEG files in `images/` subfolder
-- Markdown image references are automatically updated to `images/img-X.jpeg`
+- Images are saved as JPEG files in a per-paper `images/<md-stem>/` subfolder
+- Markdown image references are automatically updated to `images/<md-stem>/img-X.jpeg`
 - Large PDFs may take longer to process due to API limits
 - For simple text extraction without OCR, consider using the `pdf` skill instead
 - Scanned PDFs benefit most from this skill's OCR capability

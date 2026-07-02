@@ -1,6 +1,6 @@
 ---
 title: "Fix per-paper image namespacing in mistral-pdf-to-markdown"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -29,3 +29,24 @@ The damaged research collection (already-converted papers whose figures collided
 
 ## Planner Guidance
 Subfolder-by-stem (`images/<stem>/img-N.jpeg`) is the chosen scheme over a flat filename prefix — it keeps one paper's figures in one directory and reads cleanly. Keep the change surgical: the two edit sites in `convert_pdf_to_markdown.py` plus the path-rewrite string. The reconvert helper (deliverable 2) is droppable if the researcher decides on a skill-fix-only scope — it is additive and the core collision fix stands without it.
+
+## Results
+
+The collision bug is fixed by namespacing every conversion's figures under a per-paper subfolder keyed on the output `.md` filename stem. All four deliverables land.
+
+**1 — Per-paper image layout ([convert_pdf_to_markdown.py](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py)).** Two edit sites, as scoped:
+- `save_images()` ([scripts/convert_pdf_to_markdown.py:162-166](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py#L162-L166)) now writes to `output_path.parent / "images" / output_path.stem` instead of the shared `output_dir / "images"`. The `img-N` numbering is unchanged — it is now safe because each paper's counter lives in its own directory.
+- The in-markdown rewrite ([scripts/convert_pdf_to_markdown.py:231-234](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py#L231-L234)) changed from the flat `](img- → ](images/img-` to `](img- → ](images/<stem>/img-`, so references match the on-disk layout.
+
+**2 — Reconvert helper ([scripts/convert_pdf_to_markdown.py:241-259](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py#L241-L259)).** New `reconvert_dir()` plus a `--reconvert-dir <dir>` CLI flag. It iterates `*.pdf` in the directory and re-OCRs each to `<name>.md` alongside it under the new per-paper layout, repairing a collection whose figures were flattened by the old version. It re-calls the Mistral API (key required), so the researcher runs it on their own PDFs. The positional `input_pdf`/`output_md` args are now optional (`nargs="?"`); `main()` errors if neither a reconvert dir nor the pair is supplied.
+
+**3 — Documentation ([SKILL.md](../../skills/mistral-pdf-to-markdown/SKILL.md)).** Output Structure now shows the `images/<md-stem>/` tree with two example papers side by side; Key Features, Notes, and Quick Start updated to the per-paper path form; a `--reconvert-dir` invocation added to Quick Start.
+
+**4 — Offline regression test ([scripts/test_image_namespacing.py](../../skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py)).** Converts two synthetic papers (`paper_alpha`, 2 figures; `paper_beta`, 3 figures) into one output directory and asserts: each paper's images land under its own `images/<stem>/` subfolder; nothing lands in a flat `images/*.jpeg`; the full image paths are disjoint across papers even though filenames overlap (`img-0.jpeg` in both); each `.md` references only its own subfolder with no surviving `](img-` flat reference; every referenced path resolves to a file on disk. It stubs `mistralai`, `pypdf`, and `dotenv` in `sys.modules` before import and monkeypatches `load_api_key`/`extract_pages`/`process_with_mistral`, so it runs with no Mistral key, no network, and no third-party deps. Uses synthetic OCR data only (a 1x1 JPEG, placeholder stems) — no real library data.
+
+**Verification.** `python3 test_image_namespacing.py` exits 0: `OK: per-paper image namespacing holds; no overwrite, no dangling refs`. A separate offline smoke test drove `reconvert_dir` on a one-PDF directory and confirmed `images/onlypaper/img-{0,1}.jpeg` plus the matching `](images/onlypaper/img-` reference. `python3 -m py_compile` passes on both scripts.
+
+**Notes / caveats.**
+- `skill-creator` is named in the task Context but is not installed in this environment, so it could not be loaded before the `SKILL.md` edit. The edit is a minimal documentation update following the repo's skill-authoring discipline (`CLAUDE.md`); flagging for the reviewer in case the skill is expected to be present.
+- The single-conversion path is unchanged in shape (same `img-N` numbering, same rewrite mechanism) — only the directory prefix moved — so existing single-paper usage still works; the test's per-file conversions exercise that path.
+- Secret handling is untouched: the key is still read only from env / shared config / `Notes/.env` via `load_api_key()`.

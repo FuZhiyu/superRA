@@ -148,6 +148,11 @@ def save_images(ocr_response, output_path):
     """
     Extract and save images from OCR response.
 
+    Images are namespaced per paper in a subfolder named after the output
+    markdown filename stem: <output_dir>/images/<md-stem>/img-N.jpeg. This
+    keeps multiple papers converted into one output directory from colliding
+    on identically-numbered img-N files.
+
     Args:
         ocr_response: Mistral OCR response object
         output_path: Path to output markdown file
@@ -155,8 +160,8 @@ def save_images(ocr_response, output_path):
     Returns:
         Number of images saved
     """
-    output_dir = Path(output_path).parent
-    images_dir = output_dir / "images"
+    output_path = Path(output_path)
+    images_dir = output_path.parent / "images" / output_path.stem
     images_dir.mkdir(parents=True, exist_ok=True)
 
     image_count = 0
@@ -221,9 +226,11 @@ def convert_pdf_to_markdown(pdf_path, output_path, page_selection=None):
     print("Extracting images...")
     image_count = save_images(ocr_response, output_path)
 
-    # Fix image paths in markdown
+    # Fix image paths in markdown to the per-paper subfolder
     if image_count > 0:
-        markdown_content = markdown_content.replace('](img-', '](images/img-')
+        markdown_content = markdown_content.replace(
+            '](img-', f'](images/{output_path.stem}/img-'
+        )
 
     # Save markdown
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -238,18 +245,55 @@ def convert_pdf_to_markdown(pdf_path, output_path, page_selection=None):
     print(f"  Images: {image_count}")
 
 
+def reconvert_dir(input_dir, page_selection=None):
+    """
+    Reconvert every PDF in a directory into the per-paper image layout.
+
+    For each `<name>.pdf` in `input_dir`, re-OCRs and writes `<name>.md`
+    alongside it, placing figures under `images/<name>/`. Use this to repair a
+    collection whose figures were flattened into a shared `images/` folder by
+    an earlier version of this tool. Re-OCR is the only image source, so this
+    re-calls the Mistral API (key required, same as a single conversion).
+    """
+    input_dir = Path(input_dir)
+    pdfs = sorted(input_dir.glob("*.pdf"))
+    if not pdfs:
+        print(f"No PDF files found in {input_dir}")
+        return
+
+    print(f"Reconverting {len(pdfs)} PDF(s) in {input_dir}")
+    for pdf_path in pdfs:
+        output_path = pdf_path.with_suffix(".md")
+        convert_pdf_to_markdown(pdf_path, output_path, page_selection)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Convert PDF to Markdown using Mistral OCR API"
     )
-    parser.add_argument("input_pdf", help="Input PDF file path")
-    parser.add_argument("output_md", help="Output Markdown file path")
+    parser.add_argument("input_pdf", nargs="?", help="Input PDF file path")
+    parser.add_argument("output_md", nargs="?", help="Output Markdown file path")
     parser.add_argument("--pages", help='Page selection: "1,3,5" or "1-5"', default=None)
+    parser.add_argument(
+        "--reconvert-dir",
+        help="Reconvert every PDF in this directory in place, writing "
+             "<name>.md and figures under images/<name>/ to repair a "
+             "collection whose figures were flattened by an earlier version",
+        default=None,
+    )
 
     args = parser.parse_args()
 
     try:
-        convert_pdf_to_markdown(args.input_pdf, args.output_md, args.pages)
+        if args.reconvert_dir:
+            reconvert_dir(args.reconvert_dir, args.pages)
+        else:
+            if not args.input_pdf or not args.output_md:
+                parser.error(
+                    "input_pdf and output_md are required unless "
+                    "--reconvert-dir is given"
+                )
+            convert_pdf_to_markdown(args.input_pdf, args.output_md, args.pages)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
