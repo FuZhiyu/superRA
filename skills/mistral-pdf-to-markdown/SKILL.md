@@ -30,14 +30,23 @@ uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.
 
 ## Output Structure
 
+Each conversion is written as a self-contained folder. Passing `Output/PDFConversions/paper_alpha.md` creates `Output/PDFConversions/paper_alpha/paper_alpha.md`, with extracted images beside it under `images/`:
+
 ```
 Output/PDFConversions/
-├── document.md          # Markdown with text and image references
-└── images/
-    ├── img-0.jpeg      # Extracted images
-    ├── img-1.jpeg
-    └── ...
+├── paper_alpha/
+│   ├── paper_alpha.md   # references images/img-N.jpeg
+│   └── images/
+│       ├── img-0.jpeg
+│       └── img-1.jpeg
+└── paper_beta/
+    ├── paper_beta.md
+    └── images/
+        ├── img-0.jpeg
+        └── ...
 ```
+
+Passing an existing foldered markdown path such as `Output/PDFConversions/paper_alpha/paper_alpha.md` keeps that path. Passing a directory creates `<directory>/<input-pdf-stem>.md`.
 
 ## Usage in Code
 
@@ -60,7 +69,7 @@ print(result.stdout)
 ## Key Features
 
 - **Markdown formatting**: Preserves headers, lists, and structure
-- **Image extraction**: Saves images to `images/` subfolder automatically
+- **Image extraction**: Saves images to a conversion-local `images/` folder automatically
 - **Page selection**: Extract specific pages or ranges
 - **Scanned PDF support**: True OCR capability for image-based PDFs
 - **Relative paths**: Image references use `![...](images/img-X.jpeg)`
@@ -127,7 +136,7 @@ Warning: Page 100 out of range, skipping
 
 ## Notes
 
-- Images are saved as JPEG files in `images/` subfolder
+- Images are saved as JPEG files in the conversion folder's `images/` subfolder
 - Markdown image references are automatically updated to `images/img-X.jpeg`
 - Large PDFs may take longer to process due to API limits
 - For simple text extraction without OCR, consider using the `pdf` skill instead
