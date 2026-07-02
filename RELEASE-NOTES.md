@@ -24,7 +24,8 @@
 
 ### Release Prep
 
-- Version manifests bumped to `0.3.0` across package, Claude, Cursor, Codex, marketplace, and Gemini extension metadata via `scripts/bump-version.sh`. The minor bump (rather than a patch) marks this pre-1.0 breaking change.
+- Version manifests bumped to `0.3.0` across package, Claude, Codex, marketplace, and Gemini extension metadata via `scripts/bump-version.sh`. The minor bump (rather than a patch) marks this pre-1.0 breaking change.
+- The Cursor plugin manifest (`.cursor-plugin/plugin.json`) was removed — Cursor plugin packaging is no longer maintained. Hook scripts keep their Cursor-compatible output branches.
 
 ## [0.2.0] - 2026-05-30
 
