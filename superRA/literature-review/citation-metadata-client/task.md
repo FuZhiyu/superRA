@@ -8,7 +8,7 @@ depends_on: []
 
 Build the bundled script `skills/literature-review/scripts/` (PEP 723 / `uv run --script`, stdlib-first, modeled on `zotero-paper-reader/scripts/zotero_tool.py`'s JSON-subcommand style) that exposes the citation-graph and metadata operations the review loop needs, each emitting documented JSON:
 
-- **search** — Semantic Scholar relevance search (best ranking) and Crossref bibliographic search, with year/venue/field filters.
+- **search** — Semantic Scholar relevance search and Crossref bibliographic search, with year/venue/field filters. This is **one discovery lens, not the entry point**: front-line discovery leads with web search (an agent capability at the workflow layer) because S2/Crossref lag on the newest working papers; the client's structured search complements it with filterable, dedupable results over indexed work.
 - **references** — backward references of a paper (S2 `/paper/{id}/references`; Crossref `reference` array as a fallback, noting it is uneven and often DOI-less).
 - **citations** — forward citations of a paper (S2 `/paper/{id}/citations`) — the snowball backbone; Crossref has none, so this is S2-only, backstopped by the forward web sweep at the workflow layer.
 - **metadata** — hydrate by identifier (DOI / arXiv / S2 id): Crossref for the authoritative **published-version-of-record** record; S2/arXiv for abstracts. Returned **verbatim**.
