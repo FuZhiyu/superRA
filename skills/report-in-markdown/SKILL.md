@@ -36,10 +36,11 @@ $$
 - Use `\text{...}` for words inside math mode.
 - Prefer LaTeX math over Unicode for any expression that includes subscripts, superscripts, fractions, sums, or integrals.
 
-Two patterns render as broken output in the dashboard with no error, so the renderer cannot warn you about them:
+Three patterns render as broken output in the dashboard with no error, so the renderer cannot warn you about them:
 
 - **Blank-line-separate every display `$$` block.** Put a blank line above and below the `$$` fence lines, and none inside the block. The dashboard renders with `markdown-it-texmath` `delimiters: 'dollars'`, whose `$$` block rule cannot interrupt an open paragraph. A text line directly above the opening `$$` leaves a paragraph open, and the equation is swallowed into that paragraph instead of rendering as a standalone block.
 - **Write KaTeX-undefined operators as `\operatorname{...}`.** Operators that work in a LaTeX `.tex` document — `\diag`, `\cov`, `\var`, `\corr`, `\Cov`, `\Var`, `\E`, `\plim`, `\argmin`, `\argmax`, `\sgn`, `\tr`, `\rank` — are undefined in KaTeX and render as an error. Use `\operatorname{diag}`, `\operatorname{Cov}`, etc.
+- **Keep each inline `$…$` span on a single line.** Do not hard-wrap prose between an opening `$` and its closing `$`. The inline rule matches with `.` and no dotAll flag, so a span cannot close on a later line; a split span renders as raw literal text with visible backslashes. Escape a literal `$` in prose as `\$`.
 
 The task hook runs this same check automatically on edited `.md` files under a task root and surfaces non-blocking feedback. For standalone markdown, or when no hook ran, use the self-diagnose CLI (it only reports, never edits):
 

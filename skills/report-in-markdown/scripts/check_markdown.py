@@ -7,8 +7,9 @@
 
 Run on one or more markdown files before committing. It reports the patterns
 that silently fail to render in the dashboard (adjacent display $$ blocks,
-unbalanced $$, KaTeX-undefined operator macros). Stdlib-only, so it runs under
-`uv run --script` and a bare `python3` fallback.
+unbalanced $$, KaTeX-undefined operator macros, inline $…$ spans split across a
+line break). Stdlib-only, so it runs under `uv run --script` and a bare
+`python3` fallback.
 
     uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md ...
 

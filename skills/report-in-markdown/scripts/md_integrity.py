@@ -2,8 +2,8 @@
 
 The dashboard renders task markdown with markdown-it + markdown-it-texmath
 configured `delimiters: 'dollars'` (single source of truth: base.html, the
-`md.use(texmath, { engine: katex, delimiters: 'dollars' })` line). Two classes
-of authoring mistake render as broken output with no error:
+`md.use(texmath, { engine: katex, delimiters: 'dollars' })` line). Three
+classes of authoring mistake render as broken output with no error:
 
   1. Display `$$ … $$` blocks not blank-line separated from surrounding text.
      A non-blank text line directly above the opening `$$` leaves a paragraph
@@ -11,6 +11,11 @@ of authoring mistake render as broken output with no error:
      as a standalone display block.
   2. TeX-only operator macros (\\diag, \\cov, \\E, …) that KaTeX does not
      define and renders as an error. They must be written \\operatorname{...}.
+  3. An inline `$ … $` span split across a hard line break. The inline regex
+     matches with `.` and no dotAll flag, so a span cannot close on a later
+     line; the whole span renders as raw literal text. Detected as an odd
+     number of unescaped inline `$` on a single line (`$$` runs and `\\$`
+     currency escapes excluded before counting parity).
 
 This module is stdlib-only and importable. The detection logic lives here and
 nowhere else; both the self-diagnose CLI (check_markdown.py) and the PostToolUse
@@ -88,6 +93,29 @@ def _strip_inline_code(line: str) -> str:
     return "".join(out)
 
 
+def _inline_dollar_odd(scan: str) -> bool:
+    """True if `scan` has an odd number of unescaped inline `$` delimiters.
+
+    `scan` must already have inline `code` spans stripped. `$$` runs are
+    consumed as display markers (not inline `$`) and `\\$` escapes as literal
+    currency, so only genuine inline `$…$` delimiters count toward parity."""
+    i = 0
+    n = len(scan)
+    count = 0
+    while i < n:
+        c = scan[i]
+        if c == "\\":
+            i += 2  # skip the escaped char (\$ currency, \\ literal backslash)
+            continue
+        if c == "$":
+            if i + 1 < n and scan[i + 1] == "$":
+                i += 2  # display marker, not an inline delimiter
+                continue
+            count += 1
+        i += 1
+    return count % 2 == 1
+
+
 def check(text: str) -> list[Issue]:
     """Return render-integrity issues for `text` (a whole markdown document).
 
@@ -136,6 +164,21 @@ def check(text: str) -> list[Issue]:
                     message=(
                         f"\\{name} is undefined in KaTeX and renders as an error; "
                         f"write \\operatorname{{{name}}} instead."
+                    ),
+                )
+            )
+
+        if _inline_dollar_odd(scan):
+            issues.append(
+                Issue(
+                    line=idx + 1,
+                    rule="inline-math-line-break",
+                    message=(
+                        "inline $ span is unclosed on this line; if it "
+                        "continues on the next line the whole span renders as "
+                        "raw literal text (the inline regex cannot match across "
+                        "a newline). Keep each inline $…$ on one line, or escape "
+                        "a literal $ as \\$."
                     ),
                 )
             )

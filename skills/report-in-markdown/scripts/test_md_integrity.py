@@ -88,5 +88,44 @@ def test_macro_word_boundary_no_false_positive():
     assert [i for i in check(text) if i.rule == "tex-only-macro"] == []
 
 
+def test_inline_span_split_across_wrap_flagged():
+    # opening $ on line 1, prose hard-wraps, closing $ on line 2. Both lines
+    # carry an odd, unclosed $ — the opening line is flagged (as are any other
+    # broken lines), pointing the author at each end of the split span.
+    text = "The return $r_t = p_t -\np_{t-1}$ is defined here.\n"
+    lines = [i.line for i in check(text) if i.rule == "inline-math-line-break"]
+    assert 1 in lines
+
+
+def test_inline_span_single_line_clean():
+    text = "The return $r_t$ is defined here.\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
+def test_escaped_currency_clean():
+    text = "It costs \\$5 today and \\$10 tomorrow.\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
+def test_display_fence_not_flagged_as_inline():
+    text = "intro\n\n$$\nx = y + z\n$$\n\nafter\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
+def test_inline_display_dollars_not_flagged_as_inline():
+    text = "The identity $$x = y$$ holds.\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
+def test_inline_break_inside_code_fence_not_flagged():
+    text = "```\nThe return $r_t = p_t -\np_{t-1}$ here.\n```\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
+def test_inline_break_inside_inline_code_not_flagged():
+    text = "Write `$r_t` and close it later.\n"
+    assert [i for i in check(text) if i.rule == "inline-math-line-break"] == []
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

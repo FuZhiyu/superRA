@@ -360,18 +360,19 @@ in two parts + identification training):
   reader-experience failure points (reader does not know why $z_j$
   matters; notation lives for one detour; objective hidden;
   cancellation looks coincidental; non-canonical notation risked).
-  Closes with the hidden-logic dependency chain $\dot{\boldsymbol{\Sigma}}
-  \to \dot{\boldsymbol{\sigma}}_R \to \boldsymbol{\beta}_{P,E}$ that the
-  bad ordering walks in writing the wrong way around.
+  Closes with the hidden-logic dependency chain
+  $\dot{\boldsymbol{\Sigma}} \to \dot{\boldsymbol{\sigma}}_R \to \boldsymbol{\beta}_{P,E}$
+  that the bad ordering walks in writing the wrong way around.
 - **§Worked good pattern.** The user's objective-first rewrite rendered
-  verbatim. Starts from $\boldsymbol{\Sigma} = \boldsymbol{\sigma}_R
-  \boldsymbol{\sigma}_R^{\intercal}$, differentiates, identifies the
-  canonical return-loading column $\boldsymbol{\sigma}_R =
-  \boldsymbol{\beta}_P^{\intercal}\mathbf G$, applies the symmetry
-  cancellation $\dot{\boldsymbol{\beta}}_P^{\intercal}\mathbf G\mathbf e_g
-  = \mathbf 0$, then solves $\boldsymbol{\beta}_{P,E}$ via law of one
-  price + the $\hat E$ column of the return-loading equation +
-  state-loading market clearing, ending at
+  verbatim. Starts from
+  $\boldsymbol{\Sigma} = \boldsymbol{\sigma}_R \boldsymbol{\sigma}_R^{\intercal}$,
+  differentiates, identifies the canonical return-loading column
+  $\boldsymbol{\sigma}_R = \boldsymbol{\beta}_P^{\intercal}\mathbf G$,
+  applies the symmetry cancellation
+  $\dot{\boldsymbol{\beta}}_P^{\intercal}\mathbf G\mathbf e_g = \mathbf 0$,
+  then solves $\boldsymbol{\beta}_{P,E}$ via law of one price + the
+  $\hat E$ column of the return-loading equation + state-loading market
+  clearing, ending at
   $\boldsymbol{\beta}_{P,E} = \tfrac{1}{2}(\bar P_s,\bar P_f,\bar P_s,\bar P_f)^{\intercal}$.
   Closing paragraph names the visible dependency walk in prose so the
   reader sees why each equation appeared.
