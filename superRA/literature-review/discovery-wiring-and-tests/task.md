@@ -1,6 +1,6 @@
 ---
 title: "Discovery Wiring & Skill-Trigger Test"
-status: implemented
+status: approved
 depends_on: [skill-core, skill-references]
 ---
 
