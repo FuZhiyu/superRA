@@ -1,6 +1,6 @@
 ---
 title: "Fix per-conversion image namespacing in mistral-pdf-to-markdown"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -40,24 +40,16 @@ The damaged research collection lives in the researcher's separate project, not 
 ## Planner Guidance
 The original `images/<stem>/img-N.jpeg` design fixed collisions but left each markdown file outside its asset boundary. The revised design makes the paper folder the artifact boundary, which is easier to move and can support later section-level subdivision.
 
-## Revision Notes
-User requested a stronger artifact boundary after the draft PR: one folder per conversion, containing both markdown and images. This substantively replaces the earlier approved `images/<stem>/` layout, so the task is back at `implemented` pending re-review.
-
 ## Results
 
-Implemented the per-conversion folder layout.
+Implemented and integration-reviewed the per-conversion folder layout. A requested markdown target such as `Output/paper.md` now writes a self-contained artifact at `Output/paper/paper.md`, with images under `Output/paper/images/` and markdown references rewritten to `images/img-N.jpeg`; already-foldered markdown paths and directory targets are resolved explicitly in [convert_pdf_to_markdown.py](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py).
 
-**1 - Conversion-local output paths ([convert_pdf_to_markdown.py](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py)).**
-- `resolve_output_paths()` maps `Output/paper.md` to `Output/paper/paper.md`, keeps an already-foldered `Output/paper/paper.md`, and accepts a directory target as `<directory>/<input-pdf-stem>.md`.
-- `save_images()` now writes to the markdown file's sibling `images/` directory.
-- Markdown references are rewritten to `images/img-N.jpeg`, matching the conversion-local layout.
+The skill documentation now describes the self-contained output contract in [SKILL.md](../../skills/mistral-pdf-to-markdown/SKILL.md), and the offline regression in [test_image_namespacing.py](../../skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py) covers two papers converted under one collection directory, path-resolution variants, absence of a shared collection-level `images/` directory, and image references resolving relative to each paper's markdown file.
 
-**2 - Documentation ([SKILL.md](../../skills/mistral-pdf-to-markdown/SKILL.md)).**
-Output Structure, Key Features, and Notes now describe the self-contained folder layout and conversion-local image paths.
-
-**3 - Offline regression test ([scripts/test_image_namespacing.py](../../skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py)).**
-The test converts two synthetic papers into one collection directory and asserts: each paper gets its own folder; markdown is written inside that folder; no collection-level `images/` directory is created; duplicate `img-0.jpeg` filenames are safe because paths are foldered apart; every markdown image reference resolves relative to its own markdown file.
-
-**Verification.**
+**Validation.**
 - `uv run --with pytest python -m pytest skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py`
 - `python3 -m py_compile skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py`
+- `uv run --script skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py --help`
+- `git diff --check -- skills/mistral-pdf-to-markdown/SKILL.md skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py superRA/fix-ocr-image-namespacing/task.md`
+
+**Final diff self-check:** `git diff origin/main..HEAD`; surviving hunks are the converter output-path/layout change, matching skill documentation, an offline regression test, and this task record. The only review cleanup was aligning the CLI usage/help text with the documented output target behavior. No unrelated hunks are included in the scoped branch diff.
