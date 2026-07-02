@@ -6,77 +6,33 @@ depends_on: []
 
 ## Objective
 
-Give the placement and consolidation rules a safe, repeatable *execution* substrate so the structural moves consolidation performs are dependency-safe — `depends_on` auto-handled where the fix is lossless, clearly surfaced where it needs a human decision — and so pre-existing structural debt (narrow-root, misplacement) is detectable. Today consolidation relies on raw `mv`/`rm`, and the PostToolUse hook auto-fixes only status rollups and the dashboard — it leaves `depends_on` edges broken with a warning and never renumbers prefixes.
+Give the placement and consolidation rules a safe, repeatable *execution* substrate so the structural moves consolidation performs are dependency-safe — `depends_on` auto-handled where the fix is lossless, clearly surfaced where it needs a human decision.
 
-This is the tooling half of the placement/consolidation redesign whose rules are codified in `task-tree/planning-redesign/placement-and-update-lifecycle`. That dependency is **logical and cross-tree**, so it is not expressible as a sibling `depends_on` edge under the current sibling-only model — implement after those rules are settled so the detector encodes them. (This very limitation — that a dependency between tasks in different subtrees cannot be declared — is part of the motivation for the rewire work below.)
-
-### Scope
-
-**1. Lossless `depends_on` rewire in the hook (YAML metadata only).** Extend `skills/task-tree/scripts/task_hook.py` (and a shared helper in `_task_io.py`) so that after a mutating Bash op the hook auto-cascades the **lossless** cases, consistent with the status-rollup it already auto-writes:
+**Lossless `depends_on` rewire in the hook (YAML metadata only).** After a mutating Bash op, the PostToolUse hook auto-cascades the lossless case, consistent with the status rollup it already auto-writes:
 
 - **Same-parent rename** (`mv superRA/a/x superRA/a/y`): cascade every sibling `depends_on: x` → `y`. This is the cross-parent-refusing `task_rename.py` cascade, applied to raw `mv` by detecting the old→new slug mapping from the parsed Bash command.
-- **Delete** of a depended-on task: leave the dangling edge as a *warning*, do not silently drop it. Dropping a real dependency changes execution ordering and is closer to content loss than mechanical YAML maintenance — surface it for a human/agent decision.
-- **Cross-parent move and merge**: cannot be auto-rewired (a cross-tree edge is inexpressible in the sibling-only model) — warn, do not guess. These are handled deliberately by the consolidation prose procedure; **merge in particular stays manual** so the human controls how nuance from the combined tasks is integrated. No `task merge` command. (Cross-parent moves are handled by the shipped `task move` command, which the `cli-scripts` subtree provides as the canonical path-change mechanism; the prohibition here is on a `task merge` command only.)
+- **Delete** of a depended-on task: leave the dangling edge as a *warning*, never silently drop it — dropping a real dependency changes execution ordering and is closer to content loss than mechanical YAML maintenance.
+- **Cross-parent move and merge**: cannot be auto-rewired (a cross-tree edge is inexpressible in the sibling-only model) — warn, do not guess. Cross-parent moves use the shipped `task move` command; merge stays manual (no `task merge` command) so the human controls how nuance from the combined tasks integrates.
 
-Boundary: auto-mutate YAML metadata (`depends_on`, mirroring status), never task *content* (objectives, results). Do not auto-renumber display prefixes.
+Boundary: auto-mutate YAML metadata (`depends_on`, mirroring status), never task *content*. Do not auto-renumber display prefixes.
 
-**Document the behavior for agents (so the change is not surprising).** Wherever the hook's existing auto-behaviors are described to agents — the agent-facing §Task Interface / commit-hygiene surface in `using-superra`, and `task-tree` SKILL — state that a rename auto-cascades sibling `depends_on`, so an agent that renames a task expects the hook to re-point its dependents rather than being surprised by a silent edit. A silent auto-mutation the agent does not anticipate is the exact failure this guards against.
-
-**2. Advisory placement/structure `task check` category.** Add a category to `skills/task-tree/scripts/task_check.py` (current categories: status, dependency, rollup) that emits **advisory** findings (warn, never auto-fix) for the structural smells that the placement ladder forbids:
-
-- a root carrying `script` / `input` / `output` frontmatter (a leaf masquerading as the project);
-- a single-child root (a wrapper around one narrow task);
-- a root-level leaf sitting beside root-level branches (a narrow feature hoisted to root);
-- substantial concern overlap between a task and another subtree (misplacement / duplicate candidate), to the extent detectable from objective/output fields.
-
-These encode the positive root-task definition and the misplacement detection described in the placement task. Findings are surfaced, not auto-corrected, per the "hooks warn, not auto-mutate" principle.
+Wherever the hook's existing auto-behaviors are described to agents (the §Task Interface surface in `using-superra`, and `task-tree` SKILL), state that a rename auto-cascades sibling `depends_on`, so an agent that renames a task expects the hook to re-point its dependents rather than being surprised by a silent edit.
 
 ### Constraints
 
 - No new `Stage:` value — this is CLI/hook tooling, not a workflow stage.
-- Reuse the existing `task_rename.py` cascade logic for the rename case rather than duplicating it; the shared rewire helper lives in `_task_io.py`.
-- Add regression tests in `skills/task-tree/scripts/test_task_tree.py` for: same-parent-rename cascade via raw `mv`, delete-leaves-warning, cross-parent-move-warns, and each new `task check` advisory.
-- Apply the CLAUDE.md DRY/Necessity gate line by line; keep changes local and explicit (the `path-containment` task is the precedent for a small, contained CLI hardening).
-
-### Validation
-
-- New tests fail on current code and pass after the change.
-- Existing task-tree tests continue to pass.
-- A same-parent `mv` of a depended-on task leaves no broken `depends_on`; a delete leaves a visible warning, not a silent drop.
-- `task check` flags a deliberately narrow-root / single-child-root fixture as advisory and exits without auto-mutating.
-
-## Planner Guidance
-
-Likely splits at implementation into (a) hook + `_task_io` rewire helper and (b) the `task check` placement category — leave the split to the implement pass. The hook rewire (1) is the load-bearing piece; the detector (2) is what lets a future consolidation pass *find* the debt the placement ladder is meant to prevent. Sequence after the placement/consolidation rules are settled so the detector matches the codified definitions.
+- Reuse the existing `task_rename.py` cascade logic rather than duplicating it; the shared rewire helper lives in `_task_io.py`.
+- Add regression tests in `skills/task-tree/scripts/test_task_tree.py` for same-parent-rename cascade via raw `mv`, delete-leaves-warning, and cross-parent-move-warns.
 
 ## Results
 
-**Current state:** only the dep-rewire hook survives as a durable capability. Both halves originally landed here — the lossless `depends_on` auto-rewire in the PostToolUse hook (same-parent rename only) and the advisory `task check --category placement` detector — but `task-tree/top-level-task-shape` later removed the placement detector entirely (`check_placement`, the `placement` check category, and its `is_forest` threading), because the smells it flagged only made sense under the top-level-task privilege that task unprivileged; see [task-tree/task.md](../task.md) `## Results` for that removal. The sections below describe the dep-rewire hook, which is unaffected and remains current.
-
-All edits are local CLI/hook changes plus the agent-facing docs of the new hook behavior; no new `Stage:` value, no `task merge` command (cross-parent moves use the shipped `task move` command). The full suite passed at 631 tests at the time of this task's own revise round (later re-verified at 689 as other work landed; see [task-tree/task.md](../task.md)).
+The dep-rewire hook is the durable capability this task owns. (An advisory `task check --category placement` detector originally landed here too, but it was later removed with the top-level-task privilege it encoded — see the parent [task-tree/task.md](../task.md) `## Results`; it is not a current capability.) All edits are local CLI/hook changes plus agent-facing docs of the new hook behavior; the full suite passes.
 
 ### What landed
 
-**1. Shared lossless rewire helper — [`_task_io.cascade_depends_on_rename`](../../../skills/task-tree/scripts/_task_io.py).** Re-points every sibling `depends_on: old_slug` → `new_slug` within the parent that holds both slugs, rewriting only `depends_on` YAML metadata, never task content. [`task_rename.py`](../../../skills/task-tree/scripts/task_rename.py) now delegates its cascade to this helper instead of duplicating the loop (the existence checks + same-parent guard stay in the CLI), satisfying the "reuse, do not duplicate" constraint. To keep rename + cascade atomic, the CLI parse-validates every sibling `task.md` *before* `from_dir.rename(...)`, so a malformed sibling aborts with the directory still in place rather than half-applying the cascade — restoring the pre-refactor validate-then-rename ordering.
+- **Shared lossless rewire helper — `_task_io.cascade_depends_on_rename`.** Re-points every sibling `depends_on: old_slug` → `new_slug` within the parent that holds both slugs, rewriting only `depends_on` YAML metadata, never task content. `task_rename.py` delegates its cascade to this helper (the existence checks + same-parent guard stay in the CLI). To keep rename + cascade atomic, the CLI parse-validates every sibling `task.md` *before* the directory rename, so a malformed sibling aborts with the directory still in place rather than half-applying the cascade.
+- **Hook auto-cascade on same-parent rename — `task_hook.py`.** `_detect_same_parent_rename` classifies a raw `mv` / `git mv` as a rename only when it is a two-operand move, no flags, same parent, differing final slug, both inside a task root, with the destination holding a `task.md`. On a match the shared helper runs *before* the reconcile pass, so `validate_plan` sees the rewired edges and emits no spurious dangling-dependency warning, and the rewire is surfaced in hook feedback. The rename-vs-move-into-dir disambiguation reads post-move filesystem state: when `dst/<src basename>/task.md` exists (a move into an existing dir), the classifier returns None (warn-only re-parent). Trailing-slash `mv x y/`, flagged `mv`, more-than-two operands, cross-parent moves, and deletes all fall through to the existing warn-only path.
+- **Scoped to the lossless case only.** Cross-parent move, delete of a depended-on task, and merge are left as dangling-dependency warnings, never silently rewired.
+- **Agent-facing docs** of the new hook behavior, placed where the hook's existing auto-behaviors are already surfaced: `using-superra/SKILL.md §Task Interface` (the same line that documents the status cascade now also states the same-parent-rename `depends_on` re-point), the `task-tree/SKILL.md` move/rename line, `references/commands.md §Rename / move a task`, and the implementation-facing `references/internals.md §Hook Architecture`.
 
-**2. Hook auto-cascade on same-parent rename — [`task_hook.py`](../../../skills/task-tree/scripts/task_hook.py).** New `_detect_same_parent_rename` classifies a raw `mv` / `git mv` from the Bash command text as a rename only when it is a two-operand move, no flags, same parent, differing final slug, both inside a task root, with the destination holding a `task.md`. On a match `_handle_bash` calls the shared helper **before** the reconcile pass, so `validate_plan` sees the rewired edges and emits no spurious dangling-dependency warning, and the rewire is surfaced in the hook feedback so the silent edit is expected by the agent. Slugs are resolved from the command text (the source no longer exists post-move), but the rename-vs-move-into-dir disambiguation reads **post-move filesystem state**: a clean rename never leaves `dst/<src basename>/task.md` behind, whereas a move-into-an-existing-dir lands the source there — so when `(dst_abs / src_abs.name / "task.md").exists()` the classifier returns None (warn-only re-parent). This corrects an earlier mistaken claim that the two cases were indistinguishable by stat: they are, the earlier reasoning just checked the wrong path (`dst` itself, which always exists post-move, rather than `dst/<src basename>`). A bare `mv x existing-task` where `existing-task` is a pre-existing sibling task (real result `existing-task/x`) is the case the prior guard corrupted — it now correctly falls through to warn-only. Trailing-slash `mv x y/` (the explicit move-into-dir spelling), flagged `mv`, >2 operands, cross-parent moves, and deletes also fall through to the existing warn-only path.
-
-**Scoped to the lossless case only.** Cross-parent move (cross-tree edge inexpressible in the sibling-only model), delete of a depended-on task (dropping a real edge changes execution ordering — closer to content loss than YAML upkeep), and merge (human controls nuance integration — no command) are left as dangling-dependency **warnings**, never silently rewired. This preserves the pre-existing `test_bash_mv_dangling_dep_warns_and_does_not_rewrite` behavior for re-parents.
-
-**3. Advisory placement category (removed).** This task originally added `--category placement` to `task_check.py`, emitting `warning`-severity findings for four placement-ladder smells (root leaf-fields, single-child root, root-leaf-beside-branch, cross-subtree output overlap). `task-tree/top-level-task-shape` later deleted `check_placement`, the `placement` category, and its `is_forest` threading in full — see [task-tree/task.md](../task.md) `## Results`. Not a current capability.
-
-**4. Agent-facing docs of the new hook behavior** (so a rename's silent dep re-point is expected, not surprising), placed where the hook's existing auto-behaviors are already surfaced:
-- [`using-superra/SKILL.md` §Task Interface](../../../skills/using-superra/SKILL.md#L46) — the universal-interface surface every executing agent preloads: the same line that documents the status cascade now also states that a same-parent rename re-points siblings' `depends_on` edges (revise round; the scope item required this surface and it was previously missing).
-- [`task-tree/SKILL.md`](../../../skills/task-tree/SKILL.md) move/rename line — same-parent rename auto-cascades; cross-parent move and delete strand for re-wiring.
-- [`references/commands.md` §Rename / move a task](../../../skills/task-tree/references/commands.md) — full agent-facing statement of the cascade + the non-cascading cases.
-- [`references/internals.md` §Hook Architecture](../../../skills/task-tree/references/internals.md) — implementation-facing description (helper, classifier, ordering-before-reconcile, the lossless-only boundary).
-
-### Tests (red-green verified)
-
-Added to [`test_task_tree.py`](../../../skills/task-tree/scripts/test_task_tree.py): same-parent-rename cascade via raw `mv` and via `git mv`; cross-parent-move-does-not-cascade (warns); delete-of-depended-on-task-warns-no-silent-drop; flagged-`mv`-does-not-cascade; `mv`-into-existing-task-dir-does-not-cascade (the bare `mv x existing-task` re-parent the prior code corrupted — asserts no silent rewire of the dependent and a dangling-dependency warning); rename-aborts-before-mutation-on-malformed-sibling (validate-then-rename atomicity); and seven placement-category tests (root leaf-fields, single-child root, root-leaf-beside-branch, all-leaf-flat-root-clean, cross-subtree output overlap, generic-output-overlap-ignored, never-mutates). Stashing the source files and running the new tests shows them failing on old code (rename-cascade + all placement tests fail; the `mv`-into-existing-dir test corrupts the dependent on old code — `02-second` rewritten to `03-third`; the atomicity test renames then crashes mid-cascade on old code; the delete-warns and cross-parent-warns tests pass on old code, confirming those behaviors are *preserved* not newly added). Two pre-existing tests (`test_json_output_parseable`, `test_task_check_autodetects_legacy_plan_root`) used single-child-root fixtures that the new check legitimately flags; their fixtures gained a second child to restore their unrelated intent. `_write_task_md` gained optional `script`/`input`/`output` kwargs for the placement fixtures.
-
-### Verification
-
-- `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → **631 passed, 2 skipped** (at the revise round; was 305 for this task's original landing).
-- `superra task check --category placement` verification is historical only — the category no longer exists (removed by `task-tree/top-level-task-shape`).
-- DRY/Necessity gate (skill-creator unavailable, per dispatch) applied line by line to the doc edits: the rename cascade is documented once per existing surface where the hook's auto-behaviors already live, each phrased to the surface's audience (agent-facing vs implementation-facing); no new doc file or category prose surface created.
+Regression tests in `skills/task-tree/scripts/test_task_tree.py` cover the same-parent-rename cascade (raw `mv` and `git mv`), cross-parent-move-warns, delete-warns-no-silent-drop, flagged-`mv`-does-not-cascade, `mv`-into-existing-task-dir-does-not-cascade, and rename-aborts-before-mutation-on-malformed-sibling (validate-then-rename atomicity), all red-green verified against the pre-change code.

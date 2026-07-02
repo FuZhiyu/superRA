@@ -2,38 +2,29 @@
 title: "Task Edit Discipline — Manual Move + Edit-Path Guidance"
 status: approved
 depends_on: []
-tags: []
-created: 2026-05-30
 ---
 
 ## Objective
 
-Make the PostToolUse hook the single mechanism that keeps the `superRA/` tree consistent under direct edits and shell operations, and make the task-tree guidance on *how* to mutate a task unambiguous. Three coupled changes, each a subtask:
+Make the PostToolUse hook the single mechanism that keeps the `superRA/` tree consistent under direct edits and shell operations, and make the task-tree guidance on *how* to mutate a task unambiguous. Three coupled changes:
 
-1. **`move-hook`** — generalize the hook so a shell command that restructures `superRA/` (chiefly `mv`, also `rm`/`cp`/`mkdir` of task directories) triggers the same validate → propagate-status reconcile that an `Edit`/`Write` on a `task.md` already triggers.
-2. **`skill-guidance`** — rewrite the SKILL.md "How to Edit a Task" guidance so it states the settled canonical path (agents mutate a task, including `status`, by editing frontmatter directly while hooks enforce invariants), reframes the mutation CLIs as scaffolding/bulk tools rather than co-equal per-field commands, and documents manual `mv` as a supported reorganization path.
-3. **`revnote-warning`** — surface the stale-revision-note leak (approved tasks still carrying `## Revision Notes`) without mutating anything: add a `validate_plan` rule that warns when an `approved` task still has a `## Revision Notes` section, surfaced tree-wide through the existing hook warning channel. An earlier auto-mutation design (flip-to-`revise` on note add, delete-on-approve) was abandoned as too error-prone — a stateless post-hoc hook can destroy planner-owned content in the uncommitted-approval window (decision 2026-05-31: warn only). The reviewer keeps owning revision-note removal, so `agents/reviewer.md` is not touched and no Codex/direct-mode regeneration is needed.
+1. **Move hook** — generalize the hook so a shell command that restructures `superRA/` (chiefly `mv`, also `rm`/`cp`/`mkdir` of task directories) triggers the same validate → propagate-status reconcile that an `Edit`/`Write` on a `task.md` already triggers.
+2. **Skill guidance** — state the settled canonical path in SKILL.md: agents mutate a task (including `status`) by editing frontmatter directly while hooks enforce invariants; the mutation CLIs are scaffolding/bulk tools, not co-equal per-field commands; manual `mv` is a supported reorganization path.
+3. **Revision-note warning** — surface the stale-revision-note leak (approved tasks still carrying `## Revision Notes`) without mutating anything, via a `validate_plan` rule that warns through the existing hook channel. An earlier auto-mutation design (flip-to-`revise` on note add, delete-on-approve) was abandoned as too error-prone — a stateless post-hoc hook can destroy planner-owned content in the uncommitted-approval window. The reviewer keeps owning revision-note removal.
 
-### Context / Rationale
+### Rationale
 
-This is superRA self-development (skill + hook engineering); no data/theory/writing domain vertical applies. Contributor discipline in the repo `CLAUDE.md` governs — load `skill-creator` before editing `skills/task-tree/SKILL.md`, and self-apply the DRY + Necessity tests to every instruction line touched.
+- Direct edit is the canonical agent mutation path; the CLIs (`task_update.py`, `task_add_result.py`, `task_link.py`, `task_rename.py`) are convenience/scaffolding.
+- Everything a task owns lives inside its directory (`task.md`, `comments.yaml`, child task dirs), so a plain `mv` of a task directory carries the whole subtree and its comments — nothing keyed by external path is orphaned.
+- `depends_on` is sibling-slug-scoped; the only thing a move can break is a dependency edge crossing the move boundary, which `validate_plan` already reports as a dangling-dep warning.
+- `task_rename.py` refuses cross-parent moves, so manual `mv` is already the only re-parenting path — this work makes it safe and documented rather than silent.
 
-Background facts that motivate the change, already established:
-- Direct edit is the canonical agent mutation path (decided in `task-tree/agent-interface` — "Agents edit task.md directly using Read/Edit/Write. PostToolUse hooks handle validation … and parent-status propagation"). The CLIs (`task_update.py`, `task_add_result.py`, `task_link.py`, `task_rename.py`) are convenience/scaffolding, not the prescribed mutation method. SKILL.md previously presented both side by side, with a standalone "Update task status" CLI example that invited agents to reach for the CLI for a single status flip.
-- Everything a task owns lives inside its directory (`task.md`, `comments.yaml`, child task dirs), so a plain `mv` of a task directory carries the whole subtree and its comments with it — nothing keyed by external path is orphaned.
-- `depends_on` is sibling-slug-scoped (`_task_io.py` `validate_dependencies`). The only thing a move can break is a dependency edge that crosses the move boundary; `validate_plan` already reports these as dangling-dep warnings. A self-contained subtree with no boundary-crossing deps moves cleanly.
-- `task_rename.py` deliberately refuses cross-parent moves, so manual `mv` is already the only path for re-parenting — this work makes that path safe and documented rather than silent.
-
-### Scope boundary
-
-In scope: `skills/task-tree/scripts/task_hook.py`, `skills/task-tree/scripts/_task_io.py` (the new `validate_plan` warning rule), `hooks/hooks.json`, the task-tree test suite, `skills/task-tree/SKILL.md`. Out of scope and explicitly NOT to be expanded into here: the static `dashboard.html` generation cleanup, and bringing Cursor hook variants to task-validation parity (Cursor's `hooks-cursor.json` does not wire `task_hook.py` — see `move-hook` task).
-
-**No generated artifacts are affected.** With the revision-note work reduced to a non-destructive warning, `agents/reviewer.md` is no longer touched (the reviewer keeps the removal duty), so the generated reviewer references (`direct-mode-reviewer.md`, `.codex/agents/superra_reviewer.toml`) need no regeneration.
+Scope: `task_hook.py`, `_task_io.py` (the new `validate_plan` warning rule), `hooks/hooks.json`, the task-tree test suite, and `skills/task-tree/SKILL.md`. No generated artifacts are affected — with the revision-note work reduced to a warning, `agents/reviewer.md` is untouched.
 
 ## Results
 
-All three child workstream tasks implemented and approved:
+All three changes shipped and are approved.
 
-- **[move-hook](move-hook/task.md):** Generalized `task_hook.py` to handle Bash shell mutations of the `superRA/` tree (chiefly `mv`). Four new `TestTaskHook` Bash test cases added; full suite green at 147 passed. Manual move confirmed: dangling-dep warning prints, parent status propagates, exit 0.
-- **[skill-guidance](skill-guidance/task.md):** Rewrote `skills/task-tree/SKILL.md` §How to Edit a Task to name direct `task.md` edit as the canonical mutation path for status and all body sections, reframed CLIs as scaffolding tools, and documented manual `mv` as the supported re-parenting path.
-- **[revnote-warning](revnote-warning/task.md):** Removed the auto-mutation design (flip-to-`revise`/delete-on-approve) and replaced it with a stateless `validate_plan` warning rule: `approved` tasks carrying a `## Revision Notes` section produce a hook warning. Full suite green at 163 passed; `git grep` confirms no auto-mutation symbols remain.
+- **Move hook.** `task_hook.py` handles Bash shell mutations of the `superRA/` tree (chiefly `mv`): a manual move prints the dangling-dep warning, propagates parent status, and exits 0.
+- **Skill guidance.** `skills/task-tree/SKILL.md §How to Edit a Task` names direct `task.md` edit as the canonical mutation path for status and all body sections, reframes the CLIs as scaffolding tools, and documents manual `mv` as the supported re-parenting path.
+- **Revision-note warning.** The abandoned auto-mutation design is replaced by a stateless `validate_plan` rule: an `approved` task carrying a `## Revision Notes` section produces a hook warning, with no auto-mutation symbols remaining.
