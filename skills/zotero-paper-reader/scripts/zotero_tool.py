@@ -26,9 +26,22 @@ import json
 import os
 import re
 import sys
+import uuid
 from pathlib import Path
 
 LOCAL_API_BASE = "http://localhost:23119/api"
+# The Zotero desktop connector (separate path from the read-only local /api).
+# Writes go through the connector locally; the local /api is read-only.
+CONNECTOR_BASE = "http://localhost:23119/connector"
+# A non-Mozilla User-Agent (plus the allowed-request header) is required or the
+# connector rejects the save; the API-version header pins the connector wire
+# protocol. See references/access-modes.md.
+CONNECTOR_HEADERS = {
+    "Content-Type": "application/json",
+    "X-Zotero-Connector-API-Version": "3",
+    "User-Agent": "zotero-paper-reader/1.0",
+    "zotero-allowed-request": "1",
+}
 # The local API exposes the desktop's default user library at id 0.
 LOCAL_LIBRARY_ID = "0"
 PDF_MIN_BYTES = 1024
@@ -852,6 +865,566 @@ def cmd_bibliography(args: argparse.Namespace) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# Local connector transport and endpoints (write path)                        #
+# --------------------------------------------------------------------------- #
+
+
+class ConnectorError(RuntimeError):
+    """The Zotero desktop connector is unreachable or returned an error.
+
+    Callers on the ``auto`` path treat unreachability as the signal to fall back
+    to the cloud Web API write path.
+    """
+
+
+class UrllibConnectorTransport:
+    """Default stdlib transport for the connector; injectable for offline tests.
+
+    ``request`` returns ``(status, body_bytes, headers)`` for any HTTP status so
+    callers can branch on 201/409/etc., and raises ConnectorError only when the
+    connector cannot be reached at all.
+    """
+
+    def request(self, url, data=None, headers=None, method="POST", timeout=30.0):
+        import urllib.error
+        import urllib.request
+
+        req = urllib.request.Request(
+            url, data=data, headers=headers or {}, method=method
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+                return resp.status, resp.read(), dict(resp.headers)
+        except urllib.error.HTTPError as exc:
+            return exc.code, exc.read(), dict(exc.headers or {})
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise ConnectorError(
+                f"Zotero connector unreachable at {CONNECTOR_BASE}: {exc}"
+            ) from exc
+
+
+def _connector_post_json(path, body, transport, extra_headers=None):
+    """POST a JSON body to a connector endpoint, returning ``(status, text)``."""
+    headers = dict(CONNECTOR_HEADERS)
+    if extra_headers:
+        headers.update(extra_headers)
+    data = json.dumps(body).encode("utf-8")
+    status, raw, _ = transport.request(
+        f"{CONNECTOR_BASE}/{path}", data=data, headers=headers, method="POST"
+    )
+    text = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
+    return status, text
+
+
+def connector_available(transport=None) -> bool:
+    """Report whether the Zotero desktop connector answers its ping.
+
+    The connector port responds even when the read-only local /api is disabled,
+    so this is a distinct probe from ``local_api_available``.
+    """
+    transport = transport or UrllibConnectorTransport()
+    try:
+        status, _, _ = transport.request(
+            f"{CONNECTOR_BASE}/ping",
+            headers={"User-Agent": CONNECTOR_HEADERS["User-Agent"]},
+            method="GET",
+        )
+    except ConnectorError:
+        return False
+    return 200 <= status < 300
+
+
+def connector_selected_collection(transport=None) -> dict:
+    """Read the library/collection currently selected in the Zotero desktop UI.
+
+    ``saveItems`` takes no target parameter — items land wherever this points —
+    so the workflow reports this before a local save and asks the user to switch
+    the UI selection first if they want a different destination.
+    """
+    transport = transport or UrllibConnectorTransport()
+    status, text = _connector_post_json("getSelectedCollection", {}, transport)
+    if not (200 <= status < 300):
+        raise ConnectorError(
+            f"getSelectedCollection failed (HTTP {status}): {text[:200]}"
+        )
+    return json.loads(text) if text.strip() else {}
+
+
+def summarize_selected(sel: dict | None) -> dict | None:
+    """Reduce a getSelectedCollection payload to the fields the agent reports."""
+    if not sel:
+        return None
+    return {
+        "library_id": sel.get("libraryID"),
+        "library_name": sel.get("libraryName"),
+        "collection_id": sel.get("id"),
+        "collection_name": sel.get("name"),
+        "editable": sel.get("editable"),
+        "targets": [
+            {"id": t.get("id"), "name": t.get("name"), "level": t.get("level")}
+            for t in (sel.get("targets") or [])
+        ],
+    }
+
+
+def connector_save_items(item, transport=None, uri=None, max_retries=2):
+    """Save one mapped item via the connector, returning ``(session_id, text)``.
+
+    A fresh UUID sessionID is minted per attempt; a ``409 SESSION_EXISTS`` is
+    retried with a new session. 200/201 are success. Raises ConnectorError on
+    any other status or after exhausting retries.
+    """
+    transport = transport or UrllibConnectorTransport()
+    last = ""
+    for _ in range(max_retries + 1):
+        session_id = str(uuid.uuid4())
+        body = {
+            "items": [item],
+            "sessionID": session_id,
+            "uri": uri or item.get("url") or "",
+        }
+        status, text = _connector_post_json("saveItems", body, transport)
+        if status == 409:  # SESSION_EXISTS — mint a new session and retry.
+            last = text
+            continue
+        if status in (200, 201):
+            return session_id, text
+        raise ConnectorError(f"saveItems failed (HTTP {status}): {text[:200]}")
+    raise ConnectorError(
+        f"saveItems failed after {max_retries} session-collision retries: {last[:200]}"
+    )
+
+
+def connector_update_session(session_id, target, transport=None, tags=""):
+    """Steer a save session to a specific target id (a ``targets[].id`` value)."""
+    transport = transport or UrllibConnectorTransport()
+    body = {"sessionID": session_id, "target": target, "tags": tags}
+    status, text = _connector_post_json("updateSession", body, transport)
+    if not (200 <= status < 300):
+        raise ConnectorError(f"updateSession failed (HTTP {status}): {text[:200]}")
+    return text
+
+
+# --------------------------------------------------------------------------- #
+# Crossref/S2 record -> Zotero item mapper                                     #
+# --------------------------------------------------------------------------- #
+
+# Crossref work `type` -> Zotero itemType, for the econ/finance surface: journal
+# articles, preprints (posted-content), and working-paper reports. Anything else
+# falls through to the heuristic in ``choose_item_type``.
+CROSSREF_TYPE_MAP = {
+    "journal-article": "journalArticle",
+    "posted-content": "preprint",
+    "report": "report",
+    "report-series": "report",
+    "report-component": "report",
+}
+ITEM_TYPES = ("journalArticle", "preprint", "report")
+
+
+def _raw(record: dict) -> dict:
+    r = record.get("raw")
+    return r if isinstance(r, dict) else {}
+
+
+def _first(value):
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def choose_item_type(record: dict) -> str:
+    """Pick the Zotero item type from the verbatim record, never inventing one.
+
+    Crossref's `type` is authoritative when present. Otherwise: an arXiv record
+    or any record with no published DOI is a preprint (unpublished working
+    paper); a resolved DOI defaults to a journal article.
+    """
+    cr_type = record.get("type")
+    if cr_type in CROSSREF_TYPE_MAP:
+        return CROSSREF_TYPE_MAP[cr_type]
+    ids = record.get("id") or {}
+    if record.get("source") == "arxiv" or ids.get("arxiv"):
+        return "preprint"
+    if not ids.get("doi"):
+        return "preprint"
+    return "journalArticle"
+
+
+def _creators(record: dict) -> list[dict]:
+    """Map authors to Zotero creators, verbatim.
+
+    Two-field (firstName/lastName) only when Crossref supplied the given/family
+    split; otherwise a single-field ``name`` creator (S2/arXiv expose only a
+    display name — never infer a split).
+    """
+    creators: list[dict] = []
+    for a in record.get("authors") or []:
+        given, family = a.get("given"), a.get("family")
+        if given or family:
+            creators.append(
+                {
+                    "creatorType": "author",
+                    "firstName": given or "",
+                    "lastName": family or "",
+                }
+            )
+        elif a.get("name"):
+            creators.append({"creatorType": "author", "name": a["name"]})
+    return creators
+
+
+def _record_date(record: dict) -> str | None:
+    """Resolve a Zotero ``date`` string from the verbatim Crossref date-parts.
+
+    Falls back to the record's year. Returns YYYY / YYYY-MM / YYYY-MM-DD.
+    """
+    raw = _raw(record)
+    for key in ("published-print", "published-online", "published", "issued"):
+        block = raw.get(key)
+        if isinstance(block, dict):
+            parts = block.get("date-parts") or []
+            if parts and parts[0]:
+                p = parts[0]
+                if len(p) >= 3:
+                    return f"{p[0]}-{p[1]:02d}-{p[2]:02d}"
+                if len(p) == 2:
+                    return f"{p[0]}-{p[1]:02d}"
+                return str(p[0])
+    year = record.get("year")
+    return str(year) if year else None
+
+
+def _clean_abstract(record: dict) -> str | None:
+    """Return the abstract to store, ignoring the Crossref source.
+
+    Crossref abstracts arrive JATS-tagged (``<jats:p>…``) and are spotty for
+    econ; the client only falls back to them when S2/arXiv had none, so a
+    ``crossref``-sourced abstract is dropped rather than stored tagged.
+    """
+    abstract = record.get("abstract")
+    if not abstract or record.get("abstract_source") == "crossref":
+        return None
+    return abstract
+
+
+def crossref_to_zotero(
+    record: dict,
+    item_type: str | None = None,
+    pdf_url: str | None = None,
+    pdf_divergence: str | None = None,
+) -> dict:
+    """Map a verbatim citation-client record to a Zotero item dict.
+
+    Covers the econ/finance item types (journalArticle, preprint, report). Every
+    bibliographic field is taken verbatim from the record / its ``raw`` Crossref
+    payload — nothing is agent-composed. ``report`` has no Zotero DOI field, so a
+    report's DOI is preserved in ``extra``. The PDF version-divergence flag is
+    surfaced as a tag and an ``extra`` line.
+    """
+    itype = item_type or choose_item_type(record)
+    if itype not in ITEM_TYPES:
+        raise RuntimeError(
+            f"unsupported item type {itype!r}; use one of {', '.join(ITEM_TYPES)}"
+        )
+    ids = record.get("id") or {}
+    ext = record.get("external_ids") or {}
+    doi = ids.get("doi") or ext.get("DOI")
+    raw = _raw(record)
+
+    item: dict[str, object] = {"itemType": itype, "creators": _creators(record)}
+    if record.get("title"):
+        item["title"] = record["title"]
+    date = _record_date(record)
+    if date:
+        item["date"] = date
+    abstract = _clean_abstract(record)
+    if abstract:
+        item["abstractNote"] = abstract
+    if record.get("url"):
+        item["url"] = record["url"]
+    if raw.get("language"):
+        item["language"] = raw["language"]
+
+    tags: list[dict] = []
+    extra_lines: list[str] = []
+
+    if itype == "journalArticle":
+        venue = record.get("venue") or _first(raw.get("container-title"))
+        if venue:
+            item["publicationTitle"] = venue
+        volume = record.get("volume") or raw.get("volume")
+        if volume:
+            item["volume"] = str(volume)
+        if raw.get("issue"):
+            item["issue"] = str(raw["issue"])
+        pages = record.get("pages") or raw.get("page")
+        if pages:
+            item["pages"] = str(pages)
+        issn = _first(raw.get("ISSN"))
+        if issn:
+            item["ISSN"] = issn
+        if doi:
+            item["DOI"] = doi
+    elif itype == "preprint":
+        repository = record.get("venue") or _first(raw.get("container-title"))
+        if not repository and (record.get("source") == "arxiv" or ids.get("arxiv")):
+            repository = "arXiv"
+        if repository:
+            item["repository"] = repository
+        arxiv_id = ids.get("arxiv") or ext.get("ArXiv")
+        if arxiv_id:
+            item["archiveID"] = f"arXiv:{arxiv_id}"
+        if doi:
+            item["DOI"] = doi
+    elif itype == "report":
+        institution = record.get("venue") or _first(raw.get("container-title"))
+        raw_inst = _first(raw.get("institution"))
+        if isinstance(raw_inst, dict) and raw_inst.get("name"):
+            institution = raw_inst["name"]
+        if institution:
+            item["institution"] = institution
+        pages = record.get("pages") or raw.get("page")
+        if pages:
+            item["pages"] = str(pages)
+        # Zotero's report type has no DOI field — preserve it in extra.
+        if doi:
+            extra_lines.append(f"DOI: {doi}")
+
+    if pdf_divergence:
+        tags.append({"tag": f"pdf-divergence: {pdf_divergence}"})
+        extra_lines.append(f"PDF version divergence: {pdf_divergence}")
+    if pdf_url:
+        item["attachments"] = [
+            {
+                "title": "Full Text PDF",
+                "mimeType": "application/pdf",
+                "url": pdf_url,
+            }
+        ]
+    if extra_lines:
+        item["extra"] = "\n".join(extra_lines)
+    if tags:
+        item["tags"] = tags
+    return item
+
+
+def to_web_item(item: dict, collection: str | None = None) -> dict:
+    """Adapt a mapped item for the Web API (pyzotero ``create_items``).
+
+    The connector consumes the ``attachments`` array directly; the Web API takes
+    attachments through a separate call, so drop it here. A ``--collection`` key
+    targets a specific collection on the Web path (the connector ignores it and
+    uses the UI selection).
+    """
+    web = {k: v for k, v in item.items() if k != "attachments"}
+    if collection:
+        web["collections"] = [collection]
+    return web
+
+
+# --------------------------------------------------------------------------- #
+# Write-path subcommand handlers                                              #
+# --------------------------------------------------------------------------- #
+
+
+def _load_record(args: argparse.Namespace) -> dict:
+    """Load a citation-client record from ``--record`` or stdin.
+
+    Unwraps the ``metadata`` command's ``{record: …}`` envelope and a
+    ``{records: [...]}`` list (first element), so a screening-time payload can be
+    piped straight in.
+    """
+    if args.record:
+        text = Path(args.record).read_text(encoding="utf-8")
+    else:
+        text = sys.stdin.read()
+    if not text.strip():
+        raise RuntimeError(
+            "no record provided: pass --record PATH or pipe record JSON on stdin"
+        )
+    obj = json.loads(text)
+    if isinstance(obj, dict):
+        if isinstance(obj.get("record"), dict):
+            return obj["record"]
+        if isinstance(obj.get("records"), list) and obj["records"]:
+            return obj["records"][0]
+    if not isinstance(obj, dict):
+        raise RuntimeError("record JSON must be an object (or a wrapper of one)")
+    return obj
+
+
+def find_duplicate_doi(doi, prefer, library, client_factory) -> str | None:
+    """Return the item key of an existing library item with the same DOI, if any.
+
+    Best-effort: if a client for the dedup target cannot be built or queried
+    (e.g. the read-only local /api is disabled), returns None so the save still
+    proceeds — the caller reports that dedup could not run.
+    """
+    factory = client_factory or make_client
+    norm = doi.lower()
+    try:
+        zot, _ = factory(prefer=prefer, library=library)
+        items = zot.everything(zot.top())
+    except Exception:  # noqa: BLE001
+        return None
+    for it in items:
+        data = it.get("data", {})
+        existing = data.get("DOI")
+        if existing and existing.lower() == norm:
+            return data.get("key") or it.get("key")
+    return None
+
+
+def cmd_add(args, transport=None, client_factory=None) -> int:
+    """Map a discovered record to a Zotero item and save it (connector or Web API).
+
+    Path selection: ``--mode local`` forces the connector, ``--mode web`` forces
+    the Web API. On ``auto`` a group ``--library`` or a ``--collection`` (which
+    the connector cannot target) routes to the Web API; otherwise the connector
+    is used when reachable, else the Web API.
+    """
+    record = _load_record(args)
+    item = crossref_to_zotero(
+        record,
+        item_type=args.item_type,
+        pdf_url=args.pdf_url,
+        pdf_divergence=args.pdf_divergence,
+    )
+    ids = record.get("id") or {}
+    doi = item.get("DOI") or ids.get("doi") or (record.get("external_ids") or {}).get(
+        "DOI"
+    )
+
+    if args.dry_run:
+        emit(
+            {
+                "saved": False,
+                "dry_run": True,
+                "item_type": item["itemType"],
+                "doi": doi,
+                "item": item,
+            }
+        )
+        return 0
+
+    lib_type, _ = parse_library(args.library)
+    wants_web = args.mode == "web" or (
+        args.mode == "auto" and (lib_type == "group" or bool(args.collection))
+    )
+    use_connector = args.mode == "local" or (
+        args.mode == "auto" and not wants_web and connector_available(transport)
+    )
+
+    # Dedup upstream — the connector never dedups and will create duplicates.
+    dedup_ran = False
+    if not args.allow_duplicate and doi:
+        prefer = "local" if use_connector else "web"
+        library = "user" if use_connector else args.library
+        existing = find_duplicate_doi(doi, prefer, library, client_factory)
+        dedup_ran = True
+        if existing:
+            emit(
+                {
+                    "saved": False,
+                    "duplicate": True,
+                    "doi": doi,
+                    "existing_item_key": existing,
+                    "item_type": item["itemType"],
+                }
+            )
+            return 0
+
+    if use_connector:
+        selected = None
+        try:
+            selected = connector_selected_collection(transport)
+        except ConnectorError:
+            pass
+        session_id, _ = connector_save_items(
+            item, transport=transport, uri=record.get("url")
+        )
+        moved_to = None
+        if args.target:
+            connector_update_session(session_id, args.target, transport=transport)
+            moved_to = args.target
+        emit(
+            {
+                "saved": True,
+                "path": "local-connector",
+                "item_type": item["itemType"],
+                "doi": doi,
+                "dedup_checked": dedup_ran,
+                "selected_target": summarize_selected(selected),
+                "moved_to_target": moved_to,
+                "attached_pdf_url": args.pdf_url,
+            }
+        )
+        return 0
+
+    # Web API path.
+    factory = client_factory or make_client
+    zot, _ = factory(prefer="web", library=args.library)
+    resp = zot.create_items([to_web_item(item, collection=args.collection)])
+    success = resp.get("success", {}) if isinstance(resp, dict) else {}
+    failed = resp.get("failed", {}) if isinstance(resp, dict) else {}
+    if failed:
+        return fail(f"Web API create_items rejected the item: {failed}")
+    item_key = next(iter(success.values()), None)
+    emit(
+        {
+            "saved": bool(item_key),
+            "path": "web-api",
+            "item_type": item["itemType"],
+            "doi": doi,
+            "dedup_checked": dedup_ran,
+            "item_key": item_key,
+            "library": args.library,
+            "collection": args.collection,
+        }
+    )
+    return 0 if item_key else 1
+
+
+def cmd_attach(args, client_factory=None) -> int:
+    """Attach a local PDF to an existing item via the Web API (write-scoped key).
+
+    The connector attaches at save time through ``add --pdf-url`` (Zotero fetches
+    the URL, honoring the auto-attach-PDF preference); attaching a local file to
+    an already-saved item is the Web API path.
+    """
+    path = Path(args.file)
+    if not path.exists():
+        return fail(f"file not found: {path}")
+    factory = client_factory or make_client
+    zot, _ = factory(prefer="web", library=args.library)
+    try:
+        result = zot.attachment_simple([str(path)], args.item_key)
+    except Exception as exc:  # noqa: BLE001
+        return fail(f"attachment upload failed: {exc}")
+    emit(
+        {
+            "path": "web-api",
+            "parent_item_key": args.item_key,
+            "file": str(path),
+            "library": args.library,
+            "result": result,
+        }
+    )
+    return 0
+
+
+def cmd_selected(args, transport=None) -> int:
+    """Report the library/collection currently selected in the Zotero desktop UI."""
+    try:
+        sel = connector_selected_collection(transport)
+    except ConnectorError as exc:
+        return fail(str(exc))
+    emit({"path": "local-connector", "selected_target": summarize_selected(sel)})
+    return 0
+
+
+# --------------------------------------------------------------------------- #
 # Argument parsing                                                            #
 # --------------------------------------------------------------------------- #
 
@@ -1050,6 +1623,77 @@ def build_parser() -> argparse.ArgumentParser:
     add_mode_arg(p)
     add_library_arg(p)
     p.set_defaults(func=cmd_bibliography)
+
+    p = sub.add_parser(
+        "add",
+        help="save a discovered paper (record JSON) to Zotero: local connector "
+        "by default, Web API fallback",
+    )
+    p.add_argument(
+        "--record",
+        metavar="PATH",
+        help="citation-client record JSON file (default: read from stdin)",
+    )
+    p.add_argument(
+        "--mode",
+        choices=["auto", "local", "web"],
+        default="auto",
+        help="write path: auto (connector if reachable, else Web API), local "
+        "(connector), or web (Web API)",
+    )
+    p.add_argument(
+        "--item-type",
+        choices=list(ITEM_TYPES),
+        help="override the inferred Zotero item type",
+    )
+    p.add_argument(
+        "--collection",
+        metavar="KEY",
+        help="Web API: target collection key (routes auto mode to the Web API)",
+    )
+    p.add_argument(
+        "--pdf-url",
+        metavar="URL",
+        help="attach a PDF by URL (connector fetches it, honoring auto-attach)",
+    )
+    p.add_argument(
+        "--pdf-divergence",
+        metavar="TEXT",
+        help="surface a metadata-vs-PDF version divergence as a tag + extra note",
+    )
+    p.add_argument(
+        "--target",
+        metavar="ID",
+        help="connector: steer the save session to a targets[].id (see 'selected')",
+    )
+    p.add_argument(
+        "--allow-duplicate",
+        action="store_true",
+        help="skip the DOI dedup check (the connector never dedups)",
+    )
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="map and print the Zotero item without saving",
+    )
+    add_library_arg(p)
+    p.set_defaults(func=cmd_add)
+
+    p = sub.add_parser(
+        "attach",
+        help="attach a local PDF to an existing item via the Web API",
+    )
+    p.add_argument("--item-key", required=True, metavar="KEY", help="parent item key")
+    p.add_argument("--file", required=True, metavar="PATH", help="PDF file to attach")
+    add_library_arg(p)
+    p.set_defaults(func=cmd_attach)
+
+    p = sub.add_parser(
+        "selected",
+        help="report the library/collection selected in the Zotero desktop UI "
+        "(local connector save target)",
+    )
+    p.set_defaults(func=cmd_selected)
 
     return parser
 
