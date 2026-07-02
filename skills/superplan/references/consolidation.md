@@ -26,10 +26,9 @@ Consolidation is warranted when the tree has grown through ad-hoc additions, sco
 Read every `task.md` and build a structural picture:
 
 1. **Run `superra task tree`** and **`superra task dag`** for the structure, status distribution, and dependency graph.
-2. **Run `superra task check --category placement`.** Treat warnings as advisory prompts for manual review, not as authority to restructure.
-3. **Map each task's scope:** objective, `depends_on`, status, and whether it is temporary update scaffolding or a durable owner.
-4. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via `superplan/references/task-tree-design.md` §Placing Work in the Existing Tree.
-5. **Identify and classify issues** from the list below. Apply `superplan/references/task-tree-design.md` §Update-Task Lifecycle whole-tree: any task whose purpose is to improve an existing task or artifact folds back by default — a **Merge** into the task it modified, or a **Mature/Rename** when it has become the durable owner of a concern. Classify approved scaffolding into one of these by default; the open question is which fold, not whether to fold.
+2. **Map each task's scope:** objective, `depends_on`, status, and whether it is temporary update scaffolding or a durable owner.
+3. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via `superplan/references/task-tree-design.md` §Placing Work in the Existing Tree.
+4. **Identify and classify issues** from the list below. Apply `superplan/references/task-tree-design.md` §Update-Task Lifecycle whole-tree: any task whose purpose is to improve an existing task or artifact folds back by default — a **Merge** into the task it modified, or a **Mature/Rename** when it has become the durable owner of a concern. Classify approved scaffolding into one of these by default; the open question is which fold, not whether to fold.
 
 ## Issue Classification
 
@@ -103,7 +102,7 @@ Should I proceed with all changes, a subset, or none?
 
 Wait for explicit approval. A passing remark is not authorization — confirm intent if ambiguous.
 
-The sign-off boundary is the existing one in `superplan §User Feedback and Changing the Task Tree`: material changes — pruning a task whose result a reader would expect, merging two substantive concerns, an ambiguous durable home, or a status-invalidating scope-expansion rewrite — need explicit approval and route through that protocol; routine distillation is presented as the proposed default the user can veto and otherwise executes as lifecycle. The approved proposal is the authority for structural edits; `task check --category placement` is only advisory evidence.
+The sign-off boundary is the existing one in `superplan §User Feedback and Changing the Task Tree`: material changes — pruning a task whose result a reader would expect, merging two substantive concerns, an ambiguous durable home, or a status-invalidating scope-expansion rewrite — need explicit approval and route through that protocol; routine distillation is presented as the proposed default the user can veto and otherwise executes as lifecycle. The approved proposal is the authority for structural edits.
 
 ## Execution Mechanics
 

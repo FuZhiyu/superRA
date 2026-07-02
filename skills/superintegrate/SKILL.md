@@ -263,7 +263,7 @@ Screening and the user-facing proposal are orchestrator inline work, not a dispa
 
 ### Step 1: Screen the whole affected tree (mandatory)
 
-Load `superplan/references/task-tree-design.md` and survey every task and subtree the integration touched — including approved and in-flight update tasks — against its parent and other candidate durable owners. Run `superra task tree`, `superra task dag`, and `superra task check --category placement`; treat placement warnings as advisory evidence alongside the manual survey. Identify every update-task, action-verb parent, and misplacement, and per touched subtree draft the distillation: each task's durable home, the structure change that realizes it, and the altitude its `## Results` distils to. Key results selected at Protect are never dropped; when a task's own output *is* a document, distil its `## Results` to a pointer to that document.
+Load `superplan/references/task-tree-design.md` and survey every task and subtree the integration touched — including approved and in-flight update tasks — against its parent and other candidate durable owners. Run `superra task tree` and `superra task dag` as structural evidence for the manual survey. Identify every update-task, action-verb parent, and misplacement, and per touched subtree draft the distillation: each task's durable home, the structure change that realizes it, and the altitude its `## Results` distils to. Key results selected at Protect are never dropped; when a task's own output *is* a document, distil its `## Results` to a pointer to that document.
 
 ### Step 2: Ask the distillation question, one per touched subtree (always fires)
 
