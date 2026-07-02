@@ -3,8 +3,6 @@ title: "CLI Scripts"
 status: approved
 depends_on:
   - core-data-layer
-tags: []
-created: 2026-05-23
 ---
 
 ## Objective
@@ -22,7 +20,6 @@ The redesign should make `uv` the resolver. The task-tree code should be package
 - House the task-tree Python package under `skills/task-tree/`, not at repo root, so the superRA plugin repo remains primarily a skills/hooks distribution while the task-tree utility can be installed or run independently.
 - Expose `superra dashboard` as the human-facing dashboard command.
 - Expose a stable `superra task ...` command surface for task read/query/create/update/result/dependency/rename/comment/check/migrate/hook operations.
-- Preserve compatibility for existing direct script invocations during the transition; existing tests and skill instructions should not break before documentation is migrated.
 - Include `templates/` and `vendor/` dashboard assets as package data instead of relying on `Path(__file__).parent` pointing at the source checkout.
 - Remove generated `superRA/serve` wrappers; do not compute or commit generation-time paths to `skills/task-tree/scripts`.
 - Keep this checkout's `superRA/superra` CLI wrapper self-resolving to its own repo root and running the loose entry scripts via `uv run --script` (with a `python3` fallback); it is for local development convenience, not dashboard generation.
@@ -66,23 +63,11 @@ superra wrapper init [--root superRA]
 superra wrapper render-hook [--output PATH]
 ```
 
-### Validation
-
-- New task trees do not generate `superRA/serve`, and the checked-in `superRA/serve` is removed or deliberately deprecated.
-- `uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard --root superRA --no-open` reaches the dashboard from the live local checkout (no install, no caller venv).
-- `./superRA/superra task frontier` self-resolves this checkout's task-tree source and this repo's `superRA/` task tree.
-- Existing direct script tests continue to pass during the transition.
-- Active docs and role references stop teaching agents to depend on `<skill-dir>/scripts/...` for normal task-tree operations.
-
 ## Results
 
-**Final diff self-check:** `git diff 9ca25479f7cb588aec3d758f0bb27d66e4c8aded..HEAD`; surviving-change classes are package metadata/version/entry point, unified task/dashboard CLI, dashboard package-data paths, no-serve hook/wrapper migration, packaged-CLI docs/tests, generated Codex/direct-mode reference refresh, and task-tree implementation/review records. Suspicious hunks are justified as follows: `skills/*` and `agents/*` instruction edits replace flat script / generated `serve` guidance with the approved `superra task ...` and `superra dashboard` command surface while preserving incoming `postponed` and focused-read semantics; `.codex/agents/*.toml` and `skills/using-superra/references/direct-mode-*.md` are generated from the canonical role specs and verified by `sync_codex_agents.py --scope project --check`; `superRA/serve` deletion implements the researcher decision to drop the wrapper; synced task-record edits under `superRA/task-tree/status-model/11-postponed-core-semantics`, `superRA/task-tree/status-model/12-postponed-rendering-surfaces`, `superRA/task-tree/status-model/13-postponed-docs`, `superRA/task-tree/planning-redesign/review-planning-protocol/**`, and `superRA/task-tree/agent-interface/integ-workflow/**` remove stale command wording or stale sync-impact residue after preserving incoming base intent. No unrelated cleanup hunks identified.
+A path-independent `superra` CLI is shipped as a package under `skills/task-tree/`, with `uv` as the resolver so committed task trees carry no local skill or plugin paths and no generated `superRA/serve` wrappers.
 
-**Local development follow-up:** root `CLAUDE.md §Local Task-Tree CLI Development` instructs agents to run the loose entry scripts via `uv run --script skills/task-tree/scripts/cli.py …` for this checkout — script-scoped, so it never provisions the repo environment and reflects source edits on the next run with no cache-bust. The repo-local `superRA/superra` wrapper self-resolves its repo root and dispatches through that same `uv run --script` path (`python3` fallback). The `uv run --project` / `uvx` framing was superseded by the `cli-source-resolution` child's `uv run --script` model.
-
-**Task move command:** `superra task move FROM TO` is now the canonical path for intentional task path changes, while `superra task rename FROM TO` remains a same-parent compatibility alias. The move implementation carries the task directory, rewrites local Markdown links using pre-move context, cascades same-parent sibling `depends_on` rewrites, and rejects cross-parent moves that would strand old-sibling or moved-task dependencies. User guidance in `skills/task-tree/SKILL.md` and `skills/task-tree/references/commands.md` now teaches raw `mv` / `git mv` as recovery-only, with the PostToolUse hook documented as a guardrail rather than the canonical move mechanism. Focused CLI tests cover cross-parent link rewriting, dependency-stranding rejection, rootless forest destination moves, same-parent rename dependency cascading, and cross-parent rename rejection.
-
-### Key Findings
-- The shipped surface is the packaged `superra` command in [cli.py](../../../../skills/task-tree/scripts/cli.py), which routes to ~18 focused entry/helper modules under `skills/task-tree/scripts/` (e.g. `task_create.py`, `task_update.py`, `task_link.py`, `task_rename.py`, `task_query.py`, `task_read.py`, `task_add_result.py`, `task_comment.py`, `task_check.py`, `plan_migrate.py`, `plan_dashboard.py`, `task_hook.py`, `wrapper_resolver.py`), with shared internals in `_task_io.py`, `_comments.py`, `_worktree_discovery.py`.
-- Mutation invariants live in the mutator functions (single enforcement point regardless of entry surface): `resolve_path` containment + redundant-root-prefix tolerance, sibling-only dependency validation, cycle detection (`_has_transitive_dep`), and same-parent / cross-parent move invariants in `task_rename.py`.
-- Source resolution and run-line are single-sourced in `wrapper_resolver.py` (`uv run --script` + `python3` fallback), rendered into the committed `superRA/superra` wrapper and `hooks/task-hook` shim, both pinned by byte-identity tests.
+- **Command surface.** The packaged `superra` command routes through `skills/task-tree/scripts/cli.py` to ~18 focused entry/helper modules under `skills/task-tree/scripts/` (`task_create.py`, `task_update.py`, `task_link.py`, `task_rename.py`, `task_query.py`, `task_read.py`, `task_add_result.py`, `task_comment.py`, `task_check.py`, `plan_migrate.py`, `plan_dashboard.py`, `task_hook.py`, `wrapper_resolver.py`), with shared internals in `_task_io.py`, `_comments.py`, `_worktree_discovery.py`. `superra dashboard` is the human-facing dashboard command; `superra task ...` is the read/query/create/update/result/dependency/rename/comment/check/migrate/hook surface.
+- **Mutation invariants** live in the mutator functions (one enforcement point regardless of entry surface): `resolve_path` containment plus redundant-root-prefix tolerance, sibling-only dependency validation, cycle detection (`_has_transitive_dep`), and the same-parent / cross-parent move invariants in `task_rename.py`.
+- **Source resolution** is single-sourced in `wrapper_resolver.py` (`uv run --script` with a `python3` fallback), rendered into the committed `superRA/superra` wrapper and the `hooks/task-hook` shim, both pinned by byte-identity tests. Root `CLAUDE.md §Local Task-Tree CLI Development` instructs running the loose entry scripts via `uv run --script skills/task-tree/scripts/cli.py …`, which is script-scoped and never provisions the repo environment.
+- **Task move.** `superra task move FROM TO` is the canonical path for intentional task path changes (`superra task rename FROM TO` remains a same-parent compatibility alias). Move carries the task directory, rewrites local Markdown links from pre-move context, cascades same-parent sibling `depends_on` rewrites, and rejects cross-parent moves that would strand dependencies. Raw `mv` / `git mv` is documented as recovery-only, with the PostToolUse hook as a guardrail. Focused CLI tests cover cross-parent link rewriting, dependency-stranding rejection, rootless forest destination moves, same-parent rename cascading, and cross-parent rename rejection.
