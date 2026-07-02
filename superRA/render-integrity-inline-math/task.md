@@ -1,6 +1,6 @@
 ---
 title: "Render-integrity rule: inline $…$ math split across a line break"
-status: implemented
+status: approved
 depends_on: []
 ---
 

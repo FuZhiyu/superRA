@@ -1,6 +1,6 @@
 ---
 title: "Drop the Five Fields from the Data Layer, CLI, and Tests (Back-Compat Preserved)"
-status: implemented
+status: approved
 depends_on: []
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Propagate the Narrowed Field Set Across Instruction Prose"
-status: implemented
+status: approved
 depends_on:
   - 01-code-and-compat
 ---

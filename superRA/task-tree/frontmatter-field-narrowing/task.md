@@ -1,6 +1,6 @@
 ---
 title: "Narrow the Frontmatter Field Set to title/status/depends_on"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
