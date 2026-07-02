@@ -1,13 +1,7 @@
 ---
-title: "Safe Restructuring Tooling — Dep-Rewire Hook + Placement Detector"
+title: "Safe Restructuring Tooling — Dep-Rewire Hook"
 status: approved
 depends_on: []
-tags:
-  - task-tree
-  - cli
-  - consolidation
-  - placement
-created: 2026-06-07
 ---
 
 ## Objective
@@ -57,7 +51,9 @@ Likely splits at implementation into (a) hook + `_task_io` rewire helper and (b)
 
 ## Results
 
-Both halves landed: the lossless `depends_on` auto-rewire in the PostToolUse hook (same-parent rename only) and the advisory `task check --category placement` detector. All edits are local CLI/hook changes plus the agent-facing docs of the new hook behavior; no new `Stage:` value, no `task merge` command (cross-parent moves use the shipped `task move` command). The full suite passes (631 tests at the time of the revise round).
+**Current state:** only the dep-rewire hook survives as a durable capability. Both halves originally landed here — the lossless `depends_on` auto-rewire in the PostToolUse hook (same-parent rename only) and the advisory `task check --category placement` detector — but `task-tree/top-level-task-shape` later removed the placement detector entirely (`check_placement`, the `placement` check category, and its `is_forest` threading), because the smells it flagged only made sense under the top-level-task privilege that task unprivileged; see [task-tree/task.md](../task.md) `## Results` for that removal. The sections below describe the dep-rewire hook, which is unaffected and remains current.
+
+All edits are local CLI/hook changes plus the agent-facing docs of the new hook behavior; no new `Stage:` value, no `task merge` command (cross-parent moves use the shipped `task move` command). The full suite passed at 631 tests at the time of this task's own revise round (later re-verified at 689 as other work landed; see [task-tree/task.md](../task.md)).
 
 ### What landed
 
@@ -67,19 +63,13 @@ Both halves landed: the lossless `depends_on` auto-rewire in the PostToolUse hoo
 
 **Scoped to the lossless case only.** Cross-parent move (cross-tree edge inexpressible in the sibling-only model), delete of a depended-on task (dropping a real edge changes execution ordering — closer to content loss than YAML upkeep), and merge (human controls nuance integration — no command) are left as dangling-dependency **warnings**, never silently rewired. This preserves the pre-existing `test_bash_mv_dangling_dep_warns_and_does_not_rewrite` behavior for re-parents.
 
-**3. Advisory placement category — [`task_check.py`](../../../skills/task-tree/scripts/task_check.py) `check_placement`.** New `--category placement` (wired in both [`task_check.py`](../../../skills/task-tree/scripts/task_check.py) and the packaged [`cli.py`](../../../skills/task-tree/scripts/cli.py)) emits `warning`-severity findings, never auto-fixes, for the four placement-ladder smells codified in [`planning.md` §Placing Work](../../../skills/task-tree/references/planning.md):
-- root carrying `script` / `input` / `output` (a leaf masquerading as the project);
-- single-child root (a wrapper around one narrow task);
-- a root-level leaf sitting beside root-level branches (a narrow feature hoisted to root — an all-leaf flat plan is intentionally not flagged);
-- identical declared `output` artifact owned by tasks in different top-level subtrees (split-concern / duplicate candidate). Generic basenames (`README.md`, `SKILL.md`, `task.md`, …) are excluded so a shared common filename is not a false split-concern signal — only a shared *specific* artifact fires.
+**3. Advisory placement category (removed).** This task originally added `--category placement` to `task_check.py`, emitting `warning`-severity findings for four placement-ladder smells (root leaf-fields, single-child root, root-leaf-beside-branch, cross-subtree output overlap). `task-tree/top-level-task-shape` later deleted `check_placement`, the `placement` category, and its `is_forest` threading in full — see [task-tree/task.md](../task.md) `## Results`. Not a current capability.
 
 **4. Agent-facing docs of the new hook behavior** (so a rename's silent dep re-point is expected, not surprising), placed where the hook's existing auto-behaviors are already surfaced:
 - [`using-superra/SKILL.md` §Task Interface](../../../skills/using-superra/SKILL.md#L46) — the universal-interface surface every executing agent preloads: the same line that documents the status cascade now also states that a same-parent rename re-points siblings' `depends_on` edges (revise round; the scope item required this surface and it was previously missing).
 - [`task-tree/SKILL.md`](../../../skills/task-tree/SKILL.md) move/rename line — same-parent rename auto-cascades; cross-parent move and delete strand for re-wiring.
 - [`references/commands.md` §Rename / move a task](../../../skills/task-tree/references/commands.md) — full agent-facing statement of the cascade + the non-cascading cases.
 - [`references/internals.md` §Hook Architecture](../../../skills/task-tree/references/internals.md) — implementation-facing description (helper, classifier, ordering-before-reconcile, the lossless-only boundary).
-
-The placement category itself follows the precedent of the existing categories (status/dependency/rollup): discoverable via `--category` `--help` choices, not separately documented in prose — adding a new prose surface for it would exceed precedent.
 
 ### Tests (red-green verified)
 
@@ -88,5 +78,5 @@ Added to [`test_task_tree.py`](../../../skills/task-tree/scripts/test_task_tree.
 ### Verification
 
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → **631 passed, 2 skipped** (at the revise round; was 305 for this task's original landing).
-- `superra task check --category placement --root superRA` runs against the live tree and reports "All checks passed" (the depth-1 root check is exercised by the smell-3 test on a synthetic tree); advisory-only — no auto-mutation. An earlier run over-fired on shared `README.md` outputs, which drove the generic-basename exclusion.
+- `superra task check --category placement` verification is historical only — the category no longer exists (removed by `task-tree/top-level-task-shape`).
 - DRY/Necessity gate (skill-creator unavailable, per dispatch) applied line by line to the doc edits: the rename cascade is documented once per existing surface where the hook's auto-behaviors already live, each phrased to the surface's audience (agent-facing vs implementation-facing); no new doc file or category prose surface created.
