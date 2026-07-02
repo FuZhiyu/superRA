@@ -2,6 +2,8 @@
 
 > ⚠️ **Breaking change (0.3.0):** `PLAN.md` / `RESULTS.md` are replaced by the `superRA/` task tree. Existing projects are detected and offered migration automatically (or run `superra task migrate from-plan`); to stay on the previous model, pin the install to the frozen `v0.1.2` tag. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note and full history, including the 0.2.0 workflow-skill rename.
 
+> ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
+
 **[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Workflows](http://fuzhiyu.me/superRA/#/05-workflows) section, and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/07-showcase).
 
 superRA turns an AI coding agent into a disciplined research assistant. It runs on Claude Code and Codex, and ships:
