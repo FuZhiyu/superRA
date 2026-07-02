@@ -1,49 +1,63 @@
 ---
-title: "Fix per-paper image namespacing in mistral-pdf-to-markdown"
-status: approved
+title: "Fix per-conversion image namespacing in mistral-pdf-to-markdown"
+status: implemented
 depends_on: []
 ---
 
 ## Objective
-Fix a filename-collision bug in `skills/mistral-pdf-to-markdown`. `save_images()` writes every conversion's extracted figures into a single shared `<output_dir>/images/` directory, numbering from `img-0` each run. When multiple papers are converted into the **same output folder** — the normal case for a paper collection — later conversions silently overwrite the earlier papers' identically-named `img-N.jpeg` files, and the in-markdown reference `](images/img-N` is ambiguous across papers. Only the embedded figure images are affected; each paper's OCR'd text/equations live in its own `.md` and are intact.
+Fix a filename-collision and portability bug in `skills/mistral-pdf-to-markdown`. The converter originally wrote every conversion's extracted figures into one shared `<output_dir>/images/` directory, numbering from `img-0` each run. Converting multiple papers into the same collection folder could silently overwrite earlier `img-N.jpeg` files, and keeping markdown files separate from their images made single-paper moves fragile.
 
-Namespace extracted images **per paper, keyed on the output markdown filename stem**, so concurrent papers in one folder never collide.
+Write each conversion as a self-contained folder keyed on the requested output markdown stem:
+
+```
+<collection>/
+└── <paper-stem>/
+    ├── <paper-stem>.md
+    └── images/
+        ├── img-0.jpeg
+        └── ...
+```
+
+The markdown should reference `images/img-N.jpeg`, so the paper folder can be moved or later subdivided without breaking image paths.
 
 ### Deliverables
-1. **`scripts/convert_pdf_to_markdown.py`** — write images to `<output_dir>/images/<md-stem>/img-N.jpeg` (subfolder = output `.md` stem), and rewrite the in-markdown image paths to the matching `](images/<md-stem>/img-N` form. The current flat `](img- → ](images/img-` rewrite (line ~226) and the fixed `images/` dir in `save_images()` (lines ~158–160, ~176) are the two sites to change.
-2. **`SKILL.md`** — document the per-paper image subfolder layout.
-3. **Regression test** — converting two papers into the **same output directory** produces disjoint image sets under separate `images/<stem>/` subfolders with zero overwrite, and each `.md`'s image references resolve to its own subfolder. Runs **offline** against a mocked OCR response — no Mistral key, no network.
+1. **`scripts/convert_pdf_to_markdown.py`** - resolve the user-supplied output target to a conversion directory, write markdown inside that directory, write images to the directory's `images/` subfolder, and rewrite in-markdown image paths to `](images/img-N...)`.
+2. **`SKILL.md`** - document the per-conversion folder layout and output-path behavior.
+3. **Regression test** - converting two papers under the same collection output directory produces separate conversion folders with no overwrite, no shared collection-level images directory, and resolvable markdown image references. Runs offline against a mocked OCR response.
 
 ### Validation criteria
-- Two papers → same output dir → no image is overwritten; each `.md` references only its own `images/<stem>/` subfolder.
-- The in-markdown image-path rewrite matches the on-disk per-paper layout (no dangling references).
-- Single-paper conversion still works; the layout change is documented in `SKILL.md`.
-- The regression test runs with no network and no API key (mock the OCR response object).
+- Two papers -> same collection dir -> no image is overwritten; each conversion folder contains its own markdown and `images/` folder.
+- The in-markdown image-path rewrite matches the on-disk conversion-local layout.
+- A requested `output.md` path creates `output/output.md`; an already-foldered `output/output.md` path is not nested again.
+- The regression test runs with no network and no API key.
 - No secret leakage; key still read from env / shared config / `Notes/.env` only.
 
 ### Context
-Skill-creation work in the **public** superRA repo — the test must use synthetic/mocked OCR data, never real paper titles, counts, or library data. Load `skill-creator` before editing `SKILL.md`. The bug root cause is `save_images()` deriving `images_dir` from `output_path.parent` alone and numbering `image_count` from 0 per call, with no per-paper key.
+Skill-creation work in the public superRA repo - the test must use synthetic/mocked OCR data, never real paper titles, counts, or library data. Load `skill-creator` before editing `SKILL.md`.
 
-The damaged research collection (already-converted papers whose figures collided) lives in the researcher's **separate** project, not this repo. Remediation there — re-running the fixed skill on the affected PDFs (a shell loop over the per-file command) — is a researcher-run action outside this task tree; this task ships only the durable fix.
+The damaged research collection lives in the researcher's separate project, not this repo. Remediation there - re-running the fixed skill on the affected PDFs - is outside this task tree.
 
 ## Planner Guidance
-Subfolder-by-stem (`images/<stem>/img-N.jpeg`) is the chosen scheme over a flat filename prefix — it keeps one paper's figures in one directory and reads cleanly. Keep the change surgical: the two edit sites in `convert_pdf_to_markdown.py` plus the path-rewrite string.
+The original `images/<stem>/img-N.jpeg` design fixed collisions but left each markdown file outside its asset boundary. The revised design makes the paper folder the artifact boundary, which is easier to move and can support later section-level subdivision.
+
+## Revision Notes
+User requested a stronger artifact boundary after the draft PR: one folder per conversion, containing both markdown and images. This substantively replaces the earlier approved `images/<stem>/` layout, so the task is back at `implemented` pending re-review.
 
 ## Results
 
-The collision bug is fixed by namespacing every conversion's figures under a per-paper subfolder keyed on the output `.md` filename stem. All three deliverables land.
+Implemented the per-conversion folder layout.
 
-**1 — Per-paper image layout ([convert_pdf_to_markdown.py](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py)).** Two edit sites, as scoped:
-- `save_images()` ([scripts/convert_pdf_to_markdown.py:162-166](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py#L162-L166)) now writes to `output_path.parent / "images" / output_path.stem` instead of the shared `output_dir / "images"`. The `img-N` numbering is unchanged — it is now safe because each paper's counter lives in its own directory.
-- The in-markdown rewrite ([scripts/convert_pdf_to_markdown.py:231-234](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py#L231-L234)) changed from the flat `](img- → ](images/img-` to `](img- → ](images/<stem>/img-`, so references match the on-disk layout.
+**1 - Conversion-local output paths ([convert_pdf_to_markdown.py](../../skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py)).**
+- `resolve_output_paths()` maps `Output/paper.md` to `Output/paper/paper.md`, keeps an already-foldered `Output/paper/paper.md`, and accepts a directory target as `<directory>/<input-pdf-stem>.md`.
+- `save_images()` now writes to the markdown file's sibling `images/` directory.
+- Markdown references are rewritten to `images/img-N.jpeg`, matching the conversion-local layout.
 
-**2 — Documentation ([SKILL.md](../../skills/mistral-pdf-to-markdown/SKILL.md)).** Output Structure now shows the `images/<md-stem>/` tree with two example papers side by side; Key Features, Notes, and Quick Start updated to the per-paper path form.
+**2 - Documentation ([SKILL.md](../../skills/mistral-pdf-to-markdown/SKILL.md)).**
+Output Structure, Key Features, and Notes now describe the self-contained folder layout and conversion-local image paths.
 
-**3 — Offline regression test ([scripts/test_image_namespacing.py](../../skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py)).** Converts two synthetic papers (`paper_alpha`, 2 figures; `paper_beta`, 3 figures) into one output directory and asserts: each paper's images land under its own `images/<stem>/` subfolder; nothing lands in a flat `images/*.jpeg`; the full image paths are disjoint across papers even though filenames overlap (`img-0.jpeg` in both); each `.md` references only its own subfolder with no surviving `](img-` flat reference; every referenced path resolves to a file on disk. It stubs `mistralai`, `pypdf`, and `dotenv` in `sys.modules` before import and monkeypatches `load_api_key`/`extract_pages`/`process_with_mistral`, so it runs with no Mistral key, no network, and no third-party deps. Uses synthetic OCR data only (a 1x1 JPEG, placeholder stems) — no real library data.
+**3 - Offline regression test ([scripts/test_image_namespacing.py](../../skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py)).**
+The test converts two synthetic papers into one collection directory and asserts: each paper gets its own folder; markdown is written inside that folder; no collection-level `images/` directory is created; duplicate `img-0.jpeg` filenames are safe because paths are foldered apart; every markdown image reference resolves relative to its own markdown file.
 
-**Verification.** `python3 test_image_namespacing.py` exits 0: `OK: per-paper image namespacing holds; no overwrite, no dangling refs`. `python3 -m py_compile` passes on both scripts.
-
-**Notes / caveats.**
-- `skill-creator` is named in the task Context but is not installed in this environment, so it could not be loaded before the `SKILL.md` edit. The edit is a minimal documentation update following the repo's skill-authoring discipline (`CLAUDE.md`); flagging for the reviewer in case the skill is expected to be present.
-- The single-conversion path is unchanged in shape (same `img-N` numbering, same rewrite mechanism) — only the directory prefix moved — so existing single-paper usage still works; the test's per-file conversions exercise that path.
-- Secret handling is untouched: the key is still read only from env / shared config / `Notes/.env` via `load_api_key()`.
+**Verification.**
+- `uv run --with pytest python -m pytest skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py`
+- `python3 -m py_compile skills/mistral-pdf-to-markdown/scripts/convert_pdf_to_markdown.py skills/mistral-pdf-to-markdown/scripts/test_image_namespacing.py`

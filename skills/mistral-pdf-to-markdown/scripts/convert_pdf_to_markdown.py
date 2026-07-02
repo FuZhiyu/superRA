@@ -144,14 +144,38 @@ def process_with_mistral(api_key, base64_pdf):
     return response
 
 
+def resolve_output_paths(pdf_path, output_path):
+    """
+    Resolve the user-supplied output argument to a self-contained conversion.
+
+    Passing Output/paper.md creates Output/paper/paper.md. Passing an existing
+    conversion path such as Output/paper/paper.md keeps that path, and passing a
+    directory creates <directory>/<input-pdf-stem>.md.
+    """
+    pdf_path = Path(pdf_path)
+    output_path = Path(output_path)
+
+    if output_path.suffix.lower() == ".md":
+        if output_path.parent.name == output_path.stem:
+            markdown_path = output_path
+            conversion_dir = output_path.parent
+        else:
+            conversion_dir = output_path.parent / output_path.stem
+            markdown_path = conversion_dir / output_path.name
+    else:
+        conversion_dir = output_path
+        markdown_path = conversion_dir / f"{pdf_path.stem}.md"
+
+    return conversion_dir, markdown_path
+
+
 def save_images(ocr_response, output_path):
     """
     Extract and save images from OCR response.
 
-    Images are namespaced per paper in a subfolder named after the output
-    markdown filename stem: <output_dir>/images/<md-stem>/img-N.jpeg. This
-    keeps multiple papers converted into one output directory from colliding
-    on identically-numbered img-N files.
+    Images are saved inside the conversion folder next to the output markdown:
+    <conversion-dir>/images/img-N.jpeg. The conversion folder is the namespace,
+    so the markdown and all of its extracted assets can be moved together.
 
     Args:
         ocr_response: Mistral OCR response object
@@ -161,7 +185,7 @@ def save_images(ocr_response, output_path):
         Number of images saved
     """
     output_path = Path(output_path)
-    images_dir = output_path.parent / "images" / output_path.stem
+    images_dir = output_path.parent / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
 
     image_count = 0
@@ -200,11 +224,12 @@ def convert_pdf_to_markdown(pdf_path, output_path, page_selection=None):
         page_selection: Optional page selection string
     """
     pdf_path = Path(pdf_path)
-    output_path = Path(output_path)
+    conversion_dir, markdown_path = resolve_output_paths(pdf_path, output_path)
 
     print(f"Converting: {pdf_path.name}")
     if page_selection:
         print(f"Pages: {page_selection}")
+    print(f"Output folder: {conversion_dir}")
 
     # Load API key
     print("Loading API key...")
@@ -224,22 +249,20 @@ def convert_pdf_to_markdown(pdf_path, output_path, page_selection=None):
 
     # Save images
     print("Extracting images...")
-    image_count = save_images(ocr_response, output_path)
+    image_count = save_images(ocr_response, markdown_path)
 
-    # Fix image paths in markdown to the per-paper subfolder
+    # Fix image paths in markdown to the conversion-local image folder.
     if image_count > 0:
-        markdown_content = markdown_content.replace(
-            '](img-', f'](images/{output_path.stem}/img-'
-        )
+        markdown_content = markdown_content.replace('](img-', '](images/img-')
 
     # Save markdown
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, 'w', encoding='utf-8') as f:
+    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(markdown_path, 'w', encoding='utf-8') as f:
         f.write(markdown_content)
 
     # Report results
     print(f"\n✓ Conversion complete!")
-    print(f"  Markdown: {output_path}")
+    print(f"  Markdown: {markdown_path}")
     print(f"  Pages: {len(ocr_response.pages)}")
     print(f"  Characters: {len(markdown_content)}")
     print(f"  Images: {image_count}")

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Offline regression test for per-paper image namespacing.
+Offline regression test for per-conversion image namespacing.
 
-Guards the collision fix: converting two papers into the SAME output directory
-must produce disjoint image sets under separate images/<stem>/ subfolders with
-zero overwrite, and each .md's image references must resolve to its own
-subfolder.
+Guards the collision fix: converting two papers with the SAME collection output
+directory must produce self-contained per-conversion folders. Each folder
+contains the paper markdown and its own images/ directory, so the artifact can be
+moved without breaking references.
 
 Runs fully offline — the Mistral client, pypdf, and dotenv imports are stubbed
 before importing the converter, and the network/key-dependent stages
@@ -95,8 +95,9 @@ def run(tmp_root):
     out_dir = Path(tmp_root)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Two papers, both converted into the SAME output directory. Each returns a
-    # different number of figures so we can prove neither clobbers the other.
+    # Two papers, both requested under the SAME collection output directory.
+    # Each returns a different number of figures so we can prove neither
+    # clobbers the other.
     responses = {
         "paper_alpha": _make_response(2),
         "paper_beta": _make_response(3),
@@ -121,20 +122,40 @@ def run(tmp_root):
         pdf_path.write_bytes(b"%PDF-1.4 dummy")
         conv.convert_pdf_to_markdown(pdf_path, md_path)
 
-    # 1. Each paper's images live in its own subfolder.
-    alpha_imgs = sorted((out_dir / "images" / "paper_alpha").glob("*.jpeg"))
-    beta_imgs = sorted((out_dir / "images" / "paper_beta").glob("*.jpeg"))
+    alpha_dir = out_dir / "paper_alpha"
+    beta_dir = out_dir / "paper_beta"
+
+    # 1. Each conversion is a self-contained folder containing markdown and images.
+    assert (alpha_dir / "paper_alpha.md").exists()
+    assert (beta_dir / "paper_beta.md").exists()
+    assert not (out_dir / "paper_alpha.md").exists()
+    assert not (out_dir / "paper_beta.md").exists()
+    folder_dir, folder_md = conv.resolve_output_paths(
+        out_dir / "paper_alpha.pdf",
+        alpha_dir / "paper_alpha.md",
+    )
+    assert folder_dir == alpha_dir
+    assert folder_md == alpha_dir / "paper_alpha.md"
+    directory_dir, directory_md = conv.resolve_output_paths(
+        out_dir / "paper_gamma.pdf",
+        out_dir / "manual_target",
+    )
+    assert directory_dir == out_dir / "manual_target"
+    assert directory_md == out_dir / "manual_target" / "paper_gamma.md"
+
+    # 2. Each paper's images live next to its markdown in its own images folder.
+    alpha_imgs = sorted((alpha_dir / "images").glob("*.jpeg"))
+    beta_imgs = sorted((beta_dir / "images").glob("*.jpeg"))
     assert len(alpha_imgs) == 2, f"expected 2 alpha images, got {len(alpha_imgs)}"
     assert len(beta_imgs) == 3, f"expected 3 beta images, got {len(beta_imgs)}"
 
-    # 2. No flat images/ files — nothing landed in the shared (collision) dir.
-    flat = list((out_dir / "images").glob("*.jpeg"))
-    assert not flat, f"unexpected flat images (collision layout): {flat}"
+    # 3. No shared collection-level images directory.
+    assert not (out_dir / "images").exists()
 
-    # 3. Disjoint image paths → zero overwrite possible across papers.
+    # 4. Disjoint image paths → zero overwrite possible across papers.
     alpha_names = {p.name for p in alpha_imgs}
     beta_names = {p.name for p in beta_imgs}
-    # Filenames overlap (img-0.jpeg etc.), but full paths are namespaced apart.
+    # Filenames overlap (img-0.jpeg etc.), but full paths are foldered apart.
     alpha_paths = {p.resolve() for p in alpha_imgs}
     beta_paths = {p.resolve() for p in beta_imgs}
     assert alpha_paths.isdisjoint(beta_paths), "image paths collide across papers"
@@ -142,24 +163,24 @@ def run(tmp_root):
         "expected same filenames under different subfolders"
     )
 
-    # 4. Each .md references only its own images/<stem>/ subfolder.
-    alpha_md = (out_dir / "paper_alpha.md").read_text()
-    beta_md = (out_dir / "paper_beta.md").read_text()
-    assert "](images/paper_alpha/img-" in alpha_md
-    assert "](images/paper_beta/" not in alpha_md
-    assert "](images/paper_beta/img-" in beta_md
-    assert "](images/paper_alpha/" not in beta_md
+    # 5. Each .md references only its conversion-local images folder.
+    alpha_md = (alpha_dir / "paper_alpha.md").read_text()
+    beta_md = (beta_dir / "paper_beta.md").read_text()
+    assert "](images/img-" in alpha_md
+    assert "](images/img-" in beta_md
+    assert "](../" not in alpha_md and "](../" not in beta_md
     # No dangling flat reference survives the rewrite.
     assert "](img-" not in alpha_md and "](img-" not in beta_md
 
-    # 5. Every referenced image path resolves to a file on disk.
-    for md_text, stem in ((alpha_md, "paper_alpha"), (beta_md, "paper_beta")):
+    # 6. Every referenced image path resolves relative to its own markdown file.
+    for stem in ("paper_alpha", "paper_beta"):
+        conversion_dir = out_dir / stem
         n = 2 if stem == "paper_alpha" else 3
         for i in range(n):
-            ref = out_dir / "images" / stem / f"img-{i}.jpeg"
+            ref = conversion_dir / "images" / f"img-{i}.jpeg"
             assert ref.exists(), f"dangling reference: {ref}"
 
-    print("OK: per-paper image namespacing holds; no overwrite, no dangling refs")
+    print("OK: per-conversion folder layout holds; no overwrite, no dangling refs")
 
 
 def test_image_namespacing(tmp_path):
