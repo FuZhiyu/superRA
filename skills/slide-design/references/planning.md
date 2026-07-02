@@ -4,7 +4,7 @@ Use this reference in PLAN phase when slide work enters the superRA workflow.
 
 ## Audience-Context Inventory
 
-Before task decomposition, record the audience-context inventory in the root `.plan/task.md`:
+Before task decomposition, record the audience-context inventory in the governing ancestor task's objective:
 
 - **Audience:** venue, likely fields, seniority, and whether they know the paper/project.
 - **Shared context:** concepts, methods, data, notation, and institutions the audience can be expected to know without setup.

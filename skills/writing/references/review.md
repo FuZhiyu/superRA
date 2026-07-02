@@ -20,7 +20,7 @@ A shared apply-discipline vocabulary used at two call sites: review-mode finding
 
 **Sequence/set/force test.** This is the rule that draws the conventional/authorial line. If sequence + set + force are all preserved, the edit is `conventional` regardless of how aggressive the rewrite is. If any one shifts, it is `authorial`. Worked examples across the boundary: a sentence-break is `conventional` (one proposition becomes two clauses, set unchanged); a sentence-reorder is `authorial` (sequence shifts). A nominalization fix is `conventional` (action moves into the verb, force unchanged); a hedge strengthening — "may" → "does" — is `authorial` (force shifts). A coordinate sentence merge is `conventional` (two equal-weight clauses joined, force unchanged); subordinating one to the other is `authorial` (the subordinated clause loses standalone force). A topic-sentence move is `authorial` (sequence shifts; the paragraph's governing idea changes position).
 
-The tier replaces the earlier `Auto-fixable: Yes / No` flag. The prior tier names were `judgment` (now `conventional`) and `decision` (now `authorial`); commit messages on this branch before 2026-05-08 use the older names. Each `consistency/<dim>.md` output block names this section as the source of legal values.
+Each `consistency/<dim>.md` output block names this section as the source of legal values.
 
 ## Thoroughness
 
@@ -32,13 +32,11 @@ Infer thoroughness from scope; ask via `AskUserQuestion` only when ambiguous.
 
 ## Multi-lane reviews
 
-When the scope spans more than one lane (language/style, structure, or any consistency dimension), dispatch **one reviewer per lane in parallel**. Each reviewer loads only the lane file(s) it needs: `style.md`, `structure.md`, or one `consistency/*.md` file. One generalist reviewer loaded with every lane produces shallower findings than focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the shared review-doc protocol.
+When the scope spans more than one lane (language/style, structure, or any consistency dimension), dispatch **one reviewer per lane in parallel**. Each reviewer loads only the lane file(s) it needs: `style.md`, `structure.md`, or one `consistency/*.md` file. One generalist reviewer loaded with every lane produces shallower findings than focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the review task-tree protocol.
 
 ## Review-as-planning
 
-When the review's findings will drive subsequent edits (the typical case for a section-level proofread), the natural shape of the report is a `PLAN.md` task list: each finding becomes a task entry the implementer can pick up. Use the handoff-doc PLAN.md task-block format (`superRA:handoff-doc references/plan-anatomy.md`) when the findings will survive across sessions or dispatches; a chat-only findings report suffices for same-session iteration.
-
-The boundary between "findings report" and "plan" is fluid. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
+When findings will drive subsequent edits in the same session, shape the chat report as an actionable list. When findings must survive across sessions or dispatches, create or update task-tree tasks instead of a standalone review file; accepted findings live in task-local `## Review Notes` until a follow-up Polish task applies them. If the requester says "now go fix these" in a standalone session, the findings list becomes the explicit Polish scope directly — don't re-author.
 
 ## Intent comments as yardstick
 

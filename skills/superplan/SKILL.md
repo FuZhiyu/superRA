@@ -1,202 +1,196 @@
 ---
 name: superplan
-description: "Requires `superRA:using-superra` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `superimplement` once the plan is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
+description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, or reflecting material decisions in the task tree."
 ---
 
 # superplan — the PLAN phase
 
 **First, load `superRA:using-superra` if not already loaded.**
 
+**If the harness has activated plan mode, load `references/harness-plan-mode.md` before proceeding.**
+
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the superimplement to consume.
+Owns the procedural shape of the **PLAN** phase: discovery of existing work, exploration, domain setup, task decomposition, self-review, and handoff. Output is a `superRA/` task tree for superimplement to consume.
 
-Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
+The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
 
-**Announce at start:** "I'm using the superplan skill to create the project plan."
+Task-tree design judgment — placement, task splitting, context distillation, update-task lifecycle, and retroactive task-tree creation — lives in `references/task-tree-design.md`.
 
-**Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
-- Create `RESULTS.md` alongside (see Living Plan and Results Docs section below), unless the active domain planning reference declares a different durable record.
-- (User preferences for plan location override this default)
+**Announce at start:** "I'm using the superplan skill to create the task tree."
 
-Commit the plan before proceeding to execution.
+**Output location:** `superRA/` at the worktree root if in a worktree, otherwise the project root, unless the user specifies elsewhere. Commit the task tree before execution.
 
-## Phase 1: Domain Vertical Setup
+## Entry Assessment
 
-Identify the domain of the work and load the matching domain skill's planning reference. The domain skill carries any domain-specific hard gates and templates that must be satisfied before tasks are drafted.
+Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
 
-**Currently implemented verticals:**
+**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work in the Existing Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise create the work as the first top-level task under `superRA/`.
 
-| Vertical | Trigger | Domain skill |
-|---|---|---|
-| Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` |
-| Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` |
-| Writing | task involves editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
-| Slide design | task involves creating, revising, polishing, or reviewing research slide decks, Beamer presentations, seminar/conference/lecture slides, slide structure, titles, bullets, overlays, backup slides, or slide layout/overflow issues | `superRA:slide-design` |
+**2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
-**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 2.** The researcher must approve the domain skill's planning-stage inventory artifact (e.g., Data Inventory, Model Inventory / Assumption Map, or Writing Plan Header) before any task structure is drafted.
+**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
 
-If the task is writing: load `skills/writing/references/planning.md`. Large writing work continues into Phase 2 under that reference.
+**Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing — wrong placement creates rework, wrong depth wastes effort or misses complexity.
 
-If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work.
+## Depth Tiers
 
-## Phase 2: Scope Check
+A spectrum, not rigid modes — escalate mid-planning if complexity warrants. The tier mainly modulates Phase 1; Phases 2-3 scale with it; Phase 4 is identical except thorough adds an agent review step (§Agent Review).
 
-If the work covers multiple independent workstreams (e.g., "analyze portfolio sorts AND run Fama-MacBeth regressions AND build factor models"; "do the theory derivation AND the empirical test"), suggest breaking into separate plans — one per workstream. Each plan should produce complete, documented results on its own.
+**Quick** — minor updates, known additions, single-task changes (an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment). Light scan of `superRA/`, skip deep exploration, design inline.
 
-## Phase 3: File Structure
+**Standard** (default) — new workstreams in familiar territory, a significant new branch, satisfying domain hard gates. Main agent explores project structure, loads the domain skill, designs tasks.
 
-Before defining tasks, map out the artifact pipeline:
+**Thorough** — complex or unfamiliar projects, large scope spanning multiple codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). Dispatch parallel exploration agents before task design per `references/thorough-planning.md`. Competing designs returned by multiple agents are a natural source of substantive questions for the user (§Substantive Questions).
 
-- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or model setup → derivation → verification → write-up). Follow any artifact-format guidance the active domain skill loads at PLAN or IMPLEMENT stage.
-- What files are inputs? Where do outputs go?
-- Follow existing project conventions for directory structure.
+## Phase 1: Exploration
 
-**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy).
+Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md` files, and git history for relevant prior work, scaled to the chosen tier (quick: scan the tree neighborhood where the work lands; standard: systematic exploration of the relevant areas; thorough: parallel exploration agents per `references/thorough-planning.md`). The domain hard-gate data gathering (data inventory, model primitives survey, manuscript assessment) begins here, though the phase itself is domain-neutral.
 
-**Pipeline file (required for multi-artifact work):**
+Revisit the entry assessment if exploration shows placement or depth needs adjustment.
 
-If the work involves more than one script or executable artifact, the plan MUST include a pipeline file that runs all artifacts in the correct order (see the active domain skill's planning reference for examples). A single entry point that reproduces every output from source.
+## Phase 2: Domain Setup & Scope
 
-The pipeline file must:
-- Run all scripts in dependency order
-- Fail fast on errors (`set -e` or equivalent)
-- Be committed to version control
-- Be updated whenever a new script is added
+Identify the domain of the work and load the matching domain skill's planning reference, which carries the domain's hard gates and templates.
 
-## Phase 4: Task Decomposition
+**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 3.** The researcher must approve the domain skill's planning-stage inventory artifact before any task structure is drafted.
 
-### Step Granularity
+If the task is in a domain without an implemented domain skill: proceed to Phase 3, but flag the gap to the researcher.
 
-**Each step is one logical unit of work with full discipline applied.** The active domain skill defines that discipline (its main checklist plus any planning-stage step-cycle guidance). Documentation is written continuously alongside the work, not as a separate step. Typical step shapes:
+## Phase 3: Design & Task Decomposition
 
-- "Describe the raw holdings data (panel structure, key variables, missing values)" — step
-- "Merge holdings with fund characteristics (left join on fund_id × date)" — step
-- "Validate merge result (row counts, check unmatched, spot-check merged variables), commit" — step
-- "State primitives, timing, and assumptions before deriving the Euler equation" — step
-- "Verify the closed form in a limiting case and with a simple numerical check, commit" — step
+### Artifact Pipeline
 
-For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
+Before defining tasks, map the artifact pipeline: which scripts/notebooks/documents will be created (one per logical phase, following any artifact-format guidance the domain skill loads), what their inputs are, and where outputs go. Follow existing project conventions for directory structure.
+
+**Walk the project guidance docs, then point to or distill each relevant convention into scoped objective context** per `references/task-tree-design.md` §Context Distillation. Dispatched agents inherit this context via `superra task read`.
+
+**Pipeline file (required for multi-artifact work):** When the work has more than one executable artifact, include a single committed entry point that reproduces every output from source — running scripts in dependency order, failing fast (`set -e` or equivalent), updated whenever a script is added.
+
+### Task Structure
+
+**Each task is one logical unit of work with full discipline applied.** The active domain skill defines that discipline. Documentation is written continuously alongside the work, not as a separate task.
+
+For objective writing and task splitting, see `references/task-tree-design.md` §Writing Objectives and Planner Guidance and §Splitting Tasks.
+
+### Creating Tasks
+
+**First, create the task-tree wrapper.** Every downstream agent reads and edits tasks through the committed `<task-root>/superra` wrapper, so it must exist before any subagent is dispatched. A fresh project has no `superra` yet, so the first call goes through the loaded task-tree skill directory (`<skill-dir>` = the directory holding its `SKILL.md`) and is committed with the tree:
+
+```bash
+uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
+```
+
+Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree/references/commands.md`), or create directories and write `task.md` files directly (`task-tree/SKILL.md` §Task File Format).
+
+**No checkboxes.** Tasks do not contain step checkboxes (`- [ ]` / `- [x]`). If a step needs independent tracking and review, it becomes a subtask.
 
 ### Task Dependencies
 
-Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(none)*`). See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format. Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Task Anatomy and `references/task-tree-design.md` §Parent and sibling context for semantics.
 
-**A task depends on another when it:**
-- reads the other task's output files;
-- needs a sample / variable / methodology decision finalized in the other task; or
-- runs sensitivity / robustness on the other task's baseline results.
+Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
-**After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent tasks; terminal task(s) produce the top-line results.
+**After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent siblings; terminal task(s) produce the top-line results.
 
-### Plan Document Header and Task Structure
+### Task Anatomy
 
-For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., Data Inventory for data analysis, or Model Inventory / Assumption Map for theory/modeling) come from the domain skill's planning reference.
+For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-tree/references/task-file-contract.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
 
-Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
+### Create the `superRA/` Directory
 
-## Living Plan and Results Docs
+1. If a shared `## Objective` / `### Context` genuinely spans every top-level task (`task-tree/references/task-file-contract.md` §Tree Shape), create an umbrella `superRA/task.md` carrying the project-level goal, methodology, scope, and any project-wide `### Conventions` / `### Context` / `### Constraints` subsections. Otherwise skip it.
+2. Create the top-level (and any nested) task directories with full objectives per §Task Structure above.
 
-**The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
+## Phase 4: Review & Commit
 
-Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → sweep-for-stale-content → atomic-commit protocol.
+### Self-Review
 
-**Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+After writing the complete task tree:
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `superintegrate` Document it matures into a permanent record. Follow the active domain planning reference when it declares a different durable record.
+1. **Domain inventory coverage (where applicable):** For domains with a planning hard gate, can you point to task coverage for every item in the inventory?
+2. **Placeholder scan:** Search for vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria. Fix them.
+3. **Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
+4. **Validation coverage:** Does every transformative task have a corresponding validation criterion in its objective?
+5. **Objective/guidance split:** See `references/task-tree-design.md` §Writing Objectives and Planner Guidance. Binding deliverables and constraints in `## Objective`; advisory hints in `## Planner Guidance`.
+6. **Handoff test:** If you stopped here and a new agent read any leaf task's ancestor chain, could they continue? Is there enough context?
+7. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
+8. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.
+9. **Subtask coverage:** No task carries implicit sub-steps that should be separate subtasks.
 
-### PLAN.md Is the Task Tracker
+Fix issues inline. No need to re-review — just fix and move on.
 
-**`PLAN.md` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task blocks with their `- [ ]` / `- [x]` checkbox steps and `**Review status:**` lines are the authoritative state of what is planned, what is in progress, and what is done. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
+### Agent Review
 
-`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of *what the agent is doing right now in this session*. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks (e.g., "read three reference files, then summarize for the user", "fix three lint errors before re-running the test"). It is **not** acceptable as a substitute for a PLAN.md task block. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `PLAN.md` first, then optionally mirrors into `TodoWrite` as a working view.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt.
 
-**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `PLAN.md`, not `TodoWrite`.
+**Planning reviewer:**
+```
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: planning-review
+  Task: <task path or root>
+  Review mode: handoff-readiness | design-review
+  Context: <exploration synthesis, inline or path>
+```
 
-**Banned patterns:**
+The two review modes are defined in `references/planning-review.md` §Review Mode.
 
-- Tracking analysis tasks only in `TodoWrite` while leaving `PLAN.md` stale.
-- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `PLAN.md`.
-- Using `TodoWrite` to coordinate work between sessions (it does not persist; the next session sees nothing).
-- Treating `TodoWrite` items as "logged" — they are not. Logged work is in a committed doc.
+REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
-If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
+Skip this step at quick and standard depth unless the user explicitly asks for a handoff review — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
 
-When the plan itself changes, re-invoke §User Feedback and Changing Plans below.
+### User Review
 
-## User Feedback and Changing Plans
+Verify the task tree aligns with the user's intent. Present the tree (via `superra task tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
 
-When the plan changes — task details updated, tasks added, removed, or reordered, objective shifted — whether prompted by explicit user feedback or surfaced during execution, follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol records which task-local statuses and rollup milestones are invalidated. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+For each newly created task — especially a new top-level one — state the existing concern you considered and why it does not cover the work, so the placement decision is visible for a human catch without enforcement machinery.
+
+### Execution Handoff
+
+Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initial tree authoring; see §User Feedback and Changing the Task Tree for the full sub-step set). Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
+
+## Substantive Questions
+
+At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
+
+## Living Task Tree
+
+**The task tree is NOT a static spec.** Work reveals surprises; the task tree evolves in place.
+
+Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a task's approach adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits to the task's body sections per the editing discipline in `agents/implementer.md` §Editing Etiquette; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing the Task Tree below.
+
+**Results:** Each task's `## Results` section is the live findings record. See `task-tree/references/task-file-contract.md` §Results Shape for the template and two-stage lifecycle.
+
+### `superRA/` Is the Task Tracker
+
+`superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite` (a transient within-session view that does not persist). Any work that is part of the project lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. When the two disagree, `superRA/` is right.
+
+## User Feedback and Changing the Task Tree
+
+When the task tree changes — details updated, tasks added/removed/restructured, objective shifted — follow this protocol, whether the change is raised mid-execution or after integration/merge. Update task files inline; never start a parallel tree, append an "Addendum", or leave the change in chat.
 
 **Material (require this protocol):**
 
-- Adding, removing, or reordering a task block.
-- Changing a task's objective, script, input, or output.
-- Changing the analysis-level objective, methodology, sample definition, or expected output.
+- Adding, removing, or restructuring task directories.
+- Changing a task's objective.
+- Changing the project-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
-- Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
-- Substantive restructure findings surfaced mid-INTEGRATE (by the `superintegrate` Sync agent, Integrate reviewer, or Document reviewer) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
+- Scope additions arriving after integration or merge.
+- Substantive restructure findings surfaced mid-INTEGRATE. The orchestrator authors the Restructure Proposal; the researcher decides.
 
-**Not material (handle as inline discovery edits per the Living Plan section above):**
+**Not material (handle as inline discovery edits per §Living Task Tree above):**
 
-- Rewording a step within an in-flight task to match what the data forced.
+- Rewording a task objective to match what the data forced (within the same scope).
 - Adjusting expected results based on early findings.
 - Refining methodology details that the researcher already approved at planning time.
 
 **Protocol:**
 
-1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. 
-2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
-3. **Update `PLAN.md` inline:**
-   - **Prefer modifying existing task blocks over appending.** Walk the task list and identify every task whose objective or output is affected by the change. Update each in place to reflect the new scope.
-   - **New task** → Only when the change is genuinely independent of every existing task's scope, append `### Task N+1: [name]` with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
-   - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
-   - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
-   - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
-   - **Header fields.** After the task-block edits above, rewrite any line in the PLAN.md header (anatomy in `handoff-doc/references/plan-anatomy.md §Header`) that no longer matches the new plan. The header and task blocks must describe the same analysis after the edit.
+1. **Confirm intent.** A passing remark in chat is not authorization. Ask (`AskUserQuestion`) to confirm the researcher wants the change.
+2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. After task edits, rewrite any field in a governing ancestor task that no longer matches the new tree.
+3. **Update statuses** by orchestrator judgment, per `references/task-tree-design.md` §Objective rewrites on scope expansion.
+4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
+5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. PLAN is one multi-step phase, so its commit subject carries the sub-step in the scope per `using-superra` §Commit Hygiene: `plan(<sub-step>): <summary>`, where `<sub-step>` is `add` (tree authoring), `revise` (this update-task path), `rollup` (status rollup), or `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This update-task change is `plan(revise): <one-line scope change>`.
+6. **Resume** on the affected frontier per `using-superra/references/main-agent.md` §Resuming Work.
 
-4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* task-local statuses and rollup boxes are invalidated and *why*. Rules: clear per-task `**Review status:**` and `**Integration status:**` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `APPROVED` tasks. Minor-edited tasks with code unchanged may clear `**Integration status:**` while keeping `**Review status:** APPROVED`. Uncheck project-level `## Workflow Status` boxes whose rollup guarantee is no longer true; unchecking a rollup does not imply clearing every contributing task status.
-5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
-6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resolve the next frontier.** Run `using-superra/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point. On every re-entry through `superintegrate`, the **full** drift-test suite runs regardless of which tasks changed; only *authoring* new drift tests is scoped to the affected tasks.
-
-
-**Banned shortcuts:**
-
-- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see §PLAN.md Is the Task Tracker above — `TodoWrite` is a transient view, not a record).
-- Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
-- Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
-- Treating an unchecked rollup milestone as permission to clear unrelated approved tasks. Preserve task-local validity unless the changed task's downstream closure invalidates it.
-
-
-## Remember
-
-- Exact file paths always
-- Complete content in every step
-- Domain-appropriate per-step discipline applied at each step, with documentation written continuously — see the active domain skill's main checklist
-- When the active domain has a hard gate or required verification plan, the finished tasks visibly cover it
-- Pipeline file for multi-artifact work
-
-## Self-Review
-
-After writing the complete plan:
-
-**1. Domain inventory coverage (where applicable):** For domains with a planning hard gate, can you point to task coverage for every item in that section (for example, each dataset in Data Inventory or each object/assumption block in a Model Inventory / Assumption Map)?
-
-**2. Placeholder scan:** Search for the red flags listed in the "No Placeholders" section. Fix them.
-
-**3. Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
-
-**4. Validation coverage:** Does every transformative step have a corresponding validation step? (For data: every merge, filter, and variable construction.)
-
-**5. Plan serves as handoff:** If you stopped here and a new agent read the required handoff docs declared for this work, could they continue? Is there enough context?
-
-**6. Sensitivity / robustness / verification coverage (where applicable):** Does the plan cover the active domain skill's verification / robustness requirements (e.g., sensitivity analysis tasks for data work, or derivation / proof / numerical-check planning for theory work)?
-
-**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
-
-Fix issues inline. No need to re-review — just fix and move on.
-
-## Execution Handoff
-
-After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status and commit the plan + box-flip atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection (subagent vs direct — see `superRA:using-superra` §Execution Modes) and review discipline.
+Do not resume the in-flight task before the change is committed — it is not real until then — and do not treat an invalidated milestone as license to clear unrelated approved tasks.

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# PreToolUse hook: hard-gate the three superRA phase skills'
-# (superRA:superplan, superRA:superimplement, superRA:superintegrate)
-# Skill calls on superRA:agent-orchestration being loaded first.
+# PreToolUse hook: hard-gate the two dispatching superRA phase skills'
+# (superRA:superimplement, superRA:superintegrate) Skill calls on
+# superRA:agent-orchestration being loaded first. superRA:superplan is
+# intentionally ungated — at quick/standard depth it dispatches nothing;
+# its SKILL.md instructs the load at its one dispatch point (§Agent Review).
 #
 # Fires on every PreToolUse event. Only acts when:
 #   tool_name == "Skill" AND
-#   tool_input.skill in {superRA:superplan,
-#                        superRA:superimplement,
+#   tool_input.skill in {superRA:superimplement,
 #                        superRA:superintegrate}
 # and the session transcript does NOT already show a Skill invocation
 # for superRA:agent-orchestration. In that case the hook emits a
@@ -18,9 +19,9 @@
 #
 # Test vectors (see tests/hooks/test-ensure-agent-orchestration.sh):
 #   V1  tool_name="Bash"                                     -> {}
-#   V2  skill="superRA:handoff-doc"                          -> {}
-#   V3  skill="superRA:superplan", not loaded        -> deny
-#   V4  skill="superRA:superplan", already loaded    -> {}
+#   V2  skill="superRA:handoff-doc" or "superRA:superplan"   -> {}
+#   V3  skill="superRA:superimplement", not loaded           -> deny
+#   V4  skill="superRA:superimplement", already loaded       -> {}
 #   V5  transcript_path empty / nonexistent                  -> {}
 #   V6  deny payload is valid JSON with round-tripping reason
 
@@ -28,7 +29,21 @@ set -euo pipefail
 
 COMPANION="superRA:agent-orchestration"
 
-input=$(cat)
+if [ -x /bin/cat ]; then
+  input=$(/bin/cat)
+elif [ -x /usr/bin/cat ]; then
+  input=$(/usr/bin/cat)
+else
+  input=$(cat)
+fi
+
+if [ -x /usr/bin/grep ]; then
+  GREP=/usr/bin/grep
+elif [ -x /bin/grep ]; then
+  GREP=/bin/grep
+else
+  GREP=grep
+fi
 
 # Parse tool_name, tool_input.skill, transcript_path from the PreToolUse
 # JSON payload as tab-separated fields so IFS=$'\t' read splits cleanly
@@ -60,9 +75,9 @@ if [ "$tool_name" != "Skill" ]; then
   exit 0
 fi
 
-# Fast path: only act on the three workflow skills.
+# Fast path: only act on the two dispatching workflow skills.
 case "$skill" in
-  superRA:superplan|superRA:superimplement|superRA:superintegrate)
+  superRA:superimplement|superRA:superintegrate)
     ;;
   *)
     printf '{}\n'
@@ -80,13 +95,13 @@ fi
 # session, let the call through. Match tolerantly (case-insensitive,
 # whitespace-tolerant around the colon) so minor transcript-format
 # drift does not cause a spurious deny.
-if grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:agent-orchestration"' "$transcript_path"; then
+if "$GREP" -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:agent-orchestration"' "$transcript_path" 2>/dev/null; then
   printf '{}\n'
   exit 0
 fi
 
 # Deny branch: instruct Claude to load the companion first, then retry.
-reason="The superRA workflow skill \"$skill\" requires the companion skill \"$COMPANION\" to be loaded first. Invoke Skill(skill=\"$COMPANION\") now, then retry the original Skill(skill=\"$skill\") call. The companion skill carries dispatch-prompt shape, verdict-adjudication discipline, and relay protocol between orchestrator and subagent that every workflow task depends on."
+reason="\"$skill\" requires the companion skill \"$COMPANION\" loaded first. Load it, then retry \"$skill\"."
 
 # JSON-escape the reason through python3 json.dumps so any inner `"` or
 # `\` in the text cannot break the payload.

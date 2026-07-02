@@ -1,3 +1,4 @@
+.vscode/
 .worktrees/
 .private-journal/
 .claude/
@@ -6,4 +7,8 @@ node_modules/
 __pycache__/
 inspo
 triage/
+**.pyc
+.plan/**/dashboard.html
+.plan/dashboard.html
 superRA/dashboard.html
+_site/

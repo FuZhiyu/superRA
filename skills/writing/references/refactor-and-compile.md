@@ -71,13 +71,13 @@ When renaming a term of art (`treatment group` → `treated sample`):
 - `[BLOCKING]` Direct quotations and block quotes not touched (quotes are sacred).
 - `[BLOCKING]` Document builds after the refactor (§Compile).
 - `[BLOCKING]` Git diff read end-to-end; every hunk intentional.
-- `[ADVISORY]` Refactor pre-image list (what changed, how many instances, in which files) saved to the handoff.
+- `[ADVISORY]` Refactor pre-image list (what changed, how many instances, in which files) recorded in the task or status return.
 
 ---
 
 ## §Compile
 
-**Principle.** Every batch of edits ends with a build. Errors block handoff; warnings are triaged. Errors that were not in the pre-edit build but appear in the post-edit build are the edit's responsibility.
+**Principle.** Every batch of edits ends with a build. Errors block completion; warnings are triaged. Errors that were not in the pre-edit build but appear in the post-edit build are the edit's responsibility.
 
 ### Build commands per engine
 
@@ -113,7 +113,7 @@ For Markdown rendered via a static-site generator (MkDocs, Jekyll, Hugo, Zola), 
 
 After any build, read the log:
 
-1. **Errors.** Halt the build. Must be fixed before handoff.
+1. **Errors.** Halt the build. Must be fixed before completion.
 2. **Warnings.** Classified below. Triage each.
 3. **`??` in output.** Unresolved cross-references — treat as errors (see `writing/references/consistency/cross-references.md`).
 
@@ -143,14 +143,14 @@ Failure modes the warning table above does not name explicitly:
 
 ### Error-escalation rules
 
-- **Build errors introduced by the edit:** the edit is responsible. Fix before handoff.
-- **Build errors already present before the edit (the document was already broken):** flag in the handoff — this is usually an upstream issue (missing package, bad path); escalate to the researcher unless the edit should include the fix.
-- **Warnings newly introduced:** triage per table above. If `[BLOCKING]`-class, fix; otherwise list in handoff.
+- **Build errors introduced by the edit:** the edit is responsible. Fix before completion.
+- **Build errors already present before the edit (the document was already broken):** flag in the task or status return — this is usually an upstream issue (missing package, bad path); escalate to the researcher unless the edit should include the fix.
+- **Warnings newly introduced:** triage per table above. If `[BLOCKING]`-class, fix; otherwise report them in the task or status return.
 - **Warnings present before and after the edit:** note as pre-existing, do not touch unless the task scope includes build-hygiene.
 
-### Build output in handoff
+### Build output record
 
-For non-trivial edits, include in the handoff:
+For non-trivial edits, record:
 
 - Build command used.
 - Pass / fail.
@@ -159,8 +159,8 @@ For non-trivial edits, include in the handoff:
 
 ### Compile Gated Checklist
 
-- `[BLOCKING]` Build command used is stated in handoff.
+- `[BLOCKING]` Build command used is recorded.
 - `[BLOCKING]` Build runs to completion with no errors (no unresolved `??` references, no undefined citations, no `File not found`).
 - `[BLOCKING]` No new `File not found` errors introduced by the edit (missing figure / `\input` / package).
-- `[ADVISORY]` Build warnings enumerated in handoff (new vs pre-existing).
+- `[ADVISORY]` Build warnings enumerated (new vs pre-existing).
 - `[ADVISORY]` Each new warning has a ≤1-line triage rationale.

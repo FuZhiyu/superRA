@@ -1,6 +1,6 @@
 # Worktree Lifecycle — Harness Tools and Raw-Git Fallback
 
-Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `SKILL.md` §Parallelization and Worktree Isolation for when parallel subagents require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
+Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `references/parallel-dispatch.md` for when parallel subagents require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
 
 ## Prefer Harness Tools
 
@@ -16,7 +16,7 @@ git worktree add <path> -b <branch-name> <base-ref>
 
 - `<path>` — absolute or repo-relative. Placement convention below.
 - `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<current-branch>-agent/parallel/<slug>`.
-- `<base-ref>` — typically the current analysis branch (`HEAD` is fine when already on it).
+- `<base-ref>` — typically the current branch (`HEAD` is fine when already on it).
 
 After creation, the orchestrator seeds non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
 
@@ -27,7 +27,7 @@ cd <path>
 git rev-parse --show-toplevel   # verify we landed where we expected
 ```
 
-Agents dispatched with a `Worktree:` field are instructed to do this themselves via the dispatch's `Additionally:` steering (see `SKILL.md` §Parallelization and Worktree Isolation).
+Agents dispatched with a `Worktree:` field are instructed to do this themselves via the dispatch's `Additionally:` steering (see `references/parallel-dispatch.md`).
 
 ### Remove
 

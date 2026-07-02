@@ -1,6 +1,6 @@
 ---
 name: zotero-paper-reader
-description: 'Read and analyze academic papers from the user''s Zotero library, and generate citations from it. Use proactively when the user asks to read, find, access, summarize, or analyze a paper by title, author, DOI, or topic from their Zotero library. Handles the complete workflow: search Zotero, locate the PDF, convert to markdown via the mistral-pdf-to-markdown skill, save under Notes/PaperInMarkdown, and analyze in sections. Also use for library queries: listing libraries (user and group), metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, and attachment retrieval — in the user''s own library or any group library. Also use for BibTeX export, inserting a `\cite`/`[@key]` citation into a draft, syncing entries into a master `.bib` file, and rendering a formatted bibliography — reusing the user''s Better BibTeX citekeys by default.'
+description: "Use Zotero to find, read, summarize, cite, or export academic papers. Use for paper lookup, library searches, attachments, BibTeX, and draft citation work."
 user-invocable: true
 ---
 
