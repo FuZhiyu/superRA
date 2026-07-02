@@ -1,6 +1,6 @@
 ---
 name: using-superra
-description: Master superRA workflow skill. Use proactively whenever superRA is mentioned or when planning, implementing, integrating, merging, or updating a superRA/ task tree.
+description: Master superRA workflow skill. Use proactively whenever superRA is mentioned or when planning, implementing, integrating, merging, or loading a superRA/ task tree.
 ---
 
 Loaded by all agents at dispatch time.
