@@ -1,6 +1,6 @@
 ---
 title: "Skill Core — SKILL.md, Workflow & Ledger/Executor"
-status: implemented
+status: approved
 depends_on: [citation-metadata-client]
 ---
 
