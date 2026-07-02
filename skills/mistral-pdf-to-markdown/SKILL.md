@@ -26,11 +26,6 @@ uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.
 # Convert specific pages
 uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.md --pages "1-5"
 uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.md --pages "1,3,5"
-
-# Reconvert every PDF in a directory in place (re-OCRs; requires the API key).
-# For each <name>.pdf it writes <name>.md and figures under images/<name>/.
-# Use to repair a collection whose figures were flattened by an older version.
-uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py --reconvert-dir path/to/collection
 ```
 
 ## Output Structure
