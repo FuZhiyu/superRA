@@ -343,6 +343,10 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* The shared .vscode-btn uses margin-left:auto to pin the per-task button to the
+   right of its card head; in the header this button sits inline by the worktree
+   selector, so drop the auto margin and let the header's flex gap space it. */
+#worktree-open-btn { margin-left: 0; }
 .hc-btn.active {
   background: var(--accent);
   color: #fff;
@@ -1787,6 +1791,11 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
     <select class="hc-select" id="worktree-select" onchange="switchWorktree(this.value)">
     </select>
   </div>
+  {#- Open the active worktree's checkout root in VS Code. Shown for a single
+      worktree too (unlike the selector), so it sits outside #worktree-selector.
+      Icon/label/href are filled by updateWorktreeOpenHref; hidden until then. -#}
+  <a class="vscode-btn" id="worktree-open-btn" target="_blank"
+     style="display:none" title="Open this worktree in VS Code"></a>
   {%- endif %}
   <div class="header-stats" id="summary-bar"
        sse-swap="summary-updated"
@@ -2919,6 +2928,13 @@ var VSCODE_ICON =
   + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
   + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
 
+/* vscode://file deep-link to an absolute local path (a file or a folder). The
+   single place the `vscode://file/` scheme is composed, shared by the per-task
+   task.md link and the header open-worktree link. */
+function vscodeFileUri(absPath) {
+  return 'vscode://file/' + absPath;
+}
+
 /* vscode://file deep-link to a task's task.md. Derives from the resolved task
    root (RESOLVED_ROOT absolute for local links, ROOT_PREFIX repo-relative for
    the GitHub branch) so it points at the same on-disk file the body's relative
@@ -2928,7 +2944,7 @@ function taskFileVscodeHref(path) {
   if (REPO_FILE_BASE) {
     return repoFileHref((REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '') + rel);
   }
-  return 'vscode://file/' + RESOLVED_ROOT + '/' + rel;
+  return vscodeFileUri(RESOLVED_ROOT + '/' + rel);
 }
 
 async function loadActiveNode(path) {
@@ -3572,6 +3588,14 @@ async function updateSidebar(path) {
   });
 
   try {
+    /* The root/umbrella container (path "") holds every top-level task but is
+       named by no path segment, so the segment walk below never reaches it. On a
+       fresh deep-link load it starts collapsed, which leaves even a top-level
+       target hidden inside a display:none .task-children. Expand it first so the
+       ancestor chain is fully revealed. */
+    var rootNode = document.getElementById(navNodeId(''));
+    if (rootNode) await expandNavNode(rootNode);
+
     /* Walk root -> target, expanding (and lazy-loading) each ancestor so the
        next segment's node is in the DOM before we reach it. */
     var segs = path ? path.split('/') : [];
@@ -4431,6 +4455,20 @@ function populateWorktreeSelector(data) {
   selector.style.display = 'flex';
 }
 
+/* Point the header "open worktree" button at the active worktree's checkout root
+   (PROJECT_ROOT, re-pointed per ?wt= in fetchWorktrees), so subsequent per-task
+   clicks land in that now-focused window. Hidden in GitHub-file mode, which has
+   no local folder to open; doc-mode hides it via the shared .vscode-btn rule and
+   standalone omits it from the template. Idempotent: safe to call repeatedly. */
+function updateWorktreeOpenHref() {
+  var btn = document.getElementById('worktree-open-btn');
+  if (!btn) return;
+  if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
+  if (!btn.innerHTML) btn.innerHTML = VSCODE_ICON + '<span>Worktree</span>';
+  btn.href = vscodeFileUri(PROJECT_ROOT);
+  btn.style.display = '';
+}
+
 function fetchWorktrees() {
   /* Returns the fetch promise so onFullReload / applyWorktree can await the
      refreshed worktree metadata before re-rendering the active card (whose VS
@@ -4463,6 +4501,7 @@ function fetchWorktrees() {
         ROOT_PREFIX = resolved.split('/').filter(function(s) { return s; }).pop() || '';
       }
       populateWorktreeSelector(data);
+      updateWorktreeOpenHref();
     })
     .catch(function() { /* graceful: hide selector */ });
 }
@@ -4534,6 +4573,7 @@ function initWorktreeSelectorRefresh() {
 }
 
 /* Fetch worktrees on page load */
+updateWorktreeOpenHref();  /* reveal off the baked-in PROJECT_ROOT before the fetch resolves */
 fetchWorktrees();
 initWorktreeSelectorRefresh();
 

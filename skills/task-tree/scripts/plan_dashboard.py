@@ -76,6 +76,13 @@ PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 # served dashboard is unchanged.  Read by the index route at render time.
 DOC_MODE: bool = False
 
+# Repo identity: a stable hash of the repo's git common dir (or plan root when
+# there is no git), reported by /healthz so the launcher's reuse probe can tell
+# *our* repo's dashboard from a different repo whose port happens to collide on
+# the same hash.  Set from the launcher-supplied ``--repo-id`` (falling back to a
+# fresh derivation) before serving; empty until then.
+REPO_ID: str = ""
+
 # Default idle timeout: exit after this many continuous seconds with zero open
 # SSE connections.  Tests inject a sub-second value either by passing ``timeout``
 # straight to ``_idle_monitor`` or by setting ``IDLE_TIMEOUT`` before launch (it is
@@ -763,6 +770,28 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/healthz")
+async def healthz():
+    """Identity probe the launcher uses to reuse an already-running dashboard.
+
+    Reuse must not depend on the PID file alone: a server started in
+    ``--foreground`` console mode writes none, and a background server's file
+    can be lost or stale while the process is very much alive.  This endpoint
+    lets the launcher confirm a *superRA dashboard* is the thing bound to the
+    repo port, recover its PID (to repair the PID file), match serve mode so a
+    task-mode launch never reuses a ``--doc-mode`` site (or vice versa), and
+    match repo identity so a different repo colliding on the same hashed port is
+    never silently adopted (which would root its dashboard at our tree and let
+    its ``stop`` kill our server).
+    """
+    return {
+        "service": "superra-dashboard",
+        "pid": os.getpid(),
+        "doc_mode": DOC_MODE,
+        "repo_id": REPO_ID,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1792,17 +1821,44 @@ def _default_port(plan_root: Path, git_common_dir: str | None = None) -> int:
     dir so all worktrees of the same repo share a single dashboard port.
     Otherwise falls back to plan-root hashing (backward compatible).
 
-    Maps into range 8100-8999. If the port is in use, tries the next port up
-    (wrapping at 8999). Falls back to OS-assigned (port=0) after 10 attempts.
+    Maps deterministically into range 8100-8999 with no "next free port" walk:
+    the port is a pure function of the repo (or plan-root) identity, so every
+    launch from every worktree targets the *same* start port and the reuse logic
+    in ``serve_background`` can find the one server already there.  Walking off a
+    busy port here is what let a repo accumulate one server per worktree on
+    adjacent ports; ``serve_background`` now does a repo-aware walk instead —
+    reusing a busy port when *our* dashboard serves it, and advancing only for a
+    different repo (a hash collision) or a foreign process.
     """
     hash_source = git_common_dir if git_common_dir else str(plan_root.resolve())
-    base_port = int(hashlib.sha256(hash_source.encode()).hexdigest(), 16) % 900 + 8100
-    for i in range(10):
-        port = 8100 + (base_port - 8100 + i) % 900
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("localhost", port)) != 0:
-                return port
-    return 0
+    return int(hashlib.sha256(hash_source.encode()).hexdigest(), 16) % 900 + 8100
+
+
+def _repo_id(git_common_dir: str | None, plan_root: Path) -> str:
+    """Stable identity for the repo, matching ``_default_port``'s hash source.
+
+    The git common dir (resolved, shared by all of a repo's worktrees) when
+    there is one, else the plan root — hashed to a compact opaque token that
+    ``/healthz`` reports so reuse can distinguish our repo's dashboard from a
+    different repo colliding on the same port.
+    """
+    source = git_common_dir if git_common_dir else str(plan_root.resolve())
+    return hashlib.sha256(source.encode()).hexdigest()[:16]
+
+
+def _candidate_ports(base: int, count: int = 50):
+    """Yield ``base, base+1, …`` — the ports a launch probes in order.
+
+    A linear walk from the deterministic start port (skipping any that overflow
+    the valid range) so a hash collision between two repos resolves them onto
+    distinct adjacent ports deterministically: every worktree of a repo derives
+    the same *base* and walks the same sequence, so all reach the same server.
+    """
+    for i in range(count):
+        port = base + i
+        if port > 65535:
+            return
+        yield port
 
 
 def serve(port: int, host: str = "127.0.0.1") -> None:
@@ -1937,6 +1993,57 @@ def _port_serving(port: int) -> bool:
         return s.connect_ex(("localhost", port)) == 0
 
 
+def _probe_dashboard(
+    port: int, timeout: float = 0.5
+) -> tuple[int, bool, str | None] | None:
+    """Return ``(pid, doc_mode, repo_id)`` of a superRA dashboard on *port*.
+
+    Hits the ``/healthz`` identity endpoint so reuse does not depend on the PID
+    file: a foreground server (no PID file) or one whose file was lost is still
+    recognised.  ``repo_id`` is the responder's repo identity, or None for a
+    server predating the identity field — callers match it against the expected
+    repo so a colliding different repo is not adopted.  Returns None when nothing
+    answers, the responder is not a superRA dashboard (a foreign process holding
+    the port), or the payload is unusable.  ``urllib`` keeps this stdlib-only.
+    """
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/healthz", timeout=timeout
+        ) as resp:
+            if resp.status != 200:
+                return None
+            payload = json.loads(resp.read(1000).decode("utf-8", "replace"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict) or payload.get("service") != "superra-dashboard":
+        return None
+    pid = payload.get("pid")
+    if not isinstance(pid, int):
+        return None
+    repo_id = payload.get("repo_id") or None
+    return pid, bool(payload.get("doc_mode", False)), repo_id
+
+
+def _wait_for_dashboard(
+    port: int, timeout: float = 10.0, poll: float = 0.1
+) -> tuple[int, bool, str | None] | None:
+    """Poll ``/healthz`` on *port* until a superRA dashboard answers.
+
+    Returns its ``(pid, doc_mode, repo_id)`` or None on timeout.  Waiting on the
+    identity endpoint (not a bare TCP accept) means the app has finished startup
+    before the caller decides whether it launched the winner or lost a race.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        probed = _probe_dashboard(port)
+        if probed is not None:
+            return probed
+        time.sleep(poll)
+    return _probe_dashboard(port)
+
+
 def _running_pid(pid_path: Path, port: int) -> tuple[int, int] | None:
     """Return ``(pid, port)`` of a healthy running dashboard, else None.
 
@@ -1995,86 +2102,185 @@ def serve_background(
     Returns a process exit code: 0 on success (spawned or already running), non-
     zero when a freshly spawned child fails to bind within *bind_timeout*.
 
-    Idempotent: if a healthy server is already serving this repo's port, opens a
-    browser tab (unless *open_browser* is False) and reports "already running"
-    without spawning a second process.  Otherwise spawns ``serve()`` in a new
-    session (``start_new_session=True``) with stdout/stderr redirected to the log
-    file so it survives the launching shell, waits for the port to bind, writes
-    the PID file, and prints URL + PID + log path.  On bind failure it prints the
-    tail of the log so a startup error surfaces instead of leaving a dead child.
+    Idempotent one-server-per-repo, collision-safe across repos.  Reuse is
+    decided in two layers so a missing/stale PID file cannot cause a duplicate:
+    the PID file (fast path), then a repo-aware candidate walk from the
+    deterministic port.  At each candidate the ``/healthz`` probe recognises a
+    live server whose file was never written (foreground launch) or was lost; if
+    it is *our* repo's dashboard (matching repo id and serve mode) it is reused
+    and the PID file repaired, if it is a *different* repo (a hash collision) or
+    a foreign process the walk advances to the next port, and the first free port
+    is spawned on.  A different repo colliding on our start port thus gets its
+    own adjacent port instead of silently adopting (and later ``stop``-killing)
+    our server.  The bound port is recorded in the repo-keyed PID file so later
+    launches reuse via layer 1.  Spawns ``serve()`` in a new session
+    (``start_new_session=True``, stdio to the log file) so it survives the
+    launching shell, then waits on ``/healthz``.  If a *different* dashboard
+    answers (a concurrent launch won the bind race), the redundant child is
+    terminated so it does not linger and the winner is reused; a foreign process
+    or cross-repo/cross-mode conflict is reported rather than leaving a dead
+    child.
     """
     pid_path = _pid_file(plan_root, git_common_dir)
     log_path = _log_file(plan_root, git_common_dir)
+    repo_id = _repo_id(git_common_dir, plan_root)
 
-    existing = _running_pid(pid_path, port)
-    if existing is not None:
-        # Reuse the live server.  Report (and open) the port it actually bound,
-        # which may differ from the freshly derived *port* if the deterministic
-        # port was occupied when that server launched.
-        existing_pid, existing_port = existing
-        existing_url = f"http://localhost:{existing_port}"
-        print(f"Dashboard already running at {existing_url} (PID {existing_pid})")
+    def _announce_reuse(reuse_pid: int, reuse_port: int) -> int:
+        reuse_url = f"http://localhost:{reuse_port}"
+        print(f"Dashboard already running at {reuse_url} (PID {reuse_pid})")
         if open_browser:
-            webbrowser.open(existing_url)
+            webbrowser.open(reuse_url)
         return 0
 
-    url = f"http://localhost:{port}"
+    def _spawn(target_port: int) -> int:
+        """Spawn a detached server on *target_port*, wait for it, handle races."""
+        url = f"http://localhost:{target_port}"
+        # ``start_new_session`` puts the child in its own session so it outlives
+        # the launching shell; stdio is redirected to the log file (no TTY).
+        cmd = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "serve",
+            "--foreground",
+            "--root",
+            str(plan_root),
+            "--port",
+            str(target_port),
+            "--host",
+            host,
+            "--repo-id",
+            repo_id,
+            "--no-open",
+        ]
+        if doc_mode:
+            cmd.append("--doc-mode")
+        if idle_timeout is not None:
+            cmd += ["--idle-timeout", str(idle_timeout)]
+        pid_path.parent.mkdir(parents=True, exist_ok=True)
+        log_fh = open(log_path, "ab")
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=log_fh,
+                stderr=log_fh,
+                start_new_session=True,
+                cwd=str(Path.cwd()),
+            )
+        finally:
+            log_fh.close()
 
-    # Spawn the in-process server as a detached child running the foreground
-    # path.  ``start_new_session`` puts it in its own session so it outlives the
-    # launching shell; stdio is redirected to the log file (no inherited TTY).
-    cmd = [
-        sys.executable,
-        str(Path(__file__).resolve()),
-        "serve",
-        "--foreground",
-        "--root",
-        str(plan_root),
-        "--port",
-        str(port),
-        "--host",
-        host,
-        "--no-open",
-    ]
-    if doc_mode:
-        cmd.append("--doc-mode")
-    if idle_timeout is not None:
-        cmd += ["--idle-timeout", str(idle_timeout)]
-    pid_path.parent.mkdir(parents=True, exist_ok=True)
-    log_fh = open(log_path, "ab")
-    try:
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=log_fh,
-            stderr=log_fh,
-            start_new_session=True,
-            cwd=str(Path.cwd()),
-        )
-    finally:
-        log_fh.close()
+        served = _wait_for_dashboard(target_port, timeout=bind_timeout)
+        if served is None:
+            # No superRA dashboard came up: our child crashed, or a foreign
+            # process grabbed the port between the probe and the bind.  Don't
+            # leave a lingering child; surface the log tail.
+            if proc.poll() is None:
+                _terminate(proc.pid)
+            if _port_serving(target_port):
+                print(
+                    f"Error: {url} is held by a non-dashboard process; stop it "
+                    f"or launch with an explicit --port",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"Error: dashboard failed to bind {url} within {bind_timeout:.0f}s",
+                    file=sys.stderr,
+                )
+            tail = _log_tail(log_path)
+            if tail:
+                print("--- log tail ---", file=sys.stderr)
+                print(tail, file=sys.stderr)
+            return 1
 
-    if not _wait_for_bind(port, timeout=bind_timeout):
-        # Surface the startup error rather than silently backgrounding a dead
-        # process.  The child may have exited already (port conflict, traceback).
+        served_pid, served_doc_mode, served_repo = served
+        if served_pid == proc.pid:
+            # Our child won the port.
+            _write_pid_port(pid_path, proc.pid, target_port)
+            print(f"Dashboard running at {url} (PID {proc.pid})")
+            print(f"Logs: {log_path}")
+            if open_browser:
+                webbrowser.open(url)
+            return 0
+
+        # A different superRA dashboard is serving the port — we lost a
+        # concurrent launch race (or one came up between the walk and the bind).
+        # Terminate the redundant child so it does not linger, then reuse the
+        # winner only when it is our repo and mode; otherwise report the
+        # conflict rather than adopting another repo's (or mode's) server.
         if proc.poll() is None:
             _terminate(proc.pid)
+        if (served_repo is None or served_repo == repo_id) and served_doc_mode == doc_mode:
+            _write_pid_port(pid_path, served_pid, target_port)
+            return _announce_reuse(served_pid, target_port)
         print(
-            f"Error: dashboard failed to bind {url} within {bind_timeout:.0f}s",
+            f"Error: {url} was taken by another server during launch; retry or "
+            f"launch with an explicit --port",
             file=sys.stderr,
         )
-        tail = _log_tail(log_path)
-        if tail:
-            print("--- log tail ---", file=sys.stderr)
-            print(tail, file=sys.stderr)
         return 1
 
-    _write_pid_port(pid_path, proc.pid, port)
-    print(f"Dashboard running at {url} (PID {proc.pid})")
-    print(f"Logs: {log_path}")
-    if open_browser:
-        webbrowser.open(url)
-    return 0
+    # Layer 1 — PID file: the repo-keyed record of the exact port a server bound
+    # (which may differ from a fresh derivation after a collision walk).  Reuse
+    # unless the probe positively shows a different repo (PID recycled — stale
+    # file) or a different serve mode.  A probe that can't answer — e.g. a server
+    # predating /healthz — still reuses on the file's healthy verdict.
+    existing = _running_pid(pid_path, port)
+    if existing is not None:
+        existing_pid, existing_port = existing
+        probed = _probe_dashboard(existing_port)
+        if probed is None:
+            return _announce_reuse(existing_pid, existing_port)
+        _, probed_doc, probed_repo = probed
+        if probed_repo is not None and probed_repo != repo_id:
+            # Our recorded PID was recycled by a different repo's dashboard: the
+            # file is stale.  Drop it and fall through to the collision walk.
+            pid_path.unlink(missing_ok=True)
+        elif probed_doc == doc_mode:
+            return _announce_reuse(existing_pid, existing_port)
+        # else: our repo, different serve mode — fall through; the walk reports
+        # the mode conflict on the same port.
+
+    # Layer 2 — repo-aware candidate walk from the deterministic port.
+    for index, candidate in enumerate(_candidate_ports(port)):
+        probed = _probe_dashboard(candidate)
+        if probed is not None:
+            probed_pid, probed_doc, probed_repo = probed
+            # A repo-id-less server (predating /healthz identity) is trusted as
+            # ours only on the start port: under the old launcher a colliding
+            # different repo would have walked off a busy port, so it never sat
+            # on our start port; adjacent ports carry no such guarantee.
+            is_our_repo = probed_repo == repo_id or (probed_repo is None and index == 0)
+            if is_our_repo:
+                if probed_doc == doc_mode:
+                    _write_pid_port(pid_path, probed_pid, candidate)
+                    return _announce_reuse(probed_pid, candidate)
+                # Our repo already serves this port in the other mode; the PID
+                # file is per-repo (not per-mode), so a second server can't
+                # coexist.  Report rather than spawn a conflicting duplicate.
+                url = f"http://localhost:{candidate}"
+                print(
+                    f"Error: {url} is already serving a "
+                    f"{'doc-mode' if probed_doc else 'task-mode'} dashboard for "
+                    f"this repo; stop it or launch with an explicit --port",
+                    file=sys.stderr,
+                )
+                return 1
+            # A different repo (hash collision) or foreign dashboard — advance.
+            continue
+        if _port_serving(candidate):
+            # A foreign, non-dashboard process holds the port — advance.
+            continue
+        # First free candidate — spawn here.
+        return _spawn(candidate)
+
+    print(
+        f"Error: no free port found near {port} for the dashboard; launch with "
+        f"an explicit --port",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def _log_tail(log_path: Path, lines: int = 20) -> str:
@@ -2188,6 +2394,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         # background self-exit can be observed deterministically.
         help=argparse.SUPPRESS,
     )
+    serve_p.add_argument(
+        "--repo-id",
+        default=None,
+        # Repo identity reported by /healthz.  Internal: the background
+        # supervisor passes the identity it derived so the child reports the
+        # same token the launcher's reuse probe matches against (a child
+        # re-deriving from cwd could diverge).  Omitted for a manual foreground
+        # launch, which then derives its own.
+        help=argparse.SUPPRESS,
+    )
 
     # --- stop ---
     stop_p = subparsers.add_parser(
@@ -2265,7 +2481,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
     if args.command == "serve":
-        global PLAN_ROOT, DOC_MODE
+        global PLAN_ROOT, DOC_MODE, REPO_ID
         PLAN_ROOT = Path(args.root).resolve()
         DOC_MODE = args.doc_mode
 
@@ -2274,6 +2490,9 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
 
         git_common_dir = get_git_common_dir()
+        # Report the launcher-supplied identity when present so /healthz matches
+        # the token the supervisor probes against; else derive it here.
+        REPO_ID = args.repo_id or _repo_id(git_common_dir, PLAN_ROOT)
         port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
         url = f"http://localhost:{port}"
 

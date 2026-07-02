@@ -213,6 +213,22 @@ class TestServerRoutes:
         assert resp.status_code == 200
         assert "Test Project" in resp.text
 
+    def test_healthz_reports_dashboard_identity(self, client, monkeypatch):
+        """The launcher's reuse probe relies on this identity payload."""
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        monkeypatch.setattr(plan_dashboard, "REPO_ID", "abc123repoid")
+        resp = client.get("/healthz")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["service"] == "superra-dashboard"
+        assert body["pid"] == os.getpid()
+        assert body["doc_mode"] is False
+        assert body["repo_id"] == "abc123repoid"
+
+    def test_healthz_reflects_doc_mode(self, client, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        assert client.get("/healthz").json()["doc_mode"] is True
+
     def test_index_contains_workspace_shell(self, client):
         # The master-detail workspace renders an empty shell server-side; the
         # nav-tree and active-node regions are filled client-side from
@@ -2061,6 +2077,19 @@ class TestSidebarStatePreservation:
         body = m.group(0)
         assert "await expandNavNode(target)" in body
 
+    def test_expands_root_container_before_segment_walk(self):
+        """On a fresh deep-link load the root/umbrella container (path "") holds
+        every top-level task but is named by no path segment, so the segment walk
+        skips it and a top-level or deep target stays hidden in a collapsed root.
+        updateSidebar must expand navNodeId('') BEFORE the ancestor segment loop."""
+        m = re.search(r"async function updateSidebar\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert m, "updateSidebar not found"
+        body = m.group(0)
+        assert "document.getElementById(navNodeId(''))" in body
+        root_expand = body.index("expandNavNode(rootNode)")
+        seg_loop = body.index("for (var i = 0; i < segs.length - 1; i++)")
+        assert root_expand < seg_loop, "root must be expanded before the segment walk"
+
 
 class TestWorktreeSelectorLiveRefresh:
     def test_refresh_on_open_wiring_present(self):
@@ -2188,7 +2217,11 @@ class TestFileLinkConsistency:
         m = re.search(r"function taskFileVscodeHref\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
         assert m
         fn = m.group(0)
-        assert "vscode://file/' + RESOLVED_ROOT + '/'" in fn
+        # The `vscode://file/` scheme is composed once in vscodeFileUri; the local
+        # branch prepends RESOLVED_ROOT via that shared helper.
+        assert "vscodeFileUri(RESOLVED_ROOT + '/' + rel)" in fn
+        assert "function vscodeFileUri(absPath)" in BASE_HTML
+        assert "return 'vscode://file/' + absPath;" in BASE_HTML
         # GitHub branch uses the repo-root-relative prefix (so a nested tree keeps
         # its `docs/...` lead), not the bare basename or a hardcoded segment.
         assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
@@ -2332,6 +2365,76 @@ class TestWorktreeRootFollowing:
         assert "ROOT_PREFIX = resolved.split('/')" in fn
         # Non-empty guard preserves the baked-in roots in standalone mode.
         assert "if (resolved) {" in fn
+
+
+# ---------------------------------------------------------------------------
+# TestWorktreeOpenButton — the header "open worktree in VS Code" deep-link
+# button: opens the active worktree's checkout root (PROJECT_ROOT) as a folder
+# via the shared vscode://file mechanism, shown for a single worktree too.
+# ---------------------------------------------------------------------------
+
+
+class TestWorktreeOpenButton:
+    def test_button_rendered_in_live_page(self, plan_root):
+        """A server-backed page renders the button (id + shared .vscode-btn class)
+        as a sibling of the worktree selector, hidden until JS reveals it."""
+        with _client_for(plan_root) as c:
+            html = c.get("/").text
+        m = re.search(r'<a class="vscode-btn" id="worktree-open-btn"[^>]*>', html)
+        assert m, "worktree-open button not rendered"
+        tag = m.group(0)
+        assert 'target="_blank"' in tag
+        assert "display:none" in tag  # hidden until updateWorktreeOpenHref runs
+
+    def test_button_not_inside_selector_div(self):
+        """The button lives OUTSIDE #worktree-selector so populateWorktreeSelector's
+        `≤1 worktree → hide` never touches it: opening the worktree is useful with
+        a single worktree too."""
+        m = re.search(
+            r'<div class="worktree-selector" id="worktree-selector">.*?</div>',
+            BASE_HTML, re.S,
+        )
+        assert m
+        assert "worktree-open-btn" not in m.group(0)
+        # populateWorktreeSelector toggles only #worktree-selector, never the button.
+        fn = re.search(r"function populateWorktreeSelector\(data\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn and "worktree-open-btn" not in fn.group(0)
+
+    def test_href_uses_project_root_via_shared_uri_builder(self):
+        """updateWorktreeOpenHref points the button at PROJECT_ROOT (the whole
+        worktree, not the superRA/ subdir) through the shared vscodeFileUri."""
+        fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "vscodeFileUri(PROJECT_ROOT)" in body
+        assert "RESOLVED_ROOT" not in body  # the folder link uses PROJECT_ROOT
+        # GitHub-file mode has no local folder to open → hide the button.
+        assert "if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }" in body
+
+    def test_href_refreshed_on_worktree_change(self):
+        """The href re-points on the same paths that re-point PROJECT_ROOT: inside
+        fetchWorktrees (initial load + ?wt= switch via applyWorktree) and once at
+        module init off the baked-in PROJECT_ROOT before the fetch resolves."""
+        fw = re.search(r"function fetchWorktrees\(\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fw and "updateWorktreeOpenHref();" in fw.group(0)
+        # Init call sits alongside the module-eval fetchWorktrees() bootstrap.
+        assert re.search(
+            r"updateWorktreeOpenHref\(\);.*?\nfetchWorktrees\(\);", BASE_HTML, re.S
+        )
+
+    def test_doc_mode_hides_via_shared_rule(self):
+        """Doc-mode hides the button through the existing shared .vscode-btn rule
+        (the button carries that class), so no bespoke doc-mode CSS is needed."""
+        assert "html[data-doc-mode] .vscode-btn," in BASE_HTML
+
+    def test_standalone_omits_button(self, plan_root):
+        """Standalone export omits the button (no local worktree to open from a
+        file:// export) — it sits in the same not-standalone template block as the
+        selector."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert 'id="worktree-open-btn"' not in html
 
 
 # ---------------------------------------------------------------------------
@@ -3935,6 +4038,30 @@ class TestRuntimeFileKeying:
             wt_b, str(common)
         )
 
+    def test_default_port_is_deterministic_even_when_busy(self, tmp_path):
+        """The port must not walk off a busy port to the next free one.
+
+        A busy deterministic port means a server may already be there to reuse;
+        walking to the next free port is what planted a second server per repo.
+        The derivation must be a pure function of the repo identity.
+        """
+        common = tmp_path / "common.git"
+        common.mkdir()
+        plan_root = tmp_path / "wt" / "superRA"
+        plan_root.mkdir(parents=True)
+        port = plan_dashboard._default_port(plan_root, str(common))
+        assert 8100 <= port <= 8999
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(("127.0.0.1", port))
+        listener.listen(1)
+        try:
+            assert plan_dashboard._default_port(plan_root, str(common)) == port, (
+                "a busy port must still be returned, not incremented"
+            )
+        finally:
+            listener.close()
+
 
 class TestPidHelpers:
     """PID-file read/health helpers used by idempotent launch and stop."""
@@ -4203,6 +4330,242 @@ class TestBackgroundLaunch:
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
+    def test_probe_reuse_when_pid_file_missing(self, tmp_path):
+        """A live server with no PID file is reused via /healthz, not duplicated.
+
+        Reproduces the core duplicate-spawn: a server is genuinely serving the
+        repo port but this launch sees no valid PID file (a foreground launch
+        writes none; a background file can be lost or removed while the process
+        lives).  The relaunch must recover the running server via its /healthz
+        identity, repair the PID file, and spawn no second process.
+        """
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            pid1 = plan_dashboard._read_pid(pid_path)
+            assert pid1 is not None and plan_dashboard._pid_alive(pid1)
+            # Simulate the missing/stale PID file while the server stays alive.
+            pid_path.unlink()
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            )
+            assert rc == 0, "probe reuse should succeed without spawning"
+            assert pid_path.exists(), "probe reuse must repair the PID file"
+            pid2 = plan_dashboard._read_pid(pid_path)
+            assert pid2 == pid1, "reuse must recover the running PID, not spawn a duplicate"
+            assert plan_dashboard._pid_alive(pid1)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_lost_race_terminates_child_and_reuses_winner(self, tmp_path, monkeypatch):
+        """A launch that loses the concurrent bind race reuses the winner and
+        leaves no lingering child.
+
+        Both reuse layers miss (no server found pre-spawn), the child is spawned,
+        but by the time the port serves a dashboard a *different* PID answers
+        /healthz — a concurrent launch won.  The redundant child must be
+        terminated (not left alive-but-not-listening) and the winner reused.
+        """
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = 34567
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+
+        class _FakeProc:
+            pid = 55555
+
+            def poll(self):
+                return None  # our child is alive (a lingering loser)
+
+        winner_repo = plan_dashboard._repo_id(str(common), plan_root)
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
+        # The winner is our own repo (same repo id) — a same-repo race, so we
+        # reuse it rather than spawn a second server.
+        monkeypatch.setattr(
+            plan_dashboard, "_wait_for_dashboard", lambda *a, **k: (77777, False, winner_repo)
+        )
+        terminated: list[int] = []
+        monkeypatch.setattr(
+            plan_dashboard, "_terminate", lambda pid, **k: (terminated.append(pid), True)[1]
+        )
+
+        rc = plan_dashboard.serve_background(
+            plan_root, port, str(common), open_browser=False
+        )
+        assert rc == 0, "the race loser should reuse the winner and succeed"
+        assert 55555 in terminated, "the redundant losing child must be terminated"
+        assert plan_dashboard._read_pid(pid_path) == 77777, "PID file should name the winner"
+
+    def test_failed_child_does_not_linger(self, tmp_path, monkeypatch):
+        """When no dashboard comes up, a still-alive child is terminated, not left."""
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+
+        class _FakeProc:
+            pid = 55555
+
+            def poll(self):
+                return None  # child alive but never brought the dashboard up
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
+        monkeypatch.setattr(plan_dashboard, "_wait_for_dashboard", lambda *a, **k: None)
+        terminated: list[int] = []
+        monkeypatch.setattr(
+            plan_dashboard, "_terminate", lambda pid, **k: (terminated.append(pid), True)[1]
+        )
+
+        rc = plan_dashboard.serve_background(
+            plan_root, 34568, str(common), open_browser=False
+        )
+        assert rc == 1
+        assert 55555 in terminated, "a child that never serves must not be left lingering"
+
+    def test_task_mode_launch_does_not_reuse_doc_mode_server(self, tmp_path, monkeypatch):
+        """A task-mode launch must never adopt a same-repo --doc-mode server.
+
+        The PID file is per-repo, not per-mode, so a second server can't coexist:
+        the repo-aware walk detects our repo already serving the port in the
+        other mode and reports a conflict without spawning or reusing.
+        """
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = 34569
+        repo = plan_dashboard._repo_id(str(common), plan_root)
+        # Our repo's doc-mode dashboard is present per both reuse layers.
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: (12321, port))
+        monkeypatch.setattr(
+            plan_dashboard, "_probe_dashboard", lambda *a, **k: (12321, True, repo)
+        )
+        spawned: list[list[str]] = []
+
+        def _fake_popen(cmd, **kw):
+            spawned.append(cmd)
+            raise AssertionError("must not spawn a conflicting cross-mode server")
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
+
+        rc = plan_dashboard.serve_background(
+            plan_root, port, str(common), doc_mode=False, open_browser=False
+        )
+        assert not spawned, "task-mode launch must not spawn atop a doc-mode server"
+        assert rc == 1, "a same-repo cross-mode conflict should be reported"
+
+    def test_different_repo_on_port_advances_to_next_free_port(self, tmp_path, monkeypatch):
+        """A *different* repo colliding on our start port must not be reused or
+        killed: probe reuse requires a repo-id match, so our launch advances to
+        the next free port and spawns its own server there.
+        """
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        base = 34600
+        our_repo = plan_dashboard._repo_id(str(common), plan_root)
+
+        # A different repo's dashboard holds the start port; the next port is free.
+        def _fake_probe(p, *a, **k):
+            if p == base:
+                return (99999, False, "a-different-repo-id")
+            return None
+
+        monkeypatch.setattr(plan_dashboard, "_probe_dashboard", _fake_probe)
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        # The start port is occupied (by the other repo); adjacent ports are free.
+        monkeypatch.setattr(plan_dashboard, "_port_serving", lambda p: p == base)
+
+        spawned: list[list[str]] = []
+
+        class _FakeProc:
+            pid = 55555
+
+            def poll(self):
+                return None
+
+        def _fake_popen(cmd, **kw):
+            spawned.append(cmd)
+            return _FakeProc()
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
+        monkeypatch.setattr(
+            plan_dashboard, "_wait_for_dashboard", lambda *a, **k: (55555, False, our_repo)
+        )
+        terminated: list[int] = []
+        monkeypatch.setattr(
+            plan_dashboard, "_terminate", lambda pid, **k: (terminated.append(pid), True)[1]
+        )
+
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        rc = plan_dashboard.serve_background(
+            plan_root, base, str(common), open_browser=False
+        )
+        assert rc == 0
+        assert spawned, "our launch must spawn its own server"
+        cmd = spawned[0]
+        assert cmd[cmd.index("--port") + 1] == str(base + 1), (
+            "must take the next free port, not the colliding repo's start port"
+        )
+        assert 99999 not in terminated, "the other repo's server must not be killed"
+        assert plan_dashboard._read_pid(pid_path) == 55555
+
+    def test_colliding_repos_each_get_own_server(self, tmp_path):
+        """End-to-end: two different repos sharing a start port each run their
+        own server; the second does not adopt (or later kill) the first's.
+        """
+        pytest.importorskip("uvicorn")
+        (tmp_path / "a").mkdir()
+        (tmp_path / "b").mkdir()
+        plan_a = _serve_plan(tmp_path / "a")
+        plan_b = _serve_plan(tmp_path / "b")
+        common_a = tmp_path / "a.git"
+        common_a.mkdir()
+        common_b = tmp_path / "b.git"
+        common_b.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_a = plan_dashboard._pid_file(plan_a, str(common_a))
+        pid_b = plan_dashboard._pid_file(plan_b, str(common_b))
+        try:
+            # Repo A takes the shared start port.
+            assert plan_dashboard.serve_background(
+                plan_a, port, str(common_a), open_browser=False
+            ) == 0
+            a_pid = plan_dashboard._read_pid(pid_a)
+            assert a_pid is not None and plan_dashboard._pid_alive(a_pid)
+            a_probe = plan_dashboard._probe_dashboard(port)
+            assert a_probe is not None
+            a_repo = a_probe[2]
+
+            # Repo B collides on the same start port. It must not reuse A; it
+            # walks to an adjacent free port and spawns its own server.
+            assert plan_dashboard.serve_background(
+                plan_b, port, str(common_b), open_browser=False
+            ) == 0
+            b_pid, b_port = plan_dashboard._read_pid_port(pid_b)
+            assert b_pid is not None and b_pid != a_pid, "B must not adopt A's server"
+            assert b_port != port, "B must bind an adjacent port, not A's"
+            assert plan_dashboard._pid_alive(a_pid), "A must be untouched by B's launch"
+            # A still serves its own identity on the shared port.
+            a_probe2 = plan_dashboard._probe_dashboard(port)
+            assert a_probe2 is not None and a_probe2[0] == a_pid and a_probe2[2] == a_repo
+            # B serves its own, distinct identity on its own port.
+            b_probe = plan_dashboard._probe_dashboard(b_port)
+            assert b_probe is not None and b_probe[0] == b_pid and b_probe[2] != a_repo
+        finally:
+            plan_dashboard.stop_background(plan_a, str(common_a))
+            plan_dashboard.stop_background(plan_b, str(common_b))
+
 
 # ---------------------------------------------------------------------------
 # Canonical path basis: paths are relative to the resolved root, with forest
@@ -4291,9 +4654,13 @@ class TestServeBindHost:
             return _FakeProc()
 
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
-        # Stop the bind poll from waiting on a child that never starts.
-        monkeypatch.setattr(plan_dashboard, "_wait_for_bind", lambda *a, **k: True)
+        # No pre-existing server (layer 1/2 reuse skipped), and the post-spawn
+        # /healthz wait reports our fake child as the winner so no real poll runs.
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
+        monkeypatch.setattr(
+            plan_dashboard, "_wait_for_dashboard", lambda *a, **k: (999999, False, None)
+        )
         plan_dashboard.serve_background(
             plan_root, 23456, str(common), host="0.0.0.0", open_browser=False
         )
