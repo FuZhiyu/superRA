@@ -1,6 +1,6 @@
 ---
 title: "Agent Judgment & Retrieval Provenance — Delegate Depth/Traversal, Centralize Admission"
-status: implemented
+status: approved
 depends_on: [citation-client-resilience]
 ---
 
