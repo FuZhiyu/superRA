@@ -46,7 +46,7 @@ Each considered paper — included or excluded — gets one entry keyed on `firs
 - **PDF** — a **relative** markdown link to the stored PDF, e.g. `[PDF](attachments/<key>.pdf)`.
 - **Markdown (OCR)** — a **relative** markdown link to the stored conversion, e.g. `[MD](attachments/<key>.md)`.
 
-Render file links as **relative paths only** — never absolute, never `file://` / `vscode://`. The dashboard's renderer rewrites a relative file link by type (a `.pdf` to its in-browser viewer, a `.md` / source file to the editor), resolving against the entry's directory; an absolute or scheme-prefixed path is not relative, so the resolver double-prefixes and breaks it. The `zotero://` scheme link passes through as clickable once the sibling `task-tree/dashboard-link-resolution` lands. File-link citation *mechanics* are `report-in-markdown`'s — follow it for the link form; this list is only the domain-specific set a paper entry carries. Examples here use placeholder keys / paths only.
+Render file links as **relative paths only** — never absolute, never `file://` / `vscode://`. The dashboard's renderer rewrites a relative file link by type (a `.pdf` to its in-browser viewer, a `.md` / source file to the editor), resolving against the entry's directory; an absolute or scheme-prefixed path is not relative, so the resolver double-prefixes and breaks it. The `zotero://` scheme link passes through the dashboard renderer as a clickable deeplink. File-link citation *mechanics* are `report-in-markdown`'s — follow it for the link form; this list is only the domain-specific set a paper entry carries. Examples here use placeholder keys / paths only.
 
 Two representations, same fields:
 
