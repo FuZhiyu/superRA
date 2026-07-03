@@ -14,7 +14,7 @@ Before any discovery, settle the parameters below with the researcher (`AskUserQ
 
 ## Part 2 — Fan-out execution (loop-until-dry)
 
-Run each round as **search/expand → dedup/admit → batch-screen**. Seeds are researcher-vetted, so they enter as the round-1 included set and start at expansion.
+Run each round as **search/expand → dedup/admit → batch-screen**. Seeds are researcher-vetted, so they enter `seen`, form the round-1 included set, and start at expansion.
 
 **Expand included papers** with Tier-3 dedicated agents. Each expansion agent starts from the **handle** the orchestrator seeded — the normalized record ids + `landing_url` — and updates only that included paper's ledger entry, then:
 
@@ -33,7 +33,7 @@ The screening discipline, the bounded read-only candidate peek, the dedup cascad
 The orchestrator owns the `seen` dedup index and frontier growth; each round is a parallel fan-out. The frontier is a **priority queue** — high-signal candidates expand first, weak ones defer — so the loop consumes the priority the agents attach to their surfaced candidates.
 
 ```
-seen = {}                      # THE single dedup index: normalized DOI / title+year -> paper key (orchestrator-owned)
+seen = seed canonicals/handles from the setup survey         # THE single dedup index: normalized DOI / title+year -> paper key
 included = priority queue seeded from the setup survey       # seeds are pre-included; high-signal papers expand first
 
 while included is non-empty:

@@ -40,10 +40,10 @@ This is a granularity change, not a new pipeline stage — resist adding a forma
 
 ## Results
 
-Implemented the fan-out granularity change as prose-only literature-review workflow guidance; `agent-orchestration` was not edited.
+Implemented the fan-out granularity change as prose-only literature-review workflow guidance; `agent-orchestration` was not edited. A follow-up ledger-schema edit makes paper mentions link to the best available target in a fixed pecking order.
 
 **Workflow executor.**
-- `references/workflow.md` now states each round as **search/expand → dedup/admit → batch-screen**. Seeds enter as the round-1 included set and start at expansion, not screening. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17))
+- `references/workflow.md` now states each round as **search/expand → dedup/admit → batch-screen**. Seeds enter `seen`, form the round-1 included set, and start at expansion, not screening. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17))
 - Expansion is Tier-3, one dedicated agent per included paper, seeded by the carried handle and limited to that included paper's ledger entry. The expansion work now owns idempotent PDF fetch, deeper read when frontier prioritization needs it, and the ranked handle-bearing candidate set. ([workflow.md:19](../../../skills/literature-review/references/workflow.md#L19))
 - Dedup/admission sits before screening: surfaced candidates are collapsed by `citation_client dedup`, only unique canonicals not in `seen` enter the screen bundle, and their handles are carried forward. ([workflow.md:25](../../../skills/literature-review/references/workflow.md#L25))
 - Batch screening is Tier-2: one bundled agent screens many unique candidates from metadata + abstract, writes initial ledger entries, returns the included subset for expansion, and pulls depth-escalation candidates into dedicated agents. The text also records the lower same-round `citation_client` process count and reduced S2 rate-gate contention. ([workflow.md:27](../../../skills/literature-review/references/workflow.md#L27))
@@ -55,7 +55,16 @@ Implemented the fan-out granularity change as prose-only literature-review workf
 - The depth-escalation rule now says to pull central included papers out of the screen bundle into a dedicated agent for related-work / citation-discussion reading before surfacing candidates. ([search-and-screening.md:30](../../../skills/literature-review/references/search-and-screening.md#L30))
 - The parent `literature-review/task.md` snowball convention now matches the batched round shape: expand included papers, dedup/admit centrally, batch-screen unique candidates, keep the priority frontier central. ([../task.md:37](../task.md#L37))
 
+**Ledger link rule.**
+- `SKILL.md` now requires every paper mention in ledger prose, candidate lists, extraction notes, or convergence notes to link to the first available target in this order: task file, Zotero, web, PDF, Markdown. The trace-link cluster now lists the same targets, with the task-file link first for subtree-as-ledger mode. ([SKILL.md:42](../../../skills/literature-review/SKILL.md#L42))
+
 **Validation.**
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/references/workflow.md skills/literature-review/references/search-and-screening.md superRA/literature-review/task.md` reported all three files clean.
 - `rg` found the new loop/tier/rate-gate terms in the edited files and no remaining "one agent per paper" / "screening agent per paper" wording in the edited workflow path.
-- `uv run --with pyyaml python .../skill-creator/scripts/quick_validate.py skills/literature-review` did not complete because the existing `skills/literature-review/SKILL.md` frontmatter description contains an unquoted colon; this task did not edit that file. ([SKILL.md:3](../../../skills/literature-review/SKILL.md#L3))
+- The `SKILL.md` frontmatter now parses as YAML after quoting the existing description while adding the link rule. The generic `skill-creator` validator still rejects this repo's existing `user-invocable` key, so validation used YAML parse + markdown checks rather than removing repo-local metadata. ([SKILL.md:3](../../../skills/literature-review/SKILL.md#L3), [SKILL.md:4](../../../skills/literature-review/SKILL.md#L4))
+- `./superRA/superra task check` reports no task-tree diagnostics.
+
+## Review Notes
+
+1. **[MAJOR]** The executor leaves the global dedup index empty while seeding the expansion frontier with researcher-vetted included papers: `seen = {}` and `included = priority queue seeded from the setup survey` sit side by side without adding the seed canonicals to `seen` first. ([workflow.md:36-37](../../../skills/literature-review/references/workflow.md#L36-L37)) That breaks the stated seed bypass and single-screening intent: if seed B is surfaced by seed A's backward references or forward/web sweep, it is "not already in `seen`" and enters `screen_bundle`, even though seeds are supposed to bypass screening and start at expansion. ([task.md:23-24](task.md#L23-L24)) Initialize `seen` from the seed canonicals/handles before the loop, or otherwise state that the setup-survey seed entries are already admitted into the global index before any expansion round runs.
+   → implemented: initialized `seen` from setup-survey seed canonicals/handles and updated the prose so seeds are pre-admitted before expansion. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17), [workflow.md:36](../../../skills/literature-review/references/workflow.md#L36))
