@@ -1,6 +1,6 @@
 ---
 title: "Batch-Screen Fan-Out — Match Dispatch Granularity to Work Weight"
-status: implemented
+status: approved
 depends_on: [agent-judgment-and-provenance]
 ---
 
@@ -63,8 +63,3 @@ Implemented the fan-out granularity change as prose-only literature-review workf
 - `rg` found the new loop/tier/rate-gate terms in the edited files and no remaining "one agent per paper" / "screening agent per paper" wording in the edited workflow path.
 - The `SKILL.md` frontmatter now parses as YAML after quoting the existing description while adding the link rule. The generic `skill-creator` validator still rejects this repo's existing `user-invocable` key, so validation used YAML parse + markdown checks rather than removing repo-local metadata. ([SKILL.md:3](../../../skills/literature-review/SKILL.md#L3), [SKILL.md:4](../../../skills/literature-review/SKILL.md#L4))
 - `./superRA/superra task check` reports no task-tree diagnostics.
-
-## Review Notes
-
-1. **[MAJOR]** The executor leaves the global dedup index empty while seeding the expansion frontier with researcher-vetted included papers: `seen = {}` and `included = priority queue seeded from the setup survey` sit side by side without adding the seed canonicals to `seen` first. ([workflow.md:36-37](../../../skills/literature-review/references/workflow.md#L36-L37)) That breaks the stated seed bypass and single-screening intent: if seed B is surfaced by seed A's backward references or forward/web sweep, it is "not already in `seen`" and enters `screen_bundle`, even though seeds are supposed to bypass screening and start at expansion. ([task.md:23-24](task.md#L23-L24)) Initialize `seen` from the seed canonicals/handles before the loop, or otherwise state that the setup-survey seed entries are already admitted into the global index before any expansion round runs.
-   → implemented: initialized `seen` from setup-survey seed canonicals/handles and updated the prose so seeds are pre-admitted before expansion. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17), [workflow.md:36](../../../skills/literature-review/references/workflow.md#L36))
