@@ -40,7 +40,7 @@ This is a granularity change, not a new pipeline stage — resist adding a forma
 
 ## Results
 
-Implemented the fan-out granularity change as prose-only literature-review workflow guidance; `agent-orchestration` was not edited. A follow-up ledger-schema edit makes paper mentions link to the best available target in a fixed pecking order.
+Implemented the fan-out granularity change as prose-only literature-review workflow guidance; `agent-orchestration` was not edited. A follow-up Markdown-results section makes paper mentions link to the best available target in a fixed pecking order.
 
 **Workflow executor.**
 - `references/workflow.md` now states each round as **search/expand → dedup/admit → batch-screen**. Seeds enter `seen`, form the round-1 included set, and start at expansion, not screening. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17))
@@ -55,8 +55,8 @@ Implemented the fan-out granularity change as prose-only literature-review workf
 - The depth-escalation rule now says to pull central included papers out of the screen bundle into a dedicated agent for related-work / citation-discussion reading before surfacing candidates. ([search-and-screening.md:30](../../../skills/literature-review/references/search-and-screening.md#L30))
 - The parent `literature-review/task.md` snowball convention now matches the batched round shape: expand included papers, dedup/admit centrally, batch-screen unique candidates, keep the priority frontier central. ([../task.md:37](../task.md#L37))
 
-**Ledger link rule.**
-- `SKILL.md` now requires every paper mention in ledger prose, candidate lists, extraction notes, or convergence notes to link to the first available target in this order: task file, Zotero, web, PDF, Markdown. The trace-link cluster now lists the same targets, with the task-file link first for subtree-as-ledger mode. ([SKILL.md:42](../../../skills/literature-review/SKILL.md#L42))
+**Markdown results link rule.**
+- `SKILL.md` now has a separate `## Markdown Results and Summaries` section requiring literature-review results, summaries, candidate lists, extraction notes, and convergence notes in Markdown to follow `report-in-markdown`. Whenever that Markdown mentions a paper, it links to the first available target in this order: task file, Zotero, web, PDF, Markdown. ([SKILL.md:57](../../../skills/literature-review/SKILL.md#L57))
 
 **Validation.**
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/references/workflow.md skills/literature-review/references/search-and-screening.md superRA/literature-review/task.md` reported all three files clean.

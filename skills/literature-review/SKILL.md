@@ -39,8 +39,6 @@ Each considered paper — included or excluded — gets one entry keyed on `firs
 - **decision** — `included` / `excluded`, the reason, the failing gate when excluded, and `read_depth` (a one-line note when the screen escalated past abstract/intro — see `references/search-and-screening.md`).
 - **extraction fields** — the schema the setup survey defined.
 
-**Paper link rule.** Whenever ledger prose, candidate lists, extraction notes, or convergence notes mention a paper, link the paper mention to the first available target in this order: **task file** → **Zotero** → **Web** → **PDF** → **Markdown (OCR)**. Render only targets that exist, never fabricating a link.
-
 **Trace link cluster.** The written entry also renders the retrieval fields as a **navigable cluster** a reader clicks straight through to the artifact:
 
 - **Task file** — a relative markdown link to the paper's ledger task, e.g. `[Paper](../smith-2024/task.md)`. Use this first in subtree-as-ledger mode.
@@ -55,3 +53,9 @@ Two representations, same fields:
 
 - **subtree-as-ledger** (inside a superRA tree) — one subtask per paper; directory name = paper key; `status` encodes the discovery frontier (`not-started` = unscreened frontier, `implemented` = screened, `approved` = confirmed, `postponed` = can't fetch); in/out is a tag (`included` / `archived`).
 - **folder ledger** (standalone) — a papers ledger file plus a `Notes/papers/` store, following the project's convention.
+
+## Markdown Results and Summaries
+
+When writing literature-review results, summaries, candidate lists, extraction notes, or convergence notes in Markdown, follow `report-in-markdown`.
+
+Whenever that Markdown mentions a paper, link the paper mention to the first available target in this order: **task file** → **Zotero** → **Web** → **PDF** → **Markdown (OCR)**. Render only targets that exist, never fabricating a link.
