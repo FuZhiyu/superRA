@@ -16,7 +16,7 @@ From every in-scope paper, pull its reference list (`citation_client references 
 
 Forward expansion finds the descendants — newer work citing the current set. It has two sources:
 
-- **Forward citations** — `citation_client citations PAPER_ID` (S2-only; empty on an S2 outage, fall back to the web sweep).
+- **Forward citations** — `citation_client citations PAPER_ID`. Under the default `--source auto` this is S2 → OpenCitations fallback (keyless, DOI→DOI) when S2 throttles → empty with a web-sweep note if both are down. **Union across version DOIs:** in economics a paper's forward citations fragment across its NBER (`10.3386/*`), SSRN (`10.2139/ssrn.*`), and journal DOIs, and OpenCitations is DOI-keyed — so for complete forward coverage call `citations` once per known version DOI and union the results (the client stays per-DOI; the union is this workflow step). Dedup the union with the cascade below.
 - **Multi-lens web sweep** — several **blind** web queries, each formulated without reference to the others' results and each scoped to a different surface: `site:ssrn.com`, `site:nber.org`, RePEc/IDEAS, arXiv `q-fin`/`econ`, author pages, and an unscoped WebSearch that approximates Google Scholar (broadest working-paper coverage, no API). Union the hits and dedup — overlap is expected and is the dedup cascade's job, not a reason to run fewer lenses.
 
 Record forward hits as `discovered_via: forward-cite` or `web:<lens>`.

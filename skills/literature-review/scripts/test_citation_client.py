@@ -503,6 +503,332 @@ def test_get_config_returns_none_without_env(monkeypatch, tmp_path):
     cfg = cc.get_config()
     assert cfg["s2_api_key"] is None
     assert cfg["crossref_mailto"] is None
+    assert cfg["opencitations_token"] is None
+    assert cfg["cache_dir"] is None
+    assert cfg["intervals"]["s2"] == cc.DEFAULT_INTERVALS["s2"]
+
+
+def test_get_config_resolves_opencitations_cache_and_intervals(monkeypatch, tmp_path):
+    for name in ("S2_API_KEY", "SEMANTIC_SCHOLAR_API_KEY", "CROSSREF_MAILTO"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("OPENCITATIONS_ACCESS_TOKEN", "oc-token")
+    monkeypatch.setenv("CITATION_CLIENT_CACHE_DIR", "/tmp/some-cache")
+    monkeypatch.setenv("CITATION_CLIENT_INTERVAL_S2", "2.5")
+    monkeypatch.chdir(tmp_path)
+    cfg = cc.get_config()
+    assert cfg["opencitations_token"] == "oc-token"
+    assert cfg["cache_dir"] == "/tmp/some-cache"
+    assert cfg["intervals"]["s2"] == 2.5
+    # An unset backend keeps its default.
+    assert cfg["intervals"]["crossref"] == cc.DEFAULT_INTERVALS["crossref"]
+
+
+# --------------------------------------------------------------------------- #
+# Cross-process coordination — shared cache, rate gate, adaptive backoff       #
+# --------------------------------------------------------------------------- #
+#
+# Deterministic and offline: a fake clock drives all timing (sleeps advance the
+# clock, never wall-clock waits), the rate gate coordinates through real files in
+# a tmp dir, and the transport is faked.
+
+
+class FakeClock:
+    """Injectable clock/sleep. ``sleep`` advances the clock instead of waiting."""
+
+    def __init__(self, t: float = 1000.0):
+        self.t = t
+        self.sleeps: list[float] = []
+
+    def now(self) -> float:
+        return self.t
+
+    def sleep(self, dur: float) -> None:
+        self.sleeps.append(dur)
+        if dur > 0:
+            self.t += dur
+
+
+class RecordingTransport:
+    """Records the clock time of each live call; always returns a 200 JSON body."""
+
+    def __init__(self, clock: FakeClock, status: int = 200, payload=None):
+        self.clock = clock
+        self.status = status
+        self.payload = payload if payload is not None else {"ok": True}
+        self.call_times: list[float] = []
+
+    def get_json(self, url, headers=None):
+        self.call_times.append(self.clock.now())
+        return self.status, self.payload, {}
+
+    def get_text(self, url, headers=None):
+        self.call_times.append(self.clock.now())
+        return self.status, "text-body", {}
+
+
+def _gate_state(coord_dir: Path, backend: str) -> dict:
+    return json.loads((coord_dir / f"gate-{backend}.json").read_text(encoding="utf-8"))
+
+
+# --- response cache -------------------------------------------------------- #
+
+
+def test_cache_hit_miss_kind_and_ttl(tmp_path):
+    clock = FakeClock()
+    cache = cc.ResponseCache(tmp_path, ttl_long=100, ttl_short=10, now=clock.now)
+    url = "https://api.crossref.org/works/10.1111/jofi.10001"
+    assert cache.read(url, "json") is None  # miss on an empty cache
+    cache.write(url, "json", {"a": 1})
+    assert cache.read(url, "json") == {"a": 1}  # hit
+    assert cache.read(url, "text") is None  # kind mismatch is a miss
+    clock.t += 200  # past the long TTL
+    assert cache.read(url, "json") is None  # expired
+
+
+def test_cache_shorter_ttl_for_forward_citations(tmp_path):
+    clock = FakeClock()
+    cache = cc.ResponseCache(tmp_path, ttl_long=100, ttl_short=10, now=clock.now)
+    url = "https://api.semanticscholar.org/graph/v1/paper/DOI:10.1/x/citations?limit=5"
+    cache.write(url, "json", {"data": []})
+    clock.t += 20  # past the short (citations) TTL but within the long TTL
+    assert cache.read(url, "json") is None
+
+
+def test_cache_key_ignores_courtesy_params(tmp_path):
+    cache = cc.ResponseCache(tmp_path)
+    base = "https://api.crossref.org/works/10.1/x?rows=5"
+    cache.write(base + "&mailto=a@b.org", "json", {"v": 1})
+    # A different mailto (or none) resolves to the same cache entry.
+    assert cache.read(base + "&mailto=c@d.org", "json") == {"v": 1}
+    assert cache.read(base, "json") == {"v": 1}
+
+
+def test_cache_atomic_write_leaves_no_tmp(tmp_path):
+    cache = cc.ResponseCache(tmp_path)
+    cache.write("https://api.crossref.org/works/10.1/y", "json", {"a": 1})
+    assert list(tmp_path.glob("*.tmp")) == []
+    assert len(list(tmp_path.glob("*.json"))) == 1
+
+
+def test_cache_dir_is_self_gitignored(tmp_path):
+    cache_dir = tmp_path / "cache"
+    cc._ensure_cache_gitignored(cache_dir)
+    body = (cache_dir / ".gitignore").read_text(encoding="utf-8")
+    assert "*" in body.splitlines()
+
+
+# --- rate gate ------------------------------------------------------------- #
+
+
+def test_rate_gate_spaces_concurrent_callers(tmp_path):
+    # Several "processes" (separate gate instances) sharing one coord dir all
+    # arrive at the same instant; each claims the next slot, spaced by interval.
+    clock = FakeClock()
+    interval = 1.1
+    gates = [
+        cc.RateGate(tmp_path, {"s2": interval}, now=clock.now, sleep=clock.sleep)
+        for _ in range(4)
+    ]
+    slots = [g._reserve("s2") for g in gates]  # no clock advance between arrivals
+    for earlier, later in zip(slots, slots[1:]):
+        assert later - earlier >= interval - 1e-9
+
+
+def test_coordinated_transport_spaces_live_calls(tmp_path):
+    clock = FakeClock()
+    interval = 1.1
+    gate = cc.RateGate(tmp_path, {"s2": interval}, now=clock.now, sleep=clock.sleep)
+    inner = RecordingTransport(clock)
+    ct = cc.CoordinatedTransport(inner, cache=None, gate=gate)
+    url = "https://api.semanticscholar.org/graph/v1/paper/search?query=x"
+    for _ in range(3):
+        ct.get_json(url)
+    assert len(inner.call_times) == 3
+    for earlier, later in zip(inner.call_times, inner.call_times[1:]):
+        assert later - earlier >= interval - 1e-9
+
+
+def test_rate_gate_never_holds_lock_during_wait(tmp_path):
+    # The wait happens outside the lock: _reserve returns immediately (records no
+    # sleep); wait() is the only method that sleeps.
+    clock = FakeClock()
+    gate = cc.RateGate(tmp_path, {"s2": 5.0}, now=clock.now, sleep=clock.sleep)
+    gate._reserve("s2")
+    assert clock.sleeps == []  # reserving a slot never sleeps under the lock
+    gate.wait("s2")  # second call must wait a full interval
+    assert clock.sleeps and clock.sleeps[-1] >= 5.0 - 1e-9
+
+
+def test_rate_gate_penalize_widens_and_success_decays(tmp_path):
+    clock = FakeClock()
+    gate = cc.RateGate(tmp_path, {"s2": 1.0}, now=clock.now, sleep=clock.sleep,
+                       penalty_factor=2.0, decay=0.5)
+    gate.penalize("s2")
+    assert _gate_state(tmp_path, "s2")["interval"] == 2.0
+    gate.penalize("s2")
+    assert _gate_state(tmp_path, "s2")["interval"] == 4.0
+    gate.on_success("s2")
+    assert _gate_state(tmp_path, "s2")["interval"] == 2.0
+    for _ in range(5):
+        gate.on_success("s2")  # decays back toward, never below, the base
+    assert _gate_state(tmp_path, "s2")["interval"] == 1.0
+
+
+def test_coordinated_transport_backs_off_on_429(tmp_path):
+    clock = FakeClock()
+    gate = cc.RateGate(tmp_path, {"s2": 1.0}, now=clock.now, sleep=clock.sleep)
+    inner = FakeTransport(_routes(**{"/paper/search": (429, None)}))
+    ct = cc.CoordinatedTransport(inner, cache=None, gate=gate)
+    ct.get_json("https://api.semanticscholar.org/graph/v1/paper/search?query=x")
+    # A 429 pushed the shared interval outward for the whole fan-out.
+    assert _gate_state(tmp_path, "s2")["interval"] > 1.0
+
+
+def test_coordinated_transport_serves_from_cache(tmp_path):
+    cache = cc.ResponseCache(tmp_path)
+    inner = FakeTransport(_routes())
+    ct = cc.CoordinatedTransport(inner, cache=cache, gate=cc.NoOpGate())
+    url = cc.S2_BASE + "/paper/search?query=x"
+    _, first, _ = ct.get_json(url)
+    n_calls = len(inner.calls)
+    _, second, _ = ct.get_json(url)  # served from cache, no new live call
+    assert len(inner.calls) == n_calls
+    assert second == first
+
+
+def test_build_default_transport_honors_cfg_and_flags(tmp_path):
+    cfg = {
+        "s2_api_key": None, "crossref_mailto": None, "opencitations_token": None,
+        "cache_dir": str(tmp_path / "c"), "intervals": dict(cc.DEFAULT_INTERVALS),
+    }
+    args = cc.build_parser().parse_args(["search", "x"])
+    ct = cc.build_default_transport(args, cfg)
+    assert isinstance(ct, cc.CoordinatedTransport)
+    assert ct.cache is not None
+    assert (tmp_path / "c" / ".gitignore").exists()  # cache dir self-ignored
+
+    args_no_cache = cc.build_parser().parse_args(["search", "x", "--no-cache"])
+    cfg_nc = dict(cfg, cache_dir=str(tmp_path / "d"))
+    assert cc.build_default_transport(args_no_cache, cfg_nc).cache is None
+
+
+# --- OpenCitations backend + fallback chain -------------------------------- #
+
+OC_CITATIONS = [
+    {"oci": "06101-06201", "citing": "omid:br/061 doi:10.1257/aer.20220001",
+     "cited": "omid:br/060 doi:10.1111/jofi.10001", "creation": "2024-03"},
+    {"oci": "06102-06202", "citing": "doi:10.1016/j.jfineco.2023.01",
+     "cited": "doi:10.1111/jofi.10001", "creation": "2023"},
+]
+
+OC_REFERENCES = [
+    {"oci": "06001-06101", "citing": "doi:10.1111/jofi.10001",
+     "cited": "doi:10.1111/jofi.10002", "creation": "2023"},
+]
+
+
+def test_oc_headers_send_token_only_when_set():
+    assert "authorization" not in cc._oc_headers({})
+    assert cc._oc_headers({"opencitations_token": "oc-token"})["authorization"] == "oc-token"
+
+
+def test_opencitations_citations_parse_to_records():
+    t = FakeTransport({"/index/api/v2/citations/": (200, OC_CITATIONS)})
+    recs = cc.opencitations_citations(t, {}, "10.1111/jofi.10001")
+    assert [r["source"] for r in recs] == ["opencitations", "opencitations"]
+    # DOI extracted from the citing endpoint; creation year carried through.
+    assert recs[0]["id"]["doi"] == "10.1257/aer.20220001"
+    assert recs[0]["year"] == 2024
+    assert recs[1]["id"]["doi"] == "10.1016/j.jfineco.2023.01"
+
+
+def test_opencitations_references_use_cited_endpoint_no_year():
+    t = FakeTransport({"/index/api/v2/references/": (200, OC_REFERENCES)})
+    recs = cc.opencitations_references(t, {}, "10.1111/jofi.10001")
+    assert recs[0]["id"]["doi"] == "10.1111/jofi.10002"
+    # Backward edges carry the citing entity's creation date, not the cited
+    # paper's — so no year is inferred for a reference.
+    assert recs[0]["year"] is None
+
+
+def test_opencitations_requires_doi():
+    with pytest.raises(cc.OpenCitationsUnavailable):
+        cc.opencitations_citations(FakeTransport({}), {}, "not-a-doi")
+
+
+def _cfg_no_keys():
+    return {
+        "s2_api_key": None, "crossref_mailto": None, "opencitations_token": None,
+        "cache_dir": None, "intervals": dict(cc.DEFAULT_INTERVALS),
+    }
+
+
+def test_cmd_citations_falls_back_to_opencitations(monkeypatch):
+    monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
+    # OC route listed first so its more specific path wins the substring match.
+    routes = {
+        "/index/api/v2/citations/": (200, OC_CITATIONS),
+        "/citations": (429, None),
+    }
+    code, out = run_cmd(["citations", "10.1111/jofi.10001"], FakeTransport(routes))
+    assert code == 0
+    assert out["s2_available"] is False
+    assert out["source"] == "opencitations"
+    assert out["count"] == 2
+    assert any("version DOIs" in n for n in out["notes"])
+
+
+def test_cmd_citations_chain_exhausts_to_web_sweep(monkeypatch):
+    monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
+    routes = {
+        "/index/api/v2/citations/": (500, None),  # OC also down
+        "/citations": (429, None),  # S2 down
+    }
+    code, out = run_cmd(["citations", "10.1111/jofi.10001"], FakeTransport(routes))
+    assert code == 0
+    assert out["s2_available"] is False
+    assert out["records"] == []
+    assert any("web sweep" in n for n in out["notes"])
+
+
+def test_cmd_citations_source_s2_pins_s2_only(monkeypatch):
+    monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
+    routes = {
+        "/index/api/v2/citations/": (200, OC_CITATIONS),  # available but must be skipped
+        "/citations": (429, None),
+    }
+    code, out = run_cmd(["citations", "10.1111/jofi.10001", "--source", "s2"], FakeTransport(routes))
+    assert code == 0
+    assert out["s2_available"] is False
+    assert out["records"] == []  # --source s2 does not try OpenCitations
+    assert out["source"] != "opencitations"
+
+
+def test_cmd_references_opencitations_source(monkeypatch):
+    monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
+    routes = {"/index/api/v2/references/": (200, OC_REFERENCES)}
+    code, out = run_cmd(
+        ["references", "10.1111/jofi.10001", "--source", "opencitations"],
+        FakeTransport(routes),
+    )
+    assert code == 0
+    assert out["count"] == 1
+    assert out["records"][0]["id"]["doi"] == "10.1111/jofi.10002"
+
+
+def test_health_reports_new_config_and_never_leaks_oc_token(monkeypatch):
+    secret = "oc-secret-token-do-not-print"
+    monkeypatch.setattr(cc, "get_config", lambda: dict(_cfg_no_keys(), opencitations_token=secret))
+    args = cc.build_parser().parse_args(["health"])
+    out_buf, err_buf = io.StringIO(), io.StringIO()
+    with redirect_stdout(out_buf), redirect_stderr(err_buf):
+        args.func(args, transport=FakeTransport(_routes()))
+    assert secret not in out_buf.getvalue()
+    assert secret not in err_buf.getvalue()
+    payload = json.loads(out_buf.getvalue())
+    assert payload["config_present"]["OPENCITATIONS_ACCESS_TOKEN"] is True
+    assert "opencitations" in payload["endpoints"]
+    assert payload["rate_intervals"]["s2"] == cc.DEFAULT_INTERVALS["s2"]
 
 
 if __name__ == "__main__":

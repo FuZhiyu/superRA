@@ -21,7 +21,7 @@ Each dispatched agent, for its one paper:
 1. Fetch metadata + abstract verbatim from the published version of record (`citation_client metadata`, or a source-page `citation_*` / Dublin Core tag when no structured record exists).
 2. Screen against the criteria from metadata / abstract / intro only.
 3. Write its ledger entry per the schema in SKILL.md.
-4. Return surfaced candidates — backward references (`citation_client references`) and forward-citation / web-sweep hits — for the orchestrator to dedup.
+4. Return surfaced candidates — backward references (`citation_client references`) and forward-citation / web-sweep hits — for the orchestrator to dedup. Forward citations run S2 → OpenCitations (keyless) when S2 throttles, unioned across the paper's version DOIs (NBER / SSRN / journal); see `search-and-screening.md`.
 
 The screening discipline, dedup cascade, and stopping judgment are in `search-and-screening.md`.
 

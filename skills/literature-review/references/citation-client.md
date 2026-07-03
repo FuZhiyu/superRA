@@ -17,10 +17,21 @@ This client is **one discovery lens, not the entry point.** Front-line discovery
 | Semantic Scholar (S2) | relevance search, backward `references`, forward `citations`, abstracts | Optional. Anonymous pool by default; `S2_API_KEY` (or `SEMANTIC_SCHOLAR_API_KEY`) used when set. S2 keys are now institutional-only — treat as optional. |
 | Crossref | authoritative published-version-of-record metadata by DOI/title; uneven `reference` array fallback | Keyless. Set `CROSSREF_MAILTO` to use the faster, more reliable polite pool. |
 | arXiv | q-fin/econ preprint abstracts + metadata | Keyless. |
+| OpenCitations | keyless DOI→DOI forward `citations` (and backward `references`) edges from I4OC open references — the forward-citation fallback when S2 throttles | Keyless. `OPENCITATIONS_ACCESS_TOKEN` raises rate limits when set; sent in the `authorization` header only then. Its edges derive from Crossref open references, not OpenAlex, so it does not carry the OpenAlex quality problem. |
 
 Config is read from the environment, then a project-local `Notes/.env`; environment wins. Key **values are never printed** — `health` reports presence as booleans only.
 
-**S2 is optional and degrades gracefully.** On an S2 outage or sustained rate-limiting, any S2-backed command sets `"s2_available": false`, adds an explanatory `notes` entry, and returns whatever the remaining sources produced (exit 0) rather than crashing. Forward `citations` are S2-only, so on an S2 outage they return empty with a note to fall back to the workflow-layer web sweep.
+**S2 is optional and degrades gracefully.** On an S2 outage or sustained rate-limiting, any S2-backed command sets `"s2_available": false`, adds an explanatory `notes` entry, and returns whatever the remaining sources produced (exit 0) rather than crashing. Forward `citations` fall back S2 → OpenCitations → empty + a note to run the workflow-layer web sweep; the `source` field records which backend answered.
+
+### Environment variables
+
+| Variable | Meaning |
+|---|---|
+| `S2_API_KEY` / `SEMANTIC_SCHOLAR_API_KEY` | optional S2 key (institutional-only) |
+| `CROSSREF_MAILTO` | opt into Crossref's polite pool |
+| `OPENCITATIONS_ACCESS_TOKEN` | optional OpenCitations token; never echoed |
+| `CITATION_CLIENT_CACHE_DIR` | coordination + response-cache root (default `Notes/.cache/citation-client/`, self-gitignored) |
+| `CITATION_CLIENT_INTERVAL_<BACKEND>` | per-backend rate-gate spacing in seconds, e.g. `CITATION_CLIENT_INTERVAL_S2=1.5` |
 
 ## Normalized paper record
 
@@ -50,6 +61,8 @@ Config is read from the environment, then a project-local `Notes/.env`; environm
 
 ## Subcommands
 
+The network commands (`search`, `references`, `citations`, `metadata`, and `health --probe`) all accept `--no-cache` and `--cache-ttl SECONDS`; see [Concurrency, caching, and rate limits](#concurrency-caching-and-rate-limits).
+
 ### `search QUERY`
 
 Indexed relevance/bibliographic search.
@@ -71,15 +84,25 @@ Backward references. `PAPER_ID` is a DOI, arXiv id, or S2 id.
 
 | Flag | Meaning |
 |---|---|
-| `--source {s2,crossref}` | default `s2`; `crossref` needs a DOI and is the uneven, often DOI-less fallback |
+| `--source {s2,crossref,opencitations}` | default `s2`; `crossref` and `opencitations` need a DOI. `crossref` is the uneven, often DOI-less reference array; `opencitations` is DOI→DOI edges from I4OC |
 | `--limit N` | max references (default 100) |
 | `--raw` | include verbatim payloads |
 
-Output: `{paper, source, s2_available, notes, count, records: […]}`. Crossref-array references carry `source: "crossref-reference"` and an `unstructured` field; they are frequently DOI-less — prefer S2 when available.
+Output: `{paper, source, s2_available, notes, count, records: […]}`. Crossref-array references carry `source: "crossref-reference"` and an `unstructured` field; they are frequently DOI-less — prefer S2 when available. OpenCitations references carry `source: "opencitations"`, are DOI-keyed, and expose only the DOI (title/authors null) — hydrate with `metadata` if needed.
 
 ### `citations PAPER_ID`
 
-Forward citations — the snowball backbone. **S2-only** (Crossref has none). Same `--limit` / `--raw`. Output shape matches `references` with `source: "s2"`. On S2 outage: `s2_available: false`, empty `records`, and a note to use the forward web sweep.
+Forward citations — the snowball backbone.
+
+| Flag | Meaning |
+|---|---|
+| `--source {auto,s2,opencitations}` | `auto` (default) = S2 then OpenCitations fallback; `s2` = S2 only (old behavior); `opencitations` = OpenCitations only (needs a DOI) |
+| `--limit N` | max citations (default 100) |
+| `--raw` | include verbatim payloads |
+
+Output shape matches `references`; `source` reports which backend answered (`s2` or `opencitations`). Fallback chain under `auto`: **S2 → OpenCitations → empty + web-sweep note.** On S2 outage `s2_available: false`; if OpenCitations then answers, `source: "opencitations"` with the DOI→DOI records; if it too is unavailable (or no DOI), `records` is empty with a note to run the workflow-layer forward web sweep.
+
+**Version-DOI union (workflow layer).** OpenCitations is DOI→DOI only, and in economics a paper's forward citations fragment across its version DOIs (NBER `10.3386/*`, SSRN `10.2139/ssrn.*`, and the journal DOI). The client stays **per-DOI**; complete forward coverage requires calling `citations` once per known version DOI and unioning the results — a workflow step, not a tool feature (see [workflow.md](workflow.md) and [search-and-screening.md](search-and-screening.md)).
 
 ### `metadata IDENTIFIER`
 
@@ -109,8 +132,16 @@ Output: `{n_input, n_clusters, clusters: [{cluster_id, members: [input-idx…], 
 
 ### `health`
 
-Report `tool_version`, `python_version`, `dependencies` (`stdlib-only`), endpoint URLs, config presence (booleans), and `s2_key_mode` (`anonymous-pool` / `keyed`). Add `--probe` to make one S2 call and report `s2_reachable`; without it no network call is made. Pinning the runtime versions here makes behavior drift visible.
+Report `tool_version`, `python_version`, `dependencies` (`stdlib-only`), endpoint URLs (including `opencitations`), config presence (booleans — including `OPENCITATIONS_ACCESS_TOKEN` and `CITATION_CLIENT_CACHE_DIR`, values never printed), `s2_key_mode` (`anonymous-pool` / `keyed`), the resolved `cache_dir`, per-backend `rate_intervals`, and `coordination` (`cross-process` / `per-process`). Add `--probe` to make one S2 call and report `s2_reachable`; without it no network call is made. Pinning the runtime versions here makes behavior drift visible.
 
-## Rate limits
+## Concurrency, caching, and rate limits
 
-The default transport retries `429`/`503` with `Retry-After`/exponential backoff and, for Crossref, sleeps between requests per the advertised `X-Rate-Limit-Limit` / `X-Rate-Limit-Interval` headers. The offline test suite injects a fake transport, so it runs with no network and no keys.
+The fan-out is **unbounded** — every screening/extraction agent shells out its own client process, and they share one IP and one filesystem. Three shared-state layers sit in front of the live HTTP call so the collective request rate stays inside what the server measures (per IP), without funnelling agents through a single serialized caller:
+
+- **Shared on-disk response cache.** Keyed by the canonicalized request URL (courtesy params like `mailto` dropped); writes are atomic (temp file + `os.replace`), reads are lock-free. TTL by mutability: immutable `references`/`metadata`/published records ~30d; forward `citations` ~7d (they grow). Snowballing re-hits the same hub papers, so a cache hit skips both the rate gate and the network entirely. `--no-cache` bypasses it; `--cache-ttl SECONDS` overrides the TTL for one call. The cache dir (`CITATION_CLIENT_CACHE_DIR`, default `Notes/.cache/citation-client/`) is created with a self-ignoring `.gitignore` so cached responses never enter version control.
+- **Cross-process rate gate.** One next-allowed-time state file per backend host, guarded by `fcntl.flock`. Before each live call a process briefly locks the file, reads `next_ts`, claims `slot = max(now, next_ts)`, writes `next_ts = slot + interval`, releases the lock, then sleeps until `slot`. **The lock is never held during the sleep**, so concurrency is preserved while the global rate is bounded to one request per `interval` across all processes. Defaults (seconds/request): S2 `1.1`, Crossref `0.2`, OpenCitations `0.5`, arXiv `3.0`; override per backend via `CITATION_CLIENT_INTERVAL_<BACKEND>`.
+- **Adaptive backoff.** A live `429`/`503` widens the backend's shared `next_ts`/interval (decaying back over subsequent successes), so a real overload signal slows the whole fan-out, not just the unlucky process. The default transport's own `Retry-After`/exponential retry stays behind the gate as a second line of defense, and it still sleeps between Crossref requests per the advertised `X-Rate-Limit-Limit`/`X-Rate-Limit-Interval` headers.
+
+**Coordination scope.** The gate and cache are per-filesystem, so they coordinate exactly the processes on one machine — which is the right granularity because S2 rate-limits per IP and one machine shares one IP. Across machines the gate is per-machine (no shared state); that matches per-IP limits as long as each machine has its own IP. Where `fcntl` is unavailable (non-POSIX), the client degrades to per-process-only coordination rather than crashing; `health` reports `coordination` as `cross-process` or `per-process`.
+
+The offline test suite injects a fake transport plus an injectable clock/sleep and a tmp coordination dir, so it runs deterministically with no network, no keys, and no real waits.
