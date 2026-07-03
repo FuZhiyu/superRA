@@ -1,6 +1,6 @@
 ---
 title: "Shared Store And Client Mechanisms"
-status: implemented
+status: approved
 depends_on:
   - task-tree-native-orchestration
 ---
@@ -51,13 +51,3 @@ Implemented the shared coordination mechanisms.
 - [`citation-client.md`](../../../skills/literature-review/references/citation-client.md) documents `citations-union` and the materializer's materialize / claim / promote behavior.
 
 Verification: `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 72 tests.
-
-## Review Notes
-
-1. **MAJOR** — [`materialize_one`](../../../skills/literature-review/scripts/candidate_materializer.py#L354-L365) only appends a provenance line when a later record matches an existing card; it does not merge newly surfaced handles or retrieval trace fields. A targeted check with first materialization `{doi}` and second materialization `{doi, arxiv, s2, pdf_url, pdf_path}` left `arXiv`, `S2`, `PDF URL`, and `PDF path` blank, even though the task requires merged provenance/handles for concurrent/repeated materialization. Merge newly supplied identity/retrieval fields into the existing `task.md` without overwriting better existing values, and add a test where the second matching record contributes new handles/artifact paths.
-
-   → implemented: [`merge_record_into_existing`](../../../skills/literature-review/scripts/candidate_materializer.py) now fills blank identity/retrieval fields from later matched records without overwriting existing values, and [`test_materialize_merges_new_handles_into_existing_card`](../../../skills/literature-review/scripts/test_candidate_materializer.py) covers the second-record handle/path case.
-
-2. **MAJOR** — [`rewrite_links`](../../../skills/literature-review/scripts/candidate_materializer.py#L423-L433) includes the bare `old_path.name` in a global substring replacement, so `promote` rewrites any occurrence of the candidate key in a candidate card as though it were a link. The task requires rewriting links and reporting unrewritten/ambiguous references for main-agent follow-up rather than guessing. Limit automatic rewrites to structured link targets/fields the tool can prove are path references, report ambiguous bare mentions, and cover that case in the promote test.
-
-   → implemented: `promote` now rewrites Markdown link targets and known path fields only, reports unresolved bare key mentions, and the promote regression test verifies a plain prose mention remains unchanged while being reported.
