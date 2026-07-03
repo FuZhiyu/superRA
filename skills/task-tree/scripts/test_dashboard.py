@@ -3441,14 +3441,18 @@ class TestRawHtmlSanitization:
 
     def test_render_result_is_sanitized(self):
         """Every md.render(...) result flows through DOMPurify.sanitize before it
-        reaches the DOM, with style/class kept for authored inline styling. The
-        single renderMarkdown helper is the only md.render call site, so covering
-        it covers task sections, doc pages, and section previews."""
+        reaches the DOM, with style/class kept for authored inline styling and the
+        default scheme allowlist extended with `zotero` (the trace-link deeplink)
+        while javascript:/untrusted data: stay blocked. The single renderMarkdown
+        helper is the only md.render call site, so covering it covers task
+        sections, doc pages, and section previews."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
-        assert (
-            "DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] })"
-            in src
-        )
+        assert "DOMPurify.sanitize(md.render(text), {" in src
+        assert "ADD_ATTR: ['style', 'class']" in src
+        # zotero:// survives sanitization via the extended ALLOWED_URI_REGEXP;
+        # javascript: is absent from the scheme list, so it stays blocked.
+        assert "ALLOWED_URI_REGEXP:" in src
+        assert "xmpp|matrix|zotero):" in src
         # No raw md.render(...) reaches innerHTML unsanitized: the only call site
         # is the one wrapped above.
         assert src.count("md.render(") == 1
