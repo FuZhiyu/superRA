@@ -505,9 +505,12 @@ def build_default_transport(args, cfg: dict):
     ``--cache-ttl`` and the resolved per-backend intervals. Degrades to a
     per-process-only gate when ``fcntl`` is unavailable."""
     coord_dir = resolve_cache_dir(cfg)
+    # Self-ignore the coordination dir unconditionally: even under --no-cache the
+    # RateGate writes gate-<backend>.json files here, so the .gitignore must exist
+    # regardless of whether the response cache is enabled.
+    _ensure_cache_gitignored(coord_dir)
     cache = None
     if not getattr(args, "no_cache", False):
-        _ensure_cache_gitignored(coord_dir)
         cache = ResponseCache(coord_dir, ttl_override=getattr(args, "cache_ttl", None))
     gate: object
     if _HAS_FCNTL:
