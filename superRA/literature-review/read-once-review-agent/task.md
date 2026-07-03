@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: revise
+status: implemented
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -70,11 +70,15 @@ Rewired the literature-review skill around one review-agent role.
 Verification:
 
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/SKILL.md skills/literature-review/references/workflow.md skills/literature-review/references/review-agent.md skills/literature-review/references/grounding-and-extraction.md skills/literature-review/references/econ-corpus.md skills/literature-review/references/citation-client.md skills/CATEGORIES.md superRA/literature-review/read-once-review-agent/task.md` reported all files clean.
-- `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 71 tests.
+- `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 72 tests.
 - `rg` checks over live skill docs found no stale discovery/screening role references or copy-based promotion wording.
 
 ## Review Notes
 
 1. **MAJOR** — [`workflow.md`](../../../skills/literature-review/references/workflow.md#L42-L48) describes frontier dispatches and the compact state transitions, but it never states the required exception that literature-review frontier dispatches run concurrently as ordinary parallel Agent calls without worktree isolation because routine writes are mediated by the candidate store/client cache and claim-for-read prevents duplicate substantive reads. Add that explicit exception and reason to the main-agent workflow reference so the orchestrator does not fall back to the generic worktree-per-parallel-task default.
 
+   → implemented: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now states that literature-review frontier dispatches may run as ordinary parallel Agent calls without worktree isolation because routine shared writes go through the locked candidate store/cache and claim-for-read prevents duplicate substantive reads.
+
 2. **MAJOR** — [`review-agent.md`](../../../skills/literature-review/references/review-agent.md#L5-L7) tells the agent to stay within bounds and report high-signal leads that exceed them, but the required protocol is "stub and report" beyond hop/budget bounds. As written, an out-of-bounds but valuable lead can be reported only in the local map and never materialized as a `not-started` candidate, weakening the written-state handoff. Make the beyond-bounds rule explicit: materialize/update the candidate stub when minimal metadata exists, leave it `not-started`, and report why it was not chased.
+
+   → implemented: [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) now tells review agents to materialize/update a `not-started` stub for high-signal beyond-bounds leads when minimal metadata exists, and report why the lead was not chased.

@@ -71,6 +71,37 @@ def test_materialize_reuses_existing_by_doi(tmp_path: Path) -> None:
     assert second["results"][0]["action"] == "matched-existing"
 
 
+def test_materialize_merges_new_handles_into_existing_card(tmp_path: Path) -> None:
+    first_record = sample_record()
+    first_record["id"] = {"doi": "10.1111/JOFI.12345"}
+    first_record.pop("pdf_url", None)
+    first_record.pop("pdf_path", None)
+    first = run_cmd("materialize", "--store", str(tmp_path), input_obj=first_record)
+
+    second_record = sample_record()
+    second_record["id"] = {
+        "doi": "10.1111/JOFI.12345",
+        "arxiv": "2401.00001",
+        "s2": "S2-NEW",
+        "corpus_id": "123456",
+    }
+    second_record["pdf_url"] = "https://example.test/paper.pdf"
+    second_record["pdf_path"] = "attachments/paper.pdf"
+    second_record["md_path"] = "attachments/paper.md"
+    second = run_cmd("materialize", "--store", str(tmp_path), input_obj=second_record)
+
+    task_path = Path(first["results"][0]["path"])
+    text = task_path.read_text(encoding="utf-8")
+    assert second["results"][0]["action"] == "matched-existing"
+    assert set(second["results"][0]["merged_fields"]) >= {"arXiv", "S2", "Corpus ID", "PDF URL", "PDF path", "Markdown path"}
+    assert "- arXiv: 2401.00001" in text
+    assert "- S2: S2-NEW" in text
+    assert "- Corpus ID: 123456" in text
+    assert "- PDF URL: https://example.test/paper.pdf" in text
+    assert "- PDF path: attachments/paper.pdf" in text
+    assert "- Markdown path: attachments/paper.md" in text
+
+
 def test_concurrent_materialize_merges_one_not_started_card(tmp_path: Path) -> None:
     records = []
     for i in range(6):
@@ -122,6 +153,10 @@ def test_promote_moves_and_rewrites_candidate_link(tmp_path: Path) -> None:
     citing_path = Path(citing["results"][0]["path"])
     text = citing_path.read_text(encoding="utf-8")
     text = text.replace("- Source paper: ", f"- Source paper: {key}/task.md")
+    text = text.replace(
+        "- Local reason: Not recorded.",
+        f"- Local reason: Plain mention {key} is not a path reference.",
+    )
     citing_path.write_text(text, encoding="utf-8")
 
     dest = tmp_path / "permanent" / key
@@ -133,4 +168,6 @@ def test_promote_moves_and_rewrites_candidate_link(tmp_path: Path) -> None:
     assert (dest / "task.md").exists()
     updated = citing_path.read_text(encoding="utf-8")
     assert "permanent" in updated
+    assert f"Plain mention {key} is not a path reference." in updated
     assert out["updated_links"]
+    assert str(citing_path) in out["unresolved_links"]

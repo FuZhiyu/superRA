@@ -49,6 +49,8 @@ There is no hidden round state. The written state is: frontier task results, can
 
 Review cost is controlled at packet level: review frontier maps, candidate additions, claimed-read outcomes, extraction notes, permanent-record placement choices, and saturation judgments.
 
+Literature-review frontier dispatches can run as ordinary parallel Agent calls without worktree isolation: routine shared writes go through the locked candidate store and citation-client cache, and claim-for-read prevents duplicate substantive reads.
+
 ## Dispatch Boundary
 
 Recon answers: what should enter the candidate store, and what local map did this lens or seed reveal?

@@ -253,19 +253,62 @@ def update_claim_section(text: str, claimant: str, claimed_at: str, lease_hours:
     return text.rstrip() + "\n\n" + block
 
 
-def append_provenance(task_path: Path, provenance: str | None) -> bool:
-    if not provenance:
-        return False
+def merge_field_values(text: str, updates: dict[str, str]) -> tuple[str, list[str]]:
+    changed: list[str] = []
+    next_text = text
+    for label, value in updates.items():
+        if not value:
+            continue
+        pattern = rf"(?m)^(-[^\S\r\n]*{re.escape(label)}:[^\S\r\n]*)([^\r\n]*?)[^\S\r\n]*$"
+        match = re.search(pattern, next_text)
+        if not match:
+            continue
+        current = match.group(2).strip()
+        if current:
+            continue
+        next_text = re.sub(pattern, lambda m, v=value: f"{m.group(1)}{v}", next_text, count=1)
+        changed.append(label)
+    return next_text, changed
+
+
+def merge_record_into_existing(task_path: Path, record: dict[str, Any], provenance: str | None) -> dict[str, Any]:
     text = task_path.read_text(encoding="utf-8")
-    line = f"- Additional provenance: {provenance}"
-    if line in text or f"- Discovered via: {provenance}" in text:
-        return False
-    marker = "## Screening Decision"
-    if marker not in text:
-        return False
-    text = text.replace(f"\n{marker}", f"\n{line}\n\n{marker}", 1)
-    write_text_atomic(task_path, text)
-    return True
+    ids = identity(record)
+    corpus_id = record.get("id", {}).get("corpus_id") if isinstance(record.get("id"), dict) else ""
+    corpus_id = corpus_id or record.get("corpus_id") or record.get("external_ids", {}).get("CorpusId", "")
+    updates = {
+        "DOI": ids.get("doi", ""),
+        "arXiv": ids.get("arxiv", ""),
+        "S2": ids.get("s2", ""),
+        "Corpus ID": str(corpus_id) if corpus_id else "",
+        "Title-year": ids.get("title_year", ""),
+        "Metadata source": str(record.get("source") or ""),
+        "Version of record": str(record.get("version_of_record") or ""),
+        "JEL codes": str(record.get("jel_codes") or ""),
+        "Zotero item": zotero_value(record, "item_uri", "zotero_item", "zotero_item_uri"),
+        "Zotero attachment": zotero_value(record, "attachment_uri", "zotero_attachment", "zotero_attachment_uri"),
+        "Landing URL": str(nested_get(record, "url", "landing_url") or ""),
+        "PDF URL": str(record.get("pdf_url") or ""),
+        "PDF path": str(record.get("pdf_path") or ""),
+        "Markdown path": str(record.get("md_path") or record.get("markdown_path") or ""),
+        "Access": str(record.get("access") or ""),
+        "Fetched at": str(record.get("fetched_at") or ""),
+        "Version divergence": str(record.get("version_divergence") or ""),
+    }
+    next_text, merged_fields = merge_field_values(text, updates)
+
+    updated_provenance = False
+    if provenance:
+        line = f"- Additional provenance: {provenance}"
+        if line not in next_text and f"- Discovered via: {provenance}" not in next_text:
+            marker = "## Screening Decision"
+            if marker in next_text:
+                next_text = next_text.replace(f"\n{marker}", f"\n{line}\n\n{marker}", 1)
+                updated_provenance = True
+
+    if next_text != text:
+        write_text_atomic(task_path, next_text)
+    return {"updated_provenance": updated_provenance, "merged_fields": merged_fields}
 
 
 def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> str:
@@ -355,13 +398,13 @@ def materialize_one(store: Path, record: dict[str, Any], provenance: str | None)
     ident = identity(record)
     existing = find_existing(store, ident)
     if existing:
-        updated = append_provenance(existing / "task.md", provenance)
+        merge_report = merge_record_into_existing(existing / "task.md", record, provenance)
         return {
             "action": "matched-existing",
             "key": existing.name,
             "path": str(existing / "task.md"),
             "status": read_status(existing / "task.md"),
-            "updated_provenance": updated,
+            **merge_report,
         }
 
     base = key_for(record)
@@ -412,29 +455,67 @@ def claim_one(store: Path, candidate: str, claimant: str, lease_hours: float, fo
     }
 
 
+def rewrite_markdown_links(text: str, old_targets: set[str], replacement: str) -> tuple[str, bool]:
+    changed = False
+
+    def repl(match: re.Match[str]) -> str:
+        nonlocal changed
+        target = match.group("target").strip()
+        if target not in old_targets:
+            return match.group(0)
+        changed = True
+        return f"{match.group('prefix')}{replacement}{match.group('suffix')}"
+
+    pattern = r"(?P<prefix>\[[^\]\n]+\]\()(?P<target>[^)\n]+)(?P<suffix>\))"
+    return re.sub(pattern, repl, text), changed
+
+
+def rewrite_structured_path_fields(text: str, old_targets: set[str], replacement: str) -> tuple[str, bool]:
+    changed = False
+    labels = r"(?:Source paper|Task file|Paper record|Candidate record)"
+
+    def repl(match: re.Match[str]) -> str:
+        nonlocal changed
+        value = match.group("value").strip()
+        if value not in old_targets:
+            return match.group(0)
+        changed = True
+        return f"{match.group('prefix')}{replacement}"
+
+    pattern = rf"(?m)^(?P<prefix>-\s*{labels}:\s*)(?P<value>\S.*?)\s*$"
+    return re.sub(pattern, repl, text), changed
+
+
+def has_ambiguous_bare_mention(text: str, key: str, old_targets: set[str]) -> bool:
+    masked = re.sub(r"\[[^\]\n]+\]\([^\)\n]+\)", "", text)
+    for raw in old_targets:
+        masked = masked.replace(raw, "")
+    return re.search(rf"(?<![A-Za-z0-9-]){re.escape(key)}(?![A-Za-z0-9-])", masked) is not None
+
+
 def rewrite_links(root: Path, old_path: Path, new_path: Path) -> dict[str, Any]:
     updated: list[str] = []
     unresolved: list[str] = []
     old_abs = old_path.resolve()
+    old_targets = {
+        str(old_path),
+        str(old_path / "task.md"),
+        str(old_abs),
+        str(old_abs / "task.md"),
+        f"{old_path.name}/task.md",
+    }
     for task_path in root.glob("*/task.md"):
         if task_path.resolve() == (new_path / "task.md").resolve():
             continue
         text = task_path.read_text(encoding="utf-8")
-        candidates = {
-            str(old_path),
-            str(old_path / "task.md"),
-            old_path.name,
-            f"{old_path.name}/task.md",
-        }
+        replacement = os.path.relpath(new_path / "task.md", start=task_path.parent)
         next_text = text
-        for raw in sorted(candidates, key=len, reverse=True):
-            if raw in next_text:
-                replacement = os.path.relpath(new_path / "task.md", start=task_path.parent)
-                next_text = next_text.replace(raw, replacement)
+        next_text, _ = rewrite_markdown_links(next_text, old_targets, replacement)
+        next_text, _ = rewrite_structured_path_fields(next_text, old_targets, replacement)
         if next_text != text:
             write_text_atomic(task_path, next_text)
             updated.append(str(task_path))
-        elif str(old_abs) in text:
+        if str(old_abs) in text or has_ambiguous_bare_mention(text, old_path.name, old_targets):
             unresolved.append(str(task_path))
     return {"updated_links": updated, "unresolved_links": unresolved}
 

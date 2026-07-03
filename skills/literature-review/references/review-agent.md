@@ -4,7 +4,7 @@ Load for literature-review frontier dispatches.
 
 ## Frontier Bounds
 
-A dispatch gives a frontier and bounds: seed, candidate cluster, or web lens; recommended citation hops; extraction authorization; and a soft paper budget. Stay within those bounds and report high-signal leads that exceed them.
+A dispatch gives a frontier and bounds: seed, candidate cluster, or web lens; recommended citation hops; extraction authorization; and a soft paper budget. Stay within those bounds. For high-signal leads beyond the bounds, materialize/update a `not-started` stub when minimal metadata exists and report why it was not chased.
 
 ## Materialize Many, Claim Before Read
 
