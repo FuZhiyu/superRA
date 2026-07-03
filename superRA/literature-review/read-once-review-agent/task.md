@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: implemented
+status: revise
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -74,3 +74,7 @@ Verification:
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/SKILL.md skills/literature-review/references/workflow.md skills/literature-review/references/review-agent.md skills/literature-review/references/grounding-and-extraction.md skills/literature-review/references/econ-corpus.md skills/literature-review/references/citation-client.md skills/CATEGORIES.md superRA/literature-review/read-once-review-agent/task.md` reported all files clean.
 - `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 72 tests.
 - `rg` checks over live skill docs found no stale discovery/screening role references or copy-based promotion wording.
+
+## Review Notes
+
+1. **MAJOR:** The rewrite dropped the required extraction-authorization default from `workflow.md`. The task requires extraction authorization to be per dispatch, with the default authorized for seed expansions and high-priority central candidates and withheld otherwise [task.md:31](task.md#L31), and the validation criteria require `workflow.md` to state that default [task.md:52](task.md#L52). The live workflow now only says extraction happens "when authorized" in claimed-read dispatches [workflow.md:62-68](../../../skills/literature-review/references/workflow.md#L62-L68), without telling the main agent when to authorize extraction by default. Add a concise default authorization rule to `workflow.md` while preserving dispatch-time flexibility.
