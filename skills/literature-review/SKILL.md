@@ -41,12 +41,12 @@ Each considered paper — included or excluded — gets one entry keyed on `firs
 
 **Trace link cluster.** The written entry renders the retrieval fields as a **navigable cluster** a reader clicks straight through to the artifact — rendering only the targets that exist, never fabricating a link:
 
-- **Zotero** — `zotero://select/library/items/<ITEM_KEY>` (personal) or `zotero://select/groups/<GROUP_ID>/items/<ITEM_KEY>` (group); optionally `zotero://open-pdf/library/items/<ITEM_KEY>` to jump to the PDF. Only when the paper was saved to Zotero and its item key is known.
-- **Web** — the `landing_url`, or `https://doi.org/<doi>`.
-- **PDF** — `file://<absolute-path>.pdf`.
-- **Markdown (OCR)** — `vscode://file/<absolute-path>.md` (the editor scheme is configurable, e.g. `cursor://file/...`).
+- **Zotero** — `zotero://select/library/items/<ITEM_KEY>` (personal) or `zotero://select/groups/<GROUP_ID>/items/<ITEM_KEY>` (group). Only when the paper was saved to Zotero and its item key is known.
+- **Web** — `https://doi.org/<doi>`, or the `landing_url`.
+- **PDF** — a **relative** markdown link to the stored PDF, e.g. `[PDF](attachments/<key>.pdf)`.
+- **Markdown (OCR)** — a **relative** markdown link to the stored conversion, e.g. `[MD](attachments/<key>.md)`.
 
-`file://` and `vscode://file/` deeplinks resolve only from **absolute paths**, so the ledger stores absolute paths for them — correct for a researcher's own project on their machine; in this skill's own examples use placeholder paths only. File-link citation *mechanics* are `report-in-markdown`'s — follow it for the link form; this list is only the domain-specific set a paper entry carries.
+Render file links as **relative paths only** — never absolute, never `file://` / `vscode://`. The dashboard's renderer rewrites a relative file link by type (a `.pdf` to its in-browser viewer, a `.md` / source file to the editor), resolving against the entry's directory; an absolute or scheme-prefixed path is not relative, so the resolver double-prefixes and breaks it. The `zotero://` scheme link passes through as clickable once the sibling `task-tree/dashboard-link-resolution` lands. File-link citation *mechanics* are `report-in-markdown`'s — follow it for the link form; this list is only the domain-specific set a paper entry carries. Examples here use placeholder keys / paths only.
 
 Two representations, same fields:
 
