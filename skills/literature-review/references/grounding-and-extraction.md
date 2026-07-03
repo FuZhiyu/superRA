@@ -1,6 +1,6 @@
 # Anti-Hallucination Grounding & Extraction
 
-Load when extracting from a paper: DOI resolution before trusting a cite, the quote-grounded concept matrix, and honest null vs "not reported".
+Load when extracting from a claimed included paper.
 
 Treat every bibliographic claim and extracted finding as **guilty until grounded**: do not trust a cite until its DOI resolves to the paper you mean, do not record a finding until a verbatim quote from the source supports it, and do not write "no effect" until the paper is shown to have tested for one.
 
@@ -10,26 +10,28 @@ A resolving DOI is not enough — a fabricated cite often carries a real but unr
 
 Apply this to cites you surface from a paper's reference list too — the `unstructured` Crossref-array references are frequently DOI-less or mis-keyed. Resolve before adding to the frontier.
 
-## The quote-grounded concept matrix
+## Extraction Shape
 
-Extract into a **concept matrix**: one row per paper, **one question per column**. The columns are the extraction schema settled in setup (e.g. "what friction drives the result?", "identification strategy", "sign of the main effect", "sample and period"). One question per column forces the same question of every paper, which makes the papers comparable.
+The setup survey defines comparison columns: facts that must be comparable across every included paper. The set may be empty. Fill those columns when present; otherwise extraction is narrative-only.
 
-**Every cell is a claim plus the verbatim quote that grounds it, with its location** (section or page). A cell is not filled from memory of the abstract or from inference — it is filled from a quote you can point to in the source. Screening reads the abstract and intro; extraction of a central paper reads the OCR'd full text (the `mistral-pdf-to-markdown` shortlist), because the answer to a schema question usually lives in the results or the model section, not the abstract.
+Everything outside the comparison columns is a free-form grounded narrative note per paper.
+
+Every extracted claim carries a verbatim quote and location (section or page). Extraction of a central paper reads the OCR'd full text (the `mistral-pdf-to-markdown` shortlist), because the answer usually lives in the results or model section, not the abstract.
 
 Convert **once**: before OCR'ing a shortlist paper, check its `md_path` and reuse an existing conversion — Mistral OCR is billed, so never re-convert a paper already saved. A fresh conversion writes `<key>.md` plus extracted images into the durable store and records `md_path` + `fetched_at`.
 
 **Extract, then verify** — two passes:
 
-1. **Extract** — read the paper and fill the cell with the claim and the quote you believe supports it.
+1. **Extract** — read the paper and write the claim with the quote you believe supports it.
 2. **Verify** — confirm the quote appears verbatim in the source, and read the quote against the claim to confirm it actually supports it, not merely sits near it. A quote adjacent to the claim but not stating it is paraphrase drift — reject it.
 
 ## Honest null vs "not reported"
 
 Encode a **true null** — the paper tested for an effect and found none — differently from a **silence** — the paper does not address the question (e.g. `null` vs `n/r`). Reporting "no effect" for a paper that never ran the test invents a result the authors never claimed.
 
-**Identification protocol:** walk the matrix cell by cell and flag these tells:
+**Identification protocol:** walk the extracted claims and flag these tells:
 
-- **Ungrounded cell.** A claim with no quote — it was filled from inference or memory. Every cell carries its supporting quote and location.
-- **Quote that does not support its claim.** Read the quote against the cell text; a quote that is topically near the claim but does not state it is paraphrase drift, not grounding.
+- **Ungrounded claim.** A claim with no quote — it was filled from inference or memory. Every claim carries its supporting quote and location.
+- **Quote that does not support its claim.** Read the quote against the claim; a quote that is topically near the claim but does not state it is paraphrase drift, not grounding.
 - **"No effect" with no test shown.** A `null` cell whose quote does not show the paper tested for the effect is a silence mislabeled as a null — recode it `n/r`.
 - **Cite whose DOI resolves to another title.** Caught by resolving the identifier before trusting the cite; an unresolved or mismatched DOI is not yet a usable citation.

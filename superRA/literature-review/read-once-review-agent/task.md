@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: not-started
+status: implemented
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -40,14 +40,14 @@ Part 1 interactive setup additionally elicits the comparison columns alongside t
 
 - `skills/literature-review/SKILL.md` — reference map re-partitioned by loader (main agent: `workflow.md`; review agent: `review-agent.md` + `econ-corpus.md`, plus `grounding-and-extraction.md` at extraction depth; all: `citation-client.md`), record schema (`## Reading Notes`), composed-skill trigger points.
 - `skills/literature-review/references/workflow.md` — frontier-assignment dispatch loop, setup elicitation, parallel-dispatch exception, authorization default, lead-sweep cadence, main-agent permanent-record placement, Zotero-dedup trigger.
-- `skills/literature-review/references/discovery.md` + `screening.md` → `review-agent.md` — the single-role protocol above.
+- Retired discovery and screening references → `skills/literature-review/references/review-agent.md` — the single-role protocol above.
 - `skills/literature-review/references/grounding-and-extraction.md` — hybrid shape, adopt-and-reverify.
 - Any file referencing the retired reference filenames (trigger test, `econ-corpus.md`, `citation-client.md` cross-links).
 
 ### Validation criteria
 
 - `rg` over the skill finds no instruction that routes a paper to a second agent to reopen a source already read — re-opening exists only on the Reading-Notes resume path (deferred extraction, escalation).
-- `rg -l 'discovery\.md|screening\.md'` returns no hits repo-wide outside git history.
+- No live skill file links to the retired discovery or screening references.
 - `review-agent.md` states "materialize many, claim before read", write-as-you-go, the hop/budget bounds with stub-and-report beyond them, and both edge-triage modes (citation context from the source being read; metadata for bulk edge lists) as explicit protocol.
 - `workflow.md` states the parallel-dispatch exception, extraction-authorization default, lead-sweep cadence, main-agent permanent-record placement, and policy-gated Zotero trigger as explicit checkable statements.
 - `grounding-and-extraction.md` describes the hybrid with the empty-matrix (narrative-only) case; invariants read as mandatory independent of shape.
@@ -56,3 +56,19 @@ Part 1 interactive setup additionally elicits the comparison columns alongside t
 ## Planner Guidance
 
 This is skill-creation work — load `skill-creator` before editing any `SKILL.md`, and apply CLAUDE.md §Teach the Protocol line by line; collapsing two role references into one should shrink total instruction text, not grow it. The skill-file wording should teach the compact rule, not a new state taxonomy: candidate cards begin `not-started`; recon never changes that; the materializer claim command is the only way to enter `in-progress`; a finished substantive read lands `implemented` or `archived`; main-agent finalization lands `approved` when appropriate. The claim mechanism, `promote` subcommand, and version-union call exist from the dependency — reference them by name. Do not re-litigate `econ-corpus.md`'s corpus discipline; only its loader assignment changes. Bounds are guidance, not gates: the agent may stop shallower than the recommended hops when the frontier is locally dry, and must stub-and-report rather than exceed them.
+
+## Results
+
+Rewired the literature-review skill around one review-agent role.
+
+- [`SKILL.md`](../../../skills/literature-review/SKILL.md) now routes dispatched paper work to [`review-agent.md`](../../../skills/literature-review/references/review-agent.md), keeps `econ-corpus.md` for corpus discipline, and loads [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) only at extraction depth.
+- [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) replaces the old role split with the compact rule: materialize many, claim before read. Recon leaves candidates `not-started`; substantive reads begin with the materializer claim and finish as `implemented` or `archived`.
+- [`workflow.md`](../../../skills/literature-review/references/workflow.md) now dispatches frontier assignments, keeps permanent-record placement with the main agent, treats `superRA/<review>/papers/` as the default destination rather than a hard-coded location, and gates Zotero add/dedup on the setup policy.
+- [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now describes comparison columns plus free-form grounded narrative notes, including the narrative-only case.
+- Retired `discovery.md` and `screening.md`; updated live cross-links and the skill inventory.
+
+Verification:
+
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/SKILL.md skills/literature-review/references/workflow.md skills/literature-review/references/review-agent.md skills/literature-review/references/grounding-and-extraction.md skills/literature-review/references/econ-corpus.md skills/literature-review/references/citation-client.md skills/CATEGORIES.md superRA/literature-review/read-once-review-agent/task.md` reported all files clean.
+- `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 71 tests.
+- `rg` checks over live skill docs found no stale discovery/screening role references or copy-based promotion wording.
