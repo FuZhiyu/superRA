@@ -31,13 +31,22 @@ Route to these rather than reimplementing their work:
 
 ## Ledger schema
 
-Each considered paper — included or excluded — gets one entry keyed on `firstauthor-year` (the dedup identity). The entry records:
+Each considered paper — included or excluded — gets one entry keyed on `firstauthor-year` (the dedup identity). Provenance splits into two blocks: **discovery lineage** (how the paper was found) and a **retrieval trace** (how to refetch its artifact). The entry records:
 
 - **metadata** — verbatim published-version-of-record fields.
-- **provenance** — `discovered_via` (`seed` | `<parent-key>` | `web:<lens>` | `forward-cite`) and `bfs_depth`.
-- **decision** — `included` / `excluded`, the reason, and the failing gate when excluded.
-- **pdf/md path** — plus the **version-divergence flag** when the PDF is a preprint/WP that differs from the published metadata (e.g. metadata = published JF 2024; PDF = 2021 SSRN WP). Required (see `references/econ-corpus.md`).
+- **discovery lineage** — `discovered_via` (`seed` | `<parent-key>` | `web:<lens>` | `forward-cite`) and `bfs_depth`.
+- **retrieval trace** — how to refetch the artifact: `ids` (`doi` / `arxiv` / `s2` / `corpus_id`, mirroring the client's normalized `id` block), `landing_url`, `pdf_url` + `access` (`oa` | `paywall` | `wp-fallback`), `pdf_path`, `md_path`, `fetched_at`. The **version-divergence flag** lives here — set it when the fetched PDF is a preprint/WP that differs from the published metadata (e.g. metadata = published JF 2024; PDF = 2021 SSRN WP). Required (see `references/econ-corpus.md`).
+- **decision** — `included` / `excluded`, the reason, the failing gate when excluded, and `read_depth` (a one-line note when the screen escalated past abstract/intro — see `references/search-and-screening.md`).
 - **extraction fields** — the schema the setup survey defined.
+
+**Trace link cluster.** The written entry renders the retrieval fields as a **navigable cluster** a reader clicks straight through to the artifact — rendering only the targets that exist, never fabricating a link:
+
+- **Zotero** — `zotero://select/library/items/<ITEM_KEY>` (personal) or `zotero://select/groups/<GROUP_ID>/items/<ITEM_KEY>` (group); optionally `zotero://open-pdf/library/items/<ITEM_KEY>` to jump to the PDF. Only when the paper was saved to Zotero and its item key is known.
+- **Web** — the `landing_url`, or `https://doi.org/<doi>`.
+- **PDF** — `file://<absolute-path>.pdf`.
+- **Markdown (OCR)** — `vscode://file/<absolute-path>.md` (the editor scheme is configurable, e.g. `cursor://file/...`).
+
+`file://` and `vscode://file/` deeplinks resolve only from **absolute paths**, so the ledger stores absolute paths for them — correct for a researcher's own project on their machine; in this skill's own examples use placeholder paths only. File-link citation *mechanics* are `report-in-markdown`'s — follow it for the link form; this list is only the domain-specific set a paper entry carries.
 
 Two representations, same fields:
 

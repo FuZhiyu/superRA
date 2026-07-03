@@ -10,7 +10,9 @@ Keyword and semantic search seed and supplement the snowball; they do not replac
 
 ## Phase 1 — Backward citation BFS
 
-From every in-scope paper, pull its reference list (`citation_client references PAPER_ID`, S2-backed; Crossref is the DOI-less fallback). These are the intellectual ancestors — the work the authors built on. Screen them, add the in-scope ones to the next frontier, and record `discovered_via: <parent-key>` and `bfs_depth` on each. Run this as breadth-first: screen the whole current frontier before descending a level, so depth reflects citation distance from the seeds rather than the order agents happened to run.
+From every in-scope paper, pull its reference list (`citation_client references PAPER_ID`, S2-backed; Crossref is the DOI-less fallback). These are the intellectual ancestors — the work the authors built on. The dispatched agent **traverses its paper's references and judges relevance in context** — it holds why this paper matters and what its citations are doing — then surfaces a **ranked, annotated, handle-bearing** candidate set for the orchestrator to admit: each candidate carries its retrieval handle (the normalized record `references` already returned — its `id` block + `url`), a **priority** (how strongly it should be expanded next), and a one-line local reason. Record `discovered_via: <parent-key>` and `bfs_depth` on each. Run backward expansion breadth-first — a full frontier level surfaced before the next descends — so `bfs_depth` reflects citation distance from the seeds rather than the order agents happened to run.
+
+The agent MAY take a **bounded, read-only local peek** to sharpen the ranking — resolve a candidate's metadata (`citation_client metadata`) to confirm scope before surfacing it. This peek **never creates a ledger entry and never recurses** into the candidate's own references; entry creation, cross-agent dedup, and frontier admission stay with the orchestrator. Overlapping peeks across agents are cheap — the shared client cache absorbs them.
 
 ## Phase 2 — Forward multi-lens web sweep
 
@@ -21,11 +23,11 @@ Forward expansion finds the descendants — newer work citing the current set. I
 
 Record forward hits as `discovered_via: forward-cite` or `web:<lens>`.
 
-## Screen-first triage
+## Screen-first triage — a default economy, not a prohibition
 
-Screen every frontier paper from **metadata, abstract, and introduction only** — no full-text OCR during screening. The inclusion criteria settled in setup are the triage gates; each screen produces a decision (`included` / `excluded`), a one-line reason, and — when excluded — the specific gate it failed. Only the curated shortlist of central included papers is later OCR'd (via `mistral-pdf-to-markdown`); bulk OCR is deferred and screening never needs it.
+The binary in/out call resolves from **metadata, abstract, and introduction** — no bulk OCR to triage a frontier. The inclusion criteria settled in setup are the triage gates; each screen produces a decision (`included` / `excluded`), a one-line reason, and — when excluded — the specific gate it failed. Judge quality at the same time using the outlet-tier and identification-strategy bar in [econ-corpus.md](econ-corpus.md). Only the curated shortlist of central included papers is later OCR'd (via `mistral-pdf-to-markdown`) for extraction; bulk OCR is deferred and triage never needs it.
 
-Judge quality at the same time using the outlet-tier and identification-strategy bar in [econ-corpus.md](econ-corpus.md).
+**Escalate selectively.** When a paper is central and clearly included **and** how it cites the literature will change which frontier edges to prioritize, read its related-work / citation discussion before surfacing candidates. Read to the depth the decision in front of you needs, no deeper — a reading rule, not a page budget. Deeper reading draws on cheaply-available text (the intro / related-work section, the arXiv HTML); bulk `mistral-pdf-to-markdown` OCR stays the deferred **extraction** step, not a screening escalation. Record the escalation on the entry as `read_depth` plus a one-line reason, so a deeper read is an audited choice rather than silent scope creep.
 
 ## The dedup cascade
 
@@ -47,5 +49,5 @@ Walk the ledger entry by entry and flag these tells:
 - **Seed-only depth.** If every in-scope entry is `bfs_depth: 0`, the backward BFS never ran a second round — the ancestors are unexplored.
 - **Single-lens forward.** If every forward hit shares one `web:<lens>` value, the sweep was not multi-lens; holes the other lenses cover are unsearched.
 - **Excluded without a gate.** An `excluded` entry with a reason but no named failing gate hides which criterion did the work — the screen is not reproducible.
-- **Over-read screen.** A screening reason that cites full-text page numbers or a results section means the paper was read past the abstract/intro to decide in/out. The triage should resolve from metadata/abstract/intro; if it did not, the criteria may be too fine for screen-first and should be revisited.
+- **Over-read screen.** A **routine** in/out call justified by full-text page numbers or a results section — or an **exclusion** justified by page numbers — means the screen read deeper than the decision needed; the criteria may be too fine for screen-first and should be revisited. A **recorded** deeper read (`read_depth`) of a central *included* paper, taken to prioritize its snowball edges, is the legitimate escalation above — not this tell.
 - **No stopping judgment.** A completed loop with no recorded convergence judgment cannot be shown to be saturated — the stop is an assertion, not evidence.

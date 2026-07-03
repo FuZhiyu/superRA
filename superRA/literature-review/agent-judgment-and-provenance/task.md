@@ -1,6 +1,6 @@
 ---
 title: "Agent Judgment & Retrieval Provenance — Delegate Depth/Traversal, Centralize Admission"
-status: not-started
+status: implemented
 depends_on: [citation-client-resilience]
 ---
 
@@ -40,3 +40,26 @@ This is skill-authoring work in the superRA repo: load `skill-creator` before ed
 ## Planner Guidance
 
 Prose-tight discipline wording, not new tooling — no code, no new client subcommands. The parent `literature-review/task.md` conventions are reconciled to this design in the same plan revision that creates this task, so treat the parent's Conventions as the current spec and make the skill match it. The bounded local peek is read-only metadata resolution; state plainly that it is not entry creation and not recursion.
+
+## Results
+
+Prose-only discipline changes across the `literature-review` skill — no code, no new client subcommands; the cache/handle prose is written against citation_client v1.1.0 as shipped (shared on-disk response cache, normalized-record handles). Five files edited; all pass the markdown self-check.
+
+**Deliverable 1 — screening depth (`references/search-and-screening.md`).**
+- §Screen-first retitled *"a default economy, not a prohibition"* and split into the default (binary in/out from metadata/abstract/intro, no bulk OCR to triage) plus a **selective escalation** paragraph: read the related-work/citation discussion only when a paper is central, clearly included, and its citing pattern will steer frontier-edge priority; decision rule *"read to the depth the decision needs, no deeper"* (not a page budget); deeper reads draw on cheaply-available text (intro/related-work, arXiv HTML) while bulk OCR stays the deferred extraction step; the escalation is recorded as `read_depth` + a one-line reason. ([references/search-and-screening.md:26-30](../../../skills/literature-review/references/search-and-screening.md#L26-L30))
+- §Identification-protocol **"Over-read screen"** tell narrowed to flag only a *routine* in/out call read past abstract/intro or an *exclusion* justified by page numbers; a recorded deeper read (`read_depth`) of a central *included* paper for snowball prioritization is called out as the legitimate escalation, not the defect. ([references/search-and-screening.md:52](../../../skills/literature-review/references/search-and-screening.md#L52))
+
+**Deliverable 2 — retrieval provenance (`SKILL.md`, `references/workflow.md`, `references/grounding-and-extraction.md`).**
+- Ledger schema split into **discovery lineage** (`discovered_via`, `bfs_depth`) and a new **retrieval trace** block (`ids`, `landing_url`, `pdf_url` + `access` = `oa`|`paywall`|`wp-fallback`, `pdf_path`, `md_path`, `fetched_at`); the version-divergence flag now lives in the retrieval block, and `read_depth` sits with the decision fields. ([SKILL.md:34-40](../../../skills/literature-review/SKILL.md#L34-L40))
+- **Trace link cluster** (researcher mid-task addition) added to the schema: the written entry renders the retrieval fields as a navigable click-through cluster — Zotero deeplinks (`zotero://select/...`, optional `zotero://open-pdf/...`), Web (`landing_url` / `https://doi.org/<doi>`), PDF (`file://<abs>.pdf`), Markdown (`vscode://file/<abs>.md`, editor scheme configurable) — rendering only targets that exist, absolute paths for file/editor deeplinks (placeholder paths in the skill's own examples), pointing to `report-in-markdown` for file-link *mechanics* rather than restating them. Rendering is also flagged at the workflow write step. ([SKILL.md:42-51](../../../skills/literature-review/SKILL.md#L42-L51), [references/workflow.md:24](../../../skills/literature-review/references/workflow.md#L24))
+- **Handle carried across rounds:** the per-agent procedure now starts from the orchestrator-seeded handle (ids + `landing_url`), hydrating a known artifact instead of a cold search (usually a shared-cache hit); the subtree alternative executor seeds the handle into each admitted `not-started` subtask read via `superra task read`. ([references/workflow.md:19-21](../../../skills/literature-review/references/workflow.md#L19-L21), [references/workflow.md:59](../../../skills/literature-review/references/workflow.md#L59))
+- **Fetch/convert once:** idempotent PDF fetch step added to the per-agent procedure (check the durable store, record `pdf_url`/`access`/`pdf_path`/`fetched_at`, Zotero-attachment vs local `Notes/papers/<key>/` store per the add policy); idempotent OCR added to `grounding-and-extraction.md` (reuse an existing `md_path` — Mistral OCR is billed — else write `<key>.md` + images). ([references/workflow.md:23](../../../skills/literature-review/references/workflow.md#L23), [references/grounding-and-extraction.md:19](../../../skills/literature-review/references/grounding-and-extraction.md#L19))
+
+**Deliverable 3 — local traversal + priority frontier (`references/workflow.md`, `references/search-and-screening.md`).**
+- §Phase 1 now has the dispatched agent **traverse and judge relevance in context** and surface a **ranked, annotated, handle-bearing** candidate set (retrieval handle + priority + one-line reason), with an explicit **bounded, read-only local peek** (`citation_client metadata` to confirm scope) that **never creates a ledger entry and never recurses** — entry creation, dedup, and admission stay with the orchestrator; overlapping peeks are cheap on the shared cache. ([references/search-and-screening.md:13-15](../../../skills/literature-review/references/search-and-screening.md#L13-L15))
+- Executor template made **ranking-aware**: frontier is a **priority queue** (high-signal first), agents are seeded with handles, admission enqueues by candidate priority. The three invariants are stated explicitly after the template — **one writer per entry**, **one global dedup index** (agents surface, never admit), **one global stop** (saturation judged over the whole frontier). ([references/workflow.md:31-55](../../../skills/literature-review/references/workflow.md#L31-L55))
+
+**Validation.**
+- Two-role partition preserved: orchestration (executor, priority queue, admission, stop, handle-seeding) lives in `workflow.md`; per-paper discipline (traversal, bounded peek, screen depth, OCR idempotency) lives in the per-paper references. The bounded-peek text names what the agent does *not* do (admit/recurse) as its own limit — a per-paper boundary, not relocated orchestration. The per-agent PDF-fetch step sits in `workflow.md` per the deliverable's explicit direction (it extends the already-resident per-agent enumeration; detailed OCR discipline stays in `grounding-and-extraction.md`).
+- Schema additions are `read_depth` and the retrieval-trace block only; the trace **link cluster** is a rendering of those retrieval fields (no new stored field), and composes with `report-in-markdown` rather than duplicating its citation mechanics.
+- `check_markdown.py` reports all five edited files **clean**.

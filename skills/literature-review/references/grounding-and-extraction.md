@@ -16,6 +16,8 @@ Extract into a **concept matrix**: one row per paper, **one question per column*
 
 **Every cell is a claim plus the verbatim quote that grounds it, with its location** (section or page). A cell is not filled from memory of the abstract or from inference — it is filled from a quote you can point to in the source. Screening reads the abstract and intro; extraction of a central paper reads the OCR'd full text (the `mistral-pdf-to-markdown` shortlist), because the answer to a schema question usually lives in the results or the model section, not the abstract.
 
+Convert **once**: before OCR'ing a shortlist paper, check its `md_path` and reuse an existing conversion — Mistral OCR is billed, so never re-convert a paper already saved. A fresh conversion writes `<key>.md` plus extracted images into the durable store and records `md_path` + `fetched_at`.
+
 **Extract, then verify** — two passes:
 
 1. **Extract** — read the paper and fill the cell with the claim and the quote you believe supports it.
