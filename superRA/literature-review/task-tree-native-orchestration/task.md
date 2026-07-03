@@ -1,6 +1,6 @@
 ---
 title: "Task-Tree-Native Review Orchestration"
-status: implemented
+status: approved
 depends_on:
   - layout-and-coherence-refactor
 ---
