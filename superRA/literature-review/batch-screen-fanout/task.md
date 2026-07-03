@@ -1,6 +1,6 @@
 ---
 title: "Batch-Screen Fan-Out — Match Dispatch Granularity to Work Weight"
-status: not-started
+status: implemented
 depends_on: [agent-judgment-and-provenance]
 ---
 
@@ -37,3 +37,25 @@ Skill-authoring in the superRA repo: load `skill-creator` before editing under `
 ## Planner Guidance
 
 This is a granularity change, not a new pipeline stage — resist adding a formal "search stage" / "screen stage" to the workflow map; express it as *how the orchestrator sizes each round's dispatches*. The PDF-fetch and candidate-surfacing steps currently enumerated in `workflow.md`'s per-paper agent move into the expansion (per-included) agent; the batch-screen agent does metadata+abstract+decision+ledger-entry only. Keep the `superimplement`-style subtree-as-ledger alternative executor consistent with the new round shape.
+
+## Results
+
+Implemented the fan-out granularity change as prose-only literature-review workflow guidance; `agent-orchestration` was not edited.
+
+**Workflow executor.**
+- `references/workflow.md` now states each round as **search/expand → dedup/admit → batch-screen**. Seeds enter as the round-1 included set and start at expansion, not screening. ([workflow.md:17](../../../skills/literature-review/references/workflow.md#L17))
+- Expansion is Tier-3, one dedicated agent per included paper, seeded by the carried handle and limited to that included paper's ledger entry. The expansion work now owns idempotent PDF fetch, deeper read when frontier prioritization needs it, and the ranked handle-bearing candidate set. ([workflow.md:19](../../../skills/literature-review/references/workflow.md#L19))
+- Dedup/admission sits before screening: surfaced candidates are collapsed by `citation_client dedup`, only unique canonicals not in `seen` enter the screen bundle, and their handles are carried forward. ([workflow.md:25](../../../skills/literature-review/references/workflow.md#L25))
+- Batch screening is Tier-2: one bundled agent screens many unique candidates from metadata + abstract, writes initial ledger entries, returns the included subset for expansion, and pulls depth-escalation candidates into dedicated agents. The text also records the lower same-round `citation_client` process count and reduced S2 rate-gate contention. ([workflow.md:27](../../../skills/literature-review/references/workflow.md#L27))
+- The executor template now runs the alternating loop with `included` as the priority queue, Tier-3 expansion, central dedup, Tier-2 screening, and ranking-aware re-enqueueing of included decisions. The three invariants remain explicit. ([workflow.md:36](../../../skills/literature-review/references/workflow.md#L36), [workflow.md:61](../../../skills/literature-review/references/workflow.md#L61))
+- The subtree-as-ledger alternative now seeds admitted `not-started` subtasks with handles for bundled screening and moves included subtasks into the dedicated expansion queue. ([workflow.md:65](../../../skills/literature-review/references/workflow.md#L65))
+
+**Screening discipline and inherited convention.**
+- `references/search-and-screening.md` now states screening is batched as one Tier-2 dispatch after dedup, distinct from expansion, while preserving the screen-first cost economy and identification-protocol tells. ([search-and-screening.md:28](../../../skills/literature-review/references/search-and-screening.md#L28))
+- The depth-escalation rule now says to pull central included papers out of the screen bundle into a dedicated agent for related-work / citation-discussion reading before surfacing candidates. ([search-and-screening.md:30](../../../skills/literature-review/references/search-and-screening.md#L30))
+- The parent `literature-review/task.md` snowball convention now matches the batched round shape: expand included papers, dedup/admit centrally, batch-screen unique candidates, keep the priority frontier central. ([../task.md:37](../task.md#L37))
+
+**Validation.**
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/references/workflow.md skills/literature-review/references/search-and-screening.md superRA/literature-review/task.md` reported all three files clean.
+- `rg` found the new loop/tier/rate-gate terms in the edited files and no remaining "one agent per paper" / "screening agent per paper" wording in the edited workflow path.
+- `uv run --with pyyaml python .../skill-creator/scripts/quick_validate.py skills/literature-review` did not complete because the existing `skills/literature-review/SKILL.md` frontmatter description contains an unquoted colon; this task did not edit that file. ([SKILL.md:3](../../../skills/literature-review/SKILL.md#L3))
