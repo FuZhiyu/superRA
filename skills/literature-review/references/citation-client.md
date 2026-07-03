@@ -151,17 +151,20 @@ The offline test suite injects a fake transport plus an injectable clock/sleep a
 Bundled script: [`../scripts/candidate_materializer.py`](../scripts/candidate_materializer.py). Stdlib-only, PEP 723.
 
 ```
+uv run --script <skill-root>/scripts/citation_client.py metadata <identifier> \
+  | uv run --script <skill-root>/scripts/candidate_materializer.py materialize --store Notes/literature-review/<review>/candidate-papers --provenance web:ssrn
+
 uv run --script <skill-root>/scripts/candidate_materializer.py key --record-file record.json
 uv run --script <skill-root>/scripts/candidate_materializer.py materialize --store Notes/literature-review/<review>/candidate-papers --record-file record.json --provenance web:ssrn
 ```
 
-`record.json` may be one normalized record, `{record: ...}`, `{records: [...]}`, or an array of records from `citation_client` or a discovery agent. JSON here is tool I/O only; authoritative candidate state is the generated task-shaped folder and its `task.md`.
+Prefer piping normalized metadata directly from `citation_client` into the materializer. `--record-file` is for replaying a saved record or materializing records collected from web extraction. That file may contain one normalized record, `{record: ...}`, `{records: [...]}`, or an array of records. JSON here is tool I/O only; authoritative candidate state is the generated task-shaped folder and its `task.md`.
 
 The materializer:
 
 - computes a human-readable key from first author, venue/WP source, year, and title;
 - reuses an existing folder when DOI, arXiv, S2/corpus id, or normalized title-year clearly match;
 - appends a deterministic short hash only for key collisions;
-- writes a candidate `task.md` with standard task frontmatter and paper-card body sections.
+- writes a candidate `task.md` with standard task frontmatter and the full paper-card body skeleton, including empty Zotero, artifact, screening, quality, and extraction fields for agents to supplement.
 
 Ambiguous identity cases belong in the review root's dedup-conflict notes for main-agent judgment; agents may split a wrongly merged candidate when local evidence shows two records are different papers.

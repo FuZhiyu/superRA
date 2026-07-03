@@ -17,15 +17,18 @@ Stop shallower when the assigned lens/seed is locally dry. If high-signal leads 
 
 ## Candidate Records
 
-Write surfaced papers into the project-convention candidate-paper store as task-shaped folders. Use the candidate materializer when available so naming and ordinary dedup are consistent. The candidate `task.md` uses the same body sections as a promoted paper card, but it stays outside git until screening promotes it.
+Write surfaced papers into the project-convention candidate-paper store as task-shaped folders. Load [citation-client.md](citation-client.md) before materializing candidates; its Candidate Materializer section gives the exact commands. The candidate `task.md` uses the same body sections as a promoted paper card, but it stays outside git until screening promotes it.
 
 Each candidate record includes:
 
 - verbatim metadata and identifiers;
 - discovery provenance (`discovered_via`, lens/source, and `bfs_depth`);
 - retrieval handle (`ids` plus `landing_url`);
+- Zotero item/attachment links when available;
 - priority for screening or later expansion;
 - one-line local reason for relevance or promise.
+
+The materializer writes every expected paper-card field even when a value is missing. Inspect the generated card and supplement empty fields from Zotero, the landing page, repository metadata, PDF storage, or local judgment.
 
 For citation-based finds, include the source paper and exact local context:
 

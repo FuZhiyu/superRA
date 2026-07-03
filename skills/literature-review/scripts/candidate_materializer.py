@@ -112,6 +112,23 @@ def identity(record: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+def nested_get(record: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = record.get(key)
+        if value:
+            return value
+    return ""
+
+
+def zotero_value(record: dict[str, Any], *keys: str) -> str:
+    zotero = record.get("zotero") if isinstance(record.get("zotero"), dict) else {}
+    for key in keys:
+        value = zotero.get(key) or record.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
 def key_for(record: dict[str, Any]) -> str:
     author = slugify(first_author(record), 24)
     venue = slugify(venue_label(record), 28)
@@ -158,8 +175,10 @@ def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> 
     authors = record.get("authors") or []
     author_text = ", ".join(a.get("name") or a.get("family") or str(a) for a in authors) if authors else ""
     abstract = str(record.get("abstract") or "").strip()
-    url = record.get("url") or record.get("landing_url") or ""
+    url = nested_get(record, "url", "landing_url")
     source = provenance or record.get("discovered_via") or ""
+    corpus_id = record.get("id", {}).get("corpus_id") if isinstance(record.get("id"), dict) else ""
+    corpus_id = corpus_id or record.get("corpus_id") or record.get("external_ids", {}).get("CorpusId", "")
     lines = [
         "---",
         f'title: "{title.replace(chr(34), chr(39))}"',
@@ -177,7 +196,11 @@ def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> 
         f"- DOI: {ids.get('doi', '')}",
         f"- arXiv: {ids.get('arxiv', '')}",
         f"- S2: {ids.get('s2', '')}",
+        f"- Corpus ID: {corpus_id}",
         f"- Title-year: {ids.get('title_year', '')}",
+        f"- Metadata source: {record.get('source') or ''}",
+        f"- Version of record: {record.get('version_of_record') if record.get('version_of_record') is not None else ''}",
+        f"- JEL codes: {record.get('jel_codes') or ''}",
         "",
         "## Abstract",
         "",
@@ -186,26 +209,44 @@ def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> 
         "## Discovery Provenance",
         "",
         f"- Discovered via: {source}",
+        "- Source paper: ",
         "- Citation context: Not recorded.",
         "- Depth: Not recorded.",
+        "- Lens: Not recorded.",
         "- Priority: Not recorded.",
+        "- Local reason: Not recorded.",
         "",
         "## Screening Decision",
         "",
-        "Pending.",
+        "- Decision: pending",
+        "- Reason: ",
+        "- Failed gate: ",
+        "- Read depth: ",
+        "- Promotion recommendation: ",
+        "",
+        "## Quality",
+        "",
+        "- Outlet tier: ",
+        "- Identification strategy: ",
+        "- Quality notes: ",
         "",
         "## Retrieval Trace",
         "",
+        f"- Zotero item: {zotero_value(record, 'item_uri', 'zotero_item', 'zotero_item_uri')}",
+        f"- Zotero attachment: {zotero_value(record, 'attachment_uri', 'zotero_attachment', 'zotero_attachment_uri')}",
         f"- Landing URL: {url}",
-        "- PDF URL: ",
-        "- PDF path: ",
-        "- Markdown path: ",
-        "- Fetched at: ",
-        "- Version divergence: ",
+        f"- PDF URL: {record.get('pdf_url') or ''}",
+        f"- PDF path: {record.get('pdf_path') or ''}",
+        f"- Markdown path: {record.get('md_path') or record.get('markdown_path') or ''}",
+        f"- Access: {record.get('access') or ''}",
+        f"- Fetched at: {record.get('fetched_at') or ''}",
+        f"- Version divergence: {record.get('version_divergence') or ''}",
         "",
         "## Extraction",
         "",
-        "Not started.",
+        "- Status: not-started",
+        "- Fields: ",
+        "- Notes: ",
         "",
     ]
     return "\n".join(lines)

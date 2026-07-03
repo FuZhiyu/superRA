@@ -29,6 +29,10 @@ def sample_record() -> dict:
         "venue": "Journal of Finance",
         "abstract": "We study heterogeneous investors.",
         "url": "https://doi.org/10.1111/jofi.12345",
+        "zotero": {
+            "item_uri": "zotero://select/library/items/ABCD1234",
+            "attachment_uri": "zotero://select/library/items/WXYZ9876",
+        },
     }
 
 
@@ -47,6 +51,14 @@ def test_materialize_creates_task_shaped_record(tmp_path: Path) -> None:
     assert "## Discovery Provenance" in text
     assert "- Discovered via: web:ssrn" in text
     assert "- DOI: 10.1111/jofi.12345" in text
+    assert "- Zotero item: zotero://select/library/items/ABCD1234" in text
+    assert "- Zotero attachment: zotero://select/library/items/WXYZ9876" in text
+    assert "## Quality" in text
+    assert "- Outlet tier: " in text
+    assert "- Identification strategy: " in text
+    assert "- Decision: pending" in text
+    assert "- Promotion recommendation: " in text
+    assert "- Access: " in text
 
 
 def test_materialize_reuses_existing_by_doi(tmp_path: Path) -> None:

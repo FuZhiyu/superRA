@@ -38,7 +38,7 @@ Each candidate/paper record is keyed by the materializer's canonical folder name
 
 - **metadata** — verbatim published-version-of-record fields.
 - **discovery lineage** — `discovered_via` (`seed` | `<parent-key>` | `web:<lens>` | `forward-cite`), `bfs_depth`, and for citation-based finds a linked source paper plus a short quoted citation context.
-- **retrieval trace** — how to refetch the artifact: `ids` (`doi` / `arxiv` / `s2` / `corpus_id`, mirroring the client's normalized `id` block), `landing_url`, `pdf_url` + `access` (`oa` | `paywall` | `wp-fallback`), `pdf_path`, `md_path`, `fetched_at`. The **version-divergence flag** lives here — set it when the fetched PDF is a preprint/WP that differs from the published metadata (e.g. metadata = published JF 2024; PDF = 2021 SSRN WP). Required (see `references/econ-corpus.md`).
+- **retrieval trace** — how to refetch the artifact: `ids` (`doi` / `arxiv` / `s2` / `corpus_id`, mirroring the client's normalized `id` block), Zotero item/attachment links when available, `landing_url`, `pdf_url` + `access` (`oa` | `paywall` | `wp-fallback`), `pdf_path`, `md_path`, `fetched_at`. The **version-divergence flag** lives here — set it when the fetched PDF is a preprint/WP that differs from the published metadata (e.g. metadata = published JF 2024; PDF = 2021 SSRN WP). Required (see `references/econ-corpus.md`).
 - **decision** — `pending` / `included` / `excluded` / `escalate`, the reason, the failing gate when excluded, and `read_depth` when screening escalated past abstract/intro.
 - **extraction fields** — the schema the setup survey defined.
 

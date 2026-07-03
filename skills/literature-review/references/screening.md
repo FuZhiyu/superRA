@@ -25,6 +25,8 @@ For each candidate, update its task-shaped record with:
 - promotion recommendation;
 - any retrieval trace updates found during targeted verification.
 
+The materialized card already contains placeholders for Zotero item/attachment links, artifact paths, quality notes, and extraction fields. Fill those fields in place as you verify them; do not replace the card with a second schema.
+
 When the dispatch authorizes promotion and inclusion is clear, create the promoted paper card by copying the candidate folder into `superRA/<review>/papers/<paper-key>/`. Do not change the body schema during promotion.
 
 ## Targeted Verification
