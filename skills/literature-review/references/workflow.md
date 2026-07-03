@@ -51,7 +51,7 @@ A completed claimed read lands `implemented` when the decision, notes, lead harv
 
 ## Dispatch Shapes
 
-Choose the dispatch shape at the frontier boundary. A review may use any mix of these shapes, in any order, as the written state evolves.
+Choose a loose dispatch type at the frontier boundary: `recon` or `claimed read`. Synthesis passes choose the next frontier from the written state.
 
 ### Recon Dispatch
 
@@ -67,11 +67,7 @@ Claimed reads answer: whether assigned papers are included, excluded, or escalat
 
 Extraction is part of the same claimed-read job. The review agent loads `grounding-and-extraction.md` and extracts from an included or escalated paper before closing the card.
 
-### Mixed Dispatch
-
-Use a mixed dispatch when reading one source is expected to reveal targeted leads. The agent may materialize leads freely while reading, but it claims before substantively reading any newly surfaced paper.
-
-Mixed dispatches return both claimed-read outcomes and recon-style lead stubs. They are useful for seed expansions, central papers, and local clusters where citation context matters.
+Claimed reads may have recon side effects: while reading one source, the agent may materialize leads freely, but it claims before substantively reading any newly surfaced paper.
 
 ### Synthesis Pass
 

@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: revise
+status: implemented
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -67,7 +67,7 @@ Rewired the literature-review skill around one review-agent role.
 - [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now describes comparison columns plus free-form grounded narrative notes, including the narrative-only case.
 - Retired `discovery.md` and `screening.md`; updated live cross-links and the skill inventory.
 
-Follow-up rewrite: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now teaches the main-agent protocol by written state, paper state, and dispatch shape. It makes recon, claimed-read, mixed, and synthesis passes first-class choices; says existing `not-started` candidates are used for prioritization rather than followed by default; and states that claimed reads extract included or escalated papers in the same session. [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) and [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now make the same-role extraction handoff explicit.
+Follow-up rewrite: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now teaches the main-agent protocol by written state, paper state, and dispatch type. It makes recon and claimed-read dispatches the two loose choices; says existing `not-started` candidates are used for prioritization rather than followed by default; and states that claimed reads extract included or escalated papers in the same session. [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) and [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now make the same-role extraction handoff explicit.
 
 Researcher clarification: there are two loose dispatch types. Recon may inspect or read enough of a paper to understand citations, but it does not make the paper read in state. A claimed read claims the paper and, if the paper is included or escalated, extracts it before closing the card; there is no separate extraction-authorization field.
 
@@ -80,4 +80,9 @@ Verification:
 ## Review Notes
 
 1. **MAJOR:** `workflow.md` still presents "Mixed Dispatch" as a first-class dispatch shape, which conflicts with the clarified contract that there are two loose dispatch types: `recon` and `claimed read` [task.md:16](task.md#L16), and with the validation criterion that `workflow.md` state those two loose dispatch types [task.md:52](task.md#L52). The live workflow says a review may use any mix of the listed shapes [workflow.md:52-54](../../../skills/literature-review/references/workflow.md#L52-L54), then lists `Recon Dispatch`, `Claimed-Read Dispatch`, `Mixed Dispatch`, and `Synthesis Pass` [workflow.md:56-78](../../../skills/literature-review/references/workflow.md#L56-L78). This leaves main agents with a third dispatch category instead of the intended two-type choice. Fold the mixed behavior into the claimed-read/recon descriptions, or explicitly frame it as claimed-read work with recon side effects rather than a separate dispatch shape.
+
+   → implemented: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now names only `recon` and `claimed read` as loose dispatch types; lead materialization while reading is described as a claimed-read side effect rather than a third dispatch shape.
+
 2. **MAJOR:** `grounding-and-extraction.md` still scopes itself to "a claimed included paper" [grounding-and-extraction.md:3](../../../skills/literature-review/references/grounding-and-extraction.md#L3), while the clarified contract and review-agent protocol require extraction for included or escalated papers before closing a claimed read [task.md:19](task.md#L19), [review-agent.md:32-34](../../../skills/literature-review/references/review-agent.md#L32-L34). This stale wording can cause escalated claimed reads to skip the extraction checklist. Update the checklist positioning line so it covers included or escalated claimed-read papers.
+
+   → implemented: [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now scopes itself to claimed included or escalated papers.
