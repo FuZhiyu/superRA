@@ -29,6 +29,8 @@ A claimed read settles the paper to the depth the dispatch authorizes:
 - harvest targeted leads from related-work/citation discussion;
 - extract when the paper is included, central, and extraction is authorized.
 
+When extraction is authorized, load [grounding-and-extraction.md](grounding-and-extraction.md) and complete extraction before closing the claimed read.
+
 Write the card before claiming another paper. Finish as `implemented` when decision/notes/extraction are complete, or `archived` when the card is closed as duplicate, superseded, unusable, or out of scope.
 
 ## Reading Notes

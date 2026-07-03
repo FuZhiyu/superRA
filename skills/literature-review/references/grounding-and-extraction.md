@@ -1,6 +1,6 @@
 # Anti-Hallucination Grounding & Extraction
 
-Load when extracting from a claimed included paper.
+Review-agent reference. Load when extracting from a claimed included paper; this is the extraction-depth checklist for the same claimed-read session.
 
 Treat every bibliographic claim and extracted finding as **guilty until grounded**: do not trust a cite until its DOI resolves to the paper you mean, do not record a finding until a verbatim quote from the source supports it, and do not write "no effect" until the paper is shown to have tested for one.
 

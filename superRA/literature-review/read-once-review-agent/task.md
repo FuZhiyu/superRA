@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: approved
+status: implemented
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -66,6 +66,8 @@ Rewired the literature-review skill around one review-agent role.
 - [`workflow.md`](../../../skills/literature-review/references/workflow.md) now dispatches frontier assignments, keeps permanent-record placement with the main agent, treats `superRA/<review>/papers/` as the default destination rather than a hard-coded location, and gates Zotero add/dedup on the setup policy.
 - [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now describes comparison columns plus free-form grounded narrative notes, including the narrative-only case.
 - Retired `discovery.md` and `screening.md`; updated live cross-links and the skill inventory.
+
+Follow-up rewrite: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now teaches the main-agent protocol by written state, paper state, and dispatch shape. It makes recon-only, claimed-read, mixed, and synthesis passes first-class choices; says existing `not-started` candidates are used for prioritization rather than followed by default; and states that extraction is part of the same claimed-read job when authorized. [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) and [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now make the same-role extraction handoff explicit.
 
 Verification:
 
