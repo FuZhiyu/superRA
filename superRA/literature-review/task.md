@@ -1,6 +1,6 @@
 ---
 title: "Literature Review Domain Vertical"
-status: in-progress
+status: revise
 depends_on: []
 ---
 
