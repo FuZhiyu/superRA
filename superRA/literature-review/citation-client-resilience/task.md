@@ -1,6 +1,6 @@
 ---
 title: "Citation Client Resilience — Cross-Process Rate Coordination + OpenCitations Fallback"
-status: implemented
+status: approved
 depends_on: [citation-metadata-client]
 ---
 
