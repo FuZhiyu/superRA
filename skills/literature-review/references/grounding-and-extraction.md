@@ -16,7 +16,7 @@ The setup survey defines comparison columns: facts that must be comparable acros
 
 Everything outside the comparison columns is a free-form grounded narrative note per paper.
 
-Every extracted claim carries a verbatim quote and location (section or page). Extraction of a central paper reads the OCR'd full text (the `mistral-pdf-to-markdown` shortlist), because the answer usually lives in the results or model section, not the abstract.
+Every extracted claim carries a verbatim quote and location (section or page). Extraction reads the OCR'd full text when the needed evidence is not already available, because the answer usually lives in the results or model section, not the abstract.
 
 Convert **once**: before OCR'ing a shortlist paper, check its `md_path` and reuse an existing conversion — Mistral OCR is billed, so never re-convert a paper already saved. A fresh conversion writes `<key>.md` plus extracted images into the durable store and records `md_path` + `fetched_at`.
 

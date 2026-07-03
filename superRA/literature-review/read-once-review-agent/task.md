@@ -1,6 +1,6 @@
 ---
 title: "Read-Once Review Agent — One Judgment-Bounded Role Replaces the Stage Pipeline"
-status: revise
+status: implemented
 depends_on:
   - shared-store-and-client-mechanisms
 ---
@@ -13,12 +13,12 @@ Replace the three-stage per-paper pipeline (discovery -> screening -> extraction
 
 **One role, dispatch-bounded traversal** (`references/review-agent.md`, replacing both `discovery.md` and `screening.md`):
 
-- A dispatch assigns a **frontier** — a seed to expand, a cluster of pending candidates, or a web lens — plus **loose bounds**: recommended citation hops (typically 2), extraction authorization, and a soft paper budget. Within bounds, the agent decides what to materialize and, when authorized, what to claim for a substantive read; beyond bounds, stub and report — don't chase.
+- A dispatch assigns a **frontier** — a seed to expand, a cluster of pending candidates, or a web lens — plus a loose type (`recon` or `claimed read`) and bounds: recommended citation hops (typically 2) and a soft paper budget. Within bounds, the agent decides what to materialize and, for claimed reads, what to claim for a substantive read; beyond bounds, stub and report — don't chase.
 - **Materialize many, claim before read.** A paper card exists only for a specific paper with minimal metadata and starts `status: not-started`. Recon work may inspect search metadata, abstracts, citation lists, or citation snippets to identify papers, materialize/update candidate cards, add provenance, and prioritize leads; it does not make those papers "read" and leaves them `not-started`. Before substantively reading a candidate for a decision, notes, or extraction, the agent calls the atomic claim command from the dependency task, which changes `status: not-started` to `status: in-progress`. A paper already claimed, implemented, approved, or archived is adopted, not re-read.
 - **Edge triage uses the best signal available.** How the text in hand cites a paper is the primary signal for whether that paper is worth pursuing — so harvested leads carry the quoted citation context in their provenance. Bulk edge lists with no read context (e.g. hundreds of forward cites of a hub paper, via the version-union call) are triaged from metadata — hydrate DOI-only edges via `citation_client metadata`, judge scope fit from title/abstract/venue/year against the review's criteria — and stubbed with a priority, with the filtered remainder recorded as counts/patterns in the local map.
-- **Everything one claimed read enables happens in that session**: the screening decision (rationale, gate, outlet tier, identification strategy per `econ-corpus.md`); extraction when the paper is included + central and the dispatch authorized it (load `grounding-and-extraction.md`, OCR via `mistral-pdf-to-markdown`, idempotent `md_path` reuse); lead harvest from its related-work discussion; escalation for ambiguous cases. The agent finishes the card as `implemented` when decision/notes/extraction are complete, or `archived` when local evidence closes it as duplicate, superseded, unusable, or out of scope.
+- **Everything one claimed read enables happens in that session**: the screening decision (rationale, gate, outlet tier, identification strategy per `econ-corpus.md`); extraction when the paper is included or escalated (load `grounding-and-extraction.md`, OCR via `mistral-pdf-to-markdown`, idempotent `md_path` reuse); lead harvest from its related-work discussion; escalation for ambiguous cases. The agent finishes the card as `implemented` when decision/notes/extraction are complete, or `archived` when local evidence closes it as duplicate, superseded, unusable, or out of scope.
 - **Write-as-you-go.** Complete each paper's record before claiming the next substantive read, so an exhausted context loses nothing: the remaining frontier persists as `not-started` stubs and the next dispatch continues from written state.
-- A web-lens sweep is the same role with a wide, mostly-metadata assignment: stub what the lens surfaces; claim a source only when the dispatch authorizes a substantive read and the read is needed to settle scope.
+- A web-lens sweep is recon: stub what the lens surfaces; claim a source only when the dispatch is a claimed read or the main agent has turned that source into the next claimed-read frontier.
 - The local-map and leads report survives from the current discovery protocol.
 
 **Reading Notes are for substantive reads, not recon.** `SKILL.md` §Candidate And Paper Records keeps `## Reading Notes` as an append-only log for claimed reads (`[session, what was read]` + grounded takeaways) whose purpose is resuming a paper in a later session — deferred extraction, escalation, late centrality upgrade. Citation-context gathered while recon-expanding another paper belongs in discovery provenance, not Reading Notes for the cited paper.
@@ -28,7 +28,7 @@ Replace the three-stage per-paper pipeline (discovery -> screening -> extraction
 **Dispatch loop** (`workflow.md` rewrite):
 
 1. Dispatches are frontier assignments with bounds, sized by expected depth — recon sweeps are wide and shallow, while claimed-read assignments are narrow and deep. They run **concurrently as ordinary parallel Agent calls without worktree isolation** — routine shared writes go through the non-git candidate store and client cache, both concurrency-safe, and claim-for-read prevents double-processing (a stated exception to `agent-orchestration`'s worktree-per-parallel-task default, with this reason inline).
-2. Extraction authorization per dispatch; default: authorized for seed expansions and high-priority central candidates, withheld otherwise, with the researcher able to redirect at synthesis passes.
+2. Claimed reads include extraction for included or escalated papers; there is no separate extraction-authorization state.
 3. **Lead sweep at each periodic synthesis pass**: accumulated stubs and `Discovery Leads` are prioritized into the next wave of frontier assignments.
 4. **Permanent-record placement is main-agent owned.** The review agent may recommend inclusion/escalation, but the main agent chooses whether and where to move the candidate folder into a permanent record. `superRA/<review>/papers/` is the default destination, not a hard-coded requirement.
 5. **Zotero-library dedup + add fires during main-agent finalization when the setup policy enables Zotero**, once per permanent paper record (routed to `zotero-paper-reader`) — not per candidate.
@@ -38,8 +38,8 @@ Part 1 interactive setup additionally elicits the comparison columns alongside t
 
 ### Files to update
 
-- `skills/literature-review/SKILL.md` — reference map re-partitioned by loader (main agent: `workflow.md`; review agent: `review-agent.md` + `econ-corpus.md`, plus `grounding-and-extraction.md` at extraction depth; all: `citation-client.md`), record schema (`## Reading Notes`), composed-skill trigger points.
-- `skills/literature-review/references/workflow.md` — frontier-assignment dispatch loop, setup elicitation, parallel-dispatch exception, authorization default, lead-sweep cadence, main-agent permanent-record placement, Zotero-dedup trigger.
+- `skills/literature-review/SKILL.md` — reference map re-partitioned by loader (main agent: `workflow.md`; review agent: `review-agent.md` + `econ-corpus.md`, plus `grounding-and-extraction.md` for included/escalated claimed reads; all: `citation-client.md`), record schema (`## Reading Notes`), composed-skill trigger points.
+- `skills/literature-review/references/workflow.md` — frontier-assignment dispatch shapes, setup elicitation, parallel-dispatch exception, claimed-read extraction, lead-sweep cadence, main-agent permanent-record placement, Zotero-dedup trigger.
 - Retired discovery and screening references → `skills/literature-review/references/review-agent.md` — the single-role protocol above.
 - `skills/literature-review/references/grounding-and-extraction.md` — hybrid shape, adopt-and-reverify.
 - Any file referencing the retired reference filenames (trigger test, `econ-corpus.md`, `citation-client.md` cross-links).
@@ -49,7 +49,7 @@ Part 1 interactive setup additionally elicits the comparison columns alongside t
 - `rg` over the skill finds no instruction that routes a paper to a second agent to reopen a source already read — re-opening exists only on the Reading-Notes resume path (deferred extraction, escalation).
 - No live skill file links to the retired discovery or screening references.
 - `review-agent.md` states "materialize many, claim before read", write-as-you-go, the hop/budget bounds with stub-and-report beyond them, and both edge-triage modes (citation context from the source being read; metadata for bulk edge lists) as explicit protocol.
-- `workflow.md` states the parallel-dispatch exception, extraction-authorization default, lead-sweep cadence, main-agent permanent-record placement, and policy-gated Zotero trigger as explicit checkable statements.
+- `workflow.md` states the parallel-dispatch exception, two loose dispatch types, lead-sweep cadence, main-agent permanent-record placement, and policy-gated Zotero trigger as explicit checkable statements.
 - `grounding-and-extraction.md` describes the hybrid with the empty-matrix (narrative-only) case; invariants read as mandatory independent of shape.
 - `python3 skills/report-in-markdown/scripts/check_markdown.py` runs clean over every changed markdown file; the skill-trigger test still passes.
 
@@ -61,20 +61,18 @@ This is skill-creation work — load `skill-creator` before editing any `SKILL.m
 
 Rewired the literature-review skill around one review-agent role.
 
-- [`SKILL.md`](../../../skills/literature-review/SKILL.md) now routes dispatched paper work to [`review-agent.md`](../../../skills/literature-review/references/review-agent.md), keeps `econ-corpus.md` for corpus discipline, and loads [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) only at extraction depth.
+- [`SKILL.md`](../../../skills/literature-review/SKILL.md) now routes dispatched paper work to [`review-agent.md`](../../../skills/literature-review/references/review-agent.md), keeps `econ-corpus.md` for corpus discipline, and loads [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) for claimed-read dispatches.
 - [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) replaces the old role split with the compact rule: materialize many, claim before read. Recon leaves candidates `not-started`; substantive reads begin with the materializer claim and finish as `implemented` or `archived`.
 - [`workflow.md`](../../../skills/literature-review/references/workflow.md) now dispatches frontier assignments, keeps permanent-record placement with the main agent, treats `superRA/<review>/papers/` as the default destination rather than a hard-coded location, and gates Zotero add/dedup on the setup policy.
 - [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now describes comparison columns plus free-form grounded narrative notes, including the narrative-only case.
 - Retired `discovery.md` and `screening.md`; updated live cross-links and the skill inventory.
 
-Follow-up rewrite: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now teaches the main-agent protocol by written state, paper state, and dispatch shape. It makes recon-only, claimed-read, mixed, and synthesis passes first-class choices; says existing `not-started` candidates are used for prioritization rather than followed by default; and states that extraction is part of the same claimed-read job when authorized. [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) and [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now make the same-role extraction handoff explicit.
+Follow-up rewrite: [`workflow.md`](../../../skills/literature-review/references/workflow.md) now teaches the main-agent protocol by written state, paper state, and dispatch shape. It makes recon, claimed-read, mixed, and synthesis passes first-class choices; says existing `not-started` candidates are used for prioritization rather than followed by default; and states that claimed reads extract included or escalated papers in the same session. [`review-agent.md`](../../../skills/literature-review/references/review-agent.md) and [`grounding-and-extraction.md`](../../../skills/literature-review/references/grounding-and-extraction.md) now make the same-role extraction handoff explicit.
+
+Researcher clarification: there are two loose dispatch types. Recon may inspect or read enough of a paper to understand citations, but it does not make the paper read in state. A claimed read claims the paper and, if the paper is included or escalated, extracts it before closing the card; there is no separate extraction-authorization field.
 
 Verification:
 
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/literature-review/SKILL.md skills/literature-review/references/workflow.md skills/literature-review/references/review-agent.md skills/literature-review/references/grounding-and-extraction.md skills/literature-review/references/econ-corpus.md skills/literature-review/references/citation-client.md skills/CATEGORIES.md superRA/literature-review/read-once-review-agent/task.md` reported all files clean.
 - `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 72 tests.
 - `rg` checks over live skill docs found no stale discovery/screening role references or copy-based promotion wording.
-
-## Review Notes
-
-1. **MAJOR:** The rewrite dropped the required extraction-authorization default from `workflow.md`. The task requires extraction authorization to be per dispatch, with the default authorized for seed expansions and high-priority central candidates and withheld otherwise [task.md:31](task.md#L31), and the validation criteria require `workflow.md` to state that default [task.md:52](task.md#L52). The live workflow now only says extraction happens "when authorized" in claimed-read dispatches [workflow.md:62-68](../../../skills/literature-review/references/workflow.md#L62-L68), without telling the main agent when to authorize extraction by default. Add a concise default authorization rule to `workflow.md` while preserving dispatch-time flexibility.

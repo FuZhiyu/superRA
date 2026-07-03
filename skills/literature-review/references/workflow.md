@@ -47,7 +47,7 @@ Recon dispatches materialize or update paper cards and leave them `not-started`.
 
 A substantive read starts only after an agent wins `candidate_materializer.py claim`, which changes the card to `status: in-progress`. A losing claim adopts the existing card state.
 
-A completed claimed read lands `implemented` when the decision, notes, lead harvest, and any authorized extraction are complete. It lands `archived` when the card is closed as duplicate, superseded, unusable, or out of scope.
+A completed claimed read lands `implemented` when the decision, notes, lead harvest, and extraction for an included or escalated paper are complete. It lands `archived` when the card is closed as duplicate, superseded, unusable, or out of scope.
 
 ## Dispatch Shapes
 
@@ -57,15 +57,15 @@ Choose the dispatch shape at the frontier boundary. A review may use any mix of 
 
 Use recon to expand the map: web lenses, seed metadata, reference lists, forward-citation edges, author pages, venue clusters, or a backlog of not-started candidates. Recon answers: what should enter the candidate store, what changed in priorities, and what the local map reveals.
 
-Recon may inspect metadata, abstracts, citation lists, and citation snippets. It materializes useful papers and high-signal beyond-bounds stubs, records provenance, and reports patterns or counts for filtered edges. It leaves papers `not-started`.
+Recon may inspect metadata, abstracts, citation lists, citation snippets, and source text needed to understand citation context. It materializes useful papers and high-signal beyond-bounds stubs, records provenance, and reports patterns or counts for filtered edges. It leaves papers `not-started`.
 
 ### Claimed-Read Dispatch
 
-Use a claimed-read dispatch when the next question requires a paper-level decision. Assign a narrow set of candidates or a central included paper. The agent claims each paper before reading it.
+Use a claimed-read dispatch when the next question requires a paper-level decision or extraction. Assign a narrow set of candidates or an included paper that needs its permanent extraction. The agent claims each paper before reading it.
 
-Claimed reads answer: whether assigned papers are included, excluded, or escalated; what evidence supports the decision; which leads deserve follow-up; and, when extraction is authorized, what grounded facts or narrative notes enter the review.
+Claimed reads answer: whether assigned papers are included, excluded, or escalated; what evidence supports the decision; which leads deserve follow-up; and what grounded facts or narrative notes enter the review for included or escalated papers.
 
-Extraction is part of the same claimed-read job when authorized. The review agent loads `grounding-and-extraction.md` at that depth and extracts from the claimed included paper before closing the card.
+Extraction is part of the same claimed-read job. The review agent loads `grounding-and-extraction.md` and extracts from an included or escalated paper before closing the card.
 
 ### Mixed Dispatch
 

@@ -18,7 +18,7 @@ Load per workflow point, not all at once. The main agent orchestrates from `work
 | `references/workflow.md` | main agent | orchestrating a task-tree-native review — interactive setup, candidate-store setup, frontier dispatch, permanent-record placement, synthesis, and saturation judgment. |
 | `references/review-agent.md` | review agent | recon-expanding a frontier, materializing/updating candidates, claiming candidates for substantive reads, deciding membership, harvesting leads, and reporting a local map. |
 | `references/econ-corpus.md` | review agent | judging coverage and quality — working-paper-first sourcing (SSRN / NBER / RePEc), published-version metadata with the WP-divergence flag, JEL codes, and weighting by outlet tier + identification strategy. |
-| `references/grounding-and-extraction.md` | review agent | extracting from a claimed included paper when the dispatch authorizes extraction. |
+| `references/grounding-and-extraction.md` | review agent | claimed-read dispatches — quote grounding, DOI checks, comparison fields, and narrative extraction. |
 | `references/citation-client.md` | main agent + agents | calling the bundled citation-graph + metadata client and candidate materializer — command surfaces and machine I/O shapes. |
 
 ## Composed skills
@@ -26,7 +26,7 @@ Load per workflow point, not all at once. The main agent orchestrates from `work
 Route to these rather than reimplementing their work:
 
 - **`zotero-paper-reader`** — dedup/add during main-agent finalization when the setup survey selected a Zotero target; fetch PDFs, export BibTeX, and insert cites.
-- **`mistral-pdf-to-markdown`** — OCR only central included papers at extraction depth.
+- **`mistral-pdf-to-markdown`** — OCR claimed included/escalated papers at extraction depth when source text is not already available.
 - **`writing`** — any reader-facing prose (a synthesis note, gap analysis, or a related-work draft).
 
 ## Candidate And Paper Records

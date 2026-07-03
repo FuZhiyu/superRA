@@ -4,13 +4,13 @@ Load for literature-review frontier dispatches.
 
 ## Frontier Bounds
 
-A dispatch gives a frontier and bounds: seed, candidate cluster, or web lens; recommended citation hops; extraction authorization; and a soft paper budget. Stay within those bounds. For high-signal leads beyond the bounds, materialize/update a `not-started` stub when minimal metadata exists and report why it was not chased.
+A dispatch gives a frontier, a loose type (`recon` or `claimed read`), and bounds: seed, candidate cluster, or web lens; recommended citation hops; and a soft paper budget. Stay within those bounds. For high-signal leads beyond the bounds, materialize/update a `not-started` stub when minimal metadata exists and report why it was not chased.
 
 ## Materialize Many, Claim Before Read
 
 Use [citation-client.md](citation-client.md) for materializer commands.
 
-Recon may inspect search metadata, abstracts, citation lists, or citation snippets to identify papers, materialize/update candidate cards, add provenance, and prioritize leads. Recon leaves surfaced papers `status: not-started`.
+Recon may inspect search metadata, abstracts, citation lists, citation snippets, or source text needed to understand citation context. Use that context to identify papers, materialize/update candidate cards, add provenance, and prioritize leads. Recon leaves surfaced papers `status: not-started`.
 
 Before a substantive read for decision, notes, or extraction, run `candidate_materializer.py claim <key> --by <dispatch-label>`. The winning claim changes the card to `status: in-progress`; a losing claim returns the existing state, which you adopt.
 
@@ -22,14 +22,16 @@ Use `citation_client.py citations-union` when a paper has multiple known version
 
 ## Claimed Reads
 
-A claimed read settles the paper to the depth the dispatch authorizes:
+Load [grounding-and-extraction.md](grounding-and-extraction.md) for claimed-read dispatches.
+
+A claimed read settles the paper:
 
 - decide `included`, `excluded`, or `escalate`;
 - record reason, failed gate when excluded, outlet tier, and identification strategy;
 - harvest targeted leads from related-work/citation discussion;
-- extract when the paper is included, central, and extraction is authorized.
+- extract when the paper is included or escalated.
 
-When extraction is authorized, load [grounding-and-extraction.md](grounding-and-extraction.md) and complete extraction before closing the claimed read.
+For included or escalated papers, complete extraction before closing the claimed read.
 
 Write the card before claiming another paper. Finish as `implemented` when decision/notes/extraction are complete, or `archived` when the card is closed as duplicate, superseded, unusable, or out of scope.
 
