@@ -8,7 +8,7 @@ Economics and finance move on working papers — a result circulates as an SSRN/
 
 ## Working-paper-first coverage
 
-The primary discovery surfaces are the working-paper repositories: **SSRN**, **NBER**, and **RePEc/IDEAS**. arXiv `q-fin`/`econ` carries the preprints. Reach these through the site-scoped web lenses in [search-and-screening.md](search-and-screening.md); the citation client's indexed search supplements but lags the newest papers.
+The primary discovery surfaces are the working-paper repositories: **SSRN**, **NBER**, and **RePEc/IDEAS**. arXiv `q-fin`/`econ` carries the preprints. Reach these through the site-scoped web lenses in [discovery.md](discovery.md); the citation client's indexed search supplements but lags the newest papers.
 
 **Tell of under-coverage:** an active area whose ledger contains no working papers — only journal articles — has not reached the frontier. The most recent in-scope work in a live literature is almost always still a WP; its absence means the forward sweep did not reach SSRN/NBER.
 

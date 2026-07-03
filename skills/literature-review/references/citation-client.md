@@ -1,4 +1,4 @@
-# Citation-Graph & Metadata Client — Command Surface
+# Citation-Graph, Metadata, And Candidate Materializer — Command Surface
 
 Bundled script: [`../scripts/citation_client.py`](../scripts/citation_client.py). Stdlib-only, PEP 723. Run from anywhere:
 
@@ -102,7 +102,7 @@ Forward citations — the snowball backbone.
 
 Output shape matches `references`; `source` reports which backend answered (`s2` or `opencitations`). Fallback chain under `auto`: **S2 → OpenCitations → empty + web-sweep note.** On S2 outage `s2_available: false`; if OpenCitations then answers, `source: "opencitations"` with the DOI→DOI records; if it too is unavailable (or no DOI), `records` is empty with a note to run the workflow-layer forward web sweep.
 
-**Version-DOI union (workflow layer).** OpenCitations is DOI→DOI only, and in economics a paper's forward citations fragment across its version DOIs (NBER `10.3386/*`, SSRN `10.2139/ssrn.*`, and the journal DOI). The client stays **per-DOI**; complete forward coverage requires calling `citations` once per known version DOI and unioning the results — a workflow step, not a tool feature (see [workflow.md](workflow.md) and [search-and-screening.md](search-and-screening.md)).
+**Version-DOI union (workflow layer).** OpenCitations is DOI→DOI only, and in economics a paper's forward citations fragment across its version DOIs (NBER `10.3386/*`, SSRN `10.2139/ssrn.*`, and the journal DOI). The client stays **per-DOI**; complete forward coverage requires calling `citations` once per known version DOI and unioning the results — a workflow step, not a tool feature (see [workflow.md](workflow.md) and [discovery.md](discovery.md)).
 
 ### `metadata IDENTIFIER`
 
@@ -136,12 +136,32 @@ Report `tool_version`, `python_version`, `dependencies` (`stdlib-only`), endpoin
 
 ## Concurrency, caching, and rate limits
 
-The fan-out is **unbounded** — every screening/extraction agent shells out its own client process, and they share one IP and one filesystem. Three shared-state layers sit in front of the live HTTP call so the collective request rate stays inside what the server measures (per IP), without funnelling agents through a single serialized caller:
+Concurrent agents may shell out their own client process while sharing one IP and one filesystem. Three shared-state layers sit in front of the live HTTP call so the collective request rate stays inside what the server measures (per IP), without funnelling agents through a single serialized caller:
 
 - **Shared on-disk response cache.** Keyed by the canonicalized request URL (courtesy params like `mailto` dropped); writes are atomic (temp file + `os.replace`), reads are lock-free. TTL by mutability: immutable `references`/`metadata`/published records ~30d; forward `citations` ~7d (they grow). Snowballing re-hits the same hub papers, so a cache hit skips both the rate gate and the network entirely. `--no-cache` bypasses it; `--cache-ttl SECONDS` overrides the TTL for one call. The cache dir (`CITATION_CLIENT_CACHE_DIR`, default `Notes/.cache/citation-client/`) is created with a self-ignoring `.gitignore` so cached responses never enter version control.
 - **Cross-process rate gate.** One next-allowed-time state file per backend host, guarded by `fcntl.flock`. Before each live call a process briefly locks the file, reads `next_ts`, claims `slot = max(now, next_ts)`, writes `next_ts = slot + interval`, releases the lock, then sleeps until `slot`. **The lock is never held during the sleep**, so concurrency is preserved while the global rate is bounded to one request per `interval` across all processes. Defaults (seconds/request): S2 `1.1`, Crossref `0.2`, OpenCitations `0.5`, arXiv `3.0`; override per backend via `CITATION_CLIENT_INTERVAL_<BACKEND>`.
-- **Adaptive backoff.** A live `429`/`503` widens the backend's shared `next_ts`/interval (decaying back over subsequent successes), so a real overload signal slows the whole fan-out, not just the unlucky process. The default transport's own `Retry-After`/exponential retry stays behind the gate as a second line of defense, and it still sleeps between Crossref requests per the advertised `X-Rate-Limit-Limit`/`X-Rate-Limit-Interval` headers.
+- **Adaptive backoff.** A live `429`/`503` widens the backend's shared `next_ts`/interval (decaying back over subsequent successes), so a real overload signal slows every concurrent caller, not just the unlucky process. The default transport's own `Retry-After`/exponential retry stays behind the gate as a second line of defense, and it still sleeps between Crossref requests per the advertised `X-Rate-Limit-Limit`/`X-Rate-Limit-Interval` headers.
 
 **Coordination scope.** The gate and cache are per-filesystem, so they coordinate exactly the processes on one machine — which is the right granularity because S2 rate-limits per IP and one machine shares one IP. Across machines the gate is per-machine (no shared state); that matches per-IP limits as long as each machine has its own IP. Where `fcntl` is unavailable (non-POSIX), the client degrades to per-process-only coordination rather than crashing; `health` reports `coordination` as `cross-process` or `per-process`.
 
 The offline test suite injects a fake transport plus an injectable clock/sleep and a tmp coordination dir, so it runs deterministically with no network, no keys, and no real waits.
+
+## Candidate Materializer
+
+Bundled script: [`../scripts/candidate_materializer.py`](../scripts/candidate_materializer.py). Stdlib-only, PEP 723.
+
+```
+uv run --script <skill-root>/scripts/candidate_materializer.py key --record-file record.json
+uv run --script <skill-root>/scripts/candidate_materializer.py materialize --store Notes/literature-review/<review>/candidate-papers --record-file record.json --provenance web:ssrn
+```
+
+`record.json` may be one normalized record, `{record: ...}`, `{records: [...]}`, or an array of records from `citation_client` or a discovery agent. JSON here is tool I/O only; authoritative candidate state is the generated task-shaped folder and its `task.md`.
+
+The materializer:
+
+- computes a human-readable key from first author, venue/WP source, year, and title;
+- reuses an existing folder when DOI, arXiv, S2/corpus id, or normalized title-year clearly match;
+- appends a deterministic short hash only for key collisions;
+- writes a candidate `task.md` with standard task frontmatter and paper-card body sections.
+
+Ambiguous identity cases belong in the review root's dedup-conflict notes for main-agent judgment; agents may split a wrongly merged candidate when local evidence shows two records are different papers.

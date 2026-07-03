@@ -680,7 +680,7 @@ def test_coordinated_transport_backs_off_on_429(tmp_path):
     inner = FakeTransport(_routes(**{"/paper/search": (429, None)}))
     ct = cc.CoordinatedTransport(inner, cache=None, gate=gate)
     ct.get_json("https://api.semanticscholar.org/graph/v1/paper/search?query=x")
-    # A 429 pushed the shared interval outward for the whole fan-out.
+    # A 429 pushed the shared interval outward for all concurrent callers.
     assert _gate_state(tmp_path, "s2")["interval"] > 1.0
 
 

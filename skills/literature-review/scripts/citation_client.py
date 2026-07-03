@@ -28,7 +28,7 @@ Backends (see references/citation-client.md for the full command surface):
 - OpenCitations — keyless DOI->DOI forward/backward edges (I4OC open references),
   used as the forward-``citations`` fallback when S2 is rate-limited or down.
 
-Concurrent fan-out safety: a shared on-disk response cache and a cross-process
+Concurrent-agent safety: a shared on-disk response cache and a cross-process
 rate gate (one next-allowed-time file per backend host, guarded by ``fcntl``)
 sit in front of the live HTTP call, so many client processes on one machine/IP
 stay inside the server's per-IP window without being serialized. The per-process
@@ -67,7 +67,7 @@ ARXIV_BASE = "http://export.arxiv.org/api/query"
 OPENCITATIONS_BASE = "https://opencitations.net/index/api/v2"
 
 # Cross-process rate gate: conservative per-backend spacing (seconds/request)
-# bounded across all fan-out processes sharing one IP + filesystem. S2's
+# bounded across all agent processes sharing one IP + filesystem. S2's
 # anonymous pool is ~1 req/s; Crossref's polite pool tolerates more; OpenCitations
 # a few req/s; arXiv asks for 3s between requests.
 DEFAULT_INTERVALS = {"s2": 1.1, "crossref": 0.2, "opencitations": 0.5, "arxiv": 3.0}
@@ -270,7 +270,7 @@ def _encode(params: dict[str, object]) -> str:
 # Cross-process coordination (shared cache + rate gate + adaptive backoff)     #
 # --------------------------------------------------------------------------- #
 #
-# The fan-out is unbounded: every screening agent shells out its own client
+# Concurrent agents may each shell out their own client
 # process, and they share one IP and one filesystem. Coordination is via shared
 # on-disk state so the collective request rate is bounded to what the server
 # measures (per IP), without funnelling agents through a single serialized caller.
@@ -386,7 +386,7 @@ class RateGate:
     preserved while the global request rate is bounded to one per ``interval``.
 
     Adaptive backoff: :meth:`penalize` widens the backend's shared interval on a
-    429/503, slowing the whole fan-out; :meth:`on_success` decays it back."""
+    429/503, slowing all concurrent callers; :meth:`on_success` decays it back."""
 
     def __init__(self, coord_dir: Path, intervals: dict[str, float] | None = None,
                  *, now=time.time, sleep=time.sleep,

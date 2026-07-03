@@ -1,6 +1,6 @@
 ---
 title: "Task-Tree-Native Review Orchestration"
-status: not-started
+status: implemented
 depends_on:
   - layout-and-coherence-refactor
 ---
@@ -55,3 +55,23 @@ Load `skill-creator` before editing skill files. Update at least:
 ## Planner Guidance
 
 Keep the implementation focused on the orchestration contract and the smallest tooling needed to materialize task-shaped candidate folders. Do not broaden into a dashboard redesign unless the current dashboard cannot show the review root counts and promoted paper-card links from ordinary task Markdown.
+
+## Results
+
+### Key Findings
+
+- Rewrote the literature-review skill around task-tree-native orchestration: the main-agent workflow now treats the review root as the live progress page, keeps pre-screen candidates outside git as task-shaped records, uses the candidate materializer for ordinary dedup, and promotes only included/escalated papers into `superRA/<review>/papers/` ([workflow.md](../../../skills/literature-review/references/workflow.md)).
+- Split the old combined search/screening protocol into role-specific references: discovery agents load [discovery.md](../../../skills/literature-review/references/discovery.md), screening agents load [screening.md](../../../skills/literature-review/references/screening.md), and the top-level load map points each role only to the reference it needs ([SKILL.md](../../../skills/literature-review/SKILL.md)).
+- Added the task-shaped candidate materializer and tests. The CLI creates candidate `task.md` folders from normalized records, reuses existing folders for clear DOI/arXiv/S2/title-year matches, and keeps JSON as tool I/O rather than authoritative state ([candidate_materializer.py](../../../skills/literature-review/scripts/candidate_materializer.py)).
+- Clarified the universal paper-link rule: whenever a paper is mentioned in any task file, candidate record, result, report, candidate list, extraction note, or convergence note, link the paper mention using the pecking order task file -> Zotero -> Web -> PDF -> Markdown OCR ([SKILL.md](../../../skills/literature-review/SKILL.md)).
+
+### Verification
+
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/CATEGORIES.md skills/literature-review/SKILL.md skills/literature-review/references/workflow.md skills/literature-review/references/discovery.md skills/literature-review/references/screening.md skills/literature-review/references/econ-corpus.md skills/literature-review/references/citation-client.md superRA/literature-review/task-tree-native-orchestration/task.md` -> all clean.
+- `uv run --with pytest python -m pytest skills/literature-review/scripts/test_candidate_materializer.py skills/literature-review/scripts/test_citation_client.py` -> 67 passed.
+- `./superRA/superra task check` -> all checks passed.
+- Stale-term sweep over active skill surfaces found no remaining `search-and-screening`, `subtree-as-ledger`, `one subtask per paper`, `Tier-2`, `Tier-3`, `standalone folder-ledger`, `folder ledger`, `loop-until-dry`, `fan-out`, `seen index`, `candidate admission`, or `orchestrator keeps` references.
+
+### Notes
+
+- The existing skill-trigger harness did not run to a meaningful result on this machine because `tests/skill-triggering/run-test.sh` depends on `timeout`, which is absent in this macOS environment. The log at `/tmp/superpowers-tests/1783049180/skill-triggering/literature-review/claude-output.json` shows `timeout: command not found`, so the reported trigger failure is a harness/runtime issue rather than evidence about the skill metadata.
