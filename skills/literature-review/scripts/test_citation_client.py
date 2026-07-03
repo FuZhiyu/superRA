@@ -778,6 +778,40 @@ def test_cmd_citations_falls_back_to_opencitations(monkeypatch):
     assert any("version DOIs" in n for n in out["notes"])
 
 
+def test_cmd_citations_union_dedups_version_dois(monkeypatch):
+    monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
+    routes = {
+        "/index/api/v2/citations/10.3386/w12345": (
+            200,
+            [
+                {"citing": "doi:10.1257/aer.20220001", "cited": "doi:10.3386/w12345", "creation": "2024"},
+                {"citing": "doi:10.1111/jofi.77777", "cited": "doi:10.3386/w12345", "creation": "2023"},
+            ],
+        ),
+        "/index/api/v2/citations/10.2139/ssrn.12345": (
+            200,
+            [
+                {"citing": "doi:10.1257/aer.20220001", "cited": "doi:10.2139/ssrn.12345", "creation": "2024"},
+                {"citing": "doi:10.1093/rfs/hhaa001", "cited": "doi:10.2139/ssrn.12345", "creation": "2022"},
+            ],
+        ),
+    }
+    code, out = run_cmd(
+        [
+            "citations-union",
+            "10.3386/w12345",
+            "10.2139/ssrn.12345",
+            "--source",
+            "opencitations",
+        ],
+        FakeTransport(routes),
+    )
+    assert code == 0
+    assert out["count"] == 3
+    duplicated = [r for r in out["records"] if r["id"]["doi"] == "10.1257/aer.20220001"][0]
+    assert len(duplicated["source_versions"]) == 2
+
+
 def test_cmd_citations_chain_exhausts_to_web_sweep(monkeypatch):
     monkeypatch.setattr(cc, "get_config", _cfg_no_keys)
     routes = {

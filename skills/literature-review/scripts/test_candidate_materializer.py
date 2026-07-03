@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -68,3 +69,68 @@ def test_materialize_reuses_existing_by_doi(tmp_path: Path) -> None:
     second = run_cmd("materialize", "--store", str(tmp_path), input_obj=second_record)
     assert first["results"][0]["key"] == second["results"][0]["key"]
     assert second["results"][0]["action"] == "matched-existing"
+
+
+def test_concurrent_materialize_merges_one_not_started_card(tmp_path: Path) -> None:
+    records = []
+    for i in range(6):
+        rec = sample_record()
+        rec["abstract"] = f"Abstract version {i}"
+        records.append(rec)
+
+    def call(i: int) -> dict:
+        return run_cmd("materialize", "--store", str(tmp_path), "--provenance", f"web:lens-{i}", input_obj=records[i])
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        outs = list(pool.map(call, range(6)))
+
+    task_paths = {Path(out["results"][0]["path"]) for out in outs}
+    assert len(task_paths) == 1
+    assert len(list(tmp_path.glob("*/task.md"))) == 1
+    text = next(iter(task_paths)).read_text(encoding="utf-8")
+    assert "status: not-started" in text
+    assert "## Metadata" in text
+    assert "## Extraction" in text
+
+
+def test_claim_transitions_exactly_one_concurrent_reader(tmp_path: Path) -> None:
+    created = run_cmd("materialize", "--store", str(tmp_path), input_obj=sample_record())
+    key = created["results"][0]["key"]
+
+    def call(i: int) -> dict:
+        return run_cmd("claim", key, "--store", str(tmp_path), "--by", f"dispatch-{i}")
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        outs = list(pool.map(call, range(5)))
+
+    winners = [out for out in outs if out["won"]]
+    assert len(winners) == 1
+    assert all(out["status"] == "in-progress" for out in outs)
+    task_text = (tmp_path / key / "task.md").read_text(encoding="utf-8")
+    assert "status: in-progress" in task_text
+    assert "## Claim" in task_text
+    assert "- Claimed by: dispatch-" in task_text
+
+
+def test_promote_moves_and_rewrites_candidate_link(tmp_path: Path) -> None:
+    source = run_cmd("materialize", "--store", str(tmp_path), input_obj=sample_record())
+    key = source["results"][0]["key"]
+    citing_record = sample_record()
+    citing_record["id"] = {"doi": "10.1111/jofi.99999", "s2": "different"}
+    citing_record["title"] = "A Citing Paper"
+    citing = run_cmd("materialize", "--store", str(tmp_path), input_obj=citing_record)
+    citing_path = Path(citing["results"][0]["path"])
+    text = citing_path.read_text(encoding="utf-8")
+    text = text.replace("- Source paper: ", f"- Source paper: {key}/task.md")
+    citing_path.write_text(text, encoding="utf-8")
+
+    dest = tmp_path / "permanent" / key
+    out = run_cmd("promote", key, "--store", str(tmp_path), "--destination", str(dest))
+
+    assert out["action"] == "promoted"
+    assert dest.exists()
+    assert not (tmp_path / key).exists()
+    assert (dest / "task.md").exists()
+    updated = citing_path.read_text(encoding="utf-8")
+    assert "permanent" in updated
+    assert out["updated_links"]

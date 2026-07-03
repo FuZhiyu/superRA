@@ -1,6 +1,6 @@
 ---
 title: "Shared Store And Client Mechanisms"
-status: not-started
+status: implemented
 depends_on:
   - task-tree-native-orchestration
 ---
@@ -41,3 +41,13 @@ Give the shared candidate store and citation client the mechanics that make conc
 ## Planner Guidance
 
 Keep this task to the four mechanisms above — do not touch workflow or agent-protocol prose here. The dependent task (`read-once-review-agent`) wires the new commands into agent-facing instructions once they exist and are named; land this task first so that one can reference concrete command names.
+
+## Results
+
+Implemented the shared coordination mechanisms.
+
+- [`candidate_materializer.py`](../../../skills/literature-review/scripts/candidate_materializer.py) now serializes store mutations, writes task files atomically, merges recon provenance into existing cards, supports `claim` for atomic `not-started` -> `in-progress` read claims, and supports `promote` to move a candidate folder to an explicit permanent-record destination while rewriting candidate-store links.
+- [`citation_client.py`](../../../skills/literature-review/scripts/citation_client.py) now exposes `citations-union`, which unions forward citations across version IDs and preserves per-record `source_versions`.
+- [`citation-client.md`](../../../skills/literature-review/references/citation-client.md) documents `citations-union` and the materializer's materialize / claim / promote behavior.
+
+Verification: `uv run --with pytest --with pyyaml python -m pytest skills/literature-review/scripts` passed with 71 tests.

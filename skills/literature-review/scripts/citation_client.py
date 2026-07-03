@@ -1227,6 +1227,45 @@ def _oc_citations_fallback(args, transport, cfg, result: dict) -> bool:
     return True
 
 
+def citation_records_for_one(transport, cfg, paper_id: str, source: str, limit: int, include_raw: bool) -> tuple[list[dict], str, bool, list[str]]:
+    notes: list[str] = []
+    s2_available = True
+    if source == "opencitations":
+        try:
+            return opencitations_citations(transport, cfg, paper_id, limit=limit, include_raw=include_raw), "opencitations", s2_available, notes
+        except OpenCitationsUnavailable as exc:
+            notes.append(f"{paper_id}: OpenCitations unavailable: {exc}")
+            return [], "opencitations", s2_available, notes
+    try:
+        return s2_citations(transport, cfg, paper_id, limit=limit, include_raw=include_raw), "s2", s2_available, notes
+    except S2Unavailable as exc:
+        s2_available = False
+        notes.append(f"{paper_id}: S2 forward citations unavailable: {exc}")
+    if source == "auto":
+        try:
+            return opencitations_citations(transport, cfg, paper_id, limit=limit, include_raw=include_raw), "opencitations", s2_available, notes
+        except OpenCitationsUnavailable as exc:
+            notes.append(f"{paper_id}: OpenCitations fallback unavailable: {exc}")
+    return [], source, s2_available, notes
+
+
+def merge_source_versions(records: list[dict], clusters: list[dict]) -> list[dict]:
+    merged: list[dict] = []
+    for cluster in clusters:
+        rec = json.loads(json.dumps(cluster["canonical"]))
+        versions = []
+        seen = set()
+        for idx in cluster["members"]:
+            for entry in records[idx].get("source_versions") or []:
+                key = (entry.get("version"), entry.get("source"))
+                if key not in seen:
+                    seen.add(key)
+                    versions.append(entry)
+        rec["source_versions"] = versions
+        merged.append(rec)
+    return merged
+
+
 def cmd_citations(args, transport=None) -> int:
     cfg = get_config()
     transport = transport or build_default_transport(args, cfg)
@@ -1262,6 +1301,42 @@ def cmd_citations(args, transport=None) -> int:
     result["records"] = []
     result["notes"].append("fall back to the workflow-layer forward web sweep")
     emit(result)
+    return 0
+
+
+def cmd_citations_union(args, transport=None) -> int:
+    cfg = get_config()
+    transport = transport or build_default_transport(args, cfg)
+    notes: list[str] = []
+    records: list[dict] = []
+    s2_available = True
+    sources_used: list[str] = []
+    for paper_id in args.paper_ids:
+        recs, source, s2_ok, rec_notes = citation_records_for_one(
+            transport, cfg, paper_id, args.source, args.limit, args.raw
+        )
+        s2_available = s2_available and s2_ok
+        notes.extend(rec_notes)
+        if recs:
+            sources_used.append(source)
+        for rec in recs:
+            item = json.loads(json.dumps(rec))
+            item["source_versions"] = [{"version": paper_id, "source": source}]
+            records.append(item)
+    deduped = dedup_records(records) if records else {"clusters": [], "review_pairs": []}
+    unioned = merge_source_versions(records, deduped["clusters"]) if records else []
+    emit(
+        {
+            "papers": args.paper_ids,
+            "source": args.source,
+            "sources_used": sorted(set(sources_used)),
+            "s2_available": s2_available,
+            "notes": notes,
+            "count": len(unioned),
+            "records": unioned,
+            "review_pairs": deduped.get("review_pairs", []),
+        }
+    )
     return 0
 
 
@@ -1488,6 +1563,17 @@ def build_parser() -> argparse.ArgumentParser:
     _add_raw(p)
     _add_cache_flags(p)
     p.set_defaults(func=cmd_citations)
+
+    p = sub.add_parser("citations-union", help="union forward citations across version DOIs")
+    p.add_argument("paper_ids", nargs="+", help="version DOI / arXiv id / S2 id values to union")
+    p.add_argument(
+        "--source", choices=["auto", "s2", "opencitations"], default="auto",
+        help="auto = S2 then OpenCitations fallback (default); s2 = S2 only; opencitations = OpenCitations only",
+    )
+    p.add_argument("--limit", type=int, default=100, help="max citations per version id (default 100)")
+    _add_raw(p)
+    _add_cache_flags(p)
+    p.set_defaults(func=cmd_citations_union)
 
     p = sub.add_parser("metadata", help="hydrate verbatim metadata by identifier")
     p.add_argument("identifier", help="DOI / arXiv id / S2 id")

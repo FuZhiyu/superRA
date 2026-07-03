@@ -102,7 +102,17 @@ Forward citations — the snowball backbone.
 
 Output shape matches `references`; `source` reports which backend answered (`s2` or `opencitations`). Fallback chain under `auto`: **S2 → OpenCitations → empty + web-sweep note.** On S2 outage `s2_available: false`; if OpenCitations then answers, `source: "opencitations"` with the DOI→DOI records; if it too is unavailable (or no DOI), `records` is empty with a note to run the workflow-layer forward web sweep.
 
-**Version-DOI union (workflow layer).** OpenCitations is DOI→DOI only, and in economics a paper's forward citations fragment across its version DOIs (NBER `10.3386/*`, SSRN `10.2139/ssrn.*`, and the journal DOI). The client stays **per-DOI**; complete forward coverage requires calling `citations` once per known version DOI and unioning the results — a workflow step, not a tool feature (see [workflow.md](workflow.md) and [discovery.md](discovery.md)).
+### `citations-union PAPER_ID [PAPER_ID ...]`
+
+Forward-citation union across known version IDs for the same work, e.g. NBER `10.3386/*`, SSRN `10.2139/ssrn.*`, and journal DOI.
+
+| Flag | Meaning |
+|---|---|
+| `--source {auto,s2,opencitations}` | same backend selection as `citations` |
+| `--limit N` | max citations per version ID (default 100) |
+| `--raw` | include verbatim payloads |
+
+Output: `{papers, source, sources_used, s2_available, notes, count, records, review_pairs}`. Records are deduplicated across version IDs; each record carries `source_versions: [{version, source}, ...]`.
 
 ### `metadata IDENTIFIER`
 
@@ -164,6 +174,9 @@ The materializer:
 
 - computes a human-readable key from first author, venue/WP source, year, and title;
 - reuses an existing folder when DOI, arXiv, S2/corpus id, or normalized title-year clearly match;
+- merges new provenance into an existing card during recon and leaves it `status: not-started`;
+- claims a candidate for substantive reading with `claim <key> --by <dispatch-label>`, atomically changing `status: not-started` to `status: in-progress`;
+- moves a candidate into a caller-supplied permanent-record destination with `promote <key> --destination <path>` and rewrites candidate-store links from the old path;
 - appends a deterministic short hash only for key collisions;
 - writes a candidate `task.md` with standard task frontmatter and the full paper-card body skeleton, including empty Zotero, artifact, screening, quality, and extraction fields for agents to supplement.
 

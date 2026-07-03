@@ -13,10 +13,15 @@ from citation/search clients; authoritative candidate state is the generated
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import fcntl
 import hashlib
 import json
+import os
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +34,27 @@ def fail(message: str, code: int = 1) -> int:
 def emit(payload: object) -> None:
     json.dump(payload, sys.stdout, indent=2, ensure_ascii=False)
     sys.stdout.write("\n")
+
+
+def utc_now() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+class StoreLock:
+    def __init__(self, store: Path):
+        self.store = store
+        self.file = None
+
+    def __enter__(self):
+        self.store.mkdir(parents=True, exist_ok=True)
+        self.file = open(self.store / ".candidate-materializer.lock", "a+", encoding="utf-8")
+        fcntl.flock(self.file, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self.file is not None:
+            fcntl.flock(self.file, fcntl.LOCK_UN)
+            self.file.close()
 
 
 def normalize_doi(value: str | None) -> str | None:
@@ -169,6 +195,79 @@ def find_existing(store: Path, ident: dict[str, str]) -> Path | None:
     return None
 
 
+def read_status(task_path: Path) -> str | None:
+    text = task_path.read_text(encoding="utf-8")
+    match = re.search(r"(?m)^status:\s*(\S+)\s*$", text)
+    return match.group(1) if match else None
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp:
+            tmp.write(text)
+        os.replace(tmp_name, path)
+    except OSError:
+        with suppress_unlink(tmp_name):
+            pass
+        raise
+
+
+class suppress_unlink:
+    def __init__(self, path: str):
+        self.path = path
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            os.unlink(self.path)
+        except OSError:
+            pass
+
+
+def set_status(text: str, status: str) -> str:
+    if not re.search(r"(?m)^status:\s*\S+\s*$", text):
+        raise ValueError("task.md has no status frontmatter field")
+    return re.sub(r"(?m)^status:\s*\S+\s*$", f"status: {status}", text, count=1)
+
+
+def ensure_section(text: str, heading: str, body: list[str]) -> str:
+    if f"\n{heading}\n" in text or text.startswith(f"{heading}\n"):
+        return text
+    block = "\n".join(["", heading, "", *body, ""])
+    return text.rstrip() + block + "\n"
+
+
+def update_claim_section(text: str, claimant: str, claimed_at: str, lease_hours: float) -> str:
+    body = [
+        f"- Claimed by: {claimant}",
+        f"- Claimed at: {claimed_at}",
+        f"- Lease hours: {lease_hours:g}",
+    ]
+    block = "\n".join(["## Claim", "", *body, ""])
+    pattern = r"(?ms)^## Claim\n.*?(?=^## |\Z)"
+    if re.search(pattern, text):
+        return re.sub(pattern, block, text, count=1)
+    return text.rstrip() + "\n\n" + block
+
+
+def append_provenance(task_path: Path, provenance: str | None) -> bool:
+    if not provenance:
+        return False
+    text = task_path.read_text(encoding="utf-8")
+    line = f"- Additional provenance: {provenance}"
+    if line in text or f"- Discovered via: {provenance}" in text:
+        return False
+    marker = "## Screening Decision"
+    if marker not in text:
+        return False
+    text = text.replace(f"\n{marker}", f"\n{line}\n\n{marker}", 1)
+    write_text_atomic(task_path, text)
+    return True
+
+
 def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> str:
     ids = identity(record)
     title = str(record.get("title") or "Untitled")
@@ -253,19 +352,108 @@ def candidate_task(record: dict[str, Any], key: str, provenance: str | None) -> 
 
 
 def materialize_one(store: Path, record: dict[str, Any], provenance: str | None) -> dict[str, Any]:
-    store.mkdir(parents=True, exist_ok=True)
     ident = identity(record)
     existing = find_existing(store, ident)
     if existing:
-        return {"action": "matched-existing", "key": existing.name, "path": str(existing / "task.md")}
+        updated = append_provenance(existing / "task.md", provenance)
+        return {
+            "action": "matched-existing",
+            "key": existing.name,
+            "path": str(existing / "task.md"),
+            "status": read_status(existing / "task.md"),
+            "updated_provenance": updated,
+        }
 
     base = key_for(record)
     target = store / base
     if target.exists():
         target = store / f"{base}-{short_hash(record)}"
     target.mkdir(parents=True, exist_ok=False)
-    (target / "task.md").write_text(candidate_task(record, target.name, provenance), encoding="utf-8")
-    return {"action": "created", "key": target.name, "path": str(target / "task.md")}
+    write_text_atomic(target / "task.md", candidate_task(record, target.name, provenance))
+    return {"action": "created", "key": target.name, "path": str(target / "task.md"), "status": "not-started"}
+
+
+def resolve_candidate(store: Path, candidate: str) -> Path:
+    path = Path(candidate)
+    if path.name == "task.md":
+        path = path.parent
+    if path.exists():
+        return path
+    path = store / candidate
+    if path.exists():
+        return path
+    raise FileNotFoundError(f"candidate not found: {candidate}")
+
+
+def claim_one(store: Path, candidate: str, claimant: str, lease_hours: float, force: bool = False) -> dict[str, Any]:
+    folder = resolve_candidate(store, candidate)
+    task_path = folder / "task.md"
+    text = task_path.read_text(encoding="utf-8")
+    status = read_status(task_path)
+    if status != "not-started" and not force:
+        return {
+            "won": False,
+            "key": folder.name,
+            "path": str(task_path),
+            "status": status,
+        }
+    claimed_at = utc_now()
+    text = set_status(text, "in-progress")
+    text = update_claim_section(text, claimant, claimed_at, lease_hours)
+    write_text_atomic(task_path, text)
+    return {
+        "won": True,
+        "key": folder.name,
+        "path": str(task_path),
+        "status": "in-progress",
+        "claimed_by": claimant,
+        "claimed_at": claimed_at,
+        "lease_hours": lease_hours,
+    }
+
+
+def rewrite_links(root: Path, old_path: Path, new_path: Path) -> dict[str, Any]:
+    updated: list[str] = []
+    unresolved: list[str] = []
+    old_abs = old_path.resolve()
+    for task_path in root.glob("*/task.md"):
+        if task_path.resolve() == (new_path / "task.md").resolve():
+            continue
+        text = task_path.read_text(encoding="utf-8")
+        candidates = {
+            str(old_path),
+            str(old_path / "task.md"),
+            old_path.name,
+            f"{old_path.name}/task.md",
+        }
+        next_text = text
+        for raw in sorted(candidates, key=len, reverse=True):
+            if raw in next_text:
+                replacement = os.path.relpath(new_path / "task.md", start=task_path.parent)
+                next_text = next_text.replace(raw, replacement)
+        if next_text != text:
+            write_text_atomic(task_path, next_text)
+            updated.append(str(task_path))
+        elif str(old_abs) in text:
+            unresolved.append(str(task_path))
+    return {"updated_links": updated, "unresolved_links": unresolved}
+
+
+def promote_one(store: Path, candidate: str, destination: Path) -> dict[str, Any]:
+    source = resolve_candidate(store, candidate)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        raise FileExistsError(f"destination already exists: {destination}")
+    old_path = source
+    shutil.move(str(source), str(destination))
+    link_report = rewrite_links(store, old_path, destination)
+    return {
+        "action": "promoted",
+        "key": destination.name,
+        "old_path": str(old_path),
+        "path": str(destination / "task.md"),
+        **link_report,
+    }
 
 
 def cmd_key(args: argparse.Namespace) -> int:
@@ -277,8 +465,25 @@ def cmd_key(args: argparse.Namespace) -> int:
 def cmd_materialize(args: argparse.Namespace) -> int:
     records = unwrap_records(read_json(args.record_file))
     store = Path(args.store)
-    results = [materialize_one(store, record, args.provenance) for record in records]
+    with StoreLock(store):
+        results = [materialize_one(store, record, args.provenance) for record in records]
     emit({"store": str(store), "count": len(results), "results": results})
+    return 0
+
+
+def cmd_claim(args: argparse.Namespace) -> int:
+    store = Path(args.store)
+    with StoreLock(store):
+        result = claim_one(store, args.candidate, args.by, args.lease_hours, args.force)
+    emit({"store": str(store), **result})
+    return 0
+
+
+def cmd_promote(args: argparse.Namespace) -> int:
+    store = Path(args.store)
+    with StoreLock(store):
+        result = promote_one(store, args.candidate, Path(args.destination))
+    emit({"store": str(store), **result})
     return 0
 
 
@@ -295,6 +500,20 @@ def build_parser() -> argparse.ArgumentParser:
     mat.add_argument("--record-file", default="-", help="JSON file or '-' for stdin")
     mat.add_argument("--provenance", help="discovered_via label to record")
     mat.set_defaults(func=cmd_materialize)
+
+    claim = sub.add_parser("claim", help="atomically claim a candidate for substantive reading")
+    claim.add_argument("candidate", help="candidate key or path")
+    claim.add_argument("--store", required=True, help="candidate-paper store directory")
+    claim.add_argument("--by", required=True, help="dispatch or agent label")
+    claim.add_argument("--lease-hours", type=float, default=12.0, help="claim lease length for diagnostics")
+    claim.add_argument("--force", action="store_true", help="override a stale/non-not-started claim")
+    claim.set_defaults(func=cmd_claim)
+
+    promote = sub.add_parser("promote", help="move a candidate folder into a permanent-record destination")
+    promote.add_argument("candidate", help="candidate key or path")
+    promote.add_argument("--store", required=True, help="candidate-paper store directory")
+    promote.add_argument("--destination", required=True, help="destination folder for the permanent record")
+    promote.set_defaults(func=cmd_promote)
     return parser
 
 
