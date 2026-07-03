@@ -1,17 +1,17 @@
 ---
-title: "Client And Materializer Mechanisms"
-status: approved
+title: "Shared Store And Client Mechanisms"
+status: not-started
 depends_on:
   - task-tree-native-orchestration
 ---
 
 ## Objective
 
-Add three mechanical capabilities the orchestration layer needs but the tooling doesn't yet provide:
+Give the shared candidate store and citation client the mechanics that make concurrent, read-once dispatching safe. The candidate store is the coordination space for parallel agents; these three capabilities are its backbone:
 
-1. **Concurrency-safe materialization** — multiple discovery dispatches write into the same shared non-git candidate store; the materializer must merge them safely rather than racing.
+1. **Concurrency-safe materialization** — parallel survey and paper dispatches write into the same shared non-git candidate store; `materialize` must merge concurrent writes for the same paper safely rather than racing.
 2. **Move-based promotion** — a `candidate_materializer.py promote` subcommand that moves (not copies) a candidate folder into `superRA/<review>/papers/` and repoints any candidate-store links that pointed at its old path.
-3. **Version-DOI union on the citation client** — a tool-level way to union forward citations across a paper's NBER/SSRN/journal DOIs, replacing per-dispatch manual looping.
+3. **Version-DOI union on the citation client** — a tool-level way to union forward citations across a paper's NBER/SSRN/journal version DOIs, replacing per-dispatch manual looping.
 
 ### Required design
 
@@ -37,4 +37,4 @@ Add three mechanical capabilities the orchestration layer needs but the tooling 
 
 ## Planner Guidance
 
-Keep this task to the three mechanisms above — do not touch `workflow.md`/`discovery.md`/`screening.md` prose here. The dependent task (`progressive-reading-and-orchestration-efficiency`) wires the new commands into agent-facing instructions once they exist and are named; land this task first so that one can reference concrete command names.
+Keep this task to the three mechanisms above — do not touch workflow or agent-protocol prose here. The dependent task (`read-once-paper-processing`) wires the new commands into agent-facing instructions once they exist and are named; land this task first so that one can reference concrete command names.
