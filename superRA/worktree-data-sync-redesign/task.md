@@ -1,6 +1,6 @@
 ---
 title: "Worktree Data Sync Redesign: Fast Seeding, Precise Discovery, Loud Failures"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
