@@ -59,6 +59,10 @@ Note the old list's "Relevant conventions" and "Input/output expectations" items
 - `task-tree/references/commands.md:21` ("seeds an advisory `## Planner Guidance` section") — accurate for force; leave.
 - `handoff-doc/SKILL.md:13` — deprecated redirect pointing at the rewritten section; leave.
 
+## Revision Notes
+
+Maturation disposition (researcher-confirmed, 2026-07-09): **fold into parent and remove this directory.** Update `planning-redesign`'s `## Results` review-and-planning-protocol bullet with a one-line note that the objective/guidance split was sharpened to contract vs. information handoff with two admission tests, pointing at `task-tree-design.md` §Writing Objectives and Planner Guidance as the durable record; then delete `objective-guidance-split/`. No key-result protection applies (doc-only task; the skill text is the artifact).
+
 ## Results
 
 Rewrote `## Writing Objectives and Planner Guidance` in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md#L5-L26) verbatim from the approved replacement text above: `## Objective` is now the short contract gated by the "reviewer should reject work that violates it" test, with the "Include:" six-item list replaced by four must-bullets (goal, decisions, constraints, validation) and a pointer sentence routing conventions to §Context Distillation and overflow to `## Planner Guidance`. `## Planner Guidance` is redefined as the planner's information handoff gated by the "task-specific and learned during planning, not assumed" test, replacing the purely negative "optional and advisory" framing. The existing working-context paragraph, the "Steps vs. subtasks vs. suggestions" block, and the no-bulk-migration paragraph were kept in place unchanged, as instructed.
