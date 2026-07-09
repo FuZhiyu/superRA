@@ -1,6 +1,6 @@
 ---
 title: "Discovery Precision: Built-in Denylist and Tracked-Symlink Exclusion"
-status: implemented
+status: approved
 depends_on: []
 ---
 
