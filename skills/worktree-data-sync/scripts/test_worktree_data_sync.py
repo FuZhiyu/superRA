@@ -679,6 +679,87 @@ class TestAnnotationCompatibility:
         assert "cache" in annotations
 
 
+class TestDiscoveryPrecision:
+    """Built-in denylist and tracked-symlink exclusion for managed-path discovery."""
+
+    @staticmethod
+    def _init_repo(repo: Path) -> None:
+        repo.mkdir()
+        subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
+
+    def test_denylisted_entries_excluded_data_dir_kept(self, tmp_path):
+        repo = tmp_path / "repo"
+        self._init_repo(repo)
+
+        (repo / "README.md").write_text("# Test\n", encoding="utf-8")
+        (repo / ".gitignore").write_text(
+            ".venv/\n__pycache__/\n.DS_Store\ndata/\n",
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "add", "README.md", ".gitignore"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+        (repo / ".venv").mkdir()
+        (repo / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+        (repo / "__pycache__").mkdir()
+        (repo / "__pycache__" / "mod.cpython-311.pyc").write_bytes(b"\x00")
+        (repo / ".DS_Store").write_bytes(b"\x00")
+        (repo / "data").mkdir()
+        (repo / "data" / "real.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+
+        entries = worktree_data_discovery.discover_managed_entries(repo)
+        paths = {e["path"] for e in entries}
+
+        assert ".venv" not in paths
+        assert "__pycache__" not in paths
+        assert ".DS_Store" not in paths
+        assert "data" in paths
+
+    def test_denylisted_root_with_annotation_is_symlink_only(self, tmp_path):
+        repo = tmp_path / "repo"
+        self._init_repo(repo)
+
+        (repo / "README.md").write_text("# Test\n", encoding="utf-8")
+        (repo / ".gitignore").write_text(
+            ".cache/\n.cache/  # data-sync:symlink\n",
+            encoding="utf-8",
+        )
+        subprocess.run(["git", "add", "README.md", ".gitignore"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+        (repo / ".cache").mkdir()
+        (repo / ".cache" / "big.bin").write_bytes(b"\x00" * 8)
+
+        entries = worktree_data_discovery.discover_managed_entries(repo)
+        by_path = {e["path"]: e for e in entries}
+
+        assert ".cache" in by_path
+        assert by_path[".cache"]["symlink_only"] is True
+
+    def test_tracked_internal_symlink_excluded_external_symlink_kept(self, tmp_path):
+        repo = tmp_path / "repo"
+        self._init_repo(repo)
+
+        (repo / "CLAUDE.md").write_text("# Guidelines\n", encoding="utf-8")
+        (repo / "AGENTS.md").symlink_to("CLAUDE.md")
+
+        external = tmp_path / "external-notes"
+        external.mkdir()
+        (external / "note.txt").write_text("note\n", encoding="utf-8")
+        (repo / "notes").symlink_to(external)
+
+        subprocess.run(["git", "add", "CLAUDE.md", "AGENTS.md"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+        entries = worktree_data_discovery.discover_managed_entries(repo)
+        paths = {e["path"] for e in entries}
+
+        assert "AGENTS.md" not in paths
+        assert "notes" in paths
+
+
 class TestSafeJoinUnder:
     """Tests for _safe_join_under path validation."""
 
@@ -716,7 +797,12 @@ class TestSafeJoinUnder:
 
 class TestNestedWorktreeSelfReference:
     """Guard against self-referential links when --to is nested under a
-    gitignored folder of --from (e.g., /repo/.worktrees/foo seeded from /repo)."""
+    gitignored folder of --from (e.g., /repo/nested-worktrees/foo seeded from /repo).
+
+    Uses a non-denylisted directory name so this exercises the self-reference
+    guard specifically, independent of TestDiscoveryPrecision's denylist coverage
+    of the conventional ".worktrees" name.
+    """
 
     @pytest.fixture
     def repo_with_nested_worktree(self, tmp_path):
@@ -727,15 +813,15 @@ class TestNestedWorktreeSelfReference:
         subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
 
         (repo / "README.md").write_text("# Test\n", encoding="utf-8")
-        (repo / ".gitignore").write_text(".worktrees/\noutput/\n", encoding="utf-8")
+        (repo / ".gitignore").write_text("nested-worktrees/\noutput/\n", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
 
         (repo / "output").mkdir()
         (repo / "output" / "result.csv").write_text("a,b\n", encoding="utf-8")
 
-        (repo / ".worktrees").mkdir()
-        child = repo / ".worktrees" / "foo"
+        (repo / "nested-worktrees").mkdir()
+        child = repo / "nested-worktrees" / "foo"
         subprocess.run(
             ["git", "worktree", "add", str(child), "-b", "foo"],
             cwd=repo, check=True, capture_output=True,
@@ -750,7 +836,7 @@ class TestNestedWorktreeSelfReference:
         entries = worktree_data_discovery.discover_managed_entries(main, dest_worktree=child)
         paths = {e["path"] for e in entries}
 
-        assert ".worktrees" not in paths
+        assert "nested-worktrees" not in paths
         assert "output" in paths
 
     def test_nested_worktree_seed_does_not_self_reference(self, repo_with_nested_worktree):
@@ -760,7 +846,7 @@ class TestNestedWorktreeSelfReference:
         entries = worktree_data_discovery.discover_managed_entries(main, dest_worktree=child)
         sync_worktree_data.run_seed(entries, child, verbose=False)
 
-        assert not (child / ".worktrees").exists()
+        assert not (child / "nested-worktrees").exists()
         assert (child / "output" / "result.csv").exists()
 
     def test_no_dest_preserves_legacy_behavior(self, repo_with_nested_worktree):
@@ -769,4 +855,4 @@ class TestNestedWorktreeSelfReference:
         entries = worktree_data_discovery.discover_managed_entries(main)
         paths = {e["path"] for e in entries}
 
-        assert ".worktrees" in paths
+        assert "nested-worktrees" in paths
