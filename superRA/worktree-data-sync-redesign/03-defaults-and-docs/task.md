@@ -1,6 +1,6 @@
 ---
 title: "CLI Default and Documentation Sync: --from = Current Worktree"
-status: implemented
+status: approved
 depends_on: [01-seed-fast-path, 02-discovery-precision]
 ---
 
