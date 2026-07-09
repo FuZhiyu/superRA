@@ -1,6 +1,6 @@
 ---
 title: "Objective/Guidance Split: Contract vs. Planning Dossier"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
