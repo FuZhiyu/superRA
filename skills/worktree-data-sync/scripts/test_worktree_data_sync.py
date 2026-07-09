@@ -71,15 +71,54 @@ def second_repo_worktree(tmp_path):
 
 
 class TestEndpointResolution:
-    def test_defaults_from_to_main_when_omitted(self, repo_with_worktrees):
+    def test_defaults_from_to_cwd_worktree_when_omitted(self, repo_with_worktrees):
         source, destination = worktree_data_discovery.resolve_endpoints(
             repo_with_worktrees["a"],
             to_path=str(repo_with_worktrees["b"]),
             from_path=None,
         )
 
+        assert source == repo_with_worktrees["a"].resolve()
+        assert destination == repo_with_worktrees["b"].resolve()
+
+    def test_defaults_from_to_main_worktree_when_cwd_is_main(self, repo_with_worktrees):
+        source, destination = worktree_data_discovery.resolve_endpoints(
+            repo_with_worktrees["main"],
+            to_path=str(repo_with_worktrees["b"]),
+            from_path=None,
+        )
+
         assert source == repo_with_worktrees["main"].resolve()
         assert destination == repo_with_worktrees["b"].resolve()
+
+    def test_rejects_cwd_outside_any_worktree(self, repo_with_worktrees, monkeypatch, tmp_path):
+        # A cwd inside the repo's git checkout always resolves under some known
+        # worktree root, so the "outside" branch is reached by making
+        # list_worktrees report roots that do not cover cwd (e.g. stale
+        # worktree metadata git has not pruned yet).
+        monkeypatch.setattr(
+            worktree_data_discovery,
+            "list_worktrees",
+            lambda cwd: [repo_with_worktrees["main"].resolve(), repo_with_worktrees["b"].resolve()],
+        )
+        outside = tmp_path / "not-a-worktree"
+        outside.mkdir()
+
+        with pytest.raises(RuntimeError, match="not inside any worktree"):
+            worktree_data_discovery.resolve_endpoints(
+                outside,
+                to_path=str(repo_with_worktrees["b"]),
+                from_path=None,
+            )
+
+    def test_worktree_containing_returns_deepest_match(self, tmp_path):
+        root = tmp_path / "repo-a"
+        nested = root / "sub" / "dir"
+        nested.mkdir(parents=True)
+
+        result = worktree_data_discovery.get_worktree_containing(nested, [root])
+
+        assert result == root.resolve()
 
     def test_accepts_explicit_from_to_worktrees(self, repo_with_worktrees):
         source, destination = worktree_data_discovery.resolve_endpoints(
@@ -660,6 +699,26 @@ class TestCliSurface:
         assert "Seed mode: force-symlink" in proc.stdout
         assert not (target / "output").exists()
         assert not (target / "data").exists()
+
+    def test_cli_seed_defaults_from_cwd_worktree_without_from_flag(self, repo_with_worktrees):
+        script = SCRIPTS_DIR / "sync_worktree_data.py"
+        wt_a = repo_with_worktrees["a"]
+        wt_b = repo_with_worktrees["b"]
+
+        (wt_a / "output").mkdir(parents=True, exist_ok=True)
+        (wt_a / "output" / "from_a.csv").write_text("a-only\n", encoding="utf-8")
+
+        proc = subprocess.run(
+            [sys.executable, str(script), "--to", str(wt_b), "--mode", "seed"],
+            cwd=wt_a,
+            capture_output=True,
+            text=True,
+        )
+
+        assert proc.returncode == 0
+        assert f"From: {wt_a.resolve()}" in proc.stdout
+        assert (wt_b / "output" / "from_a.csv").exists()
+        assert not (wt_b / "output" / "result.csv").exists()
 
 
 class TestAnnotationCompatibility:

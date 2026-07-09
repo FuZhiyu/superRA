@@ -1156,7 +1156,7 @@ Examples:
         """,
     )
 
-    parser.add_argument("--from", dest="from_path", help="Source worktree path (default: main worktree)")
+    parser.add_argument("--from", dest="from_path", help="Source worktree path (default: worktree containing cwd)")
     parser.add_argument("--to", dest="to_path", required=True, help="Destination worktree path")
     parser.add_argument("--mode", choices=["seed", "diff", "apply"], required=True)
     parser.add_argument(

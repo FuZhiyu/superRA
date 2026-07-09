@@ -69,9 +69,15 @@ def list_worktrees(cwd: Path) -> list[Path]:
     return worktrees
 
 
-def get_main_worktree(cwd: Path) -> Path:
-    """Return the main worktree path for the repository containing cwd."""
-    return list_worktrees(cwd)[0]
+def get_worktree_containing(cwd: Path, known: list[Path]) -> Path:
+    """Return the worktree root that contains cwd, deepest match wins."""
+    cwd_resolved = cwd.resolve()
+    matches = [root for root in known if _contains(root, cwd_resolved)]
+    if not matches:
+        raise RuntimeError(
+            f"Current directory is not inside any worktree of this repository: {cwd_resolved}"
+        )
+    return max(matches, key=lambda root: len(root.parts))
 
 
 def resolve_endpoints(cwd: Path, to_path: str, from_path: str | None) -> tuple[Path, Path]:
@@ -88,7 +94,7 @@ def resolve_endpoints(cwd: Path, to_path: str, from_path: str | None) -> tuple[P
         if resolved_from not in known_map:
             raise ValueError(f"--from must be an existing git worktree in this repository: {resolved_from}")
     else:
-        resolved_from = get_main_worktree(cwd)
+        resolved_from = get_worktree_containing(cwd, known)
 
     if resolved_from == resolved_to:
         raise ValueError("--from and --to must be different worktrees")
