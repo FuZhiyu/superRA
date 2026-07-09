@@ -1,6 +1,6 @@
 ---
 title: "Objective/Guidance Split: Contract vs. Planning Dossier"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -61,3 +61,17 @@ Note the old list's "Relevant conventions" and "Input/output expectations" items
 
 ## Results
 
+Rewrote `## Writing Objectives and Planner Guidance` in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md#L5-L26) verbatim from the approved replacement text above: `## Objective` is now the short contract gated by the "reviewer should reject work that violates it" test, with the "Include:" six-item list replaced by four must-bullets (goal, decisions, constraints, validation) and a pointer sentence routing conventions to §Context Distillation and overflow to `## Planner Guidance`. `## Planner Guidance` is redefined as the planner's information handoff gated by the "task-specific and learned during planning, not assumed" test, replacing the purely negative "optional and advisory" framing. The existing working-context paragraph, the "Steps vs. subtasks vs. suggestions" block, and the no-bulk-migration paragraph were kept in place unchanged, as instructed.
+
+Updated the two echo characterizations exactly as specified:
+- [task-file-contract.md:22](../../../../skills/task-tree/references/task-file-contract.md#L22) — `## Planner Guidance` anatomy bullet now reads "the planner's information handoff — findings from planning plus suggested route. Advisory: implementers may deviate …" (rest of bullet unchanged).
+- [superplan/SKILL.md:16](../../../../skills/superplan/SKILL.md#L16) — "binding vs. suggested content" → "contract vs. planning findings".
+- [superplan/SKILL.md:115](../../../../skills/superplan/SKILL.md#L115) — self-review item 5 → "The contract in `## Objective`; planning findings and suggested route in `## Planner Guidance`."
+
+**Preserved unchanged, verified by diff:** §Context Distillation mechanics (no lines touched), `agents/implementer.md` deviation protocol (no lines touched), `agents/reviewer.md` guidance treatment (no lines touched). The generated `direct-mode-implementer.md` / `direct-mode-reviewer.md` / `.codex/agents/*.toml` were left untouched since their source role specs did not change.
+
+**Validation:**
+- `grep -rn "Planner Guidance" skills/ agents/` — reviewed every hit; none characterizes the objective as "binding deliverables" vs. guidance as merely "suggested/optional filler" any more. `grep -rn "binding vs\|suggested content\|binding deliverables" skills/ agents/` returns no hits, confirming the old asymmetric framing is fully retired from prose (test-file string literals in `task-tree/scripts/test_task_tree.py` and `test_dashboard.py` only check for the literal heading `## Planner Guidance` existing in generated output, not for characterization language, so they needed no changes).
+- The two admission tests ("a line belongs in the objective only if the reviewer should reject work that violates it" / "a line belongs in guidance only if it is task-specific and was learned during planning rather than assumed") appear in full only in `task-tree-design.md`; every other touchpoint references the section by pointer or restates only the one-line echo specified above.
+- `uv run --script skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/task-tree-design.md skills/superplan/SKILL.md skills/task-tree/references/task-file-contract.md` → all three report `clean`.
+- DRY + Necessity gate: every added/changed line either restates settled user-approved wording verbatim (the replacement block) or is a one-line echo pointing at the authoritative section (the two echo edits) — no new independent characterization was introduced anywhere else.
