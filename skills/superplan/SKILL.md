@@ -13,7 +13,7 @@ description: "Proactively plan or update superRA work. Requires superRA:using-su
 
 Owns the procedural shape of the **PLAN** phase: discovery of existing work, exploration, domain setup, task decomposition, self-review, and handoff. Output is a `superRA/` task tree for superimplement to consume.
 
-The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
+The `## Objective` / `## Planner Guidance` split — contract vs. planning findings — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
 
 Task-tree design judgment — placement, task splitting, context distillation, update-task lifecycle, and retroactive task-tree creation — lives in `references/task-tree-design.md`.
 
@@ -112,7 +112,7 @@ After writing the complete task tree:
 2. **Placeholder scan:** Search for vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria. Fix them.
 3. **Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 4. **Validation coverage:** Does every transformative task have a corresponding validation criterion in its objective?
-5. **Objective/guidance split:** See `references/task-tree-design.md` §Writing Objectives and Planner Guidance. Binding deliverables and constraints in `## Objective`; advisory hints in `## Planner Guidance`.
+5. **Objective/guidance split:** See `references/task-tree-design.md` §Writing Objectives and Planner Guidance. The contract in `## Objective`; planning findings and suggested route in `## Planner Guidance`.
 6. **Handoff test:** If you stopped here and a new agent read any leaf task's ancestor chain, could they continue? Is there enough context?
 7. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
 8. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.

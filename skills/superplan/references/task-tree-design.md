@@ -4,19 +4,21 @@ Load this reference when designing, changing, consolidating, or integration-chec
 
 ## Writing Objectives and Planner Guidance
 
-`## Objective` is the authoritative implementation and review contract. It describes what success looks like, not optional routes for getting there.
+`## Objective` is the contract — with the user at planning time, with the implementer and reviewer at dispatch. It states what must be true when the task is done, and nothing else. Keep it short: a goal statement (often a close paraphrase of the user's request) plus a few binding bullets.
 
-**Include:**
-- The goal — what the task should produce or verify.
-- Relevant conventions — naming, paths, units, variable definitions.
-- Constraints — what to avoid and what to preserve.
-- User or methodology decisions the implementer must preserve.
-- Input/output expectations — what data comes in and what form results take, including the scripts, files, or artifacts that define the task's scope.
-- Validation criteria — what must be true for the task to be complete.
+A line belongs in the objective only if the reviewer should reject work that violates it:
+- The goal — what the task must produce or verify, naming the artifacts that define its scope.
+- User or methodology decisions that must be preserved.
+- Constraints — what to avoid and what to keep intact.
+- Validation criteria — what must be checked for the task to be complete.
+
+Binding conventions that live elsewhere enter as pointers, not prose — see §Context Distillation. When an objective outgrows a short paragraph plus its must-bullets, either the task needs splitting (§Splitting Tasks) or the excess is information, which belongs in `## Planner Guidance`.
 
 The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (the project-level ones plus any nested in a directory the agent reads), manifest-loaded skills, the assigned task plus its ancestor chain via `superra task read`, and on-demand directory walking when a touched file needs a convention the chain does not cover. The objective's job is to make that assembled set *sufficient* — point into it so the right standing context and the right files are reachable — not to reproduce context that already lives there. See §Context Distillation for the point-vs-distill choice.
 
-`## Planner Guidance` is optional and advisory. Use it for suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints, and other context the implementer may adapt or ignore while satisfying `## Objective`.
+`## Planner Guidance` is the planner's information handoff: what planning discovered that the implementer would otherwise re-derive. Candidate files and their roles, data locations and quirks found during exploration, the suggested route and why, known dead ends. It is advisory in force — any route satisfying `## Objective` is acceptable — but its content is findings, not filler.
+
+A line belongs in guidance only if it is task-specific and was learned during planning rather than assumed. If it would hold for any task in this domain, or the implementer's standing context already carries it, delete it. Omit the section when nothing qualifies.
 
 **Steps vs. subtasks vs. suggestions:**
 - Necessary steps that need independent tracking and review become subtasks.
