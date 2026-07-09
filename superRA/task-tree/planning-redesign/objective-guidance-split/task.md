@@ -68,6 +68,8 @@ Updated the two echo characterizations exactly as specified:
 - [superplan/SKILL.md:16](../../../../skills/superplan/SKILL.md#L16) — "binding vs. suggested content" → "contract vs. planning findings".
 - [superplan/SKILL.md:115](../../../../skills/superplan/SKILL.md#L115) — self-review item 5 → "The contract in `## Objective`; planning findings and suggested route in `## Planner Guidance`."
 
+**Final diff self-check:** `git diff caada176..HEAD` — surviving hunks: task-tree-design.md §Writing Objectives rewrite, two one-line echoes (superplan/SKILL.md:16, :115), task-file-contract.md:22 anatomy echo, plus this task file; all justified by the task objective; no suspicious hunks. Sync was a no-op (base did not advance), so no `## Sync Impact` context existed.
+
 **Preserved unchanged, verified by diff:** §Context Distillation mechanics (no lines touched), `agents/implementer.md` deviation protocol (no lines touched), `agents/reviewer.md` guidance treatment (no lines touched). The generated `direct-mode-implementer.md` / `direct-mode-reviewer.md` / `.codex/agents/*.toml` were left untouched since their source role specs did not change.
 
 **Validation:**
