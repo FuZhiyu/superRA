@@ -401,6 +401,161 @@ class TestSeedDiffApply:
             )
 
 
+class TestSeedFastPath:
+    def test_fresh_clean_root_seeds_via_single_clone(self, monkeypatch, repo_with_worktrees):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+
+        real_run = subprocess.run
+        cp_calls: list[list[str]] = []
+
+        def spy(cmd, *args, **kwargs):
+            if isinstance(cmd, (list, tuple)) and cmd and cmd[0] == "cp":
+                cp_calls.append([str(c) for c in cmd])
+            return real_run(cmd, *args, **kwargs)
+
+        monkeypatch.setattr(sync_worktree_data.subprocess, "run", spy)
+        summary = sync_worktree_data.run_seed(entries, target, verbose=False)
+
+        # The clean `output` root clones in a single recursive cp; `data` is symlinked (no cp).
+        recursive_clones = [cmd for cmd in cp_calls if "-R" in cmd]
+        assert len(recursive_clones) == 1
+        assert len(cp_calls) == 1
+        assert summary.errors == 0
+        assert not summary.failures
+        assert (target / "output" / "new.csv").exists()
+        assert (target / "output" / "result.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+        assert (target / "data").is_symlink()
+
+    def test_nested_dataless_yields_dirs_symlink_clones_and_batches(self, monkeypatch, repo_with_worktrees):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+        out = main / "output"
+
+        (out / "loose.txt").write_text("loose\n", encoding="utf-8")
+        (out / "clean").mkdir()
+        (out / "clean" / "keep.csv").write_text("k\n", encoding="utf-8")
+        (out / "deep" / "mid").mkdir(parents=True)
+        (out / "deep" / "mid" / "placeholder.bin").write_text("cloud\n", encoding="utf-8")
+        (out / "deep" / "mid" / "other.txt").write_text("real\n", encoding="utf-8")
+
+        monkeypatch.setattr(
+            sync_worktree_data,
+            "is_dataless",
+            lambda path: Path(path).name == "placeholder.bin",
+        )
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+        summary = sync_worktree_data.run_seed(entries, target, verbose=False)
+
+        dst = target / "output"
+        # Real directories along the contaminated path.
+        assert dst.is_dir() and not dst.is_symlink()
+        assert (dst / "deep").is_dir() and not (dst / "deep").is_symlink()
+        assert (dst / "deep" / "mid").is_dir() and not (dst / "deep" / "mid").is_symlink()
+        # Symlink for the dataless file; no materialization.
+        assert (dst / "deep" / "mid" / "placeholder.bin").is_symlink()
+        # Clean sibling cloned wholesale.
+        assert (dst / "clean").is_dir()
+        assert (dst / "clean" / "keep.csv").read_text(encoding="utf-8") == "k\n"
+        # Loose files copied (batched) at both the root and the contaminated dir.
+        assert (dst / "loose.txt").read_text(encoding="utf-8") == "loose\n"
+        assert (dst / "result.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+        assert (dst / "deep" / "mid" / "other.txt").read_text(encoding="utf-8") == "real\n"
+        assert summary.errors == 0
+
+    def test_mostly_dataless_root_suggests_annotation_and_seeds_per_file(
+        self, monkeypatch, capsys, repo_with_worktrees
+    ):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+        out = main / "output"
+
+        for name in ("dl_1.csv", "dl_2.csv", "dl_3.csv"):
+            (out / name).write_text("cloud\n", encoding="utf-8")
+
+        monkeypatch.setattr(
+            sync_worktree_data,
+            "is_dataless",
+            lambda path: Path(path).name.startswith("dl_"),
+        )
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+        summary = sync_worktree_data.run_seed(entries, target, verbose=True)
+
+        stderr = capsys.readouterr().err
+        assert "data-sync:symlink" in stderr
+        assert "output" in stderr
+
+        dst = target / "output"
+        assert dst.is_dir() and not dst.is_symlink()
+        assert (dst / "dl_1.csv").is_symlink()
+        assert (dst / "new.csv").is_file() and not (dst / "new.csv").is_symlink()
+        assert (dst / "new.csv").read_text(encoding="utf-8") == "x,y\n7,8\n"
+        assert summary.errors == 0
+
+    def test_injected_copy_failure_records_per_path_reason(self, monkeypatch, repo_with_worktrees):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+
+        # Existing destination routes through the merge walk, whose loose copies batch.
+        (target / "output").mkdir(parents=True, exist_ok=True)
+        (target / "output" / "result.csv").write_text("local\n", encoding="utf-8")
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+
+        def fail_cp(cmd, *args, **kwargs):
+            raise subprocess.CalledProcessError(1, cmd)
+
+        monkeypatch.setattr(sync_worktree_data.subprocess, "run", fail_cp)
+        monkeypatch.setattr(sync_worktree_data, "cow_copy_file", lambda *a, **k: False)
+
+        summary = sync_worktree_data.run_seed(entries, target, verbose=False)
+
+        assert summary.errors >= 1
+        assert summary.failures
+        assert summary.errors == len(summary.failures)
+        assert any("new.csv" in path for path, _reason in summary.failures)
+
+    def test_seed_failure_emits_capped_listing(self, capsys):
+        summary = sync_worktree_data.SeedSummary()
+        for idx in range(25):
+            summary.record_failure(f"output/file_{idx}.csv", "copy failed")
+
+        sync_worktree_data.emit_seed_failures(summary, limit=20)
+
+        err = capsys.readouterr().err
+        assert "Seed encountered 25 error(s):" in err
+        assert "output/file_0.csv: copy failed" in err
+        assert "output/file_19.csv" in err
+        assert "output/file_20.csv" not in err
+        assert "and 5 more" in err
+
+    def test_cli_seed_nonzero_exit_on_failure(self, monkeypatch, capsys, repo_with_worktrees):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+
+        failing = sync_worktree_data.SeedSummary()
+        failing.record_failure(str(main / "output" / "new.csv"), "copy failed")
+        monkeypatch.setattr(sync_worktree_data, "run_seed", lambda *a, **k: failing)
+        monkeypatch.setattr(
+            sync_worktree_data.sys,
+            "argv",
+            ["sync_worktree_data.py", "--to", str(target), "--mode", "seed"],
+        )
+        monkeypatch.chdir(main)
+
+        with pytest.raises(SystemExit) as excinfo:
+            sync_worktree_data.main()
+
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "new.csv" in err
+        assert "copy failed" in err
+
+
 class TestCliSurface:
     def test_cli_rejects_delete_action(self, repo_with_worktrees):
         script = SCRIPTS_DIR / "sync_worktree_data.py"
