@@ -1,6 +1,6 @@
 ---
 title: "Seed Fast Path: Subtree Cloning with Dataless Preflight and Loud Errors"
-status: implemented
+status: approved
 depends_on: []
 ---
 
