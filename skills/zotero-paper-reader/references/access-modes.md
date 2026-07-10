@@ -45,13 +45,15 @@ The `bibtex`, `cite`, and `bibliography` commands resolve citekeys and entries f
 
 ## Write path (adding papers)
 
-The `add`, `attach`, and `selected` commands write to the library. The read-only local `/api` serves no write path, so a **local** write goes through the Zotero desktop **connector** (the same port, a different path: `http://localhost:23119/connector/…`), and a **cloud** write goes through the Web API with a write-scoped key. `add` selects the path automatically.
+`add` and `attach` write to the library; `selected` reports the desktop UI's current target. The read-only local `/api` serves no write path. Local `add` and `selected` go through the Zotero desktop **connector** (the same port, a different path: `http://localhost:23119/connector/…`); `attach --file` goes through the Web API because the connector path here cannot attach an arbitrary local file to an existing item. `add` selects its path automatically.
 
 **Local connector (default).** Requires only Zotero desktop running with "allow other applications to communicate" enabled — no Docker, no key, no translation-server. The tool posts to `/connector/saveItems` with a small direct-HTTP helper (pyzotero cannot reach the connector — it is Web-API-only). Connector requests carry a non-`Mozilla/` `User-Agent` and a `zotero-allowed-request: 1` header (or the connector rejects the save), `X-Zotero-Connector-API-Version: 3`, and a fresh UUID `sessionID` per save; a `409 SESSION_EXISTS` is retried with a new session, and `200`/`201` are success.
 
 `saveItems` **takes no target parameter** — the item lands in whatever library/collection is currently **selected in the Zotero desktop UI**. Read that selection with `selected` (`/connector/getSelectedCollection`) and report it before saving; steer a session to a listed `targets[].id` with `add --target ID` (`/connector/updateSession`). Because the destination follows the UI, tell the user to switch the selection first if they want a different one.
 
-**Cloud Web API (fallback).** Used when the connector is unreachable, or when the destination is one the connector cannot target — a group library (`--library group:<id>`) or a specific collection (`--collection KEY`) routes `add` to the Web API automatically. It uses pyzotero `create_items` (and `attachment_simple` for `attach`) against any accessible library, and needs a **write-scoped** `ZOTERO_API_KEY`.
+**Connector PDF URL route.** When adding a new item with a stable PDF URL, pass `add --pdf-url URL`. The mapped item carries an `attachments` entry, and `/connector/saveItems` lets Zotero Desktop fetch the PDF during the save. This is the local, no-key attachment route. It applies at item creation time, not to an arbitrary local file for an already-saved item.
+
+**Cloud Web API (fallback and file attach).** Used when the connector is unreachable, or when the destination is one the connector cannot target — a group library (`--library group:<id>`) or a specific collection (`--collection KEY`) routes `add` to the Web API automatically. It uses pyzotero `create_items` and needs a **write-scoped** `ZOTERO_API_KEY`; `attach --item-key KEY --file paper.pdf` uses pyzotero `attachment_simple` and is always a Web API upload.
 
 **Path selection.** `--mode local` forces the connector, `--mode web` forces the Web API. On the default `--mode auto`: a group library or `--collection` → Web API; otherwise the connector when reachable, else the Web API.
 
@@ -77,7 +79,9 @@ The `add`, `attach`, and `selected` commands write to the library. The read-only
 | Cite into a draft + `.bib` sync (`cite`) | yes (BBT keys; built-in fallback) | yes (built-in fallback only) |
 | Formatted references, BBT (`bibliography`) | yes (needs Better BibTeX) | no (built-in fallback only) |
 | Formatted references, built-in CSL (`bibliography` fallback) | yes | yes |
-| Add/attach papers (`add`, `attach`, `selected`) | via the desktop **connector**, not the read-only `/api` (no key) | yes (write-scoped API key) |
+| Add a paper (`add`) | via the desktop **connector**, not the read-only `/api` (no key); `--pdf-url` lets the connector fetch a PDF during save | yes (write-scoped API key) |
+| Attach a local file to an existing item (`attach --file`) | no | yes (write-scoped API key) |
+| Report connector save target (`selected`) | via the desktop **connector** | no |
 
 Two distinct full-text operations are easy to conflate:
 
