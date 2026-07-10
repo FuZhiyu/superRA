@@ -1,6 +1,6 @@
 ---
 name: worktree-data-sync
-description: Sync non-git data between worktrees. Use to seed, diff, reconcile, or tear down managed data for existing worktrees.
+description: Sync non-git data (datasets, outputs, caches, symlinked data) between git worktrees. Use proactively whenever creating or entering a worktree whose work depends on non-git-tracked data — seed the data in before dispatching or doing work there — and to seed, diff, reconcile, or tear down managed data between existing worktrees.
 user-invocable: true
 ---
 
@@ -18,7 +18,7 @@ Activate the data-sync CLI below for:
 
 ## Command Surface
 
-Single CLI entrypoint (`<skill-dir>` = directory containing this `SKILL.md`; `--from` defaults to main worktree):
+Single CLI entrypoint (`<skill-dir>` = directory containing this `SKILL.md`; `--from` defaults to the worktree containing the caller's current directory):
 
 ```bash
 python3 <skill-dir>/scripts/sync_worktree_data.py --to <worktree-path> --mode <seed|diff|apply> [OPTIONS]
@@ -28,12 +28,15 @@ python3 <skill-dir>/scripts/sync_worktree_data.py --to <worktree-path> --mode <s
 
 ### `--mode seed`
 
-Materialize missing managed files in destination from source.
+Materialize missing managed files in destination from source. Never overwrites existing destination files.
 
-Rules:
-- copies only missing files
-- never overwrites existing destination files
-- applies stateless managed-path discovery
+Per managed directory root, a stat-only preflight walk picks the cheapest path:
+- **fresh, clean destination:** one `cp -c -R -p` clones the whole root (COW where the filesystem supports it, falling back to `shutil.copytree`)
+- **fresh destination with cloud-placeholder (dataless) files:** only the directories holding a placeholder are recreated — placeholders become symlinks to their resolved source, siblings clone whole, loose files batch-copy
+- **more than half the root's files are dataless:** seeds per-file (symlink placeholders, batch-copy the rest) and prints a suggestion to annotate the root `# data-sync:symlink`, since it never switches modes automatically
+- **destination root already exists:** falls back to the per-file merge walk, copying only what's missing
+
+Every failed path is recorded with its reason; seed prints the listing to stderr (capped, plus a total count) and exits nonzero when any path failed — nothing is swallowed silently.
 
 Optional: `--seed-sync-mode <auto|force-symlink|force-cow>` (default: `auto`)
 
@@ -74,10 +77,12 @@ No delete/discard action is provided.
 ## Managed Path Discovery
 
 Discovery is stateless and source-driven. Managed roots come from:
-- gitignored paths via `git ls-files --others --ignored --exclude-standard --directory`
+- gitignored paths via `git ls-files --others --ignored --exclude-standard --directory`, minus a built-in denylist (below)
 - tracked symlinks that resolve outside the repo
-- top-level symlink safety net
+- top-level symlink safety net, skipping symlinks git already tracks (those are checked out by git in the destination already)
 - `.gitignore` symlink-only annotations
+
+A gitignored entry whose basename matches a well-known non-data name — `.venv`, `venv`, `.direnv`, `node_modules`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `.tox`, `.nox`, `.cache`, `.ipynb_checkpoints`, `.quarto`, `dist`, `build`, `*.egg-info`, `.DS_Store`, `.env`, `.envrc`, `.worktrees`, `.claude`, `.codex` — is excluded from managed entries. The denylist filters discovered entries only; it does not exclude anything from inside a root that is otherwise managed. A `# data-sync:symlink` annotation always wins over the denylist, so a deliberately annotated root (even one carrying a denylisted name) is still managed.
 
 Annotate a path as symlink-only by adding a **duplicate line** with the tag comment:
 
@@ -94,7 +99,7 @@ Symlink-only roots are symlinked in seed auto mode and excluded from diff/apply 
 ## Examples
 
 ```bash
-# Seed from main worktree into destination
+# Seed from the current worktree into destination
 python3 <skill-dir>/scripts/sync_worktree_data.py \
   --to ../MyRepo-feature \
   --mode seed

@@ -3,8 +3,42 @@
 
 from __future__ import annotations
 
+import fnmatch
 import subprocess
 from pathlib import Path
+
+# Well-known non-data names. A discovered gitignored entry whose basename
+# matches one of these (exact name or glob) is excluded from managed
+# entries unless it carries an explicit `# data-sync:symlink` annotation.
+DEFAULT_DENYLIST: tuple[str, ...] = (
+    ".venv",
+    "venv",
+    ".direnv",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    ".nox",
+    ".cache",
+    ".ipynb_checkpoints",
+    ".quarto",
+    "dist",
+    "build",
+    "*.egg-info",
+    ".DS_Store",
+    ".env",
+    ".envrc",
+    ".worktrees",
+    ".claude",
+    ".codex",
+)
+
+
+def is_denylisted(basename: str) -> bool:
+    """Return True when basename matches a well-known non-data name."""
+    return any(fnmatch.fnmatch(basename, pattern) for pattern in DEFAULT_DENYLIST)
 
 
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -35,9 +69,15 @@ def list_worktrees(cwd: Path) -> list[Path]:
     return worktrees
 
 
-def get_main_worktree(cwd: Path) -> Path:
-    """Return the main worktree path for the repository containing cwd."""
-    return list_worktrees(cwd)[0]
+def get_worktree_containing(cwd: Path, known: list[Path]) -> Path:
+    """Return the worktree root that contains cwd, deepest match wins."""
+    cwd_resolved = cwd.resolve()
+    matches = [root for root in known if _contains(root, cwd_resolved)]
+    if not matches:
+        raise RuntimeError(
+            f"Current directory is not inside any worktree of this repository: {cwd_resolved}"
+        )
+    return max(matches, key=lambda root: len(root.parts))
 
 
 def resolve_endpoints(cwd: Path, to_path: str, from_path: str | None) -> tuple[Path, Path]:
@@ -54,7 +94,7 @@ def resolve_endpoints(cwd: Path, to_path: str, from_path: str | None) -> tuple[P
         if resolved_from not in known_map:
             raise ValueError(f"--from must be an existing git worktree in this repository: {resolved_from}")
     else:
-        resolved_from = get_main_worktree(cwd)
+        resolved_from = get_worktree_containing(cwd, known)
 
     if resolved_from == resolved_to:
         raise ValueError("--from and --to must be different worktrees")
@@ -167,7 +207,7 @@ def promote_ignored_path_to_symlink_dir_root(repo_root: Path, rel_path: Path) ->
     return rel_path, False
 
 
-def _tracked_external_symlink_paths(repo_root: Path) -> list[str]:
+def _tracked_symlink_paths(repo_root: Path) -> list[str]:
     """Return repo-relative paths that are tracked symlinks."""
     result = _run_git(["ls-files", "-s"], repo_root)
     if result.returncode != 0:
@@ -230,12 +270,18 @@ def discover_managed_entries(source_worktree: Path, dest_worktree: Path | None =
         key=lambda x: (len(x[0].parts), 0 if x[1] else 1, str(x[0])),
     )
     ignored_dir_roots: list[str] = []
+    tracked_symlinks = set(_tracked_symlink_paths(source_worktree))
 
     for rel_path, is_dir_hint in ignored_candidates:
         promoted_path, promoted_dir_hint = promote_ignored_path_to_symlink_dir_root(source_worktree, rel_path)
         rel_str = str(promoted_path)
         is_dir_hint = is_dir_hint or promoted_dir_hint
         if any(_is_under(root, rel_str) for root in ignored_dir_roots):
+            continue
+
+        if rel_str not in shared_roots and is_denylisted(Path(rel_str).name):
+            if is_dir_hint:
+                ignored_dir_roots.append(rel_str)
             continue
 
         src_item = source_worktree / promoted_path
@@ -254,7 +300,7 @@ def discover_managed_entries(source_worktree: Path, dest_worktree: Path | None =
         if is_dir_hint:
             ignored_dir_roots.append(rel_str)
 
-    for rel_path in _tracked_external_symlink_paths(source_worktree):
+    for rel_path in tracked_symlinks:
         src_item = source_worktree / rel_path
         if not src_item.is_symlink():
             continue
@@ -270,7 +316,7 @@ def discover_managed_entries(source_worktree: Path, dest_worktree: Path | None =
         add_entry(rel_path, resolved, origin_priority=20)
 
     for item in source_worktree.iterdir():
-        if item.name == ".git" or not item.is_symlink():
+        if item.name == ".git" or not item.is_symlink() or item.name in tracked_symlinks:
             continue
         try:
             resolved = item.resolve()
