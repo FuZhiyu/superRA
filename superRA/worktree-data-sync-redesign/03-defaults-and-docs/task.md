@@ -30,8 +30,8 @@ Make `--from` default to the worktree containing the caller instead of the repos
 
 - Added `get_worktree_containing(cwd, known)` ([worktree_data_discovery.py:72-80](../../../skills/worktree-data-sync/scripts/worktree_data_discovery.py#L72-L80)): returns the worktree root containing `cwd` (deepest match if more than one nests, though normal worktree layouts never nest), raising `RuntimeError` with a clear message when `cwd` is not inside any known worktree. Reuses the existing `_contains` ancestor check.
 - `resolve_endpoints`'s omitted-`--from` branch now calls `get_worktree_containing(cwd, known)` instead of `get_main_worktree(cwd)` ([worktree_data_discovery.py:95-97](../../../skills/worktree-data-sync/scripts/worktree_data_discovery.py#L95-L97)); `get_main_worktree` is now unused and left in place since removing it was not requested and it is still meaningful standalone API surface.
-- `--from` help text updated to "Source worktree path (default: worktree containing cwd)" ([sync_worktree_data.py:1159](../../../skills/worktree-data-sync/scripts/sync_worktree_data.py#L1159)).
-- `main()` already caught `RuntimeError` from `resolve_endpoints` with a clean `Error: ...` + exit 1 ([sync_worktree_data.py:1217-1219](../../../skills/worktree-data-sync/scripts/sync_worktree_data.py#L1217-L1219)); no change needed there.
+- `--from` help text updated to "Source worktree path (default: worktree containing cwd)" ([sync_worktree_data.py:1163](../../../skills/worktree-data-sync/scripts/sync_worktree_data.py#L1163)).
+- `main()` already caught `RuntimeError` from `resolve_endpoints` with a clean `Error: ...` + exit 1 ([sync_worktree_data.py:1221-1223](../../../skills/worktree-data-sync/scripts/sync_worktree_data.py#L1221-L1223)); no change needed there.
 
 ### Documentation sync
 
@@ -43,7 +43,7 @@ Make `--from` default to the worktree containing the caller instead of the repos
 
 - `TestEndpointResolution`: renamed/updated `test_defaults_from_to_cwd_worktree_when_omitted` (was asserting main-worktree default, now asserts cwd's own worktree), added `test_defaults_from_to_main_worktree_when_cwd_is_main` (main worktree cwd still defaults to itself), `test_rejects_cwd_outside_any_worktree` (monkeypatches `list_worktrees` to return roots that don't cover cwd — a real cwd anywhere `git worktree list` can resolve is always contained in one of its own reported roots, so the "outside" branch is only reachable this way or via stale worktree metadata), and `test_worktree_containing_returns_deepest_match` (direct unit test of the new helper).
 - `TestCliSurface`: added `test_cli_seed_defaults_from_cwd_worktree_without_from_flag` — full subprocess CLI invocation with cwd set to a linked worktree carrying a file not present in the main worktree, no `--from`, asserting the `From:` line names that worktree and its file (not the main worktree's) lands in the destination.
-- Full suite: 43 passed (39 pre-existing from sibling tasks 01/02 + 4 new): `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -q`.
+- Full suite: 44 passed (this task adds 4 tests): `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -q`.
 - Real end-to-end CLI check (throwaway repo, outside the sandbox): seeding/diffing with cwd inside a linked worktree and no `--from` reports `From: <that worktree>`, not the main worktree.
 - `uv run --script skills/report-in-markdown/scripts/check_markdown.py` on all three doc files: clean.
 - Line-by-line pass of the three doc diffs against the root `CLAUDE.md` teach-the-protocol gate: each added/changed line states a fact the reader would otherwise guess or re-infer (the new default, the denylist contents, the seed routing) rather than narrating process or restating a default the runtime already shows in `--help`.

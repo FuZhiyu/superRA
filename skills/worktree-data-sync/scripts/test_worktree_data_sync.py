@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from dataclasses import asdict
@@ -533,6 +534,37 @@ class TestSeedFastPath:
         assert (dst / "dl_1.csv").is_symlink()
         assert (dst / "new.csv").is_file() and not (dst / "new.csv").is_symlink()
         assert (dst / "new.csv").read_text(encoding="utf-8") == "x,y\n7,8\n"
+        assert summary.errors == 0
+
+    def test_mostly_dataless_root_recreates_directory_symlink(
+        self, monkeypatch, tmp_path, repo_with_worktrees
+    ):
+        main = repo_with_worktrees["main"]
+        target = repo_with_worktrees["a"]
+        out = main / "output"
+
+        for name in ("dl_1.csv", "dl_2.csv", "dl_3.csv"):
+            (out / name).write_text("cloud\n", encoding="utf-8")
+
+        external = tmp_path / "external"
+        external.mkdir()
+        (external / "inside.txt").write_text("ext\n", encoding="utf-8")
+        (out / "linkdir").symlink_to(external)
+
+        monkeypatch.setattr(
+            sync_worktree_data,
+            "is_dataless",
+            lambda path: Path(path).name.startswith("dl_"),
+        )
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+        summary = sync_worktree_data.run_seed(entries, target, verbose=False)
+
+        dst = target / "output"
+        # The directory symlink is recreated verbatim, not silently dropped or followed.
+        assert (dst / "linkdir").is_symlink()
+        assert os.readlink(dst / "linkdir") == str(external)
+        assert (dst / "linkdir" / "inside.txt").read_text(encoding="utf-8") == "ext\n"
         assert summary.errors == 0
 
     def test_injected_copy_failure_records_per_path_reason(self, monkeypatch, repo_with_worktrees):

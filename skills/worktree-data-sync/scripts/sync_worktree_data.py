@@ -345,10 +345,14 @@ def _seed_per_file(
     """Seed a whole subtree per file: symlink dataless placeholders, batch-copy the rest."""
     for root, dirs, files in os.walk(source_dir, followlinks=False):
         root_path = Path(root)
-        dirs[:] = [d for d in dirs if d != ".git" and not (root_path / d).is_symlink()]
         destination_root = destination_dir / root_path.relative_to(source_dir)
         if not dry_run:
             destination_root.mkdir(parents=True, exist_ok=True)
+
+        for dir_name in dirs:
+            if dir_name != ".git" and (root_path / dir_name).is_symlink():
+                _recreate_symlink(root_path / dir_name, destination_root / dir_name, summary, dry_run=dry_run)
+        dirs[:] = [d for d in dirs if d != ".git" and not (root_path / d).is_symlink()]
 
         pending: list[Path] = []
         for filename in files:
