@@ -72,7 +72,7 @@ WT="${TMPDIR:-/tmp}/superRA-worktrees/$(basename "$(git rev-parse --show-topleve
 mkdir -p "$(dirname "$WT")"
 git worktree add "$WT" -b "${BR}-agent/parallel/$SLUG" "$BR"
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
-  --from "$(pwd)" --to "$WT" --mode seed --seed-sync-mode force-symlink
+  --to "$WT" --mode seed   # add --seed-sync-mode force-symlink for top-level symlinks instead of copies
 # dispatch implementer with Worktree: <absolute path to $WT>
 git merge --no-ff "${BR}-agent/parallel/$SLUG"
 git worktree remove "$WT" && git branch -D "${BR}-agent/parallel/$SLUG"

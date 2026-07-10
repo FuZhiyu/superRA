@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -47,6 +47,12 @@ class SeedSummary:
     symlinked: int = 0
     skipped_existing: int = 0
     errors: int = 0
+    failures: list[tuple[str, str]] = field(default_factory=list)
+
+    def record_failure(self, path: str, reason: str) -> None:
+        """Record one failed path with its reason and bump the error count."""
+        self.failures.append((str(path), reason))
+        self.errors += 1
 
 
 def is_dataless(path: Path) -> bool:
@@ -110,34 +116,321 @@ def _progress(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
 
+@dataclass
+class RootPreflight:
+    """Stat-only snapshot of a copy-managed source root."""
+
+    file_count: int
+    total_size: int
+    dataless_files: set[Path]
+    contaminated_dirs: set[Path]
+    subtree_file_count: dict[Path, int]
+    subtree_symlink_count: dict[Path, int]
+
+
+def _bump_ancestor_counts(counts: dict[Path, int], leaf_dir: Path, root: Path) -> None:
+    """Increment the count for leaf_dir and every ancestor up to (and including) root."""
+    current = leaf_dir
+    while True:
+        counts[current] = counts.get(current, 0) + 1
+        if current == root:
+            break
+        current = current.parent
+
+
+def preflight_root(source_dir: Path) -> RootPreflight:
+    """Walk source_dir once (stat only) to collect counts and the dataless/contaminated sets."""
+    file_count = 0
+    total_size = 0
+    dataless: set[Path] = set()
+    contaminated: set[Path] = set()
+    subtree_file_count: dict[Path, int] = {}
+    subtree_symlink_count: dict[Path, int] = {}
+
+    for root, dirs, files in os.walk(source_dir, followlinks=False):
+        root_path = Path(root)
+
+        for dir_name in dirs:
+            if dir_name == ".git":
+                continue
+            if (root_path / dir_name).is_symlink():
+                _bump_ancestor_counts(subtree_symlink_count, root_path, source_dir)
+        dirs[:] = [d for d in dirs if d != ".git" and not (root_path / d).is_symlink()]
+
+        for filename in files:
+            if filename == ".git":
+                continue
+            file_path = root_path / filename
+            if file_path.is_symlink():
+                _bump_ancestor_counts(subtree_symlink_count, root_path, source_dir)
+                continue
+            try:
+                stat_result = os.stat(file_path)
+            except OSError:
+                continue
+            file_count += 1
+            total_size += stat_result.st_size
+            _bump_ancestor_counts(subtree_file_count, root_path, source_dir)
+            if is_dataless(file_path):
+                dataless.add(file_path)
+                marker = root_path
+                while True:
+                    contaminated.add(marker)
+                    if marker == source_dir:
+                        break
+                    marker = marker.parent
+
+    return RootPreflight(
+        file_count=file_count,
+        total_size=total_size,
+        dataless_files=dataless,
+        contaminated_dirs=contaminated,
+        subtree_file_count=subtree_file_count,
+        subtree_symlink_count=subtree_symlink_count,
+    )
+
+
+def _recreate_symlink(
+    source_item: Path,
+    destination_item: Path,
+    summary: SeedSummary,
+    dry_run: bool = False,
+) -> None:
+    """Recreate a symlink at the destination with its target copied verbatim."""
+    if destination_item.exists() or destination_item.is_symlink():
+        summary.skipped_existing += 1
+        return
+    if not dry_run:
+        try:
+            destination_item.parent.mkdir(parents=True, exist_ok=True)
+            destination_item.symlink_to(os.readlink(source_item))
+        except OSError as error:
+            summary.record_failure(source_item, f"symlink failed: {error}")
+            return
+    summary.symlinked += 1
+
+
+def _symlink_dataless(
+    source_item: Path,
+    destination_item: Path,
+    summary: SeedSummary,
+    dry_run: bool = False,
+) -> None:
+    """Materialize a cloud-placeholder file as a symlink to its resolved source (no content read)."""
+    if destination_item.exists() or destination_item.is_symlink():
+        summary.skipped_existing += 1
+        return
+    if not dry_run:
+        try:
+            destination_item.parent.mkdir(parents=True, exist_ok=True)
+            destination_item.symlink_to(source_item.resolve())
+        except OSError as error:
+            summary.record_failure(source_item, f"symlink failed: {error}")
+            return
+    summary.symlinked += 1
+
+
+def _batch_copy(
+    files: list[Path],
+    destination_dir: Path,
+    summary: SeedSummary,
+    dry_run: bool = False,
+    chunk_size: int = 200,
+) -> None:
+    """Copy many loose files with few `cp -c` invocations, falling back per-file on failure."""
+    if not files:
+        return
+    if dry_run:
+        summary.copied += len(files)
+        return
+
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    for start in range(0, len(files), chunk_size):
+        chunk = files[start : start + chunk_size]
+        try:
+            subprocess.run(
+                ["cp", "-c", *[str(f) for f in chunk], str(destination_dir)],
+                check=True,
+                capture_output=True,
+            )
+            summary.copied += len(chunk)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            for source_file in chunk:
+                if cow_copy_file(source_file, destination_dir / source_file.name):
+                    summary.copied += 1
+                else:
+                    summary.record_failure(source_file, "copy failed")
+
+
+def _clone_tree(
+    source_dir: Path,
+    destination_dir: Path,
+    preflight: RootPreflight,
+    summary: SeedSummary,
+    dry_run: bool = False,
+) -> None:
+    """Clone a whole clean subtree with one `cp -c -R -p`, falling back to shutil.copytree."""
+    copied = preflight.subtree_file_count.get(source_dir, 0)
+    symlinked = preflight.subtree_symlink_count.get(source_dir, 0)
+
+    if dry_run:
+        summary.copied += copied
+        summary.symlinked += symlinked
+        return
+
+    destination_dir.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            ["cp", "-c", "-R", "-p", str(source_dir), str(destination_dir)],
+            check=True,
+            capture_output=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        try:
+            shutil.copytree(source_dir, destination_dir, symlinks=True)
+        except (OSError, shutil.Error) as error:
+            summary.record_failure(source_dir, f"clone failed: {error}")
+            return
+    summary.copied += copied
+    summary.symlinked += symlinked
+
+
+def _seed_contaminated(
+    source_dir: Path,
+    destination_dir: Path,
+    preflight: RootPreflight,
+    summary: SeedSummary,
+    dry_run: bool = False,
+) -> None:
+    """Materialize a directory that holds dataless files: recurse contaminated, clone clean."""
+    if not dry_run:
+        destination_dir.mkdir(parents=True, exist_ok=True)
+
+    pending: list[Path] = []
+    for item in sorted(source_dir.iterdir()):
+        if item.name == ".git":
+            continue
+        destination_item = destination_dir / item.name
+
+        if item.is_symlink():
+            _recreate_symlink(item, destination_item, summary, dry_run=dry_run)
+            continue
+
+        if item.is_dir():
+            if item in preflight.contaminated_dirs:
+                _seed_contaminated(item, destination_item, preflight, summary, dry_run=dry_run)
+            else:
+                _clone_tree(item, destination_item, preflight, summary, dry_run=dry_run)
+            continue
+
+        if not item.is_file():
+            continue
+
+        if item in preflight.dataless_files:
+            _symlink_dataless(item, destination_item, summary, dry_run=dry_run)
+            continue
+
+        pending.append(item)
+
+    _batch_copy(pending, destination_dir, summary, dry_run=dry_run)
+
+
+def _seed_per_file(
+    source_dir: Path,
+    destination_dir: Path,
+    dataless_files: set[Path],
+    summary: SeedSummary,
+    dry_run: bool = False,
+) -> None:
+    """Seed a whole subtree per file: symlink dataless placeholders, batch-copy the rest."""
+    for root, dirs, files in os.walk(source_dir, followlinks=False):
+        root_path = Path(root)
+        destination_root = destination_dir / root_path.relative_to(source_dir)
+        if not dry_run:
+            destination_root.mkdir(parents=True, exist_ok=True)
+
+        for dir_name in dirs:
+            if dir_name != ".git" and (root_path / dir_name).is_symlink():
+                _recreate_symlink(root_path / dir_name, destination_root / dir_name, summary, dry_run=dry_run)
+        dirs[:] = [d for d in dirs if d != ".git" and not (root_path / d).is_symlink()]
+
+        pending: list[Path] = []
+        for filename in files:
+            if filename == ".git":
+                continue
+            source_file = root_path / filename
+            destination_file = destination_root / filename
+
+            if source_file.is_symlink():
+                _recreate_symlink(source_file, destination_file, summary, dry_run=dry_run)
+                continue
+            if destination_file.exists() or destination_file.is_symlink():
+                summary.skipped_existing += 1
+                continue
+            if source_file in dataless_files:
+                _symlink_dataless(source_file, destination_file, summary, dry_run=dry_run)
+                continue
+            pending.append(source_file)
+
+        _batch_copy(pending, destination_root, summary, dry_run=dry_run)
+
+
+def seed_copy_root(
+    source_dir: Path,
+    destination_dir: Path,
+    label: str,
+    summary: SeedSummary,
+    dry_run: bool = False,
+    verbose: bool = True,
+) -> None:
+    """Route one copy-managed root through a stat-only preflight to the cheapest seed path."""
+    if not source_dir.exists():
+        return
+
+    preflight = preflight_root(source_dir)
+    if verbose:
+        _progress(f"    ({preflight.file_count} files, {format_size(preflight.total_size)})")
+
+    if destination_dir.exists():
+        copy_missing_tree(source_dir, destination_dir, summary, dry_run=dry_run)
+        return
+
+    if not preflight.dataless_files:
+        _clone_tree(source_dir, destination_dir, preflight, summary, dry_run=dry_run)
+        return
+
+    if preflight.file_count > 0 and 2 * len(preflight.dataless_files) > preflight.file_count:
+        if verbose:
+            _progress(
+                f"    Note: '{label}' is mostly cloud-only "
+                f"({len(preflight.dataless_files)}/{preflight.file_count} files); consider annotating "
+                f"'{label}/  # data-sync:symlink' in .gitignore"
+            )
+        _seed_per_file(source_dir, destination_dir, preflight.dataless_files, summary, dry_run=dry_run)
+        return
+
+    _seed_contaminated(source_dir, destination_dir, preflight, summary, dry_run=dry_run)
+
+
 def copy_missing_tree(
     source_dir: Path,
     destination_dir: Path,
     summary: SeedSummary,
     dry_run: bool = False,
 ) -> None:
-    """Recursively copy only missing content from source_dir into destination_dir."""
+    """Merge into an existing destination: copy only missing content, never overwriting."""
     if not source_dir.exists():
         return
 
     if not destination_dir.exists() and not dry_run:
         destination_dir.mkdir(parents=True, exist_ok=True)
 
+    pending: list[Path] = []
     for item in source_dir.iterdir():
         destination_item = destination_dir / item.name
 
         if item.is_symlink():
-            if destination_item.exists() or destination_item.is_symlink():
-                summary.skipped_existing += 1
-                continue
-            if not dry_run:
-                try:
-                    destination_item.parent.mkdir(parents=True, exist_ok=True)
-                    destination_item.symlink_to(os.readlink(item))
-                except OSError:
-                    summary.errors += 1
-                    continue
-            summary.symlinked += 1
+            _recreate_symlink(item, destination_item, summary, dry_run=dry_run)
             continue
 
         if item.is_dir():
@@ -157,20 +450,12 @@ def copy_missing_tree(
             continue
 
         if is_dataless(item):
-            if not dry_run:
-                try:
-                    destination_item.parent.mkdir(parents=True, exist_ok=True)
-                    destination_item.symlink_to(item.resolve())
-                except OSError:
-                    summary.errors += 1
-                    continue
-            summary.symlinked += 1
+            _symlink_dataless(item, destination_item, summary, dry_run=dry_run)
             continue
 
-        if cow_copy_file(item, destination_item, dry_run=dry_run):
-            summary.copied += 1
-        else:
-            summary.errors += 1
+        pending.append(item)
+
+    _batch_copy(pending, destination_dir, summary, dry_run=dry_run)
 
 
 def symlink_missing_entry(
@@ -185,15 +470,15 @@ def symlink_missing_entry(
         return
 
     if not source_path.exists():
-        summary.errors += 1
+        summary.record_failure(source_path, "source missing")
         return
 
     if not dry_run:
         try:
             destination_path.parent.mkdir(parents=True, exist_ok=True)
             destination_path.symlink_to(source_path.resolve())
-        except OSError:
-            summary.errors += 1
+        except OSError as error:
+            summary.record_failure(source_path, f"symlink failed: {error}")
             return
 
     summary.symlinked += 1
@@ -227,7 +512,14 @@ def run_seed(
             continue
 
         if entry_kind == "directory":
-            copy_missing_tree(source_path, destination_path, summary, dry_run=dry_run)
+            seed_copy_root(
+                source_path,
+                destination_path,
+                entry["path"],
+                summary,
+                dry_run=dry_run,
+                verbose=verbose,
+            )
             continue
 
         if destination_path.exists() or destination_path.is_symlink():
@@ -235,24 +527,17 @@ def run_seed(
             continue
 
         if not source_path.exists():
-            summary.errors += 1
+            summary.record_failure(source_path, "source missing")
             continue
 
         if is_dataless(source_path):
-            if not dry_run:
-                try:
-                    destination_path.parent.mkdir(parents=True, exist_ok=True)
-                    destination_path.symlink_to(source_path.resolve())
-                except OSError:
-                    summary.errors += 1
-                    continue
-            summary.symlinked += 1
+            _symlink_dataless(source_path, destination_path, summary, dry_run=dry_run)
             continue
 
         if cow_copy_file(source_path, destination_path, dry_run=dry_run):
             summary.copied += 1
         else:
-            summary.errors += 1
+            summary.record_failure(source_path, "copy failed")
 
     return summary
 
@@ -847,6 +1132,17 @@ def print_diff_report(source_root: Path, destination_root: Path, changes: list[F
     )
 
 
+def emit_seed_failures(summary: SeedSummary, limit: int = 20) -> None:
+    """Print recorded seed failures to stderr, capped to the first `limit` entries."""
+    if not summary.failures:
+        return
+    print(f"Seed encountered {len(summary.failures)} error(s):", file=sys.stderr)
+    for path, reason in summary.failures[:limit]:
+        print(f"  ERROR: {path}: {reason}", file=sys.stderr)
+    if len(summary.failures) > limit:
+        print(f"  ... and {len(summary.failures) - limit} more", file=sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Sync non-git data between existing git worktrees",
@@ -864,7 +1160,7 @@ Examples:
         """,
     )
 
-    parser.add_argument("--from", dest="from_path", help="Source worktree path (default: main worktree)")
+    parser.add_argument("--from", dest="from_path", help="Source worktree path (default: worktree containing cwd)")
     parser.add_argument("--to", dest="to_path", required=True, help="Destination worktree path")
     parser.add_argument("--mode", choices=["seed", "diff", "apply"], required=True)
     parser.add_argument(
@@ -946,6 +1242,9 @@ def main() -> None:
             f"copied={summary.copied}, symlinked={summary.symlinked}, "
             f"skipped_existing={summary.skipped_existing}, errors={summary.errors}"
         )
+        if summary.failures:
+            emit_seed_failures(summary)
+            sys.exit(1)
         return
 
     if args.mode == "diff":

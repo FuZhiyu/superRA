@@ -10,7 +10,7 @@ Pass the absolute worktree path via the dispatch `Worktree:` field, plus this `A
 
 > *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
-**Seeding data in.** Use `worktree-data-sync` in `--mode seed`. **Always pass `--from "$(pwd)"` (or an explicit path)** — `sync_worktree_data.py`'s `--from` default points at the main worktree, not the orchestrator's analysis worktree.
+**Seeding data in.** Use `worktree-data-sync` in `--mode seed`.
 
 **Harvest-out and conflicts.** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Task boundaries are set ex-ante, so parallel branches are mechanically disjoint and typically merge cleanly. Resolve trivial adjacent conflicts inline; escalate material ones to the researcher.
 
