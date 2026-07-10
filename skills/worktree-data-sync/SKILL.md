@@ -1,6 +1,6 @@
 ---
 name: worktree-data-sync
-description: Sync non-git data between worktrees. Use to seed, diff, reconcile, or tear down managed data for existing worktrees.
+description: Sync non-git data (datasets, outputs, caches, symlinked data) between git worktrees. Use proactively whenever creating or entering a worktree whose work depends on non-git-tracked data — seed the data in before dispatching or doing work there — and to seed, diff, reconcile, or tear down managed data between existing worktrees.
 user-invocable: true
 ---
 
