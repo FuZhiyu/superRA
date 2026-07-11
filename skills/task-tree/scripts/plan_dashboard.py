@@ -558,10 +558,27 @@ async def _stop_watcher(wt: str) -> None:
     if task is not None:
         if stop_event is not None:
             stop_event.set()
+
+        # A disconnect cancels StreamingResponse's body task.  A concurrent
+        # graceful shutdown may cancel it again while this await is in flight.
+        # Shield the watcher so either cancellation cannot turn cooperative
+        # awatch teardown into the hard cancellation that leaks its native
+        # event source.  Consume repeated caller cancellations until teardown
+        # finishes, then propagate cancellation to the ASGI caller.
+        caller_cancelled = False
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                if not task.cancelled():
+                    caller_cancelled = True
+            except BaseException:  # inspected below via task.result()
+                break
+
         try:
-            await task
+            task.result()
         except asyncio.CancelledError:
-            # The loop itself is shutting down (e.g. lifespan teardown).
+            # The watcher itself was cancelled by event-loop shutdown.
             pass
         except BaseExceptionGroup as eg:
             _, rest = eg.split(_is_benign_awatch_teardown_race)
@@ -570,6 +587,9 @@ async def _stop_watcher(wt: str) -> None:
         except BaseException as exc:  # noqa: BLE001 - re-raised unless benign
             if not _is_benign_awatch_teardown_race(exc):
                 raise
+
+        if caller_cancelled:
+            raise asyncio.CancelledError
 
 
 # ---------------------------------------------------------------------------
@@ -984,8 +1004,6 @@ async def sse_events(request: Request):
                     yield message
                 except asyncio.TimeoutError:
                     yield ": heartbeat\n\n"
-        except asyncio.CancelledError:
-            pass
         finally:
             clients = _worktree_clients.get(wt)
             if clients is not None:

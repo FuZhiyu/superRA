@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -64,3 +64,31 @@ during planning, so the reproducer must exercise the multi-client/racy path
 rather than merely duplicating that simple case.
 
 ## Results
+
+The leak boundary was cancellation during cooperative watcher teardown. Before
+the fix, cancelling `_stop_watcher()` after it had signalled the watchfiles stop
+event propagated cancellation through `await task`, hard-cancelled the watcher,
+and was then swallowed by `_stop_watcher()`. This could remove the watcher from
+the Python registries while its native event source was still unwinding. The
+deterministic regression failed on that behavior before the production change
+([test_dashboard.py:1063-1111](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1111)).
+
+Watcher teardown now shields the watcher from caller cancellation, waits through
+repeated cancellation until cooperative cleanup finishes, preserves the narrow
+benign `awatch` exception filter, and then propagates cancellation to the ASGI
+caller. The SSE generator no longer suppresses its cancellation after cleanup
+([plan_dashboard.py:532-592](../../../../skills/task-tree/scripts/plan_dashboard.py#L532-L592),
+[plan_dashboard.py:982-1014](../../../../skills/task-tree/scripts/plan_dashboard.py#L982-L1014)).
+
+Real-server coverage now runs two complete Uvicorn/FastAPI/watchfiles cycles.
+Each cycle connects eight SSE clients, resets them concurrently, and verifies a
+bounded idle exit, closed port, zero connection count, and empty watcher and stop
+event registries before relaunching
+([test_dashboard.py:4054-4141](../../../../skills/task-tree/scripts/test_dashboard.py#L4054-L4141)).
+
+Verification:
+
+- The focused cancellation and real-server regressions pass: 2 passed.
+- The watcher and idle-shutdown lifecycle groups pass: 10 passed.
+- The full task-tree script suite passes: 707 passed, with four existing
+  warnings.

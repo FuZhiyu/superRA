@@ -1060,6 +1060,56 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
+    def test_stop_caller_cancellation_does_not_hard_cancel_watcher(self):
+        """ASGI cancellation cannot interrupt cooperative native teardown.
+
+        StreamingResponse cancels its body task when a client disappears, and
+        Uvicorn may cancel it again while graceful shutdown is in progress.
+        The second cancellation must not propagate through ``await task`` to
+        the watchfiles task after its stop event has already been signalled.
+        """
+        loop = asyncio.new_event_loop()
+        self._reset()
+
+        async def _test():
+            stop_event = asyncio.Event()
+            teardown_started = asyncio.Event()
+            release_native_resource = asyncio.Event()
+            hard_cancelled = False
+
+            async def _watcher():
+                nonlocal hard_cancelled
+                await stop_event.wait()
+                teardown_started.set()
+                try:
+                    await release_native_resource.wait()
+                except asyncio.CancelledError:
+                    hard_cancelled = True
+                    raise
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            stopper = asyncio.create_task(plan_dashboard._stop_watcher("wt-a"))
+            await teardown_started.wait()
+            stopper.cancel()
+            await asyncio.sleep(0)
+            release_native_resource.set()
+            with pytest.raises(asyncio.CancelledError):
+                await stopper
+
+            assert not hard_cancelled, (
+                "caller cancellation hard-cancelled cooperative watcher teardown"
+            )
+            assert watcher.done() and not watcher.cancelled()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
     def test_crashed_watcher_is_respawned(self, tmp_path):
         loop = asyncio.new_event_loop()
         self._reset()
@@ -4000,6 +4050,94 @@ class TestIdleShutdownLifespan:
             if plan_dashboard._server is not None:
                 plan_dashboard._server.should_exit = True
             t.join(timeout=5.0)
+
+    def test_concurrent_abrupt_disconnects_do_not_leak_shutdown(self, tmp_path):
+        """Concurrent reset clients leave no ASGI or watchfiles work behind.
+
+        Run two complete real-server cycles because the observed failure left
+        the first server stuck during graceful shutdown while a replacement
+        could still be launched.  Raw sockets closed with an RST exercise the
+        disconnect cancellation path rather than httpx's orderly stream close.
+        """
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("watchfiles")
+        import struct
+        import threading
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.IDLE_TIMEOUT = 0.3
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.05
+
+        def _connect(port):
+            client = socket.create_connection(("127.0.0.1", port), timeout=5.0)
+            client.sendall(
+                b"GET /events HTTP/1.1\r\n"
+                + f"Host: 127.0.0.1:{port}\r\n".encode()
+                + b"Accept: text/event-stream\r\nConnection: keep-alive\r\n\r\n"
+            )
+            received = b""
+            while b": heartbeat\n\n" not in received:
+                received += client.recv(4096)
+            return client
+
+        try:
+            for cycle in range(2):
+                port = self._free_port()
+                server_thread = threading.Thread(
+                    target=plan_dashboard.serve,
+                    args=(port,),
+                    daemon=True,
+                    name=f"dashboard-cycle-{cycle}",
+                )
+                server_thread.start()
+                assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+                clients = [_connect(port) for _ in range(8)]
+                deadline = time.monotonic() + 3.0
+                while (
+                    plan_dashboard._open_connection_count() != len(clients)
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                assert plan_dashboard._open_connection_count() == len(clients)
+
+                barrier = threading.Barrier(len(clients))
+
+                def _reset(client):
+                    barrier.wait()
+                    client.setsockopt(
+                        socket.SOL_SOCKET,
+                        socket.SO_LINGER,
+                        struct.pack("ii", 1, 0),
+                    )
+                    client.close()
+
+                closers = [
+                    threading.Thread(target=_reset, args=(client,))
+                    for client in clients
+                ]
+                for closer in closers:
+                    closer.start()
+                for closer in closers:
+                    closer.join(timeout=2.0)
+
+                server_thread.join(timeout=5.0)
+                assert not server_thread.is_alive(), (
+                    f"cycle {cycle}: server stuck after concurrent disconnects"
+                )
+                assert not plan_dashboard._port_serving(port)
+                assert plan_dashboard._open_connection_count() == 0
+                assert not plan_dashboard._worktree_watchers
+                assert not plan_dashboard._worktree_stop_events
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
 
 
 class TestRuntimeFileKeying:
