@@ -545,10 +545,14 @@ def _schedule_forced_process_exit(delay: float) -> threading.Timer | None:
     watcher teardown phases fail, a daemon watchdog is safer than allowing an
     orphaned CPU-spinning process to survive indefinitely.  The delay lets the
     current ASGI response and lifespan make their normal exit attempt first.
-    Embedded servers running outside the main thread do not own their process,
-    so they must not arm a process-level exit.
+    Only this module's own ``serve()`` lifecycle owns its process. Embedded ASGI
+    hosts and servers running outside the main thread must not arm a
+    process-level exit.
     """
-    if threading.current_thread() is not threading.main_thread():
+    if (
+        _server is None
+        or threading.current_thread() is not threading.main_thread()
+    ):
         return None
 
     timer = threading.Timer(delay, os._exit, args=(0,))

@@ -1137,6 +1137,7 @@ class TestWatcherLifecycle:
         monkeypatch.setattr(plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.01)
         forced_exits = []
         monkeypatch.setattr(plan_dashboard.os, "_exit", forced_exits.append)
+        monkeypatch.setattr(plan_dashboard, "_server", object())
 
         class FakeTimer:
             instances = []
@@ -1215,6 +1216,19 @@ class TestWatcherLifecycle:
         thread.join(timeout=2.0)
         assert not thread.is_alive()
         assert results == [None]
+        assert created == []
+
+    def test_embedded_main_thread_cannot_arm_process_exit(self, monkeypatch):
+        """A main-thread ASGI host without serve() ownership cannot exit its host."""
+        created = []
+        monkeypatch.setattr(plan_dashboard, "_server", None)
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+
+        assert plan_dashboard._schedule_forced_process_exit(0.01) is None
         assert created == []
 
     def test_crashed_watcher_is_respawned(self, tmp_path):
