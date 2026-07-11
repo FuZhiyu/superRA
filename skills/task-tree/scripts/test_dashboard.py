@@ -1060,21 +1060,27 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
-    def test_stop_caller_cancellation_does_not_hard_cancel_watcher(self):
-        """ASGI cancellation cannot interrupt cooperative native teardown.
-
-        StreamingResponse cancels its body task when a client disappears, and
-        Uvicorn may cancel it again while graceful shutdown is in progress.
-        The second cancellation must not propagate through ``await task`` to
-        the watchfiles task after its stop event has already been signalled.
-        """
+    def test_stop_is_bounded_under_repeated_cancellation(self, monkeypatch):
+        """A non-finishing watcher is force-cancelled after a cooperative bound."""
         loop = asyncio.new_event_loop()
         self._reset()
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.03, raising=False
+        )
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.03, raising=False
+        )
+        forced_exit_delays = []
+        monkeypatch.setattr(
+            plan_dashboard,
+            "_schedule_forced_process_exit",
+            forced_exit_delays.append,
+        )
 
         async def _test():
             stop_event = asyncio.Event()
             teardown_started = asyncio.Event()
-            release_native_resource = asyncio.Event()
+            never_finishes_cooperatively = asyncio.Event()
             hard_cancelled = False
 
             async def _watcher():
@@ -1082,10 +1088,12 @@ class TestWatcherLifecycle:
                 await stop_event.wait()
                 teardown_started.set()
                 try:
-                    await release_native_resource.wait()
+                    await never_finishes_cooperatively.wait()
                 except asyncio.CancelledError:
                     hard_cancelled = True
-                    raise
+                    # Model a faulty replacement/native boundary that suppresses
+                    # hard cancellation too. _stop_watcher must still return.
+                    await never_finishes_cooperatively.wait()
 
             watcher = asyncio.create_task(_watcher())
             plan_dashboard._worktree_watchers["wt-a"] = watcher
@@ -1093,15 +1101,25 @@ class TestWatcherLifecycle:
 
             stopper = asyncio.create_task(plan_dashboard._stop_watcher("wt-a"))
             await teardown_started.wait()
-            stopper.cancel()
-            await asyncio.sleep(0)
-            release_native_resource.set()
+            for _ in range(3):
+                stopper.cancel()
+                await asyncio.sleep(0)
+            await asyncio.sleep(0.08)
+            completed_within_bound = stopper.done()
+
+            # Let the reviewed, unbounded implementation unwind so a failing
+            # assertion cannot strand this test's event loop.
+            if not completed_within_bound:
+                never_finishes_cooperatively.set()
             with pytest.raises(asyncio.CancelledError):
                 await stopper
 
-            assert not hard_cancelled, (
-                "caller cancellation hard-cancelled cooperative watcher teardown"
-            )
+            assert completed_within_bound, "watcher teardown exceeded its bound"
+            assert hard_cancelled, "non-finishing watcher was not force-cancelled"
+            assert forced_exit_delays == [plan_dashboard.WATCHER_PROCESS_EXIT_TIMEOUT]
+            assert not watcher.done(), "cancellation-suppressing watcher unexpectedly ended"
+            never_finishes_cooperatively.set()
+            await watcher
             assert watcher.done() and not watcher.cancelled()
 
         try:
@@ -4051,13 +4069,14 @@ class TestIdleShutdownLifespan:
                 plan_dashboard._server.should_exit = True
             t.join(timeout=5.0)
 
-    def test_concurrent_abrupt_disconnects_do_not_leak_shutdown(self, tmp_path):
-        """Concurrent reset clients leave no ASGI or watchfiles work behind.
+    def test_detached_repeated_abrupt_disconnects_exit_cleanly(self, tmp_path):
+        """Detached servers exit after concurrent RSTs and native watcher close.
 
-        Run two complete real-server cycles because the observed failure left
-        the first server stuck during graceful shutdown while a replacement
-        could still be launched.  Raw sockets closed with an RST exercise the
-        disconnect cancellation path rather than httpx's orderly stream close.
+        The child wraps the real watchfiles watcher with a post-cleanup stall.
+        This deterministically reaches Uvicorn's graceful-shutdown race: the
+        native watcher has closed, but the watcher task does not finish unless
+        the bounded fallback cancels it.  The reviewed unbounded implementation
+        leaves the detached child alive and its port open.
         """
         pytest.importorskip("uvicorn")
         pytest.importorskip("watchfiles")
@@ -4065,12 +4084,40 @@ class TestIdleShutdownLifespan:
         import threading
 
         plan_root = _serve_plan(tmp_path)
-        plan_dashboard.PLAN_ROOT = plan_root
-
-        saved_timeout = plan_dashboard.IDLE_TIMEOUT
-        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
-        plan_dashboard.IDLE_TIMEOUT = 0.3
-        plan_dashboard.HEARTBEAT_INTERVAL = 0.05
+        runner = tmp_path / "detached_dashboard_runner.py"
+        runner.write_text(
+            "\n".join(
+                [
+                    "import asyncio",
+                    "import sys",
+                    "from pathlib import Path",
+                    f"sys.path.insert(0, {str(SCRIPTS_DIR)!r})",
+                    "import plan_dashboard",
+                    "original_watch = plan_dashboard._watch_worktree",
+                    "marker = Path(sys.argv[3])",
+                    "async def delayed_finish(wt, stop_event):",
+                    "    await original_watch(wt, stop_event)",
+                    "    marker.write_text('native watcher closed', encoding='utf-8')",
+                    "    while True:",
+                    "        try:",
+                    "            await asyncio.Event().wait()",
+                    "        except asyncio.CancelledError:",
+                    (
+                        "            marker.write_text('native watcher closed\\n"
+                        "hard cancel suppressed', encoding='utf-8')"
+                    ),
+                    "plan_dashboard._watch_worktree = delayed_finish",
+                    "plan_dashboard.PLAN_ROOT = Path(sys.argv[1])",
+                    "plan_dashboard.IDLE_TIMEOUT = 0.3",
+                    "plan_dashboard.HEARTBEAT_INTERVAL = 0.05",
+                    "plan_dashboard.WATCHER_STOP_TIMEOUT = 0.1",
+                    "plan_dashboard.WATCHER_CANCEL_TIMEOUT = 0.1",
+                    "plan_dashboard.WATCHER_PROCESS_EXIT_TIMEOUT = 0.1",
+                    "plan_dashboard.serve(int(sys.argv[2]))",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
         def _connect(port):
             client = socket.create_connection(("127.0.0.1", port), timeout=5.0)
@@ -4084,27 +4131,29 @@ class TestIdleShutdownLifespan:
                 received += client.recv(4096)
             return client
 
-        try:
-            for cycle in range(2):
-                port = self._free_port()
-                server_thread = threading.Thread(
-                    target=plan_dashboard.serve,
-                    args=(port,),
-                    daemon=True,
-                    name=f"dashboard-cycle-{cycle}",
+        for cycle in range(2):
+            port = self._free_port()
+            marker = tmp_path / f"native-closed-{cycle}"
+            log_path = tmp_path / f"detached-{cycle}.log"
+            with log_path.open("wb") as log:
+                process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        str(runner),
+                        str(plan_root),
+                        str(port),
+                        str(marker),
+                    ],
+                    stdin=subprocess.DEVNULL,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
                 )
-                server_thread.start()
+            try:
+                assert os.getsid(process.pid) == process.pid
                 assert plan_dashboard._wait_for_bind(port, timeout=5.0)
 
                 clients = [_connect(port) for _ in range(8)]
-                deadline = time.monotonic() + 3.0
-                while (
-                    plan_dashboard._open_connection_count() != len(clients)
-                    and time.monotonic() < deadline
-                ):
-                    time.sleep(0.01)
-                assert plan_dashboard._open_connection_count() == len(clients)
-
                 barrier = threading.Barrier(len(clients))
 
                 def _reset(client):
@@ -4125,19 +4174,22 @@ class TestIdleShutdownLifespan:
                 for closer in closers:
                     closer.join(timeout=2.0)
 
-                server_thread.join(timeout=5.0)
-                assert not server_thread.is_alive(), (
-                    f"cycle {cycle}: server stuck after concurrent disconnects"
+                deadline = time.monotonic() + 5.0
+                while process.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                assert process.poll() == 0, (
+                    f"cycle {cycle}: detached server did not exit; "
+                    f"log={log_path.read_text(encoding='utf-8', errors='replace')}"
+                )
+                assert marker.read_text(encoding="utf-8") == (
+                    "native watcher closed\nhard cancel suppressed"
                 )
                 assert not plan_dashboard._port_serving(port)
-                assert plan_dashboard._open_connection_count() == 0
-                assert not plan_dashboard._worktree_watchers
-                assert not plan_dashboard._worktree_stop_events
-        finally:
-            plan_dashboard.IDLE_TIMEOUT = saved_timeout
-            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
-            if plan_dashboard._server is not None:
-                plan_dashboard._server.should_exit = True
+                assert not plan_dashboard._pid_alive(process.pid)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5.0)
 
 
 class TestRuntimeFileKeying:

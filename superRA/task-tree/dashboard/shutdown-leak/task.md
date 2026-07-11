@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -65,31 +65,38 @@ rather than merely duplicating that simple case.
 
 ## Results
 
-The leak boundary was cancellation during cooperative watcher teardown. Before
-the fix, cancelling `_stop_watcher()` after it had signalled the watchfiles stop
-event propagated cancellation through `await task`, hard-cancelled the watcher,
-and was then swallowed by `_stop_watcher()`. This could remove the watcher from
-the Python registries while its native event source was still unwinding. The
-deterministic regression failed on that behavior before the production change
-([test_dashboard.py:1063-1111](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1111)).
+Watcher shutdown now gives real `awatch` teardown a two-second cooperative grace
+period, insulated from repeated ASGI caller cancellation. If it does not finish,
+the watcher is cancelled and gets a separately bounded half-second to unwind.
+If a cancellation-suppressing watcher defeats both phases, a short daemon
+watchdog terminates this auxiliary, non-persistent dashboard process. Caller
+cancellation is propagated after cleanup, ordinary watcher failures remain
+observable, and the narrow benign `awatch` exception filter is preserved
+([plan_dashboard.py:540-659](../../../../skills/task-tree/scripts/plan_dashboard.py#L540-L659)).
 
-Watcher teardown now shields the watcher from caller cancellation, waits through
-repeated cancellation until cooperative cleanup finishes, preserves the narrow
-benign `awatch` exception filter, and then propagates cancellation to the ASGI
-caller. The SSE generator no longer suppresses its cancellation after cleanup
-([plan_dashboard.py:532-592](../../../../skills/task-tree/scripts/plan_dashboard.py#L532-L592),
-[plan_dashboard.py:982-1014](../../../../skills/task-tree/scripts/plan_dashboard.py#L982-L1014)).
+Both regressions failed against the reviewed unbounded implementation before
+this change. The focused case applied repeated caller cancellation to a watcher
+that finished neither cooperatively nor after hard cancellation; teardown
+exceeded its configured bound. The process case launched a new-session child,
+connected eight real SSE clients, reset them concurrently, and reached Uvicorn's
+`Waiting for background tasks to complete` state with the child alive and port
+open. The child wraps the real watchfiles coroutine and writes a marker only
+after that coroutine returns, then suppresses hard cancellation to exercise the
+terminal process watchdog
+([test_dashboard.py:1063-1129](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1129),
+[test_dashboard.py:4072-4189](../../../../skills/task-tree/scripts/test_dashboard.py#L4072-L4189)).
 
-Real-server coverage now runs two complete Uvicorn/FastAPI/watchfiles cycles.
-Each cycle connects eight SSE clients, resets them concurrently, and verifies a
-bounded idle exit, closed port, zero connection count, and empty watcher and stop
-event registries before relaunching
-([test_dashboard.py:4054-4141](../../../../skills/task-tree/scripts/test_dashboard.py#L4054-L4141)).
+After the fix, the detached regression completes two launch/connect/concurrent
+RST/shutdown cycles. Each child is a distinct session leader, records native
+watcher return and suppressed hard cancellation, exits with status zero,
+releases its port, and is no longer alive before the next cycle. This establishes
+process and OS-resource cleanup for the exercised interleaving; it does not
+claim that the historical orphan samples uniquely identify this path.
 
 Verification:
 
-- The focused cancellation and real-server regressions pass: 2 passed.
-- The watcher and idle-shutdown lifecycle groups pass: 10 passed.
+- The focused bounded-teardown and detached-process regressions pass: 2 passed.
+- The watcher, idle-shutdown, and background-idle lifecycle set passes: 11 passed.
 - The full task-tree script suite passes: 707 passed, with four existing
   warnings.
 
@@ -108,6 +115,11 @@ Verification:
    teardown strategy that preserves the cooperative path but guarantees server
    termination when the native watcher does not complete, with a regression for
    a non-finishing watcher under repeated cancellation.
+   → implemented: added bounded cooperative and hard-cancel phases, followed by
+   a process watchdog for cancellation-suppressing tasks, plus repeated-cancel
+   coverage of all three phases
+   ([plan_dashboard.py:586-643](../../../../skills/task-tree/scripts/plan_dashboard.py#L586-L643),
+   [test_dashboard.py:1063-1129](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1129)).
 
 2. **MAJOR:** The added real-server test is not a regression for the production
    change: it passes against the pre-fix `plan_dashboard.py`. It runs `serve()`
@@ -124,3 +136,8 @@ Verification:
    ([task.md:68-87](task.md#L68-L87)). Make the multi-client race fail on the
    pre-fix lifecycle and exercise repeated detached launch/disconnect/idle-exit
    cycles with process, port, and native-resource evidence.
+   → implemented: replaced the thread test with a two-cycle detached child
+   regression that failed pre-fix at Uvicorn graceful shutdown and now verifies
+   session leadership, real watchfiles return, terminal-fallback execution,
+   exit status, PID death, and port closure
+   ([test_dashboard.py:4072-4189](../../../../skills/task-tree/scripts/test_dashboard.py#L4072-L4189)).
