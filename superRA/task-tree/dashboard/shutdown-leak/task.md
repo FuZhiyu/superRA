@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -72,7 +72,7 @@ If a cancellation-suppressing watcher defeats both phases, a short daemon
 watchdog terminates this auxiliary, non-persistent dashboard process. Caller
 cancellation is propagated after cleanup, ordinary watcher failures remain
 observable, and the narrow benign `awatch` exception filter is preserved
-([plan_dashboard.py:540-659](../../../../skills/task-tree/scripts/plan_dashboard.py#L540-L659)).
+([plan_dashboard.py:541-667](../../../../skills/task-tree/scripts/plan_dashboard.py#L541-L667)).
 
 Both regressions failed against the reviewed unbounded implementation before
 this change. The focused case applied repeated caller cancellation to a watcher
@@ -89,7 +89,7 @@ open. The child wraps the real watchfiles coroutine and writes a marker only
 after that coroutine returns, then suppresses hard cancellation to exercise the
 terminal process watchdog
 ([test_dashboard.py:1063-1129](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1129),
-[test_dashboard.py:4072-4189](../../../../skills/task-tree/scripts/test_dashboard.py#L4072-L4189)).
+[test_dashboard.py:4161-4281](../../../../skills/task-tree/scripts/test_dashboard.py#L4161-L4281)).
 
 After the fix, the detached regression completes two launch/connect/concurrent
 RST/shutdown cycles. Each child is a distinct session leader, records native
@@ -100,9 +100,10 @@ claim that the historical orphan samples uniquely identify this path.
 
 Verification:
 
-- The focused bounded-teardown and detached-process regressions pass: 2 passed.
-- The watcher, idle-shutdown, and background-idle lifecycle set passes: 11 passed.
-- The full task-tree script suite passes: 707 passed, with four existing
+- The focused bounded-teardown, watchdog-safety, and detached-process
+  regressions pass: 4 passed.
+- The complete dashboard suite passes: 278 passed with two existing warnings.
+- The full task-tree script suite passes: 709 passed, with four existing
   warnings.
 
 ### Permanent Protection
@@ -118,7 +119,7 @@ regression protection:
 2. Repeated detached dashboard cycles survive eight concurrent abrupt SSE resets
    and finish with the real watchfiles coroutine returned, the child PID dead,
    and its port closed
-   ([test_dashboard.py:4073-4193](../../../../skills/task-tree/scripts/test_dashboard.py#L4073-L4193)).
+   ([test_dashboard.py:4161-4281](../../../../skills/task-tree/scripts/test_dashboard.py#L4161-L4281)).
 
 Both tests follow the repository's self-contained pytest convention and run
 without a separate analysis pipeline or saved-output dependency. Their timing
@@ -134,5 +135,38 @@ Red--green--green verification on 2026-07-11:
 - Detached lifecycle red: replacing the native-cleanup marker expectation with
   a sentinel failed against the observed `native watcher closed` and
   `hard cancel suppressed` marker; restoring it passed (1 passed).
-- Full task-tree script suite after restoration: 707 passed with four existing
+- Full task-tree script suite after restoration: 709 passed with four existing
   warnings.
+
+### Integration
+
+The missing pre-fit JUnit artifact was caused by an armed process-exit watchdog
+from an in-process dashboard server: a slow watcher completed after both teardown
+bounds, but its uncancelled timer later terminated pytest. The watchdog is now
+returned to `_stop_watcher()` and cancelled on late task completion. Embedded
+servers running outside the main thread cannot arm a process-level exit, while a
+standalone dashboard process retains the terminal fail-safe
+([plan_dashboard.py:541-557](../../../../skills/task-tree/scripts/plan_dashboard.py#L541-L557),
+[plan_dashboard.py:625-651](../../../../skills/task-tree/scripts/plan_dashboard.py#L625-L651)).
+Focused regressions verify late completion disarms the timer without calling
+`os._exit`, an embedded server thread creates no timer, and a genuinely detached
+cancellation-suppressing server still exits
+([test_dashboard.py:1132-1218](../../../../skills/task-tree/scripts/test_dashboard.py#L1132-L1218),
+[test_dashboard.py:4161-4281](../../../../skills/task-tree/scripts/test_dashboard.py#L4161-L4281)).
+
+Post-fit verification produced both requested JUnit artifacts: the verbose
+dashboard suite passed 278 tests through the colliding-repositories case, and
+the full task-tree script suite passed 709 tests with four existing warnings.
+Both XML files parsed with zero errors and failures. Version manifests are in
+sync at `0.3.1`, the version audit found no undeclared `0.3.1` surface, and the
+patch release is recorded in the release notes. The project-doc audit found the
+root README and contributor guide current, with no module-level dashboard docs
+requiring changes.
+
+**Final diff self-check:** `git diff dcfbd1fbcda03ed8defda1e39a2c7b14ff27d23f`;
+surviving change classes are bounded watcher shutdown, cancellation-safe process
+watchdog ownership, real lifecycle regressions and permanent protection,
+task-tree status/evidence, and the researcher-requested `0.3.1` release surfaces;
+the only cross-task hunk is the user-requested pre-existing
+[docs-site postponement](../../docs-site/task.md), and no scope-ambiguous hunk
+remains.

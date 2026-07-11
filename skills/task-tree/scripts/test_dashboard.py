@@ -1129,6 +1129,94 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
+    def test_late_watcher_completion_disarms_process_exit(self, monkeypatch):
+        """A watcher finishing after both bounds cancels its armed watchdog."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        monkeypatch.setattr(plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.01)
+        monkeypatch.setattr(plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.01)
+        forced_exits = []
+        monkeypatch.setattr(plan_dashboard.os, "_exit", forced_exits.append)
+
+        class FakeTimer:
+            instances = []
+
+            def __init__(self, delay, function, args=()):
+                self.delay = delay
+                self.function = function
+                self.args = args
+                self.daemon = False
+                self.started = False
+                self.cancelled = False
+                self.instances.append(self)
+
+            def start(self):
+                self.started = True
+
+            def cancel(self):
+                self.cancelled = True
+
+            def fire(self):
+                if not self.cancelled:
+                    self.function(*self.args)
+
+        monkeypatch.setattr(plan_dashboard.threading, "Timer", FakeTimer)
+
+        async def _test():
+            stop_event = asyncio.Event()
+            release = asyncio.Event()
+
+            async def _watcher():
+                await stop_event.wait()
+                try:
+                    await release.wait()
+                except asyncio.CancelledError:
+                    await release.wait()
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            await plan_dashboard._stop_watcher("wt-a")
+            assert len(FakeTimer.instances) == 1
+            watchdog = FakeTimer.instances[0]
+            assert watchdog.started and not watchdog.cancelled
+
+            release.set()
+            await watcher
+            await asyncio.sleep(0)
+            assert watchdog.cancelled
+            watchdog.fire()
+            assert forced_exits == []
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_embedded_server_thread_cannot_arm_process_exit(self, monkeypatch):
+        """An in-process server thread never owns or terminates its host process."""
+        import threading
+
+        created = []
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+        results = []
+        thread = threading.Thread(
+            target=lambda: results.append(
+                plan_dashboard._schedule_forced_process_exit(0.01)
+            )
+        )
+        thread.start()
+        thread.join(timeout=2.0)
+        assert not thread.is_alive()
+        assert results == [None]
+        assert created == []
+
     def test_crashed_watcher_is_respawned(self, tmp_path):
         loop = asyncio.new_event_loop()
         self._reset()

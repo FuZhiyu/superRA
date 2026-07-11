@@ -28,6 +28,7 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 import webbrowser
 from contextlib import asynccontextmanager
@@ -537,19 +538,23 @@ def _is_benign_awatch_teardown_race(exc: BaseException) -> bool:
     return isinstance(exc, UnboundLocalError) and "raw_changes" in str(exc)
 
 
-def _schedule_forced_process_exit(delay: float) -> None:
+def _schedule_forced_process_exit(delay: float) -> threading.Timer | None:
     """Guarantee exit when a cancellation-suppressing watcher cannot unwind.
 
     The dashboard is an auxiliary, non-persistent process.  Once both bounded
     watcher teardown phases fail, a daemon watchdog is safer than allowing an
     orphaned CPU-spinning process to survive indefinitely.  The delay lets the
     current ASGI response and lifespan make their normal exit attempt first.
+    Embedded servers running outside the main thread do not own their process,
+    so they must not arm a process-level exit.
     """
-    import threading
+    if threading.current_thread() is not threading.main_thread():
+        return None
 
     timer = threading.Timer(delay, os._exit, args=(0,))
     timer.daemon = True
     timer.start()
+    return timer
 
 
 async def _stop_watcher(wt: str) -> None:
@@ -622,7 +627,11 @@ async def _stop_watcher(wt: str) -> None:
             # normally completes above.  A cancellation-suppressing replacement
             # cannot be killed by asyncio; schedule a process watchdog so it
             # cannot strand this auxiliary dashboard during loop shutdown.
+            watchdog = _schedule_forced_process_exit(WATCHER_PROCESS_EXIT_TIMEOUT)
+
             def _observe_late_completion(done_task: asyncio.Task) -> None:
+                if watchdog is not None:
+                    watchdog.cancel()
                 try:
                     done_task.result()
                 except asyncio.CancelledError:
@@ -637,7 +646,6 @@ async def _stop_watcher(wt: str) -> None:
                     )
 
             task.add_done_callback(_observe_late_completion)
-            _schedule_forced_process_exit(WATCHER_PROCESS_EXIT_TIMEOUT)
             if caller_cancelled:
                 raise asyncio.CancelledError
             return
