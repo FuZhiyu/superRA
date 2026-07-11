@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -172,41 +172,3 @@ permanent protection, task-tree status/evidence, and the researcher-requested
 patch-release surfaces; the only cross-task hunk is the user-requested
 pre-existing [docs-site postponement](../../docs-site/task.md), and no
 scope-ambiguous hunk remains.
-
-## Review Notes
-
-1. **MAJOR:** Main-thread identity is not process ownership. The watchdog guard
-   suppresses `os._exit` only outside the main thread, so an externally embedded
-   ASGI host running this FastAPI app on its normal main-thread event loop still
-   arms a timer whose target is `os._exit`
-   ([plan_dashboard.py:541-557](../../../../skills/task-tree/scripts/plan_dashboard.py#L541-L557)).
-   The regression covers only a background-thread embedding
-   ([test_dashboard.py:1198-1218](../../../../skills/task-tree/scripts/test_dashboard.py#L1198-L1218)),
-   leaving an embedded main-thread host vulnerable even though late watcher
-   completion now disarms the timer. Establish explicit standalone-process
-   ownership at the dashboard's own serve entry point, require that ownership
-   before arming the process watchdog, and cover both a main-thread embedded
-   host that must not arm and the detached child that must retain the fail-safe.
-   → implemented: watchdog ownership now requires an active module-owned
-   `serve()` lifecycle plus the main thread; direct main-thread and
-   background-thread embedding regressions create no timer, while the detached
-   process regression retains the fail-safe
-   ([plan_dashboard.py:541-561](../../../../skills/task-tree/scripts/plan_dashboard.py#L541-L561),
-   [test_dashboard.py:1199-1232](../../../../skills/task-tree/scripts/test_dashboard.py#L1199-L1232),
-   [test_dashboard.py:4175-4295](../../../../skills/task-tree/scripts/test_dashboard.py#L4175-L4295)).
-
-2. **MAJOR:** The committed version-audit evidence is not true at the governing
-   HEAD. `scripts/bump-version.sh --audit` reports the task's exact
-   current-version references as undeclared, contradicting both the claimed
-   clean audit and the fresh Final diff self-check
-   ([task.md:157-169](task.md#L157-L169)). The five declared manifests are in
-   sync, but the integration record itself makes the audit non-clean under the
-   audit's repository-wide undeclared-file check
-   ([bump-version.sh:88-139](../../../../scripts/bump-version.sh#L88-L139)).
-   Make permanent task evidence intentionally outside the version-bump audit (or
-   remove the self-referential current-version literals), rerun `--audit`, and
-   refresh the Results with the output that holds at the committed tree.
-   → implemented: replaced exact current-version literals in this task with
-   durable patch-release wording; `scripts/bump-version.sh --check` reports all
-   declared manifests in sync and `--audit` reports no undeclared files
-   ([bump-version.sh:50-139](../../../../scripts/bump-version.sh#L50-L139)).
