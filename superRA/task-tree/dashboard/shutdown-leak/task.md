@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: implemented
+status: approved
 depends_on:  []
 ---
 

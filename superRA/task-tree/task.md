@@ -1,6 +1,6 @@
 ---
 title: "Task Tree Skill"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
