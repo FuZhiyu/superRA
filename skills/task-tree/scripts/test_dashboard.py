@@ -1075,6 +1075,7 @@ class TestWatcherLifecycle:
             plan_dashboard,
             "_schedule_forced_process_exit",
             forced_exit_delays.append,
+            raising=False,
         )
 
         async def _test():

@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -77,7 +77,12 @@ observable, and the narrow benign `awatch` exception filter is preserved
 Both regressions failed against the reviewed unbounded implementation before
 this change. The focused case applied repeated caller cancellation to a watcher
 that finished neither cooperatively nor after hard cancellation; teardown
-exceeded its configured bound. The process case launched a new-session child,
+exceeded its configured bound. The corrected test creates the absent watchdog
+helper when overlaid on `ad18ee19`; that replay reached and failed the intended
+`completed_within_bound` assertion rather than stopping during setup
+([test_dashboard.py:1073-1079](../../../../skills/task-tree/scripts/test_dashboard.py#L1073-L1079),
+[test_dashboard.py:1108-1118](../../../../skills/task-tree/scripts/test_dashboard.py#L1108-L1118)).
+The process case launched a new-session child,
 connected eight real SSE clients, reset them concurrently, and reached Uvicorn's
 `Waiting for background tasks to complete` state with the child alive and port
 open. The child wraps the real watchfiles coroutine and writes a marker only
@@ -114,3 +119,9 @@ Verification:
    monkeypatch (for example, `raising=False`) and verify that the pre-fix run
    reaches and fails the intended `completed_within_bound` assertion while the
    current implementation still passes.
+   → implemented: the helper monkeypatch now uses `raising=False`; an overlay
+   replay against `ad18ee19` reached line 1118 and failed with `AssertionError`
+   on "watcher teardown exceeded its bound," while the current focused
+   regressions pass
+   ([test_dashboard.py:1073-1079](../../../../skills/task-tree/scripts/test_dashboard.py#L1073-L1079),
+   [test_dashboard.py:1108-1118](../../../../skills/task-tree/scripts/test_dashboard.py#L1108-L1118)).
