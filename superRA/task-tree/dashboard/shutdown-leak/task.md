@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -104,24 +104,3 @@ Verification:
 - The watcher, idle-shutdown, and background-idle lifecycle set passes: 11 passed.
 - The full task-tree script suite passes: 707 passed, with four existing
   warnings.
-
-## Review Notes
-
-1. **MAJOR:** The focused regression does not exercise the reviewed unbounded
-   implementation as committed. Its monkeypatch of the newly added
-   `_schedule_forced_process_exit` helper uses the default `raising=True`, so
-   running this test against the pre-fix module stops immediately with
-   `AttributeError` before repeated cancellation or the timing assertion
-   ([test_dashboard.py:1073-1078](../../../../skills/task-tree/scripts/test_dashboard.py#L1073-L1078)).
-   This leaves the Results claim that the old teardown exceeded the configured
-   bound unsupported by the committed regression
-   ([task.md:76-88](task.md#L76-L88)). Create the absent helper during the
-   monkeypatch (for example, `raising=False`) and verify that the pre-fix run
-   reaches and fails the intended `completed_within_bound` assertion while the
-   current implementation still passes.
-   → implemented: the helper monkeypatch now uses `raising=False`; an overlay
-   replay against `ad18ee19` reached line 1118 and failed with `AssertionError`
-   on "watcher teardown exceeded its bound," while the current focused
-   regressions pass
-   ([test_dashboard.py:1073-1079](../../../../skills/task-tree/scripts/test_dashboard.py#L1073-L1079),
-   [test_dashboard.py:1108-1118](../../../../skills/task-tree/scripts/test_dashboard.py#L1108-L1118)).
