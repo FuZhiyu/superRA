@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -141,34 +141,48 @@ Red--green--green verification on 2026-07-11:
 ### Integration
 
 The missing pre-fit JUnit artifact was caused by an armed process-exit watchdog
-from an in-process dashboard server: a slow watcher completed after both teardown
-bounds, but its uncancelled timer later terminated pytest. The watchdog is now
-returned to `_stop_watcher()` and cancelled on late task completion. Only the
-module's own `serve()` lifecycle on the main thread can arm a process-level exit;
-external ASGI hosts and background-thread embeddings cannot, while a standalone
-dashboard process retains the terminal fail-safe
-([plan_dashboard.py:541-561](../../../../skills/task-tree/scripts/plan_dashboard.py#L541-L561),
-[plan_dashboard.py:629-655](../../../../skills/task-tree/scripts/plan_dashboard.py#L629-L655)).
-Focused regressions verify late completion disarms the timer without calling
-`os._exit`, embedded servers on either the main or a background thread create no
-timer, and a genuinely detached cancellation-suppressing server still exits
-([test_dashboard.py:1132-1232](../../../../skills/task-tree/scripts/test_dashboard.py#L1132-L1232),
-[test_dashboard.py:4175-4295](../../../../skills/task-tree/scripts/test_dashboard.py#L4175-L4295)).
+from an imported dashboard module: a slow watcher completed after both teardown
+bounds, but its uncancelled timer later terminated pytest. Returning the timer
+to `_stop_watcher()` and cancelling it on late completion closed that first
+path, but post-review closeout exposed a second nondeterministic exit. An
+isolated pre-fix trace run completed normally and captured only intentional
+fake-timer coverage, ownership probes, and detached children; the unintended
+stack did not recur. The remaining qualifying state was nevertheless shared
+and mutable: an imported in-process `serve()` thread could leave `_server`
+non-null long enough for a later main-thread teardown to arm the real watchdog.
 
-Post-fit verification produced both requested JUnit artifacts: the verbose
-dashboard suite passed 279 tests through the colliding-repositories case, and
-the full task-tree script suite passed 710 tests with four existing warnings.
-Both XML files parsed with zero errors and failures. All declared version
-manifests are in sync, the version audit found no undeclared current-version
-surface, and the patch release is recorded in the release notes. The project-doc
-audit found the root README and contributor guide current, with no module-level
-dashboard docs requiring changes.
+Process ownership is now immutable at module entry. Only executing
+`plan_dashboard.py` as `__main__`, on its main thread, can arm the terminal
+watchdog; importing the module into pytest or another ASGI host cannot acquire
+that authority through a stale `_server` handle
+([plan_dashboard.py:109-111](../../../../skills/task-tree/scripts/plan_dashboard.py#L109-L111),
+[plan_dashboard.py:545-565](../../../../skills/task-tree/scripts/plan_dashboard.py#L545-L565)).
+Focused regressions verify late completion disarms the timer without calling
+`os._exit`, a background thread cannot arm it even in a standalone process, and
+an imported module on the main thread cannot arm it even with `_server` set to
+a stale object
+([test_dashboard.py:1132-1234](../../../../skills/task-tree/scripts/test_dashboard.py#L1132-L1234)).
+The detached regression executes the production source with genuine
+`__main__` identity, proving that two cancellation-suppressing standalone CLI
+children still exercise the fail-safe and exit cleanly
+([test_dashboard.py:4177-4310](../../../../skills/task-tree/scripts/test_dashboard.py#L4177-L4310)).
+
+Post-fix verification was repeated to cover the timing-sensitive failure. The
+five focused lifecycle tests passed. The dashboard suite passed twice with 279
+tests per run, and the full task-tree script suite passed twice with 710 tests
+per run. All four JUnit files were present, parsed with zero errors and failures,
+and had identical sizes within each repeated pair; no late process exit
+occurred. All declared version manifests are in sync, the version audit found
+no undeclared current-version surface, and the patch release remains recorded
+in the release notes. The project-doc audit found the root README and
+contributor guide current, with no module-level dashboard docs requiring
+changes.
 
 **Final diff self-check:** refreshed with
-`git diff dcfbd1fbcda03ed8defda1e39a2c7b14ff27d23f` after the ownership and audit
-corrections; surviving change classes are bounded watcher shutdown,
-`serve()`-scoped process-watchdog ownership, real lifecycle regressions and
-permanent protection, task-tree status/evidence, and the researcher-requested
-patch-release surfaces; the only cross-task hunk is the user-requested
+`git diff dcfbd1fbcda03ed8defda1e39a2c7b14ff27d23f` after the immutable-ownership
+correction; surviving change classes are bounded watcher shutdown, immutable
+standalone process-watchdog ownership, real lifecycle regressions and permanent
+protection, task-tree status/evidence, and the researcher-requested
+patch-release surfaces. The only cross-task hunk is the user-requested
 pre-existing [docs-site postponement](../../docs-site/task.md), and no
 scope-ambiguous hunk remains.

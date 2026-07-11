@@ -1137,7 +1137,7 @@ class TestWatcherLifecycle:
         monkeypatch.setattr(plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.01)
         forced_exits = []
         monkeypatch.setattr(plan_dashboard.os, "_exit", forced_exits.append)
-        monkeypatch.setattr(plan_dashboard, "_server", object())
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
 
         class FakeTimer:
             instances = []
@@ -1201,6 +1201,7 @@ class TestWatcherLifecycle:
         import threading
 
         created = []
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
         monkeypatch.setattr(
             plan_dashboard.threading,
             "Timer",
@@ -1219,15 +1220,16 @@ class TestWatcherLifecycle:
         assert created == []
 
     def test_embedded_main_thread_cannot_arm_process_exit(self, monkeypatch):
-        """A main-thread ASGI host without serve() ownership cannot exit its host."""
+        """A stale server handle cannot grant main-thread process ownership."""
         created = []
-        monkeypatch.setattr(plan_dashboard, "_server", None)
+        monkeypatch.setattr(plan_dashboard, "_server", object())
         monkeypatch.setattr(
             plan_dashboard.threading,
             "Timer",
             lambda *args, **kwargs: created.append((args, kwargs)),
         )
 
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", False)
         assert plan_dashboard._schedule_forced_process_exit(0.01) is None
         assert created == []
 
@@ -4191,13 +4193,15 @@ class TestIdleShutdownLifespan:
         runner.write_text(
             "\n".join(
                 [
-                    "import asyncio",
                     "import sys",
                     "from pathlib import Path",
                     f"sys.path.insert(0, {str(SCRIPTS_DIR)!r})",
-                    "import plan_dashboard",
-                    "original_watch = plan_dashboard._watch_worktree",
-                    "marker = Path(sys.argv[3])",
+                    "plan_root, port, marker_path = sys.argv[1:4]",
+                    f"source_path = Path({str(SCRIPTS_DIR / 'plan_dashboard.py')!r})",
+                    "source = source_path.read_text(encoding='utf-8')",
+                    "injection = '''",
+                    "original_watch = _watch_worktree",
+                    "marker = Path(_test_marker_path)",
                     "async def delayed_finish(wt, stop_event):",
                     "    await original_watch(wt, stop_event)",
                     "    marker.write_text('native watcher closed', encoding='utf-8')",
@@ -4206,17 +4210,28 @@ class TestIdleShutdownLifespan:
                     "            await asyncio.Event().wait()",
                     "        except asyncio.CancelledError:",
                     (
-                        "            marker.write_text('native watcher closed\\n"
+                        "            marker.write_text('native watcher closed\\\\n"
                         "hard cancel suppressed', encoding='utf-8')"
                     ),
-                    "plan_dashboard._watch_worktree = delayed_finish",
-                    "plan_dashboard.PLAN_ROOT = Path(sys.argv[1])",
-                    "plan_dashboard.IDLE_TIMEOUT = 0.3",
-                    "plan_dashboard.HEARTBEAT_INTERVAL = 0.05",
-                    "plan_dashboard.WATCHER_STOP_TIMEOUT = 0.1",
-                    "plan_dashboard.WATCHER_CANCEL_TIMEOUT = 0.1",
-                    "plan_dashboard.WATCHER_PROCESS_EXIT_TIMEOUT = 0.1",
-                    "plan_dashboard.serve(int(sys.argv[2]))",
+                    "_watch_worktree = delayed_finish",
+                    "IDLE_TIMEOUT = 0.3",
+                    "HEARTBEAT_INTERVAL = 0.05",
+                    "WATCHER_STOP_TIMEOUT = 0.1",
+                    "WATCHER_CANCEL_TIMEOUT = 0.1",
+                    "WATCHER_PROCESS_EXIT_TIMEOUT = 0.1",
+                    "'''",
+                    "entry = '\\nif __name__ == \"__main__\":\\n'",
+                    "source = source.replace(entry, '\\n' + injection + entry, 1)",
+                    (
+                        "sys.argv = [str(source_path), 'serve', '--foreground', "
+                        "'--root', plan_root, '--port', port, '--no-open']"
+                    ),
+                    (
+                        "scope = {'__name__': '__main__', '__file__': "
+                        "str(source_path), '__package__': None, "
+                        "'_test_marker_path': marker_path}"
+                    ),
+                    "exec(compile(source, str(source_path), 'exec'), scope)",
                 ]
             ),
             encoding="utf-8",

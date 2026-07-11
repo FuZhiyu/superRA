@@ -106,6 +106,10 @@ WATCHER_PROCESS_EXIT_TIMEOUT: float = 0.5
 # shutdown by setting server.should_exit = True.  Set in serve().
 _server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
 
+# Immutable process ownership: executing this entry script owns the auxiliary
+# dashboard process; importing it into pytest or another ASGI host does not.
+_standalone_process_owner = __name__ == "__main__"
+
 # In-memory task tree and flat index.  These are a compatibility view over the
 # *default* (launch) worktree's WorktreeState — read by /export's snapshot path
 # and the standalone renderer.  Per-request handlers resolve a WorktreeState
@@ -545,12 +549,12 @@ def _schedule_forced_process_exit(delay: float) -> threading.Timer | None:
     watcher teardown phases fail, a daemon watchdog is safer than allowing an
     orphaned CPU-spinning process to survive indefinitely.  The delay lets the
     current ASGI response and lifespan make their normal exit attempt first.
-    Only this module's own ``serve()`` lifecycle owns its process. Embedded ASGI
-    hosts and servers running outside the main thread must not arm a
-    process-level exit.
+    Only the foreground CLI context owns its process. Direct ``serve()`` calls,
+    embedded ASGI hosts, and servers running outside the main thread must not arm
+    a process-level exit.
     """
     if (
-        _server is None
+        not _standalone_process_owner
         or threading.current_thread() is not threading.main_thread()
     ):
         return None
