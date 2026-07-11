@@ -140,16 +140,15 @@ Red--green--green verification on 2026-07-11:
 
 ### Integration
 
-The missing pre-fit JUnit artifact was caused by an armed process-exit watchdog
-from an imported dashboard module: a slow watcher completed after both teardown
-bounds, but its uncancelled timer later terminated pytest. Returning the timer
-to `_stop_watcher()` and cancelling it on late completion closed that first
-path, but post-review closeout exposed a second nondeterministic exit. An
-isolated pre-fix trace run completed normally and captured only intentional
-fake-timer coverage, ownership probes, and detached children; the unintended
-stack did not recur. The remaining qualifying state was nevertheless shared
-and mutable: an imported in-process `serve()` thread could leave `_server`
-non-null long enough for a later main-thread teardown to arm the real watchdog.
+Early orchestrator runs exceeded the tool's per-command execution window and
+therefore returned without their requested JUnit artifact. A direct scheduler
+trace on a complete run captured only intentional fake-timer coverage,
+ownership probes, and detached children, so the missing artifacts were not
+attributed to a reproduced watchdog escape. Integration review nevertheless
+identified two real safety gaps in the first implementation: an armed watchdog
+remained live if its watcher completed late, and shared `_server` state did not
+prove that an imported dashboard module owned its host process. The timer is now
+returned to `_stop_watcher()` and cancelled on late completion.
 
 Process ownership is now immutable at module entry. Only executing
 `plan_dashboard.py` as `__main__`, on its main thread, can arm the terminal
@@ -177,6 +176,13 @@ no undeclared current-version surface, and the patch release remains recorded
 in the release notes. The project-doc audit found the root README and
 contributor guide current, with no module-level dashboard docs requiring
 changes.
+
+The orchestrator closeout reran all 710 collected cases in bounded shards to
+stay within the command window: 19 live lifecycle/background-launch tests, 260
+remaining dashboard cases, and 431 non-dashboard cases. The shards completed
+with 708 passes, two unrelated Playwright skips, zero failures or errors, and a
+valid JUnit artifact for each shard. `superra task check` passed and no temporary
+`## Sync Impact` section remains.
 
 **Final diff self-check:** refreshed with
 `git diff dcfbd1fbcda03ed8defda1e39a2c7b14ff27d23f` after the immutable-ownership
