@@ -104,3 +104,35 @@ Verification:
 - The watcher, idle-shutdown, and background-idle lifecycle set passes: 11 passed.
 - The full task-tree script suite passes: 707 passed, with four existing
   warnings.
+
+### Permanent Protection
+
+The researcher confirmed two behaviors as key results requiring permanent
+regression protection:
+
+1. Watcher teardown remains bounded under repeated caller cancellation even when
+   the watcher suppresses hard cancellation. The focused test covers the
+   cooperative bound, forced-cancel bound, terminal process watchdog, caller
+   cancellation propagation, and late task cleanup
+   ([test_dashboard.py:1063-1130](../../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1130)).
+2. Repeated detached dashboard cycles survive eight concurrent abrupt SSE resets
+   and finish with the real watchfiles coroutine returned, the child PID dead,
+   and its port closed
+   ([test_dashboard.py:4073-4193](../../../../skills/task-tree/scripts/test_dashboard.py#L4073-L4193)).
+
+Both tests follow the repository's self-contained pytest convention and run
+without a separate analysis pipeline or saved-output dependency. Their timing
+bounds are control-flow deadlines rather than floating-point result tolerances;
+the focused test injects short test-only bounds, while the process test uses a
+five-second observation window around sub-second shutdown phases.
+
+Red--green--green verification on 2026-07-11:
+
+- Baseline: both protected tests passed together (2 passed).
+- Bounded teardown red: inverting `completed_within_bound` failed at the intended
+  assertion; restoring the expectation passed (1 passed).
+- Detached lifecycle red: replacing the native-cleanup marker expectation with
+  a sentinel failed against the observed `native watcher closed` and
+  `hard cancel suppressed` marker; restoring it passed (1 passed).
+- Full task-tree script suite after restoration: 707 passed with four existing
+  warnings.
