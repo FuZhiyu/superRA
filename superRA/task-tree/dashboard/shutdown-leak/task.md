@@ -1,6 +1,6 @@
 ---
 title: "Eliminate Orphaned Dashboard Shutdown Spins"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -92,3 +92,35 @@ Verification:
 - The watcher and idle-shutdown lifecycle groups pass: 10 passed.
 - The full task-tree script suite passes: 707 passed, with four existing
   warnings.
+
+## Review Notes
+
+1. **MAJOR:** Cooperative teardown has no bound: after signalling the stop
+   event, `_stop_watcher()` ignores every caller cancellation and loops until
+   the watcher finishes
+   ([plan_dashboard.py:568-576](../../../../skills/task-tree/scripts/plan_dashboard.py#L568-L576)).
+   If `awatch` fails to unwind, the last SSE response and lifespan shutdown both
+   await this coroutine indefinitely
+   ([plan_dashboard.py:1007-1013](../../../../skills/task-tree/scripts/plan_dashboard.py#L1007-L1013),
+   [plan_dashboard.py:782-789](../../../../skills/task-tree/scripts/plan_dashboard.py#L782-L789)),
+   reproducing Uvicorn's `Waiting for background tasks to complete` state rather
+   than satisfying the objective's bounded-exit guarantee. Add a bounded
+   teardown strategy that preserves the cooperative path but guarantees server
+   termination when the native watcher does not complete, with a regression for
+   a non-finishing watcher under repeated cancellation.
+
+2. **MAJOR:** The added real-server test is not a regression for the production
+   change: it passes against the pre-fix `plan_dashboard.py`. It runs `serve()`
+   in daemon threads rather than launching detached dashboard processes
+   ([test_dashboard.py:4088-4097](../../../../skills/task-tree/scripts/test_dashboard.py#L4088-L4097)),
+   then treats empty watcher dictionaries as resource evidence
+   ([test_dashboard.py:4128-4135](../../../../skills/task-tree/scripts/test_dashboard.py#L4128-L4135))
+   even though `_stop_watcher()` removes those entries before waiting for native
+   teardown
+   ([plan_dashboard.py:555-560](../../../../skills/task-tree/scripts/plan_dashboard.py#L555-L560)).
+   Consequently it cannot establish that a child process exited or that no
+   native event resource survived, and the root-cause/process-cleanup claims in
+   the Results remain unsupported
+   ([task.md:68-87](task.md#L68-L87)). Make the multi-client race fail on the
+   pre-fix lifecycle and exercise repeated detached launch/disconnect/idle-exit
+   cycles with process, port, and native-resource evidence.
