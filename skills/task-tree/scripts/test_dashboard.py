@@ -1060,6 +1060,179 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
+    def test_stop_is_bounded_under_repeated_cancellation(self, monkeypatch):
+        """A non-finishing watcher is force-cancelled after a cooperative bound."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.03, raising=False
+        )
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.03, raising=False
+        )
+        forced_exit_delays = []
+        monkeypatch.setattr(
+            plan_dashboard,
+            "_schedule_forced_process_exit",
+            forced_exit_delays.append,
+            raising=False,
+        )
+
+        async def _test():
+            stop_event = asyncio.Event()
+            teardown_started = asyncio.Event()
+            never_finishes_cooperatively = asyncio.Event()
+            hard_cancelled = False
+
+            async def _watcher():
+                nonlocal hard_cancelled
+                await stop_event.wait()
+                teardown_started.set()
+                try:
+                    await never_finishes_cooperatively.wait()
+                except asyncio.CancelledError:
+                    hard_cancelled = True
+                    # Model a faulty replacement/native boundary that suppresses
+                    # hard cancellation too. _stop_watcher must still return.
+                    await never_finishes_cooperatively.wait()
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            stopper = asyncio.create_task(plan_dashboard._stop_watcher("wt-a"))
+            await teardown_started.wait()
+            for _ in range(3):
+                stopper.cancel()
+                await asyncio.sleep(0)
+            await asyncio.sleep(0.08)
+            completed_within_bound = stopper.done()
+
+            # Let the reviewed, unbounded implementation unwind so a failing
+            # assertion cannot strand this test's event loop.
+            if not completed_within_bound:
+                never_finishes_cooperatively.set()
+            with pytest.raises(asyncio.CancelledError):
+                await stopper
+
+            assert completed_within_bound, "watcher teardown exceeded its bound"
+            assert hard_cancelled, "non-finishing watcher was not force-cancelled"
+            assert forced_exit_delays == [plan_dashboard.WATCHER_PROCESS_EXIT_TIMEOUT]
+            assert not watcher.done(), "cancellation-suppressing watcher unexpectedly ended"
+            never_finishes_cooperatively.set()
+            await watcher
+            assert watcher.done() and not watcher.cancelled()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_late_watcher_completion_disarms_process_exit(self, monkeypatch):
+        """A watcher finishing after both bounds cancels its armed watchdog."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        monkeypatch.setattr(plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.01)
+        monkeypatch.setattr(plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.01)
+        forced_exits = []
+        monkeypatch.setattr(plan_dashboard.os, "_exit", forced_exits.append)
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
+
+        class FakeTimer:
+            instances = []
+
+            def __init__(self, delay, function, args=()):
+                self.delay = delay
+                self.function = function
+                self.args = args
+                self.daemon = False
+                self.started = False
+                self.cancelled = False
+                self.instances.append(self)
+
+            def start(self):
+                self.started = True
+
+            def cancel(self):
+                self.cancelled = True
+
+            def fire(self):
+                if not self.cancelled:
+                    self.function(*self.args)
+
+        monkeypatch.setattr(plan_dashboard.threading, "Timer", FakeTimer)
+
+        async def _test():
+            stop_event = asyncio.Event()
+            release = asyncio.Event()
+
+            async def _watcher():
+                await stop_event.wait()
+                try:
+                    await release.wait()
+                except asyncio.CancelledError:
+                    await release.wait()
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            await plan_dashboard._stop_watcher("wt-a")
+            assert len(FakeTimer.instances) == 1
+            watchdog = FakeTimer.instances[0]
+            assert watchdog.started and not watchdog.cancelled
+
+            release.set()
+            await watcher
+            await asyncio.sleep(0)
+            assert watchdog.cancelled
+            watchdog.fire()
+            assert forced_exits == []
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_embedded_server_thread_cannot_arm_process_exit(self, monkeypatch):
+        """An in-process server thread never owns or terminates its host process."""
+        import threading
+
+        created = []
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+        results = []
+        thread = threading.Thread(
+            target=lambda: results.append(
+                plan_dashboard._schedule_forced_process_exit(0.01)
+            )
+        )
+        thread.start()
+        thread.join(timeout=2.0)
+        assert not thread.is_alive()
+        assert results == [None]
+        assert created == []
+
+    def test_embedded_main_thread_cannot_arm_process_exit(self, monkeypatch):
+        """A stale server handle cannot grant main-thread process ownership."""
+        created = []
+        monkeypatch.setattr(plan_dashboard, "_server", object())
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", False)
+        assert plan_dashboard._schedule_forced_process_exit(0.01) is None
+        assert created == []
+
     def test_crashed_watcher_is_respawned(self, tmp_path):
         loop = asyncio.new_event_loop()
         self._reset()
@@ -4000,6 +4173,141 @@ class TestIdleShutdownLifespan:
             if plan_dashboard._server is not None:
                 plan_dashboard._server.should_exit = True
             t.join(timeout=5.0)
+
+    def test_detached_repeated_abrupt_disconnects_exit_cleanly(self, tmp_path):
+        """Detached servers exit after concurrent RSTs and native watcher close.
+
+        The child wraps the real watchfiles watcher with a post-cleanup stall.
+        This deterministically reaches Uvicorn's graceful-shutdown race: the
+        native watcher has closed, but the watcher task does not finish unless
+        the bounded fallback cancels it.  The reviewed unbounded implementation
+        leaves the detached child alive and its port open.
+        """
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("watchfiles")
+        import struct
+        import threading
+
+        plan_root = _serve_plan(tmp_path)
+        runner = tmp_path / "detached_dashboard_runner.py"
+        runner.write_text(
+            "\n".join(
+                [
+                    "import sys",
+                    "from pathlib import Path",
+                    f"sys.path.insert(0, {str(SCRIPTS_DIR)!r})",
+                    "plan_root, port, marker_path = sys.argv[1:4]",
+                    f"source_path = Path({str(SCRIPTS_DIR / 'plan_dashboard.py')!r})",
+                    "source = source_path.read_text(encoding='utf-8')",
+                    "injection = '''",
+                    "original_watch = _watch_worktree",
+                    "marker = Path(_test_marker_path)",
+                    "async def delayed_finish(wt, stop_event):",
+                    "    await original_watch(wt, stop_event)",
+                    "    marker.write_text('native watcher closed', encoding='utf-8')",
+                    "    while True:",
+                    "        try:",
+                    "            await asyncio.Event().wait()",
+                    "        except asyncio.CancelledError:",
+                    (
+                        "            marker.write_text('native watcher closed\\\\n"
+                        "hard cancel suppressed', encoding='utf-8')"
+                    ),
+                    "_watch_worktree = delayed_finish",
+                    "IDLE_TIMEOUT = 0.3",
+                    "HEARTBEAT_INTERVAL = 0.05",
+                    "WATCHER_STOP_TIMEOUT = 0.1",
+                    "WATCHER_CANCEL_TIMEOUT = 0.1",
+                    "WATCHER_PROCESS_EXIT_TIMEOUT = 0.1",
+                    "'''",
+                    "entry = '\\nif __name__ == \"__main__\":\\n'",
+                    "source = source.replace(entry, '\\n' + injection + entry, 1)",
+                    (
+                        "sys.argv = [str(source_path), 'serve', '--foreground', "
+                        "'--root', plan_root, '--port', port, '--no-open']"
+                    ),
+                    (
+                        "scope = {'__name__': '__main__', '__file__': "
+                        "str(source_path), '__package__': None, "
+                        "'_test_marker_path': marker_path}"
+                    ),
+                    "exec(compile(source, str(source_path), 'exec'), scope)",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        def _connect(port):
+            client = socket.create_connection(("127.0.0.1", port), timeout=5.0)
+            client.sendall(
+                b"GET /events HTTP/1.1\r\n"
+                + f"Host: 127.0.0.1:{port}\r\n".encode()
+                + b"Accept: text/event-stream\r\nConnection: keep-alive\r\n\r\n"
+            )
+            received = b""
+            while b": heartbeat\n\n" not in received:
+                received += client.recv(4096)
+            return client
+
+        for cycle in range(2):
+            port = self._free_port()
+            marker = tmp_path / f"native-closed-{cycle}"
+            log_path = tmp_path / f"detached-{cycle}.log"
+            with log_path.open("wb") as log:
+                process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        str(runner),
+                        str(plan_root),
+                        str(port),
+                        str(marker),
+                    ],
+                    stdin=subprocess.DEVNULL,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+            try:
+                assert os.getsid(process.pid) == process.pid
+                assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+                clients = [_connect(port) for _ in range(8)]
+                barrier = threading.Barrier(len(clients))
+
+                def _reset(client):
+                    barrier.wait()
+                    client.setsockopt(
+                        socket.SOL_SOCKET,
+                        socket.SO_LINGER,
+                        struct.pack("ii", 1, 0),
+                    )
+                    client.close()
+
+                closers = [
+                    threading.Thread(target=_reset, args=(client,))
+                    for client in clients
+                ]
+                for closer in closers:
+                    closer.start()
+                for closer in closers:
+                    closer.join(timeout=2.0)
+
+                deadline = time.monotonic() + 5.0
+                while process.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                assert process.poll() == 0, (
+                    f"cycle {cycle}: detached server did not exit; "
+                    f"log={log_path.read_text(encoding='utf-8', errors='replace')}"
+                )
+                assert marker.read_text(encoding="utf-8") == (
+                    "native watcher closed\nhard cancel suppressed"
+                )
+                assert not plan_dashboard._port_serving(port)
+                assert not plan_dashboard._pid_alive(process.pid)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5.0)
 
 
 class TestRuntimeFileKeying:

@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-07-11
+
+### Fixed
+
+- Dashboard watcher teardown is bounded across cooperative stop, task
+  cancellation, and a detached-process fail-safe. Repeated abrupt SSE
+  disconnects no longer leave orphaned, CPU-spinning dashboard processes, and
+  embedded server threads cannot terminate their host process.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.1` across package, Claude, Codex,
+  marketplace, and Gemini extension metadata via `scripts/bump-version.sh`.
+
 ## [0.3.0] - 2026-07-01
 
 ### Breaking
@@ -100,7 +114,7 @@ Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent 
   - **`autoload-superra`** (`UserPromptSubmit`) — soft reminder. Detects "superRA" (and case/spacing variants like `super RA`, `super-ra`, `Super_RA`) in the user's message and, if `superRA:using-superra` has not been invoked this session, injects an `additionalContext` reminder telling Claude to load the master skill before responding.
   - **`ensure-using-superra`** (`PreToolUse:Skill`) — hard enforcement. When Claude invokes any `superRA:*-workflow` skill and `superRA:using-superra` is not yet loaded, blocks the `Skill` call with `permissionDecision: deny` and a reason directing Claude to load the master skill first and retry.
   - **`ensure-agent-orchestration`** (`PreToolUse:Skill`) — same pattern as above, gating independently on `superRA:agent-orchestration`.
-- **Hook test suites.** Per-hook stdin-synthesis drivers (16 vectors each, 48 total) under `tests/hooks/test-{autoload-superra,ensure-using-superra,ensure-agent-orchestration}.sh` covering happy path, suppression after companion-load, trigger-boundary cases, JSON-special characters, fail-open on missing transcript, and deny-reason JSON round-trip. A CLI-driven end-to-end driver (`tests/hooks/test-e2e-cli.sh`, 6 scenarios) validates registration + wiring against the live `claude` CLI on Haiku for ~$0.27 per run.
+- **Hook test suites.** Per-hook stdin-synthesis drivers (16 vectors each, 48 total) under `tests/hooks/test-{autoload-superra,ensure-using-superra,ensure-agent-orchestration}.sh` covering happy path, suppression after companion-load, trigger-boundary cases, JSON-special characters, fail-open on missing transcript, and deny-reason JSON round-trip. A CLI-driven end-to-end driver (`tests/hooks/test-e2e-cli.sh`, 6 scenarios) validates registration + wiring against the live `claude` CLI on Haiku for ~\$0.27 per run.
 - **README §Hooks** table extended to list all six registered hooks.
 
 ### Fixed
