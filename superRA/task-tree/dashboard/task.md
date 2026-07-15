@@ -24,4 +24,10 @@ What shipped, past the original single-file static HTML the objective first scop
 
 Preserved throughout: distinctive typography (Source Serif 4 + IBM Plex Mono via Google Fonts CDN), the warm parchment/ink palette with muted status tints, dark/light mode, progressive disclosure, the DAG/kanban views, and the XSS posture (JSON escaping, `textContent` for DOM writes, controlled markdown-it rewrites).
 
+### Shutdown lifecycle protection
+
+Watcher teardown is bounded under repeated caller cancellation: it gets a cooperative grace period, then a bounded forced-cancellation phase, and finally a process watchdog for a cancellation-suppressing watcher. The watchdog is restricted to a standalone `plan_dashboard.py` process running as `__main__` on its main thread, and late watcher completion disarms it ([plan_dashboard.py:109-111](../../../skills/task-tree/scripts/plan_dashboard.py#L109-L111), [plan_dashboard.py:541-671](../../../skills/task-tree/scripts/plan_dashboard.py#L541-L671)).
+
+Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets. Each process cycle verifies that the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1063-1234](../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1234), [test_dashboard.py:4177-4310](../../../skills/task-tree/scripts/test_dashboard.py#L4177-L4310)). Integration verification passed all five focused lifecycle tests, the 279-test dashboard suite twice, and the 710-test task-tree script suite twice; final bounded closeout shards recorded 708 passes, two unrelated Playwright skips, and no failures or errors.
+
 **Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` has grown to ~2,190 lines mixing seven concerns. The background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) have no FastAPI coupling and are clean extraction candidates, following the precedent of `skills/task-tree/scripts/dashboard_artifact_workflow.py`.

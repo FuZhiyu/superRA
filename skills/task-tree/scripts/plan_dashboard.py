@@ -28,6 +28,7 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 import webbrowser
 from contextlib import asynccontextmanager
@@ -93,9 +94,21 @@ IDLE_TIMEOUT: float = 300.0  # 5 minutes
 # IDLE_TIMEOUT so dead connections are pruned before they hold the server open.
 HEARTBEAT_INTERVAL: float = 20.0  # seconds
 
+# Cooperative watchfiles shutdown normally completes promptly after its stop
+# event is set.  Bound that grace period so a stuck native watcher cannot hold
+# Uvicorn's ASGI response/lifespan shutdown open forever; after this interval
+# _stop_watcher falls back to task cancellation.
+WATCHER_STOP_TIMEOUT: float = 2.0
+WATCHER_CANCEL_TIMEOUT: float = 0.5
+WATCHER_PROCESS_EXIT_TIMEOUT: float = 0.5
+
 # Handle to the running uvicorn.Server instance so the idle monitor can request
 # shutdown by setting server.should_exit = True.  Set in serve().
 _server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
+
+# Immutable process ownership: executing this entry script owns the auxiliary
+# dashboard process; importing it into pytest or another ASGI host does not.
+_standalone_process_owner = __name__ == "__main__"
 
 # In-memory task tree and flat index.  These are a compatibility view over the
 # *default* (launch) worktree's WorktreeState — read by /export's snapshot path
@@ -529,6 +542,29 @@ def _is_benign_awatch_teardown_race(exc: BaseException) -> bool:
     return isinstance(exc, UnboundLocalError) and "raw_changes" in str(exc)
 
 
+def _schedule_forced_process_exit(delay: float) -> threading.Timer | None:
+    """Guarantee exit when a cancellation-suppressing watcher cannot unwind.
+
+    The dashboard is an auxiliary, non-persistent process.  Once both bounded
+    watcher teardown phases fail, a daemon watchdog is safer than allowing an
+    orphaned CPU-spinning process to survive indefinitely.  The delay lets the
+    current ASGI response and lifespan make their normal exit attempt first.
+    Only the foreground CLI context owns its process. Direct ``serve()`` calls,
+    embedded ASGI hosts, and servers running outside the main thread must not arm
+    a process-level exit.
+    """
+    if (
+        not _standalone_process_owner
+        or threading.current_thread() is not threading.main_thread()
+    ):
+        return None
+
+    timer = threading.Timer(delay, os._exit, args=(0,))
+    timer.daemon = True
+    timer.start()
+    return timer
+
+
 async def _stop_watcher(wt: str) -> None:
     """Cooperatively stop and remove the watcher for *wt* (last client left).
 
@@ -538,13 +574,15 @@ async def _stop_watcher(wt: str) -> None:
     the event loop spinning on a perpetually-readable kqueue (see
     ``_watch_worktree``).
 
-    The stop event alone releases the native resources; awaiting the task then
-    just confirms it has unwound and surfaces any genuine watcher crash (a fault
-    in ``_rebuild_and_broadcast`` / tree-parse / disk error) — this ``await`` is
-    the only observer of the watcher task's exception, so it must stay
-    propagating.  The one thing swallowed is watchfiles' own *benign* teardown
-    race: when this runs from inside the disconnecting SSE generator's
-    ``finally`` (the common case), ``awatch`` raises
+    The stop event gets a bounded grace period to release native resources. If
+    the watcher does not finish, task cancellation gets a second bounded wait so
+    neither the disconnecting response nor lifespan shutdown can wait forever.
+    A cancellation-suppressing task triggers a delayed process-exit watchdog.
+    Genuine watcher crashes still propagate when they finish within those
+    bounds; a later failure is reported through the loop's exception handler.
+    The one thing swallowed is watchfiles' own *benign* teardown race: when this
+    runs from inside the disconnecting SSE generator's ``finally`` (the common
+    case), ``awatch`` raises
     ``UnboundLocalError: ... 'raw_changes'`` from its ``anyio`` task group as it
     exits (either bare or wrapped in a ``BaseExceptionGroup``).  By then the
     watcher is gone and its native fd is closed, so that specific leaf is not
@@ -558,10 +596,72 @@ async def _stop_watcher(wt: str) -> None:
     if task is not None:
         if stop_event is not None:
             stop_event.set()
+
+        # Give awatch a bounded cooperative grace period.  Disconnect and
+        # graceful-shutdown cancellation belongs to the ASGI caller, so consume
+        # repeated cancellation here without forwarding it to the watcher, then
+        # propagate it after teardown.  If the stop event does not finish the
+        # watcher in time, hard cancellation is the bounded fallback that lets
+        # Uvicorn complete instead of waiting forever.
+        caller_cancelled = False
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + WATCHER_STOP_TIMEOUT
+        while not task.done() and loop.time() < deadline:
+            remaining = deadline - loop.time()
+            try:
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+            except asyncio.CancelledError:
+                caller_cancelled = True
+                continue
+            if done:
+                break
+
+        if not task.done():
+            task.cancel()
+
+        cancel_deadline = loop.time() + WATCHER_CANCEL_TIMEOUT
+        while not task.done() and loop.time() < cancel_deadline:
+            remaining = cancel_deadline - loop.time()
+            try:
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+            except asyncio.CancelledError:
+                caller_cancelled = True
+                continue
+            if done:
+                break
+
+        if not task.done():
+            # _watch_worktree does not suppress CancelledError, so real awatch
+            # normally completes above.  A cancellation-suppressing replacement
+            # cannot be killed by asyncio; schedule a process watchdog so it
+            # cannot strand this auxiliary dashboard during loop shutdown.
+            watchdog = _schedule_forced_process_exit(WATCHER_PROCESS_EXIT_TIMEOUT)
+
+            def _observe_late_completion(done_task: asyncio.Task) -> None:
+                if watchdog is not None:
+                    watchdog.cancel()
+                try:
+                    done_task.result()
+                except asyncio.CancelledError:
+                    pass
+                except BaseException as exc:  # noqa: BLE001 - report to loop
+                    loop.call_exception_handler(
+                        {
+                            "message": "watcher failed after teardown timeout",
+                            "exception": exc,
+                            "task": done_task,
+                        }
+                    )
+
+            task.add_done_callback(_observe_late_completion)
+            if caller_cancelled:
+                raise asyncio.CancelledError
+            return
+
         try:
-            await task
+            task.result()
         except asyncio.CancelledError:
-            # The loop itself is shutting down (e.g. lifespan teardown).
+            # Intentional timeout fallback or event-loop shutdown.
             pass
         except BaseExceptionGroup as eg:
             _, rest = eg.split(_is_benign_awatch_teardown_race)
@@ -570,6 +670,9 @@ async def _stop_watcher(wt: str) -> None:
         except BaseException as exc:  # noqa: BLE001 - re-raised unless benign
             if not _is_benign_awatch_teardown_race(exc):
                 raise
+
+        if caller_cancelled:
+            raise asyncio.CancelledError
 
 
 # ---------------------------------------------------------------------------
@@ -984,8 +1087,6 @@ async def sse_events(request: Request):
                     yield message
                 except asyncio.TimeoutError:
                     yield ": heartbeat\n\n"
-        except asyncio.CancelledError:
-            pass
         finally:
             clients = _worktree_clients.get(wt)
             if clients is not None:
