@@ -522,7 +522,7 @@ class TestServerRoutes:
 # Per-worktree state + request resolution
 #
 # The dashboard serves any discovered worktree on demand, resolved per request
-# from the ``?wt=<name>`` query param (worktree id = directory basename).  A
+# from the ``?wt=<name>`` query param (worktree id = canonical selector token).  A
 # request with no ``?wt=`` resolves to the launch worktree; an unknown ``?wt=``
 # is a 404.  These tests build two distinct trees, seed both into the worktree
 # cache, and assert each request renders from the matching tree's state.
@@ -4451,7 +4451,7 @@ class TestBackgroundLaunch:
     per planner guidance.
     """
 
-    def test_background_launch_returns_and_writes_pid(self, tmp_path):
+    def test_background_launch_returns_and_writes_pid(self, tmp_path, capsys):
         pytest.importorskip("uvicorn")
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
@@ -4467,6 +4467,10 @@ class TestBackgroundLaunch:
             pid = plan_dashboard._read_pid(pid_path)
             assert pid is not None and plan_dashboard._pid_alive(pid)
             assert plan_dashboard._port_serving(port)
+            assert (
+                f"Dashboard running at {plan_dashboard._dashboard_url(port, plan_root)}"
+                in capsys.readouterr().out
+            )
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
@@ -4504,7 +4508,7 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=True
             ) == 0
-            assert opened == [f"http://localhost:{port}"]
+            assert opened == [plan_dashboard._dashboard_url(port, plan_root)]
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
@@ -4523,9 +4527,47 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=True
             ) == 0
-            assert opened == [f"http://localhost:{port}"]
+            assert opened == [plan_dashboard._dashboard_url(port, plan_root)]
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_repo_reuse_opens_invoking_worktree(self, tmp_path, monkeypatch, capsys):
+        """A repo-shared server launched from A must reopen scoped to B."""
+        pytest.importorskip("uvicorn")
+        (tmp_path / "worktree-a").mkdir()
+        (tmp_path / "worktree-b").mkdir()
+        plan_a = _serve_plan(tmp_path / "worktree-a")
+        plan_b = _serve_plan(tmp_path / "worktree-b")
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard.webbrowser, "open", lambda url: opened.append(url))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_a, port, str(common), open_browser=False
+            ) == 0
+            capsys.readouterr()
+            assert plan_dashboard.serve_background(
+                plan_b, port, str(common), open_browser=True
+            ) == 0
+            expected = plan_dashboard._dashboard_url(port, plan_b)
+            assert opened == [expected]
+            assert f"Dashboard already running at {expected}" in capsys.readouterr().out
+        finally:
+            plan_dashboard.stop_background(plan_a, str(common))
+
+    def test_scoped_url_encodes_collision_safe_selector(self, tmp_path, monkeypatch):
+        plan_root = tmp_path / "shared name" / "superRA"
+        plan_root.mkdir(parents=True)
+        monkeypatch.setattr(
+            plan_dashboard,
+            "_discovered_worktree_map",
+            lambda: {"parent one/shared name": plan_root},
+        )
+        assert plan_dashboard._dashboard_url(8123, plan_root) == (
+            "http://localhost:8123/?wt=parent%20one%2Fshared%20name"
+        )
 
     def test_stop_terminates_and_removes_pid(self, tmp_path):
         pytest.importorskip("uvicorn")
@@ -4694,6 +4736,7 @@ class TestBackgroundLaunch:
                 return None  # our child is alive (a lingering loser)
 
         winner_repo = plan_dashboard._repo_id(str(common), plan_root)
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
         monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
@@ -4726,6 +4769,7 @@ class TestBackgroundLaunch:
             def poll(self):
                 return None  # child alive but never brought the dashboard up
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
         monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
@@ -4806,6 +4850,7 @@ class TestBackgroundLaunch:
             spawned.append(cmd)
             return _FakeProc()
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
         monkeypatch.setattr(
             plan_dashboard, "_wait_for_dashboard", lambda *a, **k: (55555, False, our_repo)
@@ -4961,6 +5006,7 @@ class TestServeBindHost:
             captured["cmd"] = cmd
             return _FakeProc()
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
         # No pre-existing server (layer 1/2 reuse skipped), and the post-spawn
         # /healthz wait reports our fake child as the winner so no real poll runs.
@@ -4980,3 +5026,22 @@ class TestServeBindHost:
         argparse default, mirroring the help text)."""
         ns = plan_dashboard.parse_args(["serve"])
         assert ns.host == "127.0.0.1"
+
+    def test_foreground_emits_and_opens_scoped_url(self, tmp_path, monkeypatch, capsys):
+        plan_root = _serve_plan(tmp_path)
+        port = 23457
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", plan_dashboard.PLAN_ROOT)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", plan_dashboard.DOC_MODE)
+        monkeypatch.setattr(plan_dashboard, "REPO_ID", plan_dashboard.REPO_ID)
+        monkeypatch.setattr(plan_dashboard, "get_git_common_dir", lambda: None)
+        monkeypatch.setattr(plan_dashboard, "serve", lambda *args, **kwargs: None)
+        monkeypatch.setattr(plan_dashboard, "_open_browser_async", opened.append)
+
+        plan_dashboard.main([
+            "serve", "--foreground", "--root", str(plan_root), "--port", str(port),
+        ])
+
+        expected = plan_dashboard._dashboard_url(port, plan_root)
+        assert opened == [expected]
+        assert f"Starting dashboard at {expected}" in capsys.readouterr().out

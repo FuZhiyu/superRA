@@ -229,20 +229,16 @@ The wrapper's `dashboard` subcommand routes straight to `plan_dashboard.py` via 
 
 **Binding.** The server binds loopback (`127.0.0.1`) by default and is unauthenticated — it serves project files (`/files/{path}`), the full task tree (`/export`), and disk-writing comment routes. Pass `--host 0.0.0.0` only to deliberately expose it on a trusted LAN; with background-by-default serving an all-interfaces bind is a long-lived ambient surface, so it is opt-in, not the default.
 
-The server provides SSE hot-reload, auto-updating when the viewed worktree's task files change. Port is derived deterministically from the git common directory (range 8100–8999; the plan-root path is the no-git fallback), so all of a repo's worktrees share one server. That server resolves any worktree per request: the active worktree rides the browser URL as `?wt=<worktree-basename>` (absent means the launch worktree), and the selector does in-page navigation, not a server-wide switch — so two tabs can view different worktrees on one port without interfering. `--port N` overrides. The static `generate` subcommand is deprecated — use live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
+The server provides SSE hot-reload, auto-updating when the viewed worktree's task files change. Port is derived deterministically from the git common directory (range 8100–8999; the plan-root path is the no-git fallback), so all of a repo's worktrees share one server. That server resolves any worktree per request: the active worktree rides the browser URL as a canonical, URL-encoded `?wt=` selector (absent means the launch worktree), and the selector does in-page navigation, not a server-wide switch — so two tabs can view different worktrees on one port without interfering. `--port N` overrides. The static `generate` subcommand is deprecated — use live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 
 ### Headless ensure-running and task URLs
 
-`superra dashboard --no-open` is the browser-free, idempotent way to guarantee a server is up: it reuses a healthy background server — printing `Dashboard already running at http://localhost:<port>` — or starts one detached and prints `Dashboard running at http://localhost:<port>`. The reuse check reads the repo-scoped PID file, so this one command both reports whether a server was already running and leaves one running either way; the printed `localhost:<port>` is the live URL.
+`superra dashboard --no-open` is the browser-free, idempotent way to guarantee a server is up: it reuses a healthy background server or starts one detached, then prints this worktree's scoped live URL. The reuse check reads the repo-scoped PID file, so this one command both reports whether a server was already running and leaves one running either way.
 
-A specific task's URL extends that base — task path in the hash, worktree in `?wt=`:
-
-```
-http://localhost:<port>/?wt=<worktree-basename>#/<task-path>
-```
+A specific task's URL appends its task path in the hash to that emitted base:
 
 - `<task-path>` — the task-root-relative locator, exactly the `superra task read` argument (no `superRA/` prefix), e.g. `data-preparation/merge`; empty for the tree root.
-- `?wt=` — selects the worktree (the `?wt=` rule above); drop it for the launch worktree.
+- Keep the emitted URL-encoded `?wt=` selector unchanged; it disambiguates colliding worktree basenames.
 
 ### GitHub Actions artifact sharing
 
