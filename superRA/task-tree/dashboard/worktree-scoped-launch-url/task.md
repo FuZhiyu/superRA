@@ -27,13 +27,18 @@ The background supervisor currently prints and opens a bare localhost URL on bot
 
 - Added one live-URL constructor that obtains the canonical selector from `_worktree_id_for_plan_root()` and percent-encodes the complete token, including collision-disambiguating path suffixes ([plan_dashboard.py:169-191](../../../../skills/task-tree/scripts/plan_dashboard.py#L169-L191)).
 - Fresh background launches, repo-scoped reuse, and foreground serving now print and open the invoking worktree's scoped URL ([plan_dashboard.py:2236-2245](../../../../skills/task-tree/scripts/plan_dashboard.py#L2236-L2245), [plan_dashboard.py:2305-2313](../../../../skills/task-tree/scripts/plan_dashboard.py#L2305-L2313), [plan_dashboard.py:2600-2620](../../../../skills/task-tree/scripts/plan_dashboard.py#L2600-L2620)). Existing resolver fallback, doc mode, static export, server identity/reuse, and file-link behavior were not changed.
-- Added regressions for fresh launch emission/opening, cross-worktree reuse, collision-safe selector encoding, and foreground launch behavior ([test_dashboard.py:4454-4570](../../../../skills/task-tree/scripts/test_dashboard.py#L4454-L4570), [test_dashboard.py:5030-5047](../../../../skills/task-tree/scripts/test_dashboard.py#L5030-L5047)).
+- Added regressions for fresh launch emission/opening, cross-worktree reuse, collision-safe selector encoding, and foreground launch behavior ([test_dashboard.py:4500-4616](../../../../skills/task-tree/scripts/test_dashboard.py#L4500-L4616), [test_dashboard.py:5076-5093](../../../../skills/task-tree/scripts/test_dashboard.py#L5076-L5093)).
 - Updated the task-tree, dashboard internals, and main-agent instructions to retain the emitted scoped URL and append only the task hash rather than reconstructing `?wt=` ([SKILL.md:30-38](../../../../skills/task-tree/SKILL.md#L30-L38), [internals.md:232-241](../../../../skills/task-tree/references/internals.md#L232-L241), [main-agent.md:5-9](../../../../skills/using-superra/references/main-agent.md#L5-L9), [main-agent.md:24-28](../../../../skills/using-superra/references/main-agent.md#L24-L28)).
+
+### Result Protection
+
+- Protected the composed scoped-URL invariant with a dedicated regression: the canonical URL generated for worktree B includes a percent-encoded collision-disambiguating selector, is accepted directly by the request router, and renders B rather than launch worktree A ([test_dashboard.py:582-626](../../../../skills/task-tree/scripts/test_dashboard.py#L582-L626)).
+- Red-green verification passed: the test first passed against the protected implementation, failed when `_dashboard_url()` was deliberately perturbed to omit `?wt=`, and passed again after restoration.
 
 ### Verification
 
 - Focused launch/foreground suite: 22 passed.
-- Complete dashboard module: 282 passed; two dependency deprecation warnings.
-- Complete task-tree script suite: 713 passed; four expected/dependency warnings.
+- Complete dashboard module: 283 passed; two dependency deprecation warnings.
+- Complete task-tree script suite: 714 passed; four expected/dependency warnings.
 - Live checkout command `uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard --root superRA --no-open` emitted `http://localhost:8995/?wt=dashboard-rendering`.
 - Markdown validation reported all three modified instruction files clean.

@@ -579,6 +579,52 @@ def two_worktree_client(tmp_path):
 
 
 class TestPerWorktreeResolution:
+    def test_collision_safe_dashboard_url_routes_to_invoking_worktree(
+        self, tmp_path, monkeypatch
+    ):
+        """The emitted canonical URL for B must route back to B's task tree."""
+        from starlette.testclient import TestClient
+
+        def _make_tree(parent: str, title: str) -> Path:
+            root = tmp_path / parent / "shared name" / "superRA"
+            root.mkdir(parents=True)
+            _write_task_md(
+                root / "task.md",
+                title,
+                "not-started",
+                objective=f"Task tree for {title}.",
+            )
+            return root
+
+        root_a = _make_tree("parent one", "Project A")
+        root_b = _make_tree("parent two", "Project B")
+        discovered = {
+            "parent one/shared name": root_a,
+            "parent two/shared name": root_b,
+        }
+        monkeypatch.setattr(
+            plan_dashboard, "_discovered_worktree_map", lambda: discovered
+        )
+        monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", root_a)
+        plan_dashboard._jinja_env = None
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard.rebuild_tree()
+
+        url = plan_dashboard._dashboard_url(8123, root_b)
+        assert url == (
+            "http://localhost:8123/"
+            "?wt=parent%20two%2Fshared%20name"
+        )
+
+        client = TestClient(plan_dashboard.app, raise_server_exceptions=True)
+        try:
+            response = client.get(url)
+            assert response.status_code == 200
+            assert "Project B" in response.text
+            assert "Project A" not in response.text
+        finally:
+            plan_dashboard._worktree_cache.clear()
+
     def test_node_resolves_by_wt_param(self, two_worktree_client):
         client, wt_a, wt_b = two_worktree_client
         a = client.get(f"/node/01-first?wt={wt_a}")
