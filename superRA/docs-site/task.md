@@ -60,4 +60,4 @@ The documentation site is built, deployed, and live at `http://fuzhiyu.me/superR
 
 **Verification at integration.** Docs build exits 0 and emits all four pages; render-integrity is clean over all 27 pages; no dangling cross-page links or references to the retired reference/showcase-demo pages. The post-launch docs version switcher ([10-version-switcher](10-version-switcher/task.md)) is intentionally `postponed`.
 
-**Known rollup caveat.** After consolidation this task's only remaining child is the postponed `10-version-switcher`, and the tree tooling's rollup rule computes a parent with only parked children as `postponed` — so `task check` reports a stored-`approved`-vs-computed-`postponed` rollup warning here, and a status cascade triggered by a future edit under this subtree may rewrite the stored status. The `approved` status is the researcher's consolidation decision (the workstream is complete; one future enhancement is deferred) and should be restored if a cascade flips it.
+**Postponed follow-up.** This task is `postponed` because its only remaining child, the version switcher, is intentionally deferred; the deployed documentation site is complete.
