@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: in-progress
+status: approved
 depends_on:
   - core-data-layer
   - cli-scripts

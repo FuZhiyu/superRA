@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Launch URLs"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
