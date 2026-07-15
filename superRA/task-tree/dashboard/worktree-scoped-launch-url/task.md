@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Launch URLs"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -42,3 +42,9 @@ The background supervisor currently prints and opens a bare localhost URL on bot
 - Complete task-tree script suite: 714 passed; four expected/dependency warnings.
 - Live checkout command `uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard --root superRA --no-open` emitted `http://localhost:8995/?wt=dashboard-rendering`.
 - Markdown validation reported all three modified instruction files clean.
+
+### Integration
+
+The 10 focused scoped-URL and shutdown-lifecycle protection tests passed, followed by the complete task-tree script suite at 714 passed with four expected/dependency warnings.
+
+**Final diff self-check:** `git diff 35fab8110f13eb1b3dab920a1e2c9b0b52dd1e30..HEAD`; surviving change classes are the previously approved bounded shutdown/watchdog lifecycle and release metadata, scoped launch-URL construction and routing regressions, task-tree/main-agent instruction currency, and durable task records. Suspicious hunks were the instruction edits under `skills/*`, retained because the scoped-URL objective requires agents to preserve the emitted canonical selector and each line passes the contributor DRY/Necessity gate; the approved dashboard and postponed docs-site task edits are prior maturation results. No scope-ambiguous hunk remains.
