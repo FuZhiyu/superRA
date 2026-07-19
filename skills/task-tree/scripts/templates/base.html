@@ -17,13 +17,13 @@
    markdown-it runs with html:true, so its output is sanitized before DOM
    insertion (see renderMarkdown), a hard gate for published exports.
    Server mode keeps the CDN tags (the {% else %} branch). #}
-<style>{{ standalone_assets.katex_css }}</style>
-<script>{{ standalone_assets.markdown_it_js }}</script>
-<script>{{ standalone_assets.katex_js }}</script>
-<script>{{ standalone_assets.texmath_js }}</script>
-<script>{{ standalone_assets.hljs_js }}</script>
-<script>{{ standalone_assets.hljs_julia_js }}</script>
-<script>{{ standalone_assets.purify_js }}</script>
+<style>{{ standalone_assets.katex_css | safe }}</style>
+<script>{{ standalone_assets.markdown_it_js | safe }}</script>
+<script>{{ standalone_assets.katex_js | safe }}</script>
+<script>{{ standalone_assets.texmath_js | safe }}</script>
+<script>{{ standalone_assets.hljs_js | safe }}</script>
+<script>{{ standalone_assets.hljs_julia_js | safe }}</script>
+<script>{{ standalone_assets.purify_js | safe }}</script>
 {% else %}
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
@@ -2737,9 +2737,18 @@ function nodeOwnRowMatches(el, status, search) {
   return true;
 }
 
-/* ── Kanban rendering ── */
+/* ── Kanban rendering ──
+   Cards carry data-path (server-escaped) rather than an inline onclick built
+   by interpolating the task path — a delegated listener on the container
+   reads it back, mirroring onChildCardClick's pattern. */
+function onKanbanCardClick(event) {
+  var card = event.target.closest('.kanban-card');
+  if (card && card.dataset.path !== undefined) revealTask(card.dataset.path);
+}
+
 async function renderKanbanView() {
   var container = document.getElementById('view-kanban');
+  container.onclick = onKanbanCardClick;
   try {
     var resp = await fetch(wtUrl('/kanban'));
     if (resp.ok) {
@@ -4647,9 +4656,12 @@ function loadComments(taskPath) {
       for (var i = 0; i < comments.length; i++) {
         var c = comments[i];
         var key = c.anchor.section + '::' + c.anchor.block_index;
-        /* Check if the target block exists */
+        /* Check if the target block exists. CSS.escape guards against a
+           section name (task-file content, e.g. a `##` header) containing a
+           `"` — unescaped, that throws and aborts comment loading for the
+           whole task. */
         var block = taskNode.querySelector(
-          '.commentable-block[data-section="' + c.anchor.section + '"][data-block="' + c.anchor.block_index + '"]'
+          '.commentable-block[data-section="' + CSS.escape(c.anchor.section) + '"][data-block="' + CSS.escape(String(c.anchor.block_index)) + '"]'
         );
         if (block) {
           if (!grouped[key]) grouped[key] = { block: block, comments: [] };
@@ -4675,7 +4687,7 @@ function loadComments(taskPath) {
           orphanBySection[sec].push(orphaned[j]);
         }
         for (var secName in orphanBySection) {
-          var sectionDiv = taskNode.querySelector('[data-section="' + secName + '"] .section-content');
+          var sectionDiv = taskNode.querySelector('[data-section="' + CSS.escape(secName) + '"] .section-content');
           if (sectionDiv && sectionDiv.classList.contains('open')) {
             var warning = document.createElement('div');
             warning.className = 'comment-orphan-warning';

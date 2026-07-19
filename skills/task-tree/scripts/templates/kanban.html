@@ -28,7 +28,7 @@
       {{ status_label }} <span class="count">{{ tasks_in_col | length }}</span>
     </div>
     {% for t in tasks_in_col %}
-    <div class="kanban-card" onclick="revealTask('{{ t.path }}')">
+    <div class="kanban-card" data-path="{{ t.path }}">
       <div class="kanban-card-title">{{ t.title or t.path }}</div>
       <div class="kanban-card-path">{{ t.path }}</div>
     </div>

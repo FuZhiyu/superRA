@@ -717,7 +717,7 @@ def _get_jinja_env():
         loader = FileSystemLoader(str(templates_dir))
     env = Environment(
         loader=loader,
-        autoescape=False,
+        autoescape=True,
     )
 
     def vscode_link(path: str, project_root: str) -> str:
