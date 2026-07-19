@@ -1,6 +1,6 @@
 ---
 title: "Parameterize the Standalone Renderer; Retire the Legacy Module Globals"
-status: implemented
+status: approved
 depends_on: []
 ---
 
