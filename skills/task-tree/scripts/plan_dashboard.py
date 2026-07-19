@@ -804,6 +804,11 @@ async def lifespan(app: FastAPI):
     re-enters this context at the ``yield`` and cancels all watchers).
     """
     rebuild_tree()
+    # Warm the lazy-init Jinja env on the loop thread before any request can
+    # reach it: /export's blocking render now runs in a threadpool worker
+    # (asyncio.to_thread) and would otherwise race a concurrent route handler
+    # on the same check-then-set of the module-global cache.
+    _get_jinja_env()
     monitor_task = asyncio.create_task(_idle_monitor(timeout=IDLE_TIMEOUT))
     try:
         yield
@@ -885,13 +890,20 @@ def _discovered_worktree_map() -> dict[str, Path]:
     return result
 
 
-def resolve_worktree(request: Request) -> WorktreeState:
+async def resolve_worktree(request: Request) -> WorktreeState:
     """Resolve the WorktreeState a request targets via its ``?wt=<name>`` param.
 
     Falls back to the launch worktree when ``?wt=`` is absent (preserving today's
     behavior and standalone export).  Builds and caches a worktree's state lazily
     on first use.  Raises 404 only when ``?wt=`` names a value that is neither the
     launch worktree nor any discovered worktree.
+
+    The cache-hit path (the common case) is a plain dict lookup and stays on the
+    event loop.  Only the cache-miss path — discovering worktrees (git
+    subprocesses) and walking a new worktree's task tree — runs off-loop via
+    ``asyncio.to_thread``; the ``_worktree_cache`` write happens back on the loop
+    after the awaited work returns, so the cache itself is never mutated from a
+    worker thread.
     """
     wt_name = request.query_params.get("wt")
     if not wt_name or wt_name == _launch_wt_id:
@@ -904,11 +916,11 @@ def resolve_worktree(request: Request) -> WorktreeState:
     if cached is not None:
         return cached
 
-    plan_root = _discovered_worktree_map().get(wt_name)
+    plan_root = await asyncio.to_thread(lambda: _discovered_worktree_map().get(wt_name))
     if plan_root is None:
         raise HTTPException(status_code=404, detail=f"Unknown worktree: {wt_name}")
 
-    state = _build_worktree_state(wt_name, plan_root)
+    state = await asyncio.to_thread(_build_worktree_state, wt_name, plan_root)
     _worktree_cache[wt_name] = state
     return state
 
@@ -918,7 +930,7 @@ def resolve_worktree(request: Request) -> WorktreeState:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the full dashboard page."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -952,7 +964,7 @@ async def nav_fragment(request: Request):
     Renders the root-or-children (nav_node, body-free). Children are inlined
     to depth 2; depth >=3 children are lazy-load stubs fetched via /nav/{path}.
     """
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -982,7 +994,7 @@ async def sse_events(request: Request):
     disconnect the queue is removed and, if it was the worktree's last client,
     its watcher is stopped.
     """
-    wt = resolve_worktree(request).wt_id
+    wt = (await resolve_worktree(request)).wt_id
 
     async def event_generator() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
@@ -1035,7 +1047,7 @@ async def dag_view(request: Request, root: str | None = None):
     With ``root=<task path>``: an inline per-subtree panel scoped to that task's
     direct children (their sibling dependency graph), reusing the same template.
     """
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -1056,7 +1068,7 @@ async def dag_view(request: Request, root: str | None = None):
 @app.get("/kanban", response_class=HTMLResponse)
 async def kanban_view(request: Request):
     """Render the kanban board partial."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -1070,7 +1082,7 @@ async def kanban_view(request: Request):
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     file_path = Path(state.project_root) / path
     resolved = file_path.resolve()
     project_resolved = Path(state.project_root).resolve()
@@ -1090,15 +1102,9 @@ async def serve_file(path: str, request: Request):
 # swallow /task/x/comments as path="x/comments".  Templates should call
 # /api/task/PATH/comments etc.
 
-@app.get("/api/comments/summary")
-async def comments_summary(request: Request):
-    """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
-    if not _COMMENTS_AVAILABLE:
-        raise HTTPException(status_code=501, detail="Comments module not available")
-    state = resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-
+def _comments_summary_sync(root_task: Task) -> dict[str, int]:
+    """Blocking core of ``/api/comments/summary``: one ``comments.yaml`` read per
+    task.  Builds a local dict only, so it is safe to run off-loop."""
     result: dict[str, int] = {}
 
     def _walk(task: Task) -> None:
@@ -1109,8 +1115,20 @@ async def comments_summary(request: Request):
         for child in task.children:
             _walk(child)
 
-    _walk(state.root_task)
+    _walk(root_task)
     return result
+
+
+@app.get("/api/comments/summary")
+async def comments_summary(request: Request):
+    """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
+    if not _COMMENTS_AVAILABLE:
+        raise HTTPException(status_code=501, detail="Comments module not available")
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+
+    return await asyncio.to_thread(_comments_summary_sync, state.root_task)
 
 
 @app.get("/api/search-index")
@@ -1119,7 +1137,7 @@ async def search_index(request: Request):
     node ({path, slug, title, text}).  The page embeds this index at render time;
     the client re-fetches here on a structural full-reload so live search reflects
     the current tree state."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     all_tasks = collect_all_tasks(state.root_task)
@@ -1131,7 +1149,7 @@ async def create_comment(path: str, request: Request):
     """Create a comment on a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     body = await request.json()
@@ -1151,7 +1169,7 @@ async def list_comments(path: str, request: Request):
     """List comments for a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     comments = load_comments(task.dir_path)
@@ -1181,7 +1199,7 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
     """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
 
@@ -1208,7 +1226,7 @@ async def remove_comment(path: str, comment_id: int, request: Request):
     """Delete a comment."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     deleted = delete_comment(task.dir_path, comment_id)
@@ -1219,17 +1237,10 @@ async def remove_comment(path: str, comment_id: int, request: Request):
 
 # --- Worktree routes -------------------------------------------------------
 
-@app.get("/api/worktrees")
-async def list_worktrees():
-    """Return discovered worktrees with plan info, ordered by last activity.
-
-    Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
-    matching task 01's basename map with longest-unique-suffix disambiguation).
-    ``launch_wt_id`` names the default worktree (the one the server launched in);
-    the client marks the *current* selection from the URL's ``?wt=`` and falls
-    back to ``launch_wt_id`` when the URL names none.  There is no server-global
-    "current worktree": under per-request resolution it would only drift.
-    """
+def _list_worktrees_sync() -> dict:
+    """Blocking core of ``/api/worktrees``: discovery spawns a ``git`` subprocess
+    per worktree (``worktree list``, ``rev-parse``, ``log -1``), so this is run
+    off-loop in its entirety and only reads module state (no mutation)."""
     launch_dir = str(PLAN_ROOT.resolve().parent)
     all_wts = discover_worktrees()
     if not all_wts:
@@ -1290,6 +1301,20 @@ async def list_worktrees():
     }
 
 
+@app.get("/api/worktrees")
+async def list_worktrees():
+    """Return discovered worktrees with plan info, ordered by last activity.
+
+    Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
+    matching task 01's basename map with longest-unique-suffix disambiguation).
+    ``launch_wt_id`` names the default worktree (the one the server launched in);
+    the client marks the *current* selection from the URL's ``?wt=`` and falls
+    back to ``launch_wt_id`` when the URL names none.  There is no server-global
+    "current worktree": under per-request resolution it would only drift.
+    """
+    return await asyncio.to_thread(_list_worktrees_sync)
+
+
 # The former ``POST /api/worktree/switch`` is retired.  "Switching" is now a
 # client navigation to a different ``?wt=`` URL (per-request resolution, task 03);
 # there is no global mutation and no all-clients full-reload broadcast.  The
@@ -1304,7 +1329,7 @@ async def list_worktrees():
 @app.get("/nav/{path:path}", response_class=HTMLResponse)
 async def get_nav(path: str, request: Request):
     """Return a navigation-only fragment with the children of the task at *path*."""
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     html = _render_nav_children(task)
@@ -1320,7 +1345,7 @@ async def get_nav(path: str, request: Request):
 @app.get("/node/{path:path}", response_class=HTMLResponse)
 async def get_node(path: str, request: Request):
     """Return the body-only HTML fragment for the task at *path*."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     task = _find_task(state, path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
@@ -1343,15 +1368,18 @@ async def export_subtree(request: Request, root: str = ""):
     embedded inline, opens via ``file://``.  Resolves the worktree per request
     (defaulting to the launch worktree) and exports exactly that one worktree.
     ``render_standalone_html`` takes its render state as parameters, so this
-    render cannot perturb the running server's live state.
+    render cannot perturb the running server's live state.  It re-walks the
+    tree, renders every fragment, and base64-encodes figures/vendor assets, so
+    the call runs off-loop — other requests and the SSE heartbeat stay live
+    while a large export renders.
     """
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     if root and _find_task(state, root) is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
 
-    html = render_standalone_html(state.plan_root, root=root or None)
+    html = await asyncio.to_thread(render_standalone_html, state.plan_root, root=root or None)
 
     slug = root.rsplit("/", 1)[-1] if root else (state.root_task.slug or "plan")
     # Sanitize before interpolating into the quoted Content-Disposition value:

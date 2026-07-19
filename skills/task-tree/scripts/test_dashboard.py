@@ -617,8 +617,8 @@ class TestPerWorktreeResolution:
             }
             return Request(scope)
 
-        first = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
-        second = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        first = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
+        second = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
         assert first is second  # cache hit, not rebuilt
 
         # Edit the launch worktree's task on disk, then invalidate via the hook.
@@ -4268,6 +4268,101 @@ class TestIdleShutdownLifespan:
                 if process.poll() is None:
                     process.kill()
                 process.wait(timeout=5.0)
+
+
+class TestEventLoopOffload:
+    """A slow blocking route (``/export``) must not freeze the event loop: the
+    SSE heartbeat and a concurrent cheap request stay live while it renders.
+
+    Drives a real ``serve()`` (real uvicorn event loop + real threadpool), so
+    ``asyncio.to_thread`` genuinely hands the blocking core to a worker thread
+    rather than the single-threaded ``TestClient`` portal used elsewhere in this
+    file, which would not exercise threadpool offload at all.
+    """
+
+    def _free_port(self):
+        import socket as _socket
+
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        s.bind(("localhost", 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    def test_slow_export_does_not_block_heartbeat_or_concurrent_request(
+        self, tmp_path, monkeypatch
+    ):
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        # Inject an artificial delay into /export's blocking core (a real OS
+        # sleep — blocking the worker thread, not the event loop).
+        real_render = plan_dashboard.render_standalone_html
+
+        def _slow_render(*args, **kwargs):
+            time.sleep(1.5)
+            return real_render(*args, **kwargs)
+
+        monkeypatch.setattr(plan_dashboard, "render_standalone_html", _slow_render)
+
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.2
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            with httpx.Client(timeout=10.0) as client:
+                with client.stream("GET", f"{url}/events") as sse_resp:
+                    assert sse_resp.status_code == 200
+                    lines = sse_resp.iter_lines()
+                    next(lines)  # initial heartbeat — connection established
+
+                    export_result: dict[str, object] = {}
+
+                    def _do_export():
+                        export_result["resp"] = client.get(
+                            f"{url}/export", timeout=10.0
+                        )
+
+                    export_thread = threading.Thread(target=_do_export)
+                    start = time.monotonic()
+                    export_thread.start()
+
+                    # The heartbeat interval (0.2s) is well under the slow
+                    # export's 1.5s delay, so a periodic heartbeat must still
+                    # arrive promptly while /export is in flight.
+                    next(lines)
+                    hb_elapsed = time.monotonic() - start
+                    assert hb_elapsed < 1.0, (
+                        f"SSE heartbeat blocked for {hb_elapsed:.2f}s by /export"
+                    )
+
+                    # A concurrent cheap request also completes promptly rather
+                    # than queuing behind the slow render.
+                    cheap_start = time.monotonic()
+                    cheap_resp = client.get(f"{url}/healthz", timeout=5.0)
+                    cheap_elapsed = time.monotonic() - cheap_start
+                    assert cheap_resp.status_code == 200
+                    assert cheap_elapsed < 1.0, (
+                        f"/healthz took {cheap_elapsed:.2f}s while /export was slow"
+                    )
+
+                    export_thread.join(timeout=10.0)
+            assert export_result["resp"].status_code == 200
+        finally:
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
 
 
 class TestRuntimeFileKeying:
