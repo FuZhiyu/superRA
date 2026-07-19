@@ -3634,6 +3634,164 @@ class TestRawHtmlSanitization:
         assert "cdn.jsdelivr.net/npm/dompurify@3" in html
 
 
+class TestServerSideEscaping:
+    """Jinja autoescape is the one trust boundary for agent-written task
+    content: titles and section previews render as literal text everywhere the
+    server embeds them; the text/x-markdown payload stays raw (server-side)
+    because it is sanitized client-side by DOMPurify (TestRawHtmlSanitization).
+
+    The fixture plants `<script>`, `<img src=x onerror=...>`, single/double
+    quotes, and a standalone ` --> ` line across a root title, a leaf title,
+    and a leaf section body.
+    """
+
+    # Titles avoid a trailing/leading quote character: the frontmatter parser's
+    # `raw.strip("\"'")` unwraps the YAML double-quote delimiters by stripping
+    # any quote characters off the edges, so an adversarial quote sitting at
+    # the very edge of the value (rather than embedded inside it) would be
+    # eaten along with the delimiter — a fixture-authoring pitfall, not part
+    # of this task's escaping surface. Quote coverage lives in SECTION_BODY,
+    # a raw markdown value with no such unwrapping.
+    ROOT_TITLE = "<script>alert(1)</script> it's fine"
+    LEAF_TITLE = "<script>alert(2)</script>"
+    SECTION_BODY = (
+        'Has <img src=x onerror=alert(3)> and quotes: it\'s a "test".\n'
+        "\n"
+        " --> \n"
+        "\n"
+        "More text after the breakout line.\n"
+    )
+
+    @pytest.fixture
+    def adversarial_plan_root(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        root.joinpath("task.md").write_text(
+            "---\n"
+            f'title: "{self.ROOT_TITLE}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            "## Objective\n\nRoot fixture.\n",
+            encoding="utf-8",
+        )
+        leaf = root / "01-adversarial"
+        leaf.mkdir()
+        leaf.joinpath("task.md").write_text(
+            "---\n"
+            f'title: "{self.LEAF_TITLE}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            f"## Objective\n\n{self.SECTION_BODY}",
+            encoding="utf-8",
+        )
+        return root
+
+    @pytest.fixture
+    def adv_client(self, adversarial_plan_root):
+        from starlette.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = adversarial_plan_root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+            yield c
+
+    def test_page_title_and_header_escaped(self, adv_client):
+        """The root title reaches <title> and #header-title as literal text."""
+        html = adv_client.get("/").text
+        assert "<script>alert(1)</script>" not in html
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+        assert "it&#39;s fine" in html
+
+    def test_sidebar_row_escaped(self, adv_client):
+        """The leaf title reaches the sidebar nav row as literal text."""
+        html = adv_client.get("/nav").text
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+
+    def test_kanban_card_escaped_with_no_interpolated_onclick(self, adv_client):
+        """The kanban card title is literal text, and the card is wired via a
+        data-path attribute + delegated handler rather than an inline onclick
+        built by interpolating the task path."""
+        html = adv_client.get("/kanban").text
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+        assert 'onclick="revealTask(' not in html
+        assert 'data-path="01-adversarial"' in html
+
+    def test_active_node_card_assembly_delegates_to_kanban_handler(self):
+        """onKanbanCardClick reads the card's data-path (delegated), mirroring
+        onChildCardClick's escaped-attribute + delegation pattern."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "function onKanbanCardClick(event)" in src
+        assert "card.dataset.path" in src
+
+    def test_comment_anchor_selectors_use_css_escape(self):
+        """A `"` in a `##` header used to throw out of querySelector and abort
+        comment loading for the whole task; CSS.escape guards both
+        section-name selector sites (grouped anchor match, orphan-section
+        lookup)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert 'CSS.escape(c.anchor.section)' in src
+        assert 'CSS.escape(secName)' in src
+
+    def test_section_preview_literal_but_markdown_payload_stays_raw(self, adv_client):
+        """The section preview shows literal text (escaped); the x-markdown
+        payload — read via textContent and sanitized client-side — carries the
+        content unescaped, since a <script> element's raw-text content model
+        never decodes HTML entities."""
+        html = adv_client.get("/node/01-adversarial").text
+
+        preview_match = re.search(
+            r'<span class="section-preview">(.*?)</span>', html, re.S
+        )
+        assert preview_match, "section-preview span not found"
+        preview = preview_match.group(1)
+        assert "<img" not in preview
+        assert "&lt;img" in preview
+
+        payload_match = re.search(
+            r'<script type="text/x-markdown">(.*?)</script>', html, re.S
+        )
+        assert payload_match, "x-markdown payload not found"
+        payload = payload_match.group(1)
+        assert "<img src=x onerror=alert(3)>" in payload
+        assert 'it\'s a "test"' in payload
+        assert " --> " in payload
+
+    def test_standalone_export_escapes_titles_and_previews(
+        self, adversarial_plan_root, tmp_path
+    ):
+        """The same escaping holds in a standalone export. The root title
+        renders directly (server-escaped as in the live page); per-task nav
+        rows, the kanban card, and the DAG label are delivered as pre-rendered
+        fragments embedded via `| tojson` for client-side swap-in, so their
+        HTML-escaped text is additionally JSON-string-encoded (`<` -> `\\u003c`
+        etc.) rather than appearing as a literal `&lt;` substring."""
+        out = tmp_path / "export.html"
+        plan_dashboard.generate_dashboard(adversarial_plan_root, out)
+        html = out.read_text("utf-8")
+
+        assert "<script>alert(1)</script>" not in html
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html  # <title>, literal
+
+        # Kanban card / sidebar row / DAG label render the leaf title escaped
+        # (the search-index "title" field is a separate, inert JSON payload
+        # escaped by the client's escapeHtml at display time, per
+        # TestClientSearch — not asserted here).
+        escaped_leaf_title = "\\u0026lt;script\\u0026gt;alert(2)\\u0026lt;/script\\u0026gt;"
+        assert html.count(escaped_leaf_title) == 3  # kanban card, nav row, DAG label
+
+        # The x-markdown payload (client DOMPurify gate) stays raw even inside
+        # the JSON-embedded fragment — only JSON-string-encoded, not
+        # HTML-escaped.
+        assert "\\u003cimg src=x onerror=alert(3)\\u003e" in html
+        assert "\\u0026lt;img src=x onerror=alert(3)" in html  # section preview
+
+
 class TestClientSearch:
     """Full-text search over node titles + body text, navigating to results in
     both the live server and the standalone export."""

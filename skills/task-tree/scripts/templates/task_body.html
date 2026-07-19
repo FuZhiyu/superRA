@@ -49,7 +49,11 @@
     </div>
     <div class="section-content">
       <div class="rendered-md">
-        <script type="text/x-markdown">{{ content | replace('</script>', '<\\/script>') }}</script>
+        {#- Raw markdown source, read client-side via textContent and sanitized
+            through DOMPurify before insertion (see renderMarkdown) — must stay
+            unescaped here or entities would double-encode inside the script's
+            raw-text content. #}
+        <script type="text/x-markdown">{{ content | replace('</script>', '<\\/script>') | safe }}</script>
       </div>
     </div>
   </div>
