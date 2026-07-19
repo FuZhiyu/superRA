@@ -8,7 +8,20 @@ depends_on:
 
 ## Objective
 
-Provide a human-friendly dashboard over the `superRA/` task tree: recursive tree navigation with progressive disclosure, DAG (Mermaid) and kanban views, distinctive typography, a professional palette, and dark/light mode.
+Provide a human-friendly dashboard over the `superRA/` task tree: recursive tree navigation with progressive disclosure, DAG (Mermaid) and kanban views, distinctive typography, a professional palette, and dark/light mode — and keep it hardened: task content escaped at one trust boundary, no blocking work on the event loop, no legacy module-global render state, dead rendering paths removed, and assets served locally.
+
+### Context — hardening subtree (2026-07-19)
+
+A full design review (backend `plan_dashboard.py` read line-by-line; frontend `base.html` + partials reviewed by a dispatched agent) produced the hardening children of this task. Researcher decisions binding on all of them:
+
+- **Scope:** all review findings are in scope — the six priority fixes plus the medium/minor items.
+- **Escaping:** titles/section previews render HTML as literal text; markdown bodies keep HTML via DOMPurify.
+- **Dead code:** the `/tree` + `/task/{path}` giant-tree subsystem is removed outright.
+- **Assets:** all JS/CSS libraries served locally (vendor htmx/sse.js); Google Fonts stay CDN with system-font fallback.
+
+Shared conventions for the subtree: the test-suite invocation and `uv run --script` conventions are in repo `CLAUDE.md` §Local Task-Tree CLI Development (standing context — run both the dashboard and full script suites before reporting); `vendor/` is hand-managed and re-fetched per `vendor/README.md`, never generated; no generated-from-spec artifacts are in scope for these tasks.
+
+Dispatch note: these tasks edit the same two large files (`plan_dashboard.py`, `base.html`). The `depends_on` edges carry the genuine prerequisites; beyond them, avoid running two tasks that touch the same file in parallel in one worktree. The sibling `nonloopback-host-serve` task touches the background-supervisor region of `plan_dashboard.py` — coordinate ordering at dispatch time.
 
 ## Results
 
@@ -30,4 +43,8 @@ Watcher teardown is bounded under repeated caller cancellation: it gets a cooper
 
 Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets. Each process cycle verifies that the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1063-1234](../../../skills/task-tree/scripts/test_dashboard.py#L1063-L1234), [test_dashboard.py:4177-4310](../../../skills/task-tree/scripts/test_dashboard.py#L4177-L4310)). Integration verification passed all five focused lifecycle tests, the 279-test dashboard suite twice, and the 710-test task-tree script suite twice; final bounded closeout shards recorded 708 passes, two unrelated Playwright skips, and no failures or errors.
 
-**Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` has grown to ~2,190 lines mixing seven concerns. The background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) have no FastAPI coupling and are clean extraction candidates, following the precedent of `skills/task-tree/scripts/dashboard_artifact_workflow.py`.
+**Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` has grown to ~2,190 lines mixing seven concerns. The background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) have no FastAPI coupling and are clean extraction candidates, following the precedent of `skills/task-tree/scripts/dashboard_artifact_workflow.py`. The `standalone-state` and `template-split` hardening children partially discharge this debt.
+
+## Revision Notes
+
+2026-07-19: widened from the original build contract to include hardening, after a full design review of `plan_dashboard.py` and `base.html`. Nine hardening children added (`dead-code-removal`, `template-trust-boundary`, `standalone-state`, `event-loop-offload`, `children-graph-json`, `template-split`, `local-assets`, `frontend-polish`, `backend-robustness`); per-finding evidence lives in each child's `## Planner Guidance`. The shipped-work record in `## Results` above remains accurate for the original build.

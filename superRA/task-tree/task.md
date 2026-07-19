@@ -16,7 +16,7 @@ Add a `task-tree` skill to superRA that replaces flat PLAN.md/RESULTS.md task tr
 - Everything is a task — leaf tasks are directories without subdirectories.
 - Dependencies are sibling-only; parent status rolls up from children automatically.
 - Hook does validation/status propagation only; the dashboard renders on demand (`superra dashboard`) or via explicit export (`superra dashboard export`).
-- Dashboard: live SSE server (FastAPI + htmx + markdown-it + KaTeX); Google Fonts CDN for typography; vendored render libraries for offline export.
+- Dashboard: live SSE server (FastAPI + htmx + markdown-it + KaTeX); Google Fonts CDN for typography (system-font fallback offline); render libraries vendored and served locally in live mode, inlined for offline export (decided 2026-07-19 with the [dashboard](dashboard/task.md) hardening subtree; `local-assets` lands it).
 
 ## Results
 
