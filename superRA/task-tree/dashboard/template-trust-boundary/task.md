@@ -1,6 +1,6 @@
 ---
 title: "Server-Side Escaping: One Trust Boundary for Task Content"
-status: implemented
+status: approved
 depends_on:
   - dead-code-removal
 ---
