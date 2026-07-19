@@ -1,6 +1,6 @@
 ---
 title: "Move Blocking Route Work off the Event Loop"
-status: implemented
+status: approved
 depends_on:
   - standalone-state
 ---
