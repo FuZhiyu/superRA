@@ -1,6 +1,6 @@
 ---
 title: "Remove the Dead Giant-Tree Rendering Path"
-status: implemented
+status: approved
 depends_on: []
 ---
 
