@@ -244,24 +244,6 @@ class TestServerRoutes:
         assert 'id="btn-kanban"' in text
         assert 'id="btn-dag"' not in text
 
-    def test_get_task_returns_children_fragment(self, client, plan_root):
-        # Add children to 01-first so the fragment has content
-        child = plan_root / "01-first" / "sub"
-        child.mkdir()
-        _write_task_md(child / "task.md", "Sub Task", "not-started",
-                       objective="A child.")
-        plan_dashboard.rebuild_tree()
-        resp = client.get("/task/01-first")
-        assert resp.status_code == 200
-
-    def test_get_task_valid_path(self, client):
-        resp = client.get("/task/01-first")
-        assert resp.status_code == 200
-
-    def test_get_task_nonexistent_returns_404(self, client):
-        resp = client.get("/task/nonexistent")
-        assert resp.status_code == 404
-
     def test_dag_returns_mermaid(self, client):
         resp = client.get("/dag")
         assert resp.status_code == 200
@@ -1358,21 +1340,21 @@ class TestTemplateRendering:
         """Reset the Jinja env so each test gets a clean state."""
         plan_dashboard._jinja_env = None
 
-    def test_render_task_node_has_sse_swap(self, plan_root):
+    def test_render_nav_node_has_sse_swap(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        html = plan_dashboard._render_nav_node(task)
         assert 'sse-swap="task:01-first"' in html
         assert 'hx-swap="outerHTML"' in html
 
-    def test_render_task_node_has_badge(self, plan_root):
+    def test_render_nav_node_has_badge(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        html = plan_dashboard._render_nav_node(task)
         assert "badge-approved" in html
         assert "01-first" in html  # slug
 
@@ -1418,7 +1400,7 @@ class TestTemplateRendering:
         plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
         task = plan_dashboard._task_index["01-postponed-leaf"]
-        html = plan_dashboard._render_task_node(task)
+        html = plan_dashboard._render_nav_node(task)
         assert "badge-postponed" in html
         assert 'data-status="postponed"' in html
 
@@ -1455,7 +1437,7 @@ class TestTemplateRendering:
         plan_dashboard.rebuild_tree()
 
         task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        html = plan_dashboard._render_node_body(task)
         # The content's </script> is backslash-escaped to <\/script> so it does
         # not prematurely close the payload container.
         assert "<\\/script>" in html
@@ -3839,32 +3821,13 @@ class TestMasterDetailPartials:
             assert 'class="task-meta"' in r.text
             assert "<strong>depends:</strong> 01-a" in r.text
 
-    def test_node_sections_match_full_node(self, tmp_path):
-        """The body-only partial emits the same section markup as the full node."""
-        import re
-        with self._client(self._deep_plan(tmp_path)) as c:
-            node = c.get("/node/01-a").text
-            full = c.get("/task/").text  # children of root incl. the full 01-a node
-
-            def norm(s):
-                return [ln.strip() for ln in s.splitlines() if ln.strip()]
-
-            for sec in ("Objective", "Results"):
-                node_block = re.search(
-                    rf'<div data-section="{sec}">.*?</script>', node, re.S)
-                full_block = re.search(
-                    rf'<div data-section="{sec}">.*?</script>', full, re.S)
-                assert node_block is not None
-                assert full_block is not None
-                assert norm(node_block.group(0)) == norm(full_block.group(0))
-
     def test_node_missing_404(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
             assert c.get("/node/does-not-exist").status_code == 404
 
     def test_existing_routes_unaffected(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
-            for route in ("/", "/tree", "/dag", "/kanban"):
+            for route in ("/", "/dag", "/kanban"):
                 assert c.get(route).status_code == 200
 
 

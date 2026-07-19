@@ -7,8 +7,7 @@
 
 Covers:
 - rebuild_task() children_changed detection
-- _render_task_node() depth parameter behavior
-- /tree route returns HTML fragment (not full page)
+- _render_nav_node() depth parameter behavior
 - Watcher decision logic (broadcast event classification)
 """
 
@@ -110,14 +109,6 @@ def dashboard(plan_root):
     return plan_root
 
 
-@pytest.fixture
-def client(dashboard):
-    """Create a TestClient with the dashboard server pointed at dashboard."""
-    from starlette.testclient import TestClient
-    with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
-        yield c
-
-
 # ---------------------------------------------------------------------------
 # TestRebuildTaskChildrenChanged
 # ---------------------------------------------------------------------------
@@ -210,26 +201,18 @@ class TestRebuildTaskChildrenChanged:
 
 
 # ---------------------------------------------------------------------------
-# TestRenderTaskNodeDepth
+# TestRenderNavNodeDepth
 # ---------------------------------------------------------------------------
 
 
-class TestRenderTaskNodeDepth:
-    """Test _render_task_node() depth parameter and depth inference."""
-
-    def test_depth_inferred_from_path(self, dashboard):
-        """When depth=None, depth is computed from task.path slash count."""
-        # Root child: depth = 0 (path "01-first" has 0 slashes)
-        assert plan_dashboard._task_depth("01-first") == 0
-        assert plan_dashboard._task_depth("") == 0
-        assert plan_dashboard._task_depth("a/b") == 1
-        assert plan_dashboard._task_depth("a/b/c") == 2
+class TestRenderNavNodeDepth:
+    """Test _render_nav_node() depth parameter and depth inference."""
 
     def test_render_with_explicit_depth(self, dashboard):
         """Passing an explicit depth renders correctly."""
         task = plan_dashboard._task_index["01-first"]
-        html_depth0 = plan_dashboard._render_task_node(task, depth=0)
-        html_depth5 = plan_dashboard._render_task_node(task, depth=5)
+        html_depth0 = plan_dashboard._render_nav_node(task, depth=0)
+        html_depth5 = plan_dashboard._render_nav_node(task, depth=5)
         # Both should render the task node with data-path
         assert 'data-path="01-first"' in html_depth0
         assert 'data-path="01-first"' in html_depth5
@@ -237,7 +220,7 @@ class TestRenderTaskNodeDepth:
     def test_render_with_default_depth(self, dashboard):
         """Default depth (None) infers from the task's path."""
         task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        html = plan_dashboard._render_nav_node(task)
         assert 'data-path="01-first"' in html
         assert "task-node" in html
 
@@ -250,7 +233,7 @@ class TestRenderTaskNodeDepth:
         plan_dashboard.rebuild_tree()
 
         parent = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(parent, depth=0)
+        html = plan_dashboard._render_nav_node(parent, depth=0)
         # At depth 0, children rendered at depth 1 (< 3) should be inline
         assert 'data-path="01-first/sub"' in html
 
@@ -266,68 +249,11 @@ class TestRenderTaskNodeDepth:
 
         # Render from depth 3 — the task at level 3 has a child at level 4
         task_l3 = plan_dashboard._task_index["01-first/level2/level3"]
-        html = plan_dashboard._render_task_node(task_l3, depth=3)
-        # At depth 3, children should NOT be rendered inline
+        html = plan_dashboard._render_nav_node(task_l3, depth=3)
+        # At depth 3, children should NOT be rendered inline (the
+        # container is present but empty; markLazyNodes() flags it
+        # client-side rather than a server-emitted needsLoad marker)
         assert 'data-path="01-first/level2/level3/level4"' not in html
-        # But the lazy-load script marker should be present
-        assert "needsLoad" in html
-
-
-# ---------------------------------------------------------------------------
-# TestTreeRoute
-# ---------------------------------------------------------------------------
-
-
-class TestTreeRoute:
-    """Test the /tree route returns an HTML fragment, not a full page."""
-
-    def test_returns_200(self, client):
-        resp = client.get("/tree")
-        assert resp.status_code == 200
-
-    def test_returns_html_fragment_not_full_page(self, client):
-        """GET /tree should not contain <html>, <head>, or <body> tags."""
-        resp = client.get("/tree")
-        html = resp.text
-        assert "<html" not in html.lower()
-        assert "<head" not in html.lower()
-        assert "<body" not in html.lower()
-
-    def test_contains_task_nodes(self, client):
-        """The fragment contains task-node divs."""
-        resp = client.get("/tree")
-        assert "task-node" in resp.text
-
-    def test_contains_correct_data_paths(self, client):
-        """Task nodes have correct data-path attributes."""
-        resp = client.get("/tree")
-        assert 'data-path="01-first"' in resp.text
-        assert 'data-path="02-second"' in resp.text
-        assert 'data-path="03-third"' in resp.text
-
-    def test_contains_sse_swap_attributes(self, client):
-        """Task nodes carry sse-swap attributes for incremental updates."""
-        resp = client.get("/tree")
-        assert 'sse-swap="task:01-first"' in resp.text
-        assert 'sse-swap="task:02-second"' in resp.text
-
-    def test_reflects_tree_after_rebuild(self, client, dashboard):
-        """After adding a task and rebuilding, /tree reflects the new task."""
-        new_dir = dashboard / "04-new"
-        new_dir.mkdir()
-        _write_task_md(new_dir / "task.md", "New Task", "not-started",
-                       objective="Just added.")
-        plan_dashboard.rebuild_tree()
-
-        resp = client.get("/tree")
-        assert 'data-path="04-new"' in resp.text
-        assert "New Task" in resp.text
-
-    def test_root_with_body_renders_root_node(self, client, dashboard):
-        """When root task.md has body content, /tree renders the root as a node."""
-        resp = client.get("/tree")
-        # Root has body ("## Objective\n\nA test plan.\n"), so it's rendered as a node
-        assert 'data-path=""' in resp.text
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +276,7 @@ class TestWatcherDecisionLogic:
         Takes a list of (change_type, file_path_str) tuples and returns
         a list of (event_name, data_snippet) broadcast calls.
 
-        This mirrors the logic in _watch_worktree() without depending on
+        This mirrors the logic in _rebuild_and_broadcast() without depending on
         watchfiles.awatch().
 
         When *skip_init* is True, the caller is responsible for having called
@@ -405,7 +331,7 @@ class TestWatcherDecisionLogic:
                 changed_paths.add(task_path)
 
         # Simulate the broadcast decisions — matches production logic in
-        # _watch_worktree() (plan_dashboard.py).
+        # _rebuild_and_broadcast() (plan_dashboard.py).
         broadcasts: list[tuple[str, str]] = []
 
         if structural_parent_paths:
@@ -418,7 +344,7 @@ class TestWatcherDecisionLogic:
                         break
                     parent_task = plan_dashboard._task_index.get(parent_path)
                     if parent_task is not None:
-                        fragment = plan_dashboard._render_task_node(parent_task)
+                        fragment = plan_dashboard._render_nav_node(parent_task)
                         broadcasts.append((f"task:{parent_path}", fragment))
                     else:
                         broadcasts.append(("full-reload", "{}"))
@@ -438,7 +364,7 @@ class TestWatcherDecisionLogic:
                 if children_changed:
                     children_changed_paths.add(task_path)
                 elif updated is not None and plan_dashboard._root_task is not None:
-                    fragment = plan_dashboard._render_task_node(updated)
+                    fragment = plan_dashboard._render_nav_node(updated)
                     broadcasts.append((f"task:{task_path}", fragment))
 
             if children_changed_paths:
@@ -447,7 +373,7 @@ class TestWatcherDecisionLogic:
                     for task_path in children_changed_paths:
                         task = plan_dashboard._task_index.get(task_path)
                         if task is not None:
-                            fragment = plan_dashboard._render_task_node(task)
+                            fragment = plan_dashboard._render_nav_node(task)
                             broadcasts.append((f"task:{task_path}", fragment))
                         else:
                             broadcasts.append(("full-reload", "{}"))
@@ -717,7 +643,7 @@ class TestBroadcastIntegration:
 
 
 class TestTaskDepth:
-    """Test the _task_depth() helper used by _render_task_node()."""
+    """Test the _task_depth() helper used by _render_nav_node()."""
 
     def test_root_path_is_depth_0(self):
         assert plan_dashboard._task_depth("") == 0

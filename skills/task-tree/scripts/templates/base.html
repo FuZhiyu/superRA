@@ -2549,52 +2549,6 @@ function recapForCollapse(el) {
   el.style.maxHeight = '';
 }
 
-/* ── Task expand/collapse ── */
-function toggleTask(rowEl) {
-  var node = rowEl.closest('.task-node');
-  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
-  var body = node.querySelector(':scope > .task-body');
-  var children = node.querySelector(':scope > .task-children');
-
-  if (!toggle || toggle.classList.contains('leaf')) return;
-
-  var isExpanded = toggle.classList.contains('expanded');
-
-  if (isExpanded) {
-    /* Collapse */
-    toggle.classList.remove('expanded');
-    if (body) recapForCollapse(body);
-    if (children) children.style.display = 'none';
-  } else {
-    /* Expand */
-    toggle.classList.add('expanded');
-    if (body) {
-      body.classList.add('open');
-      uncapAfterTransition(body);
-    }
-    if (children) {
-      children.style.display = '';
-      /* Lazy-load children via htmx if needed */
-      if (node.dataset.needsLoad === 'true') {
-        var path = node.dataset.path;
-        var pathId = path.replace(/\//g, '-');
-        htmx.ajax('GET', wtUrl('/task/' + path), {
-          target: '#' + pathId + '-children',
-          swap: 'innerHTML'
-        });
-        node.dataset.needsLoad = 'false';
-      }
-    }
-    /* Load comment counts for section badges */
-    if (node.dataset.path) {
-      loadComments(node.dataset.path);
-    }
-  }
-
-  /* Recalculate tree-level comment badges after expand/collapse */
-  updateTreeCommentBadges();
-}
-
 /* ── Section expand/collapse (inside task body) ── */
 function toggleSection(toggleEl, event) {
   event.stopPropagation();
@@ -4850,11 +4804,6 @@ function updateTreeCommentBadges() {
           }
           if (!node) continue;
         }
-
-        /* Check if this task's body is expanded (open).
-           If it is, section-level badges handle it — skip. */
-        var body = node.querySelector(':scope > .task-body');
-        if (body && body.classList.contains('open')) continue;
 
         /* Walk up ancestors: if an ancestor's children container is hidden,
            the current node isn't visible — bubble the badge to that ancestor.

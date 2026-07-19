@@ -762,13 +762,6 @@ def _get_jinja_env():
     return env
 
 
-def _render_task_fragment(task: Task, project_root: str) -> str:
-    """Render the task_children.html template for a single task."""
-    env = _get_jinja_env()
-    template = env.get_template("task_children.html")
-    return template.render(task=task, project_root=project_root)
-
-
 def _task_depth(task_path: str) -> int:
     """Return the depth of a task in the tree (0 for root children, etc.)."""
     if not task_path:
@@ -776,30 +769,12 @@ def _task_depth(task_path: str) -> int:
     return task_path.count("/")
 
 
-def _render_task_node(task: Task, project_root: str | None = None, depth: int | None = None) -> str:
-    """Render a single task node via the task_node macro (for SSE swap).
+def _render_nav_node(task: Task, depth: int | None = None) -> str:
+    """Render a single navigation-only task node (row + children, no body).
 
     *depth* controls how many levels of children are rendered inline vs
     lazy-loaded.  When ``None``, the depth is inferred from the task's
     position in the tree (``task.path``).
-    """
-    if depth is None:
-        depth = _task_depth(task.path)
-    if project_root is None:
-        project_root = _project_root
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "task_node.html" import render_task_node -%}'
-        '{{ render_task_node(task, project_root, depth=depth) }}'
-    )
-    return template.render(task=task, project_root=project_root, depth=depth)
-
-
-def _render_nav_node(task: Task, depth: int | None = None) -> str:
-    """Render a single navigation-only task node (row + children, no body).
-
-    *depth* controls inline vs lazy-loaded children, mirroring
-    ``_render_task_node``.  When ``None``, depth is inferred from ``task.path``.
     """
     if depth is None:
         depth = _task_depth(task.path)
@@ -998,40 +973,14 @@ async def index(request: Request):
     return HTMLResponse(content=html)
 
 
-# --- Route: GET /tree (tree HTML fragment for AJAX full-reload fallback) ----
-
-@app.get("/tree", response_class=HTMLResponse)
-async def tree_fragment(request: Request):
-    """Return just the task tree HTML nodes (no page chrome)."""
-    state = resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    # Re-use the same rendering logic as base.html: if root has body, render
-    # it as a node; otherwise render its children at depth 0.
-    template = env.from_string(
-        '{%- from "task_node.html" import render_task_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_task_node(root_task, project_root, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_task_node(child, project_root, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    html = template.render(root_task=state.root_task, project_root=state.project_root)
-    return HTMLResponse(content=html)
-
-
 # --- Route: GET /nav (navigation-only tree fragment) -----------------------
 
 @app.get("/nav", response_class=HTMLResponse)
 async def nav_fragment(request: Request):
     """Return the navigation-only tree (rows, no task bodies) for the sidebar.
 
-    Mirrors /tree's root-or-children logic but renders nav_node (body-free).
-    Children are inlined to depth 2; depth >=3 children are lazy-load stubs
-    fetched via /nav/{path}.
+    Renders the root-or-children (nav_node, body-free). Children are inlined
+    to depth 2; depth >=3 children are lazy-load stubs fetched via /nav/{path}.
     """
     state = resolve_worktree(request)
     if state.root_task is None:
@@ -1166,9 +1115,10 @@ async def serve_file(path: str, request: Request):
 
 
 # --- Comment routes --------------------------------------------------------
-# These use /api/ prefix to avoid ambiguity with the catch-all /task/{path:path}
-# route.  The {path:path} parameter is greedy and would swallow /task/x/comments
-# as path="x/comments".  Templates should call /api/task/PATH/comments etc.
+# These use /api/ prefix to avoid ambiguity with the other catch-all
+# {path:path} routes (/nav/{path}, /node/{path}), which are greedy and would
+# swallow /task/x/comments as path="x/comments".  Templates should call
+# /api/task/PATH/comments etc.
 
 @app.get("/api/comments/summary")
 async def comments_summary(request: Request):
@@ -1376,25 +1326,10 @@ async def list_worktrees():
 # selector's onchange pushes a new ``?wt=`` and re-renders that worktree in place.
 
 
-# --- Route: GET /task/{path} -----------------------------------------------
-# MUST come after comment routes — {path:path} is greedy and would swallow
-# suffixes like /comments or /comment/123.
-
-@app.get("/task/{path:path}", response_class=HTMLResponse)
-async def get_task(path: str, request: Request):
-    """Return an HTML fragment with the children of the task at *path*."""
-    state = resolve_worktree(request)
-    task = _find_task(state, path)
-    if task is None:
-        raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    html = _render_task_fragment(task, state.project_root)
-    return HTMLResponse(content=html)
-
-
 # --- Route: GET /nav/{path} (nav-only lazy children) -----------------------
-# {path:path} is greedy; keep after the comment routes for the same reason as
-# /task/{path}.  Returns body-free children so deep sidebar nodes lazy-load
-# without pulling task bodies.
+# {path:path} is greedy — MUST come after comment routes, or it would swallow
+# suffixes like /comments or /comment/123.  Returns body-free children so deep
+# sidebar nodes lazy-load without pulling task bodies.
 
 @app.get("/nav/{path:path}", response_class=HTMLResponse)
 async def get_nav(path: str, request: Request):
