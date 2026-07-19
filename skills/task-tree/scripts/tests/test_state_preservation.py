@@ -24,6 +24,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import plan_dashboard
+from conftest import _launch_state
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +63,6 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
 def _init_dashboard(plan_root: Path):
     """Point the dashboard module at a plan root and build the tree."""
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
 
@@ -162,12 +162,12 @@ class TestRebuildTaskChildrenChanged:
         child.mkdir()
         _write_task_md(child / "task.md", "Nested", "not-started")
         plan_dashboard.rebuild_tree()
-        assert "02-second/nested" in plan_dashboard._task_index
+        assert "02-second/nested" in _launch_state(plan_dashboard).task_index
 
         (child / "task.md").unlink()
         child.rmdir()
         plan_dashboard.rebuild_task("02-second")
-        assert "02-second/nested" not in plan_dashboard._task_index
+        assert "02-second/nested" not in _launch_state(plan_dashboard).task_index
 
     def test_deleted_task_returns_none(self, dashboard):
         """When task.md itself is deleted, rebuild_task returns (None, False)."""
@@ -175,7 +175,7 @@ class TestRebuildTaskChildrenChanged:
         result, children_changed = plan_dashboard.rebuild_task("01-first")
         assert result is None
         assert children_changed is False
-        assert "01-first" not in plan_dashboard._task_index
+        assert "01-first" not in _launch_state(plan_dashboard).task_index
 
     def test_same_children_returns_false(self, dashboard):
         """rebuild_task with unchanged children: children_changed=False."""
@@ -196,8 +196,8 @@ class TestRebuildTaskChildrenChanged:
         _write_task_md(child / "task.md", "Fresh Child", "not-started")
 
         plan_dashboard.rebuild_task("02-second")
-        assert "02-second/new-child" in plan_dashboard._task_index
-        assert plan_dashboard._task_index["02-second/new-child"].title == "Fresh Child"
+        assert "02-second/new-child" in _launch_state(plan_dashboard).task_index
+        assert _launch_state(plan_dashboard).task_index["02-second/new-child"].title == "Fresh Child"
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class TestRenderNavNodeDepth:
 
     def test_render_with_explicit_depth(self, dashboard):
         """Passing an explicit depth renders correctly."""
-        task = plan_dashboard._task_index["01-first"]
+        task = _launch_state(plan_dashboard).task_index["01-first"]
         html_depth0 = plan_dashboard._render_nav_node(task, depth=0)
         html_depth5 = plan_dashboard._render_nav_node(task, depth=5)
         # Both should render the task node with data-path
@@ -219,7 +219,7 @@ class TestRenderNavNodeDepth:
 
     def test_render_with_default_depth(self, dashboard):
         """Default depth (None) infers from the task's path."""
-        task = plan_dashboard._task_index["01-first"]
+        task = _launch_state(plan_dashboard).task_index["01-first"]
         html = plan_dashboard._render_nav_node(task)
         assert 'data-path="01-first"' in html
         assert "task-node" in html
@@ -232,7 +232,7 @@ class TestRenderNavNodeDepth:
                        objective="Child objective.")
         plan_dashboard.rebuild_tree()
 
-        parent = plan_dashboard._task_index["01-first"]
+        parent = _launch_state(plan_dashboard).task_index["01-first"]
         html = plan_dashboard._render_nav_node(parent, depth=0)
         # At depth 0, children rendered at depth 1 (< 3) should be inline
         assert 'data-path="01-first/sub"' in html
@@ -248,7 +248,7 @@ class TestRenderNavNodeDepth:
         plan_dashboard.rebuild_tree()
 
         # Render from depth 3 — the task at level 3 has a child at level 4
-        task_l3 = plan_dashboard._task_index["01-first/level2/level3"]
+        task_l3 = _launch_state(plan_dashboard).task_index["01-first/level2/level3"]
         html = plan_dashboard._render_nav_node(task_l3, depth=3)
         # At depth 3, children should NOT be rendered inline (the
         # container is present but empty; markLazyNodes() flags it
@@ -336,13 +336,13 @@ class TestWatcherDecisionLogic:
 
         if structural_parent_paths:
             plan_dashboard.rebuild_tree()
-            root_task = plan_dashboard._root_task
+            root_task = _launch_state(plan_dashboard).root_task
             if root_task is not None:
                 for parent_path in structural_parent_paths:
                     if parent_path == "" and not (root_task.body and root_task.body.strip()):
                         broadcasts.append(("full-reload", "{}"))
                         break
-                    parent_task = plan_dashboard._task_index.get(parent_path)
+                    parent_task = _launch_state(plan_dashboard).task_index.get(parent_path)
                     if parent_task is not None:
                         fragment = plan_dashboard._render_nav_node(parent_task)
                         broadcasts.append((f"task:{parent_path}", fragment))
@@ -350,7 +350,7 @@ class TestWatcherDecisionLogic:
                         broadcasts.append(("full-reload", "{}"))
                         break
 
-                summary_html = plan_dashboard._render_summary()
+                summary_html = plan_dashboard._render_summary(root_task)
                 broadcasts.append(("summary-updated", summary_html))
 
         # Process content-only changes — collect children_changed paths
@@ -363,15 +363,15 @@ class TestWatcherDecisionLogic:
                 updated, children_changed = plan_dashboard.rebuild_task(task_path)
                 if children_changed:
                     children_changed_paths.add(task_path)
-                elif updated is not None and plan_dashboard._root_task is not None:
+                elif updated is not None and _launch_state(plan_dashboard).root_task is not None:
                     fragment = plan_dashboard._render_nav_node(updated)
                     broadcasts.append((f"task:{task_path}", fragment))
 
             if children_changed_paths:
                 plan_dashboard.rebuild_tree()
-                if plan_dashboard._root_task is not None:
+                if _launch_state(plan_dashboard).root_task is not None:
                     for task_path in children_changed_paths:
-                        task = plan_dashboard._task_index.get(task_path)
+                        task = _launch_state(plan_dashboard).task_index.get(task_path)
                         if task is not None:
                             fragment = plan_dashboard._render_nav_node(task)
                             broadcasts.append((f"task:{task_path}", fragment))
@@ -379,8 +379,8 @@ class TestWatcherDecisionLogic:
                             broadcasts.append(("full-reload", "{}"))
                             break
 
-            if content_paths and plan_dashboard._root_task is not None:
-                summary_html = plan_dashboard._render_summary()
+            if content_paths and _launch_state(plan_dashboard).root_task is not None:
+                summary_html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
                 broadcasts.append(("summary-updated", summary_html))
 
         return broadcasts
@@ -488,7 +488,7 @@ class TestWatcherDecisionLogic:
         """
         # Initialize dashboard while 03-third has NO children
         _init_dashboard(plan_root)
-        assert plan_dashboard._task_index["03-third"].children == []
+        assert _launch_state(plan_dashboard).task_index["03-third"].children == []
 
         # Now create a child directory on disk that the dashboard doesn't know about
         child = plan_root / "03-third" / "sub-dynamic"
@@ -511,7 +511,7 @@ class TestWatcherDecisionLogic:
         assert "full-reload" not in event_names
 
         # Verify rebuild_tree() was triggered (the child should now be indexed)
-        assert "03-third/sub-dynamic" in plan_dashboard._task_index
+        assert "03-third/sub-dynamic" in _launch_state(plan_dashboard).task_index
 
     def test_non_task_file_changes_ignored(self, plan_root):
         """Changes to non-task.md files (e.g. .py, .txt) produce no broadcasts."""

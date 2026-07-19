@@ -44,7 +44,7 @@ from _comments import (
 )
 
 # Shared helpers — canonical definitions live in conftest.py.
-from conftest import _write_task_md, _write_tiny_png, _serve_plan
+from conftest import _launch_state, _write_task_md, _write_tiny_png, _serve_plan
 
 
 def _workflow_lines(content: str) -> list[str]:
@@ -135,7 +135,6 @@ def client(plan_root):
 
     # Reset module-level state
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
 
@@ -195,7 +194,6 @@ def flow_client(flow_plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = flow_plan_root
-    plan_dashboard._project_root = str(flow_plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
     with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
@@ -642,10 +640,10 @@ class TestDataLayer:
     def test_rebuild_tree_populates_index(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
-        assert "" in plan_dashboard._task_index  # root
-        assert "01-first" in plan_dashboard._task_index
-        assert "02-second" in plan_dashboard._task_index
-        assert "03-third" in plan_dashboard._task_index
+        assert "" in _launch_state(plan_dashboard).task_index  # root
+        assert "01-first" in _launch_state(plan_dashboard).task_index
+        assert "02-second" in _launch_state(plan_dashboard).task_index
+        assert "03-third" in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_updates_single(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
@@ -660,7 +658,7 @@ class TestDataLayer:
         updated, children_changed = plan_dashboard.rebuild_task("01-first")
         assert updated is not None
         assert updated.title == "Updated First Task"
-        assert plan_dashboard._task_index["01-first"].title == "Updated First Task"
+        assert _launch_state(plan_dashboard).task_index["01-first"].title == "Updated First Task"
         assert children_changed is False
 
     def test_rebuild_task_discovers_existing_children(self, plan_root):
@@ -671,7 +669,7 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        original = plan_dashboard._task_index["01-first"]
+        original = _launch_state(plan_dashboard).task_index["01-first"]
         assert len(original.children) == 1
 
         # rebuild_task should re-discover existing children
@@ -686,7 +684,7 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        original = plan_dashboard._task_index["01-first"]
+        original = _launch_state(plan_dashboard).task_index["01-first"]
         assert len(original.children) == 0
 
         # Create a new child directory after the tree was built
@@ -700,7 +698,7 @@ class TestDataLayer:
         assert len(updated.children) == 1
         assert updated.children[0].title == "New Child"
         # New child should be in the flat index
-        assert "01-first/sub" in plan_dashboard._task_index
+        assert "01-first/sub" in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_removes_deleted_children(self, plan_root):
         """A child removed from disk is dropped from the tree and index."""
@@ -710,8 +708,8 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        assert "01-first/sub" in plan_dashboard._task_index
-        assert len(plan_dashboard._task_index["01-first"].children) == 1
+        assert "01-first/sub" in _launch_state(plan_dashboard).task_index
+        assert len(_launch_state(plan_dashboard).task_index["01-first"].children) == 1
 
         # Remove the child's task.md (simulating directory deletion)
         (child / "task.md").unlink()
@@ -721,7 +719,7 @@ class TestDataLayer:
         assert updated is not None
         assert children_changed is True
         assert len(updated.children) == 0
-        assert "01-first/sub" not in plan_dashboard._task_index
+        assert "01-first/sub" not in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_returns_none_for_deleted(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
@@ -730,12 +728,12 @@ class TestDataLayer:
         (plan_root / "01-first" / "task.md").unlink()
         result, children_changed = plan_dashboard.rebuild_task("01-first")
         assert result is None
-        assert "01-first" not in plan_dashboard._task_index
+        assert "01-first" not in _launch_state(plan_dashboard).task_index
 
     def test_build_index_creates_flat_dict(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
-        root = plan_dashboard._root_task
+        root = _launch_state(plan_dashboard).root_task
         idx: dict[str, _task_io.Task] = {}
         plan_dashboard._build_index(root, idx)
         assert "" in idx
@@ -1342,27 +1340,24 @@ class TestTemplateRendering:
 
     def test_render_nav_node_has_sse_swap(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-first"]
+        task = _launch_state(plan_dashboard).task_index["01-first"]
         html = plan_dashboard._render_nav_node(task)
         assert 'sse-swap="task:01-first"' in html
         assert 'hx-swap="outerHTML"' in html
 
     def test_render_nav_node_has_badge(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-first"]
+        task = _launch_state(plan_dashboard).task_index["01-first"]
         html = plan_dashboard._render_nav_node(task)
         assert "badge-approved" in html
         assert "01-first" in html  # slug
 
     def test_render_summary_has_counts(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary()
+        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
         assert "stat-tasks" in html
         assert "stat-approved" in html
         # 3 leaf tasks, 1 approved
@@ -1372,9 +1367,8 @@ class TestTemplateRendering:
         """Postponed leaves drop out of the active denominator, like archived,
         and surface as a visible count pill."""
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary()
+        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
         # Leaves: 01 postponed, 02 not-started, 03 approved, branch a/b postponed.
         # active = 5 - 3 postponed = 2; approved = 1 -> 1/2.
         assert "1/2" in html
@@ -1382,11 +1376,10 @@ class TestTemplateRendering:
 
     def test_postponed_kanban_column_holds_postponed_leaves(self, postponed_plan_root):
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(all_tasks=all_tasks)
         # The Postponed column exists and carries the postponed leaf + branch children.
         post_col = html.split('<div class="kanban-col">')
@@ -1397,23 +1390,20 @@ class TestTemplateRendering:
 
     def test_postponed_renders_badge_and_status(self, postponed_plan_root):
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-postponed-leaf"]
+        task = _launch_state(plan_dashboard).task_index["01-postponed-leaf"]
         html = plan_dashboard._render_nav_node(task)
         assert "badge-postponed" in html
         assert 'data-status="postponed"' in html
 
     def test_vscode_link_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         env = plan_dashboard._get_jinja_env()
         result = env.filters["vscode_link"]("src/main.py", "/project")
         assert result == "vscode://file//project/src/main.py"
 
     def test_file_url_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         env = plan_dashboard._get_jinja_env()
         result = env.filters["file_url"]("images/fig1.png")
         assert result == "/files/images/fig1.png"
@@ -1427,7 +1417,6 @@ class TestTemplateRendering:
         only breakout sequence is </script>.)
         """
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
 
         # Write a task whose body contains a literal </script>
         task_md = plan_root / "01-first" / "task.md"
@@ -1436,31 +1425,30 @@ class TestTemplateRendering:
         task_md.write_text(content)
         plan_dashboard.rebuild_tree()
 
-        task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_node_body(task)
+        state = _launch_state(plan_dashboard)
+        task = state.task_index["01-first"]
+        html = plan_dashboard._render_node_body(task, state.project_root)
         # The content's </script> is backslash-escaped to <\/script> so it does
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
     def test_kanban_has_7_status_columns(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(all_tasks=all_tasks)
         assert html.count("kanban-col-header") == 7
 
     def test_dag_has_dependency_arrows(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("dag.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(
-            root_task=plan_dashboard._root_task, all_tasks=all_tasks
+            root_task=_launch_state(plan_dashboard).root_task, all_tasks=all_tasks
         )
         assert "graph LR" in html
         # 02-second depends on 01-first
@@ -1841,7 +1829,6 @@ class TestTouchPolishRendered:
     def _serve(self, plan_root):
         import threading
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.resolve().parent)
         plan_dashboard._jinja_env = None
         plan_dashboard.rebuild_tree()
         # Pick a free port the same way the lifespan tests do.
@@ -2330,7 +2317,6 @@ def _client_for(plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard._worktree_cache.clear()
     plan_dashboard.rebuild_tree()
@@ -2762,9 +2748,16 @@ class TestDashboard:
         from fastapi.testclient import TestClient
 
         plan_dashboard.PLAN_ROOT = plan_root
-        # Generate to set module state, then build the fragment map.
         plan_dashboard.generate_dashboard(plan_root)
-        fragments = plan_dashboard._build_standalone_fragments()
+        # render_standalone_html builds its render state as parameters rather
+        # than module globals, so build the same whole-tree state here to
+        # reproduce its fragment map.
+        state = plan_dashboard.WorktreeState(
+            wt_id="", plan_root=plan_root,
+            project_root=str(plan_root.resolve().parent),
+            root_task=plan_dashboard.walk_plan(plan_root),
+        )
+        fragments = plan_dashboard._build_standalone_fragments(state)
 
         with TestClient(plan_dashboard.app) as c:
             assert fragments["/nav"] == c.get("/nav").text
@@ -2792,7 +2785,12 @@ class TestDashboard:
 
         plan_dashboard.PLAN_ROOT = plan_with_branches
         plan_dashboard.generate_dashboard(plan_with_branches)
-        fragments = plan_dashboard._build_standalone_fragments()
+        state = plan_dashboard.WorktreeState(
+            wt_id="", plan_root=plan_with_branches,
+            project_root=str(plan_with_branches.resolve().parent),
+            root_task=plan_dashboard.walk_plan(plan_with_branches),
+        )
+        fragments = plan_dashboard._build_standalone_fragments(state)
 
         nested = "01-data-prep/02-merge"
         # The exact URL string the standalone client builds (JS encodeURIComponent
@@ -3263,7 +3261,6 @@ def _docs_client(plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
     return TestClient(plan_dashboard.app, raise_server_exceptions=True)

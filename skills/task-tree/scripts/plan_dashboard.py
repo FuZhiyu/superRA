@@ -110,14 +110,6 @@ _server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
 # dashboard process; importing it into pytest or another ASGI host does not.
 _standalone_process_owner = __name__ == "__main__"
 
-# In-memory task tree and flat index.  These are a compatibility view over the
-# *default* (launch) worktree's WorktreeState — read by /export's snapshot path
-# and the standalone renderer.  Per-request handlers resolve a WorktreeState
-# instead of reading these.
-_root_task: Task | None = None
-_task_index: dict[str, Task] = {}
-_project_root: str = ""
-
 # Per-worktree SSE delivery and watcher lifecycle (task 02).
 #
 # Live-reload is scoped per worktree: a client viewing worktree A registers its
@@ -196,18 +188,6 @@ def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
     return state
 
 
-def _sync_default_globals() -> None:
-    """Mirror the launch worktree's state into the legacy module globals.
-
-    ``/export`` snapshots these globals around a standalone render, and the
-    standalone renderer drives them directly; the test suite also reads them.
-    Keeping them as a view over the default WorktreeState preserves that path.
-    """
-    state = _worktree_cache.get(_launch_wt_id)
-    if state is not None:
-        _set_module_state(state.root_task, state.task_index, state.project_root)
-
-
 # ---------------------------------------------------------------------------
 # Data layer
 # ---------------------------------------------------------------------------
@@ -223,13 +203,12 @@ def _build_index(task: Task, index: dict[str, Task]) -> None:
 def rebuild_tree() -> None:
     """Full re-walk of the launch plan directory; (re)seed the default worktree.
 
-    Rebuilds the launch worktree's WorktreeState from ``PLAN_ROOT`` and mirrors
-    it into the legacy globals.  Tests and the CLI seed the cache through here.
+    Rebuilds the launch worktree's WorktreeState from ``PLAN_ROOT``.  Tests and
+    the CLI seed the cache through here.
     """
     global _launch_wt_id
     _launch_wt_id = _worktree_id_for_plan_root(PLAN_ROOT)
     _worktree_cache[_launch_wt_id] = _build_worktree_state(_launch_wt_id, PLAN_ROOT)
-    _sync_default_globals()
 
 
 def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | None, bool]:
@@ -278,13 +257,11 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
 
 
 def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
-    """Re-parse a single task.md in the launch worktree (legacy-globals view)."""
+    """Re-parse a single task.md in the launch worktree's WorktreeState."""
     state = _worktree_cache.get(_launch_wt_id)
     if state is None:
         return None, False
-    result = rebuild_state_task(state, task_path)
-    _sync_default_globals()
-    return result
+    return rebuild_state_task(state, task_path)
 
 
 def _remove_from_index(index: dict[str, Task], task_path: str) -> None:
@@ -438,9 +415,8 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
 
     Re-walks the worktree's plan root and refreshes its cached state in place so
     handlers and the watcher see the new tree.  Returns the refreshed state, or
-    ``None`` when the worktree is no longer cached.  Mirrors the launch worktree
-    into the legacy globals so ``/export`` and the standalone renderer stay
-    consistent.  This is the cache-invalidation hook task 02's watcher calls.
+    ``None`` when the worktree is no longer cached.  This is the
+    cache-invalidation hook task 02's watcher calls.
     """
     existing = _worktree_cache.get(wt_id)
     if existing is None:
@@ -450,8 +426,6 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
     existing.root_task = refreshed.root_task
     existing.task_index = refreshed.task_index
     existing.project_root = refreshed.project_root
-    if wt_id == _launch_wt_id:
-        _sync_default_globals()
     return existing
 
 
@@ -793,19 +767,15 @@ def _render_nav_children(task: Task) -> str:
     return template.render(task=task)
 
 
-def _render_node_body(task: Task, project_root: str | None = None) -> str:
+def _render_node_body(task: Task, project_root: str) -> str:
     """Render the node_body.html fragment (body-only) for a single task."""
-    if project_root is None:
-        project_root = _project_root
     env = _get_jinja_env()
     template = env.get_template("node_body.html")
     return template.render(task=task, project_root=project_root)
 
 
-def _render_summary(root_task: Task | None = None) -> str:
+def _render_summary(root_task: Task | None) -> str:
     """Render the summary_bar.html template for *root_task*'s tree."""
-    if root_task is None:
-        root_task = _root_task
     env = _get_jinja_env()
     template = env.get_template("summary_bar.html")
     all_tasks = collect_all_tasks(root_task) if root_task else []
@@ -1371,9 +1341,9 @@ async def export_subtree(request: Request, root: str = ""):
     Empty *root* exports the whole tree.  The rendered HTML is identical to
     ``plan_dashboard.py generate [--root <path>]``: server-less, all fragments
     embedded inline, opens via ``file://``.  Resolves the worktree per request
-    (defaulting to the launch worktree) and exports exactly that one worktree;
-    restores live module state after rendering so the running server is
-    unaffected.
+    (defaulting to the launch worktree) and exports exactly that one worktree.
+    ``render_standalone_html`` takes its render state as parameters, so this
+    render cannot perturb the running server's live state.
     """
     state = resolve_worktree(request)
     if state.root_task is None:
@@ -1381,13 +1351,7 @@ async def export_subtree(request: Request, root: str = ""):
     if root and _find_task(state, root) is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
 
-    # render_standalone_html drives module state (_root_task/_task_index) the way
-    # generate_dashboard does, so snapshot and restore the live server's state.
-    saved_root, saved_index, saved_project = _root_task, _task_index, _project_root
-    try:
-        html = render_standalone_html(state.plan_root, root=root or None)
-    finally:
-        _set_module_state(saved_root, saved_index, saved_project)
+    html = render_standalone_html(state.plan_root, root=root or None)
 
     slug = root.rsplit("/", 1)[-1] if root else (state.root_task.slug or "plan")
     # Sanitize before interpolating into the quoted Content-Disposition value:
@@ -1413,15 +1377,17 @@ async def export_subtree(request: Request, root: str = ""):
 # template string.
 
 
-def _build_standalone_fragments() -> dict[str, str]:
+def _build_standalone_fragments(state: WorktreeState) -> dict[str, str]:
     """Pre-render every server fragment the standalone client fetches.
 
     Mirrors the live routes (/nav, /nav/<path>, /node/<path>, /dag?root=<path>,
     /kanban) byte-for-byte by reusing the same render helpers, keyed by the exact
     URL the client requests so base.html's standaloneFetch resolves them offline.
-    Assumes module state (``_root_task``, ``_project_root``) is already set.
+    Takes the render state explicitly via *state* (its ``root_task`` and
+    ``project_root``) instead of module globals.
     """
-    assert _root_task is not None
+    root_task = state.root_task
+    assert root_task is not None
     fragments: dict[str, str] = {}
 
     # /nav — the body-free sidebar tree (root-or-children logic, depth<3 inline).
@@ -1436,7 +1402,7 @@ def _build_standalone_fragments() -> dict[str, str]:
         '{% endfor %}'
         '{% endif %}'
     )
-    fragments["/nav"] = nav_tmpl.render(root_task=_root_task)
+    fragments["/nav"] = nav_tmpl.render(root_task=root_task)
 
     # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
     # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).
@@ -1451,9 +1417,9 @@ def _build_standalone_fragments() -> dict[str, str]:
     # "Could not load this task" — and a leaf-only subtree export (root with no
     # children) embeds no node body at all. /nav/<path> stays descendants-only
     # (the root is served by the main /nav fragment, never /nav/).
-    all_tasks = collect_all_tasks(_root_task)
-    for task in [_root_task, *all_tasks]:
-        fragments[f"/node/{task.path}"] = _render_node_body(task)
+    all_tasks = collect_all_tasks(root_task)
+    for task in [root_task, *all_tasks]:
+        fragments[f"/node/{task.path}"] = _render_node_body(task, state.project_root)
         fragments[f"/dag?root={task.path}"] = _render_dag_fragment(task)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
@@ -1495,15 +1461,6 @@ def _rebase_subtree(task: Task, root_path: str) -> Task:
         return replace(node, path=new_path, children=[_rebase(c) for c in node.children])
 
     return _rebase(task)
-
-
-def _set_module_state(root_task: Task | None, index: dict[str, Task], project_root: str) -> None:
-    """Set the render-helper module state in one place (used to snapshot/restore
-    around a standalone render that must not perturb a live server)."""
-    global _root_task, _task_index, _project_root
-    _root_task = root_task
-    _task_index = index
-    _project_root = project_root
 
 
 # ---------------------------------------------------------------------------
@@ -1713,15 +1670,17 @@ def render_standalone_html(
 ) -> str:
     """Render the self-contained standalone dashboard HTML and return it.
 
-    Drives the render-helper module state (``_root_task`` / ``_task_index`` /
-    ``_project_root``) the same way the serve lifespan does, renders base.html in
-    standalone mode with every server fragment pre-rendered and embedded inline,
-    and returns the HTML string (no file write).  When *root* names a task path,
-    the export is scoped to that subtree: the node is located in the full tree,
-    re-based so it becomes the root, and the embedded data / pre-rendered
-    fragments / nav cover exactly that subtree.  Whole-tree export (``root=None``)
-    is unchanged.  *output_path* (when given) only fixes where ``<img>`` sources
-    resolve from a ``file://`` open; the HTML itself is not written here.
+    Builds an explicit, throwaway ``WorktreeState`` for the scoped root and
+    project root and threads it through the render helpers — no module-global
+    render state is touched, so this cannot perturb a live server.  Renders
+    base.html in standalone mode with every server fragment pre-rendered and
+    embedded inline, and returns the HTML string (no file write).  When *root*
+    names a task path, the export is scoped to that subtree: the node is
+    located in the full tree, re-based so it becomes the root, and the
+    embedded data / pre-rendered fragments / nav cover exactly that subtree.
+    Whole-tree export (``root=None``) is unchanged.  *output_path* (when given)
+    only fixes where ``<img>`` sources resolve from a ``file://`` open; the
+    HTML itself is not written here.
     *repo_file_base* optionally points file links at a repository browser base
     such as ``https://github.com/owner/repo/blob/sha`` instead of local editor
     links.  *repo_root_prefix* is the resolved root's path relative to the repo
@@ -1753,12 +1712,10 @@ def render_standalone_html(
         scoped_root = full_root
         subtree_dir = plan_root
 
-    index: dict[str, Task] = {}
-    _build_index(scoped_root, index)
-    _set_module_state(scoped_root, index, project_root)
+    state = WorktreeState(wt_id="", plan_root=plan_root, project_root=project_root, root_task=scoped_root)
 
     all_tasks = collect_all_tasks(scoped_root)
-    fragments = _build_standalone_fragments()
+    fragments = _build_standalone_fragments(state)
 
     # Where the embedded task tree sits relative to the dashboard file, so
     # standalone <img> sources resolve from a file:// open.  Tasks reference
