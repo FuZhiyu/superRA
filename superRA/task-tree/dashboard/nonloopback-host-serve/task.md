@@ -1,6 +1,6 @@
 ---
 title: "Background Serve Lifecycle for Non-Loopback --host"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -14,3 +14,27 @@ Diagnosed in-session on macOS: 'serve --host 100.114.244.56' binds fine (uvicorn
 
 ## Results
 
+Implemented along the planner's suggested route: the launcher now derives a probe host from the requested `--host` and threads it through every readiness/reuse probe and printed URL, and the PID file records the bound host so later launches and reuse probe the right interface.
+
+**Code changes** (all in [plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py)):
+
+- `_probe_host(host)` ([plan_dashboard.py:2093-2100](../../../../skills/task-tree/scripts/plan_dashboard.py#L2093-L2100)) — maps a bind host to the address to probe: wildcard binds (`0.0.0.0`/`::`) probe loopback (they accept loopback connections), any other interface is probed directly.
+- `_display_host(host)` ([plan_dashboard.py:2103-2110](../../../../skills/task-tree/scripts/plan_dashboard.py#L2103-L2110)) — maps a bind host to the printed-URL host: loopback/wildcard show `localhost` (preserving the existing messages verbatim), an explicit interface shows its literal IP so the printed URL is the reachable one.
+- `_port_serving`, `_probe_dashboard`, `_wait_for_dashboard` accept a `probe_host` parameter (defaults preserve the loopback behavior for existing callers/tests); `serve_background` passes `_probe_host(host)` at every probe site — the post-spawn readiness wait, the failed-bind diagnosis, and both reuse layers ([plan_dashboard.py:2255-2413](../../../../skills/task-tree/scripts/plan_dashboard.py#L2255-L2413)).
+- PID file format extended from `<pid> <port>` to `<pid> <port> <host>` ([plan_dashboard.py:2024-2061](../../../../skills/task-tree/scripts/plan_dashboard.py#L2024-L2061)); `_running_pid` returns the recorded host and probes it, with loopback fallback for legacy files (pid-only and pid+port both parse; old readers ignore the extra field, so the change is cross-version safe). Layer-1 reuse probes/announces the recorded host, so reuse works even when the current invocation omits `--host`.
+- The launch/reuse/error messages and the foreground "Starting dashboard at" line use `_display_host`, so a non-loopback launch prints `http://<interface-ip>:<port>` while all loopback/wildcard messages are byte-identical to before.
+
+Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
+
+**Regression test** (contract item 5): `TestBackgroundLaunch::test_nonloopback_host_launch_binds_reports_and_reuses` ([test_dashboard.py:4884-4951](../../../../skills/task-tree/scripts/test_dashboard.py#L4884-L4951)) discovers a real non-loopback interface IP (UDP-connect trick; skips if the host has none), launches a real background server bound to it, asserts launch success, `/healthz` reachable at the interface IP but **not** via 127.0.0.1 (the exact scenario the old loopback-only probe missed), then re-launches with the same args and asserts reuse (no spawn, same PID), and stops it. Supporting unit tests updated for the 3-tuple PID-file format, including a new legacy `pid+port` parse case ([test_dashboard.py:4390-4406](../../../../skills/task-tree/scripts/test_dashboard.py#L4390-L4406)).
+
+**Verification evidence** (this session, macOS):
+
+- Full dashboard suite: `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_dashboard.py` → **279 passed, 2 skipped** (both pre-existing playwright skips; the new regression test ran and passed).
+- Previously failing sequence, run end-to-end from a non-git scratch root against the worktree script with `--host 192.168.1.24`:
+  1. `serve --root superRA --host 192.168.1.24 --no-open` → `Dashboard running at http://192.168.1.24:8323 (PID 58662)`, exit 0; PID file `58662 8323 192.168.1.24`. `curl http://192.168.1.24:8323/healthz` → 200 identity payload; `curl http://127.0.0.1:8323/healthz` → connection refused (bound only to the interface — the old launcher failed here and killed the server).
+  2. Immediate identical re-launch → `Dashboard already running at http://192.168.1.24:8323 (PID 58662)`, exit 0, same PID still alive, no second spawn.
+  3. `stop --root superRA` → `Stopped dashboard server (PID 58662).`, process gone, PID file removed.
+  4. Default loopback launch/reuse/stop re-checked: messages unchanged (`Dashboard running at http://localhost:8323 …`, `Dashboard already running at http://localhost:8323 …`).
+
+**Caveat:** the reuse-announce URL comes from the PID file's recorded host; for a PID file written by a pre-change server (no host field) it falls back to loopback wording, which matches the old behavior.

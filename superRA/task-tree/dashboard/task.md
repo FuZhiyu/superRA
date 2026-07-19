@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: not-started
+status: in-progress
 depends_on:
   - core-data-layer
   - cli-scripts
