@@ -1,6 +1,6 @@
 ---
 title: "Children Panel Consumes JSON, Not Regex-Parsed Mermaid Text"
-status: implemented
+status: approved
 depends_on: []
 ---
 
