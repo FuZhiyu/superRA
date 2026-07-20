@@ -617,31 +617,6 @@ function toggleSection(toggleEl, event) {
 }
 
 /* ── Search/Filter (client-side, descendant-aware) ── */
-function nodeMatchesStatus(el, status) {
-  if (!status) return true;
-  if (el.dataset.status === status) return true;
-  var children = el.querySelectorAll(':scope > .task-children > .task-node');
-  for (var i = 0; i < children.length; i++) {
-    if (nodeMatchesStatus(children[i], status)) return true;
-  }
-  return false;
-}
-
-function nodeMatchesSearch(el, search) {
-  if (!search) return true;
-  var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
-  var slugEl = el.querySelector(':scope > .task-row > .task-slug');
-  var title = titleEl ? titleEl.textContent.toLowerCase() : '';
-  var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
-  var path = (el.dataset.path || '').toLowerCase();
-  if (title.includes(search) || slug.includes(search) || path.includes(search)) return true;
-  var children = el.querySelectorAll(':scope > .task-children > .task-node');
-  for (var i = 0; i < children.length; i++) {
-    if (nodeMatchesSearch(children[i], search)) return true;
-  }
-  return false;
-}
-
 /* Fold-state snapshot captured the moment a filter becomes active (from the
    no-filter state), so clearing the filter restores the user's prior folds
    instead of leaving the tree force-expanded. Null whenever no filter is
@@ -688,14 +663,40 @@ function applyFiltersNow() {
   refreshRovingTabindex();
 }
 
+/* Single post-order pass: each node's own row is evaluated once and combined
+   bottom-up with its already-computed children, so no subtree is walked more
+   than once per applyFiltersNow() call (the prior nodeMatchesStatus/
+   nodeMatchesSearch each independently re-recursed a node's whole subtree,
+   on top of applyFiltersToNode's own recursion into children — a row at
+   depth d was visited once per ancestor).
+
+   Status-match and search-match are accumulated independently across the
+   subtree (a node's returned statusMatch/searchMatch is true if *any* node in
+   its subtree — itself or a descendant — matches that filter alone), then
+   ANDed for the node's own visibility. This reproduces the prior
+   nodeMatchesStatus(el) && nodeMatchesSearch(el) semantics exactly, including
+   its cross-descendant case: a branch can show as visible when one descendant
+   satisfies the status pill and a different descendant satisfies the search
+   text, with neither descendant matching both on its own. */
 function applyFiltersToNode(el, status, search) {
-  var visible = nodeMatchesStatus(el, status) && nodeMatchesSearch(el, search);
-  el.classList.toggle('hidden', !visible);
-  if (visible) {
-    el.querySelectorAll(':scope > .task-children > .task-node').forEach(function(child) {
-      applyFiltersToNode(child, status, search);
-    });
+  var statusMatch = !status || el.dataset.status === status;
+  var searchMatch = !search;
+  if (search) {
+    var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+    var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+    var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+    var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+    var path = (el.dataset.path || '').toLowerCase();
+    searchMatch = title.includes(search) || slug.includes(search) || path.includes(search);
   }
+  el.querySelectorAll(':scope > .task-children > .task-node').forEach(function(child) {
+    var childResult = applyFiltersToNode(child, status, search);
+    if (childResult.statusMatch) statusMatch = true;
+    if (childResult.searchMatch) searchMatch = true;
+  });
+  var visible = statusMatch && searchMatch;
+  el.classList.toggle('hidden', !visible);
+  return { statusMatch: statusMatch, searchMatch: searchMatch };
 }
 
 /* Record each loaded non-leaf nav node's expanded state by path, so it can be

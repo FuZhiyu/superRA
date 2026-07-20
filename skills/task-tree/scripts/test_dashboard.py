@@ -2403,6 +2403,104 @@ class TestChildFlowClientLogic:
 
 
 # ---------------------------------------------------------------------------
+# applyFiltersToNode (node-backed): single-pass sidebar filter walk
+#
+# A minimal DOM shim (no browser needed) so the recursive filter walk itself
+# runs, not just a string search over the source.  `_makeFilterNode` builds a
+# tree of stub elements exposing exactly the surface applyFiltersToNode reads
+# (dataset, classList.toggle, querySelector/querySelectorAll scoped to
+# `.task-row`/`.task-children`).
+# ---------------------------------------------------------------------------
+
+_FILTER_NODE_SHIM = r"""
+function _makeFilterNode(path, status, title, children) {
+  var classes = {};
+  var kids = children || [];
+  return {
+    dataset: { status: status, path: path },
+    classList: {
+      toggle: function (cls, force) { classes[cls] = !!force; },
+      contains: function (cls) { return !!classes[cls]; },
+    },
+    querySelector: function (sel) {
+      if (sel === ':scope > .task-row > .task-title-text') {
+        TITLE_QUERY_COUNT++;
+        return { textContent: title };
+      }
+      return null;
+    },
+    querySelectorAll: function (sel) {
+      return sel === ':scope > .task-children > .task-node' ? kids : [];
+    },
+  };
+}
+var TITLE_QUERY_COUNT = 0;
+"""
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestFilterSinglePassClientLogic:
+    def _run(self, harness_body):
+        defs = _extract_js_defs(["applyFiltersToNode"])
+        script = _FILTER_NODE_SHIM + defs + "\n" + harness_body
+        proc = subprocess.run([_NODE, "-e", script], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+
+    def test_visits_each_node_exactly_once(self):
+        """A linear 6-node chain where only the deepest leaf's title matches
+        the search term (every ancestor's own row does not, forcing a full
+        descendant scan before returning at every level under the pre-fix
+        algorithm): the prior per-node nodeMatchesSearch recursion plus
+        applyFiltersToNode's own recursion cost 6+5+4+3+2+1=21 title lookups
+        (O(n^2), confirmed against the pre-fix code in a scratch repro); the
+        single-pass walk costs exactly 6 (one per node)."""
+        out = self._run(
+            "var n5=_makeFilterNode('a/b/c/d/e/f','not-started','unique-target',[]);"
+            "var n4=_makeFilterNode('a/b/c/d/e','not-started','plain',[n5]);"
+            "var n3=_makeFilterNode('a/b/c/d','not-started','plain',[n4]);"
+            "var n2=_makeFilterNode('a/b/c','not-started','plain',[n3]);"
+            "var n1=_makeFilterNode('a/b','not-started','plain',[n2]);"
+            "var n0=_makeFilterNode('a','not-started','plain',[n1]);"
+            "applyFiltersToNode(n0, '', 'unique-target');"
+            "console.log(JSON.stringify({count: TITLE_QUERY_COUNT}));"
+        )
+        assert out["count"] == 6
+
+    def test_cross_descendant_match_preserved(self):
+        """Filter semantics are unchanged: a branch is visible when one
+        descendant alone satisfies the status pill and a different descendant
+        alone satisfies the search text, even though neither descendant (nor
+        the branch's own row) satisfies both together — the pre-fix
+        nodeMatchesStatus(el) && nodeMatchesSearch(el) behavior."""
+        out = self._run(
+            "var a=_makeFilterNode('r/a','approved','Alpha',[]);"          # status only
+            "var b=_makeFilterNode('r/b','not-started','target-zzz',[]);"  # search only
+            "var root=_makeFilterNode('r','in-progress','Root',[a,b]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  a: !a.classList.contains('hidden'),"
+            "  b: !b.classList.contains('hidden')}));"
+        )
+        assert out["root"] is True   # visible via the cross-descendant match
+        assert out["a"] is False     # status-only match alone stays hidden
+        assert out["b"] is False     # search-only match alone stays hidden
+
+    def test_no_match_anywhere_hides_whole_branch(self):
+        out = self._run(
+            "var leaf=_makeFilterNode('r/x','not-started','Nothing',[]);"
+            "var root=_makeFilterNode('r','not-started','Root',[leaf]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  leaf: !leaf.classList.contains('hidden')}));"
+        )
+        assert out["root"] is False
+        assert out["leaf"] is False
+
+
+# ---------------------------------------------------------------------------
 # renderMarkdown image-rewrite (node-backed, behavioral)
 #
 # The server-mode `<img src>` rewrite is a code path inside renderMarkdown that
