@@ -333,19 +333,68 @@ class TestServerRoutes:
         assert "shareSubtree(" in js
         assert "window.STANDALONE ? '' :" in js
 
-    def test_served_page_keeps_cdn_render_tags(self, client):
-        """Server mode is unchanged by the standalone embedding: the live page
-        still loads markdown-it/KaTeX/texmath from the CDN and does NOT inline the
-        vendored libraries or font woff2 data URIs."""
+    def test_served_page_loads_render_libraries_locally(self, client):
+        """Server mode loads every render library from this process's own
+        /static/{name} route (vendored under vendor/), not a CDN, and does NOT
+        inline the libraries or font woff2 data URIs the way standalone does —
+        Google Fonts is the sole remaining CDN reference."""
         html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/markdown-it@14" in html
-        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" in html
-        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js" in html
-        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@1" in html
+        assert '<script src="/static/htmx.min.js"></script>' in html
+        assert '<script src="/static/sse.js"></script>' in html
+        assert '<script src="/static/markdown-it.min.js"></script>' in html
+        assert '<link rel="stylesheet" href="/static/katex.min.css">' in html
+        assert '<script src="/static/katex.min.js"></script>' in html
+        assert '<script src="/static/texmath.min.js"></script>' in html
+        assert '<script src="/static/highlight.min.js"></script>' in html
+        assert '<script src="/static/languages/julia.min.js"></script>' in html
+        assert '<script src="/static/purify.min.js"></script>' in html
+        assert "cdn.jsdelivr.net" not in html
+        assert "fonts.googleapis.com" in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
         assert "var STANDALONE_IMAGES =" not in html
         assert "window.STANDALONE = false" in html
+
+    def test_static_route_serves_vendored_render_libraries(self, client):
+        """GET /static/{name} serves every vendored render-library asset the live
+        page references — including nested-path assets (highlight.js's julia
+        language module, katex's woff2 fonts) — with a matching Content-Type and
+        an ETag that 304s on repeat."""
+        for name, content_type in (
+            ("htmx.min.js", "text/javascript"),
+            ("sse.js", "text/javascript"),
+            ("markdown-it.min.js", "text/javascript"),
+            ("katex.min.js", "text/javascript"),
+            ("katex.min.css", "text/css"),
+            ("texmath.min.js", "text/javascript"),
+            ("highlight.min.js", "text/javascript"),
+            ("languages/julia.min.js", "text/javascript"),
+            ("purify.min.js", "text/javascript"),
+            ("fonts/KaTeX_Main-Regular.woff2", "font/woff2"),
+        ):
+            resp = client.get(f"/static/{name}")
+            assert resp.status_code == 200, name
+            assert resp.headers["content-type"].startswith(content_type), name
+            etag = resp.headers["etag"]
+            again = client.get(f"/static/{name}", headers={"if-none-match": etag})
+            assert again.status_code == 304, name
+
+    def test_katex_css_font_urls_resolve_under_static(self, client):
+        """katex.min.css references its woff2 fonts via a relative
+        ``url(fonts/KaTeX_*.woff2)``; served from /static/katex.min.css, the
+        browser resolves that against /static/fonts/..., which must also be a
+        servable route (not just the top-level vendor files)."""
+        css = client.get("/static/katex.min.css").text
+        names = set(re.findall(r"url\(fonts/(KaTeX_[A-Za-z0-9_-]+\.woff2)\)", css))
+        assert len(names) == 20
+        for name in names:
+            assert client.get(f"/static/fonts/{name}").status_code == 200
+
+    def test_static_route_still_rejects_unknown_names(self, client):
+        """The whitelist still 404s a name outside both the template and vendor
+        asset maps (path traversal / unknown-asset guard preserved)."""
+        assert client.get("/static/unknown.js").status_code == 404
+        assert client.get("/static/../plan_dashboard.py").status_code in (404, 400)
 
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root
@@ -2768,11 +2817,15 @@ class TestDashboard:
         assert "STANDALONE_FRAGMENTS =" in html
 
     def test_generate_has_no_live_server_calls(self, plan_root):
-        """The export must make zero network/SSE calls for task data."""
+        """The export must make zero network/SSE calls for task data. The
+        htmx SSE extension is inlined (like every other render library — see
+        vendor/README.md), but it only opens a connection for an element
+        carrying `sse-connect`/`hx-ext="sse"`, and no such element is emitted
+        in standalone output, so the inlined (inert) library code is not a
+        live call."""
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
         assert "sse-connect=" not in html
         assert 'hx-ext="sse"' not in html
-        assert "EventSource(" not in html
         assert "new WebSocket" not in html
         # No live server-only affordances rendered.
         assert 'id="worktree-selector"' not in html
@@ -3022,7 +3075,9 @@ class TestDashboard:
 
     def test_subtree_export_is_offline_clean(self, plan_with_branches):
         """The subtree export inherits the standalone offline-clean property:
-        embedded data, no SSE/worktree controls."""
+        embedded data, no SSE/worktree controls. (The inlined htmx SSE
+        extension is inert without a `sse-connect`/`hx-ext="sse"` element —
+        see test_generate_has_no_live_server_calls.)"""
         out = plan_with_branches / "sub.html"
         plan_dashboard.generate_dashboard(
             plan_with_branches, out, root="01-data-prep"
@@ -3032,7 +3087,6 @@ class TestDashboard:
         assert "STANDALONE_FRAGMENTS =" in html
         assert "sse-connect=" not in html
         assert 'hx-ext="sse"' not in html
-        assert "EventSource(" not in html
         assert 'id="worktree-selector"' not in html
         assert 'id="sse-full-reload"' not in html
 
@@ -3340,23 +3394,26 @@ class TestStandaloneSelfContained:
         assert "01-html/pic.png" in images
 
     def test_standalone_inlines_render_libraries(self, fig_math_plan):
-        """Standalone output inlines the vendored markdown-it/texmath/KaTeX JS and
-        the font-inlined KaTeX CSS — and drops the CDN tags for those three."""
+        """Standalone output inlines the vendored markdown-it/texmath/KaTeX/htmx/sse
+        JS and the font-inlined KaTeX CSS — and drops the CDN tags for all of
+        them (every render library is offline-functional)."""
         out = fig_math_plan / "export.html"
         plan_dashboard.generate_dashboard(fig_math_plan, out, root="01-figmath")
         html = out.read_text("utf-8")
         # Inline library bodies present (version banner / global from each lib).
         assert "markdown-it 14.2.0" in html
         assert "katex" in html.lower()
+        assert 'version:"2.0.10"' in html  # htmx
+        assert "Server Sent Events Extension" in html  # sse.js
         # KaTeX @font-face rewritten to a base64 woff2 data URI (inlined fonts).
         assert "data:font/woff2;base64," in html
-        # The required CDN tags for these three are GONE in standalone.
+        # No render-library CDN tag survives in standalone.
         assert "cdn.jsdelivr.net/npm/markdown-it@" not in html
         assert "cdn.jsdelivr.net/npm/katex@" not in html
         assert "cdn.jsdelivr.net/npm/markdown-it-texmath@" not in html
-        # Google Fonts + htmx/sse CDN tags may remain (allowed by scope).
+        assert "cdn.jsdelivr.net/npm/htmx" not in html
+        # Google Fonts is the one CDN tag left (allowed by scope).
         assert "fonts.googleapis.com" in html
-        assert "htmx.org@2" in html
 
     def test_img_loop_consults_standalone_images_first(self):
         """The client img[src] loop looks up STANDALONE_IMAGES before its
@@ -3380,7 +3437,8 @@ class TestStandaloneSelfContained:
         export build is hermetic (no fetch-at-build)."""
         vendor = SCRIPTS_DIR / "vendor"
         for name in ("markdown-it.min.js", "katex.min.js",
-                     "katex.min.css", "texmath.min.js", "README.md"):
+                     "katex.min.css", "texmath.min.js", "htmx.min.js",
+                     "sse.js", "README.md"):
             assert (vendor / name).exists(), f"missing vendored {name}"
         woff2 = list((vendor / "fonts").glob("KaTeX_*.woff2"))
         assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
@@ -3719,13 +3777,14 @@ class TestCodeHighlighting:
         assert (vendor / "highlight.min.js").exists()
         assert (vendor / "languages" / "julia.min.js").exists()
 
-    def test_served_page_keeps_highlight_cdn(self, tmp_path):
-        """Server mode loads highlight.js from the CDN tags (mirrors the existing
-        markdown-it/katex CDN tags)."""
+    def test_served_page_loads_highlight_locally(self, tmp_path):
+        """Server mode loads highlight.js from the local /static/ route, not a
+        CDN (mirrors the markdown-it/katex/htmx local routes)."""
         plan = _docs_plan(tmp_path)
         with _docs_client(plan) as client:
             html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/@highlightjs" in html
+        assert '<script src="/static/highlight.min.js"></script>' in html
+        assert "cdn.jsdelivr.net/npm/@highlightjs" not in html
 
 
 class TestRawHtmlSanitization:
@@ -3782,13 +3841,14 @@ class TestRawHtmlSanitization:
         assert "DOMPurify" in html  # inline body present
         assert "cdn.jsdelivr.net/npm/dompurify@" not in html
 
-    def test_served_page_keeps_purify_cdn(self, tmp_path):
-        """Server mode loads DOMPurify from the CDN tag (mirrors the existing
-        markdown-it/katex/highlight CDN tags)."""
+    def test_served_page_loads_purify_locally(self, tmp_path):
+        """Server mode loads DOMPurify from the local /static/ route, not a CDN
+        (mirrors the markdown-it/katex/highlight/htmx local routes)."""
         plan = _docs_plan(tmp_path)
         with _docs_client(plan) as client:
             html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/dompurify@3" in html
+        assert '<script src="/static/purify.min.js"></script>' in html
+        assert "cdn.jsdelivr.net/npm/dompurify@" not in html
 
 
 class TestServerSideEscaping:

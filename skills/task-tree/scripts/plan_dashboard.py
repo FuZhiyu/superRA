@@ -1052,29 +1052,64 @@ async def index(request: Request):
     return HTMLResponse(content=html)
 
 
-# --- Route: GET /static/{name} (dashboard's own CSS/JS) --------------------
+# --- Route: GET /static/{name} (dashboard CSS/JS + vendored render libs) ---
+
+def _resource_dir(name: str):
+    if __package__:
+        return resources.files(__package__).joinpath(name)
+    return Path(__file__).parent / name
+
+
+_VENDOR_DIR = _resource_dir("vendor")
+_TEMPLATES_DIR = _resource_dir("templates")
 
 # Content-Type per served static asset; also the whitelist of servable names.
+# Served from _TEMPLATES_DIR (base.html's extracted CSS/JS).
 _STATIC_ASSET_TYPES = {
     "dashboard.css": "text/css; charset=utf-8",
     "dashboard.js": "text/javascript; charset=utf-8",
 }
 
+# Content-Type per vendored render-library asset; also the whitelist of names
+# servable from _VENDOR_DIR. Names may include a subpath (e.g. "fonts/...",
+# "languages/...") to match the on-disk vendor/ layout, since katex.min.css and
+# highlight.min.js reference those siblings by relative URL. Keeps live mode
+# (this route) and the standalone export (_build_standalone_assets) reading
+# the same vendored files, so the dashboard needs no network access beyond the
+# Google Fonts CDN link in base.html. See vendor/README.md for pinned versions.
+_VENDOR_ASSET_TYPES = {
+    "htmx.min.js": "text/javascript; charset=utf-8",
+    "sse.js": "text/javascript; charset=utf-8",
+    "markdown-it.min.js": "text/javascript; charset=utf-8",
+    "katex.min.js": "text/javascript; charset=utf-8",
+    "katex.min.css": "text/css; charset=utf-8",
+    "texmath.min.js": "text/javascript; charset=utf-8",
+    "highlight.min.js": "text/javascript; charset=utf-8",
+    "languages/julia.min.js": "text/javascript; charset=utf-8",
+    "purify.min.js": "text/javascript; charset=utf-8",
+    **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
+}
 
-@app.get("/static/{name}")
+
+@app.get("/static/{name:path}")
 async def static_asset(name: str, request: Request):
-    """Serve base.html's extracted CSS/JS (see ``_TEMPLATES_DIR``) as a cacheable
-    static file instead of re-templating and re-sending them inline on every page
-    load. ETag-revalidated so an edit during development (or a version bump)
+    """Serve base.html's extracted CSS/JS and the vendored render libraries as
+    cacheable static files instead of re-templating/re-fetching them on every
+    page load. ETag-revalidated so an edit during development (or a re-pin)
     is picked up on the next request even under the 1-hour ``max-age``; the
     standalone export inlines the same files verbatim instead (see
     ``_build_standalone_assets``).
     """
-    content_type = _STATIC_ASSET_TYPES.get(name)
+    if name in _VENDOR_ASSET_TYPES:
+        content_type = _VENDOR_ASSET_TYPES[name]
+        source_dir = _VENDOR_DIR
+    else:
+        content_type = _STATIC_ASSET_TYPES.get(name)
+        source_dir = _TEMPLATES_DIR
     if content_type is None:
         raise HTTPException(status_code=404, detail="Unknown static asset")
     try:
-        data = (_TEMPLATES_DIR / name).read_bytes()
+        data = (source_dir / name).read_bytes()
     except OSError:
         raise HTTPException(status_code=404, detail="Unknown static asset")
     etag = f'"{hashlib.sha256(data).hexdigest()[:16]}"'
@@ -1608,16 +1643,9 @@ def _rebase_subtree(task: Task, root_path: str) -> Task:
 
 # ---------------------------------------------------------------------------
 # Standalone embedding — figures (base64 data URIs) and vendored render libs
+# (_resource_dir / _VENDOR_DIR / _TEMPLATES_DIR are defined above, by the
+# GET /static/{name} route, which needs them too)
 # ---------------------------------------------------------------------------
-
-def _resource_dir(name: str):
-    if __package__:
-        return resources.files(__package__).joinpath(name)
-    return Path(__file__).parent / name
-
-
-_VENDOR_DIR = _resource_dir("vendor")
-_TEMPLATES_DIR = _resource_dir("templates")
 
 # Image extension -> MIME, for the data: URI of an embedded figure.
 _IMG_MIME = {
@@ -1739,14 +1767,16 @@ def _inline_katex_css(css: str, fonts_dir: Path) -> str:
 
 def _build_standalone_assets() -> dict[str, str]:
     """Read the vendored render libraries + the dashboard's own CSS/JS and return
-    the inlined strings the standalone template emits in place of the CDN
-    ``<link>``/``<script>`` tags and the live ``/static/dashboard.{css,js}`` routes.
+    the inlined strings the standalone template emits in place of the live
+    ``/static/{name}`` routes (both read the same vendored files; live mode
+    serves them, standalone inlines them).
 
-    Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` / ``hljs_js`` /
-    ``hljs_julia_js`` / ``purify_js`` / ``dashboard_js`` (raw JS, emitted as inline
-    ``<script>`` bodies) and ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as
-    inline ``<style>`` bodies; ``katex_css`` additionally has every ``@font-face``
-    rewritten to a base64 woff2 ``data:`` URI).
+    Returns ``htmx_js`` / ``sse_js`` / ``markdown_it_js`` / ``katex_js`` /
+    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``purify_js`` /
+    ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
+    ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as inline ``<style>``
+    bodies; ``katex_css`` additionally has every ``@font-face`` rewritten to a
+    base64 woff2 ``data:`` URI).
     """
     def _read_js(directory: Path, name: str) -> str:
         # Guard against a future re-pin/edit whose body contains a literal
@@ -1761,6 +1791,8 @@ def _build_standalone_assets() -> dict[str, str]:
     dashboard_css = (_TEMPLATES_DIR / "dashboard.css").read_text(encoding="utf-8")
     dashboard_css = re.sub(r"</(style)", r"<\\/\1", dashboard_css, flags=re.IGNORECASE)
     return {
+        "htmx_js": _read_js(_VENDOR_DIR, "htmx.min.js"),
+        "sse_js": _read_js(_VENDOR_DIR, "sse.js"),
         "markdown_it_js": _read_js(_VENDOR_DIR, "markdown-it.min.js"),
         "katex_js": _read_js(_VENDOR_DIR, "katex.min.js"),
         "texmath_js": _read_js(_VENDOR_DIR, "texmath.min.js"),

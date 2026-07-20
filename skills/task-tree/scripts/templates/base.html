@@ -7,16 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
 {% if standalone %}
 {# Standalone export: inline the vendored render libraries + font-inlined KaTeX
    CSS so markdown and math render from a moved/offline file with no CDN fetch.
    highlight.js (common bundle + the julia language module) is inlined the same
    way so fenced code stays highlighted offline. DOMPurify is inlined too —
    markdown-it runs with html:true, so its output is sanitized before DOM
-   insertion (see renderMarkdown), a hard gate for published exports.
-   Server mode keeps the CDN tags (the {% else %} branch). #}
+   insertion (see renderMarkdown), a hard gate for published exports. htmx/sse
+   are inlined too, though standalone exports have no server to talk to, so
+   they never actually connect.
+   Server mode keeps the local /static/ routes (the {% else %} branch). #}
+<script>{{ standalone_assets.htmx_js | safe }}</script>
+<script>{{ standalone_assets.sse_js | safe }}</script>
 <style>{{ standalone_assets.katex_css | safe }}</style>
 <script>{{ standalone_assets.markdown_it_js | safe }}</script>
 <script>{{ standalone_assets.katex_js | safe }}</script>
@@ -25,13 +27,20 @@
 <script>{{ standalone_assets.hljs_julia_js | safe }}</script>
 <script>{{ standalone_assets.purify_js | safe }}</script>
 {% else %}
-<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/languages/julia.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+{# Live mode: every render library is served from this process's own
+   /static/{name} route (vendored under vendor/, see vendor/README.md) instead
+   of a CDN, so the dashboard is fully functional with no network access.
+   Google Fonts above stay CDN — the only permitted fetch; their absence only
+   degrades typography (system-font fallback). #}
+<script src="/static/htmx.min.js"></script>
+<script src="/static/sse.js"></script>
+<script src="/static/markdown-it.min.js"></script>
+<link rel="stylesheet" href="/static/katex.min.css">
+<script src="/static/katex.min.js"></script>
+<script src="/static/texmath.min.js"></script>
+<script src="/static/highlight.min.js"></script>
+<script src="/static/languages/julia.min.js"></script>
+<script src="/static/purify.min.js"></script>
 {% endif %}
 {% if standalone %}
 <style>{{ standalone_assets.dashboard_css | safe }}</style>
