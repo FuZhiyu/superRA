@@ -1,6 +1,6 @@
 ---
 title: "Loud Failures and Truthful SSE Bookkeeping"
-status: implemented
+status: approved
 depends_on:
   - event-loop-offload
 ---
