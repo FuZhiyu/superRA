@@ -648,7 +648,18 @@ function nodeMatchesSearch(el, search) {
    active. Keyed by data-path -> expanded?(bool). */
 var preFilterFoldState = null;
 
+/* Debounce entry point: base.html wires oninput/onchange straight to this
+   name, so keeping it as the debounced wrapper (rather than editing those
+   attributes) coalesces a fast keystroke burst into one tree scan instead of
+   one full descendant scan per keystroke. */
+var FILTER_DEBOUNCE_MS = 150;
+var _filterDebounceTimer = null;
 function applyFilters() {
+  clearTimeout(_filterDebounceTimer);
+  _filterDebounceTimer = setTimeout(applyFiltersNow, FILTER_DEBOUNCE_MS);
+}
+
+function applyFiltersNow() {
   var status = document.getElementById('filter-status').value;
   var search = document.getElementById('search-box').value.toLowerCase();
   var active = !!status || !!search;
@@ -795,6 +806,10 @@ async function renderKanbanView() {
 var activePath = '';        /* '' = root */
 var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
 var _moveFocusOnLoad = false; /* set per user-nav so loadActiveNode lands focus on the new heading */
+/* The in-flight (or last-settled) updateSidebar() promise from the current
+   setActive() call — a completion hook that patchCardBadgeWhenReady awaits
+   instead of polling for the sidebar row to land. */
+var _lastSidebarUpdate = Promise.resolve();
 
 /* A path -> display-title lookup. sidebar-nav populates this from /nav; until
    then the breadcrumb falls back to the path slug. */
@@ -830,7 +845,7 @@ function setActive(path) {
   if (currentView !== 'workspace') showView('workspace');
 
   updateBreadcrumb(path);
-  updateSidebar(path);
+  _lastSidebarUpdate = updateSidebar(path);
   loadActiveNode(path);
   loadChildrenDag(path);
 
@@ -1077,12 +1092,13 @@ function navRowStatus(path) {
   return row ? (row.dataset.status || '') : '';
 }
 
-/* Poll briefly for the sidebar row to land, then inject the status badge into
-   the card header. Bails if the card has since navigated away (token mismatch)
-   or the row never appears. Best-effort cosmetic fill for fresh deep descents. */
+/* Wait for the sidebar update kicked off by the same setActive() call to
+   finish materializing the row (a completion hook on updateSidebar's promise,
+   not a fixed-interval poll), then inject the status badge into the card
+   header. Bails if the card has since navigated away (token mismatch) or the
+   row never appeared. Best-effort cosmetic fill for fresh deep descents. */
 function patchCardBadgeWhenReady(path, token) {
-  var tries = 0;
-  (function attempt() {
+  _lastSidebarUpdate.then(function() {
     if (token !== loadActiveNode._token) return;        /* navigated away */
     var status = navRowStatus(path);
     var head = document.querySelector('#active-node .active-node-head');
@@ -1091,12 +1107,8 @@ function patchCardBadgeWhenReady(path, token) {
       badge.className = 'badge badge-' + status;
       badge.textContent = status;
       head.appendChild(badge);
-      return;
     }
-    if (status || tries >= 10) return;                  /* done or gave up */
-    tries++;
-    setTimeout(attempt, 60);
-  })();
+  });
 }
 
 /* Children panel: the active node's direct children, rendered as clickable
@@ -1161,12 +1173,14 @@ async function loadChildrenDag(path) {
   });
 }
 
-/* Cache signature: child paths + status + their direct-sibling deps, so a
-   status change or a dependency change forces a re-render. */
+/* Cache signature: child paths + title + status + their direct-sibling deps,
+   so a title edit, a status change, or a dependency change forces a
+   re-render — a title-only edit would otherwise be masked by a hit on the
+   stale-but-still-matching path/status/deps signature. */
 function childrenSig(children, edges) {
   return children.map(function(c) {
     var deps = (edges[c.path] || []).slice().sort().join(',');
-    return c.path + ':' + c.status + ':' + deps;
+    return c.path + ':' + c.status + ':' + (c.title || '') + ':' + deps;
   }).join('|');
 }
 
@@ -1515,16 +1529,24 @@ function getExpandedNavPaths() {
 
 /* Re-open the given paths after a fresh /nav rebuild. Shallow-to-deep so each
    parent is expanded (lazy-loading its children into the DOM) before its
-   descendants are reached. Best-effort: paths whose task was deleted are simply
-   absent and skipped. */
+   descendants are reached — deeper paths need their ancestor's lazy-loaded
+   children in the DOM to be found at all. Paths that share a depth have no
+   such dependency on each other, so each depth level's expandNavNode fetches
+   run concurrently; only crossing to the next depth level waits. Best-effort:
+   paths whose task was deleted are simply absent and skipped. */
 async function restoreExpandedNavPaths(paths) {
   if (!paths || !paths.length) return;
-  var ordered = paths.slice().sort(function(a, b) {
-    return (a ? a.split('/').length : 0) - (b ? b.split('/').length : 0);
+  var byDepth = {};
+  paths.forEach(function(p) {
+    var depth = p ? p.split('/').length : 0;
+    (byDepth[depth] = byDepth[depth] || []).push(p);
   });
-  for (var i = 0; i < ordered.length; i++) {
-    var node = document.getElementById(navNodeId(ordered[i]));
-    if (node) await expandNavNode(node);
+  var depths = Object.keys(byDepth).map(Number).sort(function(a, b) { return a - b; });
+  for (var i = 0; i < depths.length; i++) {
+    await Promise.all(byDepth[depths[i]].map(function(p) {
+      var node = document.getElementById(navNodeId(p));
+      return node ? expandNavNode(node) : Promise.resolve();
+    }));
   }
 }
 
@@ -2243,19 +2265,32 @@ function parentPath(path) {
        the nav-active highlight the imminent row swap will clear. The highlight
        reads the row htmx is about to replace, so defer it past the swap.
      - parent(path) === activePath -> re-render the children panel (the changed
-       task is a sibling card). loadChildrenDag's own (path, child-status+edge
-       signature) cache makes this a no-op when nothing card-relevant changed.
-       The panel re-renders from a fresh /api/children-graph fetch, so it is
-       safe to start immediately. */
+       task is a sibling card). loadChildrenDag's own (path, child-status+edge+
+       title signature) cache makes this a no-op when nothing card-relevant
+       changed. Deferred with the pathTitles reindex below, because the root
+       panel (activePath === '') builds its cards from pathTitles rather than a
+       server fetch — starting it before the reindex would bake the pre-edit
+       title into a freshly (mis-)cached render. */
 function onTaskUpdate(path) {
   if (path === activePath) {
     loadActiveNode(path);
     /* Run after htmx's outerHTML row swap detaches the current row, so the
-       highlight lands on the freshly-swapped (unhighlighted) replacement row. */
-    setTimeout(function() { if (path === activePath) updateSidebar(path); }, 0);
-  } else if (parentPath(path) === activePath) {
-    loadChildrenDag(activePath);
+       highlight lands on the freshly-swapped (unhighlighted) replacement row.
+       Track the promise too, so a patchCardBadgeWhenReady queued by the
+       loadActiveNode() call just above awaits this update, not a stale one. */
+    setTimeout(function() { if (path === activePath) _lastSidebarUpdate = updateSidebar(path); }, 0);
   }
+  /* Re-harvest pathTitles from the freshly-swapped row (deferred past the
+     swap, same as the highlight re-assert above) so a title edit propagates
+     to the breadcrumb and — for a changed sibling card — the children panel,
+     without a structural full-reload. */
+  setTimeout(function() {
+    indexNavTitles();
+    updateBreadcrumb(activePath);
+    if (path !== activePath && parentPath(path) === activePath) {
+      loadChildrenDag(activePath);
+    }
+  }, 0);
 }
 
 /* ── full-reload: a structural add/delete within the active worktree ──
@@ -2271,6 +2306,10 @@ async function onFullReload() {
   /* Capture the open branches before the rebuild wipes them, so the tree
      reopens where the user left it instead of folding back to the root. */
   var expanded = getExpandedNavPaths();
+  /* The tree just changed structurally (and a worktree switch can route
+     through here too) — a cached children-panel render keyed to the old
+     shape must not survive into the rebuilt tree. */
+  _childrenDagCache = {};
   await loadNavTree();
   await restoreExpandedNavPaths(expanded);
   /* The tree shape/content changed — refresh the search index so live search
@@ -2303,7 +2342,7 @@ function resolveSurvivingPath(path) {
 
 /* ── Comment UI: suppress SSE node-swap after local comment changes ── */
 var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
-var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
+var _activeCommentEdit = null; /* { textarea: el, ... } — at most one open editor */
 
 /* ── htmx SSE pre-message: the single dispatch point for task:<path> edits ──
    htmx owns the declarative `sse-swap="task:<path>"` swap of the body-free
@@ -2337,8 +2376,11 @@ document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
     return;
   }
   onTaskUpdate(taskPath);
-  /* Recompute the sidebar comment-count badges after the row swap settles. */
-  setTimeout(updateTreeCommentBadges, 100);
+  /* Recompute the sidebar comment-count badges after the row swap settles.
+     Debounced so a burst of task: events (e.g. a script touching several
+     tasks) collapses to a single /api/comments/summary fetch and a single
+     badge repaint instead of one per event. */
+  scheduleTreeCommentBadgeRefresh();
 });
 
 /* ── Worktree selector ──
@@ -2484,6 +2526,9 @@ function switchWorktree(token) {
    the selector and by back/forward across a ?wt= boundary. */
 async function applyWorktree(wtId, path) {
   ACTIVE_WT = wtId || '';
+  /* Children panels are per-worktree data — a cache entry from the worktree
+     being left must not leak into the newly active one. */
+  _childrenDagCache = {};
   reconnectSse();
   await loadNavTree();
   await refreshSearchIndex();
@@ -2524,7 +2569,16 @@ function reconnectSse() {
 function initWorktreeSelectorRefresh() {
   var select = document.getElementById('worktree-select');
   if (!select) return;
-  var refresh = function() { fetchWorktrees(); };
+  /* Opening the dropdown by mouse fires both mousedown and focus on the same
+     click; opening by keyboard fires focus alone. Coalesce same-tick pairs
+     into a single fetch. */
+  var pending = false;
+  var refresh = function() {
+    if (pending) return;
+    pending = true;
+    setTimeout(function() { pending = false; }, 0);
+    fetchWorktrees();
+  };
   select.addEventListener('mousedown', refresh);
   select.addEventListener('focus', refresh);
 }
@@ -2602,9 +2656,7 @@ function showCommentForm(btn) {
   submitBtn.onclick = submitComment;
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
-  cancelBtn.style.background = 'var(--bg-alt)';
-  cancelBtn.style.color = 'var(--text-mid)';
-  cancelBtn.style.marginLeft = '4px';
+  cancelBtn.classList.add('btn-secondary');
   cancelBtn.onclick = function() { form.remove(); };
   ta.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -2716,24 +2768,22 @@ function renderCommentThread(comments, taskPath) {
       body.textContent = c.body;
 
       var actions = document.createElement('div');
-      actions.style.marginTop = '2px';
-
-      var actionBtnStyle = 'font-size:var(--fs-micro);padding:1px 6px;background:var(--bg-alt);border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+      actions.classList.add('comment-actions');
 
       var editBtn = document.createElement('button');
       editBtn.textContent = 'Edit';
-      editBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);';
+      editBtn.classList.add('comment-action-btn');
       editBtn.onclick = function() { startEditComment(item, body, c, taskPath); };
 
       var resolveBtn = document.createElement('button');
       resolveBtn.textContent = c.resolved ? 'Unresolve' : 'Resolve';
-      resolveBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);margin-left:4px;';
-      resolveBtn.onclick = function() { resolveComment(taskPath, c.id, resolveBtn); };
+      resolveBtn.classList.add('comment-action-btn');
+      resolveBtn.onclick = function() { resolveComment(taskPath, c.id); };
 
       var deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
-      deleteBtn.style.cssText = actionBtnStyle + 'color:var(--st-rev-t);margin-left:4px;';
-      deleteBtn.onclick = function() { deleteComment(taskPath, c.id, deleteBtn); };
+      deleteBtn.classList.add('comment-action-btn', 'comment-action-btn--danger');
+      deleteBtn.onclick = function() { deleteComment(taskPath, c.id); };
 
       actions.appendChild(editBtn);
       actions.appendChild(resolveBtn);
@@ -2785,10 +2835,16 @@ function updateSectionBadges(taskPath, comments) {
 }
 
 /* ── Tree-level comment badges (bubble up through collapsed ancestors) ── */
-function updateTreeCommentBadges() {
-  /* Clear existing tree-level badges */
-  document.querySelectorAll('.tree-comment-badge').forEach(function(b) { b.remove(); });
+/* Debounce window so a burst of SSE task: events triggers exactly one
+   refresh (see the htmx:sseBeforeMessage handler above). */
+var COMMENT_BADGE_DEBOUNCE_MS = 150;
+var _commentBadgeRefreshTimer = null;
+function scheduleTreeCommentBadgeRefresh() {
+  clearTimeout(_commentBadgeRefreshTimer);
+  _commentBadgeRefreshTimer = setTimeout(updateTreeCommentBadges, COMMENT_BADGE_DEBOUNCE_MS);
+}
 
+function updateTreeCommentBadges() {
   fetch(wtUrl('/api/comments/summary'))
     .then(function(resp) { return resp.ok ? resp.json() : {}; })
     .then(function(summary) {
@@ -2834,6 +2890,11 @@ function updateTreeCommentBadges() {
         var prev = targetCounts.get(targetRow) || 0;
         targetCounts.set(targetRow, prev + count);
       }
+
+      /* Swap old badges for new in one synchronous pass — clearing only now,
+         with the replacement set already computed, means existing badges
+         never disappear while the fetch is in flight (no flicker window). */
+      document.querySelectorAll('.tree-comment-badge').forEach(function(b) { b.remove(); });
 
       /* Render badges on the target rows — insert after the last
          badge/progress element so the badge sits near visible content
@@ -2892,18 +2953,18 @@ function startEditComment(item, bodyEl, comment, taskPath) {
 
   var ta = document.createElement('textarea');
   ta.value = originalText;
-  ta.style.cssText = 'width:100%;min-height:60px;margin:4px 0;font-family:var(--font-mono);font-size:var(--fs-meta);background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;resize:vertical;';
+  ta.classList.add('comment-edit-textarea');
 
   var controls = document.createElement('div');
-  controls.style.marginTop = '2px';
+  controls.classList.add('comment-actions');
 
   var saveBtn = document.createElement('button');
   saveBtn.textContent = 'Save';
-  saveBtn.style.cssText = 'font-family:var(--font-mono);font-size:var(--fs-meta);padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;';
+  saveBtn.classList.add('comment-edit-btn');
 
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
-  cancelBtn.style.cssText = 'font-family:var(--font-mono);font-size:var(--fs-meta);padding:3px 10px;background:var(--bg-alt);color:var(--text-mid);border:none;border-radius:3px;cursor:pointer;margin-left:4px;';
+  cancelBtn.classList.add('comment-edit-btn', 'btn-secondary');
 
   function saveEdit() {
     _activeCommentEdit = null;
@@ -2951,19 +3012,19 @@ function startEditComment(item, bodyEl, comment, taskPath) {
   ta.selectionStart = ta.selectionEnd = ta.value.length;
 
   _activeCommentEdit = {
-    save: saveEdit, cancel: cancelEdit, textarea: ta, controls: controls,
+    textarea: ta, controls: controls,
     bodyEl: bodyEl, actionsDiv: actionsDiv, originalText: originalText,
     taskPath: taskPath, commentId: comment.id
   };
 }
 
-function resolveComment(taskPath, commentId, btn) {
+function resolveComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'PATCH' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
 
-function deleteComment(taskPath, commentId, btn) {
+function deleteComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'DELETE' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
