@@ -1,6 +1,6 @@
 ---
 title: "Frontend Responsiveness and Cache-Coherence Fixes"
-status: implemented
+status: approved
 depends_on:
   - template-split
 ---
@@ -42,8 +42,3 @@ All six fixes plus both advisory items landed in [dashboard.js](../../../../skil
 - Full suite: `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts -q` → 718 passed (0 skipped — Chromium was installed in this session so the two previously-Chromium-skipped tests also ran; the count includes the 3 filter single-pass tests added on the REVISE round).
 
 **Deviation from Planner Guidance:** the guidance's line numbers were pre-`template-split` anchors (as flagged in the dispatch); all fixes were located by function name in the post-split `dashboard.js`/`dashboard.css` per the dispatch's drift note, with net effects matching the objective.
-
-## Review Notes
-
-1. **MAJOR — objective bullet 1's per-ancestor re-scan is not addressed; only the debounce landed.** The fix wraps [`applyFilters`](../../../../skills/task-tree/scripts/templates/dashboard.js#L657-L660) as a 150ms debounce around [`applyFiltersNow`](../../../../skills/task-tree/scripts/templates/dashboard.js#L662), which fixes the "on every keystroke" frequency. But the algorithm inside a single pass is unchanged: [`applyFiltersToNode`](../../../../skills/task-tree/scripts/templates/dashboard.js#L693-L702) computes `visible` via [`nodeMatchesSearch`](../../../../skills/task-tree/scripts/templates/dashboard.js#L629-L643) (and [`nodeMatchesStatus`](../../../../skills/task-tree/scripts/templates/dashboard.js#L618-L627)), each of which recurses through the node's *entire* subtree, and then recurses into that node's children — which re-scan their subtrees again. A row at depth d is still visited once per ancestor, so each invocation is O(n·depth) / O(n²) worst case. The objective states the filter "no longer re-scans each subtree once per ancestor," and the dispatch explicitly directs confirming "the O(n-squared) recursion addressed"; as written the code still re-scans each subtree once per ancestor (now once per 150ms burst instead of per keystroke). Fix: evaluate each node's own-row match once and combine bottom-up (single post-order pass computing self-or-descendant match), so no subtree is walked more than once per `applyFiltersNow`. — If debounce-alone was the intended scope for this bullet (reading "on every keystroke" as the sole operative clause), the orchestrator can override and I will drop this item; the debounce itself is correct and the remaining bullets pass.
-   → implemented: `nodeMatchesStatus`/`nodeMatchesSearch` deleted; `applyFiltersToNode` rewritten as a single bottom-up post-order pass that visits each node exactly once, tracking status-match/search-match independently across the subtree before ANDing them for the node's own visibility (reproduces the prior cross-descendant semantics exactly) ([dashboard.js:670-698](../../../../skills/task-tree/scripts/templates/dashboard.js#L670-L698)); locked in by `TestFilterSinglePassClientLogic` ([test_dashboard.py:2441-2528](../../../../skills/task-tree/scripts/test_dashboard.py#L2441-L2528)), which asserts exactly 6 title-lookups (not 21) on a 6-node chain.
