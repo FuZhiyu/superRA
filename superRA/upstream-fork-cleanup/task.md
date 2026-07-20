@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
