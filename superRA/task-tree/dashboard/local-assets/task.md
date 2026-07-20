@@ -1,6 +1,6 @@
 ---
 title: "Serve Render Libraries Locally: Offline-Functional Live Mode"
-status: implemented
+status: approved
 depends_on:
   - template-split
 ---
