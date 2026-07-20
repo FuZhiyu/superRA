@@ -273,9 +273,13 @@ class TestServerRoutes:
             "content-disposition", ""
         )
         html = resp.text
-        # Re-based subtree children present; out-of-subtree sibling absent.
-        assert 'set["a"] = true' in html
-        assert 'set["01-flat"] = true' not in html
+        # Re-based subtree children (consumed by dashboard.js's TASK_PATHS set)
+        # present; out-of-subtree sibling absent.
+        m = re.search(r"var ALL_TASK_PATHS = (\[.*?\]);", html)
+        assert m is not None
+        paths = json.loads(m.group(1))
+        assert "a" in paths
+        assert "01-flat" not in paths
 
     def test_export_unknown_root_returns_404(self, client):
         resp = client.get("/export", params={"root": "no/such"})
@@ -319,12 +323,15 @@ class TestServerRoutes:
 
     def test_index_wires_share_button(self, client):
         """The live page carries the Share affordance: the per-node Share button
-        is emitted in the active-node card and backed by shareSubtree()."""
+        is emitted in the active-node card and backed by shareSubtree(), served
+        from the extracted dashboard.js (see /static/dashboard.js)."""
         html = client.get("/").text
-        assert "function shareSubtree" in html
+        assert '<script src="/static/dashboard.js"></script>' in html
+        js = client.get("/static/dashboard.js").text
+        assert "function shareSubtree" in js
         # The button is gated to server mode in the card header builder.
-        assert "shareSubtree(" in html
-        assert "window.STANDALONE ? '' :" in html
+        assert "shareSubtree(" in js
+        assert "window.STANDALONE ? '' :" in js
 
     def test_served_page_keeps_cdn_render_tags(self, client):
         """Server mode is unchanged by the standalone embedding: the live page
@@ -1662,7 +1669,17 @@ class TestCLI:
 # correctly with no client-side text parsing involved.
 # ---------------------------------------------------------------------------
 
-BASE_HTML = (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
+# base.html carries page structure + a small Jinja-templated config script; its
+# CSS and JS live in the extracted dashboard.css/dashboard.js static files (see
+# template-split). BASE_HTML concatenates all three template sources (in their
+# render order: CSS, then markup, then JS) so the many literal-content checks
+# below keep working unchanged against "the template source" regardless of
+# which of the three files a given rule/function now lives in.
+BASE_HTML = (
+    (SCRIPTS_DIR / "templates" / "dashboard.css").read_text(encoding="utf-8")
+    + (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
+    + (SCRIPTS_DIR / "templates" / "dashboard.js").read_text(encoding="utf-8")
+)
 
 
 class TestChildrenDagContract:
@@ -1827,12 +1844,15 @@ class TestTouchSidebar:
 
     def test_served_page_carries_touch_primitives(self, client):
         """The same primitives survive the live render (server path), not just
-        the raw template."""
+        the raw template: the page links dashboard.css and the served file
+        carries the touch primitives."""
         text = client.get("/").text
         assert "viewport-fit=cover" in text
-        assert "(hover: none), (pointer: coarse)" in text
-        assert "env(safe-area-inset-top)" in text
-        assert "body.sb-drawer-mode .nav-hamburger" in text
+        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        css = client.get("/static/dashboard.css").text
+        assert "(hover: none), (pointer: coarse)" in css
+        assert "env(safe-area-inset-top)" in css
+        assert "body.sb-drawer-mode .nav-hamburger" in css
 
 
 class TestTouchPolish:
@@ -1921,12 +1941,17 @@ class TestTouchPolish:
         assert "scroll-snap-type: x proximity;" in coarse
 
     def test_served_page_carries_polish_primitives(self, client):
-        """The polish primitives survive the live render (server path)."""
+        """The polish primitives survive the live render (server path): markup
+        stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
-        assert "@media (pointer: coarse)" in text
         assert 'id="search-sheet"' in text
-        assert "function toggleSearchSheet" in text
-        assert "-webkit-tap-highlight-color: transparent;" in text
+        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        assert '<script src="/static/dashboard.js"></script>' in text
+        css = client.get("/static/dashboard.css").text
+        assert "@media (pointer: coarse)" in css
+        assert "-webkit-tap-highlight-color: transparent;" in css
+        js = client.get("/static/dashboard.js").text
+        assert "function toggleSearchSheet" in js
 
 
 def _have_chromium() -> bool:
@@ -2536,9 +2561,10 @@ class TestFileLinkConsistency:
         as the empty-path root node and is reachable via /node/ so deep-linking /
         setActive('') back to the container works."""
         with _client_for(forest_root) as c:
-            html = c.get("/").text
-            # The empty-path root node is embedded (id falls back to `task-root`).
-            assert 'id="task-root"' in html
+            # navNodeId's fallback (empty path -> 'task-root') mirrors
+            # nav_node.html's own id attribute — real code, not template output.
+            js = c.get("/static/dashboard.js").text
+            assert "'task-' + ((path || '').replace(/\\//g, '-') || 'root')" in js
             # The container's own /node/ (empty path) route resolves.
             assert c.get("/node/").status_code == 200
         # The breadcrumb builds a clickable root crumb that ascends via
@@ -2866,7 +2892,7 @@ class TestDashboard:
         """File links keep their GitHub-style line anchor as VS Code's :line form
         so clicking jumps to the cited line (vscode://file ignores a #L fragment).
         Guards the renderMarkdown anchor-translation logic against removal."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "match(/#L" in src
         assert "repoFileHref(repoLinkPrefix + href)" in src
 
@@ -2968,13 +2994,16 @@ class TestDashboard:
             plan_with_branches, out, root="01-data-prep"
         )
         html = out.read_text("utf-8")
+        m = re.search(r"var ALL_TASK_PATHS = (\[.*?\]);", html)
+        assert m is not None
+        paths = json.loads(m.group(1))
         # Re-based: the subtree's children appear under their relative paths.
-        assert 'set["01-load"] = true' in html
-        assert 'set["02-merge"] = true' in html
+        assert "01-load" in paths
+        assert "02-merge" in paths
         # The full tree path of the subtree root is gone (re-based to "").
-        assert 'set["01-data-prep' not in html
+        assert not any(p.startswith("01-data-prep") for p in paths)
         # The out-of-subtree sibling never enters the embedded path set.
-        assert 'set["02-estimation"] = true' not in html
+        assert "02-estimation" not in paths
 
     def test_subtree_export_fragments_cover_only_subtree(self, plan_with_branches):
         """The pre-rendered fragment map covers exactly the subtree, keyed by
@@ -3332,7 +3361,7 @@ class TestStandaloneSelfContained:
     def test_img_loop_consults_standalone_images_first(self):
         """The client img[src] loop looks up STANDALONE_IMAGES before its
         relative-path fallback (guards the lookup against removal)."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "STANDALONE_IMAGES.hasOwnProperty(key)" in src
 
     def test_inline_katex_css_uses_woff2_only(self):
@@ -3435,7 +3464,7 @@ class TestDocMode:
     def test_active_node_badge_gated_on_doc_mode(self):
         """The one JS-built status badge (active-node head) is gated on
         !window.DOC_MODE so it never renders in doc-mode."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "(status && !window.DOC_MODE)" in src
 
     def test_doc_mode_default_off_in_render(self, tmp_path):
@@ -3649,14 +3678,14 @@ class TestCodeHighlighting:
 
     def test_markdown_it_wired_with_highlight(self):
         """markdown-it is constructed with the highlightFence highlighter."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "highlight: highlightFence" in src
         assert "function highlightFence" in src
 
     def test_unknown_language_falls_through(self):
         """highlightFence returns '' for an unknown/absent language so markdown-it
         keeps its default (plain) rendering — no regression for untagged code."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         # Guard the gate that only highlights a registered language.
         assert "hljs.getLanguage(lang)" in src
 
@@ -3679,7 +3708,7 @@ class TestCodeHighlighting:
     def test_theme_aware_highlight_tokens(self):
         """Highlight token colors are theme tokens (--hl-*) defined in both the
         light root and the dark theme block, so code is readable in both."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         # Defined once in :root (light) and once in [data-theme="dark"].
         assert src.count("--hl-keyword:") == 2
         assert ".rendered-md .hljs-keyword" in src
@@ -3714,7 +3743,7 @@ class TestRawHtmlSanitization:
     def test_markdownit_html_enabled(self):
         """markdown-it is constructed with html:true so agent-authored HTML in a
         task body is emitted as live HTML rather than escaped text."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "window.markdownit({ html: true," in src
         # The old escape-everything config must be gone (would re-break raw HTML).
         assert "html: false" not in src
@@ -3724,7 +3753,7 @@ class TestRawHtmlSanitization:
         reaches the DOM, with style/class kept for authored inline styling. The
         single renderMarkdown helper is the only md.render call site, so covering
         it covers task sections, doc pages, and section previews."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert (
             "DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] })"
             in src
@@ -3852,7 +3881,7 @@ class TestServerSideEscaping:
     def test_active_node_card_assembly_delegates_to_kanban_handler(self):
         """onKanbanCardClick reads the card's data-path (delegated), mirroring
         onChildCardClick's escaped-attribute + delegation pattern."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "function onKanbanCardClick(event)" in src
         assert "card.dataset.path" in src
 
@@ -3861,7 +3890,7 @@ class TestServerSideEscaping:
         comment loading for the whole task; CSS.escape guards both
         section-name selector sites (grouped anchor match, orphan-section
         lookup)."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert 'CSS.escape(c.anchor.section)' in src
         assert 'CSS.escape(secName)' in src
 
@@ -3975,7 +4004,7 @@ class TestClientSearch:
     def test_search_palette_ui_and_navigation(self):
         """The palette UI, the title+body scorer, and navigation-via-setActive
         are wired (selecting a result routes exactly as a sidebar click)."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert 'id="search-palette"' in src
         assert "function runSearch" in src
         assert "function scoreSearchRecord" in src
@@ -3985,7 +4014,7 @@ class TestClientSearch:
     def test_search_keyboard_affordances(self):
         """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
         to open, Escape to dismiss."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "openSearchPalette()" in src
         assert "ArrowDown" in src and "ArrowUp" in src
         assert "event.key === 'Enter'" in src
@@ -4004,7 +4033,7 @@ class TestClientSearch:
     def test_search_index_refreshed_on_reload(self):
         """The client re-fetches /api/search-index on a structural full-reload and
         on a worktree switch so live search stays current."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "function refreshSearchIndex" in src
         assert "refreshSearchIndex()" in src
 

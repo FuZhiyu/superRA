@@ -884,7 +884,7 @@ def _render_summary(root_task: Task | None) -> str:
 # ---------------------------------------------------------------------------
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -1050,6 +1050,38 @@ async def index(request: Request):
         search_index=_build_search_index(state.root_task, all_tasks),
     )
     return HTMLResponse(content=html)
+
+
+# --- Route: GET /static/{name} (dashboard's own CSS/JS) --------------------
+
+# Content-Type per served static asset; also the whitelist of servable names.
+_STATIC_ASSET_TYPES = {
+    "dashboard.css": "text/css; charset=utf-8",
+    "dashboard.js": "text/javascript; charset=utf-8",
+}
+
+
+@app.get("/static/{name}")
+async def static_asset(name: str, request: Request):
+    """Serve base.html's extracted CSS/JS (see ``_TEMPLATES_DIR``) as a cacheable
+    static file instead of re-templating and re-sending them inline on every page
+    load. ETag-revalidated so an edit during development (or a version bump)
+    is picked up on the next request even under the 1-hour ``max-age``; the
+    standalone export inlines the same files verbatim instead (see
+    ``_build_standalone_assets``).
+    """
+    content_type = _STATIC_ASSET_TYPES.get(name)
+    if content_type is None:
+        raise HTTPException(status_code=404, detail="Unknown static asset")
+    try:
+        data = (_TEMPLATES_DIR / name).read_bytes()
+    except OSError:
+        raise HTTPException(status_code=404, detail="Unknown static asset")
+    etag = f'"{hashlib.sha256(data).hexdigest()[:16]}"'
+    headers = {"ETag": etag, "Cache-Control": "public, max-age=3600"}
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=data, media_type=content_type, headers=headers)
 
 
 # --- Route: GET /nav (navigation-only tree fragment) -----------------------
@@ -1585,6 +1617,7 @@ def _resource_dir(name: str):
 
 
 _VENDOR_DIR = _resource_dir("vendor")
+_TEMPLATES_DIR = _resource_dir("templates")
 
 # Image extension -> MIME, for the data: URI of an embedded figure.
 _IMG_MIME = {
@@ -1705,32 +1738,38 @@ def _inline_katex_css(css: str, fonts_dir: Path) -> str:
 
 
 def _build_standalone_assets() -> dict[str, str]:
-    """Read the vendored render libraries and return the inlined JS/CSS strings the
-    standalone template emits in place of the CDN ``<link>``/``<script>`` tags.
+    """Read the vendored render libraries + the dashboard's own CSS/JS and return
+    the inlined strings the standalone template emits in place of the CDN
+    ``<link>``/``<script>`` tags and the live ``/static/dashboard.{css,js}`` routes.
 
     Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` / ``hljs_js`` /
-    ``hljs_julia_js`` / ``purify_js`` (raw minified JS, emitted as inline
-    ``<script>`` bodies) and ``katex_css`` (KaTeX CSS with every ``@font-face``
-    rewritten to a base64 woff2 ``data:`` URI, emitted as an inline ``<style>``).
+    ``hljs_julia_js`` / ``purify_js`` / ``dashboard_js`` (raw JS, emitted as inline
+    ``<script>`` bodies) and ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as
+    inline ``<style>`` bodies; ``katex_css`` additionally has every ``@font-face``
+    rewritten to a base64 woff2 ``data:`` URI).
     """
-    def _read_js(name: str) -> str:
-        # Guard against a future re-pin whose body contains a literal </script>
-        # that would prematurely close the inline block (none do today).
-        text = (_VENDOR_DIR / name).read_text(encoding="utf-8")
+    def _read_js(directory: Path, name: str) -> str:
+        # Guard against a future re-pin/edit whose body contains a literal
+        # </script> that would prematurely close the inline block (none do today).
+        text = (directory / name).read_text(encoding="utf-8")
         return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
 
     fonts_dir = _VENDOR_DIR / "fonts"
-    css = (_VENDOR_DIR / "katex.min.css").read_text(encoding="utf-8")
-    css = _inline_katex_css(css, fonts_dir)
-    css = re.sub(r"</(style)", r"<\\/\1", css, flags=re.IGNORECASE)
+    katex_css = (_VENDOR_DIR / "katex.min.css").read_text(encoding="utf-8")
+    katex_css = _inline_katex_css(katex_css, fonts_dir)
+    katex_css = re.sub(r"</(style)", r"<\\/\1", katex_css, flags=re.IGNORECASE)
+    dashboard_css = (_TEMPLATES_DIR / "dashboard.css").read_text(encoding="utf-8")
+    dashboard_css = re.sub(r"</(style)", r"<\\/\1", dashboard_css, flags=re.IGNORECASE)
     return {
-        "markdown_it_js": _read_js("markdown-it.min.js"),
-        "katex_js": _read_js("katex.min.js"),
-        "texmath_js": _read_js("texmath.min.js"),
-        "hljs_js": _read_js("highlight.min.js"),
-        "hljs_julia_js": _read_js("languages/julia.min.js"),
-        "purify_js": _read_js("purify.min.js"),
-        "katex_css": css,
+        "markdown_it_js": _read_js(_VENDOR_DIR, "markdown-it.min.js"),
+        "katex_js": _read_js(_VENDOR_DIR, "katex.min.js"),
+        "texmath_js": _read_js(_VENDOR_DIR, "texmath.min.js"),
+        "hljs_js": _read_js(_VENDOR_DIR, "highlight.min.js"),
+        "hljs_julia_js": _read_js(_VENDOR_DIR, "languages/julia.min.js"),
+        "purify_js": _read_js(_VENDOR_DIR, "purify.min.js"),
+        "dashboard_js": _read_js(_TEMPLATES_DIR, "dashboard.js"),
+        "katex_css": katex_css,
+        "dashboard_css": dashboard_css,
     }
 
 
