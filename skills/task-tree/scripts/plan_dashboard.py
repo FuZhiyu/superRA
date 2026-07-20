@@ -52,7 +52,7 @@ from _worktree_discovery import (
 from task_query import tree_to_json
 
 # ---------------------------------------------------------------------------
-# Optional comment module (created by another agent)
+# Optional comment module
 # ---------------------------------------------------------------------------
 try:
     from _comments import (
@@ -110,7 +110,7 @@ _server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
 # dashboard process; importing it into pytest or another ASGI host does not.
 _standalone_process_owner = __name__ == "__main__"
 
-# Per-worktree SSE delivery and watcher lifecycle (task 02).
+# Per-worktree SSE delivery and watcher lifecycle.
 #
 # Live-reload is scoped per worktree: a client viewing worktree A registers its
 # queue under A and a watcher for A runs only while A has at least one client.
@@ -120,8 +120,7 @@ _standalone_process_owner = __name__ == "__main__"
 # to that task's ``awatch``; setting it lets watchfiles close its native
 # fsevents thread/fd on its own terms instead of leaking it past a hard cancel;
 # ``_worktree_locks`` serializes each worktree's spawn/teardown so a connect and
-# a disconnect cannot race the watcher in or out from under each other.  These
-# locks are separate from task 01's per-state build lock.
+# a disconnect cannot race the watcher in or out from under each other.
 _worktree_clients: dict[str, set[asyncio.Queue[str]]] = {}
 _worktree_watchers: dict[str, asyncio.Task] = {}
 _worktree_stop_events: dict[str, asyncio.Event] = {}
@@ -226,8 +225,20 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
         return None, False
     try:
         updated = parse_task(task_md, state.plan_root)
-    except Exception:
-        return state.task_index.get(task_path), False
+    except Exception as exc:
+        # Loud failure: log server-side and surface a visible error state on the
+        # node instead of silently continuing to serve the last-good parse with
+        # no signal. Keep the last-good task's content but stamp parse_error so
+        # nav_node.html renders an error badge; the index/tree are updated so the
+        # error state also shows up on a fresh page load, not just this fragment.
+        print(f"[dashboard] failed to parse {task_md}: {exc}", file=sys.stderr)
+        stale = state.task_index.get(task_path)
+        if stale is None:
+            return None, False
+        errored = replace(stale, parse_error=str(exc) or type(exc).__name__)
+        state.task_index[task_path] = errored
+        _replace_node_in_tree(state.root_task, task_path, errored)
+        return errored, False
 
     # --- Re-discover children from the filesystem ---
     existing = state.task_index.get(task_path)
@@ -294,6 +305,15 @@ def _find_task(state: WorktreeState, path: str) -> Task | None:
 # SSE helpers
 # ---------------------------------------------------------------------------
 
+# Sentinel put on a client's queue in place of a message it has no room for.
+# The client's own /events generator is the only place a queue is ever removed
+# from `_worktree_clients` (in its `finally`), so `_open_connection_count()`
+# stays truthful; `_broadcast` cannot just drop the queue itself without the
+# response staying open with nothing left to read it. Seeing this sentinel
+# tells the generator to end the stream instead of waiting out a slow/stalled
+# client indefinitely.
+_QUEUE_CLOSE = object()
+
 
 async def _broadcast(event: str, data: str, wt: str) -> None:
     """Send an SSE-formatted message to every client viewing worktree *wt*.
@@ -303,18 +323,29 @@ async def _broadcast(event: str, data: str, wt: str) -> None:
     client viewing another.  A broadcast for a worktree with no current clients
     (e.g. the last client left between the watcher firing and this call) is a
     safe no-op via ``dict.get(wt, set())``.
+
+    A client whose queue is full (a slow/stalled consumer) is not silently
+    unsubscribed here: dropping it from ``clients`` would undercount open
+    connections while its ``/events`` response stays open with nothing left to
+    wake its generator. Instead the oldest buffered message is dropped to make
+    room for a ``_QUEUE_CLOSE`` sentinel, ending that connection through the
+    same generator-owned teardown path as a normal disconnect.
     """
     data_lines = "".join(f"data: {line}\n" for line in data.split("\n"))
     message = f"event: {event}\n{data_lines}\n"
     clients = _worktree_clients.get(wt, set())
-    dead: list[asyncio.Queue[str]] = []
     for q in clients:
         try:
             q.put_nowait(message)
         except asyncio.QueueFull:
-            dead.append(q)
-    for q in dead:
-        clients.discard(q)
+            try:
+                q.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            try:
+                q.put_nowait(_QUEUE_CLOSE)
+            except asyncio.QueueFull:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -416,7 +447,7 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
     Re-walks the worktree's plan root and refreshes its cached state in place so
     handlers and the watcher see the new tree.  Returns the refreshed state, or
     ``None`` when the worktree is no longer cached.  This is the
-    cache-invalidation hook task 02's watcher calls.
+    cache-invalidation hook the watcher calls.
     """
     existing = _worktree_cache.get(wt_id)
     if existing is None:
@@ -743,6 +774,52 @@ def _task_depth(task_path: str) -> int:
     return task_path.count("/")
 
 
+# Ad hoc inline snippets rendered via `Environment.from_string`, compiled once
+# and cached (mirroring `_get_jinja_env`'s lazy singleton) instead of being
+# recompiled from source on every call.
+_NAV_NODE_SNIPPET = (
+    '{%- from "nav_node.html" import render_nav_node -%}'
+    '{{ render_nav_node(task, depth=depth) }}'
+)
+_nav_node_snippet_tmpl = None
+
+# The root-or-children fragment shared by /nav and the standalone export: the
+# root's own body when it has one, else its direct children — the single
+# source both `nav_fragment` and `_build_standalone_fragments` render from.
+_ROOT_OR_CHILDREN_SNIPPET = (
+    '{%- from "nav_node.html" import render_nav_node -%}'
+    '{% if root_task.body and root_task.body.strip() %}'
+    '{{ render_nav_node(root_task, depth=0) }}'
+    '{% else %}'
+    '{% for child in root_task.children %}'
+    '{{ render_nav_node(child, depth=0) }}'
+    '{% endfor %}'
+    '{% endif %}'
+)
+_root_or_children_tmpl = None
+
+
+def _get_nav_node_snippet_template():
+    """Lazy-init and cache the single-node nav snippet template."""
+    global _nav_node_snippet_tmpl
+    if _nav_node_snippet_tmpl is None:
+        _nav_node_snippet_tmpl = _get_jinja_env().from_string(_NAV_NODE_SNIPPET)
+    return _nav_node_snippet_tmpl
+
+
+def _get_root_or_children_template():
+    """Lazy-init and cache the shared root-or-children snippet template."""
+    global _root_or_children_tmpl
+    if _root_or_children_tmpl is None:
+        _root_or_children_tmpl = _get_jinja_env().from_string(_ROOT_OR_CHILDREN_SNIPPET)
+    return _root_or_children_tmpl
+
+
+def _render_root_or_children(root_task: Task) -> str:
+    """Render the root-or-children fragment for *root_task* (see the snippet)."""
+    return _get_root_or_children_template().render(root_task=root_task)
+
+
 def _render_nav_node(task: Task, depth: int | None = None) -> str:
     """Render a single navigation-only task node (row + children, no body).
 
@@ -752,12 +829,7 @@ def _render_nav_node(task: Task, depth: int | None = None) -> str:
     """
     if depth is None:
         depth = _task_depth(task.path)
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{{ render_nav_node(task, depth=depth) }}'
-    )
-    return template.render(task=task, depth=depth)
+    return _get_nav_node_snippet_template().render(task=task, depth=depth)
 
 
 def _render_nav_children(task: Task) -> str:
@@ -967,18 +1039,7 @@ async def nav_fragment(request: Request):
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_nav_node(root_task, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_nav_node(child, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    html = template.render(root_task=state.root_task)
+    html = _render_root_or_children(state.root_task)
     return HTMLResponse(content=html)
 
 
@@ -988,7 +1049,7 @@ async def nav_fragment(request: Request):
 async def sse_events(request: Request):
     """Server-Sent Events endpoint for live updates, scoped to one worktree.
 
-    The worktree is resolved from ``?wt=`` (task 01's resolver; default = launch
+    The worktree is resolved from ``?wt=`` (``resolve_worktree``; default = launch
     worktree).  The client's queue is registered under that worktree *before* its
     watcher is ensured, so no change emitted during watcher startup is lost.  On
     disconnect the queue is removed and, if it was the worktree's last client,
@@ -1015,6 +1076,13 @@ async def sse_events(request: Request):
                     message = await asyncio.wait_for(
                         queue.get(), timeout=HEARTBEAT_INTERVAL
                     )
+                    if message is _QUEUE_CLOSE:
+                        # This client's queue overflowed (slow/stalled
+                        # consumer): end the stream here instead of idling on
+                        # a connection nothing will ever drain, so `finally`
+                        # below removes it promptly and the idle monitor's
+                        # open-connection count stays truthful.
+                        return
                     yield message
                 except asyncio.TimeoutError:
                     yield ": heartbeat\n\n"
@@ -1306,7 +1374,8 @@ async def list_worktrees():
     """Return discovered worktrees with plan info, ordered by last activity.
 
     Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
-    matching task 01's basename map with longest-unique-suffix disambiguation).
+    matching ``_discovered_worktree_map``'s basename map with longest-unique-suffix
+    disambiguation).
     ``launch_wt_id`` names the default worktree (the one the server launched in);
     the client marks the *current* selection from the URL's ``?wt=`` and falls
     back to ``launch_wt_id`` when the URL names none.  There is no server-global
@@ -1420,17 +1489,7 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, str]:
 
     # /nav — the body-free sidebar tree (root-or-children logic, depth<3 inline).
     env = _get_jinja_env()
-    nav_tmpl = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_nav_node(root_task, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_nav_node(child, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    fragments["/nav"] = nav_tmpl.render(root_task=root_task)
+    fragments["/nav"] = _render_root_or_children(root_task)
 
     # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
     # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).

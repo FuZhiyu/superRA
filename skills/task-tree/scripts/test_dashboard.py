@@ -397,6 +397,57 @@ class TestServerRoutes:
             plan_dashboard._worktree_watchers.clear()
             loop.close()
 
+    def test_events_sse_generator_ends_on_queue_overflow(self, client):
+        """A queue-overflowed client has its connection ended by the generator
+        (not silently unsubscribed), and `_open_connection_count()` stays
+        truthful once that teardown completes -- the invariant the idle
+        monitor depends on (registered queues == open connections)."""
+        from starlette.requests import Request
+
+        loop = asyncio.new_event_loop()
+
+        def _req() -> Request:
+            return Request({
+                "type": "http", "method": "GET", "path": "/events",
+                "query_string": b"", "headers": [],
+            })
+
+        async def _test():
+            wt = plan_dashboard._launch_wt_id
+            gen = plan_dashboard.sse_events(_req())
+            resp = await gen
+            body_iter = resp.body_iterator
+            await body_iter.__anext__()  # initial heartbeat
+
+            queue = next(iter(plan_dashboard._worktree_clients[wt]))
+            for _ in range(queue.maxsize):
+                queue.put_nowait("filler")
+            assert plan_dashboard._open_connection_count() == 1
+
+            # Overflow it exactly the way production broadcasts do.
+            await plan_dashboard._broadcast("full-reload", "{}", wt)
+
+            # Drain the buffered messages ahead of the close sentinel; the
+            # generator ends the stream (StopAsyncIteration) once it reads it,
+            # instead of idling on a connection nothing will ever drain.
+            ended = False
+            for _ in range(queue.maxsize + 1):
+                try:
+                    await asyncio.wait_for(body_iter.__anext__(), timeout=1)
+                except StopAsyncIteration:
+                    ended = True
+                    break
+            assert ended, "generator did not end on the close sentinel"
+            assert wt not in plan_dashboard._worktree_clients
+            assert plan_dashboard._open_connection_count() == 0
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_watchers.clear()
+            loop.close()
+
     def test_comment_api_crud(self, client, plan_root):
         """Test the full comment lifecycle: create -> list -> resolve -> delete."""
         # POST create
@@ -730,6 +781,29 @@ class TestDataLayer:
         assert result is None
         assert "01-first" not in _launch_state(plan_dashboard).task_index
 
+    def test_rebuild_task_surfaces_parse_error(self, plan_root, capsys):
+        """A task.md broken during a watcher rebuild logs an error and returns
+        the last-good task flagged with `parse_error`, instead of silently
+        continuing to serve the last-good parse with no signal."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        assert _launch_state(plan_dashboard).task_index["01-first"].parse_error == ""
+
+        task_md = plan_root / "01-first" / "task.md"
+        # Invalid UTF-8 (0xC3 without a valid continuation byte): parse_task's
+        # `read_text(encoding="utf-8")` raises UnicodeDecodeError.
+        task_md.write_bytes(b"---\ntitle: Broken\xc3\x28---\nBody\n")
+
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
+
+        assert children_changed is False
+        assert updated is not None
+        assert updated.parse_error != ""
+        # Last-good content is preserved; only the error flag is new.
+        assert updated.title == "First Task"
+        assert _launch_state(plan_dashboard).task_index["01-first"].parse_error != ""
+        assert str(task_md) in capsys.readouterr().err
+
     def test_build_index_creates_flat_dict(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
@@ -924,17 +998,23 @@ class TestSSEBroadcast:
             self._cleanup("wt-a")
             loop.close()
 
-    def test_broadcast_drops_full_queue(self):
-        """When a client queue is full, the client is removed."""
+    def test_broadcast_overflow_queues_close_sentinel_not_silent_drop(self):
+        """A full queue is not silently unsubscribed here: `_broadcast` drops its
+        oldest message and queues a close sentinel instead, leaving the queue
+        registered so `_open_connection_count()` stays truthful until the
+        `/events` generator itself ends the connection and removes it."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
         # Fill the queue
         queue.put_nowait("filler")
         self._register("wt-a", queue)
         try:
-            # This should not raise; the full queue gets dropped
+            # This should not raise; the full queue's oldest entry is dropped to
+            # make room for the close sentinel.
             loop.run_until_complete(plan_dashboard._broadcast("e", "data", "wt-a"))
-            assert queue not in plan_dashboard._worktree_clients.get("wt-a", set())
+            # Still registered: `_broadcast` never removes a client itself.
+            assert queue in plan_dashboard._worktree_clients.get("wt-a", set())
+            assert queue.get_nowait() is plan_dashboard._QUEUE_CLOSE
         finally:
             self._cleanup("wt-a")
             loop.close()
@@ -1354,6 +1434,25 @@ class TestTemplateRendering:
         assert "badge-approved" in html
         assert "01-first" in html  # slug
 
+    def test_render_nav_node_shows_parse_error(self, plan_root):
+        """A task carrying `parse_error` renders a visible error badge, so a
+        broken task.md is a loud client-side signal, not silent staleness."""
+        import dataclasses
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        task = _launch_state(plan_dashboard).task_index["01-first"]
+        errored = dataclasses.replace(task, parse_error="UnicodeDecodeError: boom")
+        html = plan_dashboard._render_nav_node(errored)
+        assert 'data-parse-error="true"' in html
+        assert "badge-error" in html
+        assert "parse error" in html
+
+        # A task with no parse error renders neither.
+        clean_html = plan_dashboard._render_nav_node(task)
+        assert "data-parse-error" not in clean_html
+        assert "badge-error" not in clean_html
+
     def test_render_summary_has_counts(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
@@ -1395,6 +1494,23 @@ class TestTemplateRendering:
         html = plan_dashboard._render_nav_node(task)
         assert "badge-postponed" in html
         assert 'data-status="postponed"' in html
+
+    def test_root_or_children_template_is_shared_and_precompiled(self, plan_root):
+        """`/nav` and the standalone export render the root-or-children
+        fragment from one cached compiled Template, not a fresh
+        `from_string` recompile per call."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        state = _launch_state(plan_dashboard)
+
+        html = plan_dashboard._render_root_or_children(state.root_task)
+        tmpl_after_first_call = plan_dashboard._root_or_children_tmpl
+        assert tmpl_after_first_call is not None
+        assert "01-first" in html
+
+        plan_dashboard._render_root_or_children(state.root_task)
+        # Second call reuses the same compiled Template object.
+        assert plan_dashboard._root_or_children_tmpl is tmpl_after_first_call
 
     def test_vscode_link_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
