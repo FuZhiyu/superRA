@@ -1,6 +1,6 @@
 ---
 title: "Split base.html into Cacheable Static CSS and JS"
-status: implemented
+status: approved
 depends_on:
   - template-trust-boundary
   - children-graph-json
