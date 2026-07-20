@@ -147,8 +147,9 @@ def client(plan_root):
 def flow_plan_root(tmp_path):
     """A plan tree with one parent whose direct children form a branching
     dependency chain (a -> b, a -> c, b -> d) and a second parent whose
-    children have no inter-child dependency.  Exercises the GET /dag?root=
-    data contract that base.html's children panel parses into cards.
+    children have no inter-child dependency.  Exercises the GET
+    /api/children-graph?root= data contract that base.html's children panel
+    renders into cards.
 
     Statuses are deliberately varied so per-child fill colors are testable.
     """
@@ -1537,54 +1538,29 @@ class TestCLI:
 
 
 # ---------------------------------------------------------------------------
-# Children-panel data contract (GET /dag?root=<path>)
+# Children-panel data contract (GET /api/children-graph?root=<path>)
 #
-# base.html's children panel parses the GET /dag?root=<path> fragment client
-# side: the direct-child set from `.dag-controls[data-node-paths]`, each child's
-# status from `style <id> fill:#<color>` lines, and the inter-child dependency
-# edges from `<dep_id> --> <child_id>` lines (prerequisite --> dependent).  These
-# tests pin the server-side half of that contract so the cards keep parsing.
+# base.html's children panel renders straight off this JSON payload: nodes
+# (path, slug, title, status) plus edges (childPath -> [depPath, …]).  These
+# tests pin the server-side half of that contract so the cards keep rendering
+# correctly with no client-side text parsing involved.
 # ---------------------------------------------------------------------------
 
 BASE_HTML = (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
 
-# node_id -> status fill color, mirrored from base.html's DAG_FILL_STATUS map.
-_FILL_STATUS = {
-    "#e0e0e0": "not-started", "#bbdefb": "in-progress", "#fff9c4": "implemented",
-    "#ffcdd2": "revise", "#c8e6c9": "approved", "#f5f5f5": "archived",
-}
-
-
-def _parse_dag_fragment(html):
-    """Parse a /dag?root= fragment the way base.html's parseChildrenDag does:
-    return (node_paths, status_by_path, edges) where edges is the set of
-    (dep_path, child_path) pairs in prerequisite -> dependent direction."""
-    m = re.search(r"data-node-paths='(\{.*?\})'", html)
-    node_paths = json.loads(m.group(1)) if m else {}
-    fills = dict(re.findall(r"style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})", html))
-    status_by_path = {
-        node_paths[nid]: _FILL_STATUS.get(color.lower(), "")
-        for nid, color in fills.items() if nid in node_paths
-    }
-    edges = set()
-    for dep_id, child_id in re.findall(r"^\s*(\S+)\s*-->\s*(\S+)\s*$", html, re.M):
-        if dep_id in node_paths and child_id in node_paths:
-            edges.add((node_paths[dep_id], node_paths[child_id]))
-    return node_paths, status_by_path, edges
-
 
 class TestChildrenDagContract:
     def test_branching_parent_node_paths_are_direct_children_only(self, flow_client):
-        resp = flow_client.get("/dag?root=00-flow")
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
         assert resp.status_code == 200
-        node_paths, _, _ = _parse_dag_fragment(resp.text)
-        assert set(node_paths.values()) == {
+        body = resp.json()
+        assert {c["path"] for c in body["children"]} == {
             "00-flow/a", "00-flow/b", "00-flow/c", "00-flow/d",
         }
 
-    def test_branching_parent_per_child_status_fills(self, flow_client):
-        resp = flow_client.get("/dag?root=00-flow")
-        _, status_by_path, _ = _parse_dag_fragment(resp.text)
+    def test_branching_parent_per_child_status(self, flow_client):
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
+        status_by_path = {c["path"]: c["status"] for c in resp.json()["children"]}
         assert status_by_path == {
             "00-flow/a": "approved",
             "00-flow/b": "in-progress",
@@ -1593,28 +1569,64 @@ class TestChildrenDagContract:
         }
 
     def test_branching_parent_edges_direction(self, flow_client):
-        """Edges run prerequisite -> dependent: a->b, a->c, b->d."""
-        resp = flow_client.get("/dag?root=00-flow")
-        _, _, edges = _parse_dag_fragment(resp.text)
-        assert edges == {
-            ("00-flow/a", "00-flow/b"),
-            ("00-flow/a", "00-flow/c"),
-            ("00-flow/b", "00-flow/d"),
+        """edges[childPath] lists the sibling paths that child depends on."""
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
+        assert resp.json()["edges"] == {
+            "00-flow/b": ["00-flow/a"],
+            "00-flow/c": ["00-flow/a"],
+            "00-flow/d": ["00-flow/b"],
         }
 
     def test_no_dependency_parent_has_no_edges(self, flow_client):
-        resp = flow_client.get("/dag?root=01-flat")
-        node_paths, _, edges = _parse_dag_fragment(resp.text)
-        assert set(node_paths.values()) == {"01-flat/x", "01-flat/y"}
-        assert edges == set()
-        assert "-->" not in resp.text
+        resp = flow_client.get("/api/children-graph", params={"root": "01-flat"})
+        body = resp.json()
+        assert {c["path"] for c in body["children"]} == {"01-flat/x", "01-flat/y"}
+        assert body["edges"] == {}
 
     def test_leaf_parent_has_empty_child_set(self, flow_client):
-        """A leaf (no children) yields an empty node-path map and no edges."""
-        resp = flow_client.get("/dag?root=00-flow/a")
-        node_paths, _, edges = _parse_dag_fragment(resp.text)
-        assert node_paths == {}
-        assert edges == set()
+        """A leaf (no children) yields an empty node set and no edges."""
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow/a"})
+        body = resp.json()
+        assert body["children"] == []
+        assert body["edges"] == {}
+
+    def test_unknown_root_404s(self, flow_client):
+        resp = flow_client.get("/api/children-graph", params={"root": "no-such-task"})
+        assert resp.status_code == 404
+
+    def test_title_with_standalone_arrow_line_does_not_corrupt_edges(self, tmp_path):
+        """A regression for the old mermaid-source regex parse: a task title
+        that is itself a standalone ` --> ` line could forge a bogus edge when
+        scraped as text. The JSON payload carries titles as a plain field, so a
+        title's content can never be mistaken for graph structure."""
+        from starlette.testclient import TestClient
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Test Project", "not-started",
+                       objective="A test plan.")
+        parent = root / "00-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "in-progress",
+                       objective="Parent.")
+        a = parent / "a"
+        a.mkdir()
+        _write_task_md(a / "task.md", "-->", "not-started",
+                       objective="Adversarial title.")
+        b = parent / "b"
+        b.mkdir()
+        _write_task_md(b / "task.md", "Child B", "not-started",
+                       depends_on=["a"], objective="Depends on a.")
+
+        plan_dashboard.PLAN_ROOT = root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+            resp = c.get("/api/children-graph", params={"root": "00-parent"})
+        body = resp.json()
+        titles_by_path = {c["path"]: c["title"] for c in body["children"]}
+        assert titles_by_path == {"00-parent/a": "-->", "00-parent/b": "Child B"}
+        assert body["edges"] == {"00-parent/b": ["00-parent/a"]}
 
 
 # ---------------------------------------------------------------------------
@@ -1958,7 +1970,7 @@ def _run_node(harness_body):
     """Run extracted client builders + a harness body under node; the body
     prints a JSON line we parse back.  Returns the decoded object."""
     defs = _extract_js_defs([
-        "DAG_FILL_STATUS", "childrenSig", "childCardHTML", "SUBTASK_HEADER",
+        "childrenSig", "childCardHTML", "SUBTASK_HEADER",
         "buildChildGrid", "buildChildFlow", "escapeHtml", "escapeAttr",
     ])
     script = defs + "\n" + harness_body
@@ -2633,10 +2645,10 @@ class TestDashboard:
             encoding="utf-8",
         )
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
-        # Nav tree, per-node bodies, per-node child DAGs, and the kanban board.
+        # Nav tree, per-node bodies, per-node children graphs, and the kanban board.
         assert "/nav" in html
         assert "/node/01-first" in html
-        assert "/dag?root=02-second" in html
+        assert "/api/children-graph?root=02-second" in html
         assert "/kanban" in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
@@ -2764,18 +2776,18 @@ class TestDashboard:
             assert fragments["/node/01-first"] == c.get("/node/01-first").text
             assert fragments["/kanban"] == c.get("/kanban").text
             assert (
-                fragments["/dag?root=02-second"]
-                == c.get("/dag", params={"root": "02-second"}).text
+                fragments["/api/children-graph?root=02-second"]
+                == c.get("/api/children-graph", params={"root": "02-second"}).json()
             )
 
-    def test_standalone_dag_resolves_for_nested_path(self, plan_with_branches):
-        """The /dag fragment for a multi-segment (nested) task must be reachable
-        under the exact URL the standalone client builds.
+    def test_standalone_children_graph_resolves_for_nested_path(self, plan_with_branches):
+        """The children-graph fragment for a multi-segment (nested) task must be
+        reachable under the exact URL the standalone client builds.
 
-        The client fetches '/dag?root=' + encodeURIComponent(path); for a nested
-        path encodeURIComponent escapes '/' to %2F, so the request URL differs
-        from the bare map key. The fetch shim decodes before the map lookup —
-        this test locks that decode-then-lookup against the byte-identical
+        The client fetches '/api/children-graph?root=' + encodeURIComponent(path);
+        for a nested path encodeURIComponent escapes '/' to %2F, so the request
+        URL differs from the bare map key. The fetch shim decodes before the map
+        lookup — this test locks that decode-then-lookup against the byte-identical
         server route, reproducing the %2F mismatch a single-segment path hides.
         """
         pytest.importorskip("httpx")
@@ -2795,18 +2807,18 @@ class TestDashboard:
         nested = "01-data-prep/02-merge"
         # The exact URL string the standalone client builds (JS encodeURIComponent
         # escapes '/' to %2F; quote(safe='') matches it for slug characters).
-        client_url = "/dag?root=" + quote(nested, safe="")
+        client_url = "/api/children-graph?root=" + quote(nested, safe="")
         assert "%2F" in client_url  # guard: the nested path really is encoded.
         assert client_url not in fragments  # the map is keyed by the bare path.
 
         # The shim decodes the client URL before the lookup; that must hit.
-        decoded_url = "/dag?root=" + nested
+        decoded_url = "/api/children-graph?root=" + nested
         assert decoded_url in fragments
 
         with TestClient(plan_dashboard.app) as c:
             assert (
                 fragments[decoded_url]
-                == c.get("/dag", params={"root": nested}).text
+                == c.get("/api/children-graph", params={"root": nested}).json()
             )
 
     def test_standalone_embeds_root_node_body(self, plan_with_branches):
@@ -3766,10 +3778,13 @@ class TestServerSideEscaping:
     ):
         """The same escaping holds in a standalone export. The root title
         renders directly (server-escaped as in the live page); per-task nav
-        rows, the kanban card, and the DAG label are delivered as pre-rendered
-        fragments embedded via `| tojson` for client-side swap-in, so their
-        HTML-escaped text is additionally JSON-string-encoded (`<` -> `\\u003c`
-        etc.) rather than appearing as a literal `&lt;` substring."""
+        rows and the kanban card are delivered as pre-rendered HTML fragments
+        embedded via `| tojson` for client-side swap-in, so their HTML-escaped
+        text is additionally JSON-string-encoded (`<` -> `\\u003c` etc.)
+        rather than appearing as a literal `&lt;` substring. The children-graph
+        JSON fragment carries the title as a plain (unescaped) string field
+        instead — JSON-encoded once, not HTML-escaped-then-JSON-encoded —
+        since it is consumed as data (`textContent`), never as markup."""
         out = tmp_path / "export.html"
         plan_dashboard.generate_dashboard(adversarial_plan_root, out)
         html = out.read_text("utf-8")
@@ -3778,12 +3793,16 @@ class TestServerSideEscaping:
         assert "<script>alert(2)</script>" not in html
         assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html  # <title>, literal
 
-        # Kanban card / sidebar row / DAG label render the leaf title escaped
+        # Kanban card / sidebar row render the leaf title escaped
         # (the search-index "title" field is a separate, inert JSON payload
         # escaped by the client's escapeHtml at display time, per
         # TestClientSearch — not asserted here).
         escaped_leaf_title = "\\u0026lt;script\\u0026gt;alert(2)\\u0026lt;/script\\u0026gt;"
-        assert html.count(escaped_leaf_title) == 3  # kanban card, nav row, DAG label
+        assert html.count(escaped_leaf_title) == 2  # kanban card, nav row
+
+        # The children-graph payload's title field is single JSON-escaped —
+        # still script-safe with no HTML-escape round trip.
+        assert "\\u003cscript\\u003ealert(2)\\u003c/script\\u003e" in html
 
         # The x-markdown payload (client DOMPurify gate) stays raw even inside
         # the JSON-embedded fragment — only JSON-string-encoded, not
