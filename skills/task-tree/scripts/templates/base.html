@@ -1941,7 +1941,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
    STANDALONE MODE — server-less single-file export.
    ──────────────────────────────────────────────────────────────────────────
    The live dashboard fetches HTML/JSON fragments from the FastAPI server
-   (/nav, /nav/<path>, /node/<path>, /dag?root=<path>, /kanban, /api/*). A file
+   (/nav, /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban,
+   /api/*). A file
    opened via file:// has no server, so generate_dashboard() pre-renders every
    one of those fragments with the SAME Jinja partials the server uses and
    embeds them here as a {url -> fragment} map. The fetch shim below resolves
@@ -1976,12 +1977,13 @@ function _standaloneResponse(payload, found) {
 }
 
 /* Resolve a fetch URL against the embedded data instead of the network.
-   - Exact fragment hits (/nav, /node/<path>, /dag?root=<path>, /kanban,
-     /nav/<path>) return their pre-rendered HTML. The map is keyed by the raw
-     (decoded) path, but the /dag loader builds its URL with
-     encodeURIComponent(path), which escapes the '/' in multi-segment paths to
-     %2F. We decode before the lookup so an encoded request
-     (/dag?root=a%2Fb) and a raw request (/node/a/b) both match the map.
+   - Exact fragment hits (/nav, /node/<path>, /api/children-graph?root=<path>,
+     /kanban, /nav/<path>) return their pre-rendered HTML/JSON. The map is
+     keyed by the raw (decoded) path, but the children-graph loader builds its
+     URL with encodeURIComponent(path), which escapes the '/' in
+     multi-segment paths to %2F. We decode before the lookup so an encoded
+     request (/api/children-graph?root=a%2Fb) and a raw request
+     (/node/a/b) both match the map.
    - Comment GETs return [] / {} so loadComments + the summary badge no-op.
    - Worktree GET returns a single-entry payload so the selector stays hidden.
    - Server-only writes (POST/PATCH/DELETE /api/*) resolve ok with no effect;
@@ -2073,7 +2075,8 @@ function readActiveWt() {
 var ACTIVE_WT = readActiveWt();
 
 /* Append the active `?wt=` to a same-origin server URL, merging with any query
-   string the URL already carries (e.g. /dag?root=<path>, /export?root=<path>).
+   string the URL already carries (e.g. /api/children-graph?root=<path>,
+   /export?root=<path>).
    No-op when ACTIVE_WT is '' (launch worktree) or in standalone mode. */
 function wtUrl(url) {
   if (!ACTIVE_WT) return url;
@@ -3081,14 +3084,16 @@ function patchCardBadgeWhenReady(path, token) {
 
 /* Children panel: the active node's direct children, rendered as clickable
    `.child-card`s — never a mermaid graph (the key inversion: subtasks live in
-   the main panel). A single GET /dag?root=<path> supplies the child set, their
-   per-child status, and the inter-child dependency edges; the root is
-   special-cased (empty root would return the global graph). Children with no
-   inter-dependency get a flat grid; children with at least one inter-child
-   dependency get the same cards in a layered topological flow with per-card
-   `↳ after:` footers. Output is cached per (path, child-status+edge-signature)
-   so navigating back to an unchanged node restores the built HTML; a child
-   whose status or sibling deps changed busts the cache and re-renders. */
+   the main panel). A single GET /api/children-graph?root=<path> supplies the
+   child set (path, slug, title, status) and the inter-child dependency edges
+   as JSON — no mermaid source, no text parsing; the root is special-cased
+   (empty root would return the global graph, unrelated to this panel).
+   Children with no inter-dependency get a flat grid; children with at least
+   one inter-child dependency get the same cards in a layered topological flow
+   with per-card `↳ after:` footers. Output is cached per (path,
+   child-status+edge-signature) so navigating back to an unchanged node
+   restores the built HTML; a child whose status or sibling deps changed busts
+   the cache and re-renders. */
 var _childrenDagCache = {};   /* path -> { sig, html } */
 
 async function loadChildrenDag(path) {
@@ -3097,9 +3102,10 @@ async function loadChildrenDag(path) {
 
   var token = (loadChildrenDag._token = (loadChildrenDag._token || 0) + 1);
 
-  /* The root's children aren't reachable via /dag?root='' (empty root selects
-     the global graph), and the root never has inter-child deps — read its
-     direct children straight off the top-level nav rows, always in the DOM. */
+  /* The root's children aren't reachable via /api/children-graph?root=''
+     (empty root selects the global graph), and the root never has inter-child
+     deps — read its direct children straight off the top-level nav rows,
+     always in the DOM. */
   if (!path) {
     var rootKids = rootChildrenFromNav();
     var rootSig = childrenSig(rootKids, {});
@@ -3109,19 +3115,19 @@ async function loadChildrenDag(path) {
     return;
   }
 
-  var resp, dagSrc;
+  var resp, payload;
   try {
-    resp = await fetch(wtUrl('/dag?root=' + encodeURIComponent(path)));
+    resp = await fetch(wtUrl('/api/children-graph?root=' + encodeURIComponent(path)));
     if (token !== loadChildrenDag._token) return;  /* superseded */
     if (!resp.ok) { region.innerHTML = ''; return; }
-    dagSrc = await resp.text();
+    payload = await resp.json();
     if (token !== loadChildrenDag._token) return;  /* superseded */
   } catch (e) {
     region.innerHTML = '<p style="color:var(--st-rev-t)">Subtasks error: ' + e.message + '</p>';
     return;
   }
 
-  var info = parseChildrenDag(dagSrc);
+  var info = childrenGraphFromPayload(payload);
 
   /* Leaf node: no children -> render nothing (card-only view). */
   if (info.children.length === 0) {
@@ -3161,55 +3167,25 @@ function renderChildren(region, path, sig, build) {
   _childrenDagCache[path] = { sig: sig, html: html };
 }
 
-/* Parse a /dag?root=<path> fragment into the direct-children set plus the
-   inter-child dependency edges. The fragment carries an authoritative
-   node_id->path map on .dag-controls[data-node-paths]; per-node status comes
-   from the `style <id> fill:#<color>` lines (the color->status map is the
-   fixed one in dag.html). Edges come from the `<dep_id> --> <child_id>` lines
-   (dag.html emits prerequisite --> dependent), mapped back through nodePaths;
-   `edges[childPath]` is the list of sibling paths that child directly depends
-   on. Titles prefer the shared pathTitles lookup. `hasEdges` is true when at
-   least one edge resolved. */
-var DAG_FILL_STATUS = {
-  '#e0e0e0': 'not-started', '#bbdefb': 'in-progress', '#fff9c4': 'implemented',
-  '#ffcdd2': 'revise', '#c8e6c9': 'approved', '#f5f5f5': 'archived',
-  '#cfd8e3': 'postponed',
-};
-function parseChildrenDag(src) {
-  var children = [];
-  var mapEl = document.createElement('div');
-  mapEl.innerHTML = src;
-  var controls = mapEl.querySelector('.dag-controls[data-node-paths]');
-  var nodePaths = {};
-  if (controls) {
-    try { nodePaths = JSON.parse(controls.getAttribute('data-node-paths')); } catch (e) { nodePaths = {}; }
-  }
-  /* node_id -> fill color, from `style <id> fill:#color` lines. */
-  var fills = {};
-  src.replace(/style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})/g, function(_, id, color) {
-    fills[id] = color.toLowerCase(); return '';
+/* Turn a GET /api/children-graph?root=<path> JSON payload into the
+   direct-children set plus the inter-child dependency edges the flow/grid
+   builders consume. `edges[childPath]` is the list of sibling paths that
+   child directly depends on, straight off the server payload — no text
+   parsing, no separate color->status map to keep in sync. Titles prefer the
+   payload's own (non-lossy) title, falling back to the shared pathTitles
+   lookup and then the slug. `hasEdges` is true when at least one child has a
+   sibling dependency. */
+function childrenGraphFromPayload(payload) {
+  var children = (payload.children || []).map(function(c) {
+    return {
+      path: c.path,
+      slug: c.slug,
+      title: c.title || pathTitles[c.path] || c.slug,
+      status: c.status || '',
+    };
   });
-  for (var nodeId in nodePaths) {
-    var p = nodePaths[nodeId];
-    children.push({
-      path: p,
-      slug: p.split('/').pop(),
-      title: pathTitles[p] || p.split('/').pop(),
-      status: DAG_FILL_STATUS[fills[nodeId]] || '',
-    });
-  }
-  /* Dependency edges: `<dep_id> --> <child_id>` => child depends on dep. */
-  var edges = {};   /* childPath -> [depPath, …] (direct sibling deps only) */
-  var hasEdges = false;
-  src.replace(/^\s*(\S+)\s*-->\s*(\S+)\s*$/gm, function(_, depId, childId) {
-    var depPath = nodePaths[depId], childPath = nodePaths[childId];
-    if (depPath && childPath) {
-      (edges[childPath] = edges[childPath] || []).push(depPath);
-      hasEdges = true;
-    }
-    return '';
-  });
-  return { children: children, edges: edges, hasEdges: hasEdges };
+  var edges = payload.edges || {};
+  return { children: children, edges: edges, hasEdges: Object.keys(edges).length > 0 };
 }
 
 /* Root's direct children, read off the top-level nav rows (always inlined). */
@@ -4252,8 +4228,8 @@ function parentPath(path) {
      - parent(path) === activePath -> re-render the children panel (the changed
        task is a sibling card). loadChildrenDag's own (path, child-status+edge
        signature) cache makes this a no-op when nothing card-relevant changed.
-       The panel re-renders from a fresh /dag fetch, so it is safe to start
-       immediately. */
+       The panel re-renders from a fresh /api/children-graph fetch, so it is
+       safe to start immediately. */
 function onTaskUpdate(path) {
   if (path === activePath) {
     loadActiveNode(path);

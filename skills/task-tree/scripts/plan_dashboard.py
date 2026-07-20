@@ -846,6 +846,31 @@ def _render_node_body(task: Task, project_root: str) -> str:
     return template.render(task=task, project_root=project_root)
 
 
+def _children_graph_payload(root_task: Task) -> dict:
+    """Direct-children graph for *root_task*: nodes (path, slug, title, status)
+    plus sibling dependency edges. Feeds the children dependency panel — GET
+    /api/children-graph and its matching standalone fragment — straight from
+    Task data, with no mermaid source and no client-side text parsing."""
+    children = list(root_task.children)
+    child_paths = {c.path for c in children}
+    prefix = f"{root_task.path}/" if root_task.path else ""
+    nodes = [
+        {
+            "path": c.path,
+            "slug": c.path.split("/")[-1],
+            "title": c.title,
+            "status": c.effective_status(),
+        }
+        for c in children
+    ]
+    edges: dict[str, list[str]] = {}
+    for c in children:
+        deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
+        if deps:
+            edges[c.path] = deps
+    return {"children": nodes, "edges": edges}
+
+
 def _render_summary(root_task: Task | None) -> str:
     """Render the summary_bar.html template for *root_task*'s tree."""
     env = _get_jinja_env()
@@ -1108,27 +1133,32 @@ async def sse_events(request: Request):
 # --- Route: GET /dag ---------------------------------------------------------
 
 @app.get("/dag", response_class=HTMLResponse)
-async def dag_view(request: Request, root: str | None = None):
-    """Render the DAG mermaid diagram partial.
-
-    Without ``root``: the global view over the whole tree, clustered by subtree.
-    With ``root=<task path>``: an inline per-subtree panel scoped to that task's
-    direct children (their sibling dependency graph), reusing the same template.
-    """
+async def dag_view(request: Request):
+    """Render the DAG mermaid diagram — the global view over the whole tree,
+    clustered by subtree. The children dependency panel no longer scopes this
+    route to a subtree; it fetches GET /api/children-graph instead."""
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("dag.html")
-    if root:
-        sub_root = _find_task(state, root)
-        if sub_root is None:
-            raise HTTPException(status_code=404, detail=f"Task not found: {root}")
-        # Scope to the parent's direct children — the sibling-only graph.
-        sub_tasks = list(sub_root.children)
-        return HTMLResponse(content=template.render(root_task=sub_root, all_tasks=sub_tasks))
     all_tasks = collect_all_tasks(state.root_task)
     return HTMLResponse(content=template.render(root_task=state.root_task, all_tasks=all_tasks))
+
+
+# --- Route: GET /api/children-graph ------------------------------------------
+
+@app.get("/api/children-graph")
+async def children_graph(request: Request, root: str):
+    """JSON payload for the children dependency panel: *root*'s direct children
+    (path, slug, title, status) plus their sibling dependency edges."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    sub_root = _find_task(state, root)
+    if sub_root is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {root}")
+    return _children_graph_payload(sub_root)
 
 
 # --- Route: GET /kanban ------------------------------------------------------
@@ -1467,47 +1497,49 @@ async def export_subtree(request: Request, root: str = ""):
 # ---------------------------------------------------------------------------
 # The `generate` subcommand renders the SAME base.html template the live server
 # serves, in standalone mode: every fragment the live client fetches (/nav,
-# /nav/<path>, /node/<path>, /dag?root=<path>, /kanban) is pre-rendered here with
-# the identical Jinja partials and embedded inline, and base.html's standalone
-# fetch shim resolves the client's fetch() calls from that embedded map. There
-# is exactly one dashboard source (base.html + its partials); no duplicate
-# template string.
+# /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban) is
+# pre-rendered here with the identical Jinja partials/render helpers and
+# embedded inline, and base.html's standalone fetch shim resolves the client's
+# fetch() calls from that embedded map. There is exactly one dashboard source
+# (base.html + its partials); no duplicate template string.
 
 
-def _build_standalone_fragments(state: WorktreeState) -> dict[str, str]:
+def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     """Pre-render every server fragment the standalone client fetches.
 
-    Mirrors the live routes (/nav, /nav/<path>, /node/<path>, /dag?root=<path>,
-    /kanban) byte-for-byte by reusing the same render helpers, keyed by the exact
-    URL the client requests so base.html's standaloneFetch resolves them offline.
+    Mirrors the live routes (/nav, /nav/<path>, /node/<path>,
+    /api/children-graph?root=<path>, /kanban) byte-for-byte (JSON fragments
+    value-for-value) by reusing the same render helpers, keyed by the exact URL
+    the client requests so base.html's standaloneFetch resolves them offline.
     Takes the render state explicitly via *state* (its ``root_task`` and
     ``project_root``) instead of module globals.
     """
     root_task = state.root_task
     assert root_task is not None
-    fragments: dict[str, str] = {}
+    fragments: dict[str, object] = {}
 
     # /nav — the body-free sidebar tree (root-or-children logic, depth<3 inline).
     env = _get_jinja_env()
     fragments["/nav"] = _render_root_or_children(root_task)
 
-    # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
-    # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).
-    # All three are keyed by the bare (decoded) path. /node and /nav are fetched
-    # with raw string concatenation client-side, so their URLs carry the path
-    # un-encoded. /dag is fetched with encodeURIComponent(path), which escapes the
-    # '/' of a multi-segment path to %2F — so the standalone fetch shim decodes
-    # the URL before the map lookup, matching all three against these bare keys.
-    # Include the root itself, not just its descendants: the client fetches the
-    # root's /node/ body and /dag?root= children-graph on initial load.
-    # collect_all_tasks excludes the root, so without it the root card shows
-    # "Could not load this task" — and a leaf-only subtree export (root with no
-    # children) embeds no node body at all. /nav/<path> stays descendants-only
-    # (the root is served by the main /nav fragment, never /nav/).
+    # Per-task fragments: /node/<path>, /api/children-graph?root=<path>, and
+    # /nav/<path> for any non-leaf (the depth>=3 lazy branches the sidebar
+    # requests on first open). All three are keyed by the bare (decoded) path.
+    # /node and /nav are fetched with raw string concatenation client-side, so
+    # their URLs carry the path un-encoded. /api/children-graph is fetched with
+    # encodeURIComponent(path), which escapes the '/' of a multi-segment path to
+    # %2F — so the standalone fetch shim decodes the URL before the map lookup,
+    # matching all three against these bare keys. Include the root itself, not
+    # just its descendants: the client fetches the root's /node/ body and
+    # /api/children-graph payload on initial load. collect_all_tasks
+    # excludes the root, so without it the root card shows "Could not load this
+    # task" — and a leaf-only subtree export (root with no children) embeds no
+    # node body at all. /nav/<path> stays descendants-only (the root is served
+    # by the main /nav fragment, never /nav/).
     all_tasks = collect_all_tasks(root_task)
     for task in [root_task, *all_tasks]:
         fragments[f"/node/{task.path}"] = _render_node_body(task, state.project_root)
-        fragments[f"/dag?root={task.path}"] = _render_dag_fragment(task)
+        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 
@@ -1516,14 +1548,6 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, str]:
     fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
 
     return fragments
-
-
-def _render_dag_fragment(task: Task) -> str:
-    """Render dag.html scoped to a task's direct children — the same payload the
-    live ``GET /dag?root=<path>`` route returns (sibling-only graph)."""
-    env = _get_jinja_env()
-    template = env.get_template("dag.html")
-    return template.render(root_task=task, all_tasks=list(task.children))
 
 
 def _rebase_subtree(task: Task, root_path: str) -> Task:
