@@ -1683,21 +1683,42 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .comment-meta { color: var(--text-mute); font-size: var(--fs-meta); }
 .comment-body { margin-top: 2px; white-space: pre-wrap; }
 .comment-resolved { opacity: 0.5; }
-.comment-form textarea {
+.comment-form textarea,
+.comment-edit-textarea {
   width: 100%; min-height: 60px; margin: 4px 0;
   font-family: var(--font-mono); font-size: var(--fs-meta);
   background: var(--bg); color: var(--text);
   border: 1px solid var(--border); border-radius: 4px;
   padding: 6px 8px; resize: vertical;
 }
-.comment-form button {
+.comment-form button,
+.comment-edit-btn {
   font-family: var(--font-mono); font-size: var(--fs-meta);
   padding: 3px 10px; background: var(--accent); color: #fff;
   border: none; border-radius: 3px; cursor: pointer;
 }
+.comment-form button + button,
+.comment-edit-btn + .comment-edit-btn {
+  margin-left: 4px;
+}
+.comment-form button.btn-secondary,
+.comment-edit-btn.btn-secondary {
+  background: var(--bg-alt); color: var(--text-mid);
+}
 .comment-orphan-warning {
   color: var(--st-rev-t); font-size: var(--fs-meta); font-style: italic;
 }
+/* Edit/Resolve/Delete row under a comment, and the Save/Cancel row while
+   editing one — both share this spacing + small-button styling instead of
+   each caller duplicating the same style.cssText string. */
+.comment-actions { margin-top: 2px; }
+.comment-action-btn {
+  font-size: var(--fs-micro); padding: 1px 6px;
+  background: var(--bg-alt); border: 1px solid var(--border);
+  border-radius: 3px; cursor: pointer; color: var(--text-mid);
+}
+.comment-action-btn + .comment-action-btn { margin-left: 4px; }
+.comment-action-btn--danger { color: var(--st-rev-t); }
 
 /* ── Utility ── */
 .hidden { display: none !important; }

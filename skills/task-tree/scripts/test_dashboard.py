@@ -2116,6 +2116,179 @@ class TestTouchPolishRendered:
             self._stop(t)
 
 
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestFrontendPolishRendered:
+    """Browser-driven regressions for the 2026-07-19 frontend-polish fixes:
+    a live task: SSE event's title change must reach the breadcrumb and the
+    root children panel without a reload, and a burst of task: events must
+    collapse into a single /api/comments/summary fetch.
+
+    Both tests broadcast synthetic `task:<path>` SSE events directly (the
+    exact fragment + event name `_rebuild_and_broadcast` sends on a real edit)
+    rather than editing task.md on disk and waiting on the real watcher: this
+    repo's watchfiles/FSEvents backend reports a file's first post-connect
+    change as Added (not Modified) regardless of how long it has existed,
+    which would route the edit through the unrelated full-reload path instead
+    of the task:<path> path this task's fix targets — masking the very
+    regression these tests exist to catch.  The server itself is real (a real
+    `uvicorn.Server` on a real socket, driven by a real browser over SSE); only
+    the disk-watch trigger is replaced with a direct, deterministic broadcast."""
+
+    def _serve(self, plan_root):
+        import threading
+
+        import uvicorn
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        import socket
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+
+        # Built inline (not plan_dashboard.serve()) so the test retains the
+        # server's event loop — needed to schedule the synthetic broadcast
+        # coroutine from the main thread via run_coroutine_threadsafe.
+        loop = asyncio.new_event_loop()
+        config = uvicorn.Config(plan_dashboard.app, host="127.0.0.1", port=port,
+                                 log_level="warning")
+        server = uvicorn.Server(config)
+        plan_dashboard._server = server
+
+        def _run():
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(server.serve())
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        assert plan_dashboard._wait_for_bind(port, timeout=5.0), "server did not bind"
+        return port, server, loop, t
+
+    def _stop(self, server, t):
+        server.should_exit = True
+        t.join(timeout=5.0)
+
+    def _broadcast_title_edit(self, loop, task_path, new_title):
+        """Simulate the watcher's reaction to a title edit: patch the in-memory
+        task index (mirrors rebuild_state_task's title-changed branch, minus
+        the disk re-parse) and broadcast the same task:<path> nav fragment
+        `_rebuild_and_broadcast` sends for a real content-only edit."""
+        from dataclasses import replace as dc_replace
+
+        async def _do():
+            state = plan_dashboard._worktree_cache[plan_dashboard._launch_wt_id]
+            updated = dc_replace(state.task_index[task_path], title=new_title)
+            state.task_index[task_path] = updated
+            plan_dashboard._replace_node_in_tree(state.root_task, task_path, updated)
+            fragment = plan_dashboard._render_nav_node(updated)
+            await plan_dashboard._broadcast(f"task:{task_path}", fragment, state.wt_id)
+
+        asyncio.run_coroutine_threadsafe(_do(), loop).result(timeout=5)
+
+    def test_title_edit_propagates_to_breadcrumb_and_children_panel(self, tmp_path):
+        """A live title edit (no reload) must reach both consumers of the
+        pathTitles cache: the root children panel (rootChildrenFromNav, which
+        has no server fetch of its own) and the breadcrumb of a task whose
+        ancestor was renamed."""
+        from playwright.sync_api import sync_playwright
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "in-progress", objective="Root.")
+        parent = root / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Original Parent", "in-progress",
+                       objective="Parent.")
+        child = parent / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "not-started", objective="Child.")
+
+        port, server, loop, t = self._serve(root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                pg.wait_for_selector('.child-card[data-path="01-parent"]', timeout=5000)
+                assert "Original Parent" in pg.inner_text('.child-card[data-path="01-parent"]')
+
+                # No navigation or reload follows — just the task: SSE event.
+                self._broadcast_title_edit(loop, "01-parent", "Renamed Parent")
+                pg.wait_for_function(
+                    "document.querySelector('.child-card[data-path=\\\"01-parent\\\"]')"
+                    ".textContent.indexOf('Renamed Parent') >= 0",
+                    timeout=5000,
+                )
+
+                # Descend into the child: the ancestor crumb for 01-parent must
+                # already carry the renamed title (same pathTitles map).
+                pg.evaluate("setActive('01-parent/01-child')")
+                pg.wait_for_selector("#crumbs .crumb", timeout=5000)
+                assert "Renamed Parent" in pg.inner_text("#crumbs")
+
+                # Rename again while the crumb is on screen; it must update live.
+                self._broadcast_title_edit(loop, "01-parent", "Renamed Again")
+                pg.wait_for_function(
+                    "document.getElementById('crumbs').textContent"
+                    ".indexOf('Renamed Again') >= 0",
+                    timeout=5000,
+                )
+                b.close()
+        finally:
+            self._stop(server, t)
+
+    def test_sse_burst_triggers_one_comment_summary_fetch(self, tmp_path):
+        """A burst of task: SSE events (three sibling task edits) must
+        coalesce into exactly one /api/comments/summary fetch, not one per
+        event."""
+        from playwright.sync_api import sync_playwright
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "in-progress", objective="Root.")
+        for i in range(1, 4):
+            d = root / f"0{i}-leaf"
+            d.mkdir()
+            _write_task_md(d / "task.md", f"Leaf {i}", "not-started", objective="Leaf.")
+
+        port, server, loop, t = self._serve(root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                # Let the page-load fetch (DOMContentLoaded's own
+                # updateTreeCommentBadges call) settle before counting.
+                pg.wait_for_timeout(400)
+
+                summary_requests = []
+                pg.on(
+                    "request",
+                    lambda req: summary_requests.append(req.url)
+                    if "/api/comments/summary" in req.url else None,
+                )
+
+                for i in range(1, 4):
+                    self._broadcast_title_edit(loop, f"0{i}-leaf", f"Leaf {i} edited")
+
+                pg.wait_for_function(
+                    "document.getElementById('task-03-leaf') &&"
+                    " document.getElementById('task-03-leaf').textContent"
+                    ".indexOf('Leaf 3 edited') >= 0",
+                    timeout=5000,
+                )
+                pg.wait_for_timeout(400)  # past the 150ms debounce window
+                b.close()
+            assert len(summary_requests) == 1, (
+                "expected exactly one /api/comments/summary fetch for the burst, "
+                f"got {len(summary_requests)}: {summary_requests}"
+            )
+        finally:
+            self._stop(server, t)
+
+
 # ---------------------------------------------------------------------------
 # Children-panel client logic (node-backed)
 #
@@ -2262,6 +2435,118 @@ class TestChildFlowClientLogic:
             "  busted: childrenSig(kids,e1)!==childrenSig(kids,e2)}));"
         )
         assert out["busted"]
+
+    def test_children_sig_busts_on_title_change(self):
+        """A title-only edit (path/status/deps unchanged) must still bust the
+        cache — otherwise a renamed child keeps showing its old title in a
+        cached children-panel render."""
+        out = _run_node(
+            "var k1=[{path:'a',status:'not-started',title:'Old'}];"
+            "var k2=[{path:'a',status:'not-started',title:'New'}];"
+            "var e={};"
+            "console.log(JSON.stringify({"
+            "  same: childrenSig(k1,e)===childrenSig(k1,e),"
+            "  busted: childrenSig(k1,e)!==childrenSig(k2,e)}));"
+        )
+        assert out["same"] and out["busted"]
+
+
+# ---------------------------------------------------------------------------
+# applyFiltersToNode (node-backed): single-pass sidebar filter walk
+#
+# A minimal DOM shim (no browser needed) so the recursive filter walk itself
+# runs, not just a string search over the source.  `_makeFilterNode` builds a
+# tree of stub elements exposing exactly the surface applyFiltersToNode reads
+# (dataset, classList.toggle, querySelector/querySelectorAll scoped to
+# `.task-row`/`.task-children`).
+# ---------------------------------------------------------------------------
+
+_FILTER_NODE_SHIM = r"""
+function _makeFilterNode(path, status, title, children) {
+  var classes = {};
+  var kids = children || [];
+  return {
+    dataset: { status: status, path: path },
+    classList: {
+      toggle: function (cls, force) { classes[cls] = !!force; },
+      contains: function (cls) { return !!classes[cls]; },
+    },
+    querySelector: function (sel) {
+      if (sel === ':scope > .task-row > .task-title-text') {
+        TITLE_QUERY_COUNT++;
+        return { textContent: title };
+      }
+      return null;
+    },
+    querySelectorAll: function (sel) {
+      return sel === ':scope > .task-children > .task-node' ? kids : [];
+    },
+  };
+}
+var TITLE_QUERY_COUNT = 0;
+"""
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestFilterSinglePassClientLogic:
+    def _run(self, harness_body):
+        defs = _extract_js_defs(["applyFiltersToNode"])
+        script = _FILTER_NODE_SHIM + defs + "\n" + harness_body
+        proc = subprocess.run([_NODE, "-e", script], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+
+    def test_visits_each_node_exactly_once(self):
+        """A linear 6-node chain where only the deepest leaf's title matches
+        the search term (every ancestor's own row does not, forcing a full
+        descendant scan before returning at every level under the pre-fix
+        algorithm): the prior per-node nodeMatchesSearch recursion plus
+        applyFiltersToNode's own recursion cost 6+5+4+3+2+1=21 title lookups
+        (O(n^2), confirmed against the pre-fix code in a scratch repro); the
+        single-pass walk costs exactly 6 (one per node)."""
+        out = self._run(
+            "var n5=_makeFilterNode('a/b/c/d/e/f','not-started','unique-target',[]);"
+            "var n4=_makeFilterNode('a/b/c/d/e','not-started','plain',[n5]);"
+            "var n3=_makeFilterNode('a/b/c/d','not-started','plain',[n4]);"
+            "var n2=_makeFilterNode('a/b/c','not-started','plain',[n3]);"
+            "var n1=_makeFilterNode('a/b','not-started','plain',[n2]);"
+            "var n0=_makeFilterNode('a','not-started','plain',[n1]);"
+            "applyFiltersToNode(n0, '', 'unique-target');"
+            "console.log(JSON.stringify({count: TITLE_QUERY_COUNT}));"
+        )
+        assert out["count"] == 6
+
+    def test_cross_descendant_match_preserved(self):
+        """Filter semantics are unchanged: a branch is visible when one
+        descendant alone satisfies the status pill and a different descendant
+        alone satisfies the search text, even though neither descendant (nor
+        the branch's own row) satisfies both together — the pre-fix
+        nodeMatchesStatus(el) && nodeMatchesSearch(el) behavior."""
+        out = self._run(
+            "var a=_makeFilterNode('r/a','approved','Alpha',[]);"          # status only
+            "var b=_makeFilterNode('r/b','not-started','target-zzz',[]);"  # search only
+            "var root=_makeFilterNode('r','in-progress','Root',[a,b]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  a: !a.classList.contains('hidden'),"
+            "  b: !b.classList.contains('hidden')}));"
+        )
+        assert out["root"] is True   # visible via the cross-descendant match
+        assert out["a"] is False     # status-only match alone stays hidden
+        assert out["b"] is False     # search-only match alone stays hidden
+
+    def test_no_match_anywhere_hides_whole_branch(self):
+        out = self._run(
+            "var leaf=_makeFilterNode('r/x','not-started','Nothing',[]);"
+            "var root=_makeFilterNode('r','not-started','Root',[leaf]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  leaf: !leaf.classList.contains('hidden')}));"
+        )
+        assert out["root"] is False
+        assert out["leaf"] is False
 
 
 # ---------------------------------------------------------------------------
