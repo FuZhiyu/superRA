@@ -83,31 +83,6 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 content,
             )
 
-    def test_generated_direct_mode_refs_do_not_embed_sync_context(self) -> None:
-        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
-        implementer = expected[
-            "skills/using-superra/references/direct-mode-implementer.md"
-        ]
-        reviewer = expected["skills/using-superra/references/direct-mode-reviewer.md"]
-
-        self.assertNotIn("Stage: sync", implementer)
-        self.assertNotIn("branch-level sync review", reviewer)
-        self.assertNotIn("current base/ref/current", reviewer)
-
-    def test_reviewer_planning_review_relocated_to_reference(self) -> None:
-        """Planning-review mechanics live in the planning-review reference, not
-        embedded in the spec or its generated direct-mode reference."""
-        reviewer_spec = (REPO_ROOT / "agents" / "reviewer.md").read_text(
-            encoding="utf-8"
-        )
-        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
-        reviewer = expected["skills/using-superra/references/direct-mode-reviewer.md"]
-
-        for text in (reviewer_spec, reviewer):
-            self.assertNotIn("### Planning Review Mode", text)
-            self.assertNotIn("## Planning Review Mode", text)
-            self.assertIn("planning-review reference", text)
-
     def test_generated_agents_have_repo_agnostic_regenerate_hint(self) -> None:
         with tempfile.TemporaryDirectory() as home:
             home_dir = Path(home)

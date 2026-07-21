@@ -35,6 +35,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import AsyncGenerator
+from urllib.parse import quote
 
 # ---------------------------------------------------------------------------
 # Ensure sibling modules are importable
@@ -143,7 +144,7 @@ _worktree_locks: dict[str, asyncio.Lock] = {}
 # render state (its task tree, flat index, project root, and plan root) lives in
 # a WorktreeState; a request resolves to one via its ``?wt=<name>`` query param,
 # defaulting to the launch worktree.  ``_worktree_cache`` is keyed by worktree id
-# (the worktree directory basename, per the root task's design decision 2).
+# (the canonical selector token returned by ``_worktree_id_for_plan_root``).
 
 
 @dataclass
@@ -182,6 +183,12 @@ def _worktree_id_for_plan_root(plan_root: Path) -> str:
         if mapped.resolve() == resolved:
             return wt_id
     return resolved.parent.name
+
+
+def _dashboard_url(port: int, plan_root: Path) -> str:
+    """Return the live URL scoped to *plan_root*'s canonical selector token."""
+    wt_id = quote(_worktree_id_for_plan_root(plan_root), safe="")
+    return f"http://localhost:{port}/?wt={wt_id}"
 
 
 def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
@@ -2227,7 +2234,7 @@ def serve_background(
     repo_id = _repo_id(git_common_dir, plan_root)
 
     def _announce_reuse(reuse_pid: int, reuse_port: int) -> int:
-        reuse_url = f"http://localhost:{reuse_port}"
+        reuse_url = _dashboard_url(reuse_port, plan_root)
         print(f"Dashboard already running at {reuse_url} (PID {reuse_pid})")
         if open_browser:
             webbrowser.open(reuse_url)
@@ -2235,7 +2242,7 @@ def serve_background(
 
     def _spawn(target_port: int) -> int:
         """Spawn a detached server on *target_port*, wait for it, handle races."""
-        url = f"http://localhost:{target_port}"
+        url = _dashboard_url(target_port, plan_root)
         # ``start_new_session`` puts the child in its own session so it outlives
         # the launching shell; stdio is redirected to the log file (no TTY).
         cmd = [
@@ -2595,7 +2602,7 @@ def main(argv: list[str] | None = None) -> None:
         # the token the supervisor probes against; else derive it here.
         REPO_ID = args.repo_id or _repo_id(git_common_dir, PLAN_ROOT)
         port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
-        url = f"http://localhost:{port}"
+        url = _dashboard_url(port, PLAN_ROOT)
 
         if args.foreground:
             # Blocking console mode: logs on stdout, Ctrl+C or idle self-exit.

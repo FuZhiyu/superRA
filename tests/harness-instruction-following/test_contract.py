@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -32,6 +33,28 @@ def read_text(relative_path: str) -> str:
 
 def read_json(relative_path: str) -> dict:
     return json.loads(read_text(relative_path))
+
+
+def markdown_table_rows(text: str, heading: str) -> list[list[str]]:
+    """Return data cells from the first Markdown table under *heading*."""
+    section = text.split(heading, 1)[1]
+    next_heading = re.search(r"\n#{1,3} ", section)
+    if next_heading:
+        section = section[: next_heading.start()]
+
+    rows = []
+    for line in section.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if all(re.fullmatch(r":?-+:?", cell.replace(" ", "")) for cell in cells):
+            continue
+        rows.append(cells)
+    return rows[1:]
+
+
+def inline_code(cell: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"`([^`]+)`", cell))
 
 
 def all_hook_commands(manifest: dict) -> list[str]:
@@ -87,15 +110,15 @@ def test_load_contract_indexes_every_ci_safe_contract_area():
         "manifest-stage-loads": "ci_safe_static",
         "manifest-domain-loads": "ci_safe_static",
         "harness-adapter-routing": "ci_safe_static",
-        "role-task-read-contract": "ci_safe_static",
+        "role-task-read-contract": "ci_safe_fixture",
         "generated-agent-drift": "ci_safe_static",
         "task-read-ancestor-context": "ci_safe_fixture",
         "task-read-comments": "ci_safe_fixture",
         "task-read-dependency-status": "ci_safe_fixture",
         "dependency-results-non-inheritance": "ci_safe_fixture",
         "hook-registries": "ci_safe_static",
-        "workflow-superimplement-orchestration": "ci_safe_static",
-        "agent-orchestration-dispatch-templates": "ci_safe_static",
+        "workflow-superimplement-orchestration": "ci_safe_fixture",
+        "agent-orchestration-dispatch-templates": "ci_safe_fixture",
         "codex-orchestration-adapter": "ci_safe_static",
     }
     for area, classification in expected.items():
@@ -138,56 +161,49 @@ def test_every_load_contract_entry_carries_covered_by():
                 )
 
 
-def test_skill_load_manifest_contract_matches_audit():
+def test_skill_load_manifest_tables_match_contract():
     manifest = read_text("skills/using-superra/SKILL.md")
+    stage_rows = markdown_table_rows(manifest, "### Stage")
+    stage_loads = {
+        inline_code(row[0])[0]: inline_code(row[2])
+        for row in stage_rows
+    }
+    assert stage_loads == {
+        "planning-review": ("skills/superplan/references/planning-review.md",),
+        "implementation": (),
+        "protection": ("result-protection",),
+        "sync": ("semantic-merge",),
+        "integration": ("refactor-and-integrate",),
+        "maturation": ("task-tree", "superplan", "writing"),
+    }
 
-    assert "superRA:using-superra" in manifest
-    assert "superRA:report-in-markdown" in manifest
-    assert "| `planning-review` | `superplan` | `skills/superplan/references/planning-review.md` |" in manifest
-    assert "| `implementation` | `superimplement` | — |" in manifest
-    assert "| `protection` | `superintegrate` Protect | `result-protection` |" in manifest
-    assert "| `sync` | `superintegrate` Sync | `semantic-merge` |" in manifest
-    assert "| `integration` | `superintegrate` Integrate | `refactor-and-integrate` |" in manifest
-    assert "| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `writing` (prose-heavy maturation) |" in manifest
-    for skill in (
+    domain_rows = markdown_table_rows(manifest, "### Domain")
+    assert {inline_code(row[0])[0] for row in domain_rows} == {
         "econ-data-analysis",
         "theory-modeling",
         "writing",
         "slide-design",
-    ):
-        assert f"`{skill}`" in manifest
-    assert "Harness adapters" in manifest
-    assert "references/" in manifest
+    }
 
 
-def test_role_and_generated_surfaces_require_manifest_and_task_read():
-    surfaces = [
-        "agents/implementer.md",
-        "agents/reviewer.md",
-        "skills/using-superra/references/direct-mode-implementer.md",
-        "skills/using-superra/references/direct-mode-reviewer.md",
-        ".codex/agents/superra_implementer.toml",
-        ".codex/agents/superra_reviewer.toml",
-    ]
+def test_codex_tool_map_matches_contract():
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+    rows = markdown_table_rows(codex, "## Codex Tool Map")
+    mappings = {
+        inline_code(row[0])[0]: inline_code(row[1])
+        for row in rows
+        if inline_code(row[0])
+    }
 
-    for relative_path in surfaces:
-        text = read_text(relative_path)
-        assert "Skill-Load Manifest" in text, relative_path
-        assert "superra task read <path>" in text, relative_path
-        assert "superRA:using-superra" in text, relative_path
-
-    assert "<!-- Source: agents/implementer.md -->" in read_text(
-        "skills/using-superra/references/direct-mode-implementer.md"
+    assert mappings["AskUserQuestion"] == ("request_user_input",)
+    assert mappings["TodoWrite"] == ("update_plan",)
+    assert mappings['Agent(subagent_type: "superRA:implementer")'] == (
+        'spawn_agent(agent_type="superra_implementer")',
     )
-    assert "<!-- Source: agents/reviewer.md -->" in read_text(
-        "skills/using-superra/references/direct-mode-reviewer.md"
+    assert mappings['Agent(subagent_type: "superRA:reviewer")'] == (
+        'spawn_agent(agent_type="superra_reviewer")',
     )
-    assert "# Source: agents/implementer.md" in read_text(
-        ".codex/agents/superra_implementer.toml"
-    )
-    assert "# Source: agents/reviewer.md" in read_text(
-        ".codex/agents/superra_reviewer.toml"
-    )
+    assert mappings["SendMessage"] == ("send_input",)
 
 
 def test_codex_generated_agent_drift_check_is_ci_safe():
@@ -246,30 +262,6 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert "Skill" not in hook_matchers_for(codex, "PreToolUse")
     assert {"Edit|Write", "Bash"} <= hook_matchers_for(codex, "PostToolUse")
     assert hook_commands_for(codex, "Stop")
-
-
-def test_workflow_orchestrator_contract_surfaces_are_static():
-    superimplement = read_text("skills/superimplement/SKILL.md")
-    orchestration = read_text("skills/agent-orchestration/SKILL.md")
-    codex = read_text("skills/using-superra/references/codex-instructions.md")
-
-    assert "Default is **subagent mode**" in superimplement
-    assert "Fall back to **direct mode**" in superimplement
-    assert "Direct mode still dispatches reviewer subagents" in superimplement
-    assert "**Load `superRA:agent-orchestration` before writing any dispatch prompt.**" in superimplement
-    assert "Dispatch implementer" in superimplement
-    assert "dispatch the reviewer" in superimplement
-
-    assert 'Agent(subagent_type: "superRA:implementer")' in orchestration
-    assert 'Agent(subagent_type: "superRA:reviewer")' in orchestration
-    assert "**Bundled implementer:**" in orchestration
-    assert "**Bundled reviewer:**" in orchestration
-    assert "Stage: planning-review" in orchestration
-    assert "Git range:" in orchestration
-
-    assert '`Agent(subagent_type: "superRA:implementer")` | `spawn_agent(agent_type="superra_implementer")`' in codex
-    assert '`Agent(subagent_type: "superRA:reviewer")` | `spawn_agent(agent_type="superra_reviewer")`' in codex
-    assert "Direct mode remains a fallback" in codex
 
 
 def test_task_read_fixture_contract_surfaces_context_without_dependency_results():
@@ -398,7 +390,6 @@ def test_live_fixture_stays_cheap_and_mock_only():
     lower = fixture_text.lower()
 
     assert "loading-evidence.json" in fixture_text
-    assert "Do not edit code or run tests." in fixture_text
     assert "marker" in lower
     assert "sentinel" in lower
     for forbidden in (

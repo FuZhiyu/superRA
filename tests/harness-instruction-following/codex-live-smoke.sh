@@ -22,8 +22,8 @@
 # file_change-free read item. The shared parser keys task-read detection off the
 # command string and marker reads off read-tool / read-command events, which is
 # the strongest available observable. Codex JSONL does not emit a structural
-# skill-load event tied to the manifest by name, so manifest/role-surface load
-# expectations stay covered by the CI-safe contract tests, and subagent dispatch
+# skill-load event tied to the manifest by name, so structured manifest mappings
+# and role frontmatter stay covered by the CI-safe tests, and subagent dispatch
 # is covered by the orchestrator smoke. This smoke isolates all Codex-specific
 # profile/hook setup in the temporary profile below.
 
