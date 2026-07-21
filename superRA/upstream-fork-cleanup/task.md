@@ -1,12 +1,16 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: approved
+status: revise
 depends_on:  []
 ---
 
 ## Objective
 
-Remove or rename the inert remnants of the upstream superpowers fork that predate superRA and no longer describe this repo: package.json and gemini-extension.json still carry the name/description "superpowers" (package.json main points at .opencode/plugins/superpowers.js); .opencode/ (INSTALL.md, plugins) and docs/superpowers/ document the upstream plugin; docs/testing.md describes testing upstream skills (subagent-driven-development); tests/subagent-driven-dev and tests/opencode test upstream behavior. For each: delete it, or rename/rewrite it to describe superRA, deciding per surface whether any harness support (e.g. Gemini, OpenCode) should be kept as real superRA packaging. Release the completed cleanup as `0.3.2`: update all maintained plugin manifests through `scripts/bump-version.sh` and add the corresponding release note. Validation: no remaining "superpowers" identifier in shipped metadata; bump-version.sh --check clean; no dangling references (grep for the removed paths).
+Remove or rename the inert remnants of the upstream superpowers fork that predate superRA and no longer describe this repo: package.json and gemini-extension.json still carry the name/description "superpowers" (package.json main points at .opencode/plugins/superpowers.js); .opencode/ (INSTALL.md, plugins) and docs/superpowers/ document the upstream plugin; docs/testing.md describes testing upstream skills (subagent-driven-development); tests/subagent-driven-dev and tests/opencode test upstream behavior. For each: delete it, or rename/rewrite it to describe superRA, deciding per surface whether any harness support (e.g. Gemini, OpenCode) should be kept as real superRA packaging. Remove tests whose sole oracle is literal prose in skill, agent, adapter, or workflow documentation; preserve tests of structured metadata, generated-artifact equality, machine-contract tokens, parser output, hooks, commands, and observable behavior. Release the completed cleanup as `0.3.2`: update all maintained plugin manifests through `scripts/bump-version.sh` and document every user-visible change included in the release. Validation: no remaining "superpowers" identifier in shipped metadata; bump-version.sh --check clean; no dangling references (grep for the removed paths); maintained test suites pass without prose-pinning assertions.
+
+## Revision Notes
+
+The researcher widened the cleanup after integration review: remove brittle exact-prose assertions across the maintained test surface and add the dashboard worktree-URL fix omitted from the `0.3.2` release notes. Reopen implementation and review; preserve structural and behavioral coverage rather than replacing deleted assertions with new wording pins.
 
 ## Results
 
