@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -31,14 +31,25 @@ paths, and no `superpowers` identifier in maintained plugin metadata. The task
 Objective names the retired paths as its implementation contract; historical
 records preserve the retired material by description instead.
 
+Removed the harness contract tests whose only oracle was literal wording in
+skill, agent, adapter, or workflow prose. The remaining static checks parse
+Markdown tables, role frontmatter, hook registries, and generated artifacts;
+fixture tests continue to verify task-read ordering, dispatch events, parser
+output, and other observable behavior. The load-contract ledger and its README
+now classify task-read and orchestration coverage as fixture-based instead of
+claiming deleted prose checks. The `0.3.2` notes also record the dashboard fix
+that preserves the invoking worktree in launch and reuse URLs.
+
 ### Integration protection
 
 The researcher selected the existing test gates rather than new drift tests.
-The full task-tree suite passed with 712 passed, 2 skipped, and 5 expected
-warnings; `tests/check-harness-compatibility.sh` passed its 7 checks; and
+The harness instruction-following suite passed with 139 tests. The full
+task-tree suite passed with 712 passed, 2 skipped, and 3 expected warnings;
+`tests/check-harness-compatibility.sh` passed its 7 checks;
 `scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
-no undeclared version references.
+no undeclared version references; `superra task check` and the Markdown checks
+passed.
 
-**Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; and synchronized release automation. The audit configuration retains only extant historical records and deliberate filename classes. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
+**Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; prose-pinning test removal with structured/behavioral coverage retained; and synchronized release automation. The audit configuration retains only extant historical records and deliberate filename classes. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
 
 The matured root rollup now identifies the task-tree workstream as in progress and the docs-site workstream as postponed while retaining their shipped and prior-integration context.

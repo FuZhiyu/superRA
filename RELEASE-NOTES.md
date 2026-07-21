@@ -4,6 +4,12 @@
 
 ## [0.3.2] - 2026-07-20
 
+### Fixed
+
+- Dashboard launch and reuse URLs retain the canonical URL-encoded worktree
+  selector, including collision disambiguation, so a repository-shared server
+  opens the worktree that invoked it.
+
 ### Removed
 
 - Retired the unmaintained upstream Superpowers package, OpenCode plugin,
