@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -43,8 +43,3 @@ Release automation introduced by the synchronized base now watches and reads
 the maintained Claude manifest rather than the retired root `package.json`, so
 automatic releases preserve the cleanup's supported-manifest contract. Sync
 commit: `a5b2a716`.
-
-## Review Notes
-
-1. **[MAJOR] The version-audit configuration retains a dangling exclusion for a deleted file.** [`.version-bump.json:9`](../../.version-bump.json#L9) still excludes `CHANGELOG.md`, even though this task deleted that file. That surviving hunk conflicts with the Objective's no-dangling-reference validation and the Final Diff Self-Check's claim that no suspicious hunk remains. Remove the obsolete exclusion and rerun `scripts/bump-version.sh --audit`; retain only exclusions for extant historical records or deliberate filename classes.
-   → implemented: removed the deleted-file exclusion; the retained exclusions cover extant historical records or deliberate filename classes ([.version-bump.json:8-16](../../.version-bump.json#L8-L16)).
