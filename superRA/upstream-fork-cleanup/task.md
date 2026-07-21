@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -26,7 +26,3 @@ non-task source finds no references to the retired manifest names or removed
 paths, and no `superpowers` identifier in maintained plugin metadata. The task
 Objective names the retired paths as its implementation contract; historical
 records preserve the retired material by description instead.
-
-## Revision Notes
-
-- 2026-07-20: The researcher requested that this cleanup release as `0.3.2`.
