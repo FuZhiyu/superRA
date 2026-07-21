@@ -2,7 +2,8 @@
 
 This suite checks one thing: when a dispatch, role spec, stage, domain, task tree, or workflow trigger asks an agent to load a file, run `superra task read`, or dispatch a subagent by default, does the harness expose enough structural evidence that the agent did it before acting? The scope is the agent-interface contract, not prose quality, so the tests assert structural observables — parsed manifest and tool-map tables, generated-agent drift, hook registries, transcript tool events, `superra task read` output, and an artifact whose values can only be produced after reading the required context — never generated prose.
 
-Coverage splits across four layers. The first three run in default CI; the fourth drives a real model and is opt-in.
+Coverage splits across four layers. Static and fixture checks run in default CI;
+the Claude and Codex live-harness layers drive real models and are opt-in.
 
 ## Coverage matrix
 
