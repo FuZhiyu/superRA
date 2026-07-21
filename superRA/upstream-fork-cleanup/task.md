@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -34,6 +34,8 @@ The full task-tree suite passed with 712 passed, 2 skipped, and 5 expected
 warnings; `tests/check-harness-compatibility.sh` passed its 7 checks; and
 `scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
 no undeclared version references.
+
+**Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; and synchronized release automation. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
 
 ## Sync Impact
 
