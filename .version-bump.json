@@ -10,6 +10,7 @@
       "RELEASE-NOTES.md",
       "2026-04-24-semantic-sync-integration-redesign-plan.md",
       "2026-04-24-semantic-sync-integration-redesign-results.md",
+      "task.md",
       "node_modules",
       ".git",
       ".version-bump.json",

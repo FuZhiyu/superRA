@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -17,13 +17,15 @@ upstream changelog and design documents, and upstream-only test suites; the
 maintained Claude, marketplace, and Codex manifests remain version-controlled in
 [.version-bump.json](../../.version-bump.json).
 
-Verification: `scripts/bump-version.sh --check` reports all three maintained
-manifests at `0.3.1`; `tests/check-harness-compatibility.sh` passes after its
-adapter checks were limited to the packaged Codex references. A sweep of every
-tracked non-task source finds no references to the retired manifest names or
-removed paths, and no `superpowers` identifier in maintained plugin metadata.
-The task Objective names the retired paths as its implementation contract;
-historical records preserve the retired material by description instead.
+Released the cleanup as `0.3.2`. `scripts/bump-version.sh --audit` verifies
+that the maintained Claude, marketplace, and Codex manifests are aligned, and
+task-tree records are excluded from that audit as durable release context.
+`tests/check-harness-compatibility.sh` passes after its adapter checks
+were limited to the packaged Codex references. A sweep of every tracked
+non-task source finds no references to the retired manifest names or removed
+paths, and no `superpowers` identifier in maintained plugin metadata. The task
+Objective names the retired paths as its implementation contract; historical
+records preserve the retired material by description instead.
 
 ## Revision Notes
 

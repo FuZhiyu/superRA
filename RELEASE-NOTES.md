@@ -2,12 +2,19 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-20
+
 ### Removed
 
 - Retired the unmaintained upstream Superpowers package, OpenCode plugin,
   Gemini extension manifest, changelog, and upstream-only documentation and
   tests. Version checks now cover the maintained Claude, marketplace, and
   Codex manifests only.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.2` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
 
 ## [0.3.1] - 2026-07-11
 
