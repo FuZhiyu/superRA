@@ -92,6 +92,15 @@ def _serve_plan(tmp_path: Path) -> Path:
     return plan_root
 
 
+def _launch_state(pd):
+    """Return *pd* (the plan_dashboard module)'s launch-worktree WorktreeState.
+
+    Tests that used to read the retired ``_root_task`` / ``_task_index`` /
+    ``_project_root`` module globals read this cached state instead.
+    """
+    return pd._worktree_cache[pd._launch_wt_id]
+
+
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------

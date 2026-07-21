@@ -5,16 +5,14 @@
     `subgraph` per parent task so the global view is legible at tree scale
     instead of one undifferentiated blob.
 
-    This template is the parsed data source for the per-node children panel
-    (GET /dag?root=<path>): base.html's loadChildrenDag reads the child set and
-    per-child status from the node_id->path map and `style <id> fill:#color`
-    lines, and the inter-child dependency edges from the `<dep_id> --> <child_id>`
-    lines, then renders the children as clickable cards (a flat grid, or a
-    layered topological flow when there are inter-child deps). The node_id->path
-    map on the .dag-controls div's data-node-paths attribute keeps the mapping
-    authoritative regardless of any slug collision in the node ids. The standalone
-    global-DAG tab and the in-page mermaid render are gone; the `.mermaid` div
-    below is no longer rendered — it is the line-based source the parser reads.
+    Serves the global GET /dag view only (the whole tree, clustered by
+    subtree). The per-node children panel (base.html's loadChildrenDag) no
+    longer scopes this template to a subtree — it reads GET
+    /api/children-graph?root=<path> JSON instead, so the color->status mapping
+    below (status_colors) has exactly one consumer: this template's own
+    mermaid `fill:` styling. The standalone global-DAG tab and the in-page
+    mermaid render are gone; the `.mermaid` div below is never rendered by the
+    live client, kept only for the documented GET /dag response shape.
 
     Variables: root_task (Task), all_tasks (list[Task])
 -#}
