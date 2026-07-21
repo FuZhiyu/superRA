@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-20
+
+### Fixed
+
+- Dashboard launch and reuse URLs retain the canonical URL-encoded worktree
+  selector, including collision disambiguation, so a repository-shared server
+  opens the worktree that invoked it.
+
+### Removed
+
+- Retired the unmaintained upstream Superpowers package, OpenCode plugin,
+  Gemini extension manifest, changelog, and upstream-only documentation and
+  tests. Version checks now cover the maintained Claude, marketplace, and
+  Codex manifests only.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.2` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.3.1] - 2026-07-11
 
 ### Fixed
@@ -103,7 +123,7 @@ Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent 
 
 ### Release Prep
 
-- Version manifests are bumped to `0.1.2` across package, Claude, Cursor, Codex, marketplace, and Gemini extension metadata.
+- Version manifests are bumped to `0.1.2` across the then-supported plugin metadata.
 - Plan and results are archived under `docs/plans/2026-04-24-semantic-sync-integration-redesign-{plan,results}.md`.
 
 ## [0.1.1] - 2026-04-22
@@ -119,7 +139,7 @@ Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent 
 
 ### Fixed
 
-- **Version drift across plugin manifests.** `package.json` (0.0.5), `.claude-plugin/plugin.json` (0.1.0), `.cursor-plugin/plugin.json` (0.0.3), `.claude-plugin/marketplace.json` (0.1.0), and `gemini-extension.json` (5.0.7 — leftover upstream Superpowers tag) are now all in sync at 0.1.1 via `scripts/bump-version.sh`.
+- **Version drift across plugin manifests.** The then-supported plugin metadata, including a leftover upstream Superpowers manifest, was synchronized at 0.1.1 via `scripts/bump-version.sh`.
 
 ### Notes
 

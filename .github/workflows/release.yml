@@ -5,7 +5,9 @@ on:
     branches:
       - main
     paths:
-      - "package.json"
+      - ".claude-plugin/plugin.json"
+      - ".claude-plugin/marketplace.json"
+      - ".codex-plugin/plugin.json"
   workflow_dispatch:
 
 permissions:
@@ -32,9 +34,9 @@ jobs:
       - name: Read the version
         id: version
         run: |
-          version="$(jq -r '.version' package.json)"
+          version="$(jq -r '.version' .claude-plugin/plugin.json)"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "package.json must contain a stable X.Y.Z version; found: $version" >&2
+            echo ".claude-plugin/plugin.json must contain a stable X.Y.Z version; found: $version" >&2
             exit 1
           fi
           echo "value=$version" >> "$GITHUB_OUTPUT"

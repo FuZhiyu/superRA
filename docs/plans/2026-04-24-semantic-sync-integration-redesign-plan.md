@@ -48,7 +48,7 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 - `/README.md`: User-facing overview of the PLAN -> IMPLEMENT -> INTEGRATE workflow, utility skills, agents, hooks, and installation. Keep public skill descriptions aligned with runtime behavior.
 
 ### Module-level docs walked
-- `tests/claude-code/README.md`: Claude Code skill tests are shell-based and focus on skill loading and expected behavior. Fast tests are preferred by default; integration tests are slow and optional.
+- Retired upstream Claude Code shell-test harnesses: these focused on skill loading and expected behavior, with fast tests preferred and integration tests optional.
 
 ### Not walked
 - No nested module guidance docs under `skills/` or `agents/` beyond the skill files and references read for this plan.
