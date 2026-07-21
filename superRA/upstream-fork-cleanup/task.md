@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -38,8 +38,3 @@ no undeclared version references.
 **Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; and synchronized release automation. The audit configuration retains only extant historical records and deliberate filename classes. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
 
 The matured root rollup now identifies the task-tree workstream as in progress and the docs-site workstream as postponed while retaining their shipped and prior-integration context.
-
-## Review Notes
-
-1. **[MAJOR] The matured root rollup is not current with the task tree.** [superRA/task.md:20](../task.md#L20) calls `task-tree` “Approved and integrated,” but its status is `in-progress` at [superRA/task-tree/task.md:1-4](../task-tree/task.md#L1-L4) because the dashboard’s [nonloopback-host-serve task](../task-tree/dashboard/nonloopback-host-serve/task.md#L1-L4) remains `not-started`. [superRA/task.md:21](../task.md#L21) likewise calls `docs-site` approved while its status is `postponed` at [superRA/docs-site/task.md:1-4](../docs-site/task.md#L1-L4). Revise the rollup to state the live statuses while preserving the shipped-site and prior-integrated-work context, then rerun `superra task tree` and record the corrected maturation result.
-   → implemented: updated the rollup to record `task-tree` as in progress and `docs-site` as postponed while retaining their completed-work context ([superRA/task.md:20-21](../task.md#L20-L21)).
