@@ -35,17 +35,19 @@ Removed the harness contract tests whose only oracle was literal wording in
 skill, agent, adapter, or workflow prose. The remaining static checks parse
 Markdown tables, role frontmatter, hook registries, and generated artifacts;
 fixture tests continue to verify task-read ordering, dispatch events, parser
-output, and other observable behavior. The load-contract ledger and its README
-now classify task-read and orchestration coverage as fixture-based instead of
-claiming deleted prose checks. The `0.3.2` notes also record the dashboard fix
-that preserves the invoking worktree in launch and reuse URLs.
+output, and other observable behavior. Wording-absence checks were also removed
+from the Codex agent generator suite; byte-for-byte generated-artifact checks
+remain. The load-contract ledger and its README now classify task-read and
+orchestration coverage as fixture-based instead of claiming deleted prose
+checks. The `0.3.2` notes also record the dashboard fix that preserves the
+invoking worktree in launch and reuse URLs.
 
 ### Integration protection
 
 The researcher selected the existing test gates rather than new drift tests.
 The harness instruction-following suite passed with 139 tests. The full
 task-tree suite passed with 712 passed, 2 skipped, and 3 expected warnings;
-`tests/check-harness-compatibility.sh` passed its 7 checks;
+`tests/check-harness-compatibility.sh` passed its 5 generator tests;
 `scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
 no undeclared version references; `superra task check` and the Markdown checks
 passed.
