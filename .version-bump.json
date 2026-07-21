@@ -6,7 +6,6 @@
   ],
   "audit": {
     "exclude": [
-      "CHANGELOG.md",
       "RELEASE-NOTES.md",
       "2026-04-24-semantic-sync-integration-redesign-plan.md",
       "2026-04-24-semantic-sync-integration-redesign-results.md",

@@ -1,6 +1,6 @@
 ---
 title: "Retire Upstream superpowers-Fork Remnants"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -35,7 +35,7 @@ warnings; `tests/check-harness-compatibility.sh` passed its 7 checks; and
 `scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
 no undeclared version references.
 
-**Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; and synchronized release automation. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
+**Final diff self-check:** `git diff 191313153ae54446bf6f6808a0ee3df693705e17..HEAD`; surviving change classes are the retired upstream packaging, documentation, and tests; maintained-manifest version and release-note updates; compatibility-check cleanup; and synchronized release automation. The audit configuration retains only extant historical records and deliberate filename classes. The dashboard code, instructions, and task records in the range are already-approved incoming merge content, retained as documented in `a5b2a716`; no scope-ambiguous or suspicious hunk remains. Project-doc audit found no stale root-level claims or dangling references to removed paths.
 
 ## Sync Impact
 
@@ -47,3 +47,4 @@ commit: `a5b2a716`.
 ## Review Notes
 
 1. **[MAJOR] The version-audit configuration retains a dangling exclusion for a deleted file.** [`.version-bump.json:9`](../../.version-bump.json#L9) still excludes `CHANGELOG.md`, even though this task deleted that file. That surviving hunk conflicts with the Objective's no-dangling-reference validation and the Final Diff Self-Check's claim that no suspicious hunk remains. Remove the obsolete exclusion and rerun `scripts/bump-version.sh --audit`; retain only exclusions for extant historical records or deliberate filename classes.
+   → implemented: removed the deleted-file exclusion; the retained exclusions cover extant historical records or deliberate filename classes ([.version-bump.json:8-16](../../.version-bump.json#L8-L16)).
