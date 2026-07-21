@@ -28,12 +28,14 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 import webbrowser
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import AsyncGenerator
+from urllib.parse import quote
 
 # ---------------------------------------------------------------------------
 # Ensure sibling modules are importable
@@ -51,7 +53,7 @@ from _worktree_discovery import (
 from task_query import tree_to_json
 
 # ---------------------------------------------------------------------------
-# Optional comment module (created by another agent)
+# Optional comment module
 # ---------------------------------------------------------------------------
 try:
     from _comments import (
@@ -93,19 +95,23 @@ IDLE_TIMEOUT: float = 300.0  # 5 minutes
 # IDLE_TIMEOUT so dead connections are pruned before they hold the server open.
 HEARTBEAT_INTERVAL: float = 20.0  # seconds
 
+# Cooperative watchfiles shutdown normally completes promptly after its stop
+# event is set.  Bound that grace period so a stuck native watcher cannot hold
+# Uvicorn's ASGI response/lifespan shutdown open forever; after this interval
+# _stop_watcher falls back to task cancellation.
+WATCHER_STOP_TIMEOUT: float = 2.0
+WATCHER_CANCEL_TIMEOUT: float = 0.5
+WATCHER_PROCESS_EXIT_TIMEOUT: float = 0.5
+
 # Handle to the running uvicorn.Server instance so the idle monitor can request
 # shutdown by setting server.should_exit = True.  Set in serve().
 _server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
 
-# In-memory task tree and flat index.  These are a compatibility view over the
-# *default* (launch) worktree's WorktreeState — read by /export's snapshot path
-# and the standalone renderer.  Per-request handlers resolve a WorktreeState
-# instead of reading these.
-_root_task: Task | None = None
-_task_index: dict[str, Task] = {}
-_project_root: str = ""
+# Immutable process ownership: executing this entry script owns the auxiliary
+# dashboard process; importing it into pytest or another ASGI host does not.
+_standalone_process_owner = __name__ == "__main__"
 
-# Per-worktree SSE delivery and watcher lifecycle (task 02).
+# Per-worktree SSE delivery and watcher lifecycle.
 #
 # Live-reload is scoped per worktree: a client viewing worktree A registers its
 # queue under A and a watcher for A runs only while A has at least one client.
@@ -115,8 +121,7 @@ _project_root: str = ""
 # to that task's ``awatch``; setting it lets watchfiles close its native
 # fsevents thread/fd on its own terms instead of leaking it past a hard cancel;
 # ``_worktree_locks`` serializes each worktree's spawn/teardown so a connect and
-# a disconnect cannot race the watcher in or out from under each other.  These
-# locks are separate from task 01's per-state build lock.
+# a disconnect cannot race the watcher in or out from under each other.
 _worktree_clients: dict[str, set[asyncio.Queue[str]]] = {}
 _worktree_watchers: dict[str, asyncio.Task] = {}
 _worktree_stop_events: dict[str, asyncio.Event] = {}
@@ -130,7 +135,7 @@ _worktree_locks: dict[str, asyncio.Lock] = {}
 # render state (its task tree, flat index, project root, and plan root) lives in
 # a WorktreeState; a request resolves to one via its ``?wt=<name>`` query param,
 # defaulting to the launch worktree.  ``_worktree_cache`` is keyed by worktree id
-# (the worktree directory basename, per the root task's design decision 2).
+# (the canonical selector token returned by ``_worktree_id_for_plan_root``).
 
 
 @dataclass
@@ -171,6 +176,12 @@ def _worktree_id_for_plan_root(plan_root: Path) -> str:
     return resolved.parent.name
 
 
+def _dashboard_url(port: int, plan_root: Path) -> str:
+    """Return the live URL scoped to *plan_root*'s canonical selector token."""
+    wt_id = quote(_worktree_id_for_plan_root(plan_root), safe="")
+    return f"http://localhost:{port}/?wt={wt_id}"
+
+
 def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
     """Walk *plan_root* and return a fully populated WorktreeState."""
     state = WorktreeState(
@@ -181,18 +192,6 @@ def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
     state.root_task = walk_plan(plan_root)
     _build_index(state.root_task, state.task_index)
     return state
-
-
-def _sync_default_globals() -> None:
-    """Mirror the launch worktree's state into the legacy module globals.
-
-    ``/export`` snapshots these globals around a standalone render, and the
-    standalone renderer drives them directly; the test suite also reads them.
-    Keeping them as a view over the default WorktreeState preserves that path.
-    """
-    state = _worktree_cache.get(_launch_wt_id)
-    if state is not None:
-        _set_module_state(state.root_task, state.task_index, state.project_root)
 
 
 # ---------------------------------------------------------------------------
@@ -210,13 +209,12 @@ def _build_index(task: Task, index: dict[str, Task]) -> None:
 def rebuild_tree() -> None:
     """Full re-walk of the launch plan directory; (re)seed the default worktree.
 
-    Rebuilds the launch worktree's WorktreeState from ``PLAN_ROOT`` and mirrors
-    it into the legacy globals.  Tests and the CLI seed the cache through here.
+    Rebuilds the launch worktree's WorktreeState from ``PLAN_ROOT``.  Tests and
+    the CLI seed the cache through here.
     """
     global _launch_wt_id
     _launch_wt_id = _worktree_id_for_plan_root(PLAN_ROOT)
     _worktree_cache[_launch_wt_id] = _build_worktree_state(_launch_wt_id, PLAN_ROOT)
-    _sync_default_globals()
 
 
 def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | None, bool]:
@@ -234,8 +232,20 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
         return None, False
     try:
         updated = parse_task(task_md, state.plan_root)
-    except Exception:
-        return state.task_index.get(task_path), False
+    except Exception as exc:
+        # Loud failure: log server-side and surface a visible error state on the
+        # node instead of silently continuing to serve the last-good parse with
+        # no signal. Keep the last-good task's content but stamp parse_error so
+        # nav_node.html renders an error badge; the index/tree are updated so the
+        # error state also shows up on a fresh page load, not just this fragment.
+        print(f"[dashboard] failed to parse {task_md}: {exc}", file=sys.stderr)
+        stale = state.task_index.get(task_path)
+        if stale is None:
+            return None, False
+        errored = replace(stale, parse_error=str(exc) or type(exc).__name__)
+        state.task_index[task_path] = errored
+        _replace_node_in_tree(state.root_task, task_path, errored)
+        return errored, False
 
     # --- Re-discover children from the filesystem ---
     existing = state.task_index.get(task_path)
@@ -265,13 +275,11 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
 
 
 def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
-    """Re-parse a single task.md in the launch worktree (legacy-globals view)."""
+    """Re-parse a single task.md in the launch worktree's WorktreeState."""
     state = _worktree_cache.get(_launch_wt_id)
     if state is None:
         return None, False
-    result = rebuild_state_task(state, task_path)
-    _sync_default_globals()
-    return result
+    return rebuild_state_task(state, task_path)
 
 
 def _remove_from_index(index: dict[str, Task], task_path: str) -> None:
@@ -304,6 +312,15 @@ def _find_task(state: WorktreeState, path: str) -> Task | None:
 # SSE helpers
 # ---------------------------------------------------------------------------
 
+# Sentinel put on a client's queue in place of a message it has no room for.
+# The client's own /events generator is the only place a queue is ever removed
+# from `_worktree_clients` (in its `finally`), so `_open_connection_count()`
+# stays truthful; `_broadcast` cannot just drop the queue itself without the
+# response staying open with nothing left to read it. Seeing this sentinel
+# tells the generator to end the stream instead of waiting out a slow/stalled
+# client indefinitely.
+_QUEUE_CLOSE = object()
+
 
 async def _broadcast(event: str, data: str, wt: str) -> None:
     """Send an SSE-formatted message to every client viewing worktree *wt*.
@@ -313,18 +330,29 @@ async def _broadcast(event: str, data: str, wt: str) -> None:
     client viewing another.  A broadcast for a worktree with no current clients
     (e.g. the last client left between the watcher firing and this call) is a
     safe no-op via ``dict.get(wt, set())``.
+
+    A client whose queue is full (a slow/stalled consumer) is not silently
+    unsubscribed here: dropping it from ``clients`` would undercount open
+    connections while its ``/events`` response stays open with nothing left to
+    wake its generator. Instead the oldest buffered message is dropped to make
+    room for a ``_QUEUE_CLOSE`` sentinel, ending that connection through the
+    same generator-owned teardown path as a normal disconnect.
     """
     data_lines = "".join(f"data: {line}\n" for line in data.split("\n"))
     message = f"event: {event}\n{data_lines}\n"
     clients = _worktree_clients.get(wt, set())
-    dead: list[asyncio.Queue[str]] = []
     for q in clients:
         try:
             q.put_nowait(message)
         except asyncio.QueueFull:
-            dead.append(q)
-    for q in dead:
-        clients.discard(q)
+            try:
+                q.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            try:
+                q.put_nowait(_QUEUE_CLOSE)
+            except asyncio.QueueFull:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -425,9 +453,8 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
 
     Re-walks the worktree's plan root and refreshes its cached state in place so
     handlers and the watcher see the new tree.  Returns the refreshed state, or
-    ``None`` when the worktree is no longer cached.  Mirrors the launch worktree
-    into the legacy globals so ``/export`` and the standalone renderer stay
-    consistent.  This is the cache-invalidation hook task 02's watcher calls.
+    ``None`` when the worktree is no longer cached.  This is the
+    cache-invalidation hook the watcher calls.
     """
     existing = _worktree_cache.get(wt_id)
     if existing is None:
@@ -437,8 +464,6 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
     existing.root_task = refreshed.root_task
     existing.task_index = refreshed.task_index
     existing.project_root = refreshed.project_root
-    if wt_id == _launch_wt_id:
-        _sync_default_globals()
     return existing
 
 
@@ -529,6 +554,29 @@ def _is_benign_awatch_teardown_race(exc: BaseException) -> bool:
     return isinstance(exc, UnboundLocalError) and "raw_changes" in str(exc)
 
 
+def _schedule_forced_process_exit(delay: float) -> threading.Timer | None:
+    """Guarantee exit when a cancellation-suppressing watcher cannot unwind.
+
+    The dashboard is an auxiliary, non-persistent process.  Once both bounded
+    watcher teardown phases fail, a daemon watchdog is safer than allowing an
+    orphaned CPU-spinning process to survive indefinitely.  The delay lets the
+    current ASGI response and lifespan make their normal exit attempt first.
+    Only the foreground CLI context owns its process. Direct ``serve()`` calls,
+    embedded ASGI hosts, and servers running outside the main thread must not arm
+    a process-level exit.
+    """
+    if (
+        not _standalone_process_owner
+        or threading.current_thread() is not threading.main_thread()
+    ):
+        return None
+
+    timer = threading.Timer(delay, os._exit, args=(0,))
+    timer.daemon = True
+    timer.start()
+    return timer
+
+
 async def _stop_watcher(wt: str) -> None:
     """Cooperatively stop and remove the watcher for *wt* (last client left).
 
@@ -538,13 +586,15 @@ async def _stop_watcher(wt: str) -> None:
     the event loop spinning on a perpetually-readable kqueue (see
     ``_watch_worktree``).
 
-    The stop event alone releases the native resources; awaiting the task then
-    just confirms it has unwound and surfaces any genuine watcher crash (a fault
-    in ``_rebuild_and_broadcast`` / tree-parse / disk error) — this ``await`` is
-    the only observer of the watcher task's exception, so it must stay
-    propagating.  The one thing swallowed is watchfiles' own *benign* teardown
-    race: when this runs from inside the disconnecting SSE generator's
-    ``finally`` (the common case), ``awatch`` raises
+    The stop event gets a bounded grace period to release native resources. If
+    the watcher does not finish, task cancellation gets a second bounded wait so
+    neither the disconnecting response nor lifespan shutdown can wait forever.
+    A cancellation-suppressing task triggers a delayed process-exit watchdog.
+    Genuine watcher crashes still propagate when they finish within those
+    bounds; a later failure is reported through the loop's exception handler.
+    The one thing swallowed is watchfiles' own *benign* teardown race: when this
+    runs from inside the disconnecting SSE generator's ``finally`` (the common
+    case), ``awatch`` raises
     ``UnboundLocalError: ... 'raw_changes'`` from its ``anyio`` task group as it
     exits (either bare or wrapped in a ``BaseExceptionGroup``).  By then the
     watcher is gone and its native fd is closed, so that specific leaf is not
@@ -558,10 +608,72 @@ async def _stop_watcher(wt: str) -> None:
     if task is not None:
         if stop_event is not None:
             stop_event.set()
+
+        # Give awatch a bounded cooperative grace period.  Disconnect and
+        # graceful-shutdown cancellation belongs to the ASGI caller, so consume
+        # repeated cancellation here without forwarding it to the watcher, then
+        # propagate it after teardown.  If the stop event does not finish the
+        # watcher in time, hard cancellation is the bounded fallback that lets
+        # Uvicorn complete instead of waiting forever.
+        caller_cancelled = False
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + WATCHER_STOP_TIMEOUT
+        while not task.done() and loop.time() < deadline:
+            remaining = deadline - loop.time()
+            try:
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+            except asyncio.CancelledError:
+                caller_cancelled = True
+                continue
+            if done:
+                break
+
+        if not task.done():
+            task.cancel()
+
+        cancel_deadline = loop.time() + WATCHER_CANCEL_TIMEOUT
+        while not task.done() and loop.time() < cancel_deadline:
+            remaining = cancel_deadline - loop.time()
+            try:
+                done, _ = await asyncio.wait({task}, timeout=remaining)
+            except asyncio.CancelledError:
+                caller_cancelled = True
+                continue
+            if done:
+                break
+
+        if not task.done():
+            # _watch_worktree does not suppress CancelledError, so real awatch
+            # normally completes above.  A cancellation-suppressing replacement
+            # cannot be killed by asyncio; schedule a process watchdog so it
+            # cannot strand this auxiliary dashboard during loop shutdown.
+            watchdog = _schedule_forced_process_exit(WATCHER_PROCESS_EXIT_TIMEOUT)
+
+            def _observe_late_completion(done_task: asyncio.Task) -> None:
+                if watchdog is not None:
+                    watchdog.cancel()
+                try:
+                    done_task.result()
+                except asyncio.CancelledError:
+                    pass
+                except BaseException as exc:  # noqa: BLE001 - report to loop
+                    loop.call_exception_handler(
+                        {
+                            "message": "watcher failed after teardown timeout",
+                            "exception": exc,
+                            "task": done_task,
+                        }
+                    )
+
+            task.add_done_callback(_observe_late_completion)
+            if caller_cancelled:
+                raise asyncio.CancelledError
+            return
+
         try:
-            await task
+            task.result()
         except asyncio.CancelledError:
-            # The loop itself is shutting down (e.g. lifespan teardown).
+            # Intentional timeout fallback or event-loop shutdown.
             pass
         except BaseExceptionGroup as eg:
             _, rest = eg.split(_is_benign_awatch_teardown_race)
@@ -570,6 +682,9 @@ async def _stop_watcher(wt: str) -> None:
         except BaseException as exc:  # noqa: BLE001 - re-raised unless benign
             if not _is_benign_awatch_teardown_race(exc):
                 raise
+
+        if caller_cancelled:
+            raise asyncio.CancelledError
 
 
 # ---------------------------------------------------------------------------
@@ -640,7 +755,7 @@ def _get_jinja_env():
         loader = FileSystemLoader(str(templates_dir))
     env = Environment(
         loader=loader,
-        autoescape=False,
+        autoescape=True,
     )
 
     def vscode_link(path: str, project_root: str) -> str:
@@ -659,13 +774,6 @@ def _get_jinja_env():
     return env
 
 
-def _render_task_fragment(task: Task, project_root: str) -> str:
-    """Render the task_children.html template for a single task."""
-    env = _get_jinja_env()
-    template = env.get_template("task_children.html")
-    return template.render(task=task, project_root=project_root)
-
-
 def _task_depth(task_path: str) -> int:
     """Return the depth of a task in the tree (0 for root children, etc.)."""
     if not task_path:
@@ -673,8 +781,54 @@ def _task_depth(task_path: str) -> int:
     return task_path.count("/")
 
 
-def _render_task_node(task: Task, project_root: str | None = None, depth: int | None = None) -> str:
-    """Render a single task node via the task_node macro (for SSE swap).
+# Ad hoc inline snippets rendered via `Environment.from_string`, compiled once
+# and cached (mirroring `_get_jinja_env`'s lazy singleton) instead of being
+# recompiled from source on every call.
+_NAV_NODE_SNIPPET = (
+    '{%- from "nav_node.html" import render_nav_node -%}'
+    '{{ render_nav_node(task, depth=depth) }}'
+)
+_nav_node_snippet_tmpl = None
+
+# The root-or-children fragment shared by /nav and the standalone export: the
+# root's own body when it has one, else its direct children — the single
+# source both `nav_fragment` and `_build_standalone_fragments` render from.
+_ROOT_OR_CHILDREN_SNIPPET = (
+    '{%- from "nav_node.html" import render_nav_node -%}'
+    '{% if root_task.body and root_task.body.strip() %}'
+    '{{ render_nav_node(root_task, depth=0) }}'
+    '{% else %}'
+    '{% for child in root_task.children %}'
+    '{{ render_nav_node(child, depth=0) }}'
+    '{% endfor %}'
+    '{% endif %}'
+)
+_root_or_children_tmpl = None
+
+
+def _get_nav_node_snippet_template():
+    """Lazy-init and cache the single-node nav snippet template."""
+    global _nav_node_snippet_tmpl
+    if _nav_node_snippet_tmpl is None:
+        _nav_node_snippet_tmpl = _get_jinja_env().from_string(_NAV_NODE_SNIPPET)
+    return _nav_node_snippet_tmpl
+
+
+def _get_root_or_children_template():
+    """Lazy-init and cache the shared root-or-children snippet template."""
+    global _root_or_children_tmpl
+    if _root_or_children_tmpl is None:
+        _root_or_children_tmpl = _get_jinja_env().from_string(_ROOT_OR_CHILDREN_SNIPPET)
+    return _root_or_children_tmpl
+
+
+def _render_root_or_children(root_task: Task) -> str:
+    """Render the root-or-children fragment for *root_task* (see the snippet)."""
+    return _get_root_or_children_template().render(root_task=root_task)
+
+
+def _render_nav_node(task: Task, depth: int | None = None) -> str:
+    """Render a single navigation-only task node (row + children, no body).
 
     *depth* controls how many levels of children are rendered inline vs
     lazy-loaded.  When ``None``, the depth is inferred from the task's
@@ -682,30 +836,7 @@ def _render_task_node(task: Task, project_root: str | None = None, depth: int | 
     """
     if depth is None:
         depth = _task_depth(task.path)
-    if project_root is None:
-        project_root = _project_root
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "task_node.html" import render_task_node -%}'
-        '{{ render_task_node(task, project_root, depth=depth) }}'
-    )
-    return template.render(task=task, project_root=project_root, depth=depth)
-
-
-def _render_nav_node(task: Task, depth: int | None = None) -> str:
-    """Render a single navigation-only task node (row + children, no body).
-
-    *depth* controls inline vs lazy-loaded children, mirroring
-    ``_render_task_node``.  When ``None``, depth is inferred from ``task.path``.
-    """
-    if depth is None:
-        depth = _task_depth(task.path)
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{{ render_nav_node(task, depth=depth) }}'
-    )
-    return template.render(task=task, depth=depth)
+    return _get_nav_node_snippet_template().render(task=task, depth=depth)
 
 
 def _render_nav_children(task: Task) -> str:
@@ -715,19 +846,40 @@ def _render_nav_children(task: Task) -> str:
     return template.render(task=task)
 
 
-def _render_node_body(task: Task, project_root: str | None = None) -> str:
+def _render_node_body(task: Task, project_root: str) -> str:
     """Render the node_body.html fragment (body-only) for a single task."""
-    if project_root is None:
-        project_root = _project_root
     env = _get_jinja_env()
     template = env.get_template("node_body.html")
     return template.render(task=task, project_root=project_root)
 
 
-def _render_summary(root_task: Task | None = None) -> str:
+def _children_graph_payload(root_task: Task) -> dict:
+    """Direct-children graph for *root_task*: nodes (path, slug, title, status)
+    plus sibling dependency edges. Feeds the children dependency panel — GET
+    /api/children-graph and its matching standalone fragment — straight from
+    Task data, with no mermaid source and no client-side text parsing."""
+    children = list(root_task.children)
+    child_paths = {c.path for c in children}
+    prefix = f"{root_task.path}/" if root_task.path else ""
+    nodes = [
+        {
+            "path": c.path,
+            "slug": c.path.split("/")[-1],
+            "title": c.title,
+            "status": c.effective_status(),
+        }
+        for c in children
+    ]
+    edges: dict[str, list[str]] = {}
+    for c in children:
+        deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
+        if deps:
+            edges[c.path] = deps
+    return {"children": nodes, "edges": edges}
+
+
+def _render_summary(root_task: Task | None) -> str:
     """Render the summary_bar.html template for *root_task*'s tree."""
-    if root_task is None:
-        root_task = _root_task
     env = _get_jinja_env()
     template = env.get_template("summary_bar.html")
     all_tasks = collect_all_tasks(root_task) if root_task else []
@@ -739,7 +891,7 @@ def _render_summary(root_task: Task | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -756,6 +908,11 @@ async def lifespan(app: FastAPI):
     re-enters this context at the ``yield`` and cancels all watchers).
     """
     rebuild_tree()
+    # Warm the lazy-init Jinja env on the loop thread before any request can
+    # reach it: /export's blocking render now runs in a threadpool worker
+    # (asyncio.to_thread) and would otherwise race a concurrent route handler
+    # on the same check-then-set of the module-global cache.
+    _get_jinja_env()
     monitor_task = asyncio.create_task(_idle_monitor(timeout=IDLE_TIMEOUT))
     try:
         yield
@@ -837,13 +994,20 @@ def _discovered_worktree_map() -> dict[str, Path]:
     return result
 
 
-def resolve_worktree(request: Request) -> WorktreeState:
+async def resolve_worktree(request: Request) -> WorktreeState:
     """Resolve the WorktreeState a request targets via its ``?wt=<name>`` param.
 
     Falls back to the launch worktree when ``?wt=`` is absent (preserving today's
     behavior and standalone export).  Builds and caches a worktree's state lazily
     on first use.  Raises 404 only when ``?wt=`` names a value that is neither the
     launch worktree nor any discovered worktree.
+
+    The cache-hit path (the common case) is a plain dict lookup and stays on the
+    event loop.  Only the cache-miss path — discovering worktrees (git
+    subprocesses) and walking a new worktree's task tree — runs off-loop via
+    ``asyncio.to_thread``; the ``_worktree_cache`` write happens back on the loop
+    after the awaited work returns, so the cache itself is never mutated from a
+    worker thread.
     """
     wt_name = request.query_params.get("wt")
     if not wt_name or wt_name == _launch_wt_id:
@@ -856,11 +1020,11 @@ def resolve_worktree(request: Request) -> WorktreeState:
     if cached is not None:
         return cached
 
-    plan_root = _discovered_worktree_map().get(wt_name)
+    plan_root = await asyncio.to_thread(lambda: _discovered_worktree_map().get(wt_name))
     if plan_root is None:
         raise HTTPException(status_code=404, detail=f"Unknown worktree: {wt_name}")
 
-    state = _build_worktree_state(wt_name, plan_root)
+    state = await asyncio.to_thread(_build_worktree_state, wt_name, plan_root)
     _worktree_cache[wt_name] = state
     return state
 
@@ -870,7 +1034,7 @@ def resolve_worktree(request: Request) -> WorktreeState:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Serve the full dashboard page."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -895,29 +1059,71 @@ async def index(request: Request):
     return HTMLResponse(content=html)
 
 
-# --- Route: GET /tree (tree HTML fragment for AJAX full-reload fallback) ----
+# --- Route: GET /static/{name} (dashboard CSS/JS + vendored render libs) ---
 
-@app.get("/tree", response_class=HTMLResponse)
-async def tree_fragment(request: Request):
-    """Return just the task tree HTML nodes (no page chrome)."""
-    state = resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    # Re-use the same rendering logic as base.html: if root has body, render
-    # it as a node; otherwise render its children at depth 0.
-    template = env.from_string(
-        '{%- from "task_node.html" import render_task_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_task_node(root_task, project_root, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_task_node(child, project_root, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    html = template.render(root_task=state.root_task, project_root=state.project_root)
-    return HTMLResponse(content=html)
+def _resource_dir(name: str):
+    if __package__:
+        return resources.files(__package__).joinpath(name)
+    return Path(__file__).parent / name
+
+
+_VENDOR_DIR = _resource_dir("vendor")
+_TEMPLATES_DIR = _resource_dir("templates")
+
+# Content-Type per served static asset; also the whitelist of servable names.
+# Served from _TEMPLATES_DIR (base.html's extracted CSS/JS).
+_STATIC_ASSET_TYPES = {
+    "dashboard.css": "text/css; charset=utf-8",
+    "dashboard.js": "text/javascript; charset=utf-8",
+}
+
+# Content-Type per vendored render-library asset; also the whitelist of names
+# servable from _VENDOR_DIR. Names may include a subpath (e.g. "fonts/...",
+# "languages/...") to match the on-disk vendor/ layout, since katex.min.css and
+# highlight.min.js reference those siblings by relative URL. Keeps live mode
+# (this route) and the standalone export (_build_standalone_assets) reading
+# the same vendored files, so the dashboard needs no network access beyond the
+# Google Fonts CDN link in base.html. See vendor/README.md for pinned versions.
+_VENDOR_ASSET_TYPES = {
+    "htmx.min.js": "text/javascript; charset=utf-8",
+    "sse.js": "text/javascript; charset=utf-8",
+    "markdown-it.min.js": "text/javascript; charset=utf-8",
+    "katex.min.js": "text/javascript; charset=utf-8",
+    "katex.min.css": "text/css; charset=utf-8",
+    "texmath.min.js": "text/javascript; charset=utf-8",
+    "highlight.min.js": "text/javascript; charset=utf-8",
+    "languages/julia.min.js": "text/javascript; charset=utf-8",
+    "purify.min.js": "text/javascript; charset=utf-8",
+    **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
+}
+
+
+@app.get("/static/{name:path}")
+async def static_asset(name: str, request: Request):
+    """Serve base.html's extracted CSS/JS and the vendored render libraries as
+    cacheable static files instead of re-templating/re-fetching them on every
+    page load. ETag-revalidated so an edit during development (or a re-pin)
+    is picked up on the next request even under the 1-hour ``max-age``; the
+    standalone export inlines the same files verbatim instead (see
+    ``_build_standalone_assets``).
+    """
+    if name in _VENDOR_ASSET_TYPES:
+        content_type = _VENDOR_ASSET_TYPES[name]
+        source_dir = _VENDOR_DIR
+    else:
+        content_type = _STATIC_ASSET_TYPES.get(name)
+        source_dir = _TEMPLATES_DIR
+    if content_type is None:
+        raise HTTPException(status_code=404, detail="Unknown static asset")
+    try:
+        data = (source_dir / name).read_bytes()
+    except OSError:
+        raise HTTPException(status_code=404, detail="Unknown static asset")
+    etag = f'"{hashlib.sha256(data).hexdigest()[:16]}"'
+    headers = {"ETag": etag, "Cache-Control": "public, max-age=3600"}
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    return Response(content=data, media_type=content_type, headers=headers)
 
 
 # --- Route: GET /nav (navigation-only tree fragment) -----------------------
@@ -926,25 +1132,13 @@ async def tree_fragment(request: Request):
 async def nav_fragment(request: Request):
     """Return the navigation-only tree (rows, no task bodies) for the sidebar.
 
-    Mirrors /tree's root-or-children logic but renders nav_node (body-free).
-    Children are inlined to depth 2; depth >=3 children are lazy-load stubs
-    fetched via /nav/{path}.
+    Renders the root-or-children (nav_node, body-free). Children are inlined
+    to depth 2; depth >=3 children are lazy-load stubs fetched via /nav/{path}.
     """
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_nav_node(root_task, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_nav_node(child, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    html = template.render(root_task=state.root_task)
+    html = _render_root_or_children(state.root_task)
     return HTMLResponse(content=html)
 
 
@@ -954,13 +1148,13 @@ async def nav_fragment(request: Request):
 async def sse_events(request: Request):
     """Server-Sent Events endpoint for live updates, scoped to one worktree.
 
-    The worktree is resolved from ``?wt=`` (task 01's resolver; default = launch
+    The worktree is resolved from ``?wt=`` (``resolve_worktree``; default = launch
     worktree).  The client's queue is registered under that worktree *before* its
     watcher is ensured, so no change emitted during watcher startup is lost.  On
     disconnect the queue is removed and, if it was the worktree's last client,
     its watcher is stopped.
     """
-    wt = resolve_worktree(request).wt_id
+    wt = (await resolve_worktree(request)).wt_id
 
     async def event_generator() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
@@ -981,11 +1175,16 @@ async def sse_events(request: Request):
                     message = await asyncio.wait_for(
                         queue.get(), timeout=HEARTBEAT_INTERVAL
                     )
+                    if message is _QUEUE_CLOSE:
+                        # This client's queue overflowed (slow/stalled
+                        # consumer): end the stream here instead of idling on
+                        # a connection nothing will ever drain, so `finally`
+                        # below removes it promptly and the idle monitor's
+                        # open-connection count stays truthful.
+                        return
                     yield message
                 except asyncio.TimeoutError:
                     yield ": heartbeat\n\n"
-        except asyncio.CancelledError:
-            pass
         finally:
             clients = _worktree_clients.get(wt)
             if clients is not None:
@@ -1008,27 +1207,32 @@ async def sse_events(request: Request):
 # --- Route: GET /dag ---------------------------------------------------------
 
 @app.get("/dag", response_class=HTMLResponse)
-async def dag_view(request: Request, root: str | None = None):
-    """Render the DAG mermaid diagram partial.
-
-    Without ``root``: the global view over the whole tree, clustered by subtree.
-    With ``root=<task path>``: an inline per-subtree panel scoped to that task's
-    direct children (their sibling dependency graph), reusing the same template.
-    """
-    state = resolve_worktree(request)
+async def dag_view(request: Request):
+    """Render the DAG mermaid diagram — the global view over the whole tree,
+    clustered by subtree. The children dependency panel no longer scopes this
+    route to a subtree; it fetches GET /api/children-graph instead."""
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("dag.html")
-    if root:
-        sub_root = _find_task(state, root)
-        if sub_root is None:
-            raise HTTPException(status_code=404, detail=f"Task not found: {root}")
-        # Scope to the parent's direct children — the sibling-only graph.
-        sub_tasks = list(sub_root.children)
-        return HTMLResponse(content=template.render(root_task=sub_root, all_tasks=sub_tasks))
     all_tasks = collect_all_tasks(state.root_task)
     return HTMLResponse(content=template.render(root_task=state.root_task, all_tasks=all_tasks))
+
+
+# --- Route: GET /api/children-graph ------------------------------------------
+
+@app.get("/api/children-graph")
+async def children_graph(request: Request, root: str):
+    """JSON payload for the children dependency panel: *root*'s direct children
+    (path, slug, title, status) plus their sibling dependency edges."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    sub_root = _find_task(state, root)
+    if sub_root is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {root}")
+    return _children_graph_payload(sub_root)
 
 
 # --- Route: GET /kanban ------------------------------------------------------
@@ -1036,7 +1240,7 @@ async def dag_view(request: Request, root: str | None = None):
 @app.get("/kanban", response_class=HTMLResponse)
 async def kanban_view(request: Request):
     """Render the kanban board partial."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
@@ -1050,7 +1254,7 @@ async def kanban_view(request: Request):
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     file_path = Path(state.project_root) / path
     resolved = file_path.resolve()
     project_resolved = Path(state.project_root).resolve()
@@ -1065,19 +1269,14 @@ async def serve_file(path: str, request: Request):
 
 
 # --- Comment routes --------------------------------------------------------
-# These use /api/ prefix to avoid ambiguity with the catch-all /task/{path:path}
-# route.  The {path:path} parameter is greedy and would swallow /task/x/comments
-# as path="x/comments".  Templates should call /api/task/PATH/comments etc.
+# These use /api/ prefix to avoid ambiguity with the other catch-all
+# {path:path} routes (/nav/{path}, /node/{path}), which are greedy and would
+# swallow /task/x/comments as path="x/comments".  Templates should call
+# /api/task/PATH/comments etc.
 
-@app.get("/api/comments/summary")
-async def comments_summary(request: Request):
-    """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
-    if not _COMMENTS_AVAILABLE:
-        raise HTTPException(status_code=501, detail="Comments module not available")
-    state = resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-
+def _comments_summary_sync(root_task: Task) -> dict[str, int]:
+    """Blocking core of ``/api/comments/summary``: one ``comments.yaml`` read per
+    task.  Builds a local dict only, so it is safe to run off-loop."""
     result: dict[str, int] = {}
 
     def _walk(task: Task) -> None:
@@ -1088,8 +1287,20 @@ async def comments_summary(request: Request):
         for child in task.children:
             _walk(child)
 
-    _walk(state.root_task)
+    _walk(root_task)
     return result
+
+
+@app.get("/api/comments/summary")
+async def comments_summary(request: Request):
+    """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
+    if not _COMMENTS_AVAILABLE:
+        raise HTTPException(status_code=501, detail="Comments module not available")
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+
+    return await asyncio.to_thread(_comments_summary_sync, state.root_task)
 
 
 @app.get("/api/search-index")
@@ -1098,7 +1309,7 @@ async def search_index(request: Request):
     node ({path, slug, title, text}).  The page embeds this index at render time;
     the client re-fetches here on a structural full-reload so live search reflects
     the current tree state."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     all_tasks = collect_all_tasks(state.root_task)
@@ -1110,7 +1321,7 @@ async def create_comment(path: str, request: Request):
     """Create a comment on a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     body = await request.json()
@@ -1130,7 +1341,7 @@ async def list_comments(path: str, request: Request):
     """List comments for a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     comments = load_comments(task.dir_path)
@@ -1160,7 +1371,7 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
     """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
 
@@ -1187,7 +1398,7 @@ async def remove_comment(path: str, comment_id: int, request: Request):
     """Delete a comment."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     deleted = delete_comment(task.dir_path, comment_id)
@@ -1198,17 +1409,10 @@ async def remove_comment(path: str, comment_id: int, request: Request):
 
 # --- Worktree routes -------------------------------------------------------
 
-@app.get("/api/worktrees")
-async def list_worktrees():
-    """Return discovered worktrees with plan info, ordered by last activity.
-
-    Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
-    matching task 01's basename map with longest-unique-suffix disambiguation).
-    ``launch_wt_id`` names the default worktree (the one the server launched in);
-    the client marks the *current* selection from the URL's ``?wt=`` and falls
-    back to ``launch_wt_id`` when the URL names none.  There is no server-global
-    "current worktree": under per-request resolution it would only drift.
-    """
+def _list_worktrees_sync() -> dict:
+    """Blocking core of ``/api/worktrees``: discovery spawns a ``git`` subprocess
+    per worktree (``worktree list``, ``rev-parse``, ``log -1``), so this is run
+    off-loop in its entirety and only reads module state (no mutation)."""
     launch_dir = str(PLAN_ROOT.resolve().parent)
     all_wts = discover_worktrees()
     if not all_wts:
@@ -1269,36 +1473,36 @@ async def list_worktrees():
     }
 
 
+@app.get("/api/worktrees")
+async def list_worktrees():
+    """Return discovered worktrees with plan info, ordered by last activity.
+
+    Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
+    matching ``_discovered_worktree_map``'s basename map with longest-unique-suffix
+    disambiguation).
+    ``launch_wt_id`` names the default worktree (the one the server launched in);
+    the client marks the *current* selection from the URL's ``?wt=`` and falls
+    back to ``launch_wt_id`` when the URL names none.  There is no server-global
+    "current worktree": under per-request resolution it would only drift.
+    """
+    return await asyncio.to_thread(_list_worktrees_sync)
+
+
 # The former ``POST /api/worktree/switch`` is retired.  "Switching" is now a
 # client navigation to a different ``?wt=`` URL (per-request resolution, task 03);
 # there is no global mutation and no all-clients full-reload broadcast.  The
 # selector's onchange pushes a new ``?wt=`` and re-renders that worktree in place.
 
 
-# --- Route: GET /task/{path} -----------------------------------------------
-# MUST come after comment routes — {path:path} is greedy and would swallow
-# suffixes like /comments or /comment/123.
-
-@app.get("/task/{path:path}", response_class=HTMLResponse)
-async def get_task(path: str, request: Request):
-    """Return an HTML fragment with the children of the task at *path*."""
-    state = resolve_worktree(request)
-    task = _find_task(state, path)
-    if task is None:
-        raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    html = _render_task_fragment(task, state.project_root)
-    return HTMLResponse(content=html)
-
-
 # --- Route: GET /nav/{path} (nav-only lazy children) -----------------------
-# {path:path} is greedy; keep after the comment routes for the same reason as
-# /task/{path}.  Returns body-free children so deep sidebar nodes lazy-load
-# without pulling task bodies.
+# {path:path} is greedy — MUST come after comment routes, or it would swallow
+# suffixes like /comments or /comment/123.  Returns body-free children so deep
+# sidebar nodes lazy-load without pulling task bodies.
 
 @app.get("/nav/{path:path}", response_class=HTMLResponse)
 async def get_nav(path: str, request: Request):
     """Return a navigation-only fragment with the children of the task at *path*."""
-    task = _find_task(resolve_worktree(request), path)
+    task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     html = _render_nav_children(task)
@@ -1314,7 +1518,7 @@ async def get_nav(path: str, request: Request):
 @app.get("/node/{path:path}", response_class=HTMLResponse)
 async def get_node(path: str, request: Request):
     """Return the body-only HTML fragment for the task at *path*."""
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     task = _find_task(state, path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
@@ -1335,23 +1539,20 @@ async def export_subtree(request: Request, root: str = ""):
     Empty *root* exports the whole tree.  The rendered HTML is identical to
     ``plan_dashboard.py generate [--root <path>]``: server-less, all fragments
     embedded inline, opens via ``file://``.  Resolves the worktree per request
-    (defaulting to the launch worktree) and exports exactly that one worktree;
-    restores live module state after rendering so the running server is
-    unaffected.
+    (defaulting to the launch worktree) and exports exactly that one worktree.
+    ``render_standalone_html`` takes its render state as parameters, so this
+    render cannot perturb the running server's live state.  It re-walks the
+    tree, renders every fragment, and base64-encodes figures/vendor assets, so
+    the call runs off-loop — other requests and the SSE heartbeat stay live
+    while a large export renders.
     """
-    state = resolve_worktree(request)
+    state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     if root and _find_task(state, root) is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
 
-    # render_standalone_html drives module state (_root_task/_task_index) the way
-    # generate_dashboard does, so snapshot and restore the live server's state.
-    saved_root, saved_index, saved_project = _root_task, _task_index, _project_root
-    try:
-        html = render_standalone_html(state.plan_root, root=root or None)
-    finally:
-        _set_module_state(saved_root, saved_index, saved_project)
+    html = await asyncio.to_thread(render_standalone_html, state.plan_root, root=root or None)
 
     slug = root.rsplit("/", 1)[-1] if root else (state.root_task.slug or "plan")
     # Sanitize before interpolating into the quoted Content-Disposition value:
@@ -1370,55 +1571,49 @@ async def export_subtree(request: Request, root: str = ""):
 # ---------------------------------------------------------------------------
 # The `generate` subcommand renders the SAME base.html template the live server
 # serves, in standalone mode: every fragment the live client fetches (/nav,
-# /nav/<path>, /node/<path>, /dag?root=<path>, /kanban) is pre-rendered here with
-# the identical Jinja partials and embedded inline, and base.html's standalone
-# fetch shim resolves the client's fetch() calls from that embedded map. There
-# is exactly one dashboard source (base.html + its partials); no duplicate
-# template string.
+# /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban) is
+# pre-rendered here with the identical Jinja partials/render helpers and
+# embedded inline, and base.html's standalone fetch shim resolves the client's
+# fetch() calls from that embedded map. There is exactly one dashboard source
+# (base.html + its partials); no duplicate template string.
 
 
-def _build_standalone_fragments() -> dict[str, str]:
+def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     """Pre-render every server fragment the standalone client fetches.
 
-    Mirrors the live routes (/nav, /nav/<path>, /node/<path>, /dag?root=<path>,
-    /kanban) byte-for-byte by reusing the same render helpers, keyed by the exact
-    URL the client requests so base.html's standaloneFetch resolves them offline.
-    Assumes module state (``_root_task``, ``_project_root``) is already set.
+    Mirrors the live routes (/nav, /nav/<path>, /node/<path>,
+    /api/children-graph?root=<path>, /kanban) byte-for-byte (JSON fragments
+    value-for-value) by reusing the same render helpers, keyed by the exact URL
+    the client requests so base.html's standaloneFetch resolves them offline.
+    Takes the render state explicitly via *state* (its ``root_task`` and
+    ``project_root``) instead of module globals.
     """
-    assert _root_task is not None
-    fragments: dict[str, str] = {}
+    root_task = state.root_task
+    assert root_task is not None
+    fragments: dict[str, object] = {}
 
     # /nav — the body-free sidebar tree (root-or-children logic, depth<3 inline).
     env = _get_jinja_env()
-    nav_tmpl = env.from_string(
-        '{%- from "nav_node.html" import render_nav_node -%}'
-        '{% if root_task.body and root_task.body.strip() %}'
-        '{{ render_nav_node(root_task, depth=0) }}'
-        '{% else %}'
-        '{% for child in root_task.children %}'
-        '{{ render_nav_node(child, depth=0) }}'
-        '{% endfor %}'
-        '{% endif %}'
-    )
-    fragments["/nav"] = nav_tmpl.render(root_task=_root_task)
+    fragments["/nav"] = _render_root_or_children(root_task)
 
-    # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
-    # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).
-    # All three are keyed by the bare (decoded) path. /node and /nav are fetched
-    # with raw string concatenation client-side, so their URLs carry the path
-    # un-encoded. /dag is fetched with encodeURIComponent(path), which escapes the
-    # '/' of a multi-segment path to %2F — so the standalone fetch shim decodes
-    # the URL before the map lookup, matching all three against these bare keys.
-    # Include the root itself, not just its descendants: the client fetches the
-    # root's /node/ body and /dag?root= children-graph on initial load.
-    # collect_all_tasks excludes the root, so without it the root card shows
-    # "Could not load this task" — and a leaf-only subtree export (root with no
-    # children) embeds no node body at all. /nav/<path> stays descendants-only
-    # (the root is served by the main /nav fragment, never /nav/).
-    all_tasks = collect_all_tasks(_root_task)
-    for task in [_root_task, *all_tasks]:
-        fragments[f"/node/{task.path}"] = _render_node_body(task)
-        fragments[f"/dag?root={task.path}"] = _render_dag_fragment(task)
+    # Per-task fragments: /node/<path>, /api/children-graph?root=<path>, and
+    # /nav/<path> for any non-leaf (the depth>=3 lazy branches the sidebar
+    # requests on first open). All three are keyed by the bare (decoded) path.
+    # /node and /nav are fetched with raw string concatenation client-side, so
+    # their URLs carry the path un-encoded. /api/children-graph is fetched with
+    # encodeURIComponent(path), which escapes the '/' of a multi-segment path to
+    # %2F — so the standalone fetch shim decodes the URL before the map lookup,
+    # matching all three against these bare keys. Include the root itself, not
+    # just its descendants: the client fetches the root's /node/ body and
+    # /api/children-graph payload on initial load. collect_all_tasks
+    # excludes the root, so without it the root card shows "Could not load this
+    # task" — and a leaf-only subtree export (root with no children) embeds no
+    # node body at all. /nav/<path> stays descendants-only (the root is served
+    # by the main /nav fragment, never /nav/).
+    all_tasks = collect_all_tasks(root_task)
+    for task in [root_task, *all_tasks]:
+        fragments[f"/node/{task.path}"] = _render_node_body(task, state.project_root)
+        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 
@@ -1427,14 +1622,6 @@ def _build_standalone_fragments() -> dict[str, str]:
     fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
 
     return fragments
-
-
-def _render_dag_fragment(task: Task) -> str:
-    """Render dag.html scoped to a task's direct children — the same payload the
-    live ``GET /dag?root=<path>`` route returns (sibling-only graph)."""
-    env = _get_jinja_env()
-    template = env.get_template("dag.html")
-    return template.render(root_task=task, all_tasks=list(task.children))
 
 
 def _rebase_subtree(task: Task, root_path: str) -> Task:
@@ -1461,26 +1648,11 @@ def _rebase_subtree(task: Task, root_path: str) -> Task:
     return _rebase(task)
 
 
-def _set_module_state(root_task: Task | None, index: dict[str, Task], project_root: str) -> None:
-    """Set the render-helper module state in one place (used to snapshot/restore
-    around a standalone render that must not perturb a live server)."""
-    global _root_task, _task_index, _project_root
-    _root_task = root_task
-    _task_index = index
-    _project_root = project_root
-
-
 # ---------------------------------------------------------------------------
 # Standalone embedding — figures (base64 data URIs) and vendored render libs
+# (_resource_dir / _VENDOR_DIR / _TEMPLATES_DIR are defined above, by the
+# GET /static/{name} route, which needs them too)
 # ---------------------------------------------------------------------------
-
-def _resource_dir(name: str):
-    if __package__:
-        return resources.files(__package__).joinpath(name)
-    return Path(__file__).parent / name
-
-
-_VENDOR_DIR = _resource_dir("vendor")
 
 # Image extension -> MIME, for the data: URI of an embedded figure.
 _IMG_MIME = {
@@ -1601,32 +1773,42 @@ def _inline_katex_css(css: str, fonts_dir: Path) -> str:
 
 
 def _build_standalone_assets() -> dict[str, str]:
-    """Read the vendored render libraries and return the inlined JS/CSS strings the
-    standalone template emits in place of the CDN ``<link>``/``<script>`` tags.
+    """Read the vendored render libraries + the dashboard's own CSS/JS and return
+    the inlined strings the standalone template emits in place of the live
+    ``/static/{name}`` routes (both read the same vendored files; live mode
+    serves them, standalone inlines them).
 
-    Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` / ``hljs_js`` /
-    ``hljs_julia_js`` / ``purify_js`` (raw minified JS, emitted as inline
-    ``<script>`` bodies) and ``katex_css`` (KaTeX CSS with every ``@font-face``
-    rewritten to a base64 woff2 ``data:`` URI, emitted as an inline ``<style>``).
+    Returns ``htmx_js`` / ``sse_js`` / ``markdown_it_js`` / ``katex_js`` /
+    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``purify_js`` /
+    ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
+    ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as inline ``<style>``
+    bodies; ``katex_css`` additionally has every ``@font-face`` rewritten to a
+    base64 woff2 ``data:`` URI).
     """
-    def _read_js(name: str) -> str:
-        # Guard against a future re-pin whose body contains a literal </script>
-        # that would prematurely close the inline block (none do today).
-        text = (_VENDOR_DIR / name).read_text(encoding="utf-8")
+    def _read_js(directory: Path, name: str) -> str:
+        # Guard against a future re-pin/edit whose body contains a literal
+        # </script> that would prematurely close the inline block (none do today).
+        text = (directory / name).read_text(encoding="utf-8")
         return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
 
     fonts_dir = _VENDOR_DIR / "fonts"
-    css = (_VENDOR_DIR / "katex.min.css").read_text(encoding="utf-8")
-    css = _inline_katex_css(css, fonts_dir)
-    css = re.sub(r"</(style)", r"<\\/\1", css, flags=re.IGNORECASE)
+    katex_css = (_VENDOR_DIR / "katex.min.css").read_text(encoding="utf-8")
+    katex_css = _inline_katex_css(katex_css, fonts_dir)
+    katex_css = re.sub(r"</(style)", r"<\\/\1", katex_css, flags=re.IGNORECASE)
+    dashboard_css = (_TEMPLATES_DIR / "dashboard.css").read_text(encoding="utf-8")
+    dashboard_css = re.sub(r"</(style)", r"<\\/\1", dashboard_css, flags=re.IGNORECASE)
     return {
-        "markdown_it_js": _read_js("markdown-it.min.js"),
-        "katex_js": _read_js("katex.min.js"),
-        "texmath_js": _read_js("texmath.min.js"),
-        "hljs_js": _read_js("highlight.min.js"),
-        "hljs_julia_js": _read_js("languages/julia.min.js"),
-        "purify_js": _read_js("purify.min.js"),
-        "katex_css": css,
+        "htmx_js": _read_js(_VENDOR_DIR, "htmx.min.js"),
+        "sse_js": _read_js(_VENDOR_DIR, "sse.js"),
+        "markdown_it_js": _read_js(_VENDOR_DIR, "markdown-it.min.js"),
+        "katex_js": _read_js(_VENDOR_DIR, "katex.min.js"),
+        "texmath_js": _read_js(_VENDOR_DIR, "texmath.min.js"),
+        "hljs_js": _read_js(_VENDOR_DIR, "highlight.min.js"),
+        "hljs_julia_js": _read_js(_VENDOR_DIR, "languages/julia.min.js"),
+        "purify_js": _read_js(_VENDOR_DIR, "purify.min.js"),
+        "dashboard_js": _read_js(_TEMPLATES_DIR, "dashboard.js"),
+        "katex_css": katex_css,
+        "dashboard_css": dashboard_css,
     }
 
 
@@ -1677,15 +1859,17 @@ def render_standalone_html(
 ) -> str:
     """Render the self-contained standalone dashboard HTML and return it.
 
-    Drives the render-helper module state (``_root_task`` / ``_task_index`` /
-    ``_project_root``) the same way the serve lifespan does, renders base.html in
-    standalone mode with every server fragment pre-rendered and embedded inline,
-    and returns the HTML string (no file write).  When *root* names a task path,
-    the export is scoped to that subtree: the node is located in the full tree,
-    re-based so it becomes the root, and the embedded data / pre-rendered
-    fragments / nav cover exactly that subtree.  Whole-tree export (``root=None``)
-    is unchanged.  *output_path* (when given) only fixes where ``<img>`` sources
-    resolve from a ``file://`` open; the HTML itself is not written here.
+    Builds an explicit, throwaway ``WorktreeState`` for the scoped root and
+    project root and threads it through the render helpers — no module-global
+    render state is touched, so this cannot perturb a live server.  Renders
+    base.html in standalone mode with every server fragment pre-rendered and
+    embedded inline, and returns the HTML string (no file write).  When *root*
+    names a task path, the export is scoped to that subtree: the node is
+    located in the full tree, re-based so it becomes the root, and the
+    embedded data / pre-rendered fragments / nav cover exactly that subtree.
+    Whole-tree export (``root=None``) is unchanged.  *output_path* (when given)
+    only fixes where ``<img>`` sources resolve from a ``file://`` open; the
+    HTML itself is not written here.
     *repo_file_base* optionally points file links at a repository browser base
     such as ``https://github.com/owner/repo/blob/sha`` instead of local editor
     links.  *repo_root_prefix* is the resolved root's path relative to the repo
@@ -1717,12 +1901,10 @@ def render_standalone_html(
         scoped_root = full_root
         subtree_dir = plan_root
 
-    index: dict[str, Task] = {}
-    _build_index(scoped_root, index)
-    _set_module_state(scoped_root, index, project_root)
+    state = WorktreeState(wt_id="", plan_root=plan_root, project_root=project_root, root_task=scoped_root)
 
     all_tasks = collect_all_tasks(scoped_root)
-    fragments = _build_standalone_fragments()
+    fragments = _build_standalone_fragments(state)
 
     # Where the embedded task tree sits relative to the dashboard file, so
     # standalone <img> sources resolve from a file:// open.  Tasks reference
@@ -2126,7 +2308,7 @@ def serve_background(
     repo_id = _repo_id(git_common_dir, plan_root)
 
     def _announce_reuse(reuse_pid: int, reuse_port: int) -> int:
-        reuse_url = f"http://localhost:{reuse_port}"
+        reuse_url = _dashboard_url(reuse_port, plan_root)
         print(f"Dashboard already running at {reuse_url} (PID {reuse_pid})")
         if open_browser:
             webbrowser.open(reuse_url)
@@ -2134,7 +2316,7 @@ def serve_background(
 
     def _spawn(target_port: int) -> int:
         """Spawn a detached server on *target_port*, wait for it, handle races."""
-        url = f"http://localhost:{target_port}"
+        url = _dashboard_url(target_port, plan_root)
         # ``start_new_session`` puts the child in its own session so it outlives
         # the launching shell; stdio is redirected to the log file (no TTY).
         cmd = [
@@ -2494,7 +2676,7 @@ def main(argv: list[str] | None = None) -> None:
         # the token the supervisor probes against; else derive it here.
         REPO_ID = args.repo_id or _repo_id(git_common_dir, PLAN_ROOT)
         port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
-        url = f"http://localhost:{port}"
+        url = _dashboard_url(port, PLAN_ROOT)
 
         if args.foreground:
             # Blocking console mode: logs on stdout, Ctrl+C or idle self-exit.

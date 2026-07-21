@@ -15,13 +15,14 @@ Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE 
 
 ## Results
 
-Workstream rollup (as of 2026-07-01, after the 0.3.0 consolidation pass):
+Workstream rollup (as of 2026-07-21, including the `0.3.2` cleanup release):
 
-- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and the workflow redesigns. Approved and integrated on `better-handoff`.
-- [docs-site](docs-site/task.md) — the public documentation site (dogfooded task-tree doc source, GitHub Pages deploy) and README front door. Approved; its `10-version-switcher` child is postponed post-launch work.
+- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and workflow redesigns. Prior work was integrated on `better-handoff`; the workstream is in progress pending the dashboard's `nonloopback-host-serve` child.
+- [docs-site](docs-site/task.md) — the shipped public documentation site (dogfooded task-tree doc source, GitHub Pages deploy) and README front door. The workstream is postponed, including its `10-version-switcher` post-launch child.
 - [showcase-analysis](showcase-analysis/task.md) — the real CAPM-vs-FF3 asset-pricing study that serves as the docs showcase; its tree and figures are a live input to `docs/build_site.sh`.
 - [zotero-skills](zotero-skills/task.md) — Zotero paper-reading, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` skill.
 - [slide-design-vertical](slide-design-vertical/task.md) — the slide-design domain vertical.
-- [upstream-fork-cleanup](upstream-fork-cleanup/task.md) — open follow-up: retire upstream superpowers-fork remnants.
+- [literature-review](literature-review/task.md) — the economics/finance literature-review utility: search, screening, citation snowballing, provenance, paper extraction, and Zotero save support.
+- [upstream-fork-cleanup](upstream-fork-cleanup/task.md) — completed `0.3.2` retirement of inactive upstream packaging, documentation, and tests; maintained Claude, marketplace, and Codex manifests are aligned and the compatibility and release-audit checks pass.
 
 Per-workstream detail lives in each child's `## Results`; integration and release history lives in the git log and `RELEASE-NOTES.md`.

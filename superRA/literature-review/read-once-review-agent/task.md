@@ -51,7 +51,7 @@ Part 1 interactive setup additionally elicits the comparison columns alongside t
 - `review-agent.md` states "materialize many, claim before read", write-as-you-go, the hop/budget bounds with stub-and-report beyond them, and both edge-triage modes (citation context from the source being read; metadata for bulk edge lists) as explicit protocol.
 - `workflow.md` states the parallel-dispatch exception, two loose dispatch types, lead-sweep cadence, main-agent permanent-record placement, and policy-gated Zotero trigger as explicit checkable statements.
 - `grounding-and-extraction.md` describes the hybrid with the empty-matrix (narrative-only) case; invariants read as mandatory independent of shape.
-- `python3 skills/report-in-markdown/scripts/check_markdown.py` runs clean over every changed markdown file; the skill-trigger test still passes.
+- `python3 skills/report-in-markdown/scripts/check_markdown.py` runs clean over every changed markdown file; the cross-harness packaging check still passes.
 
 ## Planner Guidance
 

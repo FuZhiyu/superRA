@@ -1,0 +1,80 @@
+name: Release version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".claude-plugin/plugin.json"
+      - ".claude-plugin/marketplace.json"
+      - ".codex-plugin/plugin.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Keep release creation serialized: a completed version bump is the source of
+# truth, and an existing release tag makes reruns no-ops.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify version manifests agree
+        run: scripts/bump-version.sh --check
+
+      - name: Read the version
+        id: version
+        run: |
+          version="$(jq -r '.version' .claude-plugin/plugin.json)"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo ".claude-plugin/plugin.json must contain a stable X.Y.Z version; found: $version" >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Extract this version's release notes
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          python3 - <<'PY' > release-notes.md
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          notes = Path("RELEASE-NOTES.md").read_text(encoding="utf-8")
+          match = re.search(
+              rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)",
+              notes,
+              flags=re.MULTILINE | re.DOTALL,
+          )
+          if match is None or not match.group(1).strip():
+              sys.exit(f"RELEASE-NOTES.md needs a non-empty ## [{version}] section")
+          print(match.group(1).strip())
+          PY
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+          TARGET: ${{ github.sha }}
+        run: |
+          tag="v$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; nothing to do."
+            exit 0
+          fi
+          gh release create "$tag" \
+            --target "$TARGET" \
+            --title "$tag" \
+            --notes-file release-notes.md

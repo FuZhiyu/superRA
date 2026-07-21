@@ -6,7 +6,7 @@ Before your first substantive response:
 
 - Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-tree` §CLI Setup.
 - Run `./superRA/superra task tree` for the full status summary.
-- Ensure the live dashboard is up for this repo without opening a browser: run `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached, and prints `…localhost:<port>`).
+- Ensure the live dashboard is up for this repo without opening a browser: run `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached) and retain its emitted scoped URL.
 - If `PLAN.md` exists without a `superRA/` directory, the project predates the `superRA/` task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer migration via `superra task migrate from-plan`, and point them to the superRA docs at http://fuzhiyu.me/superRA/ for details.
 
 ## Resuming Work
@@ -25,11 +25,7 @@ When the task tree changes materially — a task added, removed, or restructured
 
 After any action that changes what the tree shows the researcher — a structural or material edit (add / remove / move / replan / update a task), a status transition that completes a stage, or maturation / consolidation — give the user the affected task's live URL so they can watch it update:
 
-```
-http://localhost:<port>/?wt=<worktree-basename>#/<task-path>
-```
-
-`<port>` is from the launch line in §Session Start Actions; always include `?wt=<worktree-basename>` — this worktree's directory name (`basename` of the worktree root); `<task-path>` is the `superra task read` locator (no `superRA/` prefix, empty for the tree root).
+Append `#/<task-path>` to the scoped URL retained in §Session Start Actions; do not reconstruct its selector. `<task-path>` is the `superra task read` locator (no `superRA/` prefix, empty for the tree root).
 
 ## Proceeding and Pausing
 

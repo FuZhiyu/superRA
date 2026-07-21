@@ -44,7 +44,7 @@ from _comments import (
 )
 
 # Shared helpers — canonical definitions live in conftest.py.
-from conftest import _write_task_md, _write_tiny_png, _serve_plan
+from conftest import _launch_state, _write_task_md, _write_tiny_png, _serve_plan
 
 
 def _workflow_lines(content: str) -> list[str]:
@@ -135,7 +135,6 @@ def client(plan_root):
 
     # Reset module-level state
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
 
@@ -148,8 +147,9 @@ def client(plan_root):
 def flow_plan_root(tmp_path):
     """A plan tree with one parent whose direct children form a branching
     dependency chain (a -> b, a -> c, b -> d) and a second parent whose
-    children have no inter-child dependency.  Exercises the GET /dag?root=
-    data contract that base.html's children panel parses into cards.
+    children have no inter-child dependency.  Exercises the GET
+    /api/children-graph?root= data contract that base.html's children panel
+    renders into cards.
 
     Statuses are deliberately varied so per-child fill colors are testable.
     """
@@ -195,7 +195,6 @@ def flow_client(flow_plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = flow_plan_root
-    plan_dashboard._project_root = str(flow_plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
     with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
@@ -244,24 +243,6 @@ class TestServerRoutes:
         assert 'id="btn-kanban"' in text
         assert 'id="btn-dag"' not in text
 
-    def test_get_task_returns_children_fragment(self, client, plan_root):
-        # Add children to 01-first so the fragment has content
-        child = plan_root / "01-first" / "sub"
-        child.mkdir()
-        _write_task_md(child / "task.md", "Sub Task", "not-started",
-                       objective="A child.")
-        plan_dashboard.rebuild_tree()
-        resp = client.get("/task/01-first")
-        assert resp.status_code == 200
-
-    def test_get_task_valid_path(self, client):
-        resp = client.get("/task/01-first")
-        assert resp.status_code == 200
-
-    def test_get_task_nonexistent_returns_404(self, client):
-        resp = client.get("/task/nonexistent")
-        assert resp.status_code == 404
-
     def test_dag_returns_mermaid(self, client):
         resp = client.get("/dag")
         assert resp.status_code == 200
@@ -292,9 +273,13 @@ class TestServerRoutes:
             "content-disposition", ""
         )
         html = resp.text
-        # Re-based subtree children present; out-of-subtree sibling absent.
-        assert 'set["a"] = true' in html
-        assert 'set["01-flat"] = true' not in html
+        # Re-based subtree children (consumed by dashboard.js's TASK_PATHS set)
+        # present; out-of-subtree sibling absent.
+        m = re.search(r"var ALL_TASK_PATHS = (\[.*?\]);", html)
+        assert m is not None
+        paths = json.loads(m.group(1))
+        assert "a" in paths
+        assert "01-flat" not in paths
 
     def test_export_unknown_root_returns_404(self, client):
         resp = client.get("/export", params={"root": "no/such"})
@@ -338,26 +323,78 @@ class TestServerRoutes:
 
     def test_index_wires_share_button(self, client):
         """The live page carries the Share affordance: the per-node Share button
-        is emitted in the active-node card and backed by shareSubtree()."""
+        is emitted in the active-node card and backed by shareSubtree(), served
+        from the extracted dashboard.js (see /static/dashboard.js)."""
         html = client.get("/").text
-        assert "function shareSubtree" in html
+        assert '<script src="/static/dashboard.js"></script>' in html
+        js = client.get("/static/dashboard.js").text
+        assert "function shareSubtree" in js
         # The button is gated to server mode in the card header builder.
-        assert "shareSubtree(" in html
-        assert "window.STANDALONE ? '' :" in html
+        assert "shareSubtree(" in js
+        assert "window.STANDALONE ? '' :" in js
 
-    def test_served_page_keeps_cdn_render_tags(self, client):
-        """Server mode is unchanged by the standalone embedding: the live page
-        still loads markdown-it/KaTeX/texmath from the CDN and does NOT inline the
-        vendored libraries or font woff2 data URIs."""
+    def test_served_page_loads_render_libraries_locally(self, client):
+        """Server mode loads every render library from this process's own
+        /static/{name} route (vendored under vendor/), not a CDN, and does NOT
+        inline the libraries or font woff2 data URIs the way standalone does —
+        Google Fonts is the sole remaining CDN reference."""
         html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/markdown-it@14" in html
-        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" in html
-        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js" in html
-        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@1" in html
+        assert '<script src="/static/htmx.min.js"></script>' in html
+        assert '<script src="/static/sse.js"></script>' in html
+        assert '<script src="/static/markdown-it.min.js"></script>' in html
+        assert '<link rel="stylesheet" href="/static/katex.min.css">' in html
+        assert '<script src="/static/katex.min.js"></script>' in html
+        assert '<script src="/static/texmath.min.js"></script>' in html
+        assert '<script src="/static/highlight.min.js"></script>' in html
+        assert '<script src="/static/languages/julia.min.js"></script>' in html
+        assert '<script src="/static/purify.min.js"></script>' in html
+        assert "cdn.jsdelivr.net" not in html
+        assert "fonts.googleapis.com" in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
         assert "var STANDALONE_IMAGES =" not in html
         assert "window.STANDALONE = false" in html
+
+    def test_static_route_serves_vendored_render_libraries(self, client):
+        """GET /static/{name} serves every vendored render-library asset the live
+        page references — including nested-path assets (highlight.js's julia
+        language module, katex's woff2 fonts) — with a matching Content-Type and
+        an ETag that 304s on repeat."""
+        for name, content_type in (
+            ("htmx.min.js", "text/javascript"),
+            ("sse.js", "text/javascript"),
+            ("markdown-it.min.js", "text/javascript"),
+            ("katex.min.js", "text/javascript"),
+            ("katex.min.css", "text/css"),
+            ("texmath.min.js", "text/javascript"),
+            ("highlight.min.js", "text/javascript"),
+            ("languages/julia.min.js", "text/javascript"),
+            ("purify.min.js", "text/javascript"),
+            ("fonts/KaTeX_Main-Regular.woff2", "font/woff2"),
+        ):
+            resp = client.get(f"/static/{name}")
+            assert resp.status_code == 200, name
+            assert resp.headers["content-type"].startswith(content_type), name
+            etag = resp.headers["etag"]
+            again = client.get(f"/static/{name}", headers={"if-none-match": etag})
+            assert again.status_code == 304, name
+
+    def test_katex_css_font_urls_resolve_under_static(self, client):
+        """katex.min.css references its woff2 fonts via a relative
+        ``url(fonts/KaTeX_*.woff2)``; served from /static/katex.min.css, the
+        browser resolves that against /static/fonts/..., which must also be a
+        servable route (not just the top-level vendor files)."""
+        css = client.get("/static/katex.min.css").text
+        names = set(re.findall(r"url\(fonts/(KaTeX_[A-Za-z0-9_-]+\.woff2)\)", css))
+        assert len(names) == 20
+        for name in names:
+            assert client.get(f"/static/fonts/{name}").status_code == 200
+
+    def test_static_route_still_rejects_unknown_names(self, client):
+        """The whitelist still 404s a name outside both the template and vendor
+        asset maps (path traversal / unknown-asset guard preserved)."""
+        assert client.get("/static/unknown.js").status_code == 404
+        assert client.get("/static/../plan_dashboard.py").status_code in (404, 400)
 
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root
@@ -409,6 +446,57 @@ class TestServerRoutes:
             await body_iter.aclose()
             assert wt not in plan_dashboard._worktree_clients
             assert wt not in plan_dashboard._worktree_watchers
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_watchers.clear()
+            loop.close()
+
+    def test_events_sse_generator_ends_on_queue_overflow(self, client):
+        """A queue-overflowed client has its connection ended by the generator
+        (not silently unsubscribed), and `_open_connection_count()` stays
+        truthful once that teardown completes -- the invariant the idle
+        monitor depends on (registered queues == open connections)."""
+        from starlette.requests import Request
+
+        loop = asyncio.new_event_loop()
+
+        def _req() -> Request:
+            return Request({
+                "type": "http", "method": "GET", "path": "/events",
+                "query_string": b"", "headers": [],
+            })
+
+        async def _test():
+            wt = plan_dashboard._launch_wt_id
+            gen = plan_dashboard.sse_events(_req())
+            resp = await gen
+            body_iter = resp.body_iterator
+            await body_iter.__anext__()  # initial heartbeat
+
+            queue = next(iter(plan_dashboard._worktree_clients[wt]))
+            for _ in range(queue.maxsize):
+                queue.put_nowait("filler")
+            assert plan_dashboard._open_connection_count() == 1
+
+            # Overflow it exactly the way production broadcasts do.
+            await plan_dashboard._broadcast("full-reload", "{}", wt)
+
+            # Drain the buffered messages ahead of the close sentinel; the
+            # generator ends the stream (StopAsyncIteration) once it reads it,
+            # instead of idling on a connection nothing will ever drain.
+            ended = False
+            for _ in range(queue.maxsize + 1):
+                try:
+                    await asyncio.wait_for(body_iter.__anext__(), timeout=1)
+                except StopAsyncIteration:
+                    ended = True
+                    break
+            assert ended, "generator did not end on the close sentinel"
+            assert wt not in plan_dashboard._worktree_clients
+            assert plan_dashboard._open_connection_count() == 0
 
         try:
             loop.run_until_complete(_test())
@@ -522,7 +610,7 @@ class TestServerRoutes:
 # Per-worktree state + request resolution
 #
 # The dashboard serves any discovered worktree on demand, resolved per request
-# from the ``?wt=<name>`` query param (worktree id = directory basename).  A
+# from the ``?wt=<name>`` query param (worktree id = canonical selector token).  A
 # request with no ``?wt=`` resolves to the launch worktree; an unknown ``?wt=``
 # is a 404.  These tests build two distinct trees, seed both into the worktree
 # cache, and assert each request renders from the matching tree's state.
@@ -579,6 +667,52 @@ def two_worktree_client(tmp_path):
 
 
 class TestPerWorktreeResolution:
+    def test_collision_safe_dashboard_url_routes_to_invoking_worktree(
+        self, tmp_path, monkeypatch
+    ):
+        """The emitted canonical URL for B must route back to B's task tree."""
+        from starlette.testclient import TestClient
+
+        def _make_tree(parent: str, title: str) -> Path:
+            root = tmp_path / parent / "shared name" / "superRA"
+            root.mkdir(parents=True)
+            _write_task_md(
+                root / "task.md",
+                title,
+                "not-started",
+                objective=f"Task tree for {title}.",
+            )
+            return root
+
+        root_a = _make_tree("parent one", "Project A")
+        root_b = _make_tree("parent two", "Project B")
+        discovered = {
+            "parent one/shared name": root_a,
+            "parent two/shared name": root_b,
+        }
+        monkeypatch.setattr(
+            plan_dashboard, "_discovered_worktree_map", lambda: discovered
+        )
+        monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", root_a)
+        plan_dashboard._jinja_env = None
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard.rebuild_tree()
+
+        url = plan_dashboard._dashboard_url(8123, root_b)
+        assert url == (
+            "http://localhost:8123/"
+            "?wt=parent%20two%2Fshared%20name"
+        )
+
+        client = TestClient(plan_dashboard.app, raise_server_exceptions=True)
+        try:
+            response = client.get(url)
+            assert response.status_code == 200
+            assert "Project B" in response.text
+            assert "Project A" not in response.text
+        finally:
+            plan_dashboard._worktree_cache.clear()
+
     def test_node_resolves_by_wt_param(self, two_worktree_client):
         client, wt_a, wt_b = two_worktree_client
         a = client.get(f"/node/01-first?wt={wt_a}")
@@ -637,8 +771,8 @@ class TestPerWorktreeResolution:
             }
             return Request(scope)
 
-        first = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
-        second = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        first = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
+        second = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
         assert first is second  # cache hit, not rebuilt
 
         # Edit the launch worktree's task on disk, then invalidate via the hook.
@@ -660,10 +794,10 @@ class TestDataLayer:
     def test_rebuild_tree_populates_index(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
-        assert "" in plan_dashboard._task_index  # root
-        assert "01-first" in plan_dashboard._task_index
-        assert "02-second" in plan_dashboard._task_index
-        assert "03-third" in plan_dashboard._task_index
+        assert "" in _launch_state(plan_dashboard).task_index  # root
+        assert "01-first" in _launch_state(plan_dashboard).task_index
+        assert "02-second" in _launch_state(plan_dashboard).task_index
+        assert "03-third" in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_updates_single(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
@@ -678,7 +812,7 @@ class TestDataLayer:
         updated, children_changed = plan_dashboard.rebuild_task("01-first")
         assert updated is not None
         assert updated.title == "Updated First Task"
-        assert plan_dashboard._task_index["01-first"].title == "Updated First Task"
+        assert _launch_state(plan_dashboard).task_index["01-first"].title == "Updated First Task"
         assert children_changed is False
 
     def test_rebuild_task_discovers_existing_children(self, plan_root):
@@ -689,7 +823,7 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        original = plan_dashboard._task_index["01-first"]
+        original = _launch_state(plan_dashboard).task_index["01-first"]
         assert len(original.children) == 1
 
         # rebuild_task should re-discover existing children
@@ -704,7 +838,7 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        original = plan_dashboard._task_index["01-first"]
+        original = _launch_state(plan_dashboard).task_index["01-first"]
         assert len(original.children) == 0
 
         # Create a new child directory after the tree was built
@@ -718,7 +852,7 @@ class TestDataLayer:
         assert len(updated.children) == 1
         assert updated.children[0].title == "New Child"
         # New child should be in the flat index
-        assert "01-first/sub" in plan_dashboard._task_index
+        assert "01-first/sub" in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_removes_deleted_children(self, plan_root):
         """A child removed from disk is dropped from the tree and index."""
@@ -728,8 +862,8 @@ class TestDataLayer:
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
 
-        assert "01-first/sub" in plan_dashboard._task_index
-        assert len(plan_dashboard._task_index["01-first"].children) == 1
+        assert "01-first/sub" in _launch_state(plan_dashboard).task_index
+        assert len(_launch_state(plan_dashboard).task_index["01-first"].children) == 1
 
         # Remove the child's task.md (simulating directory deletion)
         (child / "task.md").unlink()
@@ -739,7 +873,7 @@ class TestDataLayer:
         assert updated is not None
         assert children_changed is True
         assert len(updated.children) == 0
-        assert "01-first/sub" not in plan_dashboard._task_index
+        assert "01-first/sub" not in _launch_state(plan_dashboard).task_index
 
     def test_rebuild_task_returns_none_for_deleted(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
@@ -748,12 +882,35 @@ class TestDataLayer:
         (plan_root / "01-first" / "task.md").unlink()
         result, children_changed = plan_dashboard.rebuild_task("01-first")
         assert result is None
-        assert "01-first" not in plan_dashboard._task_index
+        assert "01-first" not in _launch_state(plan_dashboard).task_index
+
+    def test_rebuild_task_surfaces_parse_error(self, plan_root, capsys):
+        """A task.md broken during a watcher rebuild logs an error and returns
+        the last-good task flagged with `parse_error`, instead of silently
+        continuing to serve the last-good parse with no signal."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        assert _launch_state(plan_dashboard).task_index["01-first"].parse_error == ""
+
+        task_md = plan_root / "01-first" / "task.md"
+        # Invalid UTF-8 (0xC3 without a valid continuation byte): parse_task's
+        # `read_text(encoding="utf-8")` raises UnicodeDecodeError.
+        task_md.write_bytes(b"---\ntitle: Broken\xc3\x28---\nBody\n")
+
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
+
+        assert children_changed is False
+        assert updated is not None
+        assert updated.parse_error != ""
+        # Last-good content is preserved; only the error flag is new.
+        assert updated.title == "First Task"
+        assert _launch_state(plan_dashboard).task_index["01-first"].parse_error != ""
+        assert str(task_md) in capsys.readouterr().err
 
     def test_build_index_creates_flat_dict(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
-        root = plan_dashboard._root_task
+        root = _launch_state(plan_dashboard).root_task
         idx: dict[str, _task_io.Task] = {}
         plan_dashboard._build_index(root, idx)
         assert "" in idx
@@ -944,17 +1101,23 @@ class TestSSEBroadcast:
             self._cleanup("wt-a")
             loop.close()
 
-    def test_broadcast_drops_full_queue(self):
-        """When a client queue is full, the client is removed."""
+    def test_broadcast_overflow_queues_close_sentinel_not_silent_drop(self):
+        """A full queue is not silently unsubscribed here: `_broadcast` drops its
+        oldest message and queues a close sentinel instead, leaving the queue
+        registered so `_open_connection_count()` stays truthful until the
+        `/events` generator itself ends the connection and removes it."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
         # Fill the queue
         queue.put_nowait("filler")
         self._register("wt-a", queue)
         try:
-            # This should not raise; the full queue gets dropped
+            # This should not raise; the full queue's oldest entry is dropped to
+            # make room for the close sentinel.
             loop.run_until_complete(plan_dashboard._broadcast("e", "data", "wt-a"))
-            assert queue not in plan_dashboard._worktree_clients.get("wt-a", set())
+            # Still registered: `_broadcast` never removes a client itself.
+            assert queue in plan_dashboard._worktree_clients.get("wt-a", set())
+            assert queue.get_nowait() is plan_dashboard._QUEUE_CLOSE
         finally:
             self._cleanup("wt-a")
             loop.close()
@@ -1059,6 +1222,179 @@ class TestWatcherLifecycle:
         finally:
             self._reset()
             loop.close()
+
+    def test_stop_is_bounded_under_repeated_cancellation(self, monkeypatch):
+        """A non-finishing watcher is force-cancelled after a cooperative bound."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.03, raising=False
+        )
+        monkeypatch.setattr(
+            plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.03, raising=False
+        )
+        forced_exit_delays = []
+        monkeypatch.setattr(
+            plan_dashboard,
+            "_schedule_forced_process_exit",
+            forced_exit_delays.append,
+            raising=False,
+        )
+
+        async def _test():
+            stop_event = asyncio.Event()
+            teardown_started = asyncio.Event()
+            never_finishes_cooperatively = asyncio.Event()
+            hard_cancelled = False
+
+            async def _watcher():
+                nonlocal hard_cancelled
+                await stop_event.wait()
+                teardown_started.set()
+                try:
+                    await never_finishes_cooperatively.wait()
+                except asyncio.CancelledError:
+                    hard_cancelled = True
+                    # Model a faulty replacement/native boundary that suppresses
+                    # hard cancellation too. _stop_watcher must still return.
+                    await never_finishes_cooperatively.wait()
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            stopper = asyncio.create_task(plan_dashboard._stop_watcher("wt-a"))
+            await teardown_started.wait()
+            for _ in range(3):
+                stopper.cancel()
+                await asyncio.sleep(0)
+            await asyncio.sleep(0.08)
+            completed_within_bound = stopper.done()
+
+            # Let the reviewed, unbounded implementation unwind so a failing
+            # assertion cannot strand this test's event loop.
+            if not completed_within_bound:
+                never_finishes_cooperatively.set()
+            with pytest.raises(asyncio.CancelledError):
+                await stopper
+
+            assert completed_within_bound, "watcher teardown exceeded its bound"
+            assert hard_cancelled, "non-finishing watcher was not force-cancelled"
+            assert forced_exit_delays == [plan_dashboard.WATCHER_PROCESS_EXIT_TIMEOUT]
+            assert not watcher.done(), "cancellation-suppressing watcher unexpectedly ended"
+            never_finishes_cooperatively.set()
+            await watcher
+            assert watcher.done() and not watcher.cancelled()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_late_watcher_completion_disarms_process_exit(self, monkeypatch):
+        """A watcher finishing after both bounds cancels its armed watchdog."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        monkeypatch.setattr(plan_dashboard, "WATCHER_STOP_TIMEOUT", 0.01)
+        monkeypatch.setattr(plan_dashboard, "WATCHER_CANCEL_TIMEOUT", 0.01)
+        forced_exits = []
+        monkeypatch.setattr(plan_dashboard.os, "_exit", forced_exits.append)
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
+
+        class FakeTimer:
+            instances = []
+
+            def __init__(self, delay, function, args=()):
+                self.delay = delay
+                self.function = function
+                self.args = args
+                self.daemon = False
+                self.started = False
+                self.cancelled = False
+                self.instances.append(self)
+
+            def start(self):
+                self.started = True
+
+            def cancel(self):
+                self.cancelled = True
+
+            def fire(self):
+                if not self.cancelled:
+                    self.function(*self.args)
+
+        monkeypatch.setattr(plan_dashboard.threading, "Timer", FakeTimer)
+
+        async def _test():
+            stop_event = asyncio.Event()
+            release = asyncio.Event()
+
+            async def _watcher():
+                await stop_event.wait()
+                try:
+                    await release.wait()
+                except asyncio.CancelledError:
+                    await release.wait()
+
+            watcher = asyncio.create_task(_watcher())
+            plan_dashboard._worktree_watchers["wt-a"] = watcher
+            plan_dashboard._worktree_stop_events["wt-a"] = stop_event
+
+            await plan_dashboard._stop_watcher("wt-a")
+            assert len(FakeTimer.instances) == 1
+            watchdog = FakeTimer.instances[0]
+            assert watchdog.started and not watchdog.cancelled
+
+            release.set()
+            await watcher
+            await asyncio.sleep(0)
+            assert watchdog.cancelled
+            watchdog.fire()
+            assert forced_exits == []
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_embedded_server_thread_cannot_arm_process_exit(self, monkeypatch):
+        """An in-process server thread never owns or terminates its host process."""
+        import threading
+
+        created = []
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", True)
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+        results = []
+        thread = threading.Thread(
+            target=lambda: results.append(
+                plan_dashboard._schedule_forced_process_exit(0.01)
+            )
+        )
+        thread.start()
+        thread.join(timeout=2.0)
+        assert not thread.is_alive()
+        assert results == [None]
+        assert created == []
+
+    def test_embedded_main_thread_cannot_arm_process_exit(self, monkeypatch):
+        """A stale server handle cannot grant main-thread process ownership."""
+        created = []
+        monkeypatch.setattr(plan_dashboard, "_server", object())
+        monkeypatch.setattr(
+            plan_dashboard.threading,
+            "Timer",
+            lambda *args, **kwargs: created.append((args, kwargs)),
+        )
+
+        monkeypatch.setattr(plan_dashboard, "_standalone_process_owner", False)
+        assert plan_dashboard._schedule_forced_process_exit(0.01) is None
+        assert created == []
 
     def test_crashed_watcher_is_respawned(self, tmp_path):
         loop = asyncio.new_event_loop()
@@ -1185,29 +1521,45 @@ class TestTemplateRendering:
         """Reset the Jinja env so each test gets a clean state."""
         plan_dashboard._jinja_env = None
 
-    def test_render_task_node_has_sse_swap(self, plan_root):
+    def test_render_nav_node_has_sse_swap(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        task = _launch_state(plan_dashboard).task_index["01-first"]
+        html = plan_dashboard._render_nav_node(task)
         assert 'sse-swap="task:01-first"' in html
         assert 'hx-swap="outerHTML"' in html
 
-    def test_render_task_node_has_badge(self, plan_root):
+    def test_render_nav_node_has_badge(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        task = _launch_state(plan_dashboard).task_index["01-first"]
+        html = plan_dashboard._render_nav_node(task)
         assert "badge-approved" in html
         assert "01-first" in html  # slug
 
+    def test_render_nav_node_shows_parse_error(self, plan_root):
+        """A task carrying `parse_error` renders a visible error badge, so a
+        broken task.md is a loud client-side signal, not silent staleness."""
+        import dataclasses
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        task = _launch_state(plan_dashboard).task_index["01-first"]
+        errored = dataclasses.replace(task, parse_error="UnicodeDecodeError: boom")
+        html = plan_dashboard._render_nav_node(errored)
+        assert 'data-parse-error="true"' in html
+        assert "badge-error" in html
+        assert "parse error" in html
+
+        # A task with no parse error renders neither.
+        clean_html = plan_dashboard._render_nav_node(task)
+        assert "data-parse-error" not in clean_html
+        assert "badge-error" not in clean_html
+
     def test_render_summary_has_counts(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary()
+        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
         assert "stat-tasks" in html
         assert "stat-approved" in html
         # 3 leaf tasks, 1 approved
@@ -1217,9 +1569,8 @@ class TestTemplateRendering:
         """Postponed leaves drop out of the active denominator, like archived,
         and surface as a visible count pill."""
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary()
+        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
         # Leaves: 01 postponed, 02 not-started, 03 approved, branch a/b postponed.
         # active = 5 - 3 postponed = 2; approved = 1 -> 1/2.
         assert "1/2" in html
@@ -1227,11 +1578,10 @@ class TestTemplateRendering:
 
     def test_postponed_kanban_column_holds_postponed_leaves(self, postponed_plan_root):
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(all_tasks=all_tasks)
         # The Postponed column exists and carries the postponed leaf + branch children.
         post_col = html.split('<div class="kanban-col">')
@@ -1242,23 +1592,37 @@ class TestTemplateRendering:
 
     def test_postponed_renders_badge_and_status(self, postponed_plan_root):
         plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard._project_root = str(postponed_plan_root.parent)
         plan_dashboard.rebuild_tree()
-        task = plan_dashboard._task_index["01-postponed-leaf"]
-        html = plan_dashboard._render_task_node(task)
+        task = _launch_state(plan_dashboard).task_index["01-postponed-leaf"]
+        html = plan_dashboard._render_nav_node(task)
         assert "badge-postponed" in html
         assert 'data-status="postponed"' in html
 
+    def test_root_or_children_template_is_shared_and_precompiled(self, plan_root):
+        """`/nav` and the standalone export render the root-or-children
+        fragment from one cached compiled Template, not a fresh
+        `from_string` recompile per call."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+        state = _launch_state(plan_dashboard)
+
+        html = plan_dashboard._render_root_or_children(state.root_task)
+        tmpl_after_first_call = plan_dashboard._root_or_children_tmpl
+        assert tmpl_after_first_call is not None
+        assert "01-first" in html
+
+        plan_dashboard._render_root_or_children(state.root_task)
+        # Second call reuses the same compiled Template object.
+        assert plan_dashboard._root_or_children_tmpl is tmpl_after_first_call
+
     def test_vscode_link_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         env = plan_dashboard._get_jinja_env()
         result = env.filters["vscode_link"]("src/main.py", "/project")
         assert result == "vscode://file//project/src/main.py"
 
     def test_file_url_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         env = plan_dashboard._get_jinja_env()
         result = env.filters["file_url"]("images/fig1.png")
         assert result == "/files/images/fig1.png"
@@ -1272,7 +1636,6 @@ class TestTemplateRendering:
         only breakout sequence is </script>.)
         """
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
 
         # Write a task whose body contains a literal </script>
         task_md = plan_root / "01-first" / "task.md"
@@ -1281,31 +1644,30 @@ class TestTemplateRendering:
         task_md.write_text(content)
         plan_dashboard.rebuild_tree()
 
-        task = plan_dashboard._task_index["01-first"]
-        html = plan_dashboard._render_task_node(task)
+        state = _launch_state(plan_dashboard)
+        task = state.task_index["01-first"]
+        html = plan_dashboard._render_node_body(task, state.project_root)
         # The content's </script> is backslash-escaped to <\/script> so it does
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
     def test_kanban_has_7_status_columns(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(all_tasks=all_tasks)
         assert html.count("kanban-col-header") == 7
 
     def test_dag_has_dependency_arrows(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
         env = plan_dashboard._get_jinja_env()
         template = env.get_template("dag.html")
-        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
         html = template.render(
-            root_task=plan_dashboard._root_task, all_tasks=all_tasks
+            root_task=_launch_state(plan_dashboard).root_task, all_tasks=all_tasks
         )
         assert "graph LR" in html
         # 02-second depends on 01-first
@@ -1394,54 +1756,39 @@ class TestCLI:
 
 
 # ---------------------------------------------------------------------------
-# Children-panel data contract (GET /dag?root=<path>)
+# Children-panel data contract (GET /api/children-graph?root=<path>)
 #
-# base.html's children panel parses the GET /dag?root=<path> fragment client
-# side: the direct-child set from `.dag-controls[data-node-paths]`, each child's
-# status from `style <id> fill:#<color>` lines, and the inter-child dependency
-# edges from `<dep_id> --> <child_id>` lines (prerequisite --> dependent).  These
-# tests pin the server-side half of that contract so the cards keep parsing.
+# base.html's children panel renders straight off this JSON payload: nodes
+# (path, slug, title, status) plus edges (childPath -> [depPath, …]).  These
+# tests pin the server-side half of that contract so the cards keep rendering
+# correctly with no client-side text parsing involved.
 # ---------------------------------------------------------------------------
 
-BASE_HTML = (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
-
-# node_id -> status fill color, mirrored from base.html's DAG_FILL_STATUS map.
-_FILL_STATUS = {
-    "#e0e0e0": "not-started", "#bbdefb": "in-progress", "#fff9c4": "implemented",
-    "#ffcdd2": "revise", "#c8e6c9": "approved", "#f5f5f5": "archived",
-}
-
-
-def _parse_dag_fragment(html):
-    """Parse a /dag?root= fragment the way base.html's parseChildrenDag does:
-    return (node_paths, status_by_path, edges) where edges is the set of
-    (dep_path, child_path) pairs in prerequisite -> dependent direction."""
-    m = re.search(r"data-node-paths='(\{.*?\})'", html)
-    node_paths = json.loads(m.group(1)) if m else {}
-    fills = dict(re.findall(r"style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})", html))
-    status_by_path = {
-        node_paths[nid]: _FILL_STATUS.get(color.lower(), "")
-        for nid, color in fills.items() if nid in node_paths
-    }
-    edges = set()
-    for dep_id, child_id in re.findall(r"^\s*(\S+)\s*-->\s*(\S+)\s*$", html, re.M):
-        if dep_id in node_paths and child_id in node_paths:
-            edges.add((node_paths[dep_id], node_paths[child_id]))
-    return node_paths, status_by_path, edges
+# base.html carries page structure + a small Jinja-templated config script; its
+# CSS and JS live in the extracted dashboard.css/dashboard.js static files (see
+# template-split). BASE_HTML concatenates all three template sources (in their
+# render order: CSS, then markup, then JS) so the many literal-content checks
+# below keep working unchanged against "the template source" regardless of
+# which of the three files a given rule/function now lives in.
+BASE_HTML = (
+    (SCRIPTS_DIR / "templates" / "dashboard.css").read_text(encoding="utf-8")
+    + (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
+    + (SCRIPTS_DIR / "templates" / "dashboard.js").read_text(encoding="utf-8")
+)
 
 
 class TestChildrenDagContract:
     def test_branching_parent_node_paths_are_direct_children_only(self, flow_client):
-        resp = flow_client.get("/dag?root=00-flow")
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
         assert resp.status_code == 200
-        node_paths, _, _ = _parse_dag_fragment(resp.text)
-        assert set(node_paths.values()) == {
+        body = resp.json()
+        assert {c["path"] for c in body["children"]} == {
             "00-flow/a", "00-flow/b", "00-flow/c", "00-flow/d",
         }
 
-    def test_branching_parent_per_child_status_fills(self, flow_client):
-        resp = flow_client.get("/dag?root=00-flow")
-        _, status_by_path, _ = _parse_dag_fragment(resp.text)
+    def test_branching_parent_per_child_status(self, flow_client):
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
+        status_by_path = {c["path"]: c["status"] for c in resp.json()["children"]}
         assert status_by_path == {
             "00-flow/a": "approved",
             "00-flow/b": "in-progress",
@@ -1450,28 +1797,64 @@ class TestChildrenDagContract:
         }
 
     def test_branching_parent_edges_direction(self, flow_client):
-        """Edges run prerequisite -> dependent: a->b, a->c, b->d."""
-        resp = flow_client.get("/dag?root=00-flow")
-        _, _, edges = _parse_dag_fragment(resp.text)
-        assert edges == {
-            ("00-flow/a", "00-flow/b"),
-            ("00-flow/a", "00-flow/c"),
-            ("00-flow/b", "00-flow/d"),
+        """edges[childPath] lists the sibling paths that child depends on."""
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow"})
+        assert resp.json()["edges"] == {
+            "00-flow/b": ["00-flow/a"],
+            "00-flow/c": ["00-flow/a"],
+            "00-flow/d": ["00-flow/b"],
         }
 
     def test_no_dependency_parent_has_no_edges(self, flow_client):
-        resp = flow_client.get("/dag?root=01-flat")
-        node_paths, _, edges = _parse_dag_fragment(resp.text)
-        assert set(node_paths.values()) == {"01-flat/x", "01-flat/y"}
-        assert edges == set()
-        assert "-->" not in resp.text
+        resp = flow_client.get("/api/children-graph", params={"root": "01-flat"})
+        body = resp.json()
+        assert {c["path"] for c in body["children"]} == {"01-flat/x", "01-flat/y"}
+        assert body["edges"] == {}
 
     def test_leaf_parent_has_empty_child_set(self, flow_client):
-        """A leaf (no children) yields an empty node-path map and no edges."""
-        resp = flow_client.get("/dag?root=00-flow/a")
-        node_paths, _, edges = _parse_dag_fragment(resp.text)
-        assert node_paths == {}
-        assert edges == set()
+        """A leaf (no children) yields an empty node set and no edges."""
+        resp = flow_client.get("/api/children-graph", params={"root": "00-flow/a"})
+        body = resp.json()
+        assert body["children"] == []
+        assert body["edges"] == {}
+
+    def test_unknown_root_404s(self, flow_client):
+        resp = flow_client.get("/api/children-graph", params={"root": "no-such-task"})
+        assert resp.status_code == 404
+
+    def test_title_with_standalone_arrow_line_does_not_corrupt_edges(self, tmp_path):
+        """A regression for the old mermaid-source regex parse: a task title
+        that is itself a standalone ` --> ` line could forge a bogus edge when
+        scraped as text. The JSON payload carries titles as a plain field, so a
+        title's content can never be mistaken for graph structure."""
+        from starlette.testclient import TestClient
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Test Project", "not-started",
+                       objective="A test plan.")
+        parent = root / "00-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "in-progress",
+                       objective="Parent.")
+        a = parent / "a"
+        a.mkdir()
+        _write_task_md(a / "task.md", "-->", "not-started",
+                       objective="Adversarial title.")
+        b = parent / "b"
+        b.mkdir()
+        _write_task_md(b / "task.md", "Child B", "not-started",
+                       depends_on=["a"], objective="Depends on a.")
+
+        plan_dashboard.PLAN_ROOT = root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+            resp = c.get("/api/children-graph", params={"root": "00-parent"})
+        body = resp.json()
+        titles_by_path = {c["path"]: c["title"] for c in body["children"]}
+        assert titles_by_path == {"00-parent/a": "-->", "00-parent/b": "Child B"}
+        assert body["edges"] == {"00-parent/b": ["00-parent/a"]}
 
 
 # ---------------------------------------------------------------------------
@@ -1556,12 +1939,15 @@ class TestTouchSidebar:
 
     def test_served_page_carries_touch_primitives(self, client):
         """The same primitives survive the live render (server path), not just
-        the raw template."""
+        the raw template: the page links dashboard.css and the served file
+        carries the touch primitives."""
         text = client.get("/").text
         assert "viewport-fit=cover" in text
-        assert "(hover: none), (pointer: coarse)" in text
-        assert "env(safe-area-inset-top)" in text
-        assert "body.sb-drawer-mode .nav-hamburger" in text
+        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        css = client.get("/static/dashboard.css").text
+        assert "(hover: none), (pointer: coarse)" in css
+        assert "env(safe-area-inset-top)" in css
+        assert "body.sb-drawer-mode .nav-hamburger" in css
 
 
 class TestTouchPolish:
@@ -1650,12 +2036,17 @@ class TestTouchPolish:
         assert "scroll-snap-type: x proximity;" in coarse
 
     def test_served_page_carries_polish_primitives(self, client):
-        """The polish primitives survive the live render (server path)."""
+        """The polish primitives survive the live render (server path): markup
+        stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
-        assert "@media (pointer: coarse)" in text
         assert 'id="search-sheet"' in text
-        assert "function toggleSearchSheet" in text
-        assert "-webkit-tap-highlight-color: transparent;" in text
+        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        assert '<script src="/static/dashboard.js"></script>' in text
+        css = client.get("/static/dashboard.css").text
+        assert "@media (pointer: coarse)" in css
+        assert "-webkit-tap-highlight-color: transparent;" in css
+        js = client.get("/static/dashboard.js").text
+        assert "function toggleSearchSheet" in js
 
 
 def _have_chromium() -> bool:
@@ -1686,7 +2077,6 @@ class TestTouchPolishRendered:
     def _serve(self, plan_root):
         import threading
         plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard._project_root = str(plan_root.resolve().parent)
         plan_dashboard._jinja_env = None
         plan_dashboard.rebuild_tree()
         # Pick a free port the same way the lifespan tests do.
@@ -1772,6 +2162,179 @@ class TestTouchPolishRendered:
             self._stop(t)
 
 
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestFrontendPolishRendered:
+    """Browser-driven regressions for the 2026-07-19 frontend-polish fixes:
+    a live task: SSE event's title change must reach the breadcrumb and the
+    root children panel without a reload, and a burst of task: events must
+    collapse into a single /api/comments/summary fetch.
+
+    Both tests broadcast synthetic `task:<path>` SSE events directly (the
+    exact fragment + event name `_rebuild_and_broadcast` sends on a real edit)
+    rather than editing task.md on disk and waiting on the real watcher: this
+    repo's watchfiles/FSEvents backend reports a file's first post-connect
+    change as Added (not Modified) regardless of how long it has existed,
+    which would route the edit through the unrelated full-reload path instead
+    of the task:<path> path this task's fix targets — masking the very
+    regression these tests exist to catch.  The server itself is real (a real
+    `uvicorn.Server` on a real socket, driven by a real browser over SSE); only
+    the disk-watch trigger is replaced with a direct, deterministic broadcast."""
+
+    def _serve(self, plan_root):
+        import threading
+
+        import uvicorn
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        import socket
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+
+        # Built inline (not plan_dashboard.serve()) so the test retains the
+        # server's event loop — needed to schedule the synthetic broadcast
+        # coroutine from the main thread via run_coroutine_threadsafe.
+        loop = asyncio.new_event_loop()
+        config = uvicorn.Config(plan_dashboard.app, host="127.0.0.1", port=port,
+                                 log_level="warning")
+        server = uvicorn.Server(config)
+        plan_dashboard._server = server
+
+        def _run():
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(server.serve())
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        assert plan_dashboard._wait_for_bind(port, timeout=5.0), "server did not bind"
+        return port, server, loop, t
+
+    def _stop(self, server, t):
+        server.should_exit = True
+        t.join(timeout=5.0)
+
+    def _broadcast_title_edit(self, loop, task_path, new_title):
+        """Simulate the watcher's reaction to a title edit: patch the in-memory
+        task index (mirrors rebuild_state_task's title-changed branch, minus
+        the disk re-parse) and broadcast the same task:<path> nav fragment
+        `_rebuild_and_broadcast` sends for a real content-only edit."""
+        from dataclasses import replace as dc_replace
+
+        async def _do():
+            state = plan_dashboard._worktree_cache[plan_dashboard._launch_wt_id]
+            updated = dc_replace(state.task_index[task_path], title=new_title)
+            state.task_index[task_path] = updated
+            plan_dashboard._replace_node_in_tree(state.root_task, task_path, updated)
+            fragment = plan_dashboard._render_nav_node(updated)
+            await plan_dashboard._broadcast(f"task:{task_path}", fragment, state.wt_id)
+
+        asyncio.run_coroutine_threadsafe(_do(), loop).result(timeout=5)
+
+    def test_title_edit_propagates_to_breadcrumb_and_children_panel(self, tmp_path):
+        """A live title edit (no reload) must reach both consumers of the
+        pathTitles cache: the root children panel (rootChildrenFromNav, which
+        has no server fetch of its own) and the breadcrumb of a task whose
+        ancestor was renamed."""
+        from playwright.sync_api import sync_playwright
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "in-progress", objective="Root.")
+        parent = root / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Original Parent", "in-progress",
+                       objective="Parent.")
+        child = parent / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "not-started", objective="Child.")
+
+        port, server, loop, t = self._serve(root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                pg.wait_for_selector('.child-card[data-path="01-parent"]', timeout=5000)
+                assert "Original Parent" in pg.inner_text('.child-card[data-path="01-parent"]')
+
+                # No navigation or reload follows — just the task: SSE event.
+                self._broadcast_title_edit(loop, "01-parent", "Renamed Parent")
+                pg.wait_for_function(
+                    "document.querySelector('.child-card[data-path=\\\"01-parent\\\"]')"
+                    ".textContent.indexOf('Renamed Parent') >= 0",
+                    timeout=5000,
+                )
+
+                # Descend into the child: the ancestor crumb for 01-parent must
+                # already carry the renamed title (same pathTitles map).
+                pg.evaluate("setActive('01-parent/01-child')")
+                pg.wait_for_selector("#crumbs .crumb", timeout=5000)
+                assert "Renamed Parent" in pg.inner_text("#crumbs")
+
+                # Rename again while the crumb is on screen; it must update live.
+                self._broadcast_title_edit(loop, "01-parent", "Renamed Again")
+                pg.wait_for_function(
+                    "document.getElementById('crumbs').textContent"
+                    ".indexOf('Renamed Again') >= 0",
+                    timeout=5000,
+                )
+                b.close()
+        finally:
+            self._stop(server, t)
+
+    def test_sse_burst_triggers_one_comment_summary_fetch(self, tmp_path):
+        """A burst of task: SSE events (three sibling task edits) must
+        coalesce into exactly one /api/comments/summary fetch, not one per
+        event."""
+        from playwright.sync_api import sync_playwright
+
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "in-progress", objective="Root.")
+        for i in range(1, 4):
+            d = root / f"0{i}-leaf"
+            d.mkdir()
+            _write_task_md(d / "task.md", f"Leaf {i}", "not-started", objective="Leaf.")
+
+        port, server, loop, t = self._serve(root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                # Let the page-load fetch (DOMContentLoaded's own
+                # updateTreeCommentBadges call) settle before counting.
+                pg.wait_for_timeout(400)
+
+                summary_requests = []
+                pg.on(
+                    "request",
+                    lambda req: summary_requests.append(req.url)
+                    if "/api/comments/summary" in req.url else None,
+                )
+
+                for i in range(1, 4):
+                    self._broadcast_title_edit(loop, f"0{i}-leaf", f"Leaf {i} edited")
+
+                pg.wait_for_function(
+                    "document.getElementById('task-03-leaf') &&"
+                    " document.getElementById('task-03-leaf').textContent"
+                    ".indexOf('Leaf 3 edited') >= 0",
+                    timeout=5000,
+                )
+                pg.wait_for_timeout(400)  # past the 150ms debounce window
+                b.close()
+            assert len(summary_requests) == 1, (
+                "expected exactly one /api/comments/summary fetch for the burst, "
+                f"got {len(summary_requests)}: {summary_requests}"
+            )
+        finally:
+            self._stop(server, t)
+
+
 # ---------------------------------------------------------------------------
 # Children-panel client logic (node-backed)
 #
@@ -1816,7 +2379,7 @@ def _run_node(harness_body):
     """Run extracted client builders + a harness body under node; the body
     prints a JSON line we parse back.  Returns the decoded object."""
     defs = _extract_js_defs([
-        "DAG_FILL_STATUS", "childrenSig", "childCardHTML", "SUBTASK_HEADER",
+        "childrenSig", "childCardHTML", "SUBTASK_HEADER",
         "buildChildGrid", "buildChildFlow", "escapeHtml", "escapeAttr",
     ])
     script = defs + "\n" + harness_body
@@ -1919,9 +2482,121 @@ class TestChildFlowClientLogic:
         )
         assert out["busted"]
 
+    def test_children_sig_busts_on_title_change(self):
+        """A title-only edit (path/status/deps unchanged) must still bust the
+        cache — otherwise a renamed child keeps showing its old title in a
+        cached children-panel render."""
+        out = _run_node(
+            "var k1=[{path:'a',status:'not-started',title:'Old'}];"
+            "var k2=[{path:'a',status:'not-started',title:'New'}];"
+            "var e={};"
+            "console.log(JSON.stringify({"
+            "  same: childrenSig(k1,e)===childrenSig(k1,e),"
+            "  busted: childrenSig(k1,e)!==childrenSig(k2,e)}));"
+        )
+        assert out["same"] and out["busted"]
+
 
 # ---------------------------------------------------------------------------
-# renderMarkdown image-rewrite (node-backed, behavioral)
+# applyFiltersToNode (node-backed): single-pass sidebar filter walk
+#
+# A minimal DOM shim (no browser needed) so the recursive filter walk itself
+# runs, not just a string search over the source.  `_makeFilterNode` builds a
+# tree of stub elements exposing exactly the surface applyFiltersToNode reads
+# (dataset, classList.toggle, querySelector/querySelectorAll scoped to
+# `.task-row`/`.task-children`).
+# ---------------------------------------------------------------------------
+
+_FILTER_NODE_SHIM = r"""
+function _makeFilterNode(path, status, title, children) {
+  var classes = {};
+  var kids = children || [];
+  return {
+    dataset: { status: status, path: path },
+    classList: {
+      toggle: function (cls, force) { classes[cls] = !!force; },
+      contains: function (cls) { return !!classes[cls]; },
+    },
+    querySelector: function (sel) {
+      if (sel === ':scope > .task-row > .task-title-text') {
+        TITLE_QUERY_COUNT++;
+        return { textContent: title };
+      }
+      return null;
+    },
+    querySelectorAll: function (sel) {
+      return sel === ':scope > .task-children > .task-node' ? kids : [];
+    },
+  };
+}
+var TITLE_QUERY_COUNT = 0;
+"""
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestFilterSinglePassClientLogic:
+    def _run(self, harness_body):
+        defs = _extract_js_defs(["applyFiltersToNode"])
+        script = _FILTER_NODE_SHIM + defs + "\n" + harness_body
+        proc = subprocess.run([_NODE, "-e", script], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+
+    def test_visits_each_node_exactly_once(self):
+        """A linear 6-node chain where only the deepest leaf's title matches
+        the search term (every ancestor's own row does not, forcing a full
+        descendant scan before returning at every level under the pre-fix
+        algorithm): the prior per-node nodeMatchesSearch recursion plus
+        applyFiltersToNode's own recursion cost 6+5+4+3+2+1=21 title lookups
+        (O(n^2), confirmed against the pre-fix code in a scratch repro); the
+        single-pass walk costs exactly 6 (one per node)."""
+        out = self._run(
+            "var n5=_makeFilterNode('a/b/c/d/e/f','not-started','unique-target',[]);"
+            "var n4=_makeFilterNode('a/b/c/d/e','not-started','plain',[n5]);"
+            "var n3=_makeFilterNode('a/b/c/d','not-started','plain',[n4]);"
+            "var n2=_makeFilterNode('a/b/c','not-started','plain',[n3]);"
+            "var n1=_makeFilterNode('a/b','not-started','plain',[n2]);"
+            "var n0=_makeFilterNode('a','not-started','plain',[n1]);"
+            "applyFiltersToNode(n0, '', 'unique-target');"
+            "console.log(JSON.stringify({count: TITLE_QUERY_COUNT}));"
+        )
+        assert out["count"] == 6
+
+    def test_cross_descendant_match_preserved(self):
+        """Filter semantics are unchanged: a branch is visible when one
+        descendant alone satisfies the status pill and a different descendant
+        alone satisfies the search text, even though neither descendant (nor
+        the branch's own row) satisfies both together — the pre-fix
+        nodeMatchesStatus(el) && nodeMatchesSearch(el) behavior."""
+        out = self._run(
+            "var a=_makeFilterNode('r/a','approved','Alpha',[]);"          # status only
+            "var b=_makeFilterNode('r/b','not-started','target-zzz',[]);"  # search only
+            "var root=_makeFilterNode('r','in-progress','Root',[a,b]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  a: !a.classList.contains('hidden'),"
+            "  b: !b.classList.contains('hidden')}));"
+        )
+        assert out["root"] is True   # visible via the cross-descendant match
+        assert out["a"] is False     # status-only match alone stays hidden
+        assert out["b"] is False     # search-only match alone stays hidden
+
+    def test_no_match_anywhere_hides_whole_branch(self):
+        out = self._run(
+            "var leaf=_makeFilterNode('r/x','not-started','Nothing',[]);"
+            "var root=_makeFilterNode('r','not-started','Root',[leaf]);"
+            "applyFiltersToNode(root, 'approved', 'zzz');"
+            "console.log(JSON.stringify({"
+            "  root: !root.classList.contains('hidden'),"
+            "  leaf: !leaf.classList.contains('hidden')}));"
+        )
+        assert out["root"] is False
+        assert out["leaf"] is False
+
+
+# ---------------------------------------------------------------------------
+# renderMarkdown link/image rewrite (node-backed, behavioral)
 #
 # The server-mode `<img src>` rewrite is a code path inside renderMarkdown that
 # string-presence assertions cannot exercise — an undefined identifier there
@@ -1935,10 +2610,12 @@ class TestChildFlowClientLogic:
 # ---------------------------------------------------------------------------
 
 _RENDER_MD_SHIM = r"""
-// Minimal markdown-it stub: emit the one relative-image we feed in as HTML.
+// Minimal markdown-it stub: emit the one relative image or link we feed in.
 var md = { render: function (text) {
   var m = text.match(/!\[[^\]]*\]\(([^)]+)\)/);
-  return m ? '<img src="' + m[1] + '">' : '<p>' + text + '</p>';
+  if (m) return '<img src="' + m[1] + '">';
+  m = text.match(/\[[^\]]*\]\(([^)]+)\)/);
+  return m ? '<a href="' + m[1] + '">link</a>' : '<p>' + text + '</p>';
 } };
 // Minimal DOM: a div whose innerHTML setter parses <img src> / <a href> into
 // element stubs, and whose querySelectorAll returns them for the rewrite loop.
@@ -1957,12 +2634,27 @@ function makeEl(tag) {
           });
         })(im[1]);
       }
+      var am; var are = /<a[^>]*\bhref="([^"]*)"[^>]*>/g;
+      while ((am = are.exec(html))) {
+        (function (val) {
+          self._as.push({
+            _attrs: { href: val },
+            getAttribute: function (n) { return this._attrs[n] || null; },
+            setAttribute: function (n, v) { this._attrs[n] = v; },
+            removeAttribute: function (n) { delete this._attrs[n]; },
+            classList: { add: function () {} },
+          });
+        })(am[1]);
+      }
       this._html = html;
     },
     get innerHTML() {
       var out = '';
       for (var i = 0; i < this._imgs.length; i++) {
         out += '<img src="' + this._imgs[i]._src + '">';
+      }
+      for (var j = 0; j < this._as.length; j++) {
+        out += '<a href="' + (this._as[j]._attrs.href || '') + '"></a>';
       }
       return out;
     },
@@ -2031,6 +2723,54 @@ class TestRenderMarkdownImageRewrite:
         root prefix: /files/<ROOT_PREFIX>/<src>."""
         out = self._run("superRA", "", "fig.png")
         assert out["src"] == "/files/superRA/fig.png"
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestRenderMarkdownLinkRewrite:
+    def _run(self, href, *, standalone=False, repo_file_base=""):
+        defs = _extract_js_defs(["renderMarkdown"])
+        harness = (
+            _RENDER_MD_SHIM
+            + "window.STANDALONE = " + json.dumps(standalone) + ";\n"
+            + "var RESOLVED_ROOT = '/abs/root';\n"
+            + "var ROOT_PREFIX = 'superRA';\n"
+            + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
+            + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+            + "var DOC_LOCAL_LINKS = [];\n"
+            + "var STANDALONE_PLAN_DIR = 'tree/';\n"
+            + defs + "\n"
+            + "var html = renderMarkdown('[link](" + href + ")', null, 'demo');\n"
+            + "var m = html.match(/href=\"([^\"]*)\"/);\n"
+            + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+        )
+        proc = subprocess.run(
+            [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+        )
+        assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+        return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
+
+    def test_scheme_uris_remain_unchanged(self):
+        assert self._run("zotero://select/library/items/ABC123") == (
+            "zotero://select/library/items/ABC123"
+        )
+        assert self._run("https://doi.org/10.1111/jofi.10001") == (
+            "https://doi.org/10.1111/jofi.10001"
+        )
+
+    def test_server_pdf_uses_file_route(self):
+        assert self._run("attachments/key.pdf") == (
+            "/files/superRA/demo/attachments/key.pdf"
+        )
+
+    def test_standalone_pdf_uses_embedded_tree_base(self):
+        assert self._run("attachments/key.pdf", standalone=True) == (
+            "tree/demo/attachments/key.pdf"
+        )
+
+    def test_other_relative_files_still_use_vscode(self):
+        assert self._run("attachments/key.md") == (
+            "vscode://file//abs/root/demo/attachments/key.md"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2175,7 +2915,6 @@ def _client_for(plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard._worktree_cache.clear()
     plan_dashboard.rebuild_tree()
@@ -2267,9 +3006,10 @@ class TestFileLinkConsistency:
         as the empty-path root node and is reachable via /node/ so deep-linking /
         setActive('') back to the container works."""
         with _client_for(forest_root) as c:
-            html = c.get("/").text
-            # The empty-path root node is embedded (id falls back to `task-root`).
-            assert 'id="task-root"' in html
+            # navNodeId's fallback (empty path -> 'task-root') mirrors
+            # nav_node.html's own id attribute — real code, not template output.
+            js = c.get("/static/dashboard.js").text
+            assert "'task-' + ((path || '').replace(/\\//g, '-') || 'root')" in js
             # The container's own /node/ (empty path) route resolves.
             assert c.get("/node/").status_code == 200
         # The breadcrumb builds a clickable root crumb that ascends via
@@ -2473,11 +3213,15 @@ class TestDashboard:
         assert "STANDALONE_FRAGMENTS =" in html
 
     def test_generate_has_no_live_server_calls(self, plan_root):
-        """The export must make zero network/SSE calls for task data."""
+        """The export must make zero network/SSE calls for task data. The
+        htmx SSE extension is inlined (like every other render library — see
+        vendor/README.md), but it only opens a connection for an element
+        carrying `sse-connect`/`hx-ext="sse"`, and no such element is emitted
+        in standalone output, so the inlined (inert) library code is not a
+        live call."""
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
         assert "sse-connect=" not in html
         assert 'hx-ext="sse"' not in html
-        assert "EventSource(" not in html
         assert "new WebSocket" not in html
         # No live server-only affordances rendered.
         assert 'id="worktree-selector"' not in html
@@ -2492,10 +3236,10 @@ class TestDashboard:
             encoding="utf-8",
         )
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
-        # Nav tree, per-node bodies, per-node child DAGs, and the kanban board.
+        # Nav tree, per-node bodies, per-node children graphs, and the kanban board.
         assert "/nav" in html
         assert "/node/01-first" in html
-        assert "/dag?root=02-second" in html
+        assert "/api/children-graph?root=02-second" in html
         assert "/kanban" in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
@@ -2597,7 +3341,7 @@ class TestDashboard:
         """File links keep their GitHub-style line anchor as VS Code's :line form
         so clicking jumps to the cited line (vscode://file ignores a #L fragment).
         Guards the renderMarkdown anchor-translation logic against removal."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "match(/#L" in src
         assert "repoFileHref(repoLinkPrefix + href)" in src
 
@@ -2607,27 +3351,34 @@ class TestDashboard:
         from fastapi.testclient import TestClient
 
         plan_dashboard.PLAN_ROOT = plan_root
-        # Generate to set module state, then build the fragment map.
         plan_dashboard.generate_dashboard(plan_root)
-        fragments = plan_dashboard._build_standalone_fragments()
+        # render_standalone_html builds its render state as parameters rather
+        # than module globals, so build the same whole-tree state here to
+        # reproduce its fragment map.
+        state = plan_dashboard.WorktreeState(
+            wt_id="", plan_root=plan_root,
+            project_root=str(plan_root.resolve().parent),
+            root_task=plan_dashboard.walk_plan(plan_root),
+        )
+        fragments = plan_dashboard._build_standalone_fragments(state)
 
         with TestClient(plan_dashboard.app) as c:
             assert fragments["/nav"] == c.get("/nav").text
             assert fragments["/node/01-first"] == c.get("/node/01-first").text
             assert fragments["/kanban"] == c.get("/kanban").text
             assert (
-                fragments["/dag?root=02-second"]
-                == c.get("/dag", params={"root": "02-second"}).text
+                fragments["/api/children-graph?root=02-second"]
+                == c.get("/api/children-graph", params={"root": "02-second"}).json()
             )
 
-    def test_standalone_dag_resolves_for_nested_path(self, plan_with_branches):
-        """The /dag fragment for a multi-segment (nested) task must be reachable
-        under the exact URL the standalone client builds.
+    def test_standalone_children_graph_resolves_for_nested_path(self, plan_with_branches):
+        """The children-graph fragment for a multi-segment (nested) task must be
+        reachable under the exact URL the standalone client builds.
 
-        The client fetches '/dag?root=' + encodeURIComponent(path); for a nested
-        path encodeURIComponent escapes '/' to %2F, so the request URL differs
-        from the bare map key. The fetch shim decodes before the map lookup —
-        this test locks that decode-then-lookup against the byte-identical
+        The client fetches '/api/children-graph?root=' + encodeURIComponent(path);
+        for a nested path encodeURIComponent escapes '/' to %2F, so the request
+        URL differs from the bare map key. The fetch shim decodes before the map
+        lookup — this test locks that decode-then-lookup against the byte-identical
         server route, reproducing the %2F mismatch a single-segment path hides.
         """
         pytest.importorskip("httpx")
@@ -2637,23 +3388,28 @@ class TestDashboard:
 
         plan_dashboard.PLAN_ROOT = plan_with_branches
         plan_dashboard.generate_dashboard(plan_with_branches)
-        fragments = plan_dashboard._build_standalone_fragments()
+        state = plan_dashboard.WorktreeState(
+            wt_id="", plan_root=plan_with_branches,
+            project_root=str(plan_with_branches.resolve().parent),
+            root_task=plan_dashboard.walk_plan(plan_with_branches),
+        )
+        fragments = plan_dashboard._build_standalone_fragments(state)
 
         nested = "01-data-prep/02-merge"
         # The exact URL string the standalone client builds (JS encodeURIComponent
         # escapes '/' to %2F; quote(safe='') matches it for slug characters).
-        client_url = "/dag?root=" + quote(nested, safe="")
+        client_url = "/api/children-graph?root=" + quote(nested, safe="")
         assert "%2F" in client_url  # guard: the nested path really is encoded.
         assert client_url not in fragments  # the map is keyed by the bare path.
 
         # The shim decodes the client URL before the lookup; that must hit.
-        decoded_url = "/dag?root=" + nested
+        decoded_url = "/api/children-graph?root=" + nested
         assert decoded_url in fragments
 
         with TestClient(plan_dashboard.app) as c:
             assert (
                 fragments[decoded_url]
-                == c.get("/dag", params={"root": nested}).text
+                == c.get("/api/children-graph", params={"root": nested}).json()
             )
 
     def test_standalone_embeds_root_node_body(self, plan_with_branches):
@@ -2687,13 +3443,16 @@ class TestDashboard:
             plan_with_branches, out, root="01-data-prep"
         )
         html = out.read_text("utf-8")
+        m = re.search(r"var ALL_TASK_PATHS = (\[.*?\]);", html)
+        assert m is not None
+        paths = json.loads(m.group(1))
         # Re-based: the subtree's children appear under their relative paths.
-        assert 'set["01-load"] = true' in html
-        assert 'set["02-merge"] = true' in html
+        assert "01-load" in paths
+        assert "02-merge" in paths
         # The full tree path of the subtree root is gone (re-based to "").
-        assert 'set["01-data-prep' not in html
+        assert not any(p.startswith("01-data-prep") for p in paths)
         # The out-of-subtree sibling never enters the embedded path set.
-        assert 'set["02-estimation"] = true' not in html
+        assert "02-estimation" not in paths
 
     def test_subtree_export_fragments_cover_only_subtree(self, plan_with_branches):
         """The pre-rendered fragment map covers exactly the subtree, keyed by
@@ -2712,7 +3471,9 @@ class TestDashboard:
 
     def test_subtree_export_is_offline_clean(self, plan_with_branches):
         """The subtree export inherits the standalone offline-clean property:
-        embedded data, no SSE/worktree controls."""
+        embedded data, no SSE/worktree controls. (The inlined htmx SSE
+        extension is inert without a `sse-connect`/`hx-ext="sse"` element —
+        see test_generate_has_no_live_server_calls.)"""
         out = plan_with_branches / "sub.html"
         plan_dashboard.generate_dashboard(
             plan_with_branches, out, root="01-data-prep"
@@ -2722,7 +3483,6 @@ class TestDashboard:
         assert "STANDALONE_FRAGMENTS =" in html
         assert "sse-connect=" not in html
         assert 'hx-ext="sse"' not in html
-        assert "EventSource(" not in html
         assert 'id="worktree-selector"' not in html
         assert 'id="sse-full-reload"' not in html
 
@@ -3030,28 +3790,31 @@ class TestStandaloneSelfContained:
         assert "01-html/pic.png" in images
 
     def test_standalone_inlines_render_libraries(self, fig_math_plan):
-        """Standalone output inlines the vendored markdown-it/texmath/KaTeX JS and
-        the font-inlined KaTeX CSS — and drops the CDN tags for those three."""
+        """Standalone output inlines the vendored markdown-it/texmath/KaTeX/htmx/sse
+        JS and the font-inlined KaTeX CSS — and drops the CDN tags for all of
+        them (every render library is offline-functional)."""
         out = fig_math_plan / "export.html"
         plan_dashboard.generate_dashboard(fig_math_plan, out, root="01-figmath")
         html = out.read_text("utf-8")
         # Inline library bodies present (version banner / global from each lib).
         assert "markdown-it 14.2.0" in html
         assert "katex" in html.lower()
+        assert 'version:"2.0.10"' in html  # htmx
+        assert "Server Sent Events Extension" in html  # sse.js
         # KaTeX @font-face rewritten to a base64 woff2 data URI (inlined fonts).
         assert "data:font/woff2;base64," in html
-        # The required CDN tags for these three are GONE in standalone.
+        # No render-library CDN tag survives in standalone.
         assert "cdn.jsdelivr.net/npm/markdown-it@" not in html
         assert "cdn.jsdelivr.net/npm/katex@" not in html
         assert "cdn.jsdelivr.net/npm/markdown-it-texmath@" not in html
-        # Google Fonts + htmx/sse CDN tags may remain (allowed by scope).
+        assert "cdn.jsdelivr.net/npm/htmx" not in html
+        # Google Fonts is the one CDN tag left (allowed by scope).
         assert "fonts.googleapis.com" in html
-        assert "htmx.org@2" in html
 
     def test_img_loop_consults_standalone_images_first(self):
         """The client img[src] loop looks up STANDALONE_IMAGES before its
         relative-path fallback (guards the lookup against removal)."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "STANDALONE_IMAGES.hasOwnProperty(key)" in src
 
     def test_inline_katex_css_uses_woff2_only(self):
@@ -3070,7 +3833,8 @@ class TestStandaloneSelfContained:
         export build is hermetic (no fetch-at-build)."""
         vendor = SCRIPTS_DIR / "vendor"
         for name in ("markdown-it.min.js", "katex.min.js",
-                     "katex.min.css", "texmath.min.js", "README.md"):
+                     "katex.min.css", "texmath.min.js", "htmx.min.js",
+                     "sse.js", "README.md"):
             assert (vendor / name).exists(), f"missing vendored {name}"
         woff2 = list((vendor / "fonts").glob("KaTeX_*.woff2"))
         assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
@@ -3108,7 +3872,6 @@ def _docs_client(plan_root):
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = plan_root
-    plan_dashboard._project_root = str(plan_root.resolve().parent)
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
     return TestClient(plan_dashboard.app, raise_server_exceptions=True)
@@ -3155,7 +3918,7 @@ class TestDocMode:
     def test_active_node_badge_gated_on_doc_mode(self):
         """The one JS-built status badge (active-node head) is gated on
         !window.DOC_MODE so it never renders in doc-mode."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "(status && !window.DOC_MODE)" in src
 
     def test_doc_mode_default_off_in_render(self, tmp_path):
@@ -3369,14 +4132,14 @@ class TestCodeHighlighting:
 
     def test_markdown_it_wired_with_highlight(self):
         """markdown-it is constructed with the highlightFence highlighter."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "highlight: highlightFence" in src
         assert "function highlightFence" in src
 
     def test_unknown_language_falls_through(self):
         """highlightFence returns '' for an unknown/absent language so markdown-it
         keeps its default (plain) rendering — no regression for untagged code."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         # Guard the gate that only highlights a registered language.
         assert "hljs.getLanguage(lang)" in src
 
@@ -3399,7 +4162,7 @@ class TestCodeHighlighting:
     def test_theme_aware_highlight_tokens(self):
         """Highlight token colors are theme tokens (--hl-*) defined in both the
         light root and the dark theme block, so code is readable in both."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         # Defined once in :root (light) and once in [data-theme="dark"].
         assert src.count("--hl-keyword:") == 2
         assert ".rendered-md .hljs-keyword" in src
@@ -3410,13 +4173,14 @@ class TestCodeHighlighting:
         assert (vendor / "highlight.min.js").exists()
         assert (vendor / "languages" / "julia.min.js").exists()
 
-    def test_served_page_keeps_highlight_cdn(self, tmp_path):
-        """Server mode loads highlight.js from the CDN tags (mirrors the existing
-        markdown-it/katex CDN tags)."""
+    def test_served_page_loads_highlight_locally(self, tmp_path):
+        """Server mode loads highlight.js from the local /static/ route, not a
+        CDN (mirrors the markdown-it/katex/htmx local routes)."""
         plan = _docs_plan(tmp_path)
         with _docs_client(plan) as client:
             html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/@highlightjs" in html
+        assert '<script src="/static/highlight.min.js"></script>' in html
+        assert "cdn.jsdelivr.net/npm/@highlightjs" not in html
 
 
 class TestRawHtmlSanitization:
@@ -3434,23 +4198,18 @@ class TestRawHtmlSanitization:
     def test_markdownit_html_enabled(self):
         """markdown-it is constructed with html:true so agent-authored HTML in a
         task body is emitted as live HTML rather than escaped text."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "window.markdownit({ html: true," in src
         # The old escape-everything config must be gone (would re-break raw HTML).
         assert "html: false" not in src
 
     def test_render_result_is_sanitized(self):
         """Every md.render(...) result flows through DOMPurify.sanitize before it
-        reaches the DOM, with style/class kept for authored inline styling and the
-        default scheme allowlist extended with `zotero` (the trace-link deeplink)
-        while javascript:/untrusted data: stay blocked. The single renderMarkdown
-        helper is the only md.render call site, so covering it covers task
-        sections, doc pages, and section previews."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        reaches the DOM, with style/class kept and Zotero links admitted without
+        allowing javascript: or untrusted data: links."""
+        src = BASE_HTML
         assert "DOMPurify.sanitize(md.render(text), {" in src
         assert "ADD_ATTR: ['style', 'class']" in src
-        # zotero:// survives sanitization via the extended ALLOWED_URI_REGEXP;
-        # javascript: is absent from the scheme list, so it stays blocked.
         assert "ALLOWED_URI_REGEXP:" in src
         assert "xmpp|matrix|zotero):" in src
         # No raw md.render(...) reaches innerHTML unsanitized: the only call site
@@ -3477,13 +4236,179 @@ class TestRawHtmlSanitization:
         assert "DOMPurify" in html  # inline body present
         assert "cdn.jsdelivr.net/npm/dompurify@" not in html
 
-    def test_served_page_keeps_purify_cdn(self, tmp_path):
-        """Server mode loads DOMPurify from the CDN tag (mirrors the existing
-        markdown-it/katex/highlight CDN tags)."""
+    def test_served_page_loads_purify_locally(self, tmp_path):
+        """Server mode loads DOMPurify from the local /static/ route, not a CDN
+        (mirrors the markdown-it/katex/highlight/htmx local routes)."""
         plan = _docs_plan(tmp_path)
         with _docs_client(plan) as client:
             html = client.get("/").text
-        assert "cdn.jsdelivr.net/npm/dompurify@3" in html
+        assert '<script src="/static/purify.min.js"></script>' in html
+        assert "cdn.jsdelivr.net/npm/dompurify@" not in html
+
+
+class TestServerSideEscaping:
+    """Jinja autoescape is the one trust boundary for agent-written task
+    content: titles and section previews render as literal text everywhere the
+    server embeds them; the text/x-markdown payload stays raw (server-side)
+    because it is sanitized client-side by DOMPurify (TestRawHtmlSanitization).
+
+    The fixture plants `<script>`, `<img src=x onerror=...>`, single/double
+    quotes, and a standalone ` --> ` line across a root title, a leaf title,
+    and a leaf section body.
+    """
+
+    # Titles avoid a trailing/leading quote character: the frontmatter parser's
+    # `raw.strip("\"'")` unwraps the YAML double-quote delimiters by stripping
+    # any quote characters off the edges, so an adversarial quote sitting at
+    # the very edge of the value (rather than embedded inside it) would be
+    # eaten along with the delimiter — a fixture-authoring pitfall, not part
+    # of this task's escaping surface. Quote coverage lives in SECTION_BODY,
+    # a raw markdown value with no such unwrapping.
+    ROOT_TITLE = "<script>alert(1)</script> it's fine"
+    LEAF_TITLE = "<script>alert(2)</script>"
+    SECTION_BODY = (
+        'Has <img src=x onerror=alert(3)> and quotes: it\'s a "test".\n'
+        "\n"
+        " --> \n"
+        "\n"
+        "More text after the breakout line.\n"
+    )
+
+    @pytest.fixture
+    def adversarial_plan_root(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        root.joinpath("task.md").write_text(
+            "---\n"
+            f'title: "{self.ROOT_TITLE}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            "## Objective\n\nRoot fixture.\n",
+            encoding="utf-8",
+        )
+        leaf = root / "01-adversarial"
+        leaf.mkdir()
+        leaf.joinpath("task.md").write_text(
+            "---\n"
+            f'title: "{self.LEAF_TITLE}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            f"## Objective\n\n{self.SECTION_BODY}",
+            encoding="utf-8",
+        )
+        return root
+
+    @pytest.fixture
+    def adv_client(self, adversarial_plan_root):
+        from starlette.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = adversarial_plan_root
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+            yield c
+
+    def test_page_title_and_header_escaped(self, adv_client):
+        """The root title reaches <title> and #header-title as literal text."""
+        html = adv_client.get("/").text
+        assert "<script>alert(1)</script>" not in html
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+        assert "it&#39;s fine" in html
+
+    def test_sidebar_row_escaped(self, adv_client):
+        """The leaf title reaches the sidebar nav row as literal text."""
+        html = adv_client.get("/nav").text
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+
+    def test_kanban_card_escaped_with_no_interpolated_onclick(self, adv_client):
+        """The kanban card title is literal text, and the card is wired via a
+        data-path attribute + delegated handler rather than an inline onclick
+        built by interpolating the task path."""
+        html = adv_client.get("/kanban").text
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
+        assert 'onclick="revealTask(' not in html
+        assert 'data-path="01-adversarial"' in html
+
+    def test_active_node_card_assembly_delegates_to_kanban_handler(self):
+        """onKanbanCardClick reads the card's data-path (delegated), mirroring
+        onChildCardClick's escaped-attribute + delegation pattern."""
+        src = BASE_HTML
+        assert "function onKanbanCardClick(event)" in src
+        assert "card.dataset.path" in src
+
+    def test_comment_anchor_selectors_use_css_escape(self):
+        """A `"` in a `##` header used to throw out of querySelector and abort
+        comment loading for the whole task; CSS.escape guards both
+        section-name selector sites (grouped anchor match, orphan-section
+        lookup)."""
+        src = BASE_HTML
+        assert 'CSS.escape(c.anchor.section)' in src
+        assert 'CSS.escape(secName)' in src
+
+    def test_section_preview_literal_but_markdown_payload_stays_raw(self, adv_client):
+        """The section preview shows literal text (escaped); the x-markdown
+        payload — read via textContent and sanitized client-side — carries the
+        content unescaped, since a <script> element's raw-text content model
+        never decodes HTML entities."""
+        html = adv_client.get("/node/01-adversarial").text
+
+        preview_match = re.search(
+            r'<span class="section-preview">(.*?)</span>', html, re.S
+        )
+        assert preview_match, "section-preview span not found"
+        preview = preview_match.group(1)
+        assert "<img" not in preview
+        assert "&lt;img" in preview
+
+        payload_match = re.search(
+            r'<script type="text/x-markdown">(.*?)</script>', html, re.S
+        )
+        assert payload_match, "x-markdown payload not found"
+        payload = payload_match.group(1)
+        assert "<img src=x onerror=alert(3)>" in payload
+        assert 'it\'s a "test"' in payload
+        assert " --> " in payload
+
+    def test_standalone_export_escapes_titles_and_previews(
+        self, adversarial_plan_root, tmp_path
+    ):
+        """The same escaping holds in a standalone export. The root title
+        renders directly (server-escaped as in the live page); per-task nav
+        rows and the kanban card are delivered as pre-rendered HTML fragments
+        embedded via `| tojson` for client-side swap-in, so their HTML-escaped
+        text is additionally JSON-string-encoded (`<` -> `\\u003c` etc.)
+        rather than appearing as a literal `&lt;` substring. The children-graph
+        JSON fragment carries the title as a plain (unescaped) string field
+        instead — JSON-encoded once, not HTML-escaped-then-JSON-encoded —
+        since it is consumed as data (`textContent`), never as markup."""
+        out = tmp_path / "export.html"
+        plan_dashboard.generate_dashboard(adversarial_plan_root, out)
+        html = out.read_text("utf-8")
+
+        assert "<script>alert(1)</script>" not in html
+        assert "<script>alert(2)</script>" not in html
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html  # <title>, literal
+
+        # Kanban card / sidebar row render the leaf title escaped
+        # (the search-index "title" field is a separate, inert JSON payload
+        # escaped by the client's escapeHtml at display time, per
+        # TestClientSearch — not asserted here).
+        escaped_leaf_title = "\\u0026lt;script\\u0026gt;alert(2)\\u0026lt;/script\\u0026gt;"
+        assert html.count(escaped_leaf_title) == 2  # kanban card, nav row
+
+        # The children-graph payload's title field is single JSON-escaped —
+        # still script-safe with no HTML-escape round trip.
+        assert "\\u003cscript\\u003ealert(2)\\u003c/script\\u003e" in html
+
+        # The x-markdown payload (client DOMPurify gate) stays raw even inside
+        # the JSON-embedded fragment — only JSON-string-encoded, not
+        # HTML-escaped.
+        assert "\\u003cimg src=x onerror=alert(3)\\u003e" in html
+        assert "\\u0026lt;img src=x onerror=alert(3)" in html  # section preview
 
 
 class TestClientSearch:
@@ -3534,7 +4459,7 @@ class TestClientSearch:
     def test_search_palette_ui_and_navigation(self):
         """The palette UI, the title+body scorer, and navigation-via-setActive
         are wired (selecting a result routes exactly as a sidebar click)."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert 'id="search-palette"' in src
         assert "function runSearch" in src
         assert "function scoreSearchRecord" in src
@@ -3544,7 +4469,7 @@ class TestClientSearch:
     def test_search_keyboard_affordances(self):
         """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
         to open, Escape to dismiss."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "openSearchPalette()" in src
         assert "ArrowDown" in src and "ArrowUp" in src
         assert "event.key === 'Enter'" in src
@@ -3563,7 +4488,7 @@ class TestClientSearch:
     def test_search_index_refreshed_on_reload(self):
         """The client re-fetches /api/search-index on a structural full-reload and
         on a worktree switch so live search stays current."""
-        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        src = BASE_HTML
         assert "function refreshSearchIndex" in src
         assert "refreshSearchIndex()" in src
 
@@ -3670,32 +4595,13 @@ class TestMasterDetailPartials:
             assert 'class="task-meta"' in r.text
             assert "<strong>depends:</strong> 01-a" in r.text
 
-    def test_node_sections_match_full_node(self, tmp_path):
-        """The body-only partial emits the same section markup as the full node."""
-        import re
-        with self._client(self._deep_plan(tmp_path)) as c:
-            node = c.get("/node/01-a").text
-            full = c.get("/task/").text  # children of root incl. the full 01-a node
-
-            def norm(s):
-                return [ln.strip() for ln in s.splitlines() if ln.strip()]
-
-            for sec in ("Objective", "Results"):
-                node_block = re.search(
-                    rf'<div data-section="{sec}">.*?</script>', node, re.S)
-                full_block = re.search(
-                    rf'<div data-section="{sec}">.*?</script>', full, re.S)
-                assert node_block is not None
-                assert full_block is not None
-                assert norm(node_block.group(0)) == norm(full_block.group(0))
-
     def test_node_missing_404(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
             assert c.get("/node/does-not-exist").status_code == 404
 
     def test_existing_routes_unaffected(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
-            for route in ("/", "/tree", "/dag", "/kanban"):
+            for route in ("/", "/dag", "/kanban"):
                 assert c.get(route).status_code == 200
 
 
@@ -4005,6 +4911,236 @@ class TestIdleShutdownLifespan:
                 plan_dashboard._server.should_exit = True
             t.join(timeout=5.0)
 
+    def test_detached_repeated_abrupt_disconnects_exit_cleanly(self, tmp_path):
+        """Detached servers exit after concurrent RSTs and native watcher close.
+
+        The child wraps the real watchfiles watcher with a post-cleanup stall.
+        This deterministically reaches Uvicorn's graceful-shutdown race: the
+        native watcher has closed, but the watcher task does not finish unless
+        the bounded fallback cancels it.  The reviewed unbounded implementation
+        leaves the detached child alive and its port open.
+        """
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("watchfiles")
+        import struct
+        import threading
+
+        plan_root = _serve_plan(tmp_path)
+        runner = tmp_path / "detached_dashboard_runner.py"
+        runner.write_text(
+            "\n".join(
+                [
+                    "import sys",
+                    "from pathlib import Path",
+                    f"sys.path.insert(0, {str(SCRIPTS_DIR)!r})",
+                    "plan_root, port, marker_path = sys.argv[1:4]",
+                    f"source_path = Path({str(SCRIPTS_DIR / 'plan_dashboard.py')!r})",
+                    "source = source_path.read_text(encoding='utf-8')",
+                    "injection = '''",
+                    "original_watch = _watch_worktree",
+                    "marker = Path(_test_marker_path)",
+                    "async def delayed_finish(wt, stop_event):",
+                    "    await original_watch(wt, stop_event)",
+                    "    marker.write_text('native watcher closed', encoding='utf-8')",
+                    "    while True:",
+                    "        try:",
+                    "            await asyncio.Event().wait()",
+                    "        except asyncio.CancelledError:",
+                    (
+                        "            marker.write_text('native watcher closed\\\\n"
+                        "hard cancel suppressed', encoding='utf-8')"
+                    ),
+                    "_watch_worktree = delayed_finish",
+                    "IDLE_TIMEOUT = 0.3",
+                    "HEARTBEAT_INTERVAL = 0.05",
+                    "WATCHER_STOP_TIMEOUT = 0.1",
+                    "WATCHER_CANCEL_TIMEOUT = 0.1",
+                    "WATCHER_PROCESS_EXIT_TIMEOUT = 0.1",
+                    "'''",
+                    "entry = '\\nif __name__ == \"__main__\":\\n'",
+                    "source = source.replace(entry, '\\n' + injection + entry, 1)",
+                    (
+                        "sys.argv = [str(source_path), 'serve', '--foreground', "
+                        "'--root', plan_root, '--port', port, '--no-open']"
+                    ),
+                    (
+                        "scope = {'__name__': '__main__', '__file__': "
+                        "str(source_path), '__package__': None, "
+                        "'_test_marker_path': marker_path}"
+                    ),
+                    "exec(compile(source, str(source_path), 'exec'), scope)",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        def _connect(port):
+            client = socket.create_connection(("127.0.0.1", port), timeout=5.0)
+            client.sendall(
+                b"GET /events HTTP/1.1\r\n"
+                + f"Host: 127.0.0.1:{port}\r\n".encode()
+                + b"Accept: text/event-stream\r\nConnection: keep-alive\r\n\r\n"
+            )
+            received = b""
+            while b": heartbeat\n\n" not in received:
+                received += client.recv(4096)
+            return client
+
+        for cycle in range(2):
+            port = self._free_port()
+            marker = tmp_path / f"native-closed-{cycle}"
+            log_path = tmp_path / f"detached-{cycle}.log"
+            with log_path.open("wb") as log:
+                process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        str(runner),
+                        str(plan_root),
+                        str(port),
+                        str(marker),
+                    ],
+                    stdin=subprocess.DEVNULL,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+            try:
+                assert os.getsid(process.pid) == process.pid
+                assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+                clients = [_connect(port) for _ in range(8)]
+                barrier = threading.Barrier(len(clients))
+
+                def _reset(client):
+                    barrier.wait()
+                    client.setsockopt(
+                        socket.SOL_SOCKET,
+                        socket.SO_LINGER,
+                        struct.pack("ii", 1, 0),
+                    )
+                    client.close()
+
+                closers = [
+                    threading.Thread(target=_reset, args=(client,))
+                    for client in clients
+                ]
+                for closer in closers:
+                    closer.start()
+                for closer in closers:
+                    closer.join(timeout=2.0)
+
+                deadline = time.monotonic() + 5.0
+                while process.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.05)
+                assert process.poll() == 0, (
+                    f"cycle {cycle}: detached server did not exit; "
+                    f"log={log_path.read_text(encoding='utf-8', errors='replace')}"
+                )
+                assert marker.read_text(encoding="utf-8") == (
+                    "native watcher closed\nhard cancel suppressed"
+                )
+                assert not plan_dashboard._port_serving(port)
+                assert not plan_dashboard._pid_alive(process.pid)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5.0)
+
+
+class TestEventLoopOffload:
+    """A slow blocking route (``/export``) must not freeze the event loop: the
+    SSE heartbeat and a concurrent cheap request stay live while it renders.
+
+    Drives a real ``serve()`` (real uvicorn event loop + real threadpool), so
+    ``asyncio.to_thread`` genuinely hands the blocking core to a worker thread
+    rather than the single-threaded ``TestClient`` portal used elsewhere in this
+    file, which would not exercise threadpool offload at all.
+    """
+
+    def _free_port(self):
+        import socket as _socket
+
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        s.bind(("localhost", 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    def test_slow_export_does_not_block_heartbeat_or_concurrent_request(
+        self, tmp_path, monkeypatch
+    ):
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        # Inject an artificial delay into /export's blocking core (a real OS
+        # sleep — blocking the worker thread, not the event loop).
+        real_render = plan_dashboard.render_standalone_html
+
+        def _slow_render(*args, **kwargs):
+            time.sleep(1.5)
+            return real_render(*args, **kwargs)
+
+        monkeypatch.setattr(plan_dashboard, "render_standalone_html", _slow_render)
+
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.2
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            with httpx.Client(timeout=10.0) as client:
+                with client.stream("GET", f"{url}/events") as sse_resp:
+                    assert sse_resp.status_code == 200
+                    lines = sse_resp.iter_lines()
+                    next(lines)  # initial heartbeat — connection established
+
+                    export_result: dict[str, object] = {}
+
+                    def _do_export():
+                        export_result["resp"] = client.get(
+                            f"{url}/export", timeout=10.0
+                        )
+
+                    export_thread = threading.Thread(target=_do_export)
+                    start = time.monotonic()
+                    export_thread.start()
+
+                    # The heartbeat interval (0.2s) is well under the slow
+                    # export's 1.5s delay, so a periodic heartbeat must still
+                    # arrive promptly while /export is in flight.
+                    next(lines)
+                    hb_elapsed = time.monotonic() - start
+                    assert hb_elapsed < 1.0, (
+                        f"SSE heartbeat blocked for {hb_elapsed:.2f}s by /export"
+                    )
+
+                    # A concurrent cheap request also completes promptly rather
+                    # than queuing behind the slow render.
+                    cheap_start = time.monotonic()
+                    cheap_resp = client.get(f"{url}/healthz", timeout=5.0)
+                    cheap_elapsed = time.monotonic() - cheap_start
+                    assert cheap_resp.status_code == 200
+                    assert cheap_elapsed < 1.0, (
+                        f"/healthz took {cheap_elapsed:.2f}s while /export was slow"
+                    )
+
+                    export_thread.join(timeout=10.0)
+            assert export_result["resp"].status_code == 200
+        finally:
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
 
 class TestRuntimeFileKeying:
     """PID/log files are keyed to the same repo identity as the port."""
@@ -4147,7 +5283,7 @@ class TestBackgroundLaunch:
     per planner guidance.
     """
 
-    def test_background_launch_returns_and_writes_pid(self, tmp_path):
+    def test_background_launch_returns_and_writes_pid(self, tmp_path, capsys):
         pytest.importorskip("uvicorn")
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
@@ -4163,6 +5299,10 @@ class TestBackgroundLaunch:
             pid = plan_dashboard._read_pid(pid_path)
             assert pid is not None and plan_dashboard._pid_alive(pid)
             assert plan_dashboard._port_serving(port)
+            assert (
+                f"Dashboard running at {plan_dashboard._dashboard_url(port, plan_root)}"
+                in capsys.readouterr().out
+            )
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
@@ -4200,7 +5340,7 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=True
             ) == 0
-            assert opened == [f"http://localhost:{port}"]
+            assert opened == [plan_dashboard._dashboard_url(port, plan_root)]
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
@@ -4219,9 +5359,47 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=True
             ) == 0
-            assert opened == [f"http://localhost:{port}"]
+            assert opened == [plan_dashboard._dashboard_url(port, plan_root)]
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_repo_reuse_opens_invoking_worktree(self, tmp_path, monkeypatch, capsys):
+        """A repo-shared server launched from A must reopen scoped to B."""
+        pytest.importorskip("uvicorn")
+        (tmp_path / "worktree-a").mkdir()
+        (tmp_path / "worktree-b").mkdir()
+        plan_a = _serve_plan(tmp_path / "worktree-a")
+        plan_b = _serve_plan(tmp_path / "worktree-b")
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard.webbrowser, "open", lambda url: opened.append(url))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_a, port, str(common), open_browser=False
+            ) == 0
+            capsys.readouterr()
+            assert plan_dashboard.serve_background(
+                plan_b, port, str(common), open_browser=True
+            ) == 0
+            expected = plan_dashboard._dashboard_url(port, plan_b)
+            assert opened == [expected]
+            assert f"Dashboard already running at {expected}" in capsys.readouterr().out
+        finally:
+            plan_dashboard.stop_background(plan_a, str(common))
+
+    def test_scoped_url_encodes_collision_safe_selector(self, tmp_path, monkeypatch):
+        plan_root = tmp_path / "shared name" / "superRA"
+        plan_root.mkdir(parents=True)
+        monkeypatch.setattr(
+            plan_dashboard,
+            "_discovered_worktree_map",
+            lambda: {"parent one/shared name": plan_root},
+        )
+        assert plan_dashboard._dashboard_url(8123, plan_root) == (
+            "http://localhost:8123/?wt=parent%20one%2Fshared%20name"
+        )
 
     def test_stop_terminates_and_removes_pid(self, tmp_path):
         pytest.importorskip("uvicorn")
@@ -4390,6 +5568,7 @@ class TestBackgroundLaunch:
                 return None  # our child is alive (a lingering loser)
 
         winner_repo = plan_dashboard._repo_id(str(common), plan_root)
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
         monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
@@ -4422,6 +5601,7 @@ class TestBackgroundLaunch:
             def poll(self):
                 return None  # child alive but never brought the dashboard up
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", lambda cmd, **kw: _FakeProc())
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
         monkeypatch.setattr(plan_dashboard, "_probe_dashboard", lambda *a, **k: None)
@@ -4502,6 +5682,7 @@ class TestBackgroundLaunch:
             spawned.append(cmd)
             return _FakeProc()
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
         monkeypatch.setattr(
             plan_dashboard, "_wait_for_dashboard", lambda *a, **k: (55555, False, our_repo)
@@ -4657,6 +5838,7 @@ class TestServeBindHost:
             captured["cmd"] = cmd
             return _FakeProc()
 
+        monkeypatch.setattr(plan_dashboard, "_discovered_worktree_map", lambda: {})
         monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
         # No pre-existing server (layer 1/2 reuse skipped), and the post-spawn
         # /healthz wait reports our fake child as the winner so no real poll runs.
@@ -4676,3 +5858,22 @@ class TestServeBindHost:
         argparse default, mirroring the help text)."""
         ns = plan_dashboard.parse_args(["serve"])
         assert ns.host == "127.0.0.1"
+
+    def test_foreground_emits_and_opens_scoped_url(self, tmp_path, monkeypatch, capsys):
+        plan_root = _serve_plan(tmp_path)
+        port = 23457
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", plan_dashboard.PLAN_ROOT)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", plan_dashboard.DOC_MODE)
+        monkeypatch.setattr(plan_dashboard, "REPO_ID", plan_dashboard.REPO_ID)
+        monkeypatch.setattr(plan_dashboard, "get_git_common_dir", lambda: None)
+        monkeypatch.setattr(plan_dashboard, "serve", lambda *args, **kwargs: None)
+        monkeypatch.setattr(plan_dashboard, "_open_browser_async", opened.append)
+
+        plan_dashboard.main([
+            "serve", "--foreground", "--root", str(plan_root), "--port", str(port),
+        ])
+
+        expected = plan_dashboard._dashboard_url(port, plan_root)
+        assert opened == [expected]
+        assert f"Starting dashboard at {expected}" in capsys.readouterr().out

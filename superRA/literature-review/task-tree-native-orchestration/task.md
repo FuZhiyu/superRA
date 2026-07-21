@@ -50,7 +50,7 @@ Load `skill-creator` before editing skill files. Update at least:
 - The workflow explains local stop rules for discovery agents and the screening-to-discovery loop through direct candidate adds vs. discovery leads.
 - The reference load map clearly separates main-agent orchestration from discovery-agent, screening-agent, and extraction-agent instructions.
 - `rg` over `skills/literature-review` no longer finds stale behavioral instructions for `subtree-as-ledger`, "one subtask per paper considered", `Tier-2`/`Tier-3`, or a standalone folder-ledger executor.
-- Markdown checks and relevant skill-trigger / citation-client tests pass.
+- Markdown checks and relevant citation-client tests pass.
 
 ## Planner Guidance
 
@@ -71,7 +71,3 @@ Keep the implementation focused on the orchestration contract and the smallest t
 - `uv run --with pytest python -m pytest skills/literature-review/scripts/test_candidate_materializer.py skills/literature-review/scripts/test_citation_client.py` -> 67 passed.
 - `./superRA/superra task check` -> all checks passed.
 - Stale-term sweep over active skill surfaces found no remaining `search-and-screening`, `subtree-as-ledger`, `one subtask per paper`, `Tier-2`, `Tier-3`, `standalone folder-ledger`, `folder ledger`, `loop-until-dry`, `fan-out`, `seen index`, `candidate admission`, or `orchestrator keeps` references.
-
-### Notes
-
-- The existing skill-trigger harness did not run to a meaningful result on this machine because `tests/skill-triggering/run-test.sh` depends on `timeout`, which is absent in this macOS environment. The log at `/tmp/superpowers-tests/1783049180/skill-triggering/literature-review/claude-output.json` shows `timeout: command not found`, so the reported trigger failure is a harness/runtime issue rather than evidence about the skill metadata.

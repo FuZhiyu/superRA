@@ -1,8 +1,8 @@
 {#- Jinja2 macro: navigation-only task node for the master-detail sidebar.
 
-    Renders the same .task-row chrome as task_node.html (toggle caret, slug,
-    title, status badge, progress, comment badge) and the recursive children
-    container, but NO task body / no `## ` sections.  Keeps the per-node
+    Renders the .task-row chrome (toggle caret, slug, title, status badge,
+    progress, comment badge) and the recursive children container, but NO
+    task body / no `## ` sections — the sole row-rendering path. Keeps the per-node
     attributes the rest of the system keys off: id="task-<path-id>", data-path,
     data-status, and sse-swap="task:<path>" so SSE row swaps keep working.
 
@@ -23,6 +23,7 @@
 <div class="task-node"
      data-path="{{ task.path }}"
      data-status="{{ eff_status }}"
+     {% if task.parse_error %}data-parse-error="true"{% endif %}
      id="task-{{ path_id }}"
      sse-swap="task:{{ task.path }}"
      hx-swap="outerHTML">
@@ -34,6 +35,9 @@
     <span class="task-slug">{{ task.slug }}</span>
     {% endif %}
     <span class="task-title-text">{{ task.title }}</span>
+    {% if task.parse_error %}
+    <span class="badge badge-error" title="task.md failed to parse: {{ task.parse_error }}">parse error</span>
+    {% endif %}
     <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
     {% if not task.is_leaf and has_children %}
     {% set approved_count = [] %}

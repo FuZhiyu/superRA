@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-Extend the dashboard's client-side link resolver (`renderMarkdown` in `skills/task-tree/scripts/templates/base.html`) so a task/ledger body can carry the literature-review trace-link cluster — Zotero deeplink, web, PDF, markdown — as **relative paths and scheme URIs the dashboard resolves**, never machine-absolute paths. Today the resolver rewrites every non-`http`/non-`#` href to `vscode://file/…`, and the pre-render DOMPurify pass strips custom schemes, so a `zotero://` link is dropped and a PDF only ever opens in VSCode. Two targeted changes; nothing else about the resolver moves.
+Extend the dashboard's client-side link resolver (`renderMarkdown` in `skills/task-tree/scripts/templates/dashboard.js`) so a task/ledger body can carry the literature-review trace-link cluster — Zotero deeplink, web, PDF, markdown — as **relative paths and scheme URIs the dashboard resolves**, never machine-absolute paths. Today the resolver rewrites every non-`http`/non-`#` href to `vscode://file/…`, and the pre-render DOMPurify pass strips custom schemes, so a `zotero://` link is dropped and a PDF only ever opens in VSCode. Two targeted changes; nothing else about the resolver moves.
 
 Scope all edits/commits to this worktree (`/Users/zhiyufu/Dropbox/package_dev/superRA.worktrees/literature-review`). Generated dashboard assets, if any, follow the task-tree skill's regeneration rules.
 
@@ -40,19 +40,19 @@ This is the dashboard half of the literature-review trace-link cluster (the skil
 
 ## Results
 
-Both deliverables are implemented in the hand-edited Jinja template [skills/task-tree/scripts/templates/base.html](../../../skills/task-tree/scripts/templates/base.html) (client-side `renderMarkdown`), reusing the existing `repoPathPrefix` and `RESOLVED_ROOT` path bases — no new base introduced.
+Both deliverables are implemented in the extracted client template [skills/task-tree/scripts/templates/dashboard.js](../../../skills/task-tree/scripts/templates/dashboard.js) (`renderMarkdown`), reusing the existing `repoPathPrefix` and `RESOLVED_ROOT` path bases — no new base introduced.
 
 ### Changes
 
 1. **External-scheme passthrough.**
-   - DOMPurify config now sets `ALLOWED_URI_REGEXP` to the vendored DOMPurify 3.4.10 default scheme list plus `zotero`, so an authored `zotero://…` href survives sanitization ([base.html:2183-2186](../../../skills/task-tree/scripts/templates/base.html#L2183)). `javascript:` and untrusted `data:` are absent from the list and stay blocked (verified below).
-   - The relative-link rewrite guard now skips any href carrying a URL scheme (`/^[a-z][a-z0-9+.\-]*:/i`) in addition to the `#`-anchor skip — subsuming the old `http(s)` checks and adding `zotero:`/`mailto:`/`tel:`/absolute `vscode:`/`file:`, so a scheme URI is never double-prefixed into `vscode://file/…/zotero://…` ([base.html:2211-2215](../../../skills/task-tree/scripts/templates/base.html#L2211)).
+   - DOMPurify config sets `ALLOWED_URI_REGEXP` to the vendored DOMPurify default scheme list plus `zotero`, so an authored `zotero://…` href survives sanitization. `javascript:` and untrusted `data:` remain blocked.
+   - The relative-link rewrite guard skips any href carrying a URL scheme (`/^[a-z][a-z0-9+.\-]*:/i`) in addition to the `#`-anchor skip — subsuming the old `http(s)` checks and adding `zotero:`/`mailto:`/`tel:`/absolute `vscode:`/`file:`, so scheme URIs are never double-prefixed.
 
-2. **PDF direct-open.** A genuine relative `.pdf` link (non-task, non-scheme, non-doc-mode, non-GitHub) now routes to the browser instead of the editor: server mode → `/files/` + `repoPathPrefix` (the same base the image branch builds); standalone → `STANDALONE_PLAN_DIR + taskDirRel + href` (the image branch's standalone form) ([base.html:2221-2232](../../../skills/task-tree/scripts/templates/base.html#L2221)). All other relative file links (`.md`, source) keep the `vscode://file/` behavior. Change is limited to `.pdf`; no broader type table added. Doc-mode / GitHub-export PDFs are left on their existing (already browser-openable) paths.
+2. **PDF direct-open.** A genuine relative `.pdf` link (non-task, non-scheme, non-doc-mode, non-GitHub) routes to the browser instead of the editor: server mode → `/files/` + `repoPathPrefix` (the same base the image branch builds); standalone → `STANDALONE_PLAN_DIR + taskDirRel + href` (the image branch's standalone form). All other relative file links (`.md`, source) keep the `vscode://file/` behavior. Change is limited to `.pdf`; no broader type table was added. Doc-mode / GitHub-export PDFs retain their existing browser-openable paths.
 
 ### Verification — real rendered DOM, both resolver modes
 
-The task-tree suite has no JS/DOM render harness (its dashboard tests are Python/FastAPI source-presence + route checks), so per the task I recorded a real-DOM inspection. A jsdom harness loaded a **self-contained standalone export** (inlined DOMPurify 3.4.10 + markdown-it + the real `renderMarkdown`), called `renderMarkdown` on a body carrying all four link forms plus a hostile `javascript:` link, and read the resulting `<a>` href values. Server mode was exercised by flipping the one flag the resolver branches on (`window.STANDALONE`), since that is the sole resolver-relevant difference between the two page templates.
+The dashboard suite now extracts the real `renderMarkdown` implementation from [dashboard.js](../../../skills/task-tree/scripts/templates/dashboard.js) and executes its link branches under Node. It covers scheme passthrough, live and standalone PDF targets, and the unchanged VS Code target for other relative files. The original real-DOM inspection also loaded a self-contained standalone export with the vendored DOMPurify and markdown-it assets and exercised the same server/standalone branches.
 
 Rendered hrefs for `[…](…)` body links (task `demo-task`, `ROOT_PREFIX=superRA`):
 
@@ -68,4 +68,4 @@ Every row matches the validation criteria. The `javascript:` link produces **zer
 
 **Live-serve render:** `plan_dashboard.py dashboard` booted (index `200`), the `/node/demo-task` fragment served all four raw link forms to the client renderer, and the exact server-mode PDF target `/files/superRA/demo-task/attachments/key.pdf` returned `200` — the rendered href resolves to a real served PDF.
 
-**Regression:** the source-presence test pinned to the old exact sanitize string was updated to assert the new config (single sanitize call site, `style`/`class` kept, `zotero` allowed) ([test_dashboard.py:3442-3459](../../../skills/task-tree/scripts/test_dashboard.py#L3442)). Full dashboard suite: `274 passed`.
+**Regression:** [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py) verifies both the sanitizer configuration and the behavioral link-rewrite matrix against the extracted implementation.
