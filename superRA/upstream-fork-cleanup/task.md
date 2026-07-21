@@ -26,3 +26,11 @@ non-task source finds no references to the retired manifest names or removed
 paths, and no `superpowers` identifier in maintained plugin metadata. The task
 Objective names the retired paths as its implementation contract; historical
 records preserve the retired material by description instead.
+
+### Integration protection
+
+The researcher selected the existing test gates rather than new drift tests.
+The full task-tree suite passed with 712 passed, 2 skipped, and 5 expected
+warnings; `tests/check-harness-compatibility.sh` passed its 7 checks; and
+`scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
+no undeclared version references.
