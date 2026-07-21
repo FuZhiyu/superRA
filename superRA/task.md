@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: revise
+status: in-progress
 depends_on: []
 ---
 
@@ -17,8 +17,8 @@ Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE 
 
 Workstream rollup (as of 2026-07-20, including the `0.3.2` cleanup release):
 
-- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and the workflow redesigns. Approved and integrated on `better-handoff`.
-- [docs-site](docs-site/task.md) — the public documentation site (dogfooded task-tree doc source, GitHub Pages deploy) and README front door. Approved; its `10-version-switcher` child is postponed post-launch work.
+- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and workflow redesigns. Prior work was integrated on `better-handoff`; the workstream is in progress pending the dashboard's `nonloopback-host-serve` child.
+- [docs-site](docs-site/task.md) — the shipped public documentation site (dogfooded task-tree doc source, GitHub Pages deploy) and README front door. The workstream is postponed, including its `10-version-switcher` post-launch child.
 - [showcase-analysis](showcase-analysis/task.md) — the real CAPM-vs-FF3 asset-pricing study that serves as the docs showcase; its tree and figures are a live input to `docs/build_site.sh`.
 - [zotero-skills](zotero-skills/task.md) — Zotero paper-reading, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` skill.
 - [slide-design-vertical](slide-design-vertical/task.md) — the slide-design domain vertical.
