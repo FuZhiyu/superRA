@@ -29,8 +29,8 @@
 # assert something vacuous, this smoke asserts the strongest available
 # observables — task-read command events and marker Read events ordered before
 # the artifact write, plus an artifact whose sentinel values can only be
-# produced after reading the required context. Manifest/role-surface load
-# expectations are covered statically by the CI-safe contract tests; the
+# produced after reading the required context. Structured manifest mappings and
+# role frontmatter are covered statically by the CI-safe contract tests; the
 # orchestrator dispatch smoke covers subagent dispatch evidence separately.
 
 set -uo pipefail

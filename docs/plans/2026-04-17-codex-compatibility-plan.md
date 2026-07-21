@@ -37,7 +37,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 ### Not walked (not needed for this retroactive handoff)
 
-- `docs/plans/`, `docs/superpowers/`, and non-structural test fixtures — not needed to reconstruct the current implementation work.
+- `docs/plans/`, the retired upstream design archive, and non-structural test fixtures — not needed to reconstruct the current implementation work.
 
 ## Decisions
 

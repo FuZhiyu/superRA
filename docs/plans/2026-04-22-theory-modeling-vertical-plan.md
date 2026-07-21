@@ -128,7 +128,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - `/README.md` (HEAD at `b6e0640`): User-facing overview of the plan/implement/integrate workflow, current domain skills, utility skills, installation, and hooks. Domain skill additions need matching README updates, especially the Domain Skills table and roadmap wording.
 
 ### Not walked (not needed for this plan)
-- `docs/plans/` beyond targeted reference examples, `tests/claude-code/`, and harness-specific install docs outside the repo root summaries — out of scope unless verification shows a drift.
+- `docs/plans/` beyond targeted reference examples, retired upstream Claude Code test harnesses, and harness-specific install docs outside the repo root summaries — out of scope unless verification shows a drift.
 
 ---
 
