@@ -34,3 +34,10 @@ The full task-tree suite passed with 712 passed, 2 skipped, and 5 expected
 warnings; `tests/check-harness-compatibility.sh` passed its 7 checks; and
 `scripts/bump-version.sh --audit` reported all `0.3.2` manifests aligned with
 no undeclared version references.
+
+## Sync Impact
+
+Release automation introduced by the synchronized base now watches and reads
+the maintained Claude manifest rather than the retired root `package.json`, so
+automatic releases preserve the cleanup's supported-manifest contract. Sync
+commit: `a5b2a716`.
