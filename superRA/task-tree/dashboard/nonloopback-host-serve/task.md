@@ -39,7 +39,3 @@ Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
 ## Sync Impact
 
 The host-aware lifecycle now composes with the base branch's worktree-scoped launch URLs: `_dashboard_url` uses the requested or PID-recorded display host and retains the canonical `?wt=` selector for launch, reuse, and foreground URLs. The preserved same-repo mode-conflict diagnostic is intentionally unscoped because it is not a launch URL. Exact loopback and non-loopback lifecycle assertions cover the full composed launch URL; the non-loopback no-respawn check distinguishes dashboard children from Git subprocesses used for worktree discovery. Sync commit: `1ce4fac3`.
-
-## Review Notes
-
-1. **MAJOR — The sync narrative erases the intentional unscoped mode-conflict exception.** The Results claim that every launch/reuse/error URL composes the canonical worktree selector, but the preserved mode-conflict branch still constructs an unscoped display-host URL at [plan_dashboard.py:2477](../../../../skills/task-tree/scripts/plan_dashboard.py#L2477). This is consistent with the incoming base's stated intent that the mode-conflict diagnostic is not a launch URL, but it contradicts both [the current Results claim](task.md#L25) and the merge commit's broader “error … URLs … retaining the canonical `?wt=` selector” thesis. Keep the code or scope it deliberately, then make the task record and a propagation sync commit state the same exception so Integrate receives an accurate approved diff.
