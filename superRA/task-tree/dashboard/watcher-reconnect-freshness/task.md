@@ -1,6 +1,6 @@
 ---
 title: "Fresh Dashboard State After Watcher Reconnect"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
