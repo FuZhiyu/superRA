@@ -243,7 +243,7 @@ function renderMarkdown(text, sectionName, taskPath) {
         if (window.STANDALONE) {
           a.setAttribute('href', STANDALONE_PLAN_DIR + taskDirRel + href);
         } else {
-          a.setAttribute('href', '/files/' + repoPathPrefix + href);
+          a.setAttribute('href', wtUrl('/files/' + repoPathPrefix + href));
         }
         a.setAttribute('target', '_blank');
       } else {

@@ -693,6 +693,7 @@ def collision_worktree_client(tmp_path, monkeypatch):
         attachments = task / "attachments"
         attachments.mkdir()
         attachments.joinpath("figure.png").write_bytes(title.encode())
+        attachments.joinpath("figure.pdf").write_bytes((title + " PDF").encode())
         if title == "Project B":
             attachments.joinpath("b-only.png").write_bytes(b"B only")
         return root
@@ -764,6 +765,29 @@ class TestPerWorktreeResolution:
         )
         assert "?wt=" not in launch_url
         assert client.get(launch_url).content == b"Project A"
+
+    @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+    def test_collision_safe_selector_routes_relative_pdf_to_selected_bytes(
+        self, collision_worktree_client
+    ):
+        client, _root_a, root_b = collision_worktree_client
+        wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
+        pdf_url = _render_markdown_link_href(
+            "attachments/figure.pdf", active_wt=wt_b, task_path="01-first"
+        )
+        assert pdf_url == (
+            "/files/superRA/01-first/attachments/figure.pdf"
+            "?wt=parent%20two%2Fshared%20name"
+        )
+        selected = client.get(pdf_url)
+        assert selected.status_code == 200
+        assert selected.content == b"Project B PDF"
+
+        launch_url = _render_markdown_link_href(
+            "attachments/figure.pdf", task_path="01-first"
+        )
+        assert "?wt=" not in launch_url
+        assert client.get(launch_url).content == b"Project A PDF"
 
     def test_node_resolves_by_wt_param(self, two_worktree_client):
         client, wt_a, wt_b = two_worktree_client
@@ -2852,29 +2876,39 @@ class TestRenderMarkdownImageRewrite:
         assert self._run("superRA", "01-alpha", src, "selected")["src"] == src
 
 
+def _render_markdown_link_href(
+    href, *, active_wt="", standalone=False, repo_file_base="", task_path="demo"
+):
+    defs = _extract_js_defs(["wtUrl", "renderMarkdown"])
+    harness = (
+        _RENDER_MD_SHIM
+        + "window.STANDALONE = " + json.dumps(standalone) + ";\n"
+        + "var ACTIVE_WT = " + json.dumps(active_wt) + ";\n"
+        + "var RESOLVED_ROOT = '/abs/root';\n"
+        + "var ROOT_PREFIX = 'superRA';\n"
+        + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
+        + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+        + "var DOC_LOCAL_LINKS = [];\n"
+        + "var STANDALONE_PLAN_DIR = 'tree/';\n"
+        + defs + "\n"
+        + "var html = renderMarkdown('[link](" + href + ")', null, "
+        + json.dumps(task_path) + ");\n"
+        + "var m = html.match(/href=\"([^\"]*)\"/);\n"
+        + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+    )
+    proc = subprocess.run(
+        [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
+
+
 @pytest.mark.skipif(_NODE is None, reason="node not available")
 class TestRenderMarkdownLinkRewrite:
     def _run(self, href, *, standalone=False, repo_file_base=""):
-        defs = _extract_js_defs(["renderMarkdown"])
-        harness = (
-            _RENDER_MD_SHIM
-            + "window.STANDALONE = " + json.dumps(standalone) + ";\n"
-            + "var RESOLVED_ROOT = '/abs/root';\n"
-            + "var ROOT_PREFIX = 'superRA';\n"
-            + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
-            + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
-            + "var DOC_LOCAL_LINKS = [];\n"
-            + "var STANDALONE_PLAN_DIR = 'tree/';\n"
-            + defs + "\n"
-            + "var html = renderMarkdown('[link](" + href + ")', null, 'demo');\n"
-            + "var m = html.match(/href=\"([^\"]*)\"/);\n"
-            + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+        return _render_markdown_link_href(
+            href, standalone=standalone, repo_file_base=repo_file_base
         )
-        proc = subprocess.run(
-            [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
-        )
-        assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
-        return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
 
     def test_scheme_uris_remain_unchanged(self):
         assert self._run("zotero://select/library/items/ABC123") == (
