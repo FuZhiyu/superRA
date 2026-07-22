@@ -71,11 +71,14 @@ notification, duplicate suppression, and cross-worktree broadcast isolation
 
 The dashboard hardening and worktree image/reconnect fixes are documented in
 the dated [0.3.3 release notes](../../../RELEASE-NOTES.md#L5). All maintained
-Claude, marketplace, and Codex manifests agree at `0.3.3`; the release workflow
-requires exactly one non-empty `0.3.3` section directly below `Unreleased`, and
-its release job runs only on `refs/heads/main`. The workflow therefore remains
-the sole owner of idempotent `v0.3.3` tag and release creation after merge
-([release.yml:23](../../../.github/workflows/release.yml#L23),
+Claude, marketplace, and Codex manifests agree at `0.3.3`, and the release
+workflow runs `scripts/bump-version.sh --check` before reading or using the
+release version. It also requires exactly one non-empty `0.3.3` section directly
+below `Unreleased`, and its release job runs only on `refs/heads/main`. The
+workflow therefore remains the sole owner of idempotent `v0.3.3` tag and release
+creation after merge
+([release.yml:32](../../../.github/workflows/release.yml#L32),
+[release.yml:23](../../../.github/workflows/release.yml#L23),
 [release.yml:45](../../../.github/workflows/release.yml#L45)).
 
 **Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` is ~2,740 lines mixing several concerns. The legacy module-global render state and the `/export` snapshot/restore dance are gone — the standalone render owns its state via `WorktreeState` — and the ~1,760 CSS / ~3,000 JS lines that used to inflate `base.html` now live in separate cacheable files. What remains: the background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) are FastAPI-decoupled, clean extraction candidates following the `skills/task-tree/scripts/dashboard_artifact_workflow.py` precedent.
@@ -85,3 +88,6 @@ the sole owner of idempotent `v0.3.3` tag and release creation after merge
 ## Review Notes
 
 1. **MAJOR** — The matured release subsection records that the manifests currently agree, but it drops the Protect-selected permanent manifest-consistency guard: the workflow runs `scripts/bump-version.sh --check` before it reads the version ([release.yml:32-33](../../../.github/workflows/release.yml#L32-L33)). Amend [the release subsection](task.md#L70-L79) to state that pre-release guard explicitly and cite it, alongside the retained section-order/uniqueness and main-only tag guards. Protect-selected key results cannot be reduced to a one-time verification fact during maturation.
+   → implemented: retained the permanent pre-release manifest check and its
+   ordering before version use in the durable release subsection
+   ([release.yml:32](../../../.github/workflows/release.yml#L32)).
