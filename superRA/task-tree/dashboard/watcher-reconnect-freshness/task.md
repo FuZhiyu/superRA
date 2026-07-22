@@ -1,7 +1,7 @@
 ---
 title: "Fresh Dashboard State After Watcher Reconnect"
-status: approved
-depends_on:  []
+status: revise
+depends_on: []
 ---
 
 ## Objective
@@ -59,3 +59,7 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
   README or contributor guide exists for the changed files.
 
 **Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving change classes are watcher-respawn cache refresh, worktree-scoped reconnect notification, lifecycle regressions, and the durable task record. The new approved task record and `skills/*` code/test hunks are retained because they directly implement and protect the reconnect-freshness objective; no scope-ambiguous or unjustified hunk remains.
+
+## Revision Notes
+
+- Researcher-approved maturation: merge this update task into `task-tree/dashboard`, preserve the protected reconnect-cache and client-refresh behavior as a short `## Results` subsection in that durable parent, and remove this child directory. This is a routine structural fold with no code-scope change.
