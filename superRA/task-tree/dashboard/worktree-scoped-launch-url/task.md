@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Requests"
-status: in-progress
+status: revise
 depends_on: []
 ---
 
@@ -45,3 +45,8 @@ This task does not change canonical role specs. Do not edit `skills/using-superr
 The 10 focused scoped-URL and shutdown-lifecycle protection tests passed, followed by the complete task-tree script suite at 714 passed with four expected/dependency warnings.
 
 **Final diff self-check:** `git diff 35fab8110f13eb1b3dab920a1e2c9b0b52dd1e30..HEAD`; surviving change classes are the previously approved bounded shutdown/watchdog lifecycle and release metadata, scoped launch-URL construction and routing regressions, task-tree/main-agent instruction currency, and durable task records. Suspicious hunks were the instruction edits under `skills/*`, retained because the scoped-URL objective requires agents to preserve the emitted canonical selector and each line passes the contributor DRY/Necessity gate; the approved dashboard and postponed docs-site task edits are prior maturation results. No scope-ambiguous hunk remains.
+
+## Review Notes
+
+1. **MAJOR:** The [Final diff self-check:47](task.md#L47) is stale: it uses `35fab811...HEAD` instead of the integration dispatch's governing `2d4c8551629814cab303573322dfde1d26f2a318..HEAD` range and describes shutdown, release, instruction, and docs-site classes that are not the surviving diff under review. This fails the blocking fresh-trail gate. Recompute the exact governing diff and replace the trail with its current four-file change classes and suspicious-hunk disposition.
+2. **MAJOR:** Several self-contained evidence links no longer support their claims: [task.md:26](task.md#L26) points at PID-health code rather than fresh/reuse/foreground URL emission, [task.md:27](task.md#L27) points at master-detail and shutdown tests rather than scoped-launch regressions, and [task.md:32](task.md#L32) points at comment tests rather than the selector-routing regression. Refresh these anchors to the current implementation and test locations so the Results remain verifiable at this commit.

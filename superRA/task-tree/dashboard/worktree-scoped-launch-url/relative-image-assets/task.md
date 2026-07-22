@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Relative Image Assets"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -27,3 +27,8 @@ Preserve the active canonical worktree selector when live-dashboard Markdown ren
 - The complete task-tree script suite passed with `729 passed, 4 warnings` under `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest -p no:cacheprovider -q skills/task-tree/scripts`. The warnings are two dependency deprecations plus two expected warning-path tests.
 
 **Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving changes are the one-line `wtUrl()` routing fix, byte-distinguishing cross-worktree regressions, and the scoped task/protection record. The approved-task hunks are retained as the durable record for issue #47; no scope-ambiguous hunk remains. The Project Doc Audit found the root `README.md` and `CLAUDE.md` current because the fix reuses the existing worktree-scoping mechanism and adds no public interface or contributor protocol.
+
+## Review Notes
+
+1. **MAJOR:** The protected end-to-end test is still named `test_collision_safe_dashboard_url_routes_to_invoking_worktree` and its docstring only describes routing the task tree ([test_dashboard.py:670-673](../../../../../skills/task-tree/scripts/test_dashboard.py#L670-L673)); neither identifies the relative-image selector or selected-worktree byte provenance that the test now protects. This fails the blocking result-protection requirement that a test name describe the protected result. Rename the test (and update its docstring) to make the image URL and byte-provenance contract discoverable; splitting the old launch-routing and new image assertions is also acceptable if that yields clearer contracts.
+2. **MINOR:** The Protection account says "the existing test required no strengthening" ([task.md:25](task.md#L25)), but this branch materially strengthened that existing test with image fixtures, selector assertions, and byte checks. Clarify that the protection-stage review required no *further* strengthening, or otherwise describe the implementation-time strengthening accurately.
