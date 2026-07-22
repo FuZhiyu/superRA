@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -17,7 +17,7 @@ Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE 
 
 Workstream rollup (as of 2026-07-21, including the `0.3.2` cleanup release):
 
-- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and workflow redesigns. Approved, including the dashboard hardening, worktree-scoped launch URLs, and non-loopback host lifecycle.
+- [task-tree](task-tree/task.md) — the task-tree system: CLI and data layer, live SSE dashboard, hooks, migration, agent interface, and workflow redesigns, including dashboard hardening, worktree-scoped launch URLs, and non-loopback host lifecycle.
 - [docs-site](docs-site/task.md) — the shipped public documentation site (dogfooded task-tree doc source, GitHub Pages deploy) and README front door. The workstream is postponed, including its `10-version-switcher` post-launch child.
 - [showcase-analysis](showcase-analysis/task.md) — the real CAPM-vs-FF3 asset-pricing study that serves as the docs showcase; its tree and figures are a live input to `docs/build_site.sh`.
 - [zotero-skills](zotero-skills/task.md) — Zotero paper-reading, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` skill.

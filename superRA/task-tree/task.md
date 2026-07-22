@@ -1,6 +1,6 @@
 ---
 title: "Task Tree Skill"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -25,10 +25,10 @@ The `task-tree` skill ships as `skills/task-tree/` — a routing `SKILL.md` over
 What the subtree delivered, one durable concern per surviving child:
 
 - **Core mechanics** — the stdlib data layer (`_task_io.py`, `_task_validate.py`), the packaged `superra` CLI, the migration script (`plan_migrate.py`), the status model (single `status` field, sibling-only deps, automatic rollup), and the test suite.
-- **Dashboard** — a FastAPI live SSE server with a master-detail workspace, DAG and kanban views, multi-worktree serving, and a self-contained static export.
+- **Dashboard** — a FastAPI live SSE server with a master-detail workspace, DAG and kanban views, multi-worktree serving, host-aware background lifecycle, and a self-contained static export.
 - **Agent interface** — the task tree as the workflow handoff surface: the universal interface in `using-superra`, comment surfacing in `task read`, and the planning / integration workflow redesigns.
 - **Later refinements** — Codex task-hook parity, frontmatter narrowed to `title`/`status`/`depends_on`, the consolidation + maturation stage redesign, task-edit discipline, and the dep-rewire restructuring hook.
 
 **Top-level tasks are unprivileged.** A `superRA/task.md` umbrella is optional, added only when a shared `## Objective` / `### Context` genuinely spans every top-level task (`task-file-contract.md` §Tree Shape); a top-level task carries no scope requirement, the same as any nested task. "Root-level task" was reworded to "top-level task" throughout skills, agents, and docs, and the `task_check.py` placement smells that encoded the old privilege (single-child-root wrapper, root-leaf-beside-branch) were dropped along with the now-empty `check_placement` function and `placement` check category. The dep-rewire hook (see [restructuring-tooling](restructuring-tooling/task.md)) is unaffected.
 
-The full test suite passes and `superra task check` is clean.
+The full test suite passes; `superra task check` reports only the integration-stage warning for this child's temporary `## Sync Impact` section.

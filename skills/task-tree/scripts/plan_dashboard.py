@@ -2110,8 +2110,8 @@ def _read_pid_port(pid_path: Path) -> tuple[int | None, int | None, str | None]:
     The PID file stores ``"<pid> <port> <host>"``: port lets a reuse check
     probe the port the running server actually bound (which can differ from a
     freshly derived port when the deterministic port was occupied at launch),
-    and host records the interface it bound so a later reuse/stop probes the
-    right address instead of assuming loopback.  A legacy file predating a
+    and host records the interface it bound so a later reuse probes the right
+    address instead of assuming loopback.  A legacy file predating a
     field (pid-only, or pid+port) returns ``None`` for the missing fields.
     Returns ``(None, None, None)`` when absent or unparseable.
     """
@@ -2194,7 +2194,7 @@ def _display_host(host: str) -> str:
 
 
 def _port_serving(port: int, probe_host: str = "localhost") -> bool:
-    """Return True if something is accepting connections on *port* at *probe_host*."""
+    """Return True if *probe_host* accepts connections on *port*."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.5)
         return s.connect_ex((probe_host, port)) == 0
@@ -2235,7 +2235,10 @@ def _probe_dashboard(
 
 
 def _wait_for_dashboard(
-    port: int, timeout: float = 10.0, poll: float = 0.1, probe_host: str = "127.0.0.1"
+    port: int,
+    timeout: float = 10.0,
+    poll: float = 0.1,
+    probe_host: str = "127.0.0.1",
 ) -> tuple[int, bool, str | None] | None:
     """Poll ``/healthz`` on *port* at *probe_host* until a dashboard answers.
 
@@ -2256,7 +2259,7 @@ def _running_pid(pid_path: Path, port: int) -> tuple[int, int, str] | None:
     """Return ``(pid, port, host)`` of a healthy running dashboard, else None.
 
     Healthy = the PID file names a live process *and* its recorded port is
-    serving at its recorded host. The port and host a running server bound are
+    serving at its recorded host.  The port and host a running server bound are
     read from the PID file (they can differ from a freshly derived *port* and
     the caller's requested host when the deterministic port was occupied at
     launch); *port* is the fallback for a legacy file, and loopback is the
@@ -2337,14 +2340,24 @@ def serve_background(
     repo_id = _repo_id(git_common_dir, plan_root)
     probe_host = _probe_host(host)
 
-    def _announce_reuse(
-        reuse_pid: int, reuse_port: int, reuse_host: str = "127.0.0.1"
-    ) -> int:
+    def _announce_reuse(reuse_pid: int, reuse_port: int, reuse_host: str) -> int:
         reuse_url = _dashboard_url(reuse_port, plan_root, reuse_host)
         print(f"Dashboard already running at {reuse_url} (PID {reuse_pid})")
         if open_browser:
             webbrowser.open(reuse_url)
         return 0
+
+    def _report_mode_conflict(
+        conflict_port: int, conflict_host: str, existing_doc_mode: bool
+    ) -> int:
+        url = f"http://{_display_host(conflict_host)}:{conflict_port}"
+        print(
+            f"Error: {url} is already serving a "
+            f"{'doc-mode' if existing_doc_mode else 'task-mode'} dashboard for "
+            f"this repo; stop it or launch with an explicit --port",
+            file=sys.stderr,
+        )
+        return 1
 
     def _spawn(target_port: int) -> int:
         """Spawn a detached server on *target_port*, wait for it, handle races."""
@@ -2384,7 +2397,9 @@ def serve_background(
         finally:
             log_fh.close()
 
-        served = _wait_for_dashboard(target_port, timeout=bind_timeout, probe_host=probe_host)
+        served = _wait_for_dashboard(
+            target_port, timeout=bind_timeout, probe_host=probe_host
+        )
         if served is None:
             # No superRA dashboard came up: our child crashed, or a foreign
             # process grabbed the port between the probe and the bind.  Don't
@@ -2454,8 +2469,10 @@ def serve_background(
             pid_path.unlink(missing_ok=True)
         elif probed_doc == doc_mode:
             return _announce_reuse(existing_pid, existing_port, existing_host)
-        # else: our repo, different serve mode — fall through; the walk reports
-        # the mode conflict on the same port.
+        else:
+            # Report against the recorded interface. Falling through to the
+            # invocation host could miss this server and start a second mode.
+            return _report_mode_conflict(existing_port, existing_host, probed_doc)
 
     # Layer 2 — repo-aware candidate walk from the deterministic port.
     for index, candidate in enumerate(_candidate_ports(port)):
@@ -2474,14 +2491,7 @@ def serve_background(
                 # Our repo already serves this port in the other mode; the PID
                 # file is per-repo (not per-mode), so a second server can't
                 # coexist.  Report rather than spawn a conflicting duplicate.
-                url = f"http://{_display_host(host)}:{candidate}"
-                print(
-                    f"Error: {url} is already serving a "
-                    f"{'doc-mode' if probed_doc else 'task-mode'} dashboard for "
-                    f"this repo; stop it or launch with an explicit --port",
-                    file=sys.stderr,
-                )
-                return 1
+                return _report_mode_conflict(candidate, host, probed_doc)
             # A different repo (hash collision) or foreign dashboard — advance.
             continue
         if _port_serving(candidate, probe_host):

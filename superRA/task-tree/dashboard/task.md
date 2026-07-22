@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: approved
+status: in-progress
 depends_on:
   - core-data-layer
   - cli-scripts
@@ -32,7 +32,7 @@ What shipped, past the original single-file static HTML the objective first scop
 - **Self-contained, offline export** — the static export base64-embeds figures and inlines every render library (markdown-it, KaTeX, highlight.js, DOMPurify, texmath, htmx, sse.js) alongside the extracted `dashboard.css`/`dashboard.js`, so a downloaded file renders fully offline; the only network reference is Google Fonts (system-font fallback).
 - **Offline-functional live mode** — live mode also loads every render library from the server's own `/static/…` route out of the hand-managed `vendor/` bundle rather than a CDN (htmx and sse.js were vendored to close the last two gaps); a blocked network degrades only typography, never rendering or SSE.
 - **Multi-worktree serving** — one server/port per repo resolves any worktree per request via `?wt=<wt_id>`; switching is client navigation, not a server-wide swap.
-- **Serve lifecycle** — background-by-default launch with idempotent reuse, idle self-exit, `stop`, and a loopback-default `--host` bind.
+- **Serve lifecycle** — background-by-default launch with idempotent reuse, idle self-exit, `stop`, and a loopback-default `--host` bind whose probes and launch URLs follow an explicitly requested interface.
 
 Task content is escaped at a single server-side trust boundary: Jinja autoescape is on, titles and section previews render HTML as literal text, and markdown bodies keep full HTML through the client DOMPurify gate. The kanban card wires clicks through a delegated `data-path` handler instead of an interpolated inline `onclick`, and comment-anchor selectors use `CSS.escape` so a `"` in a `##` header no longer aborts comment loading. Client DOM writes continue to go through `textContent`/`escapeHtml` helpers and controlled markdown-it rewrites.
 

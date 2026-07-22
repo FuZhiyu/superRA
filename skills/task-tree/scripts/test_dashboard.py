@@ -5568,7 +5568,9 @@ class TestBackgroundLaunch:
         assert rc == 1
         assert 55555 in terminated, "a child that never serves must not be left lingering"
 
-    def test_task_mode_launch_does_not_reuse_doc_mode_server(self, tmp_path, monkeypatch):
+    def test_task_mode_launch_does_not_reuse_doc_mode_server(
+        self, tmp_path, monkeypatch, capsys
+    ):
         """A task-mode launch must never adopt a same-repo --doc-mode server.
 
         The PID file is per-repo, not per-mode, so a second server can't coexist:
@@ -5580,9 +5582,12 @@ class TestBackgroundLaunch:
         common.mkdir()
         port = 34569
         repo = plan_dashboard._repo_id(str(common), plan_root)
-        # Our repo's doc-mode dashboard is present per both reuse layers.
+        # The recorded server uses a non-loopback interface while this invocation
+        # leaves --host at its loopback default. The PID fast path must report the
+        # conflict against the recorded host rather than miss it in layer 2.
+        recorded_host = "100.64.0.1"
         monkeypatch.setattr(
-            plan_dashboard, "_running_pid", lambda *a, **k: (12321, port, "127.0.0.1")
+            plan_dashboard, "_running_pid", lambda *a, **k: (12321, port, recorded_host)
         )
         monkeypatch.setattr(
             plan_dashboard, "_probe_dashboard", lambda *a, **k: (12321, True, repo)
@@ -5600,6 +5605,10 @@ class TestBackgroundLaunch:
         )
         assert not spawned, "task-mode launch must not spawn atop a doc-mode server"
         assert rc == 1, "a same-repo cross-mode conflict should be reported"
+        assert capsys.readouterr().err == (
+            f"Error: http://{recorded_host}:{port} is already serving a doc-mode "
+            "dashboard for this repo; stop it or launch with an explicit --port\n"
+        )
 
     def test_different_repo_on_port_advances_to_next_free_port(self, tmp_path, monkeypatch):
         """A *different* repo colliding on our start port must not be reused or
@@ -5739,7 +5748,9 @@ class TestBackgroundLaunch:
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
         common.mkdir()
-        port = TestIdleShutdownLifespan()._free_port()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind((ip, 0))
+            port = listener.getsockname()[1]
         pid_path = plan_dashboard._pid_file(plan_root, str(common))
         log_path = plan_dashboard._log_file(plan_root, str(common))
         pid: int | None = None
