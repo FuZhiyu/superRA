@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Requests"
-status: approved
+status: implemented
 depends_on: []
 ---
 
@@ -32,6 +32,10 @@ This task does not change canonical role specs. Do not edit `skills/using-superr
 - Protected the composed scoped-URL invariant with a dedicated regression: the canonical URL generated for worktree B includes a percent-encoded collision-disambiguating selector, is accepted directly by the request router, and renders B rather than launch worktree A ([test_dashboard.py:670-726](../../../../skills/task-tree/scripts/test_dashboard.py#L670-L726)).
 - Red-green verification passed: the test first passed against the protected implementation, failed when `_dashboard_url()` was deliberately perturbed to omit `?wt=`, and passed again after restoration.
 
+### Relative Image Assets
+
+Relative Markdown images now preserve the active canonical worktree selector when rendered into `/files` requests ([dashboard.js:291-295](../../../../skills/task-tree/scripts/templates/dashboard.js#L291-L295)). The protected regression uses a collision-disambiguated selector and same-path assets with distinct contents to verify the exact encoded image URL and prove that `/files` returns bytes from the selected worktree, while an unscoped request continues to return launch-worktree bytes ([test_dashboard.py:670-753](../../../../skills/task-tree/scripts/test_dashboard.py#L670-L753)).
+
 ### Verification
 
 - Focused scoped-launch and relative-image protection suite: 14 passed.
@@ -39,9 +43,3 @@ This task does not change canonical role specs. Do not edit `skills/using-superr
 - Complete task-tree script suite: 729 passed; four expected/dependency warnings.
 - Live checkout command `uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard --root superRA --no-open` emitted `http://localhost:8995/?wt=dashboard-rendering`.
 - Markdown validation reported all three modified instruction files clean.
-
-### Integration
-
-Integration review changed only the protected test's contract wording and refreshed task evidence; the production implementation required no further refactor.
-
-**Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; the four surviving files/classes are the one-line relative-image selector fix, image-rendering and selected-byte regression contract, researcher-authorized parent task scope/results record, and new child implementation/protection record. The parent task was approved at the base and is retained because issue #47 widened its request-scoping contract; the child is the durable record of that addition. No instruction edits, unrelated restorations, or scope-ambiguous hunks remain. The Project Doc Audit found root [README.md](../../../../README.md) and [CLAUDE.md](../../../../CLAUDE.md) current because the change reuses the existing worktree selector and adds no public interface or contributor protocol.
