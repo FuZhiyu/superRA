@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Requests"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -17,14 +17,6 @@ Keep a repo-shared dashboard scoped to the invoking worktree across launch and s
 ### Generated-artifact boundary
 
 This task does not change canonical role specs. Do not edit `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, or `.codex/agents/superra_reviewer.toml`; if scope expands into `agents/*`, regenerate and check them with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-
-## Planner Guidance
-
-The background supervisor currently prints and opens a bare localhost URL on both spawn and reuse. `_worktree_id_for_plan_root()` already owns canonical selector construction, while `resolve_worktree()` intentionally maps an absent selector to the server's launch worktree. The browser-open tests in `skills/task-tree/scripts/test_dashboard.py` currently encode the bare-URL behavior and exercise only one plan root.
-
-## Revision Notes
-
-[Issue #47](https://github.com/FuZhiyu/superRA/issues/47) widens the scoped-launch invariant to relative Markdown image requests. The approved launch-URL implementation remains valid; the new child task owns the asset-request regression and fix.
 
 ## Results
 

@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Relative Image Assets"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -10,7 +10,7 @@ Preserve the active canonical worktree selector when live-dashboard Markdown ren
 
 ## Planner Guidance
 
-[Issue #47](https://github.com/FuZhiyu/superRA/issues/47) identifies the bypass in [dashboard.js:295](../../../../../skills/task-tree/scripts/templates/dashboard.js#L295): `renderMarkdown()` constructs `/files/` directly instead of routing it through `wtUrl()`. Existing node-backed `renderMarkdown()` tests in [test_dashboard.py:2599](../../../../../skills/task-tree/scripts/test_dashboard.py#L2599) exercise the rewrite; the two-worktree fixture in [test_dashboard.py:619](../../../../../skills/task-tree/scripts/test_dashboard.py#L619) exercises server-side `WorktreeState` selection. Audit other client-generated `/files/` URLs in the same pass.
+[Issue #47](https://github.com/FuZhiyu/superRA/issues/47) identifies the bypass in [dashboard.js:295](../../../../../skills/task-tree/scripts/templates/dashboard.js#L295): `renderMarkdown()` constructs `/files/` directly instead of routing it through `wtUrl()`. Existing node-backed `renderMarkdown()` tests in [test_dashboard.py:2637](../../../../../skills/task-tree/scripts/test_dashboard.py#L2637) exercise the rewrite; the two-worktree fixture in [test_dashboard.py:619](../../../../../skills/task-tree/scripts/test_dashboard.py#L619) exercises server-side `WorktreeState` selection. Audit other client-generated `/files/` URLs in the same pass.
 
 ## Results
 
@@ -25,3 +25,5 @@ Preserve the active canonical worktree selector when live-dashboard Markdown ren
 - The researcher-confirmed invariant is protected by the cross-worktree regression: the rendered relative-image URL retains the exact encoded collision-disambiguated selector, `/files` returns the selected worktree's distinguishable bytes, a selected-worktree-only asset remains reachable, and an unscoped request returns launch-worktree bytes ([test_dashboard.py:670-752](../../../../../skills/task-tree/scripts/test_dashboard.py#L670-L752)). This is a self-contained end-to-end regression with no numerical tolerance to calibrate; the existing test required no strengthening.
 - Fresh red-green verification removed the `wtUrl()` routing call and produced the expected failure at the exact selector assertion; restoring the call made the focused regression pass (`1 passed`).
 - The complete task-tree script suite passed with `729 passed, 4 warnings` under `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest -p no:cacheprovider -q skills/task-tree/scripts`. The warnings are two dependency deprecations plus two expected warning-path tests.
+
+**Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving changes are the one-line `wtUrl()` routing fix, byte-distinguishing cross-worktree regressions, and the scoped task/protection record. The approved-task hunks are retained as the durable record for issue #47; no scope-ambiguous hunk remains. The Project Doc Audit found the root `README.md` and `CLAUDE.md` current because the fix reuses the existing worktree-scoping mechanism and adds no public interface or contributor protocol.
