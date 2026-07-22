@@ -2,6 +2,47 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-22
+
+### Changed
+
+- Dashboard hardening from [PR #46](https://github.com/FuZhiyu/superRA/pull/46)
+  now keeps live and standalone rendering on explicit per-worktree state, with no
+  legacy module-global render state or export snapshot/restore path. The dead
+  giant-tree routes and templates are gone, and the children dependency panel
+  consumes structured JSON instead of parsing Mermaid source.
+- Dashboard CSS and JavaScript are split into cacheable static assets for live
+  mode and inlined into standalone exports. Live rendering no longer depends on
+  network access for htmx or SSE because those libraries are served from the
+  local vendor bundle; Google Fonts retain the existing system-font fallback.
+- Frontend refreshes do less redundant work: sidebar filtering is debounced and
+  runs in a single pass, children-panel caches invalidate when task titles
+  change, and opening the worktree selector refreshes discovery without
+  rebuilding unchanged options or causing visible flicker.
+
+### Fixed
+
+- Dashboard content now crosses one explicit trust boundary: task titles and
+  previews display HTML literally, Markdown bodies retain supported HTML only
+  through DOMPurify, and dynamic selectors and click targets safely handle
+  punctuation in task content.
+- Slow dashboard operations run off the event loop, parse failures surface as
+  visible error state instead of stale content, slow SSE clients leave accurate
+  connection bookkeeping, and watcher teardown remains bounded under repeated
+  cancellation and abrupt disconnects.
+- Relative Markdown images preserve the selected worktree query parameter, so
+  `/files` returns bytes from the active worktree even when worktrees share a
+  basename ([issue #47](https://github.com/FuZhiyu/superRA/issues/47)).
+- Reconnecting after the last dashboard client disconnects rebuilds that
+  worktree's cached task state and sends a worktree-scoped full reload. Offline
+  edits appear immediately, while an already-live watcher emits no duplicate
+  refresh ([issue #48](https://github.com/FuZhiyu/superRA/issues/48)).
+
+### Release Prep
+
+- Version manifests bumped to `0.3.3` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.3.2] - 2026-07-20
 
 ### Fixed

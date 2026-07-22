@@ -311,7 +311,7 @@ function renderMarkdown(text, sectionName, taskPath) {
            (= resolved-root parent), so the path must carry the root's
            repo-relative name plus the task dir — the same repoPathPrefix the
            GitHub/relative-link branch builds (ROOT_PREFIX + '/' + taskPath + '/'). */
-        img.setAttribute('src', '/files/' + repoPathPrefix + src);
+        img.setAttribute('src', wtUrl('/files/' + repoPathPrefix + src));
       }
     }
   });

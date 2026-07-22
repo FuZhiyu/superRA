@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the release commit
@@ -53,12 +54,25 @@ jobs:
 
           version = os.environ["VERSION"]
           notes = Path("RELEASE-NOTES.md").read_text(encoding="utf-8")
-          match = re.search(
+          matches = list(re.finditer(
               rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)",
               notes,
               flags=re.MULTILINE | re.DOTALL,
-          )
-          if match is None or not match.group(1).strip():
+          ))
+          if len(matches) != 1:
+              sys.exit(
+                  f"RELEASE-NOTES.md needs exactly one ## [{version}] section; "
+                  f"found {len(matches)}"
+              )
+          match = matches[0]
+          unreleased = re.search(r"^## \[Unreleased\]\s*$", notes, re.MULTILINE)
+          if (
+              unreleased is None
+              or match.start() <= unreleased.end()
+              or notes[unreleased.end():match.start()].strip()
+          ):
+              sys.exit(f"## [{version}] must appear directly below ## [Unreleased]")
+          if not match.group(1).strip():
               sys.exit(f"RELEASE-NOTES.md needs a non-empty ## [{version}] section")
           print(match.group(1).strip())
           PY
