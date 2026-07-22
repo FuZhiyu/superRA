@@ -1,6 +1,6 @@
 ---
 title: "Release Dashboard Fixes as 0.3.3"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -54,3 +54,27 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
   [release.yml:80](../../../../.github/workflows/release.yml#L80)). Static
   validation confirmed the main ref enables the job while a feature-branch ref
   does not; no tag points at the release-preparation branch HEAD.
+
+### Integration
+
+- The release metadata follows the repository's existing path: the maintained
+  manifests were changed only through `scripts/bump-version.sh`, release notes
+  retain the established `Unreleased` / dated-version structure, and the
+  workflow keeps idempotent `gh release create` ownership while adding only the
+  guards required by the confirmed release invariants. No consolidation or
+  refactor beyond that minimum diff was warranted.
+- Project Doc Audit covered root [README.md](../../../../README.md), root
+  [CLAUDE.md](../../../../CLAUDE.md), and the adjacent dashboard vendor
+  [README.md](../../../../skills/task-tree/scripts/vendor/README.md). Their
+  product, contributor, and local-asset claims remain current; no nearer
+  `README.md`, `CLAUDE.md`, or `AGENTS.md` exists along the changed paths.
+
+**Final diff self-check:**
+`git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving change
+classes are selected-worktree relative-image routing and regression coverage,
+watcher reconnect cache refresh plus scoped reload and lifecycle regressions,
+the complete `0.3.3` release note and managed manifest bump, main-only release
+workflow guards, and their durable task records. The hunks in the already-
+approved dashboard and worktree task records are retained as task-coherence and
+maturation evidence for the approved fixes; no scope-ambiguous, debug, broad-
+formatting, instruction-surface, base-restoration, or unjustified hunk remains.
