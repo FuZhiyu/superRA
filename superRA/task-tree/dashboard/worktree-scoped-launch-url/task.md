@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Requests"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
@@ -45,10 +45,3 @@ This task does not change canonical role specs. Do not edit `skills/using-superr
 Integration review changed only the protected test's contract wording and refreshed task evidence; the production implementation required no further refactor.
 
 **Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; the four surviving files/classes are the one-line relative-image selector fix, image-rendering and selected-byte regression contract, researcher-authorized parent task scope/results record, and new child implementation/protection record. The parent task was approved at the base and is retained because issue #47 widened its request-scoping contract; the child is the durable record of that addition. No instruction edits, unrelated restorations, or scope-ambiguous hunks remain. The Project Doc Audit found root [README.md](../../../../README.md) and [CLAUDE.md](../../../../CLAUDE.md) current because the change reuses the existing worktree selector and adds no public interface or contributor protocol.
-
-## Review Notes
-
-1. **MAJOR:** The [Final diff self-check:47](task.md#L47) is stale: it uses `35fab811...HEAD` instead of the integration dispatch's governing `2d4c8551629814cab303573322dfde1d26f2a318..HEAD` range and describes shutdown, release, instruction, and docs-site classes that are not the surviving diff under review. This fails the blocking fresh-trail gate. Recompute the exact governing diff and replace the trail with its current four-file change classes and suspicious-hunk disposition.
-   → implemented: recomputed the governing range and replaced the stale classes with the four current files/change classes and the approved-parent justification ([task.md:47](task.md#L47)).
-2. **MAJOR:** Several self-contained evidence links no longer support their claims: [task.md:26](task.md#L26) points at PID-health code rather than fresh/reuse/foreground URL emission, [task.md:27](task.md#L27) points at master-detail and shutdown tests rather than scoped-launch regressions, and [task.md:32](task.md#L32) points at comment tests rather than the selector-routing regression. Refresh these anchors to the current implementation and test locations so the Results remain verifiable at this commit.
-   → implemented: refreshed launch/reuse/foreground implementation and regression anchors plus the composed selector-routing regression anchor ([task.md:26-32](task.md#L26-L32)).
