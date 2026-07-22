@@ -1,6 +1,6 @@
 ---
 title: "Release Dashboard Fixes as 0.3.3"
-status: approved
+status: revise
 depends_on:  []
 ---
 
@@ -51,3 +51,29 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
   pass ([release.yml:3](../../../../.github/workflows/release.yml#L3),
   [release.yml:75](../../../../.github/workflows/release.yml#L75)). No tag points
   at the release-preparation branch HEAD.
+
+## Review Notes
+
+1. **MAJOR** — The new placement guard does not actually require the current
+   version section to follow `Unreleased`. It checks only whether
+   `notes[unreleased.end():match.start()]` contains text
+   ([release.yml:56-71](../../../../.github/workflows/release.yml#L56-L71)); when
+   the version heading is moved *above* `Unreleased`, that reversed slice is
+   empty and the workflow accepts it. The current green, duplicate red, and
+   intervening-content red checks are credible, but the displaced perturbation
+   does not falsify the full ordering claim. Require `match.start()` to be after
+   `unreleased.end()` as well as allowing only whitespace between them, then
+   record red evidence for the above-`Unreleased` displacement and restore the
+   current green source.
+
+2. **MAJOR** — Tag creation is not constrained to a merged `main` commit.
+   Although push-triggered runs are filtered to `main`, `workflow_dispatch`
+   remains available without a ref guard
+   ([release.yml:3-11](../../../../.github/workflows/release.yml#L3-L11)), and
+   the release step targets the triggering `${{ github.sha }}`
+   ([release.yml:75-89](../../../../.github/workflows/release.yml#L75-L89)). A
+   manual dispatch against this release-preparation branch could therefore
+   create `v0.3.3` before merge, contrary to the task's automation-owned,
+   merged-main tag contract. Gate the release job/step on
+   `refs/heads/main` (or otherwise resolve and verify the target is `main`)
+   while preserving workflow-owned tag creation and safe reruns.
