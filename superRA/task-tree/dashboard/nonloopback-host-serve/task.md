@@ -35,3 +35,7 @@ Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
 - Live Tailscale validation against the worktree script: launch bound only to this host's Tailscale interface reported its reachable interface URL; an online Tailscale peer fetched `/healthz` and received the dashboard identity with the launched PID; an identical relaunch reported reuse with that same PID; `stop` terminated it, after which the peer's request failed with connection-refused exit 7. No private IP or machine name is embedded in the committed tests.
 
 **Caveat:** the reuse-announce URL comes from the PID file's recorded host; for a PID file written by a pre-change server (no host field) it falls back to loopback wording, which matches the old behavior.
+
+## Sync Impact
+
+The host-aware lifecycle now composes with the base branch's worktree-scoped launch URLs: `_dashboard_url` uses the requested or PID-recorded display host and retains the canonical `?wt=` selector. Exact loopback and non-loopback lifecycle assertions cover the full composed URL; the non-loopback no-respawn check distinguishes dashboard children from Git subprocesses used for worktree discovery. Sync commit: `1ce4fac3`.
