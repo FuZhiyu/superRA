@@ -682,6 +682,19 @@ class TestPerWorktreeResolution:
                 "not-started",
                 objective=f"Task tree for {title}.",
             )
+            task = root / "01-first"
+            task.mkdir()
+            _write_task_md(
+                task / "task.md",
+                f"First task in {title}",
+                "approved",
+                objective=f"Task in {title}.",
+            )
+            attachments = task / "attachments"
+            attachments.mkdir()
+            attachments.joinpath("figure.png").write_bytes(title.encode())
+            if title == "Project B":
+                attachments.joinpath("b-only.png").write_bytes(b"B only")
             return root
 
         root_a = _make_tree("parent one", "Project A")
@@ -710,6 +723,31 @@ class TestPerWorktreeResolution:
             assert response.status_code == 200
             assert "Project B" in response.text
             assert "Project A" not in response.text
+
+            if _NODE is None:
+                pytest.skip("node not available")
+            wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
+            image_url = _render_markdown_image_src(
+                "superRA", "01-first", "attachments/figure.png", wt_b
+            )
+            assert image_url == (
+                "/files/superRA/01-first/attachments/figure.png"
+                "?wt=parent%20two%2Fshared%20name"
+            )
+            selected = client.get(image_url)
+            assert selected.status_code == 200
+            assert selected.content == b"Project B"
+
+            b_only_url = _render_markdown_image_src(
+                "superRA", "01-first", "attachments/b-only.png", wt_b
+            )
+            assert client.get(b_only_url).content == b"B only"
+
+            launch_url = _render_markdown_image_src(
+                "superRA", "01-first", "attachments/figure.png"
+            )
+            assert "?wt=" not in launch_url
+            assert client.get(launch_url).content == b"Project A"
         finally:
             plan_dashboard._worktree_cache.clear()
 
@@ -2661,31 +2699,39 @@ var DOMPurify = { sanitize: function (html) { return html; } };
 """
 
 
+def _render_markdown_image_src(
+    root_prefix, task_path, src, active_wt="", repo_file_base=""
+):
+    defs = _extract_js_defs(["wtUrl", "renderMarkdown"])
+    harness = (
+        _RENDER_MD_SHIM
+        + "var ACTIVE_WT = " + json.dumps(active_wt) + ";\n"
+        + "var RESOLVED_ROOT = '/abs/root';\n"
+        + "var ROOT_PREFIX = " + json.dumps(root_prefix) + ";\n"
+        + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
+        + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+        + "var DOC_LOCAL_LINKS = [];\n"
+        + defs + "\n"
+        + "var body = '![fig](" + src + ")';\n"
+        + "var html = renderMarkdown(body, null, " + json.dumps(task_path) + ");\n"
+        + "var m = html.match(/<img src=\"([^\"]*)\">/);\n"
+        + "console.log(JSON.stringify({src: m ? m[1] : null}));\n"
+    )
+    proc = subprocess.run(
+        [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+    )
+    assert proc.returncode == 0, f"node failed (ReferenceError?):\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])["src"]
+
+
 @pytest.mark.skipif(_NODE is None, reason="node not available")
 class TestRenderMarkdownImageRewrite:
-    def _run(self, root_prefix, task_path, src, repo_file_base=""):
-        defs = _extract_js_defs(["renderMarkdown"])
-        harness = (
-            _RENDER_MD_SHIM
-            + "var RESOLVED_ROOT = '/abs/root';\n"
-            + "var ROOT_PREFIX = " + json.dumps(root_prefix) + ";\n"
-            + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
-            + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
-            + "var DOC_LOCAL_LINKS = [];\n"
-            + defs + "\n"
-            + "var body = '![fig](" + src + ")';\n"
-            + "var html = renderMarkdown(body, null, " + json.dumps(task_path) + ");\n"
-            + "var m = html.match(/<img src=\"([^\"]*)\">/);\n"
-            + "console.log(JSON.stringify({src: m ? m[1] : null}));\n"
-        )
-        proc = subprocess.run(
-            [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
-        )
-        # A ReferenceError (the shipped `pathPrefix` bug) surfaces here as a
-        # nonzero exit with the error on stderr — exactly the failure mode a
-        # string-presence test cannot see.
-        assert proc.returncode == 0, f"node failed (ReferenceError?):\n{proc.stderr}"
-        return json.loads(proc.stdout.strip().splitlines()[-1])
+    def _run(self, root_prefix, task_path, src, active_wt="", repo_file_base=""):
+        return {
+            "src": _render_markdown_image_src(
+                root_prefix, task_path, src, active_wt, repo_file_base
+            )
+        }
 
     def test_server_image_src_uses_root_prefix_and_task_path(self):
         """Server mode rewrites a relative image to
@@ -2706,6 +2752,22 @@ class TestRenderMarkdownImageRewrite:
         root prefix: /files/<ROOT_PREFIX>/<src>."""
         out = self._run("superRA", "", "fig.png")
         assert out["src"] == "/files/superRA/fig.png"
+
+    def test_server_image_src_preserves_existing_query_string(self):
+        out = self._run(
+            "superRA", "01-alpha", "fig.png?download=1", "parent two/shared name"
+        )
+        assert out["src"] == (
+            "/files/superRA/01-alpha/fig.png?download=1"
+            "&wt=parent%20two%2Fshared%20name"
+        )
+
+    @pytest.mark.parametrize(
+        "src",
+        ["http://example.test/fig.png", "https://example.test/fig.png", "/fig.png"],
+    )
+    def test_absolute_image_src_is_unchanged(self, src):
+        assert self._run("superRA", "01-alpha", src, "selected")["src"] == src
 
 
 # ---------------------------------------------------------------------------
@@ -2911,7 +2973,7 @@ class TestFileLinkConsistency:
         # Without this, the def-deletion check above guards the regression
         # backwards and a dangling `pathPrefix` reference ships green
         # (TestRenderMarkdownImageRewrite executes it; this pins the source).
-        assert "'/files/' + repoPathPrefix + src" in BASE_HTML
+        assert "wtUrl('/files/' + repoPathPrefix + src)" in BASE_HTML
         assert "'/files/' + pathPrefix + src" not in BASE_HTML
 
     # --- Forest render / route / link -------------------------------------
