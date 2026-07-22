@@ -14,7 +14,7 @@ Diagnosed in-session on macOS: 'serve --host 100.114.244.56' binds fine (uvicorn
 
 ## Results
 
-Implemented along the planner's suggested route: the launcher now derives a probe host from the requested `--host` and threads it through every readiness/reuse probe and printed URL, and the PID file records the bound host so later launches and reuse probe the right interface.
+Implemented along the planner's suggested route: the launcher now derives a probe host from the requested `--host` and threads it through every readiness/reuse probe and launch URL, and the PID file records the bound host so later launches and reuse probe the right interface.
 
 **Code changes** (all in [plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py)):
 
@@ -22,7 +22,7 @@ Implemented along the planner's suggested route: the launcher now derives a prob
 - `_display_host(host)` ([plan_dashboard.py:2103-2110](../../../../skills/task-tree/scripts/plan_dashboard.py#L2103-L2110)) — maps a bind host to the printed-URL host: loopback/wildcard show `localhost`, while an explicit interface shows its literal IP so the printed URL is reachable.
 - `_port_serving`, `_probe_dashboard`, `_wait_for_dashboard` accept a `probe_host` parameter (defaults preserve the loopback behavior for existing callers/tests); `serve_background` passes `_probe_host(host)` at every probe site — the post-spawn readiness wait, the failed-bind diagnosis, and both reuse layers ([plan_dashboard.py:2255-2413](../../../../skills/task-tree/scripts/plan_dashboard.py#L2255-L2413)).
 - PID file format extended from `<pid> <port>` to `<pid> <port> <host>` ([plan_dashboard.py:2024-2061](../../../../skills/task-tree/scripts/plan_dashboard.py#L2024-L2061)); `_running_pid` returns the recorded host and probes it, with loopback fallback for legacy files (pid-only and pid+port both parse; old readers ignore the extra field, so the change is cross-version safe). Layer-1 reuse probes/announces the recorded host, so reuse works even when the current invocation omits `--host`.
-- The launch/reuse/error messages and the foreground "Starting dashboard at" line compose that display host with the canonical worktree selector, so a non-loopback launch prints `http://<interface-ip>:<port>/?wt=<worktree>` while loopback/wildcard URLs retain `localhost` and route to the invoking worktree.
+- Launch/reuse URLs and the foreground "Starting dashboard at" line compose that display host with the canonical worktree selector, so a non-loopback launch prints `http://<interface-ip>:<port>/?wt=<worktree>` while loopback/wildcard URLs retain `localhost` and route to the invoking worktree. The preserved same-repo mode-conflict diagnostic remains intentionally unscoped at `http://<display-host>:<port>` because it reports a conflict rather than offering or opening a launch URL.
 
 Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
 
@@ -38,7 +38,7 @@ Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
 
 ## Sync Impact
 
-The host-aware lifecycle now composes with the base branch's worktree-scoped launch URLs: `_dashboard_url` uses the requested or PID-recorded display host and retains the canonical `?wt=` selector. Exact loopback and non-loopback lifecycle assertions cover the full composed URL; the non-loopback no-respawn check distinguishes dashboard children from Git subprocesses used for worktree discovery. Sync commit: `1ce4fac3`.
+The host-aware lifecycle now composes with the base branch's worktree-scoped launch URLs: `_dashboard_url` uses the requested or PID-recorded display host and retains the canonical `?wt=` selector for launch, reuse, and foreground URLs. The preserved same-repo mode-conflict diagnostic is intentionally unscoped because it is not a launch URL. Exact loopback and non-loopback lifecycle assertions cover the full composed launch URL; the non-loopback no-respawn check distinguishes dashboard children from Git subprocesses used for worktree discovery. Sync commit: `1ce4fac3`.
 
 ## Review Notes
 
