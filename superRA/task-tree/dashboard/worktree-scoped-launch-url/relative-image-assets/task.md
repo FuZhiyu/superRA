@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Relative Image Assets"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -20,8 +20,8 @@ Preserve the active canonical worktree selector when live-dashboard Markdown ren
 - The cross-worktree regression uses colliding worktree basenames, an encoded selector, distinguishable same-path bytes, and a selected-worktree-only asset. It asserts both the rendered URL and fetched response bytes, while also checking selector-free launch-worktree behavior ([test_dashboard.py:670-752](../../../../../skills/task-tree/scripts/test_dashboard.py#L670-L752)).
 - The node-backed `renderMarkdown()` harness now executes `wtUrl()` with the real production functions and covers existing relative-image query strings plus unchanged absolute sources ([test_dashboard.py:2702-2770](../../../../../skills/task-tree/scripts/test_dashboard.py#L2702-L2770)). An audit found no other client-generated `/files/` URLs.
 
-### Verification
+### Protection
 
-- Red-green check: the focused regression failed twice against the original rewrite because both generated URLs omitted `wt`; after the production change, all 9 focused tests passed.
-- Complete dashboard module: 306 passed, with 2 dependency deprecation warnings.
-- Complete task-tree script suite: 729 passed, with 4 expected/dependency warnings.
+- The researcher-confirmed invariant is protected by the cross-worktree regression: the rendered relative-image URL retains the exact encoded collision-disambiguated selector, `/files` returns the selected worktree's distinguishable bytes, a selected-worktree-only asset remains reachable, and an unscoped request returns launch-worktree bytes ([test_dashboard.py:670-752](../../../../../skills/task-tree/scripts/test_dashboard.py#L670-L752)). This is a self-contained end-to-end regression with no numerical tolerance to calibrate; the existing test required no strengthening.
+- Fresh red-green verification removed the `wtUrl()` routing call and produced the expected failure at the exact selector assertion; restoring the call made the focused regression pass (`1 passed`).
+- The complete task-tree script suite passed with `729 passed, 4 warnings` under `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest -p no:cacheprovider -q skills/task-tree/scripts`. The warnings are two dependency deprecations plus two expected warning-path tests.
