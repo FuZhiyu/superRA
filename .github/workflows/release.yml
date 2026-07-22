@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the release commit
@@ -65,7 +66,11 @@ jobs:
               )
           match = matches[0]
           unreleased = re.search(r"^## \[Unreleased\]\s*$", notes, re.MULTILINE)
-          if unreleased is None or notes[unreleased.end():match.start()].strip():
+          if (
+              unreleased is None
+              or match.start() <= unreleased.end()
+              or notes[unreleased.end():match.start()].strip()
+          ):
               sys.exit(f"## [{version}] must appear directly below ## [Unreleased]")
           if not match.group(1).strip():
               sys.exit(f"RELEASE-NOTES.md needs a non-empty ## [{version}] section")

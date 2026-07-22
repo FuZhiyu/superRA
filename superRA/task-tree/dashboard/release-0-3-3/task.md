@@ -1,6 +1,6 @@
 ---
 title: "Release Dashboard Fixes as 0.3.3"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -35,22 +35,25 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
 
 - The release workflow already runs `scripts/bump-version.sh --check` before it
   reads the release version, protecting agreement across all maintained
-  manifests ([release.yml:31](../../../../.github/workflows/release.yml#L31)).
+  manifests ([release.yml:32](../../../../.github/workflows/release.yml#L32)).
 - Protection review found and closed one real gap in the existing release-note
   guard: extraction now rejects zero or multiple current-version sections,
   requires the unique section to appear directly below `Unreleased`, and still
   rejects an empty body
-  ([release.yml:44](../../../../.github/workflows/release.yml#L44)). A fresh
+  ([release.yml:45](../../../../.github/workflows/release.yml#L45)). A fresh
   green run accepted the current 38-line section; in-memory duplicate-section
-  and intervening-content perturbations were both rejected before the current
-  source was rechecked green. No separate test file was needed because the
-  strengthened workflow step is the executable release gate.
-- Tag ownership remains protected by workflow scope and current repository
-  state: automatic release runs trigger on `main`, and the workflow creates
-  `v$VERSION` against the merged commit only after the manifest and note guards
-  pass ([release.yml:3](../../../../.github/workflows/release.yml#L3),
-  [release.yml:75](../../../../.github/workflows/release.yml#L75)). No tag points
-  at the release-preparation branch HEAD.
+  and intervening-content perturbations were rejected. The directional fix was
+  additionally checked red with the version section moved above `Unreleased`,
+  then the current source was restored and rechecked green. No separate test
+  file was needed because the strengthened workflow step is the executable
+  release gate.
+- Tag ownership is protected at the job boundary: the release job runs only
+  when `github.ref` is `refs/heads/main`, covering both push and manual dispatch,
+  and creates `v$VERSION` against that main commit only after the manifest and
+  note guards pass ([release.yml:23](../../../../.github/workflows/release.yml#L23),
+  [release.yml:80](../../../../.github/workflows/release.yml#L80)). Static
+  validation confirmed the main ref enables the job while a feature-branch ref
+  does not; no tag points at the release-preparation branch HEAD.
 
 ## Review Notes
 
@@ -65,6 +68,9 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
    `unreleased.end()` as well as allowing only whitespace between them, then
    record red evidence for the above-`Unreleased` displacement and restore the
    current green source.
+   → implemented: made the ordering check strictly directional and verified
+   the above-`Unreleased` perturbation red before restoring the current green
+   source ([release.yml:68](../../../../.github/workflows/release.yml#L68)).
 
 2. **MAJOR** — Tag creation is not constrained to a merged `main` commit.
    Although push-triggered runs are filtered to `main`, `workflow_dispatch`
@@ -77,3 +83,7 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
    merged-main tag contract. Gate the release job/step on
    `refs/heads/main` (or otherwise resolve and verify the target is `main`)
    while preserving workflow-owned tag creation and safe reruns.
+   → implemented: gated the entire release job on `refs/heads/main`, so
+   non-main manual dispatches cannot reach tag creation while main push/manual
+   runs retain the existing idempotent release path
+   ([release.yml:23](../../../../.github/workflows/release.yml#L23)).
