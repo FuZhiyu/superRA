@@ -1,7 +1,7 @@
 ---
 title: "Release Dashboard Fixes as 0.3.3"
-status: approved
-depends_on:  []
+status: revise
+depends_on: []
 ---
 
 ## Objective
@@ -78,3 +78,7 @@ workflow guards, and their durable task records. The hunks in the already-
 approved dashboard and worktree task records are retained as task-coherence and
 maturation evidence for the approved fixes; no scope-ambiguous, debug, broad-
 formatting, instruction-surface, base-restoration, or unjustified hunk remains.
+
+## Revision Notes
+
+- Researcher-approved maturation: merge this release-preparation task into `task-tree/dashboard`, preserve a concise pointer to the `0.3.3` release notes plus the manifest-consistency, exact-section ordering, and main-only tag guards, and remove this child directory. This is a routine update-task fold with no release-scope change.
