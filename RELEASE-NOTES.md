@@ -15,6 +15,10 @@
   mode and inlined into standalone exports. Live rendering no longer depends on
   network access for htmx or SSE because those libraries are served from the
   local vendor bundle; Google Fonts retain the existing system-font fallback.
+- Frontend refreshes do less redundant work: sidebar filtering is debounced and
+  runs in a single pass, children-panel caches invalidate when task titles
+  change, and opening the worktree selector refreshes discovery without
+  rebuilding unchanged options or causing visible flicker.
 
 ### Fixed
 
