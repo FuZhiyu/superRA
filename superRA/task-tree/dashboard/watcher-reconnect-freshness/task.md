@@ -21,6 +21,29 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
   the refreshed objective and the `full-reload` delivered on that stream. The
   watcher-start test also verifies a second ensure emits no duplicate refresh
   ([test_dashboard.py:1229-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1229-L1316)).
+
+### Result Protection
+
+- The confirmed key result is fully protected by the existing pytest guards:
+  the reconnect regression covers the offline edit, rebuilt cached objective,
+  and client-observable `full-reload`; the watcher-start regression covers the
+  no-duplicate live-watcher path; and the broadcast regression independently
+  covers worktree isolation
+  ([test_dashboard.py:1166-1182](../../../../skills/task-tree/scripts/test_dashboard.py#L1166-L1182),
+  [test_dashboard.py:1229-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1229-L1316)).
+- The guards satisfy the drift-test-quality checklist without another test:
+  their names state the protected behavior, they run independently without a
+  full pipeline or saved-output fixture, use exact deterministic assertions
+  where no numerical tolerance applies, and follow the repository's pytest
+  structure.
+- Red-green verification is established by the implementation cycle: the two
+  strengthened lifecycle guards failed against the cache-only implementation
+  (missing queue event and reconnect timeout), then passed after the
+  worktree-scoped startup broadcast was added. A fresh protection-stage run of
+  the reconnect, no-duplicate, and isolation guards passed all 3 tests.
+
+### Verification
+
 - Verification passed: `test_dashboard.py` (307 tests) and the complete
   `skills/task-tree/scripts` suite (730 tests). Both runs reported only existing
   dependency and malformed-fixture warnings.
