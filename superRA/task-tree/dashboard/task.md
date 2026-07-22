@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: revise
+status: in-progress
 depends_on:
   - core-data-layer
   - cli-scripts
@@ -52,6 +52,21 @@ Watcher teardown is bounded under repeated caller cancellation: it gets a cooper
 
 Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets; each process cycle verifies the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1162-1518](../../../skills/task-tree/scripts/test_dashboard.py#L1162-L1518), [test_dashboard.py:4850](../../../skills/task-tree/scripts/test_dashboard.py#L4850)).
 
+### Reconnect freshness
+
+When a worktree watcher starts after an interval with no connected client, the
+server rebuilds that worktree's cached task state before watching for new
+changes, then sends a worktree-scoped `full-reload` to the reconnecting SSE
+client. Because the client queue is registered before watcher startup, edits
+made while the watcher was stopped are visible immediately on reconnect; an
+ensure call against an already-live watcher emits no duplicate refresh
+([plan_dashboard.py:505-546](../../../skills/task-tree/scripts/plan_dashboard.py#L505-L546)).
+
+Permanent regressions cover the offline edit, refreshed cache, reconnect-stream
+notification, duplicate suppression, and cross-worktree broadcast isolation
+([test_dashboard.py:1177-1193](../../../skills/task-tree/scripts/test_dashboard.py#L1177-L1193),
+[test_dashboard.py:1240-1327](../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
+
 **Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` is ~2,740 lines mixing several concerns. The legacy module-global render state and the `/export` snapshot/restore dance are gone — the standalone render owns its state via `WorktreeState` — and the ~1,760 CSS / ~3,000 JS lines that used to inflate `base.html` now live in separate cacheable files. What remains: the background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) are FastAPI-decoupled, clean extraction candidates following the `skills/task-tree/scripts/dashboard_artifact_workflow.py` precedent.
 
-**Verification.** The full task-tree script suite passes at 721 passed, 4 skipped (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`, commit `4ad5028e`). Each hardening child's merged diff traced cleanly to its objective with no scope-ambiguous hunks, no `skills/*`/`agents/*` instruction edits, and `vendor/` left hand-managed per its `README.md`; per-task red/green and byte-identical-export checks are recorded in this task's git history.
+**Verification.** The dashboard module passes 308 tests with two dependency warnings, and the full task-tree script suite passes 731 tests with four expected/dependency warnings (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`). The consolidated tree and dashboard DAG render correctly, `task check` reports no issues, the durable task passes the Markdown checker, and `git diff --check` is clean. Each hardening child's merged diff traced cleanly to its objective with no scope-ambiguous hunks, no `skills/*`/`agents/*` instruction edits, and `vendor/` left hand-managed per its `README.md`; per-task red/green and byte-identical-export checks are recorded in this task's git history.
