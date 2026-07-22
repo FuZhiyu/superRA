@@ -667,10 +667,11 @@ def two_worktree_client(tmp_path):
 
 
 class TestPerWorktreeResolution:
-    def test_collision_safe_dashboard_url_routes_to_invoking_worktree(
+    def test_collision_safe_selector_routes_relative_image_to_selected_bytes(
         self, tmp_path, monkeypatch
     ):
-        """The emitted canonical URL for B must route back to B's task tree."""
+        """The canonical selector must survive the image rewrite so /files
+        returns bytes from the selected worktree rather than the launch worktree."""
         from starlette.testclient import TestClient
 
         def _make_tree(parent: str, title: str) -> Path:
