@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: revise
+status: in-progress
 depends_on:
   - core-data-layer
   - cli-scripts
@@ -67,6 +67,17 @@ notification, duplicate suppression, and cross-worktree broadcast isolation
 ([test_dashboard.py:1177-1193](../../../skills/task-tree/scripts/test_dashboard.py#L1177-L1193),
 [test_dashboard.py:1240-1327](../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
 
+### Release 0.3.3
+
+The dashboard hardening and worktree image/reconnect fixes are documented in
+the dated [0.3.3 release notes](../../../RELEASE-NOTES.md#L5). All maintained
+Claude, marketplace, and Codex manifests agree at `0.3.3`; the release workflow
+requires exactly one non-empty `0.3.3` section directly below `Unreleased`, and
+its release job runs only on `refs/heads/main`. The workflow therefore remains
+the sole owner of idempotent `v0.3.3` tag and release creation after merge
+([release.yml:23](../../../.github/workflows/release.yml#L23),
+[release.yml:45](../../../.github/workflows/release.yml#L45)).
+
 **Design debt (recorded for a future extraction pass):** `skills/task-tree/scripts/plan_dashboard.py` is ~2,740 lines mixing several concerns. The legacy module-global render state and the `/export` snapshot/restore dance are gone — the standalone render owns its state via `WorktreeState` — and the ~1,760 CSS / ~3,000 JS lines that used to inflate `base.html` now live in separate cacheable files. What remains: the background supervisor (~300 lines of PID/daemon logic) and the standalone build (~340 lines) are FastAPI-decoupled, clean extraction candidates following the `skills/task-tree/scripts/dashboard_artifact_workflow.py` precedent.
 
-**Verification.** The dashboard module passes 308 tests with two dependency warnings, and the full task-tree script suite passes 731 tests with four expected/dependency warnings (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`). The consolidated tree and dashboard DAG render correctly, `task check` reports no issues, the durable task passes the Markdown checker, and `git diff --check` is clean. Each hardening child's merged diff traced cleanly to its objective with no scope-ambiguous hunks, no `skills/*`/`agents/*` instruction edits, and `vendor/` left hand-managed per its `README.md`; per-task red/green and byte-identical-export checks are recorded in this task's git history.
+**Verification.** The dashboard module passes 308 tests with two dependency warnings, and the full task-tree script suite passes 731 tests with four expected/dependency warnings (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`). The consolidated tree and dashboard DAG render correctly, `task check` reports no issues, the durable task passes the Markdown checker, and `git diff --check` is clean. Release verification also confirms synchronized `0.3.3` manifests, a clean version audit, valid workflow YAML and main-ref gating, and exactly one non-empty `0.3.3` notes section directly below `Unreleased`. Each hardening child's merged diff traced cleanly to its objective with no scope-ambiguous hunks, no `skills/*`/`agents/*` instruction edits, and `vendor/` left hand-managed per its `README.md`; per-task red/green and byte-identical-export checks are recorded in this task's git history.
