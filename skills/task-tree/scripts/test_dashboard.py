@@ -1262,6 +1262,50 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
+    def test_reconnect_rebuilds_edits_made_while_watcher_stopped(self, tmp_path):
+        from starlette.requests import Request
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+
+        request = Request({
+            "type": "http",
+            "method": "GET",
+            "path": "/events",
+            "query_string": b"wt=wt-a",
+            "headers": [],
+        })
+
+        async def _test():
+            await plan_dashboard._ensure_watcher("wt-a")
+            await plan_dashboard._stop_watcher("wt-a")
+
+            state = plan_dashboard._worktree_cache["wt-a"]
+            _write_task_md(
+                state.plan_root / "task.md",
+                "Root wt-a",
+                "not-started",
+                objective="edited while disconnected",
+            )
+            assert state.task_index[""].objective.strip() == "seed"
+
+            response = await plan_dashboard.sse_events(request)
+            body_iter = response.body_iterator
+            assert "heartbeat" in await body_iter.__anext__()
+            assert (
+                state.task_index[""].objective.strip()
+                == "edited while disconnected"
+            )
+            await body_iter.aclose()
+            assert "wt-a" not in plan_dashboard._worktree_watchers
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
     def test_stop_is_bounded_under_repeated_cancellation(self, monkeypatch):
         """A non-finishing watcher is force-cancelled after a cooperative bound."""
         loop = asyncio.new_event_loop()

@@ -527,12 +527,15 @@ async def _ensure_watcher(wt: str) -> None:
     """Start the watcher for *wt* if one is not already running.
 
     A present-but-``done()`` task (a watcher that finished or crashed) is treated
-    as absent and respawned, so a dead watcher is never silently reused.
+    as absent and respawned, so a dead watcher is never silently reused.  Before
+    each spawn, rebuild the cached state to include edits made while no watcher
+    was running; ``awatch`` only reports changes that happen after it starts.
     """
     async with _worktree_lock(wt):
         existing = _worktree_watchers.get(wt)
         if existing is not None and not existing.done():
             return
+        rebuild_worktree_state(wt)
         # Fresh stop event per spawn: a respawn after a crashed/finished watcher
         # must start with an unset event so the new watch loop is not torn down
         # by a stale signal from the prior generation.
