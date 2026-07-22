@@ -1,6 +1,6 @@
 ---
 title: "Fresh Dashboard State After Watcher Reconnect"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -10,16 +10,17 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
 
 ## Results
 
-- Watcher startup now rebuilds the cached worktree state only on the path that
-  spawns a new watcher. This captures disk edits made while no client was
-  connected while leaving the live-watcher fast path, per-worktree lock, fresh
-  stop event, and cooperative teardown unchanged
-  ([plan_dashboard.py:526-544](../../../../skills/task-tree/scripts/plan_dashboard.py#L526-L544)).
-- Added a reconnect regression that seeds cached state, starts and stops the
-  watcher, edits `task.md` while disconnected, reconnects through `/events`,
-  verifies the cached objective is refreshed before the initial heartbeat, and
-  confirms stream closure still removes the watcher
-  ([test_dashboard.py:1265-1308](../../../../skills/task-tree/scripts/test_dashboard.py#L1265-L1308)).
+- Watcher startup now rebuilds cached worktree state and emits a worktree-scoped
+  `full-reload` only on the path that spawns a watcher. Because `/events`
+  registers the reconnecting queue before calling `_ensure_watcher`, the client
+  receives the refresh after its initial heartbeat; the live-watcher fast path
+  returns without a duplicate event, and teardown is unchanged
+  ([plan_dashboard.py:505-546](../../../../skills/task-tree/scripts/plan_dashboard.py#L505-L546)).
+- The reconnect regression now seeds cached state, stops the watcher, edits
+  `task.md` while disconnected, reconnects through `/events`, and asserts both
+  the refreshed objective and the `full-reload` delivered on that stream. The
+  watcher-start test also verifies a second ensure emits no duplicate refresh
+  ([test_dashboard.py:1229-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1229-L1316)).
 - Verification passed: `test_dashboard.py` (307 tests) and the complete
   `skills/task-tree/scripts` suite (730 tests). Both runs reported only existing
   dependency and malformed-fixture warnings.
@@ -45,3 +46,4 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
    assert the reconnecting stream/UI receives the edited content without a later
    filesystem event. Cover the already-open-page reconnect path, not only a fresh
    route read from the newly rebuilt cache.
+   → implemented: watcher respawn now queues a worktree-scoped `full-reload` for the already-registered SSE client ([plan_dashboard.py:526-546](../../../../skills/task-tree/scripts/plan_dashboard.py#L526-L546)), and the regression consumes and asserts that refresh after the offline edit ([test_dashboard.py:1271-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1271-L1316)).

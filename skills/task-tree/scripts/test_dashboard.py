@@ -475,6 +475,8 @@ class TestServerRoutes:
             resp = await gen
             body_iter = resp.body_iterator
             await body_iter.__anext__()  # initial heartbeat
+            startup_refresh = await body_iter.__anext__()
+            assert "event: full-reload" in startup_refresh
 
             queue = next(iter(plan_dashboard._worktree_clients[wt]))
             for _ in range(queue.maxsize):
@@ -1230,12 +1232,16 @@ class TestWatcherLifecycle:
         self._seed(tmp_path, "wt-a")
 
         async def _test():
+            queue: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {queue}
             await plan_dashboard._ensure_watcher("wt-a")
             task = plan_dashboard._worktree_watchers.get("wt-a")
             assert task is not None and not task.done()
+            assert "event: full-reload" in queue.get_nowait()
             # A second ensure for the same worktree does not start a second.
             await plan_dashboard._ensure_watcher("wt-a")
             assert plan_dashboard._worktree_watchers["wt-a"] is task
+            assert queue.empty()
             await plan_dashboard._stop_watcher("wt-a")
 
         try:
@@ -1293,6 +1299,9 @@ class TestWatcherLifecycle:
             response = await plan_dashboard.sse_events(request)
             body_iter = response.body_iterator
             assert "heartbeat" in await body_iter.__anext__()
+            refresh = await asyncio.wait_for(body_iter.__anext__(), timeout=0.1)
+            assert "event: full-reload" in refresh
+            assert "data: {}" in refresh
             assert (
                 state.task_index[""].objective.strip()
                 == "edited while disconnected"
