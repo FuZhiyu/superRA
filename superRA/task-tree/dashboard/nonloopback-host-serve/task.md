@@ -41,7 +41,3 @@ Scope-outs honored: no multi-interface binding, no `--tailscale` flag.
 **Project Doc Audit:** walked from both changed script files and all four task records to the repository root; [README.md](../../../../README.md), [CLAUDE.md](../../../../CLAUDE.md), and its [AGENTS.md](../../../../AGENTS.md) alias remain current, and no nearer project docs exist.
 
 **Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving classes are host-aware probe/PID/URL composition, exact lifecycle and compatibility regressions, the recorded-host cross-mode invariant, and current task rollups; suspicious task-record hunks are justified as the leaf implementation record, hook-derived ancestor status rollups, removal of a superseded dashboard dispatch note, and the root's current date/workstream rollup. No `skills/*/SKILL.md` or `agents/*` instructions changed, no scope-ambiguous hunks remain, and the synced base's deletions are preserved.
-
-## Sync Impact
-
-The host-aware lifecycle now composes with the base branch's worktree-scoped launch URLs: `_dashboard_url` uses the requested or PID-recorded display host and retains the canonical `?wt=` selector for launch, reuse, and foreground URLs. The preserved same-repo mode-conflict diagnostic is intentionally unscoped because it is not a launch URL. Exact loopback and non-loopback lifecycle assertions cover the full composed launch URL; the non-loopback no-respawn check distinguishes dashboard children from Git subprocesses used for worktree discovery. Sync commit: `1ce4fac3`.
