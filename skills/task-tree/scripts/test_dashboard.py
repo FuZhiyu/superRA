@@ -668,91 +668,102 @@ def two_worktree_client(tmp_path):
         plan_dashboard._worktree_cache.clear()
 
 
-class TestPerWorktreeResolution:
-    def test_collision_safe_selector_routes_relative_image_to_selected_bytes(
-        self, tmp_path, monkeypatch
-    ):
-        """The canonical selector must survive the image rewrite so /files
-        returns bytes from the selected worktree rather than the launch worktree."""
-        from starlette.testclient import TestClient
+@pytest.fixture
+def collision_worktree_client(tmp_path, monkeypatch):
+    """A launch and selected worktree with the same basename and distinct images."""
+    from starlette.testclient import TestClient
 
-        def _make_tree(parent: str, title: str) -> Path:
-            root = tmp_path / parent / "shared name" / "superRA"
-            root.mkdir(parents=True)
-            _write_task_md(
-                root / "task.md",
-                title,
-                "not-started",
-                objective=f"Task tree for {title}.",
-            )
-            task = root / "01-first"
-            task.mkdir()
-            _write_task_md(
-                task / "task.md",
-                f"First task in {title}",
-                "approved",
-                objective=f"Task in {title}.",
-            )
-            attachments = task / "attachments"
-            attachments.mkdir()
-            attachments.joinpath("figure.png").write_bytes(title.encode())
-            if title == "Project B":
-                attachments.joinpath("b-only.png").write_bytes(b"B only")
-            return root
-
-        root_a = _make_tree("parent one", "Project A")
-        root_b = _make_tree("parent two", "Project B")
-        discovered = {
-            "parent one/shared name": root_a,
-            "parent two/shared name": root_b,
-        }
-        monkeypatch.setattr(
-            plan_dashboard, "_discovered_worktree_map", lambda: discovered
+    def _make_tree(parent: str, title: str) -> Path:
+        root = tmp_path / parent / "shared name" / "superRA"
+        root.mkdir(parents=True)
+        _write_task_md(
+            root / "task.md",
+            title,
+            "not-started",
+            objective=f"Task tree for {title}.",
         )
-        monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", root_a)
-        plan_dashboard._jinja_env = None
+        task = root / "01-first"
+        task.mkdir()
+        _write_task_md(
+            task / "task.md",
+            f"First task in {title}",
+            "approved",
+            objective=f"Task in {title}.",
+        )
+        attachments = task / "attachments"
+        attachments.mkdir()
+        attachments.joinpath("figure.png").write_bytes(title.encode())
+        if title == "Project B":
+            attachments.joinpath("b-only.png").write_bytes(b"B only")
+        return root
+
+    root_a = _make_tree("parent one", "Project A")
+    root_b = _make_tree("parent two", "Project B")
+    discovered = {
+        "parent one/shared name": root_a,
+        "parent two/shared name": root_b,
+    }
+    monkeypatch.setattr(
+        plan_dashboard, "_discovered_worktree_map", lambda: discovered
+    )
+    monkeypatch.setattr(plan_dashboard, "PLAN_ROOT", root_a)
+    plan_dashboard._jinja_env = None
+    plan_dashboard._worktree_cache.clear()
+    plan_dashboard.rebuild_tree()
+
+    client = TestClient(plan_dashboard.app, raise_server_exceptions=True)
+    try:
+        yield client, root_a, root_b
+    finally:
         plan_dashboard._worktree_cache.clear()
-        plan_dashboard.rebuild_tree()
+
+
+class TestPerWorktreeResolution:
+    def test_collision_safe_dashboard_url_routes_to_invoking_worktree(
+        self, collision_worktree_client
+    ):
+        """The emitted canonical URL for B must route back to B's task tree."""
+        client, _root_a, root_b = collision_worktree_client
 
         url = plan_dashboard._dashboard_url(8123, root_b)
         assert url == (
             "http://localhost:8123/"
             "?wt=parent%20two%2Fshared%20name"
         )
+        response = client.get(url)
+        assert response.status_code == 200
+        assert "Project B" in response.text
+        assert "Project A" not in response.text
 
-        client = TestClient(plan_dashboard.app, raise_server_exceptions=True)
-        try:
-            response = client.get(url)
-            assert response.status_code == 200
-            assert "Project B" in response.text
-            assert "Project A" not in response.text
+    @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+    def test_collision_safe_selector_routes_relative_image_to_selected_bytes(
+        self, collision_worktree_client
+    ):
+        """The canonical selector must survive the image rewrite so /files
+        returns bytes from the selected worktree rather than the launch worktree."""
+        client, _root_a, root_b = collision_worktree_client
+        wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
+        image_url = _render_markdown_image_src(
+            "superRA", "01-first", "attachments/figure.png", wt_b
+        )
+        assert image_url == (
+            "/files/superRA/01-first/attachments/figure.png"
+            "?wt=parent%20two%2Fshared%20name"
+        )
+        selected = client.get(image_url)
+        assert selected.status_code == 200
+        assert selected.content == b"Project B"
 
-            if _NODE is None:
-                pytest.skip("node not available")
-            wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
-            image_url = _render_markdown_image_src(
-                "superRA", "01-first", "attachments/figure.png", wt_b
-            )
-            assert image_url == (
-                "/files/superRA/01-first/attachments/figure.png"
-                "?wt=parent%20two%2Fshared%20name"
-            )
-            selected = client.get(image_url)
-            assert selected.status_code == 200
-            assert selected.content == b"Project B"
+        b_only_url = _render_markdown_image_src(
+            "superRA", "01-first", "attachments/b-only.png", wt_b
+        )
+        assert client.get(b_only_url).content == b"B only"
 
-            b_only_url = _render_markdown_image_src(
-                "superRA", "01-first", "attachments/b-only.png", wt_b
-            )
-            assert client.get(b_only_url).content == b"B only"
-
-            launch_url = _render_markdown_image_src(
-                "superRA", "01-first", "attachments/figure.png"
-            )
-            assert "?wt=" not in launch_url
-            assert client.get(launch_url).content == b"Project A"
-        finally:
-            plan_dashboard._worktree_cache.clear()
+        launch_url = _render_markdown_image_src(
+            "superRA", "01-first", "attachments/figure.png"
+        )
+        assert "?wt=" not in launch_url
+        assert client.get(launch_url).content == b"Project A"
 
     def test_node_resolves_by_wt_param(self, two_worktree_client):
         client, wt_a, wt_b = two_worktree_client

@@ -1,6 +1,6 @@
 ---
 title: "Fresh Dashboard State After Watcher Reconnect"
-status: approved
+status: implemented
 depends_on:  []
 ---
 
@@ -20,7 +20,7 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
   `task.md` while disconnected, reconnects through `/events`, and asserts both
   the refreshed objective and the `full-reload` delivered on that stream. The
   watcher-start test also verifies a second ensure emits no duplicate refresh
-  ([test_dashboard.py:1229-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1229-L1316)).
+  ([test_dashboard.py:1240-1327](../../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
 
 ### Result Protection
 
@@ -29,8 +29,8 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
   and client-observable `full-reload`; the watcher-start regression covers the
   no-duplicate live-watcher path; and the broadcast regression independently
   covers worktree isolation
-  ([test_dashboard.py:1166-1182](../../../../skills/task-tree/scripts/test_dashboard.py#L1166-L1182),
-  [test_dashboard.py:1229-1316](../../../../skills/task-tree/scripts/test_dashboard.py#L1229-L1316)).
+  ([test_dashboard.py:1177-1193](../../../../skills/task-tree/scripts/test_dashboard.py#L1177-L1193),
+  [test_dashboard.py:1240-1327](../../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
 - The guards satisfy the drift-test-quality checklist without another test:
   their names state the protected behavior, they run independently without a
   full pipeline or saved-output fixture, use exact deterministic assertions
@@ -44,6 +44,18 @@ Ensure a dashboard worktree rebuilds cached task-tree state whenever its stopped
 
 ### Verification
 
-- Verification passed: `test_dashboard.py` (307 tests) and the complete
-  `skills/task-tree/scripts` suite (730 tests). Both runs reported only existing
+- Verification passed: `test_dashboard.py` (308 tests) and the complete
+  `skills/task-tree/scripts` suite (731 tests). Both runs reported only existing
   dependency and malformed-fixture warnings.
+
+### Integration
+
+- The watcher implementation already matches the host lifecycle and SSE
+  patterns: it reuses the in-place worktree rebuild and scoped broadcast
+  utilities, retains register-before-ensure ordering, and leaves bounded
+  teardown unchanged. No code refactor was warranted.
+- Project-doc audit covered root [README.md](../../../../README.md) and
+  [CLAUDE.md](../../../../CLAUDE.md); both remain current, and no nearer module
+  README or contributor guide exists for the changed files.
+
+**Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving change classes are watcher-respawn cache refresh, worktree-scoped reconnect notification, lifecycle regressions, and the durable task record. The new approved task record and `skills/*` code/test hunks are retained because they directly implement and protect the reconnect-freshness objective; no scope-ambiguous or unjustified hunk remains.
