@@ -30,3 +30,24 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
   Markdown checker; the dashboard suite passes 308 tests with two dependency
   warnings, and the complete task-tree script suite passes 731 tests with four
   expected/dependency warnings.
+
+### Result Protection
+
+- The release workflow already runs `scripts/bump-version.sh --check` before it
+  reads the release version, protecting agreement across all maintained
+  manifests ([release.yml:31](../../../../.github/workflows/release.yml#L31)).
+- Protection review found and closed one real gap in the existing release-note
+  guard: extraction now rejects zero or multiple current-version sections,
+  requires the unique section to appear directly below `Unreleased`, and still
+  rejects an empty body
+  ([release.yml:44](../../../../.github/workflows/release.yml#L44)). A fresh
+  green run accepted the current 38-line section; in-memory duplicate-section
+  and intervening-content perturbations were both rejected before the current
+  source was rechecked green. No separate test file was needed because the
+  strengthened workflow step is the executable release gate.
+- Tag ownership remains protected by workflow scope and current repository
+  state: automatic release runs trigger on `main`, and the workflow creates
+  `v$VERSION` against the merged commit only after the manifest and note guards
+  pass ([release.yml:3](../../../../.github/workflows/release.yml#L3),
+  [release.yml:75](../../../../.github/workflows/release.yml#L75)). No tag points
+  at the release-preparation branch HEAD.
