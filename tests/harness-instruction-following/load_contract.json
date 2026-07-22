@@ -29,7 +29,6 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit",
           "test_always_loaded_live.py::test_green_static_backbone_real_role_specs",
           "sdk_load_evidence.py::check_always_loaded_frontmatter"
         ],
@@ -53,7 +52,7 @@
       ],
       "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or maturation.",
       "expected_evidence": [
-        "static parse finds exact stage rows and load targets",
+        "structured table parse finds the stage rows and load targets",
         "live transcript for non-empty stage rows shows the target skill(s)/reference loaded before action",
         "the maturation row loads task-tree + superplan (writing conditional, prose-heavy maturation only)",
         "the implementation row produces no extra stage-skill expectation"
@@ -64,7 +63,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (stage evaluator + per-stage codex canaries on synthetic inputs)"
@@ -86,7 +85,7 @@
       ],
       "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, or slide-design work.",
       "expected_evidence": [
-        "static parse finds the four domain rows",
+        "structured table parse finds the four domain rows",
         "fixture prompts can include unambiguous task text for each domain",
         "live transcript shows every matching domain skill loaded, including multiple matches when applicable"
       ],
@@ -96,7 +95,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + multi-domain every-match + per-domain codex canaries on synthetic inputs)"
@@ -119,7 +118,7 @@
       ],
       "trigger": "A loaded superRA instruction names Claude-oriented tools or Codex is the active harness.",
       "expected_evidence": [
-        "static parse finds adapter-reference pointer and Codex tool map",
+        "structured table parse verifies the Codex tool map",
         "Codex live transcript uses request_user_input/update_plan/spawn_agent/send_input equivalents where applicable"
       ],
       "classification": [
@@ -128,13 +127,12 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read",
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (Harness adapters pointer)"
+          "test_contract.py::test_codex_tool_map_matches_contract"
         ],
         "manual_live_codex": [
           "codex-live-smoke.sh + orchestrator-live-smoke.sh HARNESS=codex (built/CI-tested, live-pending — no credentials yet)"
         ],
-        "notes": "Codex-only live row; not yet run. Static contract verifies the adapter pointer and Codex tool map are present."
+        "notes": "Codex-only live row; not yet run. Static coverage parses the Codex tool map as structured data."
       }
     },
     {
@@ -150,18 +148,14 @@
       ],
       "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch, or enters direct mode for one task.",
       "expected_evidence": [
-        "static parse confirms canonical and generated surfaces require Skill-Load Manifest use before code and superra task read per task",
-        "generated surfaces identify their canonical source",
+        "fixture parser rejects code or artifact edits that precede superra task read <path>",
         "live transcript shows superra task read <path> before code or artifact edits"
       ],
       "classification": [
-        "ci_safe_static",
+        "ci_safe_fixture",
         "manual_live_both"
       ],
       "covered_by": {
-        "ci_safe_static": [
-          "test_contract.py::test_role_and_generated_surfaces_require_manifest_and_task_read"
-        ],
         "fixture_unit": [
           "test_transcript_assertions.py (task-read-before-write ordering parser); test_contract.py::test_parser_contract_samples_and_negative_ordering_cases"
         ],
@@ -211,7 +205,7 @@
       ],
       "trigger": "Reviewer dispatch has Stage: planning-review.",
       "expected_evidence": [
-        "static parse confirms planning-review row points to skills/superplan/references/planning-review.md",
+        "structured table parse confirms planning-review maps to skills/superplan/references/planning-review.md",
         "live reviewer transcript shows the reference loaded and planning-review protocol used instead of implementation diff review",
         "no task status change occurs in planning-review"
       ],
@@ -221,7 +215,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (planning-review row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (planning-review row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (Read-channel reference suffix matcher; stage evaluator green/red)"
@@ -244,7 +238,7 @@
       ],
       "trigger": "Dispatch has Stage: protection.",
       "expected_evidence": [
-        "static parse confirms manifest loads result-protection",
+        "structured table parse confirms the manifest maps protection to result-protection",
         "static parse confirms drift/regression reference routing for the active mechanism",
         "live transcript shows result-protection loaded before writing or reviewing protection tests"
       ],
@@ -254,7 +248,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (protection -> result-protection row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (protection -> result-protection row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (stage evaluator + protection codex canary)"
@@ -277,7 +271,7 @@
       ],
       "trigger": "Dispatch has Stage: sync, or semantic-merge is invoked directly.",
       "expected_evidence": [
-        "static parse confirms manifest loads semantic-merge for sync",
+        "structured table parse confirms the manifest maps sync to semantic-merge",
         "static parse confirms exactly one mode reference is selected by call path",
         "live workflow-sync transcript shows workflow-sync author/reviewer reference selection"
       ],
@@ -287,7 +281,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (sync -> semantic-merge row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (sync -> semantic-merge row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (stage evaluator + sync codex canary)"
@@ -311,7 +305,7 @@
       ],
       "trigger": "Dispatch has Stage: integration.",
       "expected_evidence": [
-        "static parse confirms manifest loads refactor-and-integrate",
+        "structured table parse confirms the manifest maps integration to refactor-and-integrate",
         "static parse confirms active domain skill may add integration references",
         "live transcript or task Results records Final Diff Self-Check when integration work runs"
       ],
@@ -321,7 +315,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (integration -> refactor-and-integrate row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (integration -> refactor-and-integrate row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (stage evaluator + integration codex canary)"
@@ -346,7 +340,7 @@
       ],
       "trigger": "Dispatch has Stage: maturation.",
       "expected_evidence": [
-        "static parse confirms manifest loads task-tree + superplan always, and writing conditionally (prose-heavy maturation)",
+        "structured table parse confirms the manifest maps maturation to task-tree, superplan, and writing",
         "live transcript shows task-tree and superplan loaded before action; writing is not a guaranteed load",
         "the over-load check treats task-tree and superplan as stage skills (a maturation skill on the negative implementation stage is an over-load)"
       ],
@@ -356,7 +350,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (maturation -> task-tree, superplan, writing row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, writing row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (multi-skill stage evaluator: both guaranteed skills required, writing conditional; maturation codex canary)"
@@ -380,7 +374,7 @@
       ],
       "trigger": "Task imports, cleans, merges, filters, constructs variables, aggregates, summarizes, regresses, or figures economic/financial/panel data.",
       "expected_evidence": [
-        "static parse confirms manifest trigger and stage-scoped reference table",
+        "structured table parse confirms the domain is present in the manifest",
         "fixture task with data wording should lead transcript to load econ-data-analysis",
         "if implementation edits notebooks/scripts, transcript or output shows relevant implementer reference use"
       ],
@@ -390,7 +384,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (econ-data-analysis domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (econ-data-analysis domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + econ codex canary)"
@@ -413,7 +407,7 @@
       ],
       "trigger": "Task derives, solves, verifies, or proves mathematical/modeling content.",
       "expected_evidence": [
-        "static parse confirms manifest trigger and stage-scoped reference table",
+        "structured table parse confirms the domain is present in the manifest",
         "fixture task with proof/derivation wording should lead transcript to load theory-modeling",
         "integration/protection stage tests account for terminology finding SF002"
       ],
@@ -423,7 +417,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (theory-modeling domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (theory-modeling domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + theory codex canary + multi-domain every-match case)"
@@ -446,7 +440,7 @@
       ],
       "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
       "expected_evidence": [
-        "static parse confirms manifest trigger and mode-routing table",
+        "structured table parse confirms the domain is present in the manifest",
         "fixture Markdown/prose task should lead transcript to load writing",
         "reference loads depend on Review/Polish/Draft classification rather than all files at once"
       ],
@@ -456,7 +450,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (writing domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (writing domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + writing codex canary + multi-domain every-match case)"
@@ -480,7 +474,7 @@
       ],
       "trigger": "Task designs, reviews, creates, revises, or fixes research slides or Beamer source.",
       "expected_evidence": [
-        "static parse confirms manifest trigger and stage-scoped references",
+        "structured table parse confirms the domain is present in the manifest",
         "fixture slide/Beamer task should lead transcript to load slide-design",
         "Beamer fixture should show applicable Beamer/layout reference or script use"
       ],
@@ -490,7 +484,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_contract_matches_audit (slide-design domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (slide-design domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + slide-design codex canary)"
@@ -674,18 +668,15 @@
       ],
       "trigger": "User invokes superimplement or implementation workflow over a task tree.",
       "expected_evidence": [
-        "static parse confirms subagent mode default, direct-mode exceptions, and required agent-orchestration load before dispatch prompt",
+        "fixture parser detects implementer and reviewer dispatches or a documented direct-mode fallback",
         "manual live transcript shows main agent loads superimplement and agent-orchestration, dispatches implementer then reviewer for non-trivial work",
         "manual live transcript documents direct-mode fallback only when allowed"
       ],
       "classification": [
-        "ci_safe_static",
+        "ci_safe_fixture",
         "manual_live_both"
       ],
       "covered_by": {
-        "ci_safe_static": [
-          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static"
-        ],
         "fixture_unit": [
           "test_transcript_assertions.py (dispatch detection + documented-fallback gating); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
         ],
@@ -707,18 +698,15 @@
       ],
       "trigger": "Orchestrator dispatches implementer/reviewer or bundle, or handles status transitions.",
       "expected_evidence": [
-        "static parse confirms required dispatch fields for implementer, reviewer, bundled variants, and planning reviewer",
+        "fixture parser detects structural implementer and reviewer dispatch events",
         "manual live transcript shows Task: or Tasks:, Stage:, Git range for reviewer, and no aggregate bundle verdict",
         "manual live transcript shows status-driven progression from implemented to reviewer and approved to next task"
       ],
       "classification": [
-        "ci_safe_static",
+        "ci_safe_fixture",
         "manual_live_both"
       ],
       "covered_by": {
-        "ci_safe_static": [
-          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static (dispatch-template fields)"
-        ],
         "fixture_unit": [
           "test_transcript_assertions.py + test_contract.py::test_parser_contract_samples_and_negative_ordering_cases (dispatch detection samples)"
         ],
@@ -728,7 +716,7 @@
         "manual_live_codex": [
           "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"
         ],
-        "notes": "Dispatch-template surfaces fully static-covered; dispatch detection fixture-covered. Status-progression assertion is part of the orchestrator smoke (built, live run pending for both harnesses)."
+        "notes": "Dispatch detection is fixture-covered. Dispatch fields and status progression are asserted by the orchestrator smoke (built, live run pending for both harnesses)."
       }
     },
     {
@@ -740,8 +728,7 @@
       ],
       "trigger": "Codex main agent dispatches role agents in a superRA workflow.",
       "expected_evidence": [
-        "static parse confirms named-agent priority and direct-mode fallback boundaries",
-        "static parse confirms named agent setup guidance and tool map",
+        "structured table parse confirms the named implementer and reviewer agent mappings",
         "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer or documented fallback"
       ],
       "classification": [
@@ -750,7 +737,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_workflow_orchestrator_contract_surfaces_are_static (Codex named-agent priority + tool map present)"
+          "test_contract.py::test_codex_tool_map_matches_contract (Codex named-agent mappings)"
         ],
         "manual_live_codex": [
           "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"

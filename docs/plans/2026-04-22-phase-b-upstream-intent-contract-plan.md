@@ -42,7 +42,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Not walked (not needed for this task)
 
-- `docs/plans/`, `docs/superpowers/`, and harness-specific test fixtures under `tests/` — historical records and fixtures, not canonical runtime instructions for this contract change.
+- `docs/plans/`, the retired upstream design archive, and harness-specific test fixtures under `tests/` — historical records and fixtures, not canonical runtime instructions for this contract change.
 
 ## Decisions
 

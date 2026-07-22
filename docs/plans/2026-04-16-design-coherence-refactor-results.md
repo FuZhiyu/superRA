@@ -249,7 +249,7 @@ End-to-end re-reads:
 **`integration-workflow` Step 3 reshaped:**
 - Sub-part B entirely removed (the doc audit bullet block, its `git commit -m "update project docs for <analysis>"` block, the "both sub-parts commit" framing).
 - Doc-writer dispatch `Task:` trimmed from "Stage 2 RESULTS.md maturation + project doc audit" to "Stage 2 RESULTS.md maturation".
-- Doc-writer dispatch `Additionally:` drops the A/B two-sub-part instruction; now reads "this dispatch matures RESULTS.md in place and relocates it to ${RESULTS_DIR} per final-form.md."
+- Doc-writer dispatch `Additionally:` drops the A/B two-sub-part instruction; now reads "this dispatch matures RESULTS.md in place and relocates it to \${RESULTS_DIR} per final-form.md."
 - Doc-reviewer dispatch `Task:` trimmed from "review of matured Stage 2 RESULTS.md + audited project docs" to "review of matured Stage 2 RESULTS.md".
 - Doc-reviewer scope: 3-item list collapsed to 2 items (fact-check + cross-consistency), with cross-consistency pointing at Stage 2's responsibility for upstream stale-claim catches.
 - Process diagram node "B: audit CLAUDE.md / AGENTS.md / README.md" and both of its edges removed; A now flows directly into doc-reviewer.
@@ -469,7 +469,7 @@ The `commands/` directory is now empty and git treats it as removed (no tracked 
 **Grep sweep (`execute-plan|write-plan|brainstorm` across `skills/`, `commands/`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `CATEGORIES.md`, `agents/`, `hooks/`):** zero matches after the deletion. No inventory-table rows or skill-body references to clean up — the stubs were referenced only by the plugin runtime's command discovery, not by any skill body or README table.
 
 **Intentionally not touched:**
-- `RELEASE-NOTES.md` and `CHANGELOG.md` carry upstream superpowers release history mentioning these commands (lines documenting their introduction, deprecation, and removal in prior upstream versions). These are historical release records, not current inventory, so they stay. superRA's own release-note entry for this refactor lands in Task 16 Step 4.
+- The release history then retained upstream Superpowers command references as provenance rather than current inventory. The later upstream-fork cleanup retired those obsolete records; superRA's own release-note entry for this refactor lands in Task 16 Step 4.
 
 **Task-1 overlap check:** grep surfaced no references inside any of Task 1's files (`skills/using-superra/SKILL.md`, the 4 workflow skills, `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md`). No deferred edits for Task 1 to absorb.
 

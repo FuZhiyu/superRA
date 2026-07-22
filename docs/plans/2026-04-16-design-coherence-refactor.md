@@ -423,7 +423,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
   git rm commands/execute-plan.md commands/write-plan.md commands/brainstorm.md
   ```
 
-- [x] **Step 2: Sweep references.** `grep -rn "execute-plan\|write-plan\|brainstorm" skills/ commands/ README.md CLAUDE.md` returned zero matches in any of those paths — no inventory-table rows to remove. Upstream-history mentions in `RELEASE-NOTES.md` and `CHANGELOG.md` are intentionally preserved (they are release history for the upstream superpowers project, not superRA inventory); superRA's own release entry for this refactor lands in Task 16 Step 4.
+- [x] **Step 2: Sweep references.** `grep -rn "execute-plan\|write-plan\|brainstorm" skills/ commands/ README.md CLAUDE.md` returned zero matches in any of those paths — no inventory-table rows to remove. The upstream release history was retained until the later upstream-fork cleanup; superRA's own release entry for this refactor lands in Task 16 Step 4.
 
 - [x] **Step 3: Validate.** Atomic commit.
 

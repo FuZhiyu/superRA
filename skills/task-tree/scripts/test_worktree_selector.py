@@ -609,13 +609,11 @@ class TestWorktreeRoutes:
 
         # Save original module state
         self._orig_plan_root = plan_dashboard.PLAN_ROOT
-        self._orig_project_root = plan_dashboard._project_root
-        self._orig_root_task = plan_dashboard._root_task
-        self._orig_task_index = plan_dashboard._task_index
+        self._orig_worktree_cache = dict(plan_dashboard._worktree_cache)
+        self._orig_launch_wt_id = plan_dashboard._launch_wt_id
 
         # Set module-level state
         plan_dashboard.PLAN_ROOT = self._plan_root
-        plan_dashboard._project_root = str(tmp_path)
 
         # Build the task tree
         plan_dashboard.rebuild_tree()
@@ -624,9 +622,9 @@ class TestWorktreeRoutes:
 
         # Restore original state
         plan_dashboard.PLAN_ROOT = self._orig_plan_root
-        plan_dashboard._project_root = self._orig_project_root
-        plan_dashboard._root_task = self._orig_root_task
-        plan_dashboard._task_index = self._orig_task_index
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard._worktree_cache.update(self._orig_worktree_cache)
+        plan_dashboard._launch_wt_id = self._orig_launch_wt_id
 
     def _get_client(self):
         from fastapi.testclient import TestClient

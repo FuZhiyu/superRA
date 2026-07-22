@@ -222,7 +222,7 @@ class TestMutationIsolation:
         b_node_before = client.get(f"/node/01-first?wt={wt_b}").text
 
         # Edit A's task body on disk, then invalidate only A's cached state.
-        state_a = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        state_a = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
         task_md = state_a.plan_root / "01-first" / "task.md"
         task_md.write_text(task_md.read_text().replace("Step one in A.",
                                                        "Mutated step in A."))
@@ -259,8 +259,8 @@ class TestSSEScopingAcrossWorktrees:
     def _two_states_and_clients(self, two_worktrees):
         """Resolve both worktree states and register one queue per worktree."""
         client, wt_a, wt_b = two_worktrees
-        state_a = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
-        state_b = plan_dashboard.resolve_worktree(_req(f"wt={wt_b}"))
+        state_a = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
+        state_b = asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_b}")))
         qa: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
         qb: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
         plan_dashboard._worktree_clients[wt_a] = {qa}
@@ -362,8 +362,8 @@ class TestWatcherLifecycleMultiplexed:
     def test_independent_start_and_stop(self, two_worktrees):
         client, wt_a, wt_b = two_worktrees
         # Both states must exist in the cache so the watcher coroutine finds them.
-        plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
-        plan_dashboard.resolve_worktree(_req(f"wt={wt_b}"))
+        asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
+        asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_b}")))
 
         loop = asyncio.new_event_loop()
 
@@ -389,8 +389,8 @@ class TestWatcherLifecycleMultiplexed:
 
     def test_crashed_a_watcher_respawns_without_touching_b(self, two_worktrees):
         client, wt_a, wt_b = two_worktrees
-        plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
-        plan_dashboard.resolve_worktree(_req(f"wt={wt_b}"))
+        asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
+        asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_b}")))
 
         loop = asyncio.new_event_loop()
 
@@ -444,7 +444,7 @@ class TestWatcherLifecycleMultiplexed:
         import anyio.to_thread
 
         client, wt_a, wt_b = two_worktrees
-        plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        asyncio.run(plan_dashboard.resolve_worktree(_req(f"wt={wt_a}")))
 
         orig_run_sync = anyio.to_thread.run_sync
         active = {"n": 0}

@@ -100,6 +100,11 @@ class Task:
     revision_notes: str = ""
     review_notes: str = ""
     children: list[Task] = field(default_factory=list)
+    # Transient, never round-tripped to disk: set by the dashboard watcher when a
+    # rebuild's re-parse of this task's task.md raises, so the node can render a
+    # visible error state instead of silently reusing the last-good parse with no
+    # signal.  Empty for every task built by the normal parse path.
+    parse_error: str = ""
 
     @property
     def is_leaf(self) -> bool:

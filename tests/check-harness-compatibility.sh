@@ -66,8 +66,7 @@ assert all(
 assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h in group["hooks"]), "Codex Stop must wire codex-plan-stop"
 PY
 
-section "Shared harness adapters"
-test -f skills/using-superra/references/claude-tools.md
+section "Codex adapter references"
 test -f skills/using-superra/references/codex-instructions.md
 test -f skills/using-superra/references/direct-mode-implementer.md
 test -f skills/using-superra/references/direct-mode-reviewer.md
