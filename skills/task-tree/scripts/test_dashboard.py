@@ -4476,23 +4476,31 @@ class TestBackgroundLaunch:
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
-    def test_idempotent_second_launch_reuses_server(self, tmp_path):
+    def test_idempotent_second_launch_reuses_server(self, tmp_path, capsys):
         pytest.importorskip("uvicorn")
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
         common.mkdir()
         port = TestIdleShutdownLifespan()._free_port()
         pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        log_path = plan_dashboard._log_file(plan_root, str(common))
         try:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=False
             ) == 0
             pid1 = plan_dashboard._read_pid(pid_path)
+            assert capsys.readouterr().out == (
+                f"Dashboard running at http://localhost:{port} (PID {pid1})\n"
+                f"Logs: {log_path}\n"
+            )
             # Second launch must reuse, not spawn a duplicate.
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=False
             ) == 0
             pid2 = plan_dashboard._read_pid(pid_path)
+            assert capsys.readouterr().out == (
+                f"Dashboard already running at http://localhost:{port} (PID {pid1})\n"
+            )
             assert pid1 == pid2, "second launch spawned a different process"
             assert plan_dashboard._pid_alive(pid1)
         finally:
@@ -4901,7 +4909,9 @@ class TestBackgroundLaunch:
             s.close()
         return ip if ip != "127.0.0.1" else None
 
-    def test_nonloopback_host_launch_binds_reports_and_reuses(self, tmp_path, monkeypatch):
+    def test_nonloopback_host_launch_binds_reports_and_reuses(
+        self, tmp_path, monkeypatch, capsys
+    ):
         """A background launch bound to a non-loopback --host must be seen by
         the launcher's own readiness probe (not just by a loopback-only one),
         report a URL reachable at the bound host, and be reused (not re-spawned
@@ -4917,6 +4927,7 @@ class TestBackgroundLaunch:
         common.mkdir()
         port = TestIdleShutdownLifespan()._free_port()
         pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        log_path = plan_dashboard._log_file(plan_root, str(common))
         pid: int | None = None
         try:
             rc = plan_dashboard.serve_background(
@@ -4925,6 +4936,10 @@ class TestBackgroundLaunch:
             assert rc == 0, "launch bound to a non-loopback host must succeed"
             pid = plan_dashboard._read_pid(pid_path)
             assert pid is not None and plan_dashboard._pid_alive(pid)
+            assert capsys.readouterr().out == (
+                f"Dashboard running at http://{ip}:{port} (PID {pid})\n"
+                f"Logs: {log_path}\n"
+            )
             # The server is bound only to `ip`: reachable there, not via loopback
             # — this is exactly the scenario a loopback-only probe would miss.
             assert plan_dashboard._probe_dashboard(port, probe_host=ip) is not None
@@ -4943,6 +4958,9 @@ class TestBackgroundLaunch:
                 plan_root, port, str(common), host=ip, open_browser=False
             )
             assert rc2 == 0
+            assert capsys.readouterr().out == (
+                f"Dashboard already running at http://{ip}:{port} (PID {pid})\n"
+            )
             assert not spawned, "reuse must not spawn a second server"
             assert plan_dashboard._read_pid(pid_path) == pid, "reuse must keep the same PID"
         finally:
