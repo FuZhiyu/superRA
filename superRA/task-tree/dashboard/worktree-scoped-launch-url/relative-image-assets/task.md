@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Relative Image Assets"
-status: implemented
+status: approved
 depends_on:  []
 ---
 

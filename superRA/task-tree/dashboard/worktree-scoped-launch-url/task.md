@@ -1,6 +1,6 @@
 ---
 title: "Worktree-Scoped Dashboard Requests"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
