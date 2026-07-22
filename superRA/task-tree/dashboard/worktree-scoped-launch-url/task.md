@@ -47,12 +47,12 @@ Relative Markdown images and PDF links now preserve the active canonical worktre
 
 ### Integration
 
-- Split the collision-safe launch and relative-image assertions over a shared
-  fixture so the Python routing guard remains active when Node is unavailable,
-  while the image rewrite reports its Node dependency explicitly
-  ([test_dashboard.py:671-766](../../../../skills/task-tree/scripts/test_dashboard.py#L671-L766)).
+- Split the collision-safe launch and relative image/PDF assertions over a
+  shared fixture so the Python routing guard remains active when Node is
+  unavailable, while the asset rewrites report their Node dependency explicitly
+  ([test_dashboard.py:671-790](../../../../skills/task-tree/scripts/test_dashboard.py#L671-L790)).
 - Project-doc audit covered root [README.md](../../../../README.md) and
   [CLAUDE.md](../../../../CLAUDE.md); both remain current, and no nearer module
   README or contributor guide exists for the changed files.
 
-**Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving change classes are canonical scoped-image request routing, collision-safe launch/image regressions with shared test setup, and the durable task record. The approved task-record and `skills/*` code/test hunks are retained because they directly implement and protect the scoped-request objective; no scope-ambiguous or unjustified hunk remains.
+**Final diff self-check:** `git diff 2d4c8551629814cab303573322dfde1d26f2a318..HEAD`; surviving change classes are canonical scoped image/PDF request routing, collision-safe launch/asset regressions with shared test setup, and the durable task record. The approved task-record and `skills/*` code/test hunks are retained because they directly implement and protect the scoped-request objective; no scope-ambiguous or unjustified hunk remains.
