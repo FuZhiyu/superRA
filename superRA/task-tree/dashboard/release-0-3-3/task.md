@@ -1,6 +1,6 @@
 ---
 title: "Release Dashboard Fixes as 0.3.3"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -30,3 +30,20 @@ Prepare patch release 0.3.3 in PR #49. Add a dated 0.3.3 section to RELEASE-NOTE
   Markdown checker; the dashboard suite passes 308 tests with two dependency
   warnings, and the complete task-tree script suite passes 731 tests with four
   expected/dependency warnings.
+
+## Review Notes
+
+1. **MAJOR** — The `0.3.3` section does not yet cover the complete PR #46
+   delta required by the objective. Its PR #46 bullets cover eight hardening
+   workstreams through lifecycle robustness
+   ([RELEASE-NOTES.md:9-28](../../../../RELEASE-NOTES.md#L9-L28)), but omit the
+   merged frontend-polish workstream: debounced and single-pass sidebar
+   filtering ([dashboard.js:619-648](../../../../skills/task-tree/scripts/templates/dashboard.js#L619-L648),
+   [test_dashboard.py:2603-2666](../../../../skills/task-tree/scripts/test_dashboard.py#L2603-L2666)),
+   title-aware children-panel cache invalidation
+   ([dashboard.js:1177-1199](../../../../skills/task-tree/scripts/templates/dashboard.js#L1177-L1199)),
+   and refresh-on-open worktree selection without redundant option rebuilds
+   ([dashboard.js:2405-2436](../../../../skills/task-tree/scripts/templates/dashboard.js#L2405-L2436)).
+   Add a concise user-facing clause or bullet covering that final PR #46
+   workstream, then update the section-length/result evidence and rerun the
+   exact release-note extraction check.
