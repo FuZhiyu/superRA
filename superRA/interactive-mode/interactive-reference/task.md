@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: implemented
+status: approved
 depends_on:
   - superplan-decrowd
 ---
