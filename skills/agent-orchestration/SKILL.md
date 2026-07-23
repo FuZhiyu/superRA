@@ -88,6 +88,33 @@ Agent(subagent_type: "superRA:reviewer"):
 ```
 
 
+## Seat Assignment
+
+Each task has an implementer seat and a reviewer seat; each is independently filled by the main agent or a dispatched subagent. `using-superra/references/main-agent.md §Execution Modes` names the presets over this knob — below are the four seat configurations and how to choose per task. Whoever fills the reviewer seat runs the same adversarial gated pass: `agents/reviewer.md` governs the review, not who sits in the seat.
+
+| Implementer | Reviewer | Choose when |
+|---|---|---|
+| subagent | subagent | Default. Large or routine subtrees — keep both seats off the main context. |
+| subagent | main | Small or high-stakes task — strongest model on the adversarial seat, routine implementation delegated. |
+| main | subagent | Main co-edits the task (interactive canvas); an independent subagent gates it. |
+| main | main | Manual — explicit researcher request only. |
+
+Per-task signals:
+
+- **Size / routineness** → subagent reviewer, to keep the main context lean.
+- **Stakes / silent-error risk** → main-agent reviewer, to put the strongest model on the seat that catches a wrong result before it ships.
+- **Context cost** → send whichever seat you cannot afford to carry inline to a subagent.
+
+### Main agent in the reviewer seat
+
+When the main agent reviews a subagent's implementation there is no reviewer dispatch — the main agent runs the review itself over the same `Git range:` the implementer produced:
+
+1. Load `agents/reviewer.md` and the task's stage + domain skills from the Skill-Load Manifest — the same load a dispatched reviewer gets.
+2. Review the range as an adversary and write `## Review Notes` into the task file, walking the stage/domain gated checklist as a subagent reviewer would.
+3. Being also the orchestrator, §Handling Reviewer Feedback collapses to writing only the findings you would forward, then re-dispatching the implementer subagent; on a clean pass set `status: approved` inline.
+
+The mirror — main implements, subagent reviews — dispatches a reviewer through the template above over the main agent's own commits; its canvas loop is `superplan/references/interactive-mode.md`.
+
 ## Orchestrator Duties
 
 Done by the orchestrator alone, at every workflow stage:
