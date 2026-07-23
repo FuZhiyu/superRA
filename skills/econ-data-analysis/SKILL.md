@@ -41,6 +41,8 @@ Shared checklist walked by implementer (before DONE) and reviewer (as verificati
 
 The APPROVE/REVISE verdict mechanics, the one-comprehensive-pass rule, and re-review handling are owned by the active reviewer role spec (`agents/reviewer.md`).
 
+**Targeted verification effort.** The committed diagnostics, row-count logs, and output files are the primary evidence in data work — assess them first. Re-execute a step to resolve a *suspected discrepancy*: an implausible magnitude, a missing row-count log, or a number that disagrees with `## Results`. When iterating or fixing, re-run only the changed step and its downstream dependents; unaffected upstream outputs stand as committed.
+
 ### Describe
 
 The most common analytical error is transforming data you do not understand. Describe thoroughly and often — both before and after every transformation. Post-transformation describe is not a separate phase; it is the same discipline applied a second time, now as a validation tool fed into Sanity checks (below).
@@ -124,6 +126,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 - `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
+- `[BLOCKING]` **Headline findings presented visually.** Show each headline result as a figure — a distribution, a relationship, or a time path — unless a figure would not clarify it (a lone scalar, or a small table that already reads clearly).
 - `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
 - `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings shipped.
 

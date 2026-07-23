@@ -68,8 +68,6 @@ PY
 
 section "Codex adapter references"
 test -f skills/using-superra/references/codex-instructions.md
-test -f skills/using-superra/references/direct-mode-implementer.md
-test -f skills/using-superra/references/direct-mode-reviewer.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 

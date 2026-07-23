@@ -71,7 +71,7 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 ## Execution Modes
 
-Subagent mode — dispatching implementers and reviewers — is the default all workflows assume; the full mode contract, including Direct mode, is in `references/main-agent.md §Execution Modes`.
+Subagent mode — dispatching implementers and reviewers — is the default all workflows assume; the full mode contract (the two-dial model as named presets plus a seat knob, including interactive) is in `references/main-agent.md §Execution Modes`.
 
 ## Skill-Load Manifest
 

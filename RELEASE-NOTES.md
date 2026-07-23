@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-07-23
+
+### Changed
+
+- Execution modes are now two coherent modes instead of three mismatched
+  presets ([PR #50](https://github.com/FuZhiyu/superRA/pull/50)). **subagent**
+  (default, autonomous) routes through `agent-orchestration`, which owns the
+  three seat structures; when the main agent fills a seat it runs that seat's
+  role spec. **interactive** (the `direct` alias) has the main agent execute the
+  task itself at high human cadence and ask before dispatching a reviewer. The
+  `manual` preset is retired — main-fills-both is served by interactive with
+  review deferred.
+- The interactive canvas loop is self-contained (it loads no role specs) and now
+  makes *keep the task updated* and *ask before review with a tool* required
+  steps. Retroactive capture is reframed around its real trigger — writing up
+  work already done — routed through the same loop.
+- The `superplan` SKILL.md spine was tightened (Depth Tiers rendered as a table);
+  phase choreography and review gates remain owned by the spine.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.4` across the maintained Claude, marketplace,
+  and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.3.3] - 2026-07-22
 
 ### Changed

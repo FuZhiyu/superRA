@@ -41,14 +41,14 @@ Ask questions, and resolve what you can from code and data first.
 
 ## Execution Modes
 
-Subagent mode is the default — dispatch implementers and reviewers through `superRA:agent-orchestration`. Direct mode is a fallback: only for trivial tasks or when the user explicitly requests it, and you must announce the switch before proceeding.
+Two dials set how a task runs. Selection is by autonomy and human cadence.
 
-**Direct mode protocol:**
+- **Axis A — human cadence.** Autonomous — dispatch and run to completion — is the default; interactive — co-edit with the researcher, pausing often — is an explicit opt-in.
+- **Axis B — seat assignment.** Each task has an implementer seat and a reviewer seat, each filled by the main agent or a dispatched subagent. `superRA:agent-orchestration §Seat Assignment` owns the structures and the per-task choice.
 
-- **Read the direct-mode role reference for the role you play** — `references/direct-mode-implementer.md` or `references/direct-mode-reviewer.md`. These are the cross-repo-loadable copies of the role protocol.
-- **The Skill-Load Manifest still drives loads**, in-session per your Stage row.
-- **Task context comes from `superRA/` task files** (`superra task read`) — there is no dispatch prompt.
-- **The self-review gate, editing discipline, and APPROVE / REVISE verdict protocol all apply.** Walk the active domain skill's gated checklist before committing.
-- **Review is never skipped.** Always dispatch a reviewer subagent unless the user explicitly asks to skip it.
+The two modes:
+
+- **subagent** (default) — autonomous execution, the mode all workflows assume. Axis B picks the seat structure; when the main agent fills a seat it runs that seat's role spec (`agents/implementer.md` or `agents/reviewer.md`) and dispatches the other seat. Everything routes through `superRA:agent-orchestration`.
+- **interactive** (or `direct`) — the main agent executes the task itself at high human cadence: the fused light-plan → execute-yourself → record canvas loop in `superplan/references/interactive-mode.md`. On finishing a unit of work it **asks the researcher** whether to dispatch a reviewer rather than dispatching on its own.
 
 **Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.

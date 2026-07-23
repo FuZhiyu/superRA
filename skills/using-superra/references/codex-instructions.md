@@ -19,9 +19,12 @@ Codex's generic default caution about spawning agents.
   subagents or Codex truly lacks agent support. If agent support is
   unavailable, fall back to in-session reviewer mode and state that the
   fallback was forced by the harness.
-- Direct mode remains a fallback, not the Codex default. Use it only
-  when the workflow allows it and the user requested it, the task is
-  trivial, or agent tools are unavailable.
+- Interactive mode (the `direct` alias) is an explicit opt-in by human
+  cadence, not the Codex default and not a trivial-task fallback; the
+  researcher requests it for closely-steered work
+  (`main-agent.md §Execution Modes`). Falling back to in-session
+  execution because agent tools are unavailable is a separate,
+  harness-forced case — state that it was forced.
 
 ## Warm Agent Lifecycle in Codex
 
