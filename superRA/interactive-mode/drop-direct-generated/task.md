@@ -1,6 +1,6 @@
 ---
 title: "Drop the generated direct-mode role references and update the generator"
-status: implemented
+status: revise
 depends_on:
   - execution-mode-contract
 ---
@@ -46,3 +46,13 @@ The two generated direct-mode role references are gone, the generator no longer 
 
 [direct-mode-implementer.md]: ../../../skills/using-superra/references/direct-mode-implementer.md
 [direct-mode-reviewer.md]: ../../../skills/using-superra/references/direct-mode-reviewer.md
+
+## Review Notes
+
+1. **CRITICAL** — [tests/check-harness-compatibility.sh:71-72](../../../tests/check-harness-compatibility.sh#L71-L72) is a live harness-compatibility test that asserts the two deleted files exist (`test -f skills/using-superra/references/direct-mode-implementer.md` / `direct-mode-reviewer.md`). The script runs under `set -euo pipefail`, so with the files deleted it now aborts at the "Codex adapter references" section — I ran it and it exits 1. This is a functional test breakage introduced directly by this task, so the Objective's success criterion ("no dangling reference to the deleted files remains anywhere in the repo"; repo "runs clean") is not met. Fix: remove the two `test -f` lines for the deleted files (keep the `codex-instructions.md` assertion on line 70) and re-run the script to confirm it passes.
+
+2. **MAJOR** — [tests/harness-instruction-following/load_contract.json](../../../tests/harness-instruction-following/load_contract.json) still lists the deleted files in `source_paths` for LC005 ([L144-L145](../../../tests/harness-instruction-following/load_contract.json#L144-L145)) and LC006 ([L177-L178](../../../tests/harness-instruction-following/load_contract.json#L177-L178)), and LC006's `expected_evidence` ([L185](../../../tests/harness-instruction-following/load_contract.json#L185)) still claims the drift check "regenerates direct-mode references and .codex agent TOML". `test_contract.py` does not existence-check `source_paths`, so its 10 tests still pass, but these are stale dangling references in a live (non-archive) fixture that now misdescribe the coverage. Fix: drop the two `direct-mode-*` entries from LC005 and LC006 `source_paths`, and reword LC006's `expected_evidence` to reference only the `.toml` agents.
+
+3. **MAJOR** — The [Results §Verification](#) grep claim ("Repo-wide grep … returns zero hits in live skill prose, agent files, or adapter references") is scoped too narrowly: it excludes `tests/`, which is live (not a `docs/plans/*.md` archive). A truly repo-wide grep surfaces the findings in items 1 and 2. Update the sweep and the Results account once those are fixed so "no dangling reference … anywhere in the repo" is accurate. The `docs/plans/*.md` and sibling-task-file exclusions already flagged are correctly judged; the `tests/` omission was not flagged at all.
+
+Note: the generator, deletions, generator/test runs, `.toml`-unchanged verification, and CLAUDE.md edits (items in the Objective other than the sweep) all verified correct on my pass — `sync_codex_agents.py --scope project --check` passes, `test_sync_codex_agents.py` runs 3 OK, both `.toml`s unchanged (identical md5), and the CLAUDE.md enumeration/bullets are complete.
