@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: implemented
+status: revise
 depends_on:
   - superplan-decrowd
 ---
@@ -43,3 +43,13 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 **Wiring** — a two-sentence pointer at `SKILL.md` Entry Assessment §3 (Routing path — "what mode"), the routing seam, stating the load condition (researcher opts into interactive canvas cadence) and the reference target. Kept to a pointer per the DRY + Necessity gate.
 
 **DRY discipline** — the reference points to owners rather than restating them: Task Interface, Commit Hygiene, the status enum, the placement descent, the retroactive machinery, and the confirm-intent gate all resolve through links. `python3 skills/report-in-markdown/scripts/check_markdown.py` reports the reference clean.
+
+## Review Notes
+
+1. **MAJOR** — Sibling cross-references use the wrong relative path. The new file lives in `skills/superplan/references/`, so same-skill siblings must be cited by bare filename (the in-`references/` house convention — see `changing-the-tree.md:39` citing `task-tree-design.md`, and `planning-review.md`/`decomposition.md`/`thorough-planning.md` all citing `task-tree-design.md` bare). This file instead writes `references/task-tree-design.md` at [interactive-mode.md:12](../../../skills/superplan/references/interactive-mode.md#L12) and [:28](../../../skills/superplan/references/interactive-mode.md#L28), and `references/changing-the-tree.md` at [:30](../../../skills/superplan/references/interactive-mode.md#L30). Resolved relative to the file's own directory (per `report-in-markdown`), these point at `references/references/…`, which does not exist, and they are inconsistent with every sibling reference. These are the reference's load-bearing routing pointers, so this undercuts the stated self-contained/loadable success criterion. Fix: drop the `references/` prefix — `task-tree-design.md §…` and `changing-the-tree.md`. (The `SKILL.md:34` pointer's `references/interactive-mode.md` is correct because SKILL.md sits one level up.)
+
+2. **MAJOR** — DRY: the parenthetical `(set complete-and-verified work to approved, done-but-unreviewed work to implemented)` at [interactive-mode.md:12](../../../skills/superplan/references/interactive-mode.md#L12) paraphrases steps 3–4 of the section it points to (`task-tree-design.md §Retroactive Task-Tree Creation`, lines 110–111), and also restates the same enum mapping already given locally at loop step 4 (line 23). The agent following the retroactive path loads that section anyway (it also needs §Placing Work there), so the echo forces no redundant load — "point and trust." Per the CLAUDE.md DRY + Necessity gate for skill prose, this paraphrase of owned content is a drift risk (the mapping duplicates and can diverge). Cut the parenthetical; the link carries it.
+
+3. **MINOR** — [interactive-mode.md:34](../../../skills/superplan/references/interactive-mode.md#L34): "Editing from the dashboard is out of scope — it observes, it does not author." The trailing "it observes, it does not author" restates the out-of-scope clause it follows. Trim to the scope statement.
+
+4. **MINOR** — [interactive-mode.md:16](../../../skills/superplan/references/interactive-mode.md#L16): "The researcher's messages drive the canvas; you write them in." largely re-states the co-editing framing already in the header (line 3) and the `using-superra` §Task Interface pointer in the same sentence. Consider trimming; it shapes little the agent would not already do given the co-edit pointer.
