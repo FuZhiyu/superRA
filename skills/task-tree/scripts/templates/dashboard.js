@@ -184,6 +184,8 @@ function resolveInternalTaskPath(href, taskPath) {
 /**
  * Render markdown text via markdown-it, then post-process:
  * - In-tree task references -> internal hash navigation (#/<task-path>)
+ * - Scheme URIs (zotero:, mailto:, http(s):, …) -> left untouched
+ * - Relative .pdf links -> /files/ (server) or STANDALONE_PLAN_DIR (standalone)
  * - Other relative file paths -> vscode://file/{resolved_root}/{task-rel path}
  * - Image src -> /files/{src}
  * - Wrap each block-level element in a .commentable-block container
@@ -195,8 +197,14 @@ function renderMarkdown(text, sectionName, taskPath) {
      untrusted reader input — sanitize before it touches the DOM. DOMPurify's
      default allowlist strips scripts/iframes/event handlers/javascript: URLs;
      ADD_ATTR keeps class/style so authored HTML can use inline styles and the
-     dashboard CSS tokens. <details>/<summary> are on the default allowlist. */
-  var html = DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] });
+     dashboard CSS tokens. <details>/<summary> are on the default allowlist.
+     ALLOWED_URI_REGEXP is DOMPurify's default scheme list plus `zotero` (the
+     trace-link deeplink), so authored Zotero links survive sanitization while
+     javascript: and untrusted data: links remain blocked. */
+  var html = DOMPurify.sanitize(md.render(text), {
+    ADD_ATTR: ['style', 'class'],
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|zotero):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  });
   var container = document.createElement('div');
   container.innerHTML = html;
 
@@ -221,12 +229,23 @@ function renderMarkdown(text, sectionName, taskPath) {
      figures, paths outside the tree) keeps the vscode://file rewrite. */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
-    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
+    /* Only genuine relative paths enter the task/file resolver. Scheme URIs
+       (including zotero:, mailto:, vscode:, and file:) remain untouched. */
+    if (href && !href.startsWith('#') && !/^[a-z][a-z0-9+.\-]*:/i.test(href)) {
       var internal = resolveInternalTaskPath(href, taskPath);
       if (internal !== null) {
         a.setAttribute('href', '#/' + internal);
         a.removeAttribute('target');
         a.classList.add('task-link');
+      } else if (/\.pdf$/i.test(href.replace(/[?#].*$/, '')) && !window.DOC_MODE && !REPO_FILE_BASE) {
+        /* PDFs are browser-viewable artifacts: route them through the live file
+           server, or resolve beside the embedded task tree in standalone mode. */
+        if (window.STANDALONE) {
+          a.setAttribute('href', STANDALONE_PLAN_DIR + taskDirRel + href);
+        } else {
+          a.setAttribute('href', wtUrl('/files/' + repoPathPrefix + href));
+        }
+        a.setAttribute('target', '_blank');
       } else {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]

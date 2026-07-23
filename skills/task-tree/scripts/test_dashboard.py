@@ -693,6 +693,7 @@ def collision_worktree_client(tmp_path, monkeypatch):
         attachments = task / "attachments"
         attachments.mkdir()
         attachments.joinpath("figure.png").write_bytes(title.encode())
+        attachments.joinpath("figure.pdf").write_bytes((title + " PDF").encode())
         if title == "Project B":
             attachments.joinpath("b-only.png").write_bytes(b"B only")
         return root
@@ -764,6 +765,29 @@ class TestPerWorktreeResolution:
         )
         assert "?wt=" not in launch_url
         assert client.get(launch_url).content == b"Project A"
+
+    @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+    def test_collision_safe_selector_routes_relative_pdf_to_selected_bytes(
+        self, collision_worktree_client
+    ):
+        client, _root_a, root_b = collision_worktree_client
+        wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
+        pdf_url = _render_markdown_link_href(
+            "attachments/figure.pdf", active_wt=wt_b, task_path="01-first"
+        )
+        assert pdf_url == (
+            "/files/superRA/01-first/attachments/figure.pdf"
+            "?wt=parent%20two%2Fshared%20name"
+        )
+        selected = client.get(pdf_url)
+        assert selected.status_code == 200
+        assert selected.content == b"Project B PDF"
+
+        launch_url = _render_markdown_link_href(
+            "attachments/figure.pdf", task_path="01-first"
+        )
+        assert "?wt=" not in launch_url
+        assert client.get(launch_url).content == b"Project A PDF"
 
     def test_node_resolves_by_wt_param(self, two_worktree_client):
         client, wt_a, wt_b = two_worktree_client
@@ -2699,7 +2723,7 @@ class TestFilterSinglePassClientLogic:
 
 
 # ---------------------------------------------------------------------------
-# renderMarkdown image-rewrite (node-backed, behavioral)
+# renderMarkdown link/image rewrite (node-backed, behavioral)
 #
 # The server-mode `<img src>` rewrite is a code path inside renderMarkdown that
 # string-presence assertions cannot exercise — an undefined identifier there
@@ -2713,10 +2737,12 @@ class TestFilterSinglePassClientLogic:
 # ---------------------------------------------------------------------------
 
 _RENDER_MD_SHIM = r"""
-// Minimal markdown-it stub: emit the one relative-image we feed in as HTML.
+// Minimal markdown-it stub: emit the one relative image or link we feed in.
 var md = { render: function (text) {
   var m = text.match(/!\[[^\]]*\]\(([^)]+)\)/);
-  return m ? '<img src="' + m[1] + '">' : '<p>' + text + '</p>';
+  if (m) return '<img src="' + m[1] + '">';
+  m = text.match(/\[[^\]]*\]\(([^)]+)\)/);
+  return m ? '<a href="' + m[1] + '">link</a>' : '<p>' + text + '</p>';
 } };
 // Minimal DOM: a div whose innerHTML setter parses <img src> / <a href> into
 // element stubs, and whose querySelectorAll returns them for the rewrite loop.
@@ -2735,12 +2761,27 @@ function makeEl(tag) {
           });
         })(im[1]);
       }
+      var am; var are = /<a[^>]*\bhref="([^"]*)"[^>]*>/g;
+      while ((am = are.exec(html))) {
+        (function (val) {
+          self._as.push({
+            _attrs: { href: val },
+            getAttribute: function (n) { return this._attrs[n] || null; },
+            setAttribute: function (n, v) { this._attrs[n] = v; },
+            removeAttribute: function (n) { delete this._attrs[n]; },
+            classList: { add: function () {} },
+          });
+        })(am[1]);
+      }
       this._html = html;
     },
     get innerHTML() {
       var out = '';
       for (var i = 0; i < this._imgs.length; i++) {
         out += '<img src="' + this._imgs[i]._src + '">';
+      }
+      for (var j = 0; j < this._as.length; j++) {
+        out += '<a href="' + (this._as[j]._attrs.href || '') + '"></a>';
       }
       return out;
     },
@@ -2833,6 +2874,64 @@ class TestRenderMarkdownImageRewrite:
     )
     def test_absolute_image_src_is_unchanged(self, src):
         assert self._run("superRA", "01-alpha", src, "selected")["src"] == src
+
+
+def _render_markdown_link_href(
+    href, *, active_wt="", standalone=False, repo_file_base="", task_path="demo"
+):
+    defs = _extract_js_defs(["wtUrl", "renderMarkdown"])
+    harness = (
+        _RENDER_MD_SHIM
+        + "window.STANDALONE = " + json.dumps(standalone) + ";\n"
+        + "var ACTIVE_WT = " + json.dumps(active_wt) + ";\n"
+        + "var RESOLVED_ROOT = '/abs/root';\n"
+        + "var ROOT_PREFIX = 'superRA';\n"
+        + "var REPO_ROOT_PREFIX = ROOT_PREFIX;\n"
+        + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+        + "var DOC_LOCAL_LINKS = [];\n"
+        + "var STANDALONE_PLAN_DIR = 'tree/';\n"
+        + defs + "\n"
+        + "var html = renderMarkdown('[link](" + href + ")', null, "
+        + json.dumps(task_path) + ");\n"
+        + "var m = html.match(/href=\"([^\"]*)\"/);\n"
+        + "console.log(JSON.stringify({href: m ? m[1] : null}));\n"
+    )
+    proc = subprocess.run(
+        [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])["href"]
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestRenderMarkdownLinkRewrite:
+    def _run(self, href, *, standalone=False, repo_file_base=""):
+        return _render_markdown_link_href(
+            href, standalone=standalone, repo_file_base=repo_file_base
+        )
+
+    def test_scheme_uris_remain_unchanged(self):
+        assert self._run("zotero://select/library/items/ABC123") == (
+            "zotero://select/library/items/ABC123"
+        )
+        assert self._run("https://doi.org/10.1111/jofi.10001") == (
+            "https://doi.org/10.1111/jofi.10001"
+        )
+
+    def test_server_pdf_uses_file_route(self):
+        assert self._run("attachments/key.pdf") == (
+            "/files/superRA/demo/attachments/key.pdf"
+        )
+
+    def test_standalone_pdf_uses_embedded_tree_base(self):
+        assert self._run("attachments/key.pdf", standalone=True) == (
+            "tree/demo/attachments/key.pdf"
+        )
+
+    def test_other_relative_files_still_use_vscode(self):
+        assert self._run("attachments/key.md") == (
+            "vscode://file//abs/root/demo/attachments/key.md"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -4267,14 +4366,13 @@ class TestRawHtmlSanitization:
 
     def test_render_result_is_sanitized(self):
         """Every md.render(...) result flows through DOMPurify.sanitize before it
-        reaches the DOM, with style/class kept for authored inline styling. The
-        single renderMarkdown helper is the only md.render call site, so covering
-        it covers task sections, doc pages, and section previews."""
+        reaches the DOM, with style/class kept and Zotero links admitted without
+        allowing javascript: or untrusted data: links."""
         src = BASE_HTML
-        assert (
-            "DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] })"
-            in src
-        )
+        assert "DOMPurify.sanitize(md.render(text), {" in src
+        assert "ADD_ATTR: ['style', 'class']" in src
+        assert "ALLOWED_URI_REGEXP:" in src
+        assert "xmpp|matrix|zotero):" in src
         # No raw md.render(...) reaches innerHTML unsanitized: the only call site
         # is the one wrapped above.
         assert src.count("md.render(") == 1

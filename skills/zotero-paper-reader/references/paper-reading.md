@@ -254,7 +254,7 @@ Note: Zotero may be running but the local API off — the connector port answers
 
 **Symptom:** `children` output has no child with `data.contentType == "application/pdf"`.
 
-**Action:** Inform the user. The paper may be in Zotero as a metadata-only record without a stored PDF. Options: the user can attach a PDF in Zotero Desktop, or if the DOI is present you can search the web for an open-access copy.
+**Action:** Inform the user. The paper may be in Zotero as a metadata-only record without a stored PDF. Options: if adding a new item and a stable PDF URL is available, use `add --pdf-url URL` so the connector fetches it during save; for an existing item with a local PDF file, use Zotero Desktop or `attach --item-key KEY --file paper.pdf` with Web API write credentials; if the DOI is present, you can search the web for an open-access copy.
 
 ### Missing local file (PDF not in local storage)
 

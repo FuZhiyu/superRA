@@ -1,6 +1,6 @@
 ---
 name: zotero-paper-reader
-description: "Use Zotero to find, read, summarize, cite, or export academic papers. Use for paper lookup, library searches, attachments, BibTeX, and draft citation work."
+description: "Use Zotero to find, read, summarize, cite, export, or save academic papers. Use for paper lookup, library searches, attachments, BibTeX, draft citation work, and adding discovered papers to the library."
 user-invocable: true
 ---
 
@@ -57,6 +57,27 @@ All commands emit JSON. Add `--help` to any subcommand for parameter details.
 
 Load [`references/bibtex-citations.md`](references/bibtex-citations.md) for command examples, the full flag list (`--bib` / `--tex` / `--markdown` / `--marker` / `--style`), the BBT-vs-built-in key model and fallback semantics, JSON fields, and troubleshooting.
 
+## Adding Papers
+
+Save a discovered paper to the library. The default write path is the **local Zotero connector** — no key, no cloud, only Zotero desktop running with "allow other applications to communicate" enabled. It falls back to the **Web API** (write-scoped key) when the connector is unreachable or the destination is one it cannot target.
+
+| Goal | Command |
+|---|---|
+| Report the desktop UI's current save target | `selected` |
+| Add a paper from a citation-client record | `add --record record.json` (or pipe the JSON on stdin) |
+| Add a paper and let the connector fetch a PDF URL | `add --record record.json --pdf-url URL` |
+| Attach a local PDF file to an existing item | `attach --item-key KEY --file paper.pdf` (Web API only) |
+
+The record is a citation-client `metadata` record — piped straight from screening, so there is no second lookup. A mapper covers the econ/finance item types (journalArticle, preprint, working-paper report), taking every bibliographic field **verbatim** from the record and its `--raw` Crossref payload — never agent-authored, always the published version of record.
+
+**Save target.** The connector saves to whatever library/collection is **selected in the Zotero desktop UI** (`saveItems` takes no target). Run `selected` first and report it to the user; tell them to switch the UI selection if they want a different destination. A group library (`--library group:<id>`) or a specific `--collection KEY` the connector cannot target routes `add` to the Web API automatically.
+
+**PDF attachments.** Prefer `add --pdf-url URL` when adding a new item and a stable PDF URL is available; the local connector fetches the PDF during `saveItems`. Use `attach --item-key KEY --file paper.pdf` only for an existing item when Web API write credentials are available. The local `/api` cannot attach files, and the connector path used here does not attach an arbitrary local file to an already-saved item.
+
+**Dedup** runs by default (DOI vs the target library) before saving — the connector never dedups and would create duplicates. Surface a **PDF version divergence** (metadata = published, PDF = working paper) with `--pdf-divergence "..."`; it lands as a tag and an `extra` note.
+
+Load [`references/access-modes.md`](references/access-modes.md) for the connector wire details, path-selection rules, and write-key setup.
+
 ## Configuration
 
 Credentials are read from environment variables or, when present, from `Notes/.env`. They are never printed to the agent transcript. Required variables for Web API mode: `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE` (default `user`), `ZOTERO_API_KEY`. Local mode needs no credentials. See [`references/access-modes.md`](references/access-modes.md) for full details.
@@ -64,6 +85,6 @@ Credentials are read from environment variables or, when present, from `Notes/.e
 ## Resources
 
 - [`references/paper-reading.md`](references/paper-reading.md) — full workflow with command examples, JSON field guide, disambiguation, and troubleshooting
-- [`references/access-modes.md`](references/access-modes.md) — local vs. web access rules, credential setup, fallback logic, troubleshooting
+- [`references/access-modes.md`](references/access-modes.md) — local vs. web access rules, the read-only local API and the connector/Web-API write paths, credential setup, fallback logic, troubleshooting
 - [`references/bibtex-citations.md`](references/bibtex-citations.md) — load for the `bibtex` / `cite` / `bibliography` commands: examples, full flag list, the Better BibTeX key model and fallback semantics, group-library targeting, and troubleshooting
 - [`scripts/zotero_tool.py`](scripts/zotero_tool.py) — unified pyzotero command surface (pinned to pyzotero 1.13.0 via PEP 723 inline metadata)
