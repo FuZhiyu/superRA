@@ -1,6 +1,6 @@
 ---
 title: "Drop the generated direct-mode role references and update the generator"
-status: implemented
+status: approved
 depends_on:
   - execution-mode-contract
 ---
