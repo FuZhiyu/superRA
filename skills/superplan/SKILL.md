@@ -33,17 +33,17 @@ Before exploration or task design, assess three independent dimensions of the in
 
 When the researcher opts into **interactive canvas cadence** — co-editing the task file and executing it yourself rather than dispatching, running to completion — load `references/interactive-mode.md`. It fuses light planning, self-execution, and recording across the forward light-plan and retroactive-capture forms.
 
-**Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing — wrong placement creates rework, wrong depth wastes effort or misses complexity.
+**Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing.
 
 ## Depth Tiers
 
 A spectrum, not rigid modes — escalate mid-planning if complexity warrants. The tier mainly modulates Phase 1; Phases 2-3 scale with it; Phase 4 is identical except thorough adds an agent review step (§Agent Review).
 
-**Quick** — minor updates, known additions, single-task changes (an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment). Light scan of `superRA/`, skip deep exploration, design inline.
-
-**Standard** (default) — new workstreams in familiar territory, a significant new branch, satisfying domain hard gates. Main agent explores project structure, loads the domain skill, designs tasks.
-
-**Thorough** — complex or unfamiliar projects, large scope spanning multiple codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). Dispatch parallel exploration agents before task design per `references/thorough-planning.md`. Competing designs returned by multiple agents are a natural source of substantive questions for the user (§Substantive Questions).
+| Tier | Use for | Phase 1 |
+|---|---|---|
+| **Quick** | Minor updates, known additions, single-task changes — an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment. | Light scan of `superRA/`, skip deep exploration, design inline. |
+| **Standard** (default) | New workstreams in familiar territory, a significant new branch, satisfying domain hard gates. | Explore project structure, load the domain skill, design tasks. |
+| **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Substantive Questions. |
 
 ## Phase 1: Exploration
 
