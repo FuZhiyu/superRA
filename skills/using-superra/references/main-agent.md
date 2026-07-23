@@ -41,14 +41,15 @@ Ask questions, and resolve what you can from code and data first.
 
 ## Execution Modes
 
-Subagent mode is the default — dispatch implementers and reviewers through `superRA:agent-orchestration`. Direct mode is a fallback: only for trivial tasks or when the user explicitly requests it, and you must announce the switch before proceeding.
+Two dials set how a task runs, surfaced as named presets plus a seat knob. Selection is by autonomy and human cadence, **not** task difficulty.
 
-**Direct mode protocol:**
+- **Axis A — human cadence.** Autonomous (dispatches and runs to completion) is the default; interactive (co-edit with the researcher, pausing often) is an explicit opt-in.
+- **Axis B — seat assignment.** Each task has an implementer seat and a reviewer seat; each is filled by the main agent or a dispatched subagent, chosen per task. `superRA:agent-orchestration` owns the seat-assignment mechanics.
 
-- **Read the direct-mode role reference for the role you play** — `references/direct-mode-implementer.md` or `references/direct-mode-reviewer.md`. These are the cross-repo-loadable copies of the role protocol.
-- **The Skill-Load Manifest still drives loads**, in-session per your Stage row.
-- **Task context comes from `superRA/` task files** (`superra task read`) — there is no dispatch prompt.
-- **The self-review gate, editing discipline, and APPROVE / REVISE verdict protocol all apply.** Walk the active domain skill's gated checklist before committing.
-- **Review is never skipped.** Always dispatch a reviewer subagent unless the user explicitly asks to skip it.
+Presets over these dials:
+
+- **subagent** (default) — both seats are subagents running autonomously; the mode all workflows assume. Dispatch implementers and reviewers through `superRA:agent-orchestration`.
+- **interactive** (or `direct`, for backward compatibility) — the main agent participates as co-editor at high human cadence: a fused light-plan → execute-yourself → record canvas loop. How-to in `superplan/references/interactive-mode.md`.
+- **manual** — the main agent fills both seats; explicit request only.
 
 **Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
