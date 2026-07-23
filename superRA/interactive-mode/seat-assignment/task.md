@@ -1,6 +1,6 @@
 ---
 title: "Seat assignment: support main or subagent in either role"
-status: implemented
+status: approved
 depends_on:
   - execution-mode-contract
 ---
