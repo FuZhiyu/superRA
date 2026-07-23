@@ -11,7 +11,7 @@ Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task disp
 
 ## Execution Modes
 
-Subagent mode is the default (one implementer per task, fresh context); the mode contract — Direct-mode fallback conditions and its never-skipped review — is in `using-superra/references/main-agent.md §Execution Modes`.
+Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive (or manual); interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
 
 ## The Process
 
