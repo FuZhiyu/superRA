@@ -1,0 +1,34 @@
+# Interactive Canvas Mode
+
+A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You fill both seats yourself and pause often for feedback instead of dispatching and running to completion.
+
+Select it by **autonomy**, not difficulty: interactive is for work the researcher steers closely — often hard, concentrated work — where the plan and the execution move together. It is not for trivial jots. The default remains autonomous subagent execution; interactive is an explicit opt-in.
+
+## The spectrum
+
+One task file carries the whole range of plan/execute interleaving:
+
+- **Light-plan, then execute.** Scope a target and objective into a task file — positioning retained, but skipping the full exploration, domain-gate, and decomposition choreography of a standard superplan pass — then execute the task yourself and record results in place.
+- **Retroactive capture — the ultimate interactive form.** Do the work first, then write it down: create the task and populate `## Results` after the fact. This is superplan's retroactive documentation run results-first — use the existing machinery in `references/task-tree-design.md` §Retroactive Task-Tree Creation (set complete-and-verified work to `approved`, done-but-unreviewed work to `implemented`), not a parallel path.
+
+## The loop
+
+1. **Co-edit** the target, objective, and results into the task file through the `using-superra` §Task Interface. The researcher's messages drive the canvas; you write them in.
+2. **Self-review always.** Walk the active domain skill's gated checklist as a genuine judgment pass (e.g. the Iron Law for modeling, evidence-before-claims for data work) — every `[BLOCKING]` item, sized to the work, not a heavy multi-item ceremony.
+3. **Commit instantly** per edit, per `using-superra` §Commit Hygiene.
+4. **Prompt: review now / defer / skip.**
+   - **Now** — dispatch a reviewer subagent for a full gated pass (via `superRA:agent-orchestration`); on APPROVE the task reaches `approved`.
+   - **Defer / skip** — leave the task at `implemented` for a later deferred-review sweep.
+
+   Reuse `implemented` / `approved` for these states; do not invent an awaiting-review status.
+5. **Continue**, pausing frequently for feedback before the next unit of work.
+
+## Positioning and the intent gate
+
+Position every task by the recursive descent in `references/task-tree-design.md` §Placing Work in the Existing Tree — light planning trims the choreography, not the placement discipline.
+
+The confirm-intent gate that normally precedes a tree change (`references/changing-the-tree.md`) **collapses when the human is the editor**: the researcher's message co-editing the canvas *is* the authorization, so apply the change and commit without a separate confirmation round. The gate remains only for scope changes you initiate on your own.
+
+## Dashboard pairing
+
+Recommend running the dashboard in live-serve as a read-only canvas view alongside the loop, so the researcher watches the task tree update as you co-edit. Editing from the dashboard is out of scope — it observes, it does not author.
