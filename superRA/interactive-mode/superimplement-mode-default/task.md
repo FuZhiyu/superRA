@@ -1,6 +1,6 @@
 ---
 title: "superimplement mode-selection default"
-status: implemented
+status: approved
 depends_on:
   - execution-mode-contract
 ---
