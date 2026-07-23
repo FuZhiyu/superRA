@@ -1,6 +1,6 @@
 # Interactive Canvas Mode
 
-A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You do the work yourself and pause often for feedback instead of dispatching and running to completion; review is prompted, not automatic (§The loop, step 4).
+A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You do the work yourself and pause often for feedback instead of dispatching and running to completion; review is prompted, not automatic (§The loop, step 5).
 
 Select it by **autonomy**, not difficulty: interactive is for work the researcher steers closely — often hard, concentrated work — where the plan and the execution move together. It is not for trivial jots. The default remains autonomous subagent execution; interactive is an explicit opt-in.
 
