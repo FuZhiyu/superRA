@@ -1,6 +1,6 @@
 ---
 title: "Econ-data-analysis: reviewer read-first default and prefer-visualization"
-status: implemented
+status: approved
 depends_on: []
 ---
 
