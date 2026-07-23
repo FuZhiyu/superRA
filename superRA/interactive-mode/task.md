@@ -1,25 +1,29 @@
 ---
-title: "Interactive Execution Mode"
+title: "Execution Mode Model & Interactive Canvas"
 status: not-started
 depends_on: []
 ---
 
 ## Objective
 
-Introduce an **interactive execution mode** for superRA: a human-in-the-loop, low-autonomy mode in which the researcher and main agent co-edit task files as a live canvas — capturing targets, objectives, and results with fast, iterative, instantly-committed edits — pausing frequently for researcher feedback. Paired with the live dashboard it forms a light-plan I/O surface: brainstorm together, capture into tasks, execute together.
+Reshape superRA's execution-mode model and add an interactive canvas mode. Model the choice as **two dials, surfaced as named presets plus a seat knob**:
 
-The mode selection axis is **autonomy / human-involvement, not task difficulty** — interactive is for work the researcher wants to steer closely, which is often hard and concentrated, not trivial.
+- **Axis A — human cadence (autonomy).** Autonomous (runs to completion) ↔ interactive (pauses often for the researcher). Default is autonomous/subagent; interactive is an explicit opt-in. `superimplement` on a built tree defaults to subagent unless interactive is requested.
+- **Axis B — seat assignment.** Each task has an implementer seat and a reviewer seat; each is filled by the main agent or a dispatched subagent. The orchestrator chooses **per task** — subagent reviewer for large/routine subtrees (lean main context), main-agent reviewer for small or high-stakes tasks (strongest model on the critical, adversarial seat). Main-agent-fills-both (manual) only on explicit request.
 
-Interactive mode **replaces the behavior of the current direct mode** (same non-subagent slot; renamed to `interactive`, with `direct` retained as a backward-compat alias). The old direct-mode behavior — main agent playing implementer/reviewer with the full gate walk and mandatory reviewer dispatch — is retired. In interactive mode: **self-review is always performed; independent review is elective** (researcher chooses review-now / defer / skip), reusing the existing `implemented` (self-reviewed, awaiting/deferred) vs `approved` (independently reviewed) statuses — no new status values. **Positioning discipline is retained**; the full gate ceremony and automatic reviewer dispatch are dropped for this mode. Routed through `superplan` (positioning judgment lives there and references load with their owning skill).
+Named presets over these dials: **subagent** (both seats subagents, autonomous — default), **interactive** (main participates as co-editor + high human cadence — the canvas), **manual** (main fills both seats, explicit only). Seat-assignment is a documented knob `agent-orchestration` supports, not a fourth mode.
 
-Success: the two active modes (subagent, interactive) are documented on the autonomy axis; the interactive canvas loop is a loadable superplan reference sized for concentrated work; the generated direct-mode role references are removed and their generator updated; no gate is silently weakened by the superplan de-crowd.
+**Interactive mode** replaces the old direct mode's behavior (same non-subagent slot; renamed `interactive`, `direct` kept as a backward-compat alias; old full-gate behavior retired). In it: co-edit the task file as a live canvas, **self-review always**, **independent review elective** (now / defer / skip) reusing `implemented` / `approved` — no new status, positioning retained, full gate ceremony and automatic reviewer dispatch dropped. The selection axis is autonomy/human-involvement, **not task difficulty** — interactive is for work the researcher steers closely, often hard and concentrated. Routed through `superplan`.
+
+Success: the contract documents the two axes as presets + seat knob on the autonomy axis; the interactive canvas is a loadable superplan reference sized for concentrated work; `agent-orchestration` supports per-task seat assignment; `superimplement` defaults to subagent unless interactive is requested; the generated direct-mode role references are removed and their generator updated; no gate is silently weakened by the superplan de-crowd.
 
 ### Context
 
-This is superRA-internal skill authoring. Follow `CLAUDE.md` — the DRY + Necessity gate, ownership boundaries, generated-artifact rules, and "instruct, don't justify." No domain skill governs this work; `skill-creator` governs `skills/*/SKILL.md` edits where available.
+superRA-internal skill authoring. Follow `CLAUDE.md` — the DRY + Necessity gate, ownership boundaries, generated-artifact rules, and "instruct, don't justify." No domain skill governs this work; `skill-creator` governs `skills/*/SKILL.md` edits where available.
 
 ### Conventions
 
 - Route interactive-mode procedure through `superplan`; `task-tree` remains the tooling (CLI/dashboard) the mode drives, not the procedure home.
-- Reuse the existing status enum; do not add status values for the elective-review state.
+- The contract *names* the seat model; `agent-orchestration` owns the seat-assignment *mechanics* — point, do not duplicate.
+- Reuse the existing status enum; no new status for the elective-review state.
 - Editable-from-dashboard is out of scope — the dashboard is a read-only live canvas view for this workstream.
