@@ -32,7 +32,7 @@ Rewrote the execution-mode contract as the authoritative home of the two-mode mo
 
 Removed the old "Direct mode is a fallback: only for trivial tasks" framing and the "Direct mode protocol" block (the dropped `direct-mode-implementer.md` / `direct-mode-reviewer.md` reads). The Codex-agents pointer is retained unchanged.
 
-**Follow-up revision (interactive-mode branch review).** Per researcher feedback the `manual` preset was dropped (it duplicated interactive-with-deferred-review) and the "not task difficulty" mandate removed; the interactive bullet now states the ask-before-review behavior. `skills/using-superra/SKILL.md §Execution Modes` one-line pointer unchanged in intent.
+**Follow-up revision (interactive-mode branch review).** Per researcher feedback the `manual` preset was dropped (it duplicated interactive-with-deferred-review) and the "not task difficulty" mandate removed; the interactive bullet now states the ask-before-review behavior. `skills/using-superra/SKILL.md §Execution Modes` one-line pointer unchanged in intent. Routing review found one un-swept remnant: `references/codex-instructions.md` still framed Direct mode as a trivial-task fallback — realigned to "interactive is an explicit opt-in by human cadence, not a trivial-task fallback," keeping the legitimate not-Codex-default and tools-unavailable-forced-fallback points.
 
 **DRY held:** the contract owns the model vocabulary; the interactive how-to points to the superplan reference, seat mechanics point to `agent-orchestration`.
 

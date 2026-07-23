@@ -21,7 +21,7 @@ Pure structural refactor with real correctness risk: a moved gate must not be si
 
 ## Results
 
-`skills/superplan/SKILL.md` is now a **routing spine of 109 lines, down from 196** ([SKILL.md](../../../skills/superplan/SKILL.md)). It keeps Overview, Entry Assessment, Depth Tiers, the Phase 1–4 sequence, Substantive Questions, and slim Living-Task-Tree / User-Feedback pointer sections; all mechanical detail moved to two new one-level-deep references, each with a stated load condition from `SKILL.md`.
+`skills/superplan/SKILL.md` is now a **routing spine of 111 lines, down from 196** ([SKILL.md](../../../skills/superplan/SKILL.md)). It keeps Overview, Entry Assessment, Depth Tiers, the Phase 1–4 sequence, Substantive Questions, and slim Living-Task-Tree / User-Feedback pointer sections; all mechanical detail moved to two new one-level-deep references, each with a stated load condition from `SKILL.md`.
 
 **Relocations (all gate/stop/transition text moved verbatim):**
 
