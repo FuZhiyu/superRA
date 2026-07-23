@@ -1,6 +1,6 @@
 # Interactive Canvas Mode
 
-A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You fill both seats yourself and pause often for feedback instead of dispatching and running to completion.
+A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You do the work yourself and pause often for feedback instead of dispatching and running to completion; review is prompted, not automatic (§The loop, step 4).
 
 Select it by **autonomy**, not difficulty: interactive is for work the researcher steers closely — often hard, concentrated work — where the plan and the execution move together. It is not for trivial jots. The default remains autonomous subagent execution; interactive is an explicit opt-in.
 
@@ -9,9 +9,11 @@ Select it by **autonomy**, not difficulty: interactive is for work the researche
 One task file carries the whole range of plan/execute interleaving:
 
 - **Light-plan, then execute.** Scope a target and objective into a task file — positioning retained, but skipping the full exploration, domain-gate, and decomposition choreography of a standard superplan pass — then execute the task yourself and record results in place.
-- **Retroactive capture — the ultimate interactive form.** Do the work first, then write it down: create the task and populate `## Results` after the fact. This is superplan's retroactive documentation run results-first — use the existing machinery in `task-tree-design.md` §Retroactive Task-Tree Creation, not a parallel path.
+- **Retroactive capture.** When the work is already done and the researcher asks to write it up — a handoff note, or a task that reflects what changed — run this same loop results-first: reconstruct the task and populate `## Results` after the fact via `task-tree-design.md` §Retroactive Task-Tree Creation. Route the request through this loop rather than building a separate path.
 
 ## The loop
+
+You do not load the implementer or reviewer role specs here — this loop is your protocol for handling the task file.
 
 1. **Co-edit** the target, objective, and results into the task file through the `using-superra` §Task Interface.
 2. **Self-review always.** Walk the active domain skill's gated checklist as a genuine judgment pass (e.g. the Iron Law for modeling, evidence-before-claims for data work) — every `[BLOCKING]` item, sized to the work, not a heavy multi-item ceremony.

@@ -41,15 +41,14 @@ Ask questions, and resolve what you can from code and data first.
 
 ## Execution Modes
 
-Two dials set how a task runs, surfaced as named presets plus a seat knob. Selection is by autonomy and human cadence, **not** task difficulty.
+Two dials set how a task runs. Selection is by autonomy and human cadence.
 
-- **Axis A — human cadence.** Autonomous (dispatches and runs to completion) is the default; interactive (co-edit with the researcher, pausing often) is an explicit opt-in.
-- **Axis B — seat assignment.** Each task has an implementer seat and a reviewer seat; each is filled by the main agent or a dispatched subagent, chosen per task. `superRA:agent-orchestration` owns the seat-assignment mechanics.
+- **Axis A — human cadence.** Autonomous — dispatch and run to completion — is the default; interactive — co-edit with the researcher, pausing often — is an explicit opt-in.
+- **Axis B — seat assignment.** Each task has an implementer seat and a reviewer seat, each filled by the main agent or a dispatched subagent. `superRA:agent-orchestration §Seat Assignment` owns the structures and the per-task choice.
 
-Presets over these dials:
+The two modes:
 
-- **subagent** (default) — both seats are subagents running autonomously; the mode all workflows assume. Dispatch implementers and reviewers through `superRA:agent-orchestration`.
-- **interactive** (or `direct`, for backward compatibility) — the main agent participates as co-editor at high human cadence: a fused light-plan → execute-yourself → record canvas loop. How-to in `superplan/references/interactive-mode.md`.
-- **manual** — the main agent fills both seats; explicit request only.
+- **subagent** (default) — autonomous execution, the mode all workflows assume. Axis B picks the seat structure; when the main agent fills a seat it runs that seat's role spec (`agents/implementer.md` or `agents/reviewer.md`) and dispatches the other seat. Everything routes through `superRA:agent-orchestration`.
+- **interactive** (or `direct`) — the main agent executes the task itself at high human cadence: the fused light-plan → execute-yourself → record canvas loop in `superplan/references/interactive-mode.md`. On finishing a unit of work it **asks the researcher** whether to dispatch a reviewer rather than dispatching on its own.
 
 **Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
