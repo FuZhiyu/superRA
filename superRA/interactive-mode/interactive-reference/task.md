@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: approved
+status: implemented
 depends_on:
   - superplan-decrowd
 ---
@@ -10,15 +10,16 @@ depends_on:
 Add `skills/superplan/references/interactive-mode.md` defining the interactive canvas — a **light-plan → execute-yourself → record** loop, co-edited with the researcher, sized for concentrated work (not trivial jots). It spans a spectrum of plan/execute interleaving, all through the same task file:
 
 - **Light-plan, then execute.** Lightly scope a target/objective into a task file (a light superplan — positioning retained, but skipping the full exploration / domain-gate / decomposition choreography), then execute yourself and record results in place.
-- **Retroactive capture — the ultimate interactive form.** Do the work first, then write it down: create the task and write the results in after the fact. Embeds superplan's retroactive documentation mode (see `references/task-tree-design.md §Retroactive Task-Tree Creation`); run the same machinery results-first rather than forking a parallel path.
+- **Retroactive capture.** When the work is already done and the researcher asks to write it up (a handoff note, or a task reflecting what changed), run the same loop results-first via `references/task-tree-design.md §Retroactive Task-Tree Creation` — route the request through this loop rather than forking a parallel path.
 
 Across the spectrum:
 
-1. **Co-edit** targets, objectives, and results into the task file via the `using-superra` §Task Interface.
+1. **Co-edit** targets and objectives into the task file via the `using-superra` §Task Interface.
 2. **Self-review always** — apply domain judgment (e.g. Iron Law, evidence-before-claims for data work) as a genuine pass, not a heavy multi-item ceremony.
-3. **Commit instantly** per edit, per `using-superra` §Commit Hygiene.
-4. **Prompt the researcher: review now / defer / skip.** "Now" dispatches a reviewer subagent (full gated pass) → `approved`. "Defer/skip" leaves the task at `implemented` for a later deferred-review sweep. No new status values.
-5. **Continue, pausing frequently for feedback.**
+3. **Keep the task updated (required)** — record work into `## Results` and move `status` before each pause; the task file is the state of record, not the commit log alone.
+4. **Commit instantly** per edit, per `using-superra` §Commit Hygiene.
+5. **Ask before review, with a tool (required)** — use `AskUserQuestion` to ask the researcher review now / defer / skip; never dispatch on your own read. "Now" dispatches a reviewer subagent (full gated pass) → `approved`. "Defer/skip" leaves the task at `implemented` for a later deferred-review sweep. No new status values.
+6. **Continue, pausing frequently for feedback.**
 
 Positioning routes to `references/task-tree-design.md §Placing Work`. The confirm-intent gate for task-tree changes **collapses when the human is the editor** (their message is the authorization); it remains only for agent-initiated scope changes. Dashboard pairing: recommend running the dashboard in live-serve as a read-only canvas view.
 
@@ -42,4 +43,9 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 
 **Wiring** — a two-sentence pointer at `SKILL.md` Entry Assessment §3 (Routing path — "what mode"), the routing seam, stating the load condition (researcher opts into interactive canvas cadence) and the reference target. Kept to a pointer per the DRY + Necessity gate.
 
-**DRY discipline** — the reference points to owners rather than restating them: Task Interface, Commit Hygiene, the status enum, the placement descent, the retroactive machinery, and the confirm-intent gate all resolve through links. `python3 skills/report-in-markdown/scripts/check_markdown.py` reports the reference clean.
+**Follow-up revision (interactive-mode branch review).** Per researcher feedback:
+- Retroactive capture rewritten around its real trigger (work already done, researcher asks to write it up) routed through the same loop — dropped the "ultimate interactive form" jargon.
+- Framing corrected: the main agent does the work itself and review is prompted (not "fills both seats"); a lead line states the loop loads no role specs and is itself the protocol.
+- **Two loop steps made required and unmissable:** *Keep the task updated* (record `## Results` + move `status` before each pause) and *Ask before review with a tool* (`AskUserQuestion`, never dispatch on your own). These were the two steps that were skipped when the mode was first exercised.
+
+**DRY discipline** — the reference points to owners rather than restating them: Task Interface, Commit Hygiene, the status enum, the placement descent, the retroactive machinery, and the confirm-intent gate all resolve through links.

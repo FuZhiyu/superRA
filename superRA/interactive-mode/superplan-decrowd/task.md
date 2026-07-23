@@ -1,6 +1,6 @@
 ---
 title: "De-crowd superplan SKILL.md into a routing spine"
-status: approved
+status: implemented
 depends_on: []
 ---
 
@@ -36,3 +36,5 @@ Pure structural refactor with real correctness risk: a moved gate must not be si
 **Point-not-duplicate.** `changing-the-tree.md` points to `task-tree-design.md` §Placing Work / §Objective rewrites for the update-task lifecycle rather than duplicating it; intra-skill paths were rewritten from `references/X` to `X` for the new file location, cross-skill paths (`task-tree/…`, `agent-orchestration`, `using-superra/…`, `agents/…`) left unchanged.
 
 **Verification:** every moved `[BLOCKING]`/stop phrase confirmed present in its new home via `grep` (wrapper-first, no-checkboxes, dependency-trace, all 9 self-review items, confirm-intent, do-not-resume-before-commit); all internal `§` anchors in the slimmed `SKILL.md` resolve (Depth Tiers, Agent Review, Substantive Questions, User Feedback); `grep "superplan §"` across `skills/`+`agents/` shows all externally-cited anchors still present in `SKILL.md`.
+
+**Follow-up tightening (interactive-mode branch review).** Per researcher feedback that the spine could read more as a pointer: Depth Tiers compressed from three prose paragraphs to a tier/use-for/Phase-1 table; the "wrong placement creates rework" justification cut from Ask-when-unclear; the design-note comment removed and heading spacing restored. The Phase 1–4 choreography, stop points, and review gates stay in the spine because superplan owns them — further externalization would move ownership, not just prose.

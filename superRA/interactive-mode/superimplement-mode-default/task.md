@@ -1,13 +1,13 @@
 ---
 title: "superimplement mode-selection default"
-status: approved
+status: implemented
 depends_on:
   - execution-mode-contract
 ---
 
 ## Objective
 
-Add the mode-selection default rule to `superimplement` (which owns execution-mode selection per `using-superra`): **default to subagent-driven execution unless the researcher explicitly requests interactive (or manual).** Applies at `superimplement` entry on a built tree; interactive can also be requested mid-flight.
+Add the mode-selection default rule to `superimplement` (which owns execution-mode selection per `using-superra`): **default to subagent-driven execution unless the researcher explicitly requests interactive.** Applies at `superimplement` entry on a built tree; interactive can also be requested mid-flight.
 
 State it as a short default rule that points to `main-agent.md §Execution Modes` for the mode definitions — do not restate the modes.
 
@@ -23,7 +23,9 @@ Two stale lines in `superimplement/SKILL.md` were replaced to match the new exec
 
 1. **§Execution Modes ([SKILL.md:14](../../../skills/superimplement/SKILL.md#L14))** — replaced the old model line ("Direct-mode fallback conditions and its never-skipped review") with the mode-selection default rule, pointing to the contract for definitions:
 
-   > Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive (or manual); interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
+   > Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive; interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
+
+   Follow-up: dropped the `(or manual)` clause when the `manual` preset was retired (interactive-mode branch review).
 
 2. **Step 2 mode note ([SKILL.md:83](../../../skills/superimplement/SKILL.md#L83))** — the prior line named `direct mode` as the primary term and asserted the retired auto-dispatch full-gate default ("Steps 3–4 still dispatch reviewer subagents unless the user overrides"). Replaced with the interactive-mode behavior, pointing to the loop's owner for mechanics:
 

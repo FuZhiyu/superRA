@@ -1,6 +1,6 @@
 ---
 title: "Seat assignment: support main or subagent in either role"
-status: approved
+status: implemented
 depends_on:
   - execution-mode-contract
 ---
@@ -11,12 +11,11 @@ Extend `agent-orchestration` to support **Axis B seat assignment**: a task's imp
 
 - **subagent reviewer** for large/routine subtrees — keep main-agent context lean.
 - **main-agent reviewer** for small or high-stakes tasks — put the strongest model on the critical, adversarial seat (subagent implements).
-- **main implements / subagent reviews** (today's direct pattern) and **subagent implements / main reviews** are both first-class.
-- **main fills both seats** (manual) only on explicit researcher request.
+- **main implements / subagent reviews** and **subagent implements / main reviews** are both first-class.
 
-The reviewer stays adversarial regardless of who fills the seat.
+These are the three seat structures of **subagent** mode (autonomous). Whoever fills a seat runs that seat's role spec (`implementer.md` / `reviewer.md`), main agent or subagent alike — the reviewer stays adversarial regardless of who fills it. There is no main-fills-both preset; that is served by interactive mode with review deferred.
 
-Success: `agent-orchestration` documents the four seat configurations and a per-task choice heuristic (size / stakes / context-cost), and its dispatch mechanics cover the main-as-reviewer-over-subagent-implementer case; the reviewer's adversarial protocol is unchanged.
+Success: `agent-orchestration` documents the three seat configurations and a per-task choice heuristic (size / stakes / context-cost), and its dispatch mechanics cover the main-as-reviewer-over-subagent-implementer case; the reviewer's adversarial protocol is unchanged.
 
 ## Planner Guidance
 
@@ -28,9 +27,11 @@ Added a `## Seat Assignment` section to [skills/agent-orchestration/SKILL.md](..
 
 Delivered against the success criteria:
 
-- **Four seat configurations** as a table (implementer × reviewer, each main or subagent): subagent/subagent (default), subagent/main (high-stakes), main/subagent (interactive canvas), main/main (manual, explicit only).
+- **Three seat configurations** as a table (implementer × reviewer, each main or subagent): subagent/subagent (default), subagent/main (high-stakes), main/subagent (context-heavy but review-worthy). No main/main row.
+- **Per-seat role spec** — the section states that whoever fills a seat runs that seat's role spec (`implementer.md` for the implementer, `reviewer.md` for the reviewer), main agent or subagent alike.
 - **Per-task choice heuristic** on three signals: size/routineness → subagent reviewer (lean main context); stakes/silent-error risk → main-agent reviewer (strongest model on the adversarial seat); context cost → delegate whichever seat can't be carried inline.
-- **Dispatch mechanics for the main-as-reviewer-over-subagent-implementer case** (`### Main agent in the reviewer seat`): no reviewer dispatch — the main agent loads `agents/reviewer.md` + the task's stage/domain manifest skills, reviews the same `Git range:` adversarially, writes `## Review Notes`, and (being also the orchestrator) folds findings straight into §Handling Reviewer Feedback and re-dispatches the implementer, or sets `approved` on a clean pass. The mirror case (main implements / subagent reviews) points to the existing reviewer template and `superplan/references/interactive-mode.md`.
-- **Reviewer adversarial protocol unchanged** — the section states `agents/reviewer.md` governs the review regardless of seat; that file is not edited.
+- **Dispatch mechanics for the main-as-reviewer-over-subagent-implementer case** (`### Main agent in the reviewer seat`): no reviewer dispatch — the main agent loads `agents/reviewer.md` + the task's stage/domain manifest skills, reviews the same `Git range:` adversarially, writes `## Review Notes`, folds findings into §Handling Reviewer Feedback and re-dispatches the implementer, or sets `approved` on a clean pass. The mirror (main in the implementer seat) runs `agents/implementer.md` over its own work, then dispatches a reviewer.
 
-DRY + Necessity: the section does not restate the presets/axes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them.
+**Follow-up revision (interactive-mode branch review).** Per researcher feedback the `main/main` (manual) row was dropped (→ three configs), and the autonomous main-implementer seat was decoupled from the interactive canvas: that seat runs `implementer.md`; the interactive canvas loop is the separate **interactive** mode.
+
+DRY + Necessity: the section does not restate the modes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/implementer.md`, `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them.
