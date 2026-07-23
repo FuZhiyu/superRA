@@ -9,11 +9,11 @@ Select it by **autonomy**, not difficulty: interactive is for work the researche
 One task file carries the whole range of plan/execute interleaving:
 
 - **Light-plan, then execute.** Scope a target and objective into a task file — positioning retained, but skipping the full exploration, domain-gate, and decomposition choreography of a standard superplan pass — then execute the task yourself and record results in place.
-- **Retroactive capture — the ultimate interactive form.** Do the work first, then write it down: create the task and populate `## Results` after the fact. This is superplan's retroactive documentation run results-first — use the existing machinery in `references/task-tree-design.md` §Retroactive Task-Tree Creation (set complete-and-verified work to `approved`, done-but-unreviewed work to `implemented`), not a parallel path.
+- **Retroactive capture — the ultimate interactive form.** Do the work first, then write it down: create the task and populate `## Results` after the fact. This is superplan's retroactive documentation run results-first — use the existing machinery in `task-tree-design.md` §Retroactive Task-Tree Creation, not a parallel path.
 
 ## The loop
 
-1. **Co-edit** the target, objective, and results into the task file through the `using-superra` §Task Interface. The researcher's messages drive the canvas; you write them in.
+1. **Co-edit** the target, objective, and results into the task file through the `using-superra` §Task Interface.
 2. **Self-review always.** Walk the active domain skill's gated checklist as a genuine judgment pass (e.g. the Iron Law for modeling, evidence-before-claims for data work) — every `[BLOCKING]` item, sized to the work, not a heavy multi-item ceremony.
 3. **Commit instantly** per edit, per `using-superra` §Commit Hygiene.
 4. **Prompt: review now / defer / skip.**
@@ -25,10 +25,10 @@ One task file carries the whole range of plan/execute interleaving:
 
 ## Positioning and the intent gate
 
-Position every task by the recursive descent in `references/task-tree-design.md` §Placing Work in the Existing Tree — light planning trims the choreography, not the placement discipline.
+Position every task by the recursive descent in `task-tree-design.md` §Placing Work in the Existing Tree — light planning trims the choreography, not the placement discipline.
 
-The confirm-intent gate that normally precedes a tree change (`references/changing-the-tree.md`) **collapses when the human is the editor**: the researcher's message co-editing the canvas *is* the authorization, so apply the change and commit without a separate confirmation round. The gate remains only for scope changes you initiate on your own.
+The confirm-intent gate that normally precedes a tree change (`changing-the-tree.md`) **collapses when the human is the editor**: the researcher's message co-editing the canvas *is* the authorization, so apply the change and commit without a separate confirmation round. The gate remains only for scope changes you initiate on your own.
 
 ## Dashboard pairing
 
-Recommend running the dashboard in live-serve as a read-only canvas view alongside the loop, so the researcher watches the task tree update as you co-edit. Editing from the dashboard is out of scope — it observes, it does not author.
+Recommend running the dashboard in live-serve as a read-only canvas view alongside the loop, so the researcher watches the task tree update as you co-edit. Editing from the dashboard is out of scope.
