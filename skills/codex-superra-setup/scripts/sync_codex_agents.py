@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
-"""Generate superRA Codex custom agents and direct-mode role references."""
+"""Generate superRA Codex custom agents."""
 
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 
 MANAGED_HEADER = "# Managed by superRA codex-superra-setup. Do not edit by hand."
-DIRECT_MODE_MANAGED_HEADER = (
-    "<!-- Managed by superRA codex-superra-setup. Do not edit by hand. -->"
-)
 
 
 @dataclass(frozen=True)
@@ -22,8 +18,6 @@ class RoleSpec:
     codex_target_filename: str
     codex_name: str
     nickname_candidates: tuple[str, ...]
-    direct_mode_target: str
-    direct_mode_title: str
 
 
 ROLE_SPECS = (
@@ -32,16 +26,12 @@ ROLE_SPECS = (
         codex_target_filename="superra_implementer.toml",
         codex_name="superra_implementer",
         nickname_candidates=("implementer", "superra-implementer"),
-        direct_mode_target="skills/using-superra/references/direct-mode-implementer.md",
-        direct_mode_title="Direct-Mode Implementer",
     ),
     RoleSpec(
         source_md="agents/reviewer.md",
         codex_target_filename="superra_reviewer.toml",
         codex_name="superra_reviewer",
         nickname_candidates=("reviewer", "superra-reviewer"),
-        direct_mode_target="skills/using-superra/references/direct-mode-reviewer.md",
-        direct_mode_title="Direct-Mode Reviewer",
     ),
 )
 
@@ -86,10 +76,9 @@ def main() -> int:
     repo_root = args.repo_root.resolve()
     target_dir = resolve_target_dir(args.scope, repo_root, args.home_dir.resolve())
     codex_agents = render_all_agents(repo_root)
-    direct_mode_refs = render_all_direct_mode_refs(repo_root)
 
     if args.check:
-        return run_check(repo_root, target_dir, codex_agents, direct_mode_refs)
+        return run_check(target_dir, codex_agents)
 
     target_dir.mkdir(parents=True, exist_ok=True)
     for filename, content in codex_agents.items():
@@ -108,14 +97,6 @@ def main() -> int:
         write_atomically(target_path, content)
         print(f"Wrote {target_path}")
 
-    for relative_path, content in direct_mode_refs.items():
-        target_path = repo_root / relative_path
-        existing = target_path.read_text(encoding="utf-8")
-        if existing == content:
-            continue
-        write_atomically(target_path, content)
-        print(f"Wrote {target_path}")
-
     print(f"superRA Codex agents installed in {target_dir}")
     return 0
 
@@ -129,13 +110,6 @@ def resolve_target_dir(scope: str, repo_root: Path, home_dir: Path) -> Path:
 def render_all_agents(repo_root: Path) -> dict[str, str]:
     return {
         spec.codex_target_filename: render_agent(repo_root, spec) for spec in ROLE_SPECS
-    }
-
-
-def render_all_direct_mode_refs(repo_root: Path) -> dict[str, str]:
-    return {
-        spec.direct_mode_target: render_direct_mode_ref(repo_root, spec)
-        for spec in ROLE_SPECS
     }
 
 
@@ -162,63 +136,6 @@ def render_agent(repo_root: Path, spec: RoleSpec) -> str:
         f"{instructions}\n"
         "'''\n"
     )
-
-
-def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
-    source_path = repo_root / spec.source_md
-    _, _, body = read_agent_markdown(source_path)
-    preface, sections = split_top_level_sections(body)
-
-    # The source `## Before You Start` opens with a one-line note on the
-    # subagent dispatch prompt; direct mode has no dispatch, so we substitute
-    # a direct-mode-specific `## Before You Start`. §Handoff no longer carries
-    # dispatch-only wording, so it splices in unchanged.
-    if "implementer" in spec.codex_name:
-        before_you_start = render_implementer_direct_mode_before_you_start()
-        handoff = sections["## Handoff"]
-        tail_sections = (
-            sections["## Execution Protocol"],
-            sections["## Self-Check"],
-            handoff,
-            sections["## Escalation"],
-        )
-    else:
-        before_you_start = render_reviewer_direct_mode_before_you_start()
-        review_protocol = sections["## Review Protocol"].replace(
-            "reviewer dispatches are costly", "review passes are costly"
-        )
-        handoff = sections["## Handoff"].replace(
-            " If your dispatch prompt does not specify a stage, default to "
-            "**ad-hoc** (report-only).",
-            "",
-        )
-        tail_sections = (
-            review_protocol,
-            sections["## Self-Check"],
-            handoff,
-            sections["## Report Format"],
-        )
-
-    header = "\n".join(
-        [
-            DIRECT_MODE_MANAGED_HEADER,
-            f"<!-- Source: {spec.source_md} -->",
-            "<!-- Regenerate with: rerun superRA:codex-superra-setup -->",
-        ]
-    )
-    parts = [
-        header,
-        f"# {spec.direct_mode_title}",
-        (
-            f"Generated from `{spec.source_md}` for direct mode by "
-            "`superRA:codex-superra-setup`. Do not edit by hand."
-        ),
-        preface.rstrip(),
-        before_you_start.rstrip(),
-    ]
-    parts.extend(section.rstrip() for section in tail_sections)
-    rendered = "\n\n".join(part for part in parts if part)
-    return re.sub(r"\n{3,}", "\n\n", rendered).rstrip() + "\n"
 
 
 def read_agent_markdown(path: Path) -> tuple[str, str, str]:
@@ -268,69 +185,6 @@ def parse_frontmatter_description(frontmatter: str) -> str:
     return " ".join(parts)
 
 
-def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
-    sections: dict[str, str] = {}
-    current_heading: str | None = None
-    current_lines: list[str] = []
-    preface_lines: list[str] = []
-    in_code_fence = False
-
-    for line in body.splitlines(keepends=True):
-        stripped = line.rstrip()
-        if stripped.startswith("```"):
-            in_code_fence = not in_code_fence
-
-        if not in_code_fence and line.startswith("## "):
-            if current_heading is None:
-                if not sections:
-                    preface = "".join(preface_lines).strip()
-                else:
-                    raise ValueError("Unexpected second preface block")
-            else:
-                sections[current_heading] = "".join(current_lines).rstrip()
-            current_heading = line.rstrip()
-            current_lines = [line]
-            continue
-
-        if current_heading is None:
-            preface_lines.append(line)
-        else:
-            current_lines.append(line)
-
-    if current_heading is None:
-        raise ValueError("Agent body is missing level-2 markdown sections")
-    sections[current_heading] = "".join(current_lines).rstrip()
-    return "".join(preface_lines).strip(), sections
-
-
-def render_implementer_direct_mode_before_you_start() -> str:
-    return """## Before You Start
-
-In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
-
-1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
-2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
-3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
-4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
-
-The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time."""
-
-
-def render_reviewer_direct_mode_before_you_start() -> str:
-    return """## Before You Start
-
-In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
-
-1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded. Then load the stage and domain skills per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload.
-2. **Read your task via `superra task read <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
-3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
-4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
-
-At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.
-
-The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""
-
-
 def escape_toml_basic_string(value: str) -> str:
     return (
         value.replace("\\", "\\\\")
@@ -350,12 +204,7 @@ def write_atomically(path: Path, content: str) -> None:
     temp_path.replace(path)
 
 
-def run_check(
-    repo_root: Path,
-    target_dir: Path,
-    expected_agents: dict[str, str],
-    expected_direct_mode_refs: dict[str, str],
-) -> int:
+def run_check(target_dir: Path, expected_agents: dict[str, str]) -> int:
     failures = 0
     for filename, content in expected_agents.items():
         target_path = target_dir / filename
@@ -367,20 +216,9 @@ def run_check(
         if existing != content:
             print(f"Generated agent drift: {target_path}", file=sys.stderr)
             failures += 1
-
-    for relative_path, content in expected_direct_mode_refs.items():
-        target_path = repo_root / relative_path
-        existing = target_path.read_text(encoding="utf-8")
-        if existing != content:
-            print(
-                f"Generated direct-mode reference drift: {target_path}",
-                file=sys.stderr,
-            )
-            failures += 1
     if failures:
         return 1
     print(f"All generated agent files are up to date in {target_dir}")
-    print("All generated direct-mode role references are up to date")
     return 0
 
 

@@ -11,7 +11,7 @@ Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task disp
 
 ## Execution Modes
 
-Subagent mode is the default (one implementer per task, fresh context); the mode contract — Direct-mode fallback conditions and its never-skipped review — is in `using-superra/references/main-agent.md §Execution Modes`.
+Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive; interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
 
 ## The Process
 
@@ -80,7 +80,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
 
-**In direct mode:** the main agent does Steps 1–2 directly; Steps 3–4 still dispatch reviewer subagents unless the user overrides.
+**In interactive mode:** the main agent executes the task directly and runs the canvas loop — self-review always, independent review elective — per `superplan/references/interactive-mode.md`.
 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
