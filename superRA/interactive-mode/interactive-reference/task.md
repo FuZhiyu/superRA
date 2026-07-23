@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: implemented
+status: revise
 depends_on:
   - superplan-decrowd
 ---
@@ -49,3 +49,7 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 - **Two loop steps made required and unmissable:** *Keep the task updated* (record `## Results` + move `status` before each pause) and *Ask before review with a tool* (`AskUserQuestion`, never dispatch on your own). These were the two steps that were skipped when the mode was first exercised.
 
 **DRY discipline** — the reference points to owners rather than restating them: Task Interface, Commit Hygiene, the status enum, the placement descent, the retroactive machinery, and the confirm-intent gate all resolve through links.
+
+## Review Notes
+
+1. MINOR — stale internal step reference introduced by this refactor. The intro of [interactive-mode.md:3](../../../skills/superplan/references/interactive-mode.md#L3) reads "review is prompted, not automatic (§The loop, step 4)", but inserting the required *Keep the task updated* step at position 3 renumbered the loop so the review prompt ("Ask before review, with a tool") is now **step 5**, not step 4. Step 4 is now "Commit instantly", which the pointer misdirects the reader to. Fix: change the parenthetical to "(§The loop, step 5)". Everything else in the reference is coherent and faithful to the objective.

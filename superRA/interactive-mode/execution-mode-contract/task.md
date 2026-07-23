@@ -1,6 +1,6 @@
 ---
 title: "Rewrite the execution-mode contract: two axes as presets + seat knob"
-status: implemented
+status: approved
 depends_on:
   - interactive-reference
 ---

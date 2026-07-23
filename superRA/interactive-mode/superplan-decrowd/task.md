@@ -1,6 +1,6 @@
 ---
 title: "De-crowd superplan SKILL.md into a routing spine"
-status: implemented
+status: approved
 depends_on: []
 ---
 
