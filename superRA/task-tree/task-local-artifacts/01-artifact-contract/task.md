@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -29,3 +29,13 @@ Keep the agent-facing placement instruction silent about attachment depth. Tooli
 No generated outputs are expected because `agents/*` is out of scope. If that changes, edit canonical role specs and run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` for the four generated role surfaces listed in the parent task; do not edit those outputs directly.
 
 ## Results
+
+Added one authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify). It classifies scratch, task-local, and permanent files; defines direct versus `attachments/` placement and the asset-container exception; requires links and reproducibility metadata; promotes permanent artifacts without duplicate sources of truth; and carries retained companions through Mature & Consolidate without dropping protected-result support.
+
+The contract is routed from the universal [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and the smallest planning, implementation, integration, maturation, task-tree, reporting, and [user-facing documentation](../../../../README.md#how-it-works) surfaces. Canonical role specs and generated role artifacts remain unchanged.
+
+Verification:
+
+- `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
+- A fresh isolated Codex harness created and self-reviewed representative companions: it removed session scratch, retained a hand-authored note, generated CSV, and imported bundle under `attachments/`, and promoted a Python diagnostic to the fixture project's conventional `src/` path when a runtime consumer appeared. The rerun reproduced the CSV deterministically, all 13 recorded links resolved, and task validation reported zero errors (plus the fixture's expected synthetic-root rollup warning).
+- The Markdown checker reported all 13 changed Markdown files clean, and `git diff --check` passed on the final task-owned diff.

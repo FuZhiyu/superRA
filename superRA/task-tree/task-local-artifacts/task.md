@@ -1,6 +1,6 @@
 ---
 title: "Task Companion Files and Dashboard"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 

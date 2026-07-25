@@ -25,6 +25,8 @@ Social-science research needs a different rhythm than software engineering: it i
 
 A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit your codebase, documented, and shipped.
 
+The lifecycle and placement rules for files retained with a task are in the [task companion-file contract](skills/using-superra/references/task-companion-files.md).
+
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]

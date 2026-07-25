@@ -63,6 +63,8 @@ If the task is in a domain without an implemented domain skill: proceed to Phase
 
 Before defining tasks, map the artifact pipeline: which scripts/notebooks/documents will be created (one per logical phase, following any artifact-format guidance the domain skill loads), what their inputs are, and where outputs go. Follow existing project conventions for directory structure.
 
+For any artifact planned inside a task directory, load and apply `../using-superra/references/task-companion-files.md`.
+
 **Walk the project guidance docs, then point to or distill each relevant convention into scoped objective context** per `references/task-tree-design.md` §Context Distillation. Dispatched agents inherit this context via `superra task read`.
 
 **Pipeline file (required for multi-artifact work):** When the work has more than one executable artifact, include a single committed entry point that reproduces every output from source — running scripts in dependency order, failing fast (`set -e` or equivalent), updated whenever a script is added.

@@ -6,7 +6,7 @@ user-invocable: true
 
 # Report in Markdown
 
-Apply the rules below to any markdown you write. Load references only for figures or standalone-report IO.
+Apply the rules below to any markdown you write. Load references only for figures, task companion files, or standalone-report IO.
 
 ## File-reference rule
 
@@ -82,4 +82,5 @@ HTML-heavy content is **dashboard-first**: GitHub's own markdown renderer strips
 ## References
 
 - `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding). Load when the output includes figures.
-- `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Load for permanent standalone artifacts (reports, rendered notes, dashboards); not required for task files or status returns.
+- `../using-superra/references/task-companion-files.md` — task-local companion classification, placement, reproducibility, promotion, and maturation. Load before retaining any file with a task.
+- `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Load for permanent standalone artifacts (reports, rendered notes, dashboards); task-local Markdown companions follow the companion-file contract instead.
