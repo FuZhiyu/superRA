@@ -55,6 +55,31 @@ def _precheck_same_parent_rename(from_dir: Path) -> None:
             _die(f"cannot parse sibling {sibling_dir / 'task.md'}: {exc}")
 
 
+def _precheck_status_ancestors(
+    plan_root: Path, start_dir: Path, *, side: str
+) -> None:
+    """Validate each structural ancestor that status propagation will parse."""
+    root = plan_root.resolve()
+    current = start_dir
+    while True:
+        task_md = current / "task.md"
+        if task_md.is_symlink():
+            _die(f"{side} ancestor task.md is a symlink: {task_md}")
+        if not task_md.exists():
+            if current == root:  # rootless forests have no structural root task
+                return
+            _die(f"{side} ancestor is not a task directory: {current}")
+        if not task_md.is_file():
+            _die(f"{side} ancestor task.md is not a regular file: {task_md}")
+        try:
+            parse_task(task_md, root)
+        except Exception as exc:
+            _die(f"cannot parse {side} ancestor {task_md}: {exc}")
+        if current == root:
+            return
+        current = current.parent
+
+
 def _collect_cross_parent_dep_drops(
     from_dir: Path, to_dir: Path
 ) -> tuple[list[tuple[Path, str]], list[str]]:
@@ -159,6 +184,10 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     if from_parent == to_parent:
         _precheck_same_parent_rename(from_dir)
     else:
+        _precheck_status_ancestors(plan_root_resolved, from_parent, side="source")
+        _precheck_status_ancestors(
+            plan_root_resolved, to_parent, side="destination"
+        )
         try:
             sibling_drops, moved_drops = _collect_cross_parent_dep_drops(from_dir, to_dir)
         except Exception as exc:

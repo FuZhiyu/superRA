@@ -948,6 +948,59 @@ class TestTaskRename:
         assert external_md.read_bytes() == external_bytes
         assert (plan_root / "02-second" / "task.md").read_bytes() == sibling_before
 
+    @pytest.mark.parametrize("symlink_level", ["parent", "ancestor"])
+    def test_move_rejects_symlinked_destination_ancestry_before_mutation(
+        self, tmp_path, symlink_level
+    ):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        source_parent = root / "01-source"
+        source_parent.mkdir()
+        _write_task_md(source_parent / "task.md", "Source", "not-started")
+        source = source_parent / "01-mover"
+        source.mkdir()
+        _write_task_md(source / "task.md", "Mover", "not-started")
+
+        destination_ancestor = root / "02-destination"
+        destination_ancestor.mkdir()
+        _write_task_md(
+            destination_ancestor / "task.md", "Destination", "not-started"
+        )
+        if symlink_level == "parent":
+            destination_parent = destination_ancestor
+        else:
+            destination_parent = destination_ancestor / "01-parent"
+            destination_parent.mkdir()
+            _write_task_md(
+                destination_parent / "task.md", "Destination parent", "not-started"
+            )
+
+        structural_md = (
+            destination_parent / "task.md"
+            if symlink_level == "parent"
+            else destination_ancestor / "task.md"
+        )
+        external_md = tmp_path / f"external-{symlink_level}.md"
+        external_bytes = structural_md.read_bytes()
+        external_md.write_bytes(external_bytes)
+        structural_md.unlink()
+        structural_md.symlink_to(external_md)
+        destination = destination_parent / "01-mover"
+
+        with pytest.raises(SystemExit) as excinfo:
+            task_rename.rename_task(
+                root,
+                source.relative_to(root).as_posix(),
+                destination.relative_to(root).as_posix(),
+            )
+
+        assert excinfo.value.code == 1
+        assert source.is_dir()
+        assert not destination.exists()
+        assert structural_md.is_symlink()
+        assert external_md.read_bytes() == external_bytes
+
 
 class TestTaskMoveLinkSweep:
     """Path resolution on move: inbound links anywhere in the tree, plus outbound
@@ -1068,6 +1121,60 @@ class TestTaskMoveLinkSweep:
         assert (plan_root / "01-first").is_dir()
         assert not (plan_root / "01-first-renamed").exists()
         assert external_md.read_bytes() == external_bytes
+
+    def test_move_restores_all_rewrites_when_later_target_is_read_only(
+        self, plan_root
+    ):
+        first_md = plan_root / "02-second" / "task.md"
+        second_md = plan_root / "03-third" / "task.md"
+        link = "\nSee [first](../01-first/task.md).\n"
+        self._append(first_md, link)
+        self._append(second_md, link)
+        before = {path: path.read_bytes() for path in (first_md, second_md)}
+        original_mode = second_md.stat().st_mode & 0o777
+        second_md.chmod(0o444)
+        try:
+            with pytest.raises(SystemExit) as excinfo:
+                task_rename.rename_task(
+                    plan_root, "01-first", "01-first-renamed"
+                )
+        finally:
+            second_md.chmod(original_mode)
+
+        assert excinfo.value.code == 1
+        assert (plan_root / "01-first").is_dir()
+        assert not (plan_root / "01-first-renamed").exists()
+        assert {path: path.read_bytes() for path in before} == before
+
+    def test_move_restores_earlier_rewrites_after_second_write_fails(
+        self, plan_root, monkeypatch
+    ):
+        first_md = plan_root / "02-second" / "task.md"
+        second_md = plan_root / "03-third" / "task.md"
+        link = "\nSee [first](../01-first/task.md).\n"
+        self._append(first_md, link)
+        self._append(second_md, link)
+        before = {path: path.read_bytes() for path in (first_md, second_md)}
+        original_write = _task_io._write_fd_bytes
+        calls = 0
+
+        def fail_second_write(fd, payload):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("injected second-target write failure")
+            original_write(fd, payload)
+
+        monkeypatch.setattr(_task_io, "_write_fd_bytes", fail_second_write)
+
+        with pytest.raises(SystemExit) as excinfo:
+            task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+
+        assert excinfo.value.code == 1
+        assert calls >= 4  # two forward attempts, then both targets restored
+        assert (plan_root / "01-first").is_dir()
+        assert not (plan_root / "01-first-renamed").exists()
+        assert {path: path.read_bytes() for path in before} == before
 
 
 class TestTaskMoveCrossParentDeps:

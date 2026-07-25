@@ -652,6 +652,12 @@ def _open_contained_regular(
     """Open a contained regular file without following any path symlink."""
     root = plan_root.resolve(strict=True)
     relative = _contained_regular_relative(path, root)
+    if (
+        flags & os.O_ACCMODE
+        and not path.lstat().st_mode
+        & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+    ):
+        raise PermissionError(f"Markdown rewrite target is read-only: {path}")
     directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     no_follow = getattr(os, "O_NOFOLLOW", 0)
     directory_fd = os.open(root, directory_flags | no_follow)
@@ -678,10 +684,26 @@ def _open_contained_regular(
     return file_fd
 
 
-def _read_contained_markdown(path: Path, plan_root: Path) -> str:
+def _read_contained_bytes(path: Path, plan_root: Path) -> bytes:
     fd = _open_contained_regular(path, plan_root, os.O_RDONLY)
-    with os.fdopen(fd, "r", encoding="utf-8") as handle:
+    with os.fdopen(fd, "rb") as handle:
         return handle.read()
+
+
+def _read_contained_markdown(path: Path, plan_root: Path) -> str:
+    return _read_contained_bytes(path, plan_root).decode("utf-8")
+
+
+def _write_fd_bytes(fd: int, payload: bytes) -> None:
+    """Replace an opened regular file's bytes, retaining its descriptor."""
+    os.lseek(fd, 0, os.SEEK_SET)
+    os.ftruncate(fd, 0)
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(fd, remaining)
+        if written <= 0:
+            raise OSError("short write while applying Markdown rewrite")
+        remaining = remaining[written:]
 
 
 def _iter_contained_markdown(root: Path, plan_root: Path):
@@ -763,14 +785,43 @@ def compute_move_link_rewrites(
 def apply_move_link_rewrites(
     plan_root: Path, rewrites: dict[Path, str]
 ) -> None:
-    """Validate every queued destination, then apply rewrites without symlinks."""
+    """Apply a rewrite queue transactionally through contained regular files."""
     ordered = sorted(rewrites.items(), key=lambda item: str(item[0]))
-    for path, _content in ordered:
-        _contained_regular_relative(path, plan_root)
+    prepared: list[tuple[Path, bytes, bytes]] = []
     for path, content in ordered:
-        fd = _open_contained_regular(path, plan_root, os.O_WRONLY | os.O_TRUNC)
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(content)
+        _contained_regular_relative(path, plan_root)
+        prepared.append(
+            (path, content.encode("utf-8"), _read_contained_bytes(path, plan_root))
+        )
+
+    write_fds: list[int] = []
+    try:
+        # Open every destination before changing bytes. Permission/path failures
+        # therefore leave the whole queue untouched.
+        for path, _new_bytes, _original_bytes in prepared:
+            write_fds.append(_open_contained_regular(path, plan_root, os.O_WRONLY))
+
+        touched: list[tuple[int, Path, bytes]] = []
+        try:
+            for fd, (path, new_bytes, original_bytes) in zip(write_fds, prepared):
+                touched.append((fd, path, original_bytes))
+                _write_fd_bytes(fd, new_bytes)
+        except Exception as exc:
+            rollback_errors: list[str] = []
+            for fd, path, original_bytes in reversed(touched):
+                try:
+                    _write_fd_bytes(fd, original_bytes)
+                except Exception as rollback_exc:
+                    rollback_errors.append(f"{path}: {rollback_exc}")
+            if rollback_errors:
+                raise OSError(
+                    "Markdown rewrite failed and byte rollback was incomplete: "
+                    + "; ".join(rollback_errors)
+                ) from exc
+            raise
+    finally:
+        for fd in write_fds:
+            os.close(fd)
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:
