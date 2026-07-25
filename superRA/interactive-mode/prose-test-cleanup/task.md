@@ -1,7 +1,7 @@
 ---
 title: "Replace Prose-Specific Tests with Behavioral Contracts"
-status: not-started
-depends_on:  []
+status: revise
+depends_on: []
 ---
 
 ## Objective
@@ -13,4 +13,3 @@ Remove existing tests that treat authored instruction prose, labels, or diagnost
 The read-only integration audit identified affected surfaces across harness test_contract, always-loaded/stage/domain live canaries and fixtures, transcript diagnostics, SDK/Codex evidence tests, and sync_codex_agents stderr wording. Use that inventory as navigation, reclassifying each assertion before deletion. This is the researcher-confirmed cleanup prompted during Protect.
 
 ## Results
-
