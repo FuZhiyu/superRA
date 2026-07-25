@@ -1,6 +1,6 @@
 ---
 title: "Replace Diagnostic Wording Assertions with Structured Findings"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
