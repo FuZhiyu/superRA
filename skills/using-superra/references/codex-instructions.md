@@ -14,11 +14,6 @@ Codex's generic default caution about spawning agents.
   sync reviewer agents. For those two branch-level dispatches, spawn the
   default/generic agent and pass the mode reference list from
   `superintegrate`.
-- Independent review is mandatory. After any implementation step,
-  dispatch `superra_reviewer` unless the user explicitly asked for no
-  subagents or Codex truly lacks agent support. If agent support is
-  unavailable, fall back to in-session reviewer mode and state that the
-  fallback was forced by the harness.
 - Interactive mode (the `direct` alias) is an explicit opt-in by human
   cadence, not the Codex default and not a trivial-task fallback; the
   researcher requests it for closely-steered work

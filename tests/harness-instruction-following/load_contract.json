@@ -17,7 +17,7 @@
         "agents/implementer.md#L1-L9",
         "agents/reviewer.md#L1-L10"
       ],
-      "trigger": "Any superRA dispatch or direct-mode role session.",
+      "trigger": "Any superRA role dispatch.",
       "expected_evidence": [
         "source manifest names superRA:using-superra and superRA:report-in-markdown as always loaded",
         "role frontmatter lists those skills",
@@ -144,7 +144,7 @@
         ".codex/agents/superra_implementer.toml#L17-L20",
         ".codex/agents/superra_reviewer.toml#L17-L23"
       ],
-      "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch, or enters direct mode for one task.",
+      "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch.",
       "expected_evidence": [
         "fixture parser rejects code or artifact edits that precede superra task read <path>",
         "live transcript shows superra task read <path> before code or artifact edits"
@@ -660,24 +660,32 @@
       "source_paths": [
         "skills/superimplement/SKILL.md#L12-L27",
         "skills/superimplement/SKILL.md#L77-L91",
-        "skills/superimplement/SKILL.md#L163-L166"
+        "skills/superimplement/SKILL.md#L163-L166",
+        "skills/using-superra/references/main-agent.md#L43-L53",
+        "skills/superplan/references/interactive-mode.md#L1-L35",
+        "skills/agent-orchestration/SKILL.md#L91-L116"
       ],
       "trigger": "User invokes superimplement or implementation workflow over a task tree.",
       "expected_evidence": [
-        "fixture parser detects implementer and reviewer dispatches or a documented direct-mode fallback",
-        "manual live transcript shows main agent loads superimplement and agent-orchestration, dispatches implementer then reviewer for non-trivial work",
-        "manual live transcript documents direct-mode fallback only when allowed"
+        "static contract test confirms interactive is explicit opt-in, records Results/status before pauses, and asks before reviewer dispatch",
+        "static contract test confirms autonomous main-agent seats load the canonical role protocol",
+        "fixture parser requires structural implementer and reviewer dispatches for the default superimplement smoke",
+        "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the default path"
       ],
       "classification": [
+        "ci_safe_static",
         "ci_safe_fixture",
         "manual_live_both"
       ],
       "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_interactive_mode_is_explicit_and_records_before_review_prompt; test_contract.py::test_autonomous_main_agent_seats_keep_canonical_role_protocol"
+        ],
         "fixture_unit": [
-          "test_transcript_assertions.py (dispatch detection + documented-fallback gating); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
+          "test_transcript_assertions.py (dispatch detection rejects prose-only interactive narration); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
         ],
         "manual_live_claude": [
-          "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events, or documented direct-mode fallback) — built/CI-tested; live run not part of the 08-12 expansion"
+          "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events) — built/CI-tested; live run not part of the 08-12 expansion"
         ],
         "manual_live_codex": [
           "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"
@@ -725,7 +733,7 @@
       "trigger": "Codex main agent dispatches role agents in a superRA workflow.",
       "expected_evidence": [
         "structured table parse confirms the named implementer and reviewer agent mappings",
-        "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer or documented fallback"
+        "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer"
       ],
       "classification": [
         "ci_safe_static",
@@ -782,19 +790,6 @@
       "finding": "Codex Bash hook coverage is documented as best-effort rather than a complete enforcement boundary.",
       "proposed_owner": "task-tree",
       "test_implication": "Keep Codex Bash hook assertions to registry wiring and fixture invocation. Do not make manual live tests depend on catching every shell mutation."
-    },
-    {
-      "id": "SF004",
-      "severity": "minor",
-      "area": "direct-mode-observability",
-      "source_paths": [
-        "skills/superimplement/SKILL.md#L12-L15",
-        "skills/superimplement/SKILL.md#L89-L90",
-        "skills/using-superra/references/codex-instructions.md#L24-L31"
-      ],
-      "finding": "Direct-mode exceptions are policy choices observable in transcripts only when the main agent states the fallback reason or dispatch path.",
-      "proposed_owner": "agent-orchestration / using-superra",
-      "test_implication": "Manual live tests should accept either subagent dispatch evidence or explicit allowed fallback evidence, not infer fallback from absence of spawn events alone."
     }
   ]
 }

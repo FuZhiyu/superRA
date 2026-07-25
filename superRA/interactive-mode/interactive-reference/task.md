@@ -51,3 +51,5 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 **DRY discipline** — the reference points to owners rather than restating them: Task Interface, Commit Hygiene, the status enum, the placement descent, the retroactive machinery, and the confirm-intent gate all resolve through links.
 
 Review (interactive-mode branch): the one blocking finding — the intro pointer read "(§The loop, step 4)" after the required keep-task-updated step renumbered the loop — is fixed; the review prompt is step 5 and the pointer now matches.
+
+**Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks the required ordering and content of the canvas loop: the task's `## Results` and `status` move before each pause, then the tool-backed review-now/defer/skip question fires, with no autonomous reviewer dispatch. The red run caught the conflicting Codex mandatory-review override; the restored contract passes.

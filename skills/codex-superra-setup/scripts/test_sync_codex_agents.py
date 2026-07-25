@@ -20,6 +20,10 @@ class SyncCodexAgentsTests(unittest.TestCase):
             target_dir = home_dir / ".codex" / "agents"
 
             self.run_script("--scope", "global", "--home-dir", str(home_dir))
+            self.assertEqual(
+                sorted(path.name for path in target_dir.iterdir()),
+                ["superra_implementer.toml", "superra_reviewer.toml"],
+            )
             self.assertTrue((target_dir / "superra_implementer.toml").exists())
             self.assertTrue((target_dir / "superra_reviewer.toml").exists())
 

@@ -50,5 +50,7 @@ The two generated direct-mode role references are gone, the generator no longer 
 - `docs/plans/*.md` — dated historical plan/results archives that accurately record past regenerations of these files (one, [2026-05-20-markdown-style-guide-results.md](../../../docs/plans/2026-05-20-markdown-style-guide-results.md), holds actual markdown links to the deleted files). Rewriting an archive to erase accurate history is worse than a dead link in a non-loaded record; the dispatch's sweep scope (skill/agent/adapter prose) excludes these.
 - Sibling task files `execution-mode-contract/task.md` and `task-tree/dashboard/worktree-scoped-launch-url/task.md` mention the filenames but belong to other tasks — not edited per the ownership boundary. The latter's "do not edit these generated files" note is now stale and should be cleaned when that task is next touched.
 
+**Regression protection.** [test_sync_codex_agents.py](../../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py) now asserts that a fresh installation emits exactly `superra_implementer.toml` and `superra_reviewer.toml`; the existing project `--check` continues to byte-check the committed generated agents against the canonical role specs. Red-green verification changed the expected reviewer filename, observed the failure, restored it, and passed.
+
 [direct-mode-implementer.md]: ../../../skills/using-superra/references/direct-mode-implementer.md
 [direct-mode-reviewer.md]: ../../../skills/using-superra/references/direct-mode-reviewer.md

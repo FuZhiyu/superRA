@@ -27,7 +27,7 @@ Added a `## Seat Assignment` section to [skills/agent-orchestration/SKILL.md](..
 
 Delivered against the success criteria:
 
-- **Three seat configurations** as a table (implementer × reviewer, each main or subagent): subagent/subagent (default), subagent/main (high-stakes), main/subagent (context-heavy but review-worthy). No main/main row.
+- **Three seat configurations** as a table (implementer × reviewer, each main or subagent): subagent/subagent (default), subagent/main (high-stakes), main/subagent (small or context-heavy but review-worthy). No main/main row.
 - **Per-seat role spec** — the section states that whoever fills a seat runs that seat's role spec (`implementer.md` for the implementer, `reviewer.md` for the reviewer), main agent or subagent alike.
 - **Per-task choice heuristic** on three signals: size/routineness → subagent reviewer (lean main context); stakes/silent-error risk → main-agent reviewer (strongest model on the adversarial seat); context cost → delegate whichever seat can't be carried inline.
 - **Dispatch mechanics for the main-as-reviewer-over-subagent-implementer case** (`### Main agent in the reviewer seat`): no reviewer dispatch — the main agent loads `agents/reviewer.md` + the task's stage/domain manifest skills, reviews the same `Git range:` adversarially, writes `## Review Notes`, folds findings into §Handling Reviewer Feedback and re-dispatches the implementer, or sets `approved` on a clean pass. The mirror (main in the implementer seat) runs `agents/implementer.md` over its own work, then dispatches a reviewer.
@@ -35,3 +35,5 @@ Delivered against the success criteria:
 **Follow-up revision (interactive-mode branch review).** Per researcher feedback the `main/main` (manual) row was dropped (→ three configs), and the autonomous main-implementer seat was decoupled from the interactive canvas: that seat runs `implementer.md`; the interactive canvas loop is the separate **interactive** mode.
 
 DRY + Necessity: the section does not restate the modes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/implementer.md`, `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them.
+
+**Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks all three autonomous seat structures, excludes main/main, and requires both main-seat paths to invoke the canonical role protocol. The stale Tier-1 "do trivial work inline, no subagent" path in [agent-orchestration/SKILL.md](../../../skills/agent-orchestration/SKILL.md) is now the main-implementer/subagent-reviewer structure, avoiding an implementer spawn without dropping the reviewer seat. The red run failed on the stale inline path and passed after correction.

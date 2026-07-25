@@ -7,21 +7,19 @@ description: Coordinate superRA agents and handoffs. Requires superRA:using-supe
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops; do trivial work inline.
+You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops; balance seat assignment against spawn cost per task.
 
 ## Workload Balancing
 
 Every dispatch has spawn cost — skill-load, context hydration, per-turn overhead. Pick the tier that matches the work:
 
-### Tier 1 — Trivial: do it inline
+### Tier 1 — Small: main implementer seat
 
-The orchestrator executes the task itself, no subagent. Use when the task fits in a single edit, reads no unfamiliar files, and needs no domain skill beyond what the orchestrator already has loaded.
+Use §Seat Assignment's main-implementer / subagent-reviewer structure when implementation fits in a single edit, reads no unfamiliar files, and needs no domain skill beyond what the orchestrator already has loaded.
 
 - Typo or comment fix in one file.
 - A 2-line constant change the orchestrator has already read.
 - Removing a known-dead import.
-
-Dispatch cost > work content. Just do it.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 
@@ -96,7 +94,7 @@ Each task has an implementer seat and a reviewer seat; each is independently fil
 |---|---|---|
 | subagent | subagent | Default. Large or routine subtrees — keep both seats off the main context. |
 | subagent | main | Small or high-stakes task — strongest model on the adversarial seat, routine implementation delegated. |
-| main | subagent | A task too context-heavy to hand off but still worth independent review — main implements on the main context, an independent subagent gates it. |
+| main | subagent | A small edit or task too context-heavy to hand off — main implements on the main context, an independent subagent gates it. |
 
 Per-task signals:
 

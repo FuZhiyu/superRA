@@ -291,9 +291,7 @@ def evaluate_dispatch_log(
 
     The SubagentStart hook supersedes JSONL-based dispatch detection for the
     Codex orchestrator path (the JSONL hides ``spawn_agent``). A required type
-    that never appears is a missing-dispatch finding; the caller decides whether
-    a documented direct-mode fallback (handled out-of-band by the smoke) excuses
-    it.
+    that never appears is a missing-dispatch finding.
     """
 
     dispatched = dispatched_agent_types(log_text)
