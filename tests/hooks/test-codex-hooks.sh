@@ -136,6 +136,22 @@ assert_empty_json_object() {
   return 0
 }
 
+assert_stop_block_json() {
+  local name="$1"
+  local out="$2"
+  if ! printf '%s' "$out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert set(d) == {"decision", "reason"}, d
+assert d["decision"] == "block", d
+assert isinstance(d["reason"], str) and d["reason"], d
+' 2>/dev/null; then
+    record_fail "$name" "expected Stop block JSON: $out"
+    return 1
+  fi
+  return 0
+}
+
 case_autoload_codex_wording() {
   local name="autoload emits Codex-native skill wording"
   local input out context
@@ -195,16 +211,12 @@ case_codex_manifest_claude_root_fallback() {
 
 case_codex_manifest_plan_stop_execution() {
   local name="Codex manifest command executes plan Stop hook"
-  local input out reason
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"# Proposed Plan\n\n## Summary\n\nDo the work."}))')
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_codex_manifest_hook codex-plan-stop "$input" plugin)
   assert_json "$name" "$out" || return
-  reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
-  if printf '%s' "$reason" | grep -Fq 'superRA/ task tree'; then
-    record_pass "$name"
-  else
-    record_fail "$name" "missing Stop reminder through manifest command: $out"
-  fi
+  assert_stop_block_json "$name" "$out" || return
+  record_pass "$name"
 }
 
 case_codex_manifest_task_hook_apply_patch() {
@@ -236,7 +248,7 @@ PY
 
 case_codex_manifest_task_hook_invalid_status_feedback() {
   local name="Codex manifest task hook injects invalid-status feedback"
-  local work input out context
+  local work input out check_out check_rc
   work="$TMPROOT/task-hook-invalid-status"
   mkdir -p "$work/.plan"
   write_minimal_task_md "$work/.plan/task.md" "Root" "not-started"
@@ -245,12 +257,39 @@ case_codex_manifest_task_hook_invalid_status_feedback() {
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
   assert_json "$name" "$out" || return
-  context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
-  if printf '%s' "$context" | grep -Fq "invalid status 'invalid-status'" \
+  if ! printf '%s' "$out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert set(d) == {"hookSpecificOutput"}, d
+h = d["hookSpecificOutput"]
+assert set(h) == {"hookEventName", "additionalContext"}, h
+assert h["hookEventName"] == "PostToolUse", h
+assert isinstance(h["additionalContext"], str) and h["additionalContext"], h
+' 2>/dev/null; then
+    record_fail "$name" "unexpected task-hook JSON shape: $out"
+    return
+  fi
+
+  check_out=$(python3 "$REPO_ROOT/skills/task-tree/scripts/cli.py" task check \
+    --root "$work/.plan" --category status --json 2>/dev/null)
+  check_rc=$?
+  if [ "$check_rc" -eq 1 ] \
+     && printf '%s' "$check_out" | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["ok"] is False, d
+assert d["total"] == 1, d
+f = d["findings"][0]
+assert f["code"] == "status.invalid", f
+assert f["subject"] == "status", f
+assert f["actual"] == "invalid-status", f
+assert f["path"] == "01-child", f
+assert f["related_nodes"] == [], f
+' 2>/dev/null \
      && [ ! -s "$work/stderr" ]; then
     record_pass "$name"
   else
-    record_fail "$name" "missing invalid-status feedback: stdout=$out stderr=$(cat "$work/stderr")"
+    record_fail "$name" "missing structured invalid-status identity: hook=$out check=$check_out stderr=$(cat "$work/stderr")"
   fi
 }
 
@@ -269,36 +308,18 @@ case_codex_manifest_missing_root_fails_open() {
 
 case_plan_stop_reminder() {
   local name="codex plan Stop emits materialization reminder"
-  local input out decision reason
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"# Proposed Plan\n\n## Summary\n\nDo the work."}))')
-  out=$(run_hook codex-plan-stop "$input")
-  assert_json "$name" "$out" || return
-  decision=$(printf '%s' "$out" | json_get 'print(d.get("decision", ""))')
-  reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
-  if [ "$decision" = "block" ] && printf '%s' "$reason" | grep -Fq 'superRA/ task tree'; then
-    record_pass "$name"
-  else
-    record_fail "$name" "missing Stop continuation decision/reason: $out"
-  fi
-}
-
-case_plan_stop_accepts_proposed_plan_tag() {
-  local name="codex plan Stop accepts proposed_plan tag"
   local input out
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
-  if printf '%s' "$out" | grep -Fq 'superRA/ task tree'; then
-    record_pass "$name"
-  else
-    record_fail "$name" "missing proposed_plan reminder: $out"
-  fi
+  assert_stop_block_json "$name" "$out" || return
+  record_pass "$name"
 }
 
-case_plan_stop_silent_for_quoted_tag_outside_plan_mode() {
-  local name="codex plan Stop silent for quoted tag outside plan mode"
+case_plan_stop_requires_plan_permission_mode() {
+  local name="codex plan Stop requires plan permission mode"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"default","last_assistant_message":"The literal <proposed_plan> marker appears in this review."}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"default","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -311,7 +332,7 @@ case_plan_stop_silent_for_quoted_tag_outside_plan_mode() {
 case_plan_stop_silent_when_already_continued() {
   local name="codex plan Stop silent during Stop-hook continuation"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","stop_hook_active":True,"last_assistant_message":"# Proposed Plan"}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","stop_hook_active":True,"last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -347,10 +368,10 @@ case_plan_stop_silent_for_non_plan_output_in_plan_mode() {
   fi
 }
 
-case_plan_stop_silent_for_negated_proposed_plan_phrase() {
-  local name="codex plan Stop silent for negated proposed-plan phrase"
+case_plan_stop_silent_for_markdown_heading() {
+  local name="codex plan Stop ignores Markdown plan heading without structured signal"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"This is not a proposed plan; it is a code review verdict."}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"# Proposed Plan\n\n## Summary\n\nDo the work."}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -369,12 +390,11 @@ case_codex_manifest_task_hook_apply_patch
 case_codex_manifest_task_hook_invalid_status_feedback
 case_codex_manifest_missing_root_fails_open
 case_plan_stop_reminder
-case_plan_stop_accepts_proposed_plan_tag
-case_plan_stop_silent_for_quoted_tag_outside_plan_mode
+case_plan_stop_requires_plan_permission_mode
 case_plan_stop_silent_when_already_continued
 case_plan_stop_silent_without_plan
 case_plan_stop_silent_for_non_plan_output_in_plan_mode
-case_plan_stop_silent_for_negated_proposed_plan_phrase
+case_plan_stop_silent_for_markdown_heading
 
 echo
 echo "Passed: $pass    Failed: $fail"
