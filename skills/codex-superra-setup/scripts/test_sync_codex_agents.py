@@ -46,7 +46,7 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(failed.returncode, 0)
-            self.assertIn("Refusing to overwrite unmanaged file", failed.stderr)
+            self.assertEqual(unmanaged.read_text(encoding="utf-8"), "name = \"custom\"\n")
 
             self.run_script(
                 "--scope",

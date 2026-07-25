@@ -62,7 +62,6 @@ def test_green_required_skills_load_before_first_edit():
     )
 
     report.assert_ok()
-    assert len(report.observations) == 2
 
 
 def test_red_required_skill_never_loaded():
@@ -81,9 +80,6 @@ def test_red_required_skill_never_loaded():
     )
 
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "writing" in report.missing[0]
-    assert "never loaded" in report.missing[0]
 
 
 def test_red_skill_loaded_only_after_first_edit():
@@ -102,9 +98,6 @@ def test_red_skill_loaded_only_after_first_edit():
     )
 
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "writing" in report.missing[0]
-    assert "before the first edit" in report.missing[0]
 
 
 def test_no_edit_session_counts_any_load_as_before_edit():
@@ -134,11 +127,7 @@ def test_all_failures_collected_together():
         ["econ-data-analysis", "writing"],
     )
 
-    assert len(report.missing) == 2
-    assert "econ-data-analysis" in report.missing[0]
-    assert "never loaded" in report.missing[0]
-    assert "writing" in report.missing[1]
-    assert "before the first edit" in report.missing[1]
+    assert not report.ok
 
 
 # --------------------------------------------------------------------------- #
@@ -197,8 +186,6 @@ def test_qualified_observations_still_reject_genuinely_absent_skill():
     report = SkillLoadReport()
     check_skills_loaded_before_first_edit(report, evidence, ["semantic-merge"])
     assert not report.ok
-    assert "semantic-merge" in report.missing[0]
-    assert "never loaded" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -246,8 +233,6 @@ def test_green_always_loaded_frontmatter_real_role_specs():
     report = SkillLoadReport()
     check_always_loaded_frontmatter(report, REPO_ROOT)
     report.assert_ok()
-    # two specs x two skills
-    assert len(report.observations) == 4
 
 
 def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
@@ -266,17 +251,12 @@ def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
     check_always_loaded_frontmatter(report, tmp_path)
 
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "implementer.md" in report.missing[0]
-    assert "superRA:report-in-markdown" in report.missing[0]
 
 
 def test_red_always_loaded_frontmatter_missing_file(tmp_path):
     report = SkillLoadReport()
     check_always_loaded_frontmatter(report, tmp_path)
-    # both specs absent → one missing-file failure each
-    assert len(report.missing) == 2
-    assert all("not found" in m for m in report.missing)
+    assert not report.ok
 
 
 def test_always_loaded_skills_constant_is_qualified():

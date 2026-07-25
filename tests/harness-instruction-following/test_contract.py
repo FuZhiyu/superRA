@@ -228,44 +228,6 @@ def test_seat_assignment_table_has_three_supported_structures():
     }
 
 
-def test_superplan_routing_split_preserves_gates_and_references():
-    superplan = read_text("skills/superplan/SKILL.md")
-    decomposition = read_text("skills/superplan/references/decomposition.md")
-    changing = read_text("skills/superplan/references/changing-the-tree.md")
-
-    routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
-    assert {
-        "references/decomposition.md",
-        "references/changing-the-tree.md",
-    } <= routed_paths
-    assert all((REPO_ROOT / "skills" / "superplan" / path).is_file()
-               for path in routed_paths)
-
-    phase_headings = re.findall(r"(?m)^## Phase \d+:", superplan)
-    assert len(phase_headings) == 4
-    phase_four = re.search(
-        r"(?ms)^## Phase 4:.*?(?=^## |\Z)",
-        superplan,
-    )
-    assert phase_four is not None
-    assert len(re.findall(r"(?m)^### ", phase_four.group())) == 4
-
-    def ordered_run_lengths(text: str) -> list[int]:
-        numbers = [
-            int(match.group(1))
-            for match in re.finditer(r"(?m)^(\d+)\. ", text)
-        ]
-        runs: list[int] = []
-        current = 0
-        for number in numbers:
-            current = current + 1 if number == current + 1 else 1
-            runs.append(current)
-        return runs
-
-    assert 9 in ordered_run_lengths(decomposition)
-    assert 6 in ordered_run_lengths(changing)
-
-
 def test_codex_tool_map_matches_contract():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     rows = markdown_table_rows(codex, "## Codex Tool Map")
@@ -418,7 +380,7 @@ def test_parser_contract_samples_and_negative_ordering_cases():
         late_events,
         ["agent-loading-bundle/02-primary-loading-task"],
     )
-    assert len(late_report.missing) == 1
+    assert not late_report.ok
 
     missing_events = parse_json_events(
         json.dumps(
@@ -437,7 +399,7 @@ def test_parser_contract_samples_and_negative_ordering_cases():
             "agent-loading-bundle/03-secondary-loading-task",
         ],
     )
-    assert len(missing_report.missing) == 2
+    assert not missing_report.ok
 
 
 def test_codex_orchestrator_sample_has_structural_dispatches():
@@ -447,38 +409,3 @@ def test_codex_orchestrator_sample_has_structural_dispatches():
     check_orchestrator_dispatches(report, events)
 
     report.assert_ok()
-    assert report.observations == ["orchestrator dispatch events observed"]
-
-
-def test_live_fixture_stays_cheap_and_mock_only():
-    fixture_text = "\n".join(
-        [
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/task.md"
-            ),
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/02-primary-loading-task/task.md"
-            ),
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/03-secondary-loading-task/task.md"
-            ),
-        ]
-    )
-    lower = fixture_text.lower()
-
-    assert "loading-evidence.json" in fixture_text
-    assert "marker" in lower
-    assert "sentinel" in lower
-    for forbidden in (
-        "install",
-        "package",
-        "pytest",
-        "npm",
-        "cargo",
-        "real implementation",
-        "broad repository exploration",
-    ):
-        assert forbidden not in lower

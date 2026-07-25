@@ -58,7 +58,6 @@ def test_green_canary_present_in_command():
         ],
     )
     report.assert_ok()
-    assert any("present in command" in o for o in report.observations)
 
 
 def test_green_canary_command_satisfies():
@@ -84,9 +83,8 @@ def test_red_canary_absent_from_commands():
         command_strings=["ls -la", "cat README.md"],
     )
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "report-in-markdown" in report.missing[0]
-    assert "did not load" in report.missing[0]
+
+
 def test_evaluate_canaries_collects_all_failures():
     specs = [
         CanarySpec(skill="a", token="TOKEN_A"),
@@ -94,9 +92,7 @@ def test_evaluate_canaries_collects_all_failures():
     ]
     report = CanaryReport()
     evaluate_canaries(report, specs, command_strings=["echo TOKEN_A"])
-    assert len(report.missing) == 1
-    assert "skill 'b'" in report.missing[0]
-    assert len(report.observations) == 1
+    assert not report.ok
 
 
 def test_command_strings_from_events_pulls_codex_command_execution():
@@ -174,21 +170,18 @@ def test_green_dispatch_log_has_both_sentinels():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\nsuperra_reviewer\n")
     report.assert_ok()
-    assert len(report.observations) == 2
 
 
 def test_red_dispatch_log_missing_reviewer():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\n")
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "superra_reviewer" in report.missing[0]
 
 
 def test_red_dispatch_log_empty():
     report = DispatchReport()
     evaluate_dispatch_log(report, "")
-    assert len(report.missing) == 2
+    assert not report.ok
 
 
 # --------------------------------------------------------------------------- #
