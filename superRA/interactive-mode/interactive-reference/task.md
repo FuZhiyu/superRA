@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: implemented
+status: approved
 depends_on:
   - superplan-decrowd
 ---
@@ -53,8 +53,3 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 Review (interactive-mode branch): the one blocking finding — the intro pointer read "(§The loop, step 4)" after the required keep-task-updated step renumbered the loop — is fixed; the review prompt is step 5 and the pointer now matches.
 
 **Regression protection.** Authored instruction prose and labels are never test oracles; protection uses structured surfaces or observable behavior. A committed task artifact plus transcript fixture in [samples](../../../tests/harness-instruction-following/samples/) carries a structured interactive opt-in and demonstrates non-empty `## Results` and `status: implemented` landing before a structural question-tool event, which precedes reviewer dispatch. [transcript_assertions.py](../../../tests/harness-instruction-following/transcript_assertions.py) evaluates the ordering without matching authored instruction prose or option labels. Red-green verification reordered the update and question events, observed the expected failure, restored the fixture, and passed.
-
-## Review Notes
-
-1. MAJOR — [test_contract.py:189-212](../../../tests/harness-instruction-following/test_contract.py#L189-L212), [README.md:54-60](../../../tests/harness-instruction-following/README.md#L54-L60), and [load_contract.json:657-693](../../../tests/harness-instruction-following/load_contract.json#L657-L693). The claimed protection matches exact authored sentences and labels, even though the harness contract says authored instruction sentences are not test oracles. It therefore fails on harmless prose refactors but can pass while an agent ignores the required canvas behavior; no fixture or live interactive scenario observes `## Results`/`status` being written before a pause or a structural user-question tool event before reviewer dispatch. Fix: add an explicitly opted-in interactive fixture/smoke whose artifact and transcript demonstrate the required ordering, red-green the evaluator, and limit static checks to stable structured routing surfaces.
-   → implemented: replaced prose needles with an artifact/transcript evaluator that requires implemented status and non-empty Results before a question-tool event and reviewer dispatch; added positive, reordered-event, and red-green fixtures ([transcript_assertions.py](../../../tests/harness-instruction-following/transcript_assertions.py), [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py)).

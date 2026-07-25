@@ -1,6 +1,6 @@
 ---
 title: "Rewrite the execution-mode contract: two axes as presets + seat knob"
-status: implemented
+status: approved
 depends_on:
   - interactive-reference
 ---
@@ -39,8 +39,3 @@ Removed the old "Direct mode is a fallback: only for trivial tasks" framing and 
 **Verification:** `grep -i "trivial\|fallback\|manual\|direct-mode-implementer\|direct-mode-reviewer"` over `main-agent.md §Execution Modes` returns no matches.
 
 **Regression protection.** Authored instruction prose and labels are never test oracles; protection uses structured surfaces or observable behavior. [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) parses the structured Codex availability table and distinguishes unavailable agent tooling from a missing named-agent installation. Interactive behavior and seat behavior are protected by transcript/artifact evaluators in [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py).
-
-## Review Notes
-
-1. MAJOR — [codex-instructions.md:17-22](../../../skills/using-superra/references/codex-instructions.md#L17-L22) and [load_contract.json:657-693](../../../tests/harness-instruction-following/load_contract.json#L657-L693). Removing the mandatory-review paragraph also removed the only concrete instruction for the legitimate agent-tools-unavailable case: the adapter now says only “in-session execution” and “state that it was forced.” That case is not researcher-opted interactive mode, while every autonomous seat structure requires a dispatch, so neither mode now defines which role protocol, review guarantee, or task-status path applies. The protection audit also deleted the fallback finding/tests rather than covering this retained behavior separately. Fix: define the harness-forced fallback without weakening the strict default-dispatch smoke, then add dedicated coverage that distinguishes unavailable tools from missing named-agent installation.
-   → implemented: added a structured three-state availability route with canonical in-session implementer/reviewer roles and `implemented` → `approved`/`revise` lifecycle only for unavailable agent tooling; missing named agents route to setup, and the default smoke remains strict ([codex-instructions.md](../../../skills/using-superra/references/codex-instructions.md), [test_contract.py](../../../tests/harness-instruction-following/test_contract.py)).
