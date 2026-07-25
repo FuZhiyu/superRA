@@ -3439,6 +3439,30 @@ class TestDashboardArtifactWorkflow:
         assert hyphen.startswith("superra-dashboard-feature-foo-")
         assert slash != hyphen
 
+    def test_generated_workflow_preserves_schema_and_step_order(self):
+        workflow = dashboard_artifact_workflow.render_workflow(
+            dashboard_artifact_workflow.WorkflowConfig(
+                branch_patterns=("main", "feature/**"),
+            )
+        )
+        lines = workflow.splitlines()
+
+        on_idx = lines.index("on:")
+        push_idx = lines.index("  push:")
+        branches_idx = lines.index("    branches:")
+        dispatch_idx = lines.index("  workflow_dispatch:")
+        permissions_idx = lines.index("permissions:")
+        assert on_idx < push_idx < branches_idx < dispatch_idx < permissions_idx
+        assert lines[permissions_idx + 1:permissions_idx + 3] == [
+            "  contents: read",
+            "  actions: write",
+        ]
+        assert branches_idx < lines.index('      - "main"') < dispatch_idx
+        assert branches_idx < lines.index('      - "feature/**"') < dispatch_idx
+        assert workflow.index("actions/github-script@v7") < workflow.index(
+            "actions/upload-artifact@v4"
+        )
+
     def test_install_workflow_creates_default_managed_file(self, tmp_path):
         result = dashboard_artifact_workflow.install_workflow(
             tmp_path,
@@ -3509,6 +3533,7 @@ class TestDashboardArtifactWorkflow:
         assert "retention-days: 5" in content
         assert '      - "main"' in content
         assert '      - "analysis/**"' in content
+
     def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path):
         with pytest.raises(SystemExit) as excinfo:
             cli.main([

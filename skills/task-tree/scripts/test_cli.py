@@ -497,6 +497,19 @@ def test_generated_wrapper_and_hook_are_valid_bash() -> None:
         assert result.returncode == 0, result.stderr
 
 
+def test_dashboard_missing_web_stack_exits_one(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise(*_args, **_kwargs):
+        raise ModuleNotFoundError("No module named 'fastapi'", name="fastapi")
+
+    monkeypatch.setattr(cli, "_module_main", _raise)
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["dashboard", "export", "--root", str(task_root)])
+    assert excinfo.value.code == 1
+
+
 def test_committed_hook_shim_matches_generator() -> None:
     committed = (SKILL_DIR.parent.parent / "hooks" / "task-hook")
     if not committed.exists():

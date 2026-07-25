@@ -1,6 +1,6 @@
 ---
 title: "Prune Prose-Specific Tests Conservatively"
-status: revise
+status: in-progress
 depends_on: []
 ---
 
@@ -34,8 +34,9 @@ Verification:
 
 - Rule-canary focused suite: `103 passed`.
 - Diagnostic/presentation focused Python suite: `801 passed`.
-- Codex hook and Zotero shell suites: `11/11` and `18/18`.
-- Final full Python suite: `896 passed`, `0 failed`, with four expected
+- Codex hook and Zotero shell suites after the accepted revision: `15/15` and
+  `18/18`.
+- Final full Python suite after the accepted revision: `899 passed`, `0 failed`, with four expected
   warnings.
 
 ## Review Notes
@@ -44,9 +45,15 @@ Verification:
    canary paths it removed.** The current issue and required documentation-only
    reconciliation are recorded in
    [01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes).
+   → implemented: reconciled the harness documentation and annotated the
+   child-local finding
+   ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).
 
 2. **MAJOR — Child 02 exceeds the conservative deletion budget by removing
    cheap exit-status, routing-branch, generated-path, and command-order
    coverage.** The focused restorations that avoid prose assertions are recorded
    in
    [02-structured-diagnostics/task.md](02-structured-diagnostics/task.md#review-notes).
+   → implemented: restored only the accepted structural coverage and annotated
+   both child-local findings
+   ([02-structured-diagnostics/task.md](02-structured-diagnostics/task.md#review-notes)).

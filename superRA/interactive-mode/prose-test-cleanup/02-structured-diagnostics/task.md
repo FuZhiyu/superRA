@@ -1,6 +1,6 @@
 ---
 title: "Delete Low-Value Wording Assertions"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -53,6 +53,23 @@ Verification:
   `78.90s`.
 - Python compilation, shell syntax, and `git diff --check` passed.
 
+Revision:
+
+- Restored the four Codex Stop-parser routing branches using only structured
+  `decision` or empty-JSON outcomes, plus the missing-dashboard dependency
+  branch's exit code
+  ([test-codex-hooks.sh:282](../../../../tests/hooks/test-codex-hooks.sh#L282),
+  [test_cli.py:500](../../../../skills/task-tree/scripts/test_cli.py#L500)).
+- Restored superplan routed-reference existence and generated dashboard
+  workflow schema, permission, branch-trigger, configured-path, and
+  cleanup-before-upload ordering coverage without checking labels or diagnostic
+  prose
+  ([test_contract.py:231](../../../../tests/harness-instruction-following/test_contract.py#L231),
+  [test_dashboard.py:3442](../../../../skills/task-tree/scripts/test_dashboard.py#L3442)).
+- Revision verification: `15 passed` focused Python tests; `15/15` Codex hook
+  cases; `18/18` Zotero cases; full suite `899 passed`, `0 failed`, with four
+  expected warnings in `84.58s`.
+
 ## Review Notes
 
 1. **MAJOR — Cheap branch and exit-status coverage was deleted together with
@@ -70,6 +87,11 @@ Verification:
    `ImportError` branch
    ([cli.py:167-183](../../../../skills/task-tree/scripts/cli.py#L167-L183)).
    Restore these cheap behavioral cases without checking reminder/error wording.
+   → implemented: restored the four parser branches with structured
+   decision/empty-JSON assertions and the missing-dependency path with only
+   `SystemExit.code == 1`
+   ([test-codex-hooks.sh:282](../../../../tests/hooks/test-codex-hooks.sh#L282),
+   [test_cli.py:500](../../../../skills/task-tree/scripts/test_cli.py#L500)).
 
 2. **MAJOR — Stable path and ordering checks were removed as if they were prose
    assertions.** The cleanup deleted the superplan routed-reference existence
@@ -83,3 +105,8 @@ Verification:
    ([test_dashboard.py:3423-3511](../../../../skills/task-tree/scripts/test_dashboard.py#L3423-L3511)).
    Restore only the cheap reference-path and generated-workflow
    schema/command-order checks, omitting headings, labels, and remediation copy.
+   → implemented: restored routed-file existence plus workflow schema,
+   permission, configured-path, branch-trigger, and cleanup-before-upload
+   ordering checks
+   ([test_contract.py:231](../../../../tests/harness-instruction-following/test_contract.py#L231),
+   [test_dashboard.py:3442](../../../../skills/task-tree/scripts/test_dashboard.py#L3442)).

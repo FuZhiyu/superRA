@@ -228,6 +228,20 @@ def test_seat_assignment_table_has_three_supported_structures():
     }
 
 
+def test_superplan_routed_references_exist():
+    superplan = read_text("skills/superplan/SKILL.md")
+    routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
+
+    assert {
+        "references/decomposition.md",
+        "references/changing-the-tree.md",
+    } <= routed_paths
+    assert all(
+        (REPO_ROOT / "skills" / "superplan" / path).is_file()
+        for path in routed_paths
+    )
+
+
 def test_codex_tool_map_matches_contract():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     rows = markdown_table_rows(codex, "## Codex Tool Map")
