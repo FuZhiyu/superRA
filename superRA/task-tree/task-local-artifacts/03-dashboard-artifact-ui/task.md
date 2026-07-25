@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: approved
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -44,10 +44,3 @@ Companion search is optional for this scope: add it only if the existing index c
 - Full task-tree suite: `773 passed` with four non-failing warnings via `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts`.
 - Static checks passed: `node --check` for `dashboard.js`, Python byte-compilation for the changed Python/tests, and `git diff --check`. Desktop Chromium inspection at 1440×900 confirmed the Files list and notebook preview remain legible alongside the active task.
 - `notebook.min.js` matches the documented SHA-256 `673b1916c250d2093c8c8920e5503348a2283ef67d6ad429f0b0dc6c98f7c115`. The generic skill-creator validator was not applicable as a clean gate: it rejects the task-tree skill's pre-existing `user-invocable` frontmatter key, which this task did not modify.
-
-## Review Notes
-
-1. **MAJOR** — The sidebar file-count control is not keyboard-activatable. The count button is inserted inside the task row ([dashboard.js:1251-1275](../../../../skills/task-tree/scripts/templates/dashboard.js#L1251-L1275)), while the delegated tree handler treats `Enter` and `Space` from any row descendant as task activation, prevents the button's default activation, and calls `setActive` ([dashboard.js:3011-3075](../../../../skills/task-tree/scripts/templates/dashboard.js#L3011-L3075)). In Chromium, focusing `.artifact-count-btn` and pressing `Enter` left the Files sidecar closed and moved focus to the task heading. Exclude nested interactive controls from the tree-row key handler (or stop the count button's key events from reaching it), and add browser regressions showing both `Enter` and `Space` open Files with correct focus behavior.
-   → implemented: excluded nested interactive descendants from roving-tree key handling while preserving row Enter activation, with Chromium coverage for Enter, Space, unchanged task state, and focus return ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L3014), [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py#L418)).
-2. **MAJOR** — Artifact hot reload can leave a stale preview visible after the selected file becomes unavailable. The refresh branch only reopens a selected entry when `selected.previewable` is true and has no branch for a still-selected, newly non-previewable entry ([dashboard.js:1428-1437](../../../../skills/task-tree/scripts/templates/dashboard.js#L1428-L1437)), even though the preview renderer already knows how to show the unavailable state ([dashboard.js:1557-1563](../../../../skills/task-tree/scripts/templates/dashboard.js#L1557-L1563)). In Chromium, growing an open Markdown companion beyond the 2 MiB preview limit and broadcasting its updated manifest removed the row's Open action but left the old Markdown heading visible with no unavailable message. Re-render every still-selected entry on an artifact event (or explicitly clear and replace the preview when it becomes non-previewable), and cover the previewable-to-oversized transition in the hot-reload browser test.
-   → implemented: routed every still-selected SSE refresh through the preview renderer so oversized files show the existing unavailable state and added a Chromium transition/state-preservation regression ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1428), [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py#L472)).
