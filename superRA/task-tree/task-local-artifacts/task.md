@@ -26,12 +26,6 @@ Put first-class companion documents and code—`.md`, `.py`, `.jl`, `.r`/`.R`, a
 
 The existing [HTML Dashboard](../dashboard/task.md) concern covers dashboard behavior but not the cross-workflow storage and promotion contract, so this work is a sibling durable concern under Task Tree Skill. The contract lands first; the backend data path and user interface then follow in dependency order.
 
-## Revision Notes
-
-On 2026-07-25 the researcher chose a flat companion-file model. The same decision keeps companion files out of the semantic task tree. A dependency review found that a small vendored browser renderer can cover common static `.ipynb` cells and outputs without adding the Jupyter Python or JupyterLab dependency stacks; JavaScript, widgets, and full interactive-output fidelity remain out of scope.
-
-Later that day, the researcher narrowed direct companions to Markdown, Python, Julia, R, and Jupyter notebooks; all generated, supporting, or otherwise retained files belong in `attachments/`. Recursive attachment discovery is a compatibility capability rather than an agent-facing organizational choice. R syntax support adds no dependency because the dashboard's existing Highlight.js common bundle already contains the language.
-
 ## Critical Files
 
 - [using-superra/SKILL.md](../../../skills/using-superra/SKILL.md) — universal task interface loaded by main agents, implementers, reviewers, and direct mode
@@ -41,3 +35,11 @@ Later that day, the researcher narrowed direct companions to Markdown, Python, J
 - [dashboard.js](../../../skills/task-tree/scripts/templates/dashboard.js) — active-task navigation and client-side Markdown rendering
 
 ## Results
+
+Implemented the task-local companion-file lifecycle and dashboard canvas across three approved children:
+
+- The [companion-file contract](01-artifact-contract/task.md#results) now distinguishes disposable scratch, retained task-local evidence, and permanent project artifacts. Markdown, Python, Julia, R, and Jupyter files may sit beside `task.md`; generated outputs, supporting data, and other retained files belong in `attachments/`. Retained files require result links and reproducibility metadata, while shared or maintained artifacts are promoted into project-conventional paths before Integrate closes.
+- The [secure artifact data path](02-dashboard-artifact-data/task.md#results) discovers direct companions and recursively generated attachments without admitting files into task discovery, dependencies, status rollups, or mutations. Task-scoped live and standalone APIs enforce worktree/task containment, no-follow reads, bounded traversal and byte budgets, opaque `attachments/`, and transactional link rewriting across move failures.
+- The [dashboard Files canvas](03-dashboard-artifact-ui/task.md#results) groups direct files, attachments, and legacy placement inside the owning task view. It safely renders companion-relative Markdown, Python/Julia/R source, common static Jupyter cells and outputs, images, PDFs, and text; JavaScript, widgets, active MIME types, and unsupported notebook outputs never execute. Task-scoped hot reload preserves task routing and view state, and live/worktree/standalone behavior shares the same artifact payload.
+
+Final verification from the approved branch passed all 773 task-tree tests with four known non-failing fixture/dependency warnings. Independent Chromium review covered keyboard and focus behavior, sanitization, notebook fallbacks, hot reload including oversized transitions, worktree switching, and standalone export. NotebookJS remains a pinned 8,102-byte vendored asset rather than a Jupyter or `nbconvert` dependency.
