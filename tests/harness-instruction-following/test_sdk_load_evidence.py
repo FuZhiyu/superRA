@@ -8,7 +8,8 @@ imported. Covers:
 - on-demand skill ordering: green plus the two red cases the parent objective
   names (required skill missing; skill loaded only after the first edit);
 - the static always-loaded frontmatter contract (green against the real role
-  specs; red against a synthetic spec missing a skill).
+  specs; red against a synthetic spec missing a skill);
+- the reusable behavioral-canary checker task 10 consumes (green + red).
 """
 
 from __future__ import annotations
@@ -23,14 +24,15 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from sdk_load_evidence import (  # noqa: E402
     ALWAYS_LOADED_SKILLS,
+    BehavioralCanarySpec,
     SkillLoadReport,
     check_always_loaded_frontmatter,
+    check_behavioral_canary,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
     normalize_skill_name,
     parse_frontmatter_skills,
 )
-from structured_findings import finding_codes, findings_for  # noqa: E402
 
 
 def test_default_ci_path_never_imports_claude_agent_sdk():
@@ -62,10 +64,7 @@ def test_green_required_skills_load_before_first_edit():
     )
 
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == [
-        "SKILL_LOADED_BEFORE_EDIT",
-        "SKILL_LOADED_BEFORE_EDIT",
-    ]
+    assert len(report.observations) == 2
 
 
 def test_red_required_skill_never_loaded():
@@ -84,8 +83,9 @@ def test_red_required_skill_never_loaded():
     )
 
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["SKILL_NEVER_LOADED"]
-    assert findings_for(report, "SKILL_NEVER_LOADED")[0].subject == "writing"
+    assert len(report.missing) == 1
+    assert "writing" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 def test_red_skill_loaded_only_after_first_edit():
@@ -104,13 +104,9 @@ def test_red_skill_loaded_only_after_first_edit():
     )
 
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["SKILL_LOADED_AFTER_EDIT"]
-    finding = findings_for(report, "SKILL_LOADED_AFTER_EDIT")[0]
-    assert (finding.subject, finding.event_index, finding.related_index) == (
-        "writing",
-        4,
-        2,
-    )
+    assert len(report.missing) == 1
+    assert "writing" in report.missing[0]
+    assert "before the first edit" in report.missing[0]
 
 
 def test_no_edit_session_counts_any_load_as_before_edit():
@@ -140,14 +136,11 @@ def test_all_failures_collected_together():
         ["econ-data-analysis", "writing"],
     )
 
-    assert finding_codes(report, outcome="missing") == [
-        "SKILL_NEVER_LOADED",
-        "SKILL_LOADED_AFTER_EDIT",
-    ]
-    assert [finding.subject for finding in report.findings] == [
-        "econ-data-analysis",
-        "writing",
-    ]
+    assert len(report.missing) == 2
+    assert "econ-data-analysis" in report.missing[0]
+    assert "never loaded" in report.missing[0]
+    assert "writing" in report.missing[1]
+    assert "before the first edit" in report.missing[1]
 
 
 # --------------------------------------------------------------------------- #
@@ -206,8 +199,8 @@ def test_qualified_observations_still_reject_genuinely_absent_skill():
     report = SkillLoadReport()
     check_skills_loaded_before_first_edit(report, evidence, ["semantic-merge"])
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["SKILL_NEVER_LOADED"]
-    assert findings_for(report, "SKILL_NEVER_LOADED")[0].subject == "semantic-merge"
+    assert "semantic-merge" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -256,9 +249,7 @@ def test_green_always_loaded_frontmatter_real_role_specs():
     check_always_loaded_frontmatter(report, REPO_ROOT)
     report.assert_ok()
     # two specs x two skills
-    assert finding_codes(report, outcome="observed") == [
-        "ALWAYS_LOADED_DECLARED",
-    ] * 4
+    assert len(report.observations) == 4
 
 
 def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
@@ -277,23 +268,17 @@ def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
     check_always_loaded_frontmatter(report, tmp_path)
 
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["ALWAYS_LOADED_MISSING"]
-    finding = findings_for(report, "ALWAYS_LOADED_MISSING")[0]
-    assert (finding.path, finding.subject) == (
-        "agents/implementer.md",
-        "superRA:report-in-markdown",
-    )
+    assert len(report.missing) == 1
+    assert "implementer.md" in report.missing[0]
+    assert "superRA:report-in-markdown" in report.missing[0]
 
 
 def test_red_always_loaded_frontmatter_missing_file(tmp_path):
     report = SkillLoadReport()
     check_always_loaded_frontmatter(report, tmp_path)
     # both specs absent → one missing-file failure each
-    assert finding_codes(report, outcome="missing") == ["ROLE_SPEC_MISSING"] * 2
-    assert {finding.path for finding in report.findings} == {
-        "agents/implementer.md",
-        "agents/reviewer.md",
-    }
+    assert len(report.missing) == 2
+    assert all("not found" in m for m in report.missing)
 
 
 def test_always_loaded_skills_constant_is_qualified():
@@ -302,6 +287,46 @@ def test_always_loaded_skills_constant_is_qualified():
         "superRA:using-superra",
         "superRA:report-in-markdown",
     )
+
+
+# --------------------------------------------------------------------------- #
+# Behavioral canary (reusable checker; fixtures owned by task 10)
+# --------------------------------------------------------------------------- #
+
+
+def test_green_behavioral_canary_rule_applied():
+    # report-in-markdown prescribes file refs as markdown links with line anchors.
+    spec = BehavioralCanarySpec(
+        skill="superRA:report-in-markdown",
+        rule="file references cited as markdown links with line anchors",
+        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
+    )
+    output = "See [sdk_load_harness.py:42](sdk_load_harness.py#L42) for the hook."
+    report = SkillLoadReport()
+
+    check_behavioral_canary(report, spec, output)
+
+    report.assert_ok()
+    assert len(report.observations) == 1
+
+
+def test_red_behavioral_canary_rule_absent():
+    # Output uses a backtick path instead of the prescribed markdown-link form —
+    # the preloaded skill rule did not shape it.
+    spec = BehavioralCanarySpec(
+        skill="superRA:report-in-markdown",
+        rule="file references cited as markdown links with line anchors",
+        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
+    )
+    output = "See `sdk_load_harness.py` line 42 for the hook."
+    report = SkillLoadReport()
+
+    check_behavioral_canary(report, spec, output)
+
+    assert not report.ok
+    assert len(report.missing) == 1
+    assert "superRA:report-in-markdown" in report.missing[0]
+    assert "did not shape the output" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #

@@ -1,5 +1,5 @@
 {
-  "schema": "superra.stage-load-evidence/v1",
+  "schema_version": 1,
   "stage": "implementation",
-  "loads": []
+  "stage_canary": "none"
 }

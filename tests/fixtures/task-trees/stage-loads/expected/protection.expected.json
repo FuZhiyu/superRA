@@ -1,7 +1,5 @@
 {
-  "schema": "superra.stage-load-evidence/v1",
+  "schema_version": 1,
   "stage": "protection",
-  "loads": [
-    {"kind": "skill", "id": "result-protection"}
-  ]
+  "stage_canary": "drift test"
 }

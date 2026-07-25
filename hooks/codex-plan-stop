@@ -12,26 +12,30 @@ else
   input=$(cat)
 fi
 
+if [ -x /usr/bin/grep ]; then
+  GREP=/usr/bin/grep
+elif [ -x /bin/grep ]; then
+  GREP=/bin/grep
+else
+  GREP=grep
+fi
+
 parsed=$(echo "$input" | python3 -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
 except Exception:
-    print("\t\t\t")
+    print("\t\t")
     sys.exit(0)
 event = d.get("hook_event_name", "") or ""
 permission_mode = d.get("permission_mode", "") or ""
 stop_hook_active = "1" if d.get("stop_hook_active") else "0"
 last = d.get("last_assistant_message", "") or ""
-proposed_plan = (
-    "1"
-    if isinstance(last, str) and last.lstrip().startswith("<proposed_plan>")
-    else "0"
-)
-print(event + "\t" + permission_mode + "\t" + stop_hook_active + "\t" + proposed_plan)
+last = last.replace("\t", " ").replace("\n", " ").replace("\r", " ")
+print(event + "\t" + permission_mode + "\t" + stop_hook_active + "\t" + last)
 ' 2>/dev/null || printf '\t\t\t')
 
-IFS=$'\t' read -r event permission_mode stop_hook_active proposed_plan <<<"$parsed"
+IFS=$'\t' read -r event permission_mode stop_hook_active last_assistant_message <<<"$parsed"
 
 if [ "$event" != "Stop" ]; then
   printf '{}\n'
@@ -43,7 +47,14 @@ if [ "$stop_hook_active" = "1" ]; then
   exit 0
 fi
 
-if [ "$permission_mode" != "plan" ] || [ "$proposed_plan" != "1" ]; then
+has_plan_marker=0
+if [ "$permission_mode" = "plan" ] && printf '%s' "$last_assistant_message" | "$GREP" -Eiq '^[[:space:]]*<proposed_plan>' 2>/dev/null; then
+  has_plan_marker=1
+elif [ "$permission_mode" = "plan" ] && printf '%s' "$last_assistant_message" | "$GREP" -Eiq '^[[:space:]#*_-]*proposed[[:space:]]+plan([[:space:]:#*_-]|$)' 2>/dev/null; then
+  has_plan_marker=1
+fi
+
+if [ "$has_plan_marker" != "1" ]; then
   printf '{}\n'
   exit 0
 fi

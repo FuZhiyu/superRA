@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the per-stage skill-load live coverage (task 11).
 
-Drives the stage evaluator and structured artifact contracts on synthetic inputs
-with no model call and no ``claude_agent_sdk`` / codex-cli import:
+Drives the stage evaluator and the per-stage Codex canaries on synthetic inputs —
+no model call, no ``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-stage evaluator** (:func:`stage_loads_live.evaluate_stage_load`):
   green for each non-empty stage (skill channel via the Skill hook, including the
@@ -11,11 +11,13 @@ with no model call and no ``claude_agent_sdk`` / codex-cli import:
   reference is never read, and when a load lands after the first edit; and the
   negative stage (``implementation``) green when no stage skill loaded, red when
   one did (over-load).
+- **Codex per-stage canaries** (09's :func:`codex_load_evidence.evaluate_canary`):
+  green when the stage skill's skill-unique token is at the artifact field, red
+  when absent (skill body did not load).
 - **Read-path suffix matching** (:func:`sdk_load_evidence._read_path_matches`):
   an absolute/workspace-relative read path matches the manifest-relative
   reference path; an unrelated path does not.
-- **Fixture sanity:** each committed expected artifact preserves its schema,
-  stage, load kinds, skill IDs, and reference paths.
+- **Fixture sanity:** each committed expected artifact satisfies its stage canary.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from codex_load_evidence import CanaryReport, evaluate_canary  # noqa: E402
 from sdk_load_evidence import (  # noqa: E402
     _read_path_matches,
     evidence_from_hook_records,
@@ -42,12 +45,9 @@ from stage_loads_live import (  # noqa: E402
     StageLoadReport,
     evaluate_all_stage_loads,
     evaluate_stage_load,
-    expected_stage_artifact,
-    stage_artifact_matches,
     stage_dispatch_prompt,
     stage_row,
 )
-from structured_findings import finding_codes, findings_for  # noqa: E402
 
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "stage-loads"
 
@@ -124,7 +124,7 @@ def test_green_skill_stage_loaded_before_edit():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["STAGE_SKILL_LOADED"]
+    assert len(report.observations) == 1
 
 
 def test_green_skill_stage_loaded_as_plugin_qualified_name():
@@ -171,8 +171,8 @@ def test_red_skill_stage_genuinely_absent_still_rejected_with_qualified_observat
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_SKILL_MISSING"]
-    assert findings_for(report, "STAGE_SKILL_MISSING")[0].path == "semantic-merge"
+    assert "semantic-merge" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 def test_red_negative_stage_over_load_detected_when_qualified():
@@ -186,10 +186,7 @@ def test_red_negative_stage_over_load_detected_when_qualified():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_OVERLOAD"]
-    assert findings_for(report, "STAGE_OVERLOAD")[0].actual == [
-        "refactor-and-integrate"
-    ]
+    assert "over-load" in report.missing[0]
 
 
 def test_red_skill_stage_never_loaded():
@@ -203,8 +200,8 @@ def test_red_skill_stage_never_loaded():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_SKILL_MISSING"]
-    assert findings_for(report, "STAGE_SKILL_MISSING")[0].path == "semantic-merge"
+    assert "semantic-merge" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 def test_red_skill_stage_loaded_after_first_edit():
@@ -216,13 +213,7 @@ def test_red_skill_stage_loaded_after_first_edit():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_SKILL_LATE"]
-    finding = findings_for(report, "STAGE_SKILL_LATE")[0]
-    assert (finding.path, finding.event_index, finding.related_index) == (
-        "refactor-and-integrate",
-        5,
-        2,
-    )
+    assert "before the first edit" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -244,7 +235,7 @@ def test_green_maturation_both_guaranteed_skills_loaded_before_edit():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["STAGE_SKILL_LOADED"] * 2
+    assert len(report.observations) == 2
 
 
 def test_green_maturation_holds_without_conditional_writing():
@@ -259,7 +250,7 @@ def test_green_maturation_holds_without_conditional_writing():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     report.assert_ok()
-    assert {finding.path for finding in report.findings} == {"task-tree", "superplan"}
+    assert "writing" not in " ".join(report.missing)
 
 
 def test_red_maturation_one_guaranteed_skill_missing():
@@ -273,8 +264,8 @@ def test_red_maturation_one_guaranteed_skill_missing():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_SKILL_MISSING"]
-    assert findings_for(report, "STAGE_SKILL_MISSING")[0].path == "superplan"
+    assert "superplan" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -297,8 +288,7 @@ def test_green_read_stage_reference_read_before_edit():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["STAGE_REFERENCE_LOADED"]
-    assert findings_for(report, "STAGE_REFERENCE_LOADED")[0].path == _PLANNING_REF
+    assert "reference" in report.observations[0]
 
 
 def test_red_read_stage_reference_never_read():
@@ -312,8 +302,8 @@ def test_red_read_stage_reference_never_read():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_REFERENCE_MISSING"]
-    assert findings_for(report, "STAGE_REFERENCE_MISSING")[0].path == _PLANNING_REF
+    assert _PLANNING_REF in report.missing[0]
+    assert "never read" in report.missing[0]
 
 
 def test_red_read_stage_reference_read_after_first_edit():
@@ -325,13 +315,7 @@ def test_red_read_stage_reference_read_after_first_edit():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_REFERENCE_LATE"]
-    finding = findings_for(report, "STAGE_REFERENCE_LATE")[0]
-    assert (finding.path, finding.event_index, finding.related_index) == (
-        _PLANNING_REF,
-        4,
-        1,
-    )
+    assert "before the first edit" in report.missing[0]
 
 
 def test_read_path_suffix_matches_absolute_not_substring_false_positive():
@@ -367,7 +351,7 @@ def test_green_negative_stage_no_stage_skill_loaded():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["STAGE_NEGATIVE_CLEAN"]
+    assert "negative case holds" in report.observations[0]
 
 
 def test_red_negative_stage_loaded_a_stage_skill():
@@ -379,10 +363,8 @@ def test_red_negative_stage_loaded_a_stage_skill():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_OVERLOAD"]
-    assert findings_for(report, "STAGE_OVERLOAD")[0].actual == [
-        "refactor-and-integrate"
-    ]
+    assert "over-load" in report.missing[0]
+    assert "refactor-and-integrate" in report.missing[0]
 
 
 def test_red_negative_stage_loaded_a_maturation_skill():
@@ -396,8 +378,8 @@ def test_red_negative_stage_loaded_a_maturation_skill():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["STAGE_OVERLOAD"]
-    assert findings_for(report, "STAGE_OVERLOAD")[0].actual == ["task-tree"]
+    assert "over-load" in report.missing[0]
+    assert "task-tree" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -429,55 +411,80 @@ def test_evaluate_all_green_across_all_stages():
     report.assert_ok()
     # One observation per stage row, plus one extra for maturation's second
     # guaranteed skill (task-tree + superplan).
-    assert len(report.findings) == len(STAGE_ROWS) + 1
-    assert all(finding.outcome == "observed" for finding in report.findings)
+    assert len(report.observations) == len(STAGE_ROWS) + 1
 
 
 def test_evaluate_all_reports_missing_evidence_for_a_stage():
     report = StageLoadReport()
     evaluate_all_stage_loads(report, {})
     # every stage missing -> one failure each
-    assert finding_codes(report, outcome="missing") == [
-        "STAGE_EVIDENCE_MISSING"
-    ] * len(STAGE_ROWS)
-    assert {finding.subject for finding in report.findings} == {
-        row.stage for row in STAGE_ROWS
-    }
+    assert len(report.missing) == len(STAGE_ROWS)
+    assert all("no captured evidence" in m for m in report.missing)
 
 
 # --------------------------------------------------------------------------- #
-# Structured artifact contract
+# Codex per-stage canaries
 # --------------------------------------------------------------------------- #
 
 
-def test_committed_expected_artifacts_use_structured_load_identities():
+def test_green_codex_canary_each_positive_stage_from_artifact():
     for row in STAGE_ROWS:
+        if row.codex_canary is None:
+            continue
+        report = CanaryReport()
+        evaluate_canary(
+            report,
+            row.codex_canary,
+            command_strings=[],
+            artifact={"stage_canary": row.codex_canary.token},
+        )
+        report.assert_ok()
+
+
+def test_red_codex_canary_absent_for_a_stage():
+    row = stage_row("sync")
+    report = CanaryReport()
+    evaluate_canary(
+        report,
+        row.codex_canary,
+        command_strings=[],
+        artifact={"stage_canary": "WRONG"},
+    )
+    assert not report.ok
+    assert "semantic-merge" in report.missing[0]
+    assert "did not load" in report.missing[0]
+
+
+# --------------------------------------------------------------------------- #
+# Fixture sanity: committed expected artifacts satisfy the canaries
+# --------------------------------------------------------------------------- #
+
+
+def test_committed_expected_artifacts_satisfy_canaries():
+    for row in STAGE_ROWS:
+        if row.codex_canary is None:
+            continue
         expected = json.loads(
             (FIXTURE_ROOT / "expected" / f"{row.stage}.expected.json").read_text(
                 encoding="utf-8"
             )
         )
-        assert stage_artifact_matches(row, expected)
+        report = CanaryReport()
+        evaluate_canary(
+            report,
+            row.codex_canary,
+            command_strings=[],
+            artifact=expected,
+        )
+        report.assert_ok()
 
 
-def test_structured_stage_artifact_rejects_wrong_skill_id():
-    row = stage_row("sync")
-    artifact = expected_stage_artifact(row)
-    artifact["loads"][0]["id"] = "result-protection"
-    assert not stage_artifact_matches(row, artifact)
-
-
-def test_structured_stage_artifact_rejects_wrong_reference_path():
-    row = stage_row("planning-review")
-    artifact = expected_stage_artifact(row)
-    artifact["loads"][0]["path"] = "skills/superplan/SKILL.md"
-    assert not stage_artifact_matches(row, artifact)
-
-
-def test_negative_stage_has_empty_load_list():
-    row = stage_row("implementation")
-    assert expected_stage_artifact(row) == {
-        "schema": "superra.stage-load-evidence/v1",
-        "stage": "implementation",
-        "loads": [],
-    }
+def test_negative_stage_expected_artifacts_use_none_sentinel():
+    stage = "implementation"
+    expected = json.loads(
+        (FIXTURE_ROOT / "expected" / f"{stage}.expected.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert expected["stage"] == stage
+    assert expected["stage_canary"] == "none"

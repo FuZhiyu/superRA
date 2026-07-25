@@ -32,11 +32,11 @@ and which of the two channels carries it — load-bearing for the harness design
   that records read paths; the evaluator matches the manifest reference path
   against the captured reads.
 
-The evaluator takes already-captured skill-load and read evidence, so the
-default ``pytest`` path drives it on synthetic inputs with no model call and no
-``claude_agent_sdk`` / codex-cli import. Committed artifacts preserve only the
-stage, schema, load kind, skill ID, and reference path. The live Claude entry
-:func:`run_claude_stage_load_check` consumes 08's
+The evaluator takes already-captured inputs (the dispatched agent's skill-load +
+read evidence for Claude; command strings + the output artifact for Codex), so
+the default ``pytest`` path drives it on synthetic inputs with no model call and
+no ``claude_agent_sdk`` / codex-cli import. The live Claude entry
+:func:`run_claude_stage_canary` consumes 08's
 :func:`sdk_load_harness.run_skill_load_session` and is gated behind
 ``RUN_LIVE_HARNESS=1``.
 
@@ -54,12 +54,11 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from codex_load_evidence import CanarySpec
 from sdk_load_evidence import SkillLoadEvidence
-from structured_findings import Finding, add_missing, add_observation
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "stage-loads"
-STAGE_ARTIFACT_SCHEMA = "superra.stage-load-evidence/v1"
 
 # Evidence channels a stage's manifest entry loads through.
 CHANNEL_SKILL = "skill"  # loaded via the Skill tool -> 08's Skill hook records it
@@ -84,12 +83,66 @@ class StageRow:
     - For a negative stage, both ``expected`` is ``None`` and ``expected_skills``
       is empty.
     - ``channel`` selects how the evaluator looks for the evidence.
+    - ``codex_canary`` is the per-stage Codex :class:`CanarySpec` whose
+      skill-unique token is only producible if a stage skill/reference body
+      loaded; ``None`` for a negative stage.
     """
 
     stage: str
     expected: str | None
     channel: str
+    codex_canary: CanarySpec | None
     expected_skills: tuple[str, ...] = ()
+
+
+# --------------------------------------------------------------------------- #
+# Codex per-stage canaries (skill-unique tokens, recorded at the artifact field)
+# --------------------------------------------------------------------------- #
+
+# Each token is a discriminating concept the stage skill/reference body
+# prescribes (named in the fixture task only as "the discriminating concept that
+# stage's body prescribes"), so the agent can only write it once that body is in
+# context. Recorded at the artifact field `stage_canary` (the same artifact-field
+# convention task 10's always-loaded canaries use); a stage skill with no
+# bundled script has no command-execution side effect, so the artifact field is
+# the channel.
+_STAGE_CANARY_FIELD = "stage_canary"
+
+CODEX_PROTECTION_CANARY = CanarySpec(
+    skill="result-protection",
+    token="drift test",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
+CODEX_SYNC_CANARY = CanarySpec(
+    skill="semantic-merge",
+    token="intent conflict",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
+CODEX_INTEGRATION_CANARY = CanarySpec(
+    skill="refactor-and-integrate",
+    token="minimum net diff",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
+CODEX_PLANNING_REVIEW_CANARY = CanarySpec(
+    skill="skills/superplan/references/planning-review.md",
+    token="handoff-readiness",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
+# maturation loads task-tree + superplan (always) and writing (conditional). The
+# canary anchors on a concept unique to one *always-loaded* maturation skill —
+# task-tree's `frontier` view — so the token is producible only if that body
+# reached context. We do NOT anchor on writing (conditional) lest a maturation
+# run that legitimately skips the prose-heavy load red the canary.
+CODEX_MATURATION_CANARY = CanarySpec(
+    skill="task-tree",
+    token="frontier",
+    in_command=False,
+    in_artifact_field=_STAGE_CANARY_FIELD,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -101,23 +154,27 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         stage="planning-review",
         expected="skills/superplan/references/planning-review.md",
         channel=CHANNEL_READ,
+        codex_canary=CODEX_PLANNING_REVIEW_CANARY,
     ),
     StageRow(
         stage="protection",
         expected=None,
         channel=CHANNEL_SKILL,
+        codex_canary=CODEX_PROTECTION_CANARY,
         expected_skills=("result-protection",),
     ),
     StageRow(
         stage="sync",
         expected=None,
         channel=CHANNEL_SKILL,
+        codex_canary=CODEX_SYNC_CANARY,
         expected_skills=("semantic-merge",),
     ),
     StageRow(
         stage="integration",
         expected=None,
         channel=CHANNEL_SKILL,
+        codex_canary=CODEX_INTEGRATION_CANARY,
         expected_skills=("refactor-and-integrate",),
     ),
     # Positive multi-skill stage: maturation always loads task-tree + superplan.
@@ -127,10 +184,11 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         stage="maturation",
         expected=None,
         channel=CHANNEL_SKILL,
+        codex_canary=CODEX_MATURATION_CANARY,
         expected_skills=("task-tree", "superplan"),
     ),
     # Negative stage: no extra stage-skill expectation.
-    StageRow(stage="implementation", expected=None, channel=CHANNEL_NONE),
+    StageRow(stage="implementation", expected=None, channel=CHANNEL_NONE, codex_canary=None),
 )
 
 # All stage skill names, for the negative-case "no stage skill loaded" check.
@@ -154,28 +212,6 @@ def stage_row(stage: str) -> StageRow:
     raise KeyError(f"no stage row for {stage!r}")
 
 
-def expected_stage_artifact(row: StageRow) -> dict:
-    """Return the exact structured artifact for one stage row."""
-
-    if row.channel == CHANNEL_SKILL:
-        loads = [{"kind": "skill", "id": skill} for skill in row.expected_skills]
-    elif row.channel == CHANNEL_READ:
-        loads = [{"kind": "reference", "path": row.expected}]
-    else:
-        loads = []
-    return {
-        "schema": STAGE_ARTIFACT_SCHEMA,
-        "stage": row.stage,
-        "loads": loads,
-    }
-
-
-def stage_artifact_matches(row: StageRow, artifact: dict | None) -> bool:
-    """Return whether ``artifact`` exactly preserves stage/load identities."""
-
-    return artifact == expected_stage_artifact(row)
-
-
 # --------------------------------------------------------------------------- #
 # Claude evaluator (consumes 08's SkillLoadEvidence)
 # --------------------------------------------------------------------------- #
@@ -187,7 +223,6 @@ class StageLoadReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
-    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -226,75 +261,41 @@ def evaluate_stage_load(
     if row.channel == CHANNEL_SKILL:
         for skill in row.expected_skills:
             if skill not in evidence.loaded_skill_names:
-                add_missing(
-                    report,
-                    "STAGE_SKILL_MISSING",
+                report.missing.append(
                     f"stage {row.stage!r}: required skill {skill!r} never loaded "
-                    f"(observed skill loads: {sorted(evidence.loaded_skill_names)})",
-                    subject=row.stage,
-                    path=skill,
-                    actual=sorted(evidence.loaded_skill_names),
+                    f"(observed skill loads: {sorted(evidence.loaded_skill_names)})"
                 )
             elif not evidence.loaded_before_first_edit(skill):
-                add_missing(
-                    report,
-                    "STAGE_SKILL_LATE",
+                report.missing.append(
                     f"stage {row.stage!r}: skill {skill!r} loaded at event "
                     f"{evidence.first_load_index(skill)} but the first edit/write "
                     f"was at event {evidence.first_edit_index} — must load before "
-                    f"the first edit",
-                    subject=row.stage,
-                    path=skill,
-                    event_index=evidence.first_load_index(skill),
-                    related_index=evidence.first_edit_index,
+                    f"the first edit"
                 )
             else:
-                add_observation(
-                    report,
-                    "STAGE_SKILL_LOADED",
-                    f"stage {row.stage!r}: skill {skill!r} loaded before first edit",
-                    subject=row.stage,
-                    path=skill,
-                    event_index=evidence.first_load_index(skill),
-                    related_index=evidence.first_edit_index,
+                report.observations.append(
+                    f"stage {row.stage!r}: skill {skill!r} loaded before first edit"
                 )
 
     elif row.channel == CHANNEL_READ:
         ref = row.expected
         if evidence.first_read_index(ref) is None:
-            add_missing(
-                report,
-                "STAGE_REFERENCE_MISSING",
+            report.missing.append(
                 f"stage {row.stage!r}: required reference {ref!r} never read "
                 f"(observed reads: {sorted(evidence.read_paths)}) — the "
                 f"reference loads via the Read tool, so run the session with "
-                f"capture_reads=True",
-                subject=row.stage,
-                path=ref,
-                actual=sorted(evidence.read_paths),
+                f"capture_reads=True"
             )
         elif not evidence.read_before_first_edit(ref):
-            add_missing(
-                report,
-                "STAGE_REFERENCE_LATE",
+            report.missing.append(
                 f"stage {row.stage!r}: reference {ref!r} read at event "
                 f"{evidence.first_read_index(ref)} but the first edit/write was "
                 f"at event {evidence.first_edit_index} — must read before the "
-                f"first edit",
-                subject=row.stage,
-                path=ref,
-                event_index=evidence.first_read_index(ref),
-                related_index=evidence.first_edit_index,
+                f"first edit"
             )
         else:
-            add_observation(
-                report,
-                "STAGE_REFERENCE_LOADED",
-                f"stage {row.stage!r}: reference {ref!r} read before first edit",
-                subject=row.stage,
-                path=ref,
-                event_index=evidence.first_read_index(ref),
-                related_index=evidence.first_edit_index,
+            report.observations.append(
+                f"stage {row.stage!r}: reference {ref!r} read before first edit"
             )
 
     elif row.channel == CHANNEL_NONE:
@@ -302,31 +303,18 @@ def evaluate_stage_load(
             evidence.loaded_skill_names & ALL_STAGE_SKILLS
         )
         if loaded_stage_skills:
-            add_missing(
-                report,
-                "STAGE_OVERLOAD",
+            report.missing.append(
                 f"stage {row.stage!r} carries no stage-skill expectation, but the "
                 f"dispatch loaded stage skill(s) {loaded_stage_skills} — an "
-                f"over-load finding",
-                subject=row.stage,
-                actual=loaded_stage_skills,
+                f"over-load finding"
             )
         else:
-            add_observation(
-                report,
-                "STAGE_NEGATIVE_CLEAN",
-                f"stage {row.stage!r}: no stage skill loaded (negative case holds)",
-                subject=row.stage,
+            report.observations.append(
+                f"stage {row.stage!r}: no stage skill loaded (negative case holds)"
             )
 
     else:  # pragma: no cover - guarded by the table
-        add_missing(
-            report,
-            "STAGE_CHANNEL_UNKNOWN",
-            f"stage {row.stage!r}: unknown channel {row.channel!r}",
-            subject=row.stage,
-            actual=row.channel,
-        )
+        report.missing.append(f"stage {row.stage!r}: unknown channel {row.channel!r}")
 
 
 def evaluate_all_stage_loads(
@@ -337,11 +325,8 @@ def evaluate_all_stage_loads(
 
     for row in STAGE_ROWS:
         if row.stage not in evidence_by_stage:
-            add_missing(
-                report,
-                "STAGE_EVIDENCE_MISSING",
-                f"stage {row.stage!r}: no captured evidence supplied",
-                subject=row.stage,
+            report.missing.append(
+                f"stage {row.stage!r}: no captured evidence supplied"
             )
             continue
         evaluate_stage_load(report, row, evidence_by_stage[row.stage])
@@ -375,14 +360,14 @@ def stage_dispatch_prompt(stage: str) -> str:
     )
 
 
-def run_claude_stage_load_check(
+def run_claude_stage_canary(
     stage: str,
     *,
     cwd: Path | str,
     model: str | None = None,
     attempts: int = 3,
 ) -> StageLoadReport:
-    """Run the live Claude per-stage skill-load check (manual-only).
+    """Run the live Claude per-stage skill-load canary for one stage (manual-only).
 
     Dispatches the real ``superRA:implementer`` via 08's
     :func:`sdk_load_harness.run_skill_load_session` with ``capture_reads=True``
@@ -399,7 +384,7 @@ def run_claude_stage_load_check(
 
     if not _gate_is_open():
         raise RuntimeError(
-            "RUN_LIVE_HARNESS is not set to 1 — the per-stage skill-load check "
+            "RUN_LIVE_HARNESS is not set to 1 — the per-stage skill-load canary "
             "is manual-only and must never run in default CI."
         )
 
@@ -444,7 +429,7 @@ def _main() -> int:
     if not _gate_is_open():
         print(
             "SKIP  RUN_LIVE_HARNESS is not set to 1 — the per-stage skill-load "
-            "check is opt-in and never runs in CI.\n"
+            "canary is opt-in and never runs in CI.\n"
             "      Set RUN_LIVE_HARNESS=1 (with claude-agent-sdk installed via "
             "uv run --with) to run it."
         )
@@ -463,7 +448,7 @@ def _main() -> int:
             workspace = Path(tmp) / "ws"
             workspace.mkdir()
             _seed_workspace(workspace)
-            report = run_claude_stage_load_check(stage, cwd=workspace)
+            report = run_claude_stage_canary(stage, cwd=workspace)
         for obs in report.observations:
             print(f"OK: {obs}")
         if not report.ok:

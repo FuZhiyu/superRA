@@ -22,7 +22,6 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
@@ -45,36 +44,20 @@ from _task_validate import detect_cycles, invalid_status_message
 class Finding:
     """A single diagnostic finding."""
 
-    code: str
+    task_path: str
     category: str  # "status" | "dependency" | "rollup" | "sync-impact"
     severity: str  # "error" | "warning"
-    subject: str
-    actual: Any
-    path: str
-    related_nodes: tuple[str, ...]
     message: str
-    expected: Any = None
-
-    @property
-    def task_path(self) -> str:
-        """Backward-compatible alias for callers of the original JSON schema."""
-        return self.path
 
     def to_text(self) -> str:
-        prefix = self.path or "(root)"
+        prefix = self.task_path or "(root)"
         return f"[{self.severity.upper()}] [{self.category}] {prefix}: {self.message}"
 
     def to_dict(self) -> dict:
         return {
-            "code": self.code,
+            "task_path": self.task_path,
             "category": self.category,
             "severity": self.severity,
-            "subject": self.subject,
-            "actual": self.actual,
-            "expected": self.expected,
-            "path": self.path,
-            "task_path": self.path,
-            "related_nodes": list(self.related_nodes),
             "message": self.message,
         }
 
@@ -96,13 +79,9 @@ def _check_status_recursive(
     # Check the status value itself
     if task.status not in VALID_STATUSES:
         findings.append(Finding(
-            code="status.invalid",
+            task_path=task.path,
             category="status",
             severity="error",
-            subject="status",
-            actual=task.status,
-            path=task.path,
-            related_nodes=(),
             message=invalid_status_message(task.status),
         ))
 
@@ -116,13 +95,9 @@ def _check_status_recursive(
             value = fm[field_name]
             if value and value != "~":
                 findings.append(Finding(
-                    code="status.stale-field",
+                    task_path=task.path,
                     category="status",
                     severity="warning",
-                    subject=field_name,
-                    actual=value,
-                    path=task.path,
-                    related_nodes=(),
                     message=(
                         f"stale field '{field_name}' still present "
                         f"with value {value!r}; should be removed"
@@ -130,13 +105,9 @@ def _check_status_recursive(
                 ))
             else:
                 findings.append(Finding(
-                    code="status.stale-field",
+                    task_path=task.path,
                     category="status",
                     severity="warning",
-                    subject=field_name,
-                    actual=value,
-                    path=task.path,
-                    related_nodes=(),
                     message=(
                         f"stale field '{field_name}' still present "
                         f"in frontmatter (value: {value!r}); should be removed"
@@ -169,52 +140,36 @@ def _check_deps_recursive(task: Task, findings: list[Finding]) -> None:
         for dep in child.depends_on:
             if dep not in sibling_map:
                 findings.append(Finding(
-                    code="dependency.missing-sibling",
+                    task_path=child.path,
                     category="dependency",
                     severity="error",
-                    subject="depends_on",
-                    actual=dep,
-                    path=child.path,
-                    related_nodes=(dep,),
                     message=f"depends_on '{dep}' does not resolve to any sibling task",
                 ))
             else:
                 dep_task = sibling_map[dep]
                 if dep_task.effective_status() == "archived":
                     findings.append(Finding(
-                        code="dependency.archived",
+                        task_path=child.path,
                         category="dependency",
                         severity="warning",
-                        subject="depends_on",
-                        actual="archived",
-                        path=child.path,
-                        related_nodes=(dep_task.path,),
                         message=f"depends on archived task '{dep}'",
                     ))
                 elif dep_task.effective_status() == "postponed":
                     findings.append(Finding(
-                        code="dependency.postponed",
+                        task_path=child.path,
                         category="dependency",
                         severity="warning",
-                        subject="depends_on",
-                        actual="postponed",
-                        path=child.path,
-                        related_nodes=(dep_task.path,),
                         message=f"depends on postponed task '{dep}' (blocked until resumed)",
                     ))
 
     # Cycle detection at this sibling level
-    cycle_findings = detect_cycles(task.children, path=task.path)
-    for cycle in cycle_findings:
+    cycle_warnings = detect_cycles(task.children)
+    for warning in cycle_warnings:
         findings.append(Finding(
-            code=cycle.code,
+            task_path=task.path,
             category="dependency",
             severity="error",
-            subject=cycle.subject,
-            actual=cycle.actual,
-            path=cycle.path,
-            related_nodes=cycle.related_nodes,
-            message=cycle.message,
+            message=warning,
         ))
 
     # Recurse into children that have their own children
@@ -242,18 +197,13 @@ def _check_rollup_recursive(task: Task, findings: list[Finding]) -> None:
 
     if stored != computed:
         findings.append(Finding(
-            code="rollup.mismatch",
+            task_path=task.path,
             category="rollup",
             severity="warning",
-            subject="status",
-            actual=stored,
-            path=task.path,
-            related_nodes=tuple(child.path for child in task.children),
             message=(
                 f"stored status is '{stored}' but computed rollup "
                 f"from children is '{computed}'"
             ),
-            expected=computed,
         ))
 
     for child in task.children:
@@ -291,13 +241,9 @@ def _check_sync_impact_recursive(task: Task, findings: list[Finding]) -> None:
         text = task_md.read_text(encoding="utf-8")
         if _SYNC_IMPACT_HEADING.search(text):
             findings.append(Finding(
-                code="sync-impact.present",
+                task_path=task.path,
                 category="sync-impact",
                 severity="warning",
-                subject="Sync Impact",
-                actual=True,
-                path=task.path,
-                related_nodes=(),
                 message=(
                     "carries a temporary '## Sync Impact' section; remove it at "
                     "Integrate closeout, or fold any lasting task assumption into "

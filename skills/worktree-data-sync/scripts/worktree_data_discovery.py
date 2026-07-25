@@ -6,34 +6,6 @@ from __future__ import annotations
 import fnmatch
 import subprocess
 from pathlib import Path
-from typing import Literal
-
-
-DiscoveryErrorCode = Literal[
-    "git_worktree_list_failed",
-    "no_worktrees_discovered",
-    "cwd_outside_worktree",
-    "invalid_endpoint",
-    "identical_endpoints",
-]
-
-
-class WorktreeDiscoveryError(RuntimeError):
-    """Worktree discovery failure with a stable machine-readable identity."""
-
-    def __init__(self, code: DiscoveryErrorCode, message: str, **fields: object) -> None:
-        super().__init__(message)
-        self.code = code
-        self.fields = fields
-
-
-class EndpointResolutionError(ValueError):
-    """Endpoint validation failure with a stable machine-readable identity."""
-
-    def __init__(self, code: DiscoveryErrorCode, message: str, **fields: object) -> None:
-        super().__init__(message)
-        self.code = code
-        self.fields = fields
 
 # Well-known non-data names. A discovered gitignored entry whose basename
 # matches one of these (exact name or glob) is excluded from managed
@@ -84,12 +56,7 @@ def list_worktrees(cwd: Path) -> list[Path]:
     result = _run_git(["worktree", "list", "--porcelain"], cwd)
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
-        raise WorktreeDiscoveryError(
-            "git_worktree_list_failed",
-            stderr or "Not inside a git worktree",
-            cwd=cwd.resolve(),
-            returncode=result.returncode,
-        )
+        raise RuntimeError(stderr or "Not inside a git worktree")
 
     worktrees: list[Path] = []
     for line in result.stdout.splitlines():
@@ -97,11 +64,7 @@ def list_worktrees(cwd: Path) -> list[Path]:
             worktrees.append(Path(line.split(" ", 1)[1]).resolve())
 
     if not worktrees:
-        raise WorktreeDiscoveryError(
-            "no_worktrees_discovered",
-            "Could not discover worktrees for this repository",
-            cwd=cwd.resolve(),
-        )
+        raise RuntimeError("Could not discover worktrees for this repository")
 
     return worktrees
 
@@ -111,11 +74,8 @@ def get_worktree_containing(cwd: Path, known: list[Path]) -> Path:
     cwd_resolved = cwd.resolve()
     matches = [root for root in known if _contains(root, cwd_resolved)]
     if not matches:
-        raise WorktreeDiscoveryError(
-            "cwd_outside_worktree",
-            f"Current directory is not inside any worktree of this repository: {cwd_resolved}",
-            cwd=cwd_resolved,
-            known_worktrees=tuple(known),
+        raise RuntimeError(
+            f"Current directory is not inside any worktree of this repository: {cwd_resolved}"
         )
     return max(matches, key=lambda root: len(root.parts))
 
@@ -127,32 +87,17 @@ def resolve_endpoints(cwd: Path, to_path: str, from_path: str | None) -> tuple[P
 
     resolved_to = Path(to_path).expanduser().resolve()
     if resolved_to not in known_map:
-        raise EndpointResolutionError(
-            "invalid_endpoint",
-            f"--to must be an existing git worktree in this repository: {resolved_to}",
-            endpoint="to",
-            path=resolved_to,
-        )
+        raise ValueError(f"--to must be an existing git worktree in this repository: {resolved_to}")
 
     if from_path:
         resolved_from = Path(from_path).expanduser().resolve()
         if resolved_from not in known_map:
-            raise EndpointResolutionError(
-                "invalid_endpoint",
-                f"--from must be an existing git worktree in this repository: {resolved_from}",
-                endpoint="from",
-                path=resolved_from,
-            )
+            raise ValueError(f"--from must be an existing git worktree in this repository: {resolved_from}")
     else:
         resolved_from = get_worktree_containing(cwd, known)
 
     if resolved_from == resolved_to:
-        raise EndpointResolutionError(
-            "identical_endpoints",
-            "--from and --to must be different worktrees",
-            source=resolved_from,
-            destination=resolved_to,
-        )
+        raise ValueError("--from and --to must be different worktrees")
 
     return resolved_from, resolved_to
 

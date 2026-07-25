@@ -7,12 +7,12 @@
 
 Covers the comment-surfacing subtree:
 - `_comments.anchored_block` — in-block, moved-then-reanchored, orphaned.
-- `task_read` surfacing — full blocks, orphaned degradation, and resolved
-  exclusion through the structured JSON contract.
+- `task_read` surfacing — human `=== Open Comments ===` section, orphaned
+  degradation, no-section-when-none, resolved excluded, `--json` parity.
 - Reliability — the read path surfaces JSON sidecars and degrades legacy
   block-YAML sidecars *without* `pyyaml`, proven by making `import yaml` fail
   inside the test.
-- Enriched `task_comment list` — full blocks in structured JSON output.
+- Enriched `task_comment list` — full block in human + `--json` output.
 
 Run with an interpreter that has pyyaml (e.g. `~/.venv/bin/python`); the
 no-pyyaml path is exercised by monkeypatching the import machinery, not by the
@@ -146,6 +146,13 @@ class TestAnchoredBlock:
 # task_read surfacing (task 02)
 # ---------------------------------------------------------------------------
 
+def _read_human(plan_root: Path, path: str) -> str:
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        task_read.main(["--plan-root", str(plan_root), "--path", path])
+    return buf.getvalue()
+
+
 def _read_json(plan_root: Path, path: str) -> dict:
     import json
     buf = io.StringIO()
@@ -156,15 +163,44 @@ def _read_json(plan_root: Path, path: str) -> dict:
 
 
 class TestTaskReadSurfacing:
-    def test_json_resolved_excluded(self, plan_root):
+    def test_human_shows_open_comments_with_full_block(self, plan_root):
+        add_comment(plan_root / "01-task", "Objective", 1,
+                    "Second paragraph", "Tighten this sentence.",
+                    author="reviewer")
+        out = _read_human(plan_root, "01-task")
+        assert "=== Open Comments ===" in out
+        assert "[reviewer] on ## Objective" in out
+        # Full block text surfaced (not just the ≤60-char preview).
+        assert ("Second paragraph that we will pin a comment to with full "
+                "detail.") in out
+        assert "Tighten this sentence." in out
+
+    def test_human_orphaned_shows_preview_and_note(self, plan_root):
+        add_comment(plan_root / "01-task", "Objective", 0,
+                    "preview-that-matches-nothing", "stale comment",
+                    author="reviewer")
+        out = _read_human(plan_root, "01-task")
+        assert "=== Open Comments ===" in out
+        assert 'block: "preview-that-matches-nothing"' in out
+        assert "[ORPHANED — block moved/edited away]" in out
+
+    def test_human_no_section_when_no_unresolved(self, plan_root):
+        # No comments at all -> no Open Comments section.
+        out = _read_human(plan_root, "01-task")
+        assert "=== Open Comments ===" not in out
+
+    def test_human_resolved_excluded(self, plan_root):
         c = add_comment(plan_root / "01-task", "Objective", 1,
                         "Second paragraph", "already handled",
                         author="reviewer")
+        # Mark resolved by rewriting the sidecar.
         c.resolved = True
         save_comments(plan_root / "01-task", [c])
-        assert _read_json(plan_root, "01-task")["open_comments"] == []
+        out = _read_human(plan_root, "01-task")
+        assert "=== Open Comments ===" not in out
+        assert "already handled" not in out
 
-    def test_json_carries_full_block_and_user_content(self, plan_root):
+    def test_json_carries_full_block(self, plan_root):
         add_comment(plan_root / "01-task", "Objective", 1,
                     "Second paragraph", "Tighten this sentence.",
                     author="reviewer")
@@ -176,11 +212,8 @@ class TestTaskReadSurfacing:
         assert entry["block"] == (
             "Second paragraph that we will pin a comment to with full detail."
         )
-        assert entry["body"] == "Tighten this sentence."
-        assert entry["author"] == "reviewer"
         assert entry["orphaned"] is False
         assert entry["degraded"] is None
-        assert entry["degraded_code"] is None
 
     def test_json_orphaned_shape_block_null(self, plan_root):
         add_comment(plan_root / "01-task", "Objective", 0,
@@ -258,15 +291,14 @@ class TestNoPyyamlReliability:
         buf = io.StringIO()
         with redirect_stdout(buf):
             fresh_read.main(["--plan-root", str(plan_root),
-                             "--path", "01-task", "--json"])
-        import json
-        data = json.loads(buf.getvalue())
-        entry = data["open_comments"][0]
-        assert entry["block"] == (
-            "Second paragraph that we will pin a comment to with full detail."
-        )
-        assert entry["body"] == "fix without yaml"
-        assert entry["degraded_code"] is None
+                             "--path", "01-task"])
+        out = buf.getvalue()
+        # The JSON sidecar is read by stdlib json — no yaml needed — so the
+        # comment surfaces with its full block.
+        assert "=== Open Comments ===" in out
+        assert ("Second paragraph that we will pin a comment to with full "
+                "detail.") in out
+        assert "fix without yaml" in out
 
     def test_legacy_block_yaml_degrades_without_yaml(self, plan_root,
                                                      monkeypatch,
@@ -291,18 +323,14 @@ class TestNoPyyamlReliability:
 
         buf = io.StringIO()
         with redirect_stdout(buf):
+            # Must NOT crash — degrades to a visible note, exits normally.
             fresh_read.main(["--plan-root", str(plan_root),
-                             "--path", "01-task", "--json"])
-        import json
-        data = json.loads(buf.getvalue())
-        assert data["open_comments"][0]["degraded_code"] == (
-            task_read.LEGACY_COMMENT_FORMAT
-        )
-        # The rest of the structured read still emits.
-        assert data["task"]["title"] == "First Task"
-        assert data["task"]["sections"]["Objective"].startswith(
-            "First paragraph anchor target."
-        )
+                             "--path", "01-task"])
+        out = buf.getvalue()
+        assert "open comments unavailable: legacy sidecar format" in out
+        # The rest of the read still emitted (frontmatter, sections).
+        assert "=== Task: First Task ===" in out
+        assert "## Objective" in out
 
     def test_legacy_sidecar_raises_only_without_yaml(self, plan_root,
                                                      monkeypatch,
@@ -340,7 +368,15 @@ def _comment_cli(plan_root: Path, *args: str) -> str:
 
 
 class TestTaskCommentList:
-    def test_json_full_block_and_user_content_round_trip(self, plan_root):
+    def test_human_emits_full_block(self, plan_root):
+        add_comment(plan_root / "01-task", "Objective", 1,
+                    "Second paragraph", "CLI fix me", author="reviewer")
+        out = _comment_cli(plan_root, "list", "01-task")
+        assert ("Second paragraph that we will pin a comment to with full "
+                "detail.") in out
+        assert "CLI fix me" in out
+
+    def test_json_full_block_parity(self, plan_root):
         import json
         add_comment(plan_root / "01-task", "Objective", 1,
                     "Second paragraph", "CLI fix me", author="reviewer")
@@ -350,8 +386,6 @@ class TestTaskCommentList:
         assert data[0]["block"] == (
             "Second paragraph that we will pin a comment to with full detail."
         )
-        assert data[0]["body"] == "CLI fix me"
-        assert data[0]["author"] == "reviewer"
         assert data[0]["orphaned"] is False
 
     def test_json_orphaned_shape(self, plan_root):

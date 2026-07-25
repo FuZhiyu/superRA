@@ -105,14 +105,12 @@ class TestEndpointResolution:
         outside = tmp_path / "not-a-worktree"
         outside.mkdir()
 
-        with pytest.raises(worktree_data_discovery.WorktreeDiscoveryError) as excinfo:
+        with pytest.raises(RuntimeError, match="not inside any worktree"):
             worktree_data_discovery.resolve_endpoints(
                 outside,
                 to_path=str(repo_with_worktrees["b"]),
                 from_path=None,
             )
-        assert excinfo.value.code == "cwd_outside_worktree"
-        assert excinfo.value.fields["cwd"] == outside.resolve()
 
     def test_worktree_containing_returns_deepest_match(self, tmp_path):
         root = tmp_path / "repo-a"
@@ -134,42 +132,28 @@ class TestEndpointResolution:
         assert destination == repo_with_worktrees["b"].resolve()
 
     def test_rejects_missing_to_worktree(self, repo_with_worktrees, tmp_path):
-        missing = tmp_path / "not-a-worktree"
-        with pytest.raises(worktree_data_discovery.EndpointResolutionError) as excinfo:
+        with pytest.raises(ValueError, match="--to"):
             worktree_data_discovery.resolve_endpoints(
                 repo_with_worktrees["a"],
-                to_path=str(missing),
+                to_path=str(tmp_path / "not-a-worktree"),
                 from_path=None,
             )
-        assert excinfo.value.code == "invalid_endpoint"
-        assert excinfo.value.fields == {"endpoint": "to", "path": missing.resolve()}
 
     def test_rejects_different_repo_endpoint(self, repo_with_worktrees, second_repo_worktree):
-        with pytest.raises(worktree_data_discovery.EndpointResolutionError) as excinfo:
+        with pytest.raises(ValueError, match="--to"):
             worktree_data_discovery.resolve_endpoints(
                 repo_with_worktrees["a"],
                 to_path=str(second_repo_worktree),
                 from_path=None,
             )
-        assert excinfo.value.code == "invalid_endpoint"
-        assert excinfo.value.fields == {
-            "endpoint": "to",
-            "path": second_repo_worktree.resolve(),
-        }
 
     def test_rejects_same_from_to(self, repo_with_worktrees):
-        endpoint = repo_with_worktrees["a"].resolve()
-        with pytest.raises(worktree_data_discovery.EndpointResolutionError) as excinfo:
+        with pytest.raises(ValueError, match="must be different"):
             worktree_data_discovery.resolve_endpoints(
                 repo_with_worktrees["a"],
                 to_path=str(repo_with_worktrees["a"]),
                 from_path=str(repo_with_worktrees["a"]),
             )
-        assert excinfo.value.code == "identical_endpoints"
-        assert excinfo.value.fields == {
-            "source": endpoint,
-            "destination": endpoint,
-        }
 
 
 class TestSeedDiffApply:
@@ -359,7 +343,7 @@ class TestSeedDiffApply:
         json_path = tmp_path / "mismatch.json"
         json_path.write_text(json.dumps(payload), encoding="utf-8")
 
-        with pytest.raises(sync_worktree_data.SyncValidationError) as excinfo:
+        with pytest.raises(ValueError, match="to_worktree"):
             sync_worktree_data.process_from_json(
                 json_path,
                 "overwrite",
@@ -368,12 +352,6 @@ class TestSeedDiffApply:
                 destination_root=target_b,
                 entries=entries,
             )
-        assert excinfo.value.code == "endpoint_mismatch"
-        assert excinfo.value.fields == {
-            "endpoint": "to",
-            "expected": target_b.resolve(),
-            "actual": target_a.resolve(),
-        }
 
     def test_apply_from_json_ignores_external_target_path_and_re_roots_to_to(self, repo_with_worktrees, tmp_path):
         main = repo_with_worktrees["main"]
@@ -451,7 +429,7 @@ class TestSeedDiffApply:
         json_path = tmp_path / "outside-source.json"
         json_path.write_text(json.dumps(payload), encoding="utf-8")
 
-        with pytest.raises(sync_worktree_data.SyncValidationError) as excinfo:
+        with pytest.raises(ValueError, match="outside managed roots"):
             sync_worktree_data.process_from_json(
                 json_path,
                 "overwrite",
@@ -461,9 +439,6 @@ class TestSeedDiffApply:
                 entries=entries,
                 verbose=False,
             )
-        assert excinfo.value.code == "source_outside_managed_roots"
-        assert excinfo.value.fields["source"] == outside_source.resolve()
-        assert excinfo.value.fields["allowed_roots"] == (main.joinpath("output").resolve(),)
 
 
 class TestSeedFastPath:
@@ -531,7 +506,9 @@ class TestSeedFastPath:
         assert (dst / "deep" / "mid" / "other.txt").read_text(encoding="utf-8") == "real\n"
         assert summary.errors == 0
 
-    def test_mostly_dataless_root_seeds_per_file(self, monkeypatch, repo_with_worktrees):
+    def test_mostly_dataless_root_suggests_annotation_and_seeds_per_file(
+        self, monkeypatch, capsys, repo_with_worktrees
+    ):
         main = repo_with_worktrees["main"]
         target = repo_with_worktrees["a"]
         out = main / "output"
@@ -546,7 +523,11 @@ class TestSeedFastPath:
         )
 
         entries = worktree_data_discovery.discover_managed_entries(main)
-        summary = sync_worktree_data.run_seed(entries, target, verbose=False)
+        summary = sync_worktree_data.run_seed(entries, target, verbose=True)
+
+        stderr = capsys.readouterr().err
+        assert "data-sync:symlink" in stderr
+        assert "output" in stderr
 
         dst = target / "output"
         assert dst.is_dir() and not dst.is_symlink()
@@ -586,7 +567,7 @@ class TestSeedFastPath:
         assert (dst / "linkdir" / "inside.txt").read_text(encoding="utf-8") == "ext\n"
         assert summary.errors == 0
 
-    def test_injected_copy_failure_records_failed_path(self, monkeypatch, repo_with_worktrees):
+    def test_injected_copy_failure_records_per_path_reason(self, monkeypatch, repo_with_worktrees):
         main = repo_with_worktrees["main"]
         target = repo_with_worktrees["a"]
 
@@ -609,18 +590,21 @@ class TestSeedFastPath:
         assert summary.errors == len(summary.failures)
         assert any("new.csv" in path for path, _reason in summary.failures)
 
-    def test_seed_summary_retains_all_failure_paths(self):
+    def test_seed_failure_emits_capped_listing(self, capsys):
         summary = sync_worktree_data.SeedSummary()
         for idx in range(25):
             summary.record_failure(f"output/file_{idx}.csv", "copy failed")
 
-        assert summary.errors == 25
-        assert len(summary.failures) == 25
-        assert [path for path, _reason in summary.failures] == [
-            f"output/file_{idx}.csv" for idx in range(25)
-        ]
+        sync_worktree_data.emit_seed_failures(summary, limit=20)
 
-    def test_cli_seed_nonzero_exit_on_failure(self, monkeypatch, repo_with_worktrees):
+        err = capsys.readouterr().err
+        assert "Seed encountered 25 error(s):" in err
+        assert "output/file_0.csv: copy failed" in err
+        assert "output/file_19.csv" in err
+        assert "output/file_20.csv" not in err
+        assert "and 5 more" in err
+
+    def test_cli_seed_nonzero_exit_on_failure(self, monkeypatch, capsys, repo_with_worktrees):
         main = repo_with_worktrees["main"]
         target = repo_with_worktrees["a"]
 
@@ -638,10 +622,9 @@ class TestSeedFastPath:
             sync_worktree_data.main()
 
         assert excinfo.value.code == 1
-        assert failing.errors == 1
-        assert [path for path, _reason in failing.failures] == [
-            str(main / "output" / "new.csv")
-        ]
+        err = capsys.readouterr().err
+        assert "new.csv" in err
+        assert "copy failed" in err
 
 
 class TestCliSurface:
@@ -662,7 +645,7 @@ class TestCliSurface:
             capture_output=True,
             text=True,
         )
-        assert proc.returncode == 2
+        assert proc.returncode != 0
 
     def test_cli_has_no_sandbox_option(self, repo_with_worktrees):
         script = SCRIPTS_DIR / "sync_worktree_data.py"
@@ -680,7 +663,8 @@ class TestCliSurface:
             capture_output=True,
             text=True,
         )
-        assert proc.returncode == 2
+        assert proc.returncode != 0
+        assert "unrecognized arguments" in proc.stderr
 
     def test_cli_rejects_seed_sync_mode_with_diff(self, repo_with_worktrees):
         script = SCRIPTS_DIR / "sync_worktree_data.py"
@@ -699,7 +683,8 @@ class TestCliSurface:
             capture_output=True,
             text=True,
         )
-        assert proc.returncode == 2
+        assert proc.returncode != 0
+        assert "--seed-sync-mode is only valid with --mode seed" in proc.stderr
 
     def test_cli_rejects_seed_sync_mode_with_apply(self, repo_with_worktrees):
         script = SCRIPTS_DIR / "sync_worktree_data.py"
@@ -720,26 +705,16 @@ class TestCliSurface:
             capture_output=True,
             text=True,
         )
-        assert proc.returncode == 2
+        assert proc.returncode != 0
+        assert "--seed-sync-mode is only valid with --mode seed" in proc.stderr
 
-    def test_cli_seed_dry_run_forwards_seed_mode_without_mutation(
-        self, monkeypatch, repo_with_worktrees
-    ):
-        main = repo_with_worktrees["main"]
+    def test_cli_seed_dry_run_reports_seed_mode_without_mutation(self, repo_with_worktrees):
+        script = SCRIPTS_DIR / "sync_worktree_data.py"
         target = repo_with_worktrees["a"]
-        chosen_modes: list[str] = []
-        real_run_seed = sync_worktree_data.run_seed
-
-        def capture_seed_mode(*args, **kwargs):
-            chosen_modes.append(kwargs["seed_sync_mode"])
-            return real_run_seed(*args, **kwargs)
-
-        monkeypatch.setattr(sync_worktree_data, "run_seed", capture_seed_mode)
-        monkeypatch.setattr(
-            sync_worktree_data.sys,
-            "argv",
+        proc = subprocess.run(
             [
-                "sync_worktree_data.py",
+                sys.executable,
+                str(script),
                 "--to",
                 str(target),
                 "--mode",
@@ -748,12 +723,12 @@ class TestCliSurface:
                 "force-symlink",
                 "--dry-run",
             ],
+            cwd=repo_with_worktrees["main"],
+            capture_output=True,
+            text=True,
         )
-        monkeypatch.chdir(main)
-
-        sync_worktree_data.main()
-
-        assert chosen_modes == ["force-symlink"]
+        assert proc.returncode == 0
+        assert "Seed mode: force-symlink" in proc.stdout
         assert not (target / "output").exists()
         assert not (target / "data").exists()
 
@@ -773,6 +748,7 @@ class TestCliSurface:
         )
 
         assert proc.returncode == 0
+        assert f"From: {wt_a.resolve()}" in proc.stdout
         assert (wt_b / "output" / "from_a.csv").exists()
         assert not (wt_b / "output" / "result.csv").exists()
 
@@ -898,11 +874,8 @@ class TestSafeJoinUnder:
         base = tmp_path / "worktree"
         base.mkdir()
 
-        with pytest.raises(sync_worktree_data.SyncValidationError) as excinfo:
+        with pytest.raises(ValueError, match="escapes base root"):
             sync_worktree_data._safe_join_under(base, Path("../etc/passwd"))
-        assert excinfo.value.code == "path_escape"
-        assert excinfo.value.fields["base"] == base.resolve()
-        assert excinfo.value.fields["relative"] == Path("../etc/passwd")
 
     def test_normal_relative_path(self, tmp_path):
         """_safe_join_under should accept a normal relative path."""

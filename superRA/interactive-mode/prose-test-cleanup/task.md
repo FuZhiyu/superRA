@@ -1,7 +1,7 @@
 ---
 title: "Replace Prose-Specific Tests with Behavioral Contracts"
-status: revise
-depends_on: []
+status: not-started
+depends_on:  []
 ---
 
 ## Objective

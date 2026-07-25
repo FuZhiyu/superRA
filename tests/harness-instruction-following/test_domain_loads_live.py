@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the per-domain skill-load live coverage (task 12).
 
-Drives the domain evaluator and structured artifact contracts on synthetic
-inputs with no model call and no ``claude_agent_sdk`` / codex-cli import:
+Drives the domain evaluator and the per-domain Codex artifact canaries on
+synthetic inputs — no model call, no ``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-domain evaluator** (:func:`domain_loads_live.evaluate_domain_load`):
   green for each domain (skill loaded before edit via the Skill hook, including the
@@ -12,8 +12,12 @@ inputs with no model call and no ``claude_agent_sdk`` / codex-cli import:
   green when EVERY matching domain skill loaded; red when only one of several
   matching skills loaded (first-match instead of every-match) — the load-bearing
   case for task 12.
-- **Fixture sanity:** each committed expected artifact preserves its schema and
-  ordered domain skill IDs, including every matched multi-domain ID.
+- **Codex per-domain canaries** (:func:`domain_loads_live.evaluate_codex_domain_canary`):
+  green when the domain skill-unique token is in the artifact ``domain_canaries``
+  list; red when absent; and the multi-domain Codex check requires every matched
+  domain's token, red when one is missing.
+- **Fixture sanity:** each committed expected artifact satisfies its domain canary,
+  and the multi-domain artifact satisfies every multi-domain canary.
 """
 
 from __future__ import annotations
@@ -31,18 +35,18 @@ from sdk_load_evidence import evidence_from_hook_records  # noqa: E402
 from domain_loads_live import (  # noqa: E402
     ALL_DOMAIN_SKILLS,
     DOMAIN_ROWS,
+    MULTI_DOMAIN_CANARIES,
     MULTI_DOMAIN_SKILLS,
     MULTI_DOMAIN_WORDING,
     DomainLoadReport,
-    domain_artifact_matches,
     domain_dispatch_prompt,
     domain_row,
     evaluate_all_domain_loads,
+    evaluate_codex_domain_canary,
+    evaluate_codex_multi_domain,
     evaluate_domain_load,
     evaluate_multi_domain_load,
-    expected_domain_artifact,
 )
-from structured_findings import finding_codes, findings_for  # noqa: E402
 
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "domain-loads"
 
@@ -106,8 +110,7 @@ def test_green_each_domain_loaded_before_edit():
         report = DomainLoadReport()
         evaluate_domain_load(report, row, evidence)
         report.assert_ok()
-        assert finding_codes(report, outcome="observed") == ["DOMAIN_SKILL_LOADED"]
-        assert report.findings[0].subject == row.skill
+        assert len(report.observations) == 1
 
 
 def test_green_domain_loaded_as_plugin_qualified_name():
@@ -133,8 +136,8 @@ def test_red_domain_never_loaded():
     report = DomainLoadReport()
     evaluate_domain_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_MISSING"]
-    assert findings_for(report, "DOMAIN_SKILL_MISSING")[0].subject == "theory-modeling"
+    assert "theory-modeling" in report.missing[0]
+    assert "never loaded" in report.missing[0]
 
 
 def test_red_domain_loaded_after_first_edit():
@@ -146,13 +149,7 @@ def test_red_domain_loaded_after_first_edit():
     report = DomainLoadReport()
     evaluate_domain_load(report, row, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_LATE"]
-    finding = findings_for(report, "DOMAIN_SKILL_LATE")[0]
-    assert (finding.subject, finding.event_index, finding.related_index) == (
-        "writing",
-        5,
-        2,
-    )
+    assert "before the first edit" in report.missing[0]
 
 
 def test_evaluate_all_green_across_all_domains():
@@ -163,18 +160,14 @@ def test_evaluate_all_green_across_all_domains():
     report = DomainLoadReport()
     evaluate_all_domain_loads(report, evidence_by_domain)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == [
-        "DOMAIN_SKILL_LOADED"
-    ] * len(DOMAIN_ROWS)
+    assert len(report.observations) == len(DOMAIN_ROWS)
 
 
 def test_evaluate_all_reports_missing_evidence_for_a_domain():
     report = DomainLoadReport()
     evaluate_all_domain_loads(report, {})
-    assert finding_codes(report, outcome="missing") == [
-        "DOMAIN_EVIDENCE_MISSING"
-    ] * len(DOMAIN_ROWS)
-    assert {finding.subject for finding in report.findings} == ALL_DOMAIN_SKILLS
+    assert len(report.missing) == len(DOMAIN_ROWS)
+    assert all("no captured evidence" in m for m in report.missing)
 
 
 # --------------------------------------------------------------------------- #
@@ -195,9 +188,7 @@ def test_green_multi_domain_all_loaded():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == [
-        "DOMAIN_SKILL_LOADED"
-    ] * len(MULTI_DOMAIN_SKILLS)
+    assert len(report.observations) == len(MULTI_DOMAIN_SKILLS)
 
 
 def test_red_multi_domain_loaded_only_one():
@@ -211,14 +202,9 @@ def test_red_multi_domain_loaded_only_one():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_MISSING"]
-    assert findings_for(report, "DOMAIN_SKILL_MISSING")[0].subject == "writing"
+    assert any("writing" in m and "never loaded" in m for m in report.missing)
     # theory-modeling DID load, so it is not in the failures.
-    assert "theory-modeling" not in {
-        finding.subject
-        for finding in report.findings
-        if finding.outcome == "missing"
-    }
+    assert not any("'theory-modeling' never loaded" in m for m in report.missing)
 
 
 def test_red_multi_domain_none_loaded():
@@ -229,13 +215,66 @@ def test_red_multi_domain_none_loaded():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == [
-        "DOMAIN_SKILL_MISSING"
-    ] * len(MULTI_DOMAIN_SKILLS)
+    assert len(report.missing) == len(MULTI_DOMAIN_SKILLS)
 
 
 # --------------------------------------------------------------------------- #
-# Structured artifact contract
+# Codex per-domain artifact canaries
+# --------------------------------------------------------------------------- #
+
+
+def test_green_codex_canary_each_domain_from_artifact_list():
+    for row in DOMAIN_ROWS:
+        report = DomainLoadReport()
+        evaluate_codex_domain_canary(
+            report,
+            row.codex_canary,
+            {"domain_canaries": [row.codex_canary.token]},
+        )
+        report.assert_ok()
+
+
+def test_red_codex_canary_absent_for_a_domain():
+    row = domain_row("slide-design")
+    report = DomainLoadReport()
+    evaluate_codex_domain_canary(
+        report,
+        row.codex_canary,
+        {"domain_canaries": ["WRONG"]},
+    )
+    assert not report.ok
+    assert "slide-design" in report.missing[0]
+    assert "did not load" in report.missing[0]
+
+
+def test_green_codex_multi_domain_all_tokens_present():
+    artifact = {
+        "domain_canaries": [spec.token for spec in MULTI_DOMAIN_CANARIES],
+    }
+    report = DomainLoadReport()
+    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, artifact)
+    report.assert_ok()
+    assert len(report.observations) == len(MULTI_DOMAIN_CANARIES)
+
+
+def test_red_codex_multi_domain_missing_one_token():
+    # Only the first matched domain's token present -> the others fail.
+    artifact = {"domain_canaries": [MULTI_DOMAIN_CANARIES[0].token]}
+    report = DomainLoadReport()
+    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, artifact)
+    assert not report.ok
+    assert len(report.missing) == len(MULTI_DOMAIN_CANARIES) - 1
+
+
+def test_codex_canary_absent_artifact_fails():
+    row = domain_row("econ-data-analysis")
+    report = DomainLoadReport()
+    evaluate_codex_domain_canary(report, row.codex_canary, None)
+    assert not report.ok
+
+
+# --------------------------------------------------------------------------- #
+# Fixture sanity: committed expected artifacts satisfy the canaries
 # --------------------------------------------------------------------------- #
 
 
@@ -247,27 +286,21 @@ def _load_expected(name: str) -> dict:
     )
 
 
-def test_committed_single_domain_artifacts_use_structured_skill_ids():
+def test_committed_single_domain_artifacts_satisfy_canaries():
     for row in DOMAIN_ROWS:
         expected = _load_expected(row.skill)
-        assert domain_artifact_matches((row.skill,), expected)
+        report = DomainLoadReport()
+        evaluate_codex_domain_canary(report, row.codex_canary, expected)
+        report.assert_ok()
+        assert expected["domains"] == [row.skill]
 
 
-def test_committed_multi_domain_artifact_preserves_every_skill_id():
+def test_committed_multi_domain_artifact_satisfies_all_canaries():
     expected = _load_expected("multi-domain")
-    assert domain_artifact_matches(MULTI_DOMAIN_SKILLS, expected)
-
-
-def test_domain_artifact_rejects_missing_multi_domain_skill_id():
-    artifact = expected_domain_artifact(MULTI_DOMAIN_SKILLS)
-    artifact["domains"].pop()
-    assert not domain_artifact_matches(MULTI_DOMAIN_SKILLS, artifact)
-
-
-def test_domain_artifact_rejects_extra_fields():
-    artifact = expected_domain_artifact(("writing",))
-    artifact["instruction"] = "extra"
-    assert not domain_artifact_matches(("writing",), artifact)
+    report = DomainLoadReport()
+    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, expected)
+    report.assert_ok()
+    assert set(expected["domains"]) == set(MULTI_DOMAIN_SKILLS)
 
 
 def test_multi_domain_wording_is_nonempty_and_used():

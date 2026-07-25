@@ -1,8 +1,8 @@
 ---
-title: "Per-Stage Skill-Load Behavior Task"
+title: "Per-Stage Skill-Load Canary Task"
 status: not-started
 depends_on: []
-tags: [fixture, harness]
+tags: [fixture, canary]
 output:
   - stage-loads-evidence.json
 created: 2026-06-19
@@ -14,8 +14,8 @@ Read this task with `./superRA/superra task read stage-loads-task`. You are an
 implementer (or reviewer); load the skill or reference your role spec and the
 Skill-Load Manifest tell you to load for the `Stage:` your dispatch named, before
 acting. This task proves that stage skill/reference reached your context by asking
-for the structured load identity. Do not edit source code, install anything, run a
-test suite, or explore the codebase.
+for one skill-unique token from it. Do not edit source code, install anything, run
+a test suite, or explore the codebase.
 
 Do exactly this:
 
@@ -24,17 +24,23 @@ Do exactly this:
 
 ```json
 {
-  "schema": "superra.stage-load-evidence/v1",
+  "schema_version": 1,
   "stage": "<your dispatch Stage: value>",
-  "loads": ["<structured load identities described below>"]
+  "stage_canary": "<the discriminating concept named below>"
 }
 ```
 
-Encode each required load as its stable identity:
+The `stage_canary` value is the discriminating concept that stage's manifest
+skill/reference body prescribes — knowable only from that body:
 
-- Skill: `{"kind": "skill", "id": "<manifest skill ID>"}`
-- Reference: `{"kind": "reference", "path": "<manifest reference path>"}`
+- `protection` → `drift test`
+- `sync` → `intent conflict`
+- `integration` → `minimum net diff`
+- `planning-review` → `handoff-readiness`
+- `maturation` → `frontier`
 
 For `maturation`, load the skills the manifest maps that stage to (`task-tree`,
-`superplan`; `writing` only for prose-heavy maturation). For `implementation`,
-write an empty `loads` list.
+`superplan`; `writing` only for prose-heavy maturation); `frontier` is a concept
+unique to the always-loaded `task-tree` body.
+
+For `implementation` there is no extra stage skill; set `stage_canary` to `none`.

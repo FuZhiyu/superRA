@@ -1,8 +1,5 @@
 {
-  "schema": "superra.stage-load-evidence/v1",
+  "schema_version": 1,
   "stage": "maturation",
-  "loads": [
-    {"kind": "skill", "id": "task-tree"},
-    {"kind": "skill", "id": "superplan"}
-  ]
+  "stage_canary": "frontier"
 }

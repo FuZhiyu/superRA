@@ -23,12 +23,12 @@
     {% endif %}
   {% endfor %}
 
-  <div class="kanban-col" data-status="{{ status_key }}" data-count="{{ tasks_in_col | length }}">
+  <div class="kanban-col">
     <div class="kanban-col-header">
       {{ status_label }} <span class="count">{{ tasks_in_col | length }}</span>
     </div>
     {% for t in tasks_in_col %}
-    <div class="kanban-card" data-path="{{ t.path }}" data-status="{{ status_key }}">
+    <div class="kanban-card" data-path="{{ t.path }}">
       <div class="kanban-card-title">{{ t.title or t.path }}</div>
       <div class="kanban-card-path">{{ t.path }}</div>
     </div>

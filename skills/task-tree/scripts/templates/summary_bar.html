@@ -10,12 +10,6 @@
 {% set approved = leaves | selectattr('status', 'equalto', 'approved') | list | length %}
 {% set pct = ((100 * approved / active_leaves) | round | int) if active_leaves > 0 else 0 %}
 
-<span id="stat-tasks"
-      data-active-count="{{ active_leaves }}"
-      data-group-count="{{ groups }}"
-      data-archived-count="{{ archived_leaves }}"
-      data-postponed-count="{{ postponed_leaves }}"><strong>{{ active_leaves }}</strong> tasks, <strong>{{ groups }}</strong> groups{% if archived_leaves %}, <strong>{{ archived_leaves }}</strong> archived{% endif %}{% if postponed_leaves %}, <strong>{{ postponed_leaves }}</strong> postponed{% endif %}</span>
-<span id="stat-approved"
-      data-approved-count="{{ approved }}"
-      data-active-count="{{ active_leaves }}"><strong>{{ approved }}/{{ active_leaves }}</strong> approved</span>
-<div class="progress-track"><div class="progress-fill" id="progress-fill" data-percent="{{ pct }}" style="width:{{ pct }}%"></div></div>
+<span id="stat-tasks"><strong>{{ active_leaves }}</strong> tasks, <strong>{{ groups }}</strong> groups{% if archived_leaves %}, <strong>{{ archived_leaves }}</strong> archived{% endif %}{% if postponed_leaves %}, <strong>{{ postponed_leaves }}</strong> postponed{% endif %}</span>
+<span id="stat-approved"><strong>{{ approved }}/{{ active_leaves }}</strong> approved</span>
+<div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:{{ pct }}%"></div></div>

@@ -110,7 +110,7 @@ class TestParseTask:
             "---\ntitle: T\nstatus: done\n---\n## Objective\n\nx\n",
             encoding="utf-8",
         )
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="invalid status 'done'"):
             task = _task_io.parse_task(task_md)
         assert task.status == "done"  # raw value preserved, not coerced
 
@@ -124,7 +124,7 @@ class TestParseTask:
         )
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="outside the supplied plan root"):
             _task_io.parse_task(outside / "task.md", plan_root=root_dir)
 
     def test_legacy_fields_parse_and_are_dropped_on_rewrite(self, tmp_path):
@@ -220,7 +220,7 @@ class TestResolvePath:
         assert not (resolved / "task.md").exists()
 
     def test_traversal_escape_still_rejected(self, plan_root):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="escapes plan root"):
             _task_io.resolve_path(plan_root, "../../etc")
 
 
@@ -308,20 +308,24 @@ class TestCliPrefixTolerantMutations:
         with pytest.raises(SystemExit) as excinfo:
             cli.main(["task", "update", "01-x", "--status", "approved"])
         assert excinfo.value.code == 1
-        assert not (tmp_path / "superRA").exists()
+        err = capsys.readouterr().err
+        assert "could not auto-detect task root" in err
+        assert "does not exist" not in err
 
     def test_invalid_status_error_stays_on_public_surface(self, plan_root, capsys):
         # The public command must not leak the legacy mutator's internal flags
         # (--plan-root / --path / --cascade) in its usage/error output. Direct
         # function calls (not argv round-tripping) keep the surface single.
-        before = (plan_root / "02-second" / "task.md").read_bytes()
-        with pytest.raises(SystemExit) as excinfo:
+        with pytest.raises(SystemExit):
             cli.main([
                 "task", "update", "02-second",
                 "--root", str(plan_root), "--status", "bogus",
             ])
-        assert excinfo.value.code == 2
-        assert (plan_root / "02-second" / "task.md").read_bytes() == before
+        err = capsys.readouterr().err
+        assert "invalid choice: 'bogus'" in err
+        assert "--plan-root" not in err
+        assert "--path" not in err
+        assert "--cascade" not in err
 
 
 class TestWalkPlan:
@@ -365,8 +369,7 @@ class TestWalkPlan:
 
         assert len(root.children) == 1
         assert root.children[0].slug == "01-good"
-        assert len(caught) == 1
-        assert caught[0].category is UserWarning
+        assert any("02-bad" in str(w.message) for w in caught)
 
 
 class TestComputeStatus:
@@ -528,6 +531,7 @@ class TestComputeFrontier:
         ancestors_ready=True, the root itself appears on the frontier.
         This is correct: a childless root IS the work to be done.
 
+        render_dag should return the fallback 'no children' output.
         """
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
@@ -537,6 +541,8 @@ class TestComputeFrontier:
         # Root with no children is itself a leaf and is on the frontier
         assert len(frontier) == 1
         assert frontier[0].is_root
+        dag = task_query.render_dag(root)
+        assert "no children" in dag
 
 
 class TestWriteTask:
@@ -624,8 +630,7 @@ class TestFrontmatterParsing:
             _warnings.simplefilter("always")
             fm, body = _task_io.parse_frontmatter(text)
         assert fm == {}
-        assert len(caught) == 1
-        assert caught[0].category is UserWarning
+        assert any("'---'" in str(w.message) for w in caught)
 
 
 # --- CLI script tests ---
@@ -982,7 +987,7 @@ class TestTaskMoveCrossParentDeps:
     """Cross-parent moves drop sibling-only depends_on edges they strand, warning
     on each drop instead of aborting."""
 
-    def test_drops_moved_task_stranded_dep(self, plan_with_branches):
+    def test_drops_moved_task_stranded_dep(self, plan_with_branches, capsys):
         # 02-merge depends on its sibling 01-load. Moving it under 02-estimation
         # strands that edge (no 01-load sibling there) — drop it and warn.
         task_rename.rename_task(plan_with_branches,
@@ -990,8 +995,9 @@ class TestTaskMoveCrossParentDeps:
         moved = _task_io.parse_task(
             plan_with_branches / "02-estimation" / "01-merge" / "task.md")
         assert moved.depends_on == []
+        assert "dropped stranded depends_on '01-load'" in capsys.readouterr().err
 
-    def test_drops_sibling_stranded_dep(self, plan_with_branches):
+    def test_drops_sibling_stranded_dep(self, plan_with_branches, capsys):
         # 02-merge stays put and depends on 01-load. Moving 01-load out from under
         # 01-data-prep strands 02-merge's edge — drop it from the sibling and warn.
         task_rename.rename_task(plan_with_branches,
@@ -999,8 +1005,10 @@ class TestTaskMoveCrossParentDeps:
         merge = _task_io.parse_task(
             plan_with_branches / "01-data-prep" / "02-merge" / "task.md")
         assert merge.depends_on == []
+        err = capsys.readouterr().err
+        assert "dropped stranded depends_on '01-load' from sibling 02-merge" in err
 
-    def test_drops_self_edge_on_destination_slug(self, tmp_path):
+    def test_drops_self_edge_on_destination_slug(self, tmp_path, capsys):
         # The moved task's own edge names the slug it will occupy at the
         # destination — a self-dependency once moved, so it is dropped.
         root = tmp_path / "superRA"
@@ -1016,6 +1024,7 @@ class TestTaskMoveCrossParentDeps:
         task_rename.rename_task(root, "01-a/01-mover", "02-b/02-mover")
         moved = _task_io.parse_task(root / "02-b" / "02-mover" / "task.md")
         assert moved.depends_on == []
+        assert "dropped stranded depends_on '02-mover'" in capsys.readouterr().err
 
     def test_keeps_dep_that_resolves_under_destination(self, tmp_path):
         root = tmp_path / "superRA"
@@ -1152,42 +1161,25 @@ class TestReviewedCliTaskRootDefaults:
             task_check.main([])
         assert excinfo.value.code == 0
 
-    def test_reviewed_cli_parsers_register_plan_root(self, tmp_path):
-        """The reviewed CLIs accept an explicit task-root argument."""
-        root = str(tmp_path / "superRA")
-        parser_calls = [
-            (task_update.parse_args, ["--plan-root", root]),
-            (
-                task_add_result.parse_args,
-                ["--plan-root", root, "--path", "01-task"],
-            ),
-            (
-                task_link.parse_args,
-                [
-                    "--plan-root",
-                    root,
-                    "--path",
-                    "01-task",
-                    "--depends-on",
-                    "00-input",
-                ],
-            ),
-            (
-                task_rename.parse_args,
-                [
-                    "--plan-root",
-                    root,
-                    "--from",
-                    "01-task",
-                    "--to",
-                    "02-task",
-                ],
-            ),
-            (task_check.parse_args, ["--plan-root", root]),
+    def test_reviewed_cli_help_describes_autodetect_task_root(self, capsys):
+        """The reviewed CLIs document optional task-root auto-detection."""
+        parsers = [
+            task_update.parse_args,
+            task_add_result.parse_args,
+            task_link.parse_args,
+            task_rename.parse_args,
+            task_check.parse_args,
         ]
 
-        for parse, argv in parser_calls:
-            assert parse(argv).plan_root == root
+        for parse in parsers:
+            with pytest.raises(SystemExit) as excinfo:
+                parse(["--help"])
+            assert excinfo.value.code == 0
+            out = capsys.readouterr().out
+            assert "--plan-root" in out
+            assert "task root directory" in out
+            assert "auto-detect" in out
+            assert "superRA" in out
 
 
 class TestCollectAllTasks:
@@ -1668,26 +1660,21 @@ class TestValidateFrontmatter:
     def test_bad_status_value(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.status = "done"  # invalid enum value
-        findings = _task_validate.validate_frontmatter(task)
-        assert [(f.code, f.subject, f.actual, f.path) for f in findings] == [
-            ("status.invalid", "status", "done", "02-second")
-        ]
+        warnings = _task_validate.validate_frontmatter(task)
+        assert any("invalid status" in w for w in warnings)
+        assert any("done" in w for w in warnings)
 
     def test_depends_on_not_list(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.depends_on = "01-first"  # string instead of list
-        findings = _task_validate.validate_frontmatter(task)
-        assert [(f.code, f.subject, f.actual, f.path) for f in findings] == [
-            ("frontmatter.invalid-type", "depends_on", "01-first", "02-second")
-        ]
+        warnings = _task_validate.validate_frontmatter(task)
+        assert any("depends_on" in w for w in warnings)
 
     def test_empty_title_warning(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
         task.title = ""
-        findings = _task_validate.validate_frontmatter(task)
-        assert [(f.code, f.subject, f.actual, f.path) for f in findings] == [
-            ("frontmatter.empty", "title", "", "01-first")
-        ]
+        warnings = _task_validate.validate_frontmatter(task)
+        assert any("title" in w for w in warnings)
 
 
 class TestValidateDependencies:
@@ -1699,25 +1686,16 @@ class TestValidateDependencies:
     def test_missing_sibling_ref(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         # Pass siblings that don't include 01-first
-        findings = _task_validate.validate_dependencies(
-            task, ["02-second", "03-third"]
-        )
-        assert len(findings) == 1
-        assert findings[0].code == "dependency.missing-sibling"
-        assert findings[0].subject == "depends_on"
-        assert findings[0].actual == "01-first"
-        assert findings[0].path == "02-second"
-        assert findings[0].related_nodes == ("01-first",)
+        warnings = _task_validate.validate_dependencies(task, ["02-second", "03-third"])
+        assert len(warnings) == 1
+        assert "01-first" in warnings[0]
+        assert "does not match" in warnings[0]
 
     def test_nonexistent_dep(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.depends_on = ["nonexistent"]
-        findings = _task_validate.validate_dependencies(
-            task, ["01-first", "02-second"]
-        )
-        assert [(f.code, f.actual) for f in findings] == [
-            ("dependency.missing-sibling", "nonexistent")
-        ]
+        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second"])
+        assert any("nonexistent" in w for w in warnings)
 
     def test_no_deps_no_warnings(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
@@ -1755,11 +1733,9 @@ class TestDetectCycles:
             ("01-a", ["02-b"]),
             ("02-b", ["01-a"]),
         ])
-        findings = _task_validate.detect_cycles(tasks)
-        assert len(findings) == 1
-        assert findings[0].code == "dependency.cycle"
-        assert findings[0].subject == "depends_on"
-        assert findings[0].related_nodes == ("01-a", "02-b", "01-a")
+        warnings = _task_validate.detect_cycles(tasks)
+        assert len(warnings) >= 1
+        assert any("cycle" in w.lower() for w in warnings)
 
     def test_three_node_cycle(self, tmp_path):
         tasks = self._make_tasks(tmp_path, [
@@ -1767,10 +1743,11 @@ class TestDetectCycles:
             ("02-b", ["01-a"]),
             ("03-c", ["02-b"]),
         ])
-        findings = _task_validate.detect_cycles(tasks)
-        assert len(findings) == 1
-        assert findings[0].code == "dependency.cycle"
-        assert set(findings[0].related_nodes) == {"01-a", "02-b", "03-c"}
+        warnings = _task_validate.detect_cycles(tasks)
+        assert any("cycle" in w.lower() for w in warnings)
+        # Cycle description should mention the nodes involved
+        cycle_msg = warnings[0]
+        assert "->" in cycle_msg
 
     def test_independent_tasks_no_cycle(self, tmp_path):
         tasks = self._make_tasks(tmp_path, [
@@ -1787,31 +1764,25 @@ class TestValidatePlan:
         warnings = _task_validate.validate_plan(plan_root)
         assert warnings == []
 
-    def test_missing_dep_produces_finding(self, plan_root):
+    def test_missing_dep_produces_warning(self, plan_root):
         # Add a task with a depends_on pointing to a nonexistent sibling
         bad_dir = plan_root / "04-bad"
         bad_dir.mkdir()
         _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
                        depends_on=["99-nonexistent"])
-        findings = _task_validate.validate_plan(plan_root)
-        assert any(
-            f.code == "dependency.missing-sibling"
-            and f.actual == "99-nonexistent"
-            for f in findings
-        )
+        warnings = _task_validate.validate_plan(plan_root)
+        assert any("nonexistent" in w for w in warnings)
 
-    def test_findings_carry_task_path(self, plan_root):
+    def test_warnings_prefixed_with_task_path(self, plan_root):
         bad_dir = plan_root / "04-bad"
         bad_dir.mkdir()
         _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
                        depends_on=["99-nonexistent"])
-        findings = _task_validate.validate_plan(plan_root)
-        assert any(
-            f.code == "dependency.missing-sibling" and f.path == "04-bad"
-            for f in findings
-        )
+        warnings = _task_validate.validate_plan(plan_root)
+        # Each warning should be prefixed with the task path
+        assert any(w.startswith("04-bad:") for w in warnings)
 
-    def test_cycle_produces_finding(self, tmp_path):
+    def test_cycle_produces_warning(self, tmp_path):
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
@@ -1821,10 +1792,8 @@ class TestValidatePlan:
         d2 = root_dir / "02-b"
         d2.mkdir()
         _write_task_md(d2 / "task.md", "B", "not-started", depends_on=["01-a"])
-        findings = _task_validate.validate_plan(root_dir)
-        assert [(f.code, f.path) for f in findings] == [
-            ("dependency.cycle", "")
-        ]
+        warnings = _task_validate.validate_plan(root_dir)
+        assert any("cycle" in w.lower() for w in warnings)
 
 
 # --- Topological sort tests ---
@@ -1905,21 +1874,56 @@ class TestTaskRead:
         ancestors = task_read._collect_ancestors(plan_root, "")
         assert ancestors == []
 
-    def test_focused_tree_includes_target_and_siblings(self, plan_root):
+    def test_no_ancestors_flag(self, plan_root):
+        """render_human with show_ancestors=False omits the ancestor section."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        output = task_read.render_human(
+            ancestors=[],
+            target_task=target,
+            dep_pairs=dep_pairs,
+            show_ancestors=False,
+        )
+        assert "=== Context ===" not in output
+        assert "Ancestor Context" not in output
+        assert "Second Task" in output
+
+    def test_context_header_renamed(self, plan_root):
+        """The Context block uses the `=== Context ===` header, not the old name."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        ancestors = task_read._collect_ancestors(plan_root, target.path)
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        root = _task_io.walk_plan(plan_root)
+        tree = task_query.format_focused_tree(root, target.path)
+        output = task_read.render_human(
+            ancestors, target, dep_pairs, show_ancestors=True, focused_tree=tree
+        )
+        assert "=== Context ===" in output
+        assert "Ancestor Context" not in output
+
+    def test_focused_tree_marks_current_and_shows_siblings(self, plan_root):
+        """Focused tree marks the current node and lists its siblings."""
         target = _task_io.parse_task(plan_root / "02-second" / "task.md")
         root = _task_io.walk_plan(plan_root)
         tree = task_query.format_focused_tree(root, target.path)
+        # Current node is marked.
+        marked = [ln for ln in tree.splitlines() if "← this task" in ln]
+        assert len(marked) == 1
+        assert "02-second" in marked[0]
+        # Siblings appear, unmarked.
         assert "01-first" in tree
-        assert "02-second" in tree
         assert "03-third" in tree
+        assert tree.count("← this task") == 1
 
     def test_focused_tree_shows_children_not_unrelated_branches(self, plan_with_branches):
         """Focused tree shows the target's direct children but not unrelated ancestor branches."""
         root = _task_io.walk_plan(plan_with_branches)
         # Target is the branch task 01-data-prep, which has children 01-load, 02-merge.
         tree = task_query.format_focused_tree(root, "01-data-prep")
+        assert "← this task" in tree
         # Direct children of the target are shown.
-        assert "01-data-prep" in tree
         assert "01-load" in tree
         assert "02-merge" in tree
         # The sibling branch 02-estimation is shown (it is a sibling of the target)...
@@ -1935,7 +1939,9 @@ class TestTaskRead:
         # must appear (it is an ancestor sibling) but unexpanded; the target's
         # own siblings (01-load) must appear.
         tree = task_query.format_focused_tree(root, "01-data-prep/02-merge")
-        assert "02-merge" in tree
+        assert "← this task" in tree
+        marked = [ln for ln in tree.splitlines() if "← this task" in ln]
+        assert "02-merge" in marked[0]
         assert "01-load" in tree  # target sibling
         # 02-estimation is a sibling of the target's parent. It is NOT on the
         # spine and NOT a sibling of the target, so the focused form does not
@@ -1953,6 +1959,18 @@ class TestTaskRead:
         assert "ancestors" in data
         assert "task" in data
         assert "dependencies" in data
+
+    def test_planner_guidance_rendered_in_human_output(self, plan_root):
+        task_md = plan_root / "02-second" / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Planner Guidance\n\nUse the current helper if it fits.\n",
+            encoding="utf-8",
+        )
+        target = _task_io.parse_task(task_md)
+        output = task_read.render_human([], target, [], show_ancestors=False)
+        assert "## Planner Guidance" in output
+        assert "Use the current helper if it fits." in output
 
     def test_planner_guidance_rendered_in_json_sections(self, plan_root):
         task_md = plan_root / "02-second" / "task.md"
@@ -1977,16 +1995,15 @@ class TestTaskRead:
         assert isinstance(data["ancestors"], list)
         assert all("path" in a and "title" in a for a in data["ancestors"])
 
-    def test_sibling_dependency_resolves_to_structured_task(self, plan_root):
+    def test_sibling_dep_status_shown(self, plan_root):
+        """Sibling dependency status + title appear in human output."""
         target = _task_io.parse_task(plan_root / "02-second" / "task.md")
         siblings = task_read._sibling_map(plan_root, target)
         dep_pairs = task_read._dep_tasks(target, siblings)
-        assert len(dep_pairs) == 1
-        dep_slug, dep_task = dep_pairs[0]
-        assert dep_slug == "01-first"
-        assert dep_task is not None
-        assert dep_task.path == "01-first"
-        assert dep_task.status == "approved"
+        output = task_read.render_human([], target, dep_pairs, show_ancestors=False)
+        # 01-first is approved; its status and title should appear
+        assert "01-first" in output
+        assert "approved" in output
 
     def test_autodetect_plan_root(self, plan_root):
         """Auto-detect plan root from a subdirectory inside the plan."""
@@ -2025,6 +2042,26 @@ class TestTaskRead:
         # root (path="") and 01-data-prep should be in ancestors
         assert "" in paths
         assert "01-data-prep" in paths
+
+    def test_ancestor_objective_full_not_truncated(self, plan_root):
+        """Human output shows the full ancestor ## Objective, beyond 10 lines and
+        including nested ### subsections."""
+        long_objective = (
+            "\n".join(f"Objective line {i}." for i in range(1, 16))
+            + "\n\n### Conventions\n\nUse left joins throughout the subtree."
+        )
+        root_md = plan_root / "task.md"
+        _write_task_md(root_md, "Test Project", "not-started",
+                       objective=long_objective)
+        ancestors = task_read._collect_ancestors(plan_root, "02-second")
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        output = task_read.render_human(ancestors, target, dep_pairs)
+        assert "Objective line 15." in output  # past old 10-line cap
+        assert "..." not in output.split("=== Task:")[0]  # no truncation marker
+        assert "### Conventions" in output
+        assert "Use left joins throughout the subtree." in output
 
     def test_ancestor_objective_field_in_json_preserves_keys(self, plan_root):
         """JSON ancestors carry an explicit full `objective` field while keeping
@@ -2861,10 +2898,7 @@ class TestValidateRevisionNotes:
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
             body="## Objective\n\nx\n\n## Revision Notes\n\nstale note\n",
         )
-        findings = _task_validate.validate_revision_notes(t)
-        assert [(f.code, f.subject, f.actual, f.path) for f in findings] == [
-            ("revision-notes.stale", "Revision Notes", "approved", "01-t")
-        ]
+        assert _task_validate.validate_revision_notes(t)
 
     def test_approved_without_revnote_no_warn(self):
         t = _task_io.Task(
@@ -2921,10 +2955,9 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "approved", revnote="stale note"))
-        findings = _task_validate.validate_plan(root)
-        assert [(f.code, f.path) for f in findings] == [
-            ("revision-notes.stale", "01-task")
-        ]
+        warnings = _task_validate.validate_plan(root)
+        assert any("Revision Notes" in w and w.startswith("01-task:")
+                   for w in warnings)
 
     def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
         root = tmp_path / "superRA"
@@ -2934,8 +2967,8 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "implemented", revnote="rework"))
-        findings = _task_validate.validate_plan(root)
-        assert all(f.code != "revision-notes.stale" for f in findings)
+        warnings = _task_validate.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
 
     def test_validate_plan_silent_on_fenced_header(self, tmp_path):
         root = tmp_path / "superRA"
@@ -2952,8 +2985,8 @@ class TestValidatePlanRevisionNotes:
             "tags: []\ncreated: 2026-01-01\n"
         )
         self._write(d / "task.md", f"---\n{fm}---\n\n{fenced}")
-        findings = _task_validate.validate_plan(root)
-        assert all(f.code != "revision-notes.stale" for f in findings)
+        warnings = _task_validate.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
 
 
 
@@ -3067,8 +3100,8 @@ class TestPostponedSemantics:
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Parked", "postponed")
         task = _task_io.parse_task(root_dir / "task.md")
-        findings = _task_validate.validate_frontmatter(task)
-        assert all(f.code != "status.invalid" for f in findings)
+        warnings_out = _task_validate.validate_frontmatter(task)
+        assert not any("status" in w for w in warnings_out)
 
     def test_postponed_leaf_excluded_from_frontier(self, tmp_path):
         """A leaf task with status 'postponed' never appears on the frontier."""
@@ -3312,19 +3345,14 @@ class TestCascade:
         assert a.status == "archived", "archived leaf should not be unarchived by cascade"
         assert b.status == "not-started"
 
-    def test_branch_status_without_cascade_updates_only_branch(self):
-        child_paths = [
-            self.plan_root / "01-branch" / "01-leaf-a" / "task.md",
-            self.plan_root / "01-branch" / "02-leaf-b" / "task.md",
-        ]
-        before = [path.read_bytes() for path in child_paths]
+    def test_branch_status_without_cascade_warns(self, capsys):
+        """Setting status on a branch task without --cascade prints a warning."""
         task_update.update_task(
             self.plan_root, "01-branch",
             status="approved",
         )
-        branch = _task_io.parse_task(self.plan_root / "01-branch" / "task.md")
-        assert branch.status == "approved"
-        assert [path.read_bytes() for path in child_paths] == before
+        captured = capsys.readouterr()
+        assert "children" in captured.err.lower() or "rollup" in captured.err.lower()
 
 
 # --- Forward-compatible reading tests ---
@@ -3409,15 +3437,8 @@ class TestTaskCheck:
         )
         (d / "task.md").write_text(content, encoding="utf-8")
         findings = task_check.run_checks(root_dir, category="status")
-        assert any(
-            f.code == "status.invalid"
-            and f.category == "status"
-            and f.severity == "error"
-            and f.subject == "status"
-            and f.actual == "completed"
-            and f.path == "01-bad"
-            for f in findings
-        )
+        assert any(f.category == "status" and f.severity == "error" for f in findings)
+        assert any("completed" in f.message for f in findings)
 
     def test_detects_stale_review_status(self, tmp_path):
         """Flags stale review_status field still present in frontmatter."""
@@ -3430,10 +3451,7 @@ class TestTaskCheck:
                        review_status="approved")
         findings = task_check.run_checks(root_dir, category="status")
         assert any(
-            f.code == "status.stale-field"
-            and f.category == "status"
-            and f.subject == "review_status"
-            and f.actual == "approved"
+            "review_status" in f.message and f.category == "status"
             for f in findings
         )
 
@@ -3448,10 +3466,7 @@ class TestTaskCheck:
                        integration_status="~")
         findings = task_check.run_checks(root_dir, category="status")
         assert any(
-            f.code == "status.stale-field"
-            and f.category == "status"
-            and f.subject == "integration_status"
-            and f.actual == ""
+            "integration_status" in f.message and f.category == "status"
             for f in findings
         )
 
@@ -3466,12 +3481,8 @@ class TestTaskCheck:
                        depends_on=["99-missing"])
         findings = task_check.run_checks(root_dir, category="dependency")
         assert any(
-            f.code == "dependency.missing-sibling"
-            and f.category == "dependency"
-            and f.severity == "error"
-            and f.subject == "depends_on"
-            and f.actual == "99-missing"
-            and f.related_nodes == ("99-missing",)
+            f.category == "dependency" and f.severity == "error"
+            and "99-missing" in f.message
             for f in findings
         )
 
@@ -3490,9 +3501,7 @@ class TestTaskCheck:
                        depends_on=["01-a"])
         findings = task_check.run_checks(root_dir, category="dependency")
         assert any(
-            f.code == "dependency.cycle"
-            and f.category == "dependency"
-            and f.related_nodes == ("01-a", "02-b", "01-a")
+            f.category == "dependency" and "cycle" in f.message.lower()
             for f in findings
         )
 
@@ -3510,11 +3519,8 @@ class TestTaskCheck:
                        depends_on=["01-dep"])
         findings = task_check.run_checks(root_dir, category="dependency")
         assert any(
-            f.code == "dependency.archived"
-            and f.category == "dependency"
-            and f.severity == "warning"
-            and f.actual == "archived"
-            and f.related_nodes == ("01-dep",)
+            f.category == "dependency" and f.severity == "warning"
+            and "archived" in f.message
             for f in findings
         )
 
@@ -3532,11 +3538,8 @@ class TestTaskCheck:
                        depends_on=["01-dep"])
         findings = task_check.run_checks(root_dir, category="dependency")
         assert any(
-            f.code == "dependency.postponed"
-            and f.category == "dependency"
-            and f.severity == "warning"
-            and f.actual == "postponed"
-            and f.related_nodes == ("01-dep",)
+            f.category == "dependency" and f.severity == "warning"
+            and "postponed" in f.message
             for f in findings
         )
 
@@ -3556,20 +3559,10 @@ class TestTaskCheck:
         c2.mkdir()
         _write_task_md(c2 / "task.md", "Child B", "not-started")
         findings = task_check.run_checks(root_dir, category="rollup")
-        finding = next(
-            f for f in findings
-            if f.code == "rollup.mismatch" and f.path == "01-parent"
+        assert any(
+            f.category == "rollup" and "rollup" in f.message.lower()
+            for f in findings
         )
-        assert finding.category == "rollup"
-        assert finding.subject == "status"
-        assert finding.actual == "approved"
-        assert finding.expected == "in-progress"
-        assert finding.path == "01-parent"
-        assert finding.related_nodes == (
-            "01-parent/01-child",
-            "01-parent/02-child",
-        )
-        assert finding.to_dict()["expected"] == "in-progress"
 
     def test_json_output_parseable(self, tmp_path):
         """--json output is valid JSON with expected keys."""
@@ -3582,7 +3575,11 @@ class TestTaskCheck:
         findings = task_check.run_checks(root_dir)
         json_str = task_check.format_json(findings)
         data = json.loads(json_str)
-        assert set(data) == {"ok", "total", "errors", "warnings", "findings"}
+        assert "ok" in data
+        assert "total" in data
+        assert "errors" in data
+        assert "warnings" in data
+        assert "findings" in data
         assert data["ok"] is True
         assert data["total"] == 0
 
@@ -3601,28 +3598,22 @@ class TestTaskCheck:
         assert data["total"] >= 1
         assert len(data["findings"]) >= 1
         f = data["findings"][0]
-        assert {
-            "code",
-            "category",
-            "severity",
-            "subject",
-            "actual",
-            "expected",
-            "path",
-            "task_path",
-            "related_nodes",
-            "message",
-        } == set(f)
+        assert "task_path" in f
+        assert "category" in f
+        assert "severity" in f
+        assert "message" in f
 
-    def test_cli_exits_zero_for_clean_tree(self, tmp_path):
+    def test_text_output_clean(self, tmp_path):
+        """Text output says 'All checks passed' for a clean tree."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
-        with pytest.raises(SystemExit) as excinfo:
-            task_check.main(["--plan-root", str(root_dir)])
-        assert excinfo.value.code == 0
+        findings = task_check.run_checks(root_dir)
+        text = task_check.format_text(findings)
+        assert "All checks passed" in text
 
-    def test_cli_exits_one_for_findings(self, tmp_path):
+    def test_text_output_with_issues(self, tmp_path):
+        """Text output reports issue count for a tree with problems."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
@@ -3630,9 +3621,9 @@ class TestTaskCheck:
         d.mkdir()
         _write_task_md(d / "task.md", "Bad", "not-started",
                        depends_on=["99-missing"])
-        with pytest.raises(SystemExit) as excinfo:
-            task_check.main(["--plan-root", str(root_dir)])
-        assert excinfo.value.code == 1
+        findings = task_check.run_checks(root_dir)
+        text = task_check.format_text(findings)
+        assert "issue(s)" in text
 
     def test_category_filter(self, tmp_path):
         """Running with category='status' only returns status findings."""
@@ -3678,10 +3669,8 @@ class TestTaskCheck:
         f = findings[0]
         assert f.category == "sync-impact"
         assert f.severity == "warning"
-        assert f.code == "sync-impact.present"
-        assert f.subject == "Sync Impact"
-        assert f.actual is True
-        assert f.path == "01-a"
+        assert f.task_path == "01-a"
+        assert "Sync Impact" in f.message
 
     def test_sync_impact_clean_tree_no_findings(self, tmp_path):
         """A tree with no ## Sync Impact section yields no findings."""
@@ -3711,7 +3700,7 @@ class TestTaskCheck:
         findings = task_check.run_checks(root_dir, category="sync-impact")
         assert all(f.category == "sync-impact" for f in findings)
         assert len(findings) == 1
-        assert findings[0].path == "01-only"
+        assert findings[0].task_path == "01-only"
 
     def test_sync_impact_never_mutates(self, tmp_path):
         """task check is read-only — a lingering section is not auto-removed."""

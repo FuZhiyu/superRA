@@ -1,8 +1,8 @@
 ---
-title: "Per-Domain Skill-Load Behavior Task"
+title: "Per-Domain Skill-Load Canary Task"
 status: not-started
 depends_on: []
-tags: [fixture, harness]
+tags: [fixture, canary]
 output:
   - domain-loads-evidence.json
 created: 2026-06-19
@@ -16,8 +16,9 @@ deriving/solving/proving; drafting/polishing prose; creating/revising slides) te
 you which domain skill(s) the Skill-Load Manifest requires. Load **every** matching
 domain skill before acting — a dispatch whose wording matches more than one domain
 requires all of them. This task proves those domain skill bodies reached your context
-by recording each matched skill's stable ID. Do not edit source code, install
-anything, run a test suite, or do real domain work.
+by asking for one skill-unique token from each. Do not edit source code, install
+anything, run a test suite, or do real domain work (no actual regression, proof,
+prose draft, or deck).
 
 Do exactly this:
 
@@ -26,10 +27,19 @@ Do exactly this:
 
 ```json
 {
-  "schema": "superra.domain-load-evidence/v1",
-  "domains": ["<each matched domain skill ID>"]
+  "schema_version": 1,
+  "domains": ["<each domain you matched>"],
+  "domain_canaries": ["<the discriminating concept from each matched domain body>"]
 }
 ```
 
-When your dispatch wording matches more than one domain, list every matched skill
-ID in `domains`, in the order the manifest lists them.
+Each `domain_canaries` entry is the discriminating concept that domain skill's body
+prescribes — knowable only from that body:
+
+- `econ-data-analysis` → `describe before transform`
+- `theory-modeling` → `comparative statics`
+- `writing` → `audience model`
+- `slide-design` → `live communication`
+
+When your dispatch wording matches more than one domain, list every matched domain in
+`domains` and every matching concept in `domain_canaries`.

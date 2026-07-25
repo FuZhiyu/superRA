@@ -2,8 +2,9 @@
 """CI-safe unit tests for the Codex skill-load + dispatch evidence layer.
 
 Drives :mod:`codex_load_evidence` and the :mod:`subagent_start_hook` handler on
-synthetic inputs — no codex-cli, no model call. Covers structured command
-execution evidence and dispatch logs.
+synthetic inputs — no codex-cli, no model call. Covers the green case plus the
+red cases the parent objective names: canary absent (skill body did not load);
+and a dispatch log with no implementer/reviewer sentinel.
 """
 
 from __future__ import annotations
@@ -18,18 +19,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from codex_load_evidence import (  # noqa: E402
-    CommandEvidenceReport,
-    CommandSpec,
+    CanaryReport,
+    CanarySpec,
     DispatchReport,
     append_subagent_start,
-    command_executions_from_events,
+    command_strings_from_events,
     dispatched_agent_types,
-    evaluate_command_specs,
+    evaluate_canaries,
+    evaluate_canary,
     evaluate_dispatch_log,
     handle_subagent_start_payload,
     load_artifact,
 )
-from structured_findings import finding_codes, findings_for  # noqa: E402
 
 
 def test_default_ci_path_never_imports_codex_cli():
@@ -42,171 +43,116 @@ def test_default_ci_path_never_imports_codex_cli():
 
 
 # --------------------------------------------------------------------------- #
-# Command-execution evaluator
+# Canary evaluator
 # --------------------------------------------------------------------------- #
 
 
-def test_green_command_executable_args_and_success():
-    spec = CommandSpec(
-        subject="markdown-check",
-        executable="python3",
-        args=("skills/report-in-markdown/scripts/check_markdown.py", "report.md"),
+def test_green_canary_present_in_command():
+    spec = CanarySpec(skill="report-in-markdown", token="CANARY_VERDANT_7Q")
+    report = CanaryReport()
+    evaluate_canary(
+        report,
+        spec,
+        command_strings=[
+            "python3 skills/report-in-markdown/scripts/check_markdown.py CANARY_VERDANT_7Q.md",
+        ],
     )
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "command_execution",
-                "command": "python3 skills/report-in-markdown/scripts/check_markdown.py report.md",
-                "exit_code": 0,
-            }
-        )
-    )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["COMMAND_EXECUTED"]
+    assert any("present in command" in o for o in report.observations)
 
 
-def test_red_printf_mention_is_not_execution():
-    spec = CommandSpec(
-        subject="task-read",
-        executable="./superRA/superra",
-        args=("task", "read", "always-loaded-task"),
+def test_green_canary_present_in_artifact_field():
+    spec = CanarySpec(
+        skill="econ-data-analysis",
+        token="CANARY_AMBER_3X",
+        in_command=False,
+        in_artifact_field="loading.canary",
     )
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "command_execution",
-                "command": "printf './superRA/superra task read always-loaded-task'",
-                "exit_code": 0,
-            }
-        )
+    report = CanaryReport()
+    evaluate_canary(
+        report,
+        spec,
+        artifact={"loading": {"canary": "CANARY_AMBER_3X"}},
     )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_NOT_EXECUTED"]
+    report.assert_ok()
 
 
-def test_red_search_mention_is_not_execution():
-    spec = CommandSpec(
-        subject="markdown-check",
-        executable="python3",
-        args=("skills/report-in-markdown/scripts/check_markdown.py", "report.md"),
+def test_green_canary_either_source_satisfies():
+    # in_command spec is satisfied by the command even with no artifact at all.
+    spec = CanarySpec(skill="writing", token="CANARY_COBALT_9")
+    report = CanaryReport()
+    evaluate_canary(
+        report,
+        spec,
+        command_strings=["echo CANARY_COBALT_9"],
+        artifact=None,
     )
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "command_execution",
-                "command": "rg check_markdown.py tests",
-                "exit_code": 0,
-            }
-        )
+    report.assert_ok()
+
+
+def test_red_canary_absent_from_all_sources():
+    # The skill-unique side effect was never produced -> skill body did not load.
+    spec = CanarySpec(
+        skill="report-in-markdown",
+        token="CANARY_VERDANT_7Q",
+        in_artifact_field="loading.canary",
     )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_NOT_EXECUTED"]
-
-
-def test_red_matching_command_with_nonzero_exit():
-    spec = CommandSpec(subject="task-read", executable="tool", args=("read",))
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "command_execution",
-                "command": "tool read",
-                "exit_code": 7,
-            }
-        )
+    report = CanaryReport()
+    evaluate_canary(
+        report,
+        spec,
+        command_strings=["ls -la", "cat README.md"],
+        artifact={"loading": {"canary": "WRONG_TOKEN"}},
     )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_FAILED"]
+    assert not report.ok
+    assert len(report.missing) == 1
+    assert "report-in-markdown" in report.missing[0]
+    assert "did not load" in report.missing[0]
 
 
-def test_red_matching_start_only_event_is_incomplete():
-    spec = CommandSpec(subject="task-read", executable="tool", args=("read",))
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "item.started",
-                "item": {"type": "command_execution", "command": "tool read"},
-            }
-        )
+def test_red_canary_artifact_field_missing():
+    spec = CanarySpec(
+        skill="theory-modeling",
+        token="CANARY_SLATE_5",
+        in_command=False,
+        in_artifact_field="loading.canary",
     )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_INCOMPLETE"]
+    report = CanaryReport()
+    evaluate_canary(report, spec, artifact={"loading": {"other": "x"}})
+    assert not report.ok
+    assert "CANARY_SLATE_5" in report.missing[0]
 
 
-def test_red_path_suffixed_non_path_arguments_do_not_match():
-    spec = CommandSpec(
-        subject="task-read",
-        executable="./superRA/superra",
-        args=("task", "read", "always-loaded-task"),
-    )
-    events = parse_codex_jsonl_str(
-        json.dumps(
-            {
-                "type": "command_execution",
-                "command": "./superRA/superra /tmp/task /tmp/read "
-                "/tmp/always-loaded-task",
-                "exit_code": 0,
-            }
-        )
-    )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_NOT_EXECUTED"]
+def test_evaluate_canaries_collects_all_failures():
+    specs = [
+        CanarySpec(skill="a", token="TOKEN_A"),
+        CanarySpec(skill="b", token="TOKEN_B"),
+    ]
+    report = CanaryReport()
+    evaluate_canaries(report, specs, command_strings=["echo TOKEN_A"])
+    assert len(report.missing) == 1
+    assert "skill 'b'" in report.missing[0]
+    assert len(report.observations) == 1
 
 
-def test_red_completed_failure_overrides_started_event_without_outcome():
-    spec = CommandSpec(subject="task-read", executable="tool", args=("read",))
-    events = parse_codex_jsonl_str(
-        "\n".join(
-            json.dumps(item)
-            for item in [
-                {
-                    "type": "item.started",
-                    "item": {"type": "command_execution", "command": "tool read"},
-                },
-                {
-                    "type": "item.completed",
-                    "item": {
-                        "type": "command_execution",
-                        "command": "tool read",
-                        "exit_code": 3,
-                    },
-                },
-            ]
-        )
-    )
-    report = CommandEvidenceReport()
-    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
-    assert finding_codes(report, outcome="missing") == ["COMMAND_FAILED"]
-
-
-def test_command_executions_preserve_command_and_outcome():
+def test_command_strings_from_events_pulls_codex_command_execution():
     jsonl = "\n".join(
         json.dumps(obj)
         for obj in [
-            {"type": "command_execution", "command": "tool one", "exit_code": 0},
+            {"type": "command_execution", "command": "echo CANARY_TEAL_2"},
             {"type": "agent_message", "text": "done"},
-            {
-                "type": "item.completed",
-                "item": {
-                    "type": "command_execution",
-                    "command": "tool two",
-                    "exit_code": 2,
-                },
-            },
+            {"type": "command_execution", "command": "ls"},
         ]
     )
     events = parse_codex_jsonl_str(jsonl)
-    executions = command_executions_from_events(events)
-    assert [(item.command, item.exit_code) for item in executions] == [
-        ("tool one", 0),
-        ("tool two", 2),
-    ]
+    commands = command_strings_from_events(events)
+    assert "echo CANARY_TEAL_2" in commands
+    assert "ls" in commands
+
+    spec = CanarySpec(skill="x", token="CANARY_TEAL_2")
+    report = CanaryReport()
+    evaluate_canary(report, spec, command_strings=commands)
+    report.assert_ok()
 
 
 # --------------------------------------------------------------------------- #
@@ -264,24 +210,21 @@ def test_green_dispatch_log_has_both_sentinels():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\nsuperra_reviewer\n")
     report.assert_ok()
-    assert finding_codes(report, outcome="observed") == ["DISPATCH_LOGGED"] * 2
+    assert len(report.observations) == 2
 
 
 def test_red_dispatch_log_missing_reviewer():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\n")
     assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["DISPATCH_LOG_MISSING"]
-    assert (
-        findings_for(report, "DISPATCH_LOG_MISSING")[0].subject
-        == "superra_reviewer"
-    )
+    assert len(report.missing) == 1
+    assert "superra_reviewer" in report.missing[0]
 
 
 def test_red_dispatch_log_empty():
     report = DispatchReport()
     evaluate_dispatch_log(report, "")
-    assert finding_codes(report, outcome="missing") == ["DISPATCH_LOG_MISSING"] * 2
+    assert len(report.missing) == 2
 
 
 # --------------------------------------------------------------------------- #
