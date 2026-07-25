@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: implemented
+status: revise
 depends_on:
   - 01-artifact-contract
 ---
@@ -41,3 +41,13 @@ Verification:
 - Dashboard compatibility suite: 308 passed.
 - Full task-tree script suite: 750 passed with four expected warnings from dependency deprecations and intentional malformed-task fixtures.
 - Python compilation, focused Ruff import/error checks, repository harness-compatibility validation, Markdown integrity checks, and `git diff --check` passed.
+
+## Review Notes
+
+1. **CRITICAL** — `attachments/` is excluded from the main tree walk, but it is still discovered as a task by validation and multiple mutation paths. [`validate_plan`](../../../../skills/task-tree/scripts/_task_validate.py#L134-L167) parses `attachments/task.md` as a child (a valid opaque asset produces `attachments: title must be a non-empty string`), [`update_task`](../../../../skills/task-tree/scripts/task_update.py#L85-L101) accepts the container as a task path/branch, the move helper includes it among [task siblings](../../../../skills/task-tree/scripts/task_rename.py#L40-L44), and both migration passes rewrite every recursively found [`task.md`](../../../../skills/task-tree/scripts/plan_migrate.py#L394-L451). This invalidates the core claim that `attachments/**/task.md` never becomes a task and can also admit unusable dependency edges or rewrite/move asset content through task commands. Make the opaque-directory rule a shared invariant across discovery, validation, dependency/sibling scans, task-path mutation, hooks, and migration, then add regressions that exercise those command surfaces with `attachments/task.md`.
+
+2. **MAJOR** — the advertised file-count and metadata limits bound the returned manifest, not the listing work. Direct entries are fully materialized and classified before the limit is checked ([`_artifacts.py:267-305`](../../../../skills/task-tree/scripts/_artifacts.py#L267-L305)); attachment traversal uses `os.walk`, which materializes every name in each directory, sorts those full lists, and can traverse arbitrarily many empty directories before yielding a file ([`_artifacts.py:206-239`](../../../../skills/task-tree/scripts/_artifacts.py#L206-L239)). A wide directory or empty-directory tree can therefore consume unbounded time and memory despite the documented 512-file ceiling. Apply an explicit traversal/work budget before full materialization and account for directory entries as well as retained files; test that discovery stops within that budget on wide and empty-directory fixtures.
+
+3. **MAJOR** — standalone packing can falsely mark an artifact as reusing figure bytes that were never embedded. [`_standalone_image_artifact_keys`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1914-L1944) accepts every resolvable path found in Markdown image syntax, while `_build_standalone_images` embeds only extensions in `_IMG_MIME`; the resulting key makes the packer skip the artifact payload as a [reused figure](../../../../skills/task-tree/scripts/_artifacts.py#L493-L500). Reproducing with `![bad](attachments/data.txt)` yields `export.status: "figure"`, an empty `contents` map, and no matching `STANDALONE_IMAGES` key, so the offline export has neither preview nor download bytes. Mark reuse only when the client key is present in the actual image map; otherwise run normal bounded packing, and cover unsupported or unreadable image references.
+
+4. **MAJOR** — the required deep-attachment regression is not actually deep: [`("level-" * 30)` creates one long directory component](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L71-L88), so the suite never verifies recursion at arbitrary nesting depth. Replace or supplement it with a true multi-level attachment tree and assert manifest, resolution/content, watcher ownership, and scoped export behavior at the deepest file.
