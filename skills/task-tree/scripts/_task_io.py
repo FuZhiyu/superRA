@@ -706,6 +706,50 @@ def _write_fd_bytes(fd: int, payload: bytes) -> None:
         remaining = remaining[written:]
 
 
+def _close_rewrite_fd(fd: int) -> None:
+    """Close one rewrite descriptor (seamed for failure-order testing)."""
+    os.close(fd)
+
+
+def _close_rewrite_fds(fds: list[int]) -> list[tuple[int, Exception]]:
+    """Attempt every close in order and return failures without short-circuiting."""
+    failures: list[tuple[int, Exception]] = []
+    for fd in fds:
+        try:
+            _close_rewrite_fd(fd)
+        except Exception as exc:
+            failures.append((fd, exc))
+    return failures
+
+
+def _restore_rewrite_paths(
+    plan_root: Path, prepared: list[tuple[Path, bytes, bytes]]
+) -> list[str]:
+    """Best-effort restoration through fresh descriptors after finalization fails."""
+    restore_fds: list[tuple[int, Path, bytes]] = []
+    errors: list[str] = []
+    for path, _new_bytes, original_bytes in prepared:
+        try:
+            fd = _open_contained_regular(path, plan_root, os.O_WRONLY)
+        except Exception as exc:
+            errors.append(f"reopen {path}: {exc}")
+            continue
+        restore_fds.append((fd, path, original_bytes))
+
+    for fd, path, original_bytes in restore_fds:
+        try:
+            _write_fd_bytes(fd, original_bytes)
+        except Exception as exc:
+            errors.append(f"restore {path}: {exc}")
+
+    close_failures = _close_rewrite_fds([fd for fd, _path, _bytes in restore_fds])
+    if close_failures:
+        retry_failures = _close_rewrite_fds([fd for fd, _exc in close_failures])
+        errors.extend(f"close restored fd {fd}: {exc}" for fd, exc in close_failures)
+        errors.extend(f"retry restored fd {fd}: {exc}" for fd, exc in retry_failures)
+    return errors
+
+
 def _iter_contained_markdown(root: Path, plan_root: Path):
     """Yield regular Markdown files without entering symlinked directories."""
     task_root = plan_root.resolve(strict=True)
@@ -795,33 +839,45 @@ def apply_move_link_rewrites(
         )
 
     write_fds: list[int] = []
+    touched: list[tuple[int, Path, bytes]] = []
+    primary_error: Exception | None = None
+    rollback_errors: list[str] = []
+
     try:
         # Open every destination before changing bytes. Permission/path failures
         # therefore leave the whole queue untouched.
         for path, _new_bytes, _original_bytes in prepared:
             write_fds.append(_open_contained_regular(path, plan_root, os.O_WRONLY))
+        for fd, (path, new_bytes, original_bytes) in zip(write_fds, prepared):
+            touched.append((fd, path, original_bytes))
+            _write_fd_bytes(fd, new_bytes)
+    except Exception as exc:
+        primary_error = exc
+        for fd, path, original_bytes in reversed(touched):
+            try:
+                _write_fd_bytes(fd, original_bytes)
+            except Exception as rollback_exc:
+                rollback_errors.append(f"restore {path}: {rollback_exc}")
 
-        touched: list[tuple[int, Path, bytes]] = []
-        try:
-            for fd, (path, new_bytes, original_bytes) in zip(write_fds, prepared):
-                touched.append((fd, path, original_bytes))
-                _write_fd_bytes(fd, new_bytes)
-        except Exception as exc:
-            rollback_errors: list[str] = []
-            for fd, path, original_bytes in reversed(touched):
-                try:
-                    _write_fd_bytes(fd, original_bytes)
-                except Exception as rollback_exc:
-                    rollback_errors.append(f"{path}: {rollback_exc}")
-            if rollback_errors:
-                raise OSError(
-                    "Markdown rewrite failed and byte rollback was incomplete: "
-                    + "; ".join(rollback_errors)
-                ) from exc
-            raise
-    finally:
-        for fd in write_fds:
-            os.close(fd)
+    close_failures = _close_rewrite_fds(write_fds)
+    if close_failures and touched:
+        # A close error means the new bytes were never fully committed. Some
+        # original descriptors may already be closed, so restore every path
+        # through a fresh no-follow descriptor before reporting the failure.
+        rollback_errors.extend(_restore_rewrite_paths(plan_root, prepared))
+
+    # A failed close may have left its descriptor open. Retry only after byte
+    # restoration, while still attempting every failed descriptor in order.
+    retry_failures = _close_rewrite_fds([fd for fd, _exc in close_failures])
+
+    if primary_error is not None or close_failures or rollback_errors:
+        details: list[str] = []
+        if primary_error is not None:
+            details.append(str(primary_error))
+        details.extend(f"close fd {fd}: {exc}" for fd, exc in close_failures)
+        details.extend(rollback_errors)
+        details.extend(f"retry close fd {fd}: {exc}" for fd, exc in retry_failures)
+        raise OSError("Markdown rewrite transaction failed: " + "; ".join(details))
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:

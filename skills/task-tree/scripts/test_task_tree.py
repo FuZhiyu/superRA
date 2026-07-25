@@ -1176,6 +1176,45 @@ class TestTaskMoveLinkSweep:
         assert not (plan_root / "01-first-renamed").exists()
         assert {path: path.read_bytes() for path in before} == before
 
+    def test_move_restores_all_rewrites_after_first_descriptor_close_fails(
+        self, plan_root, monkeypatch
+    ):
+        first_md = plan_root / "02-second" / "task.md"
+        second_md = plan_root / "03-third" / "task.md"
+        link = "\nSee [first](../01-first/task.md).\n"
+        self._append(first_md, link)
+        self._append(second_md, link)
+        before = {path: path.read_bytes() for path in (first_md, second_md)}
+        original_write = _task_io._write_fd_bytes
+        original_close = _task_io._close_rewrite_fd
+        forward_fds = []
+        close_attempts = []
+
+        def record_forward_writes(fd, payload):
+            if len(forward_fds) < 2:
+                forward_fds.append(fd)
+            original_write(fd, payload)
+
+        def fail_first_close(fd):
+            close_attempts.append(fd)
+            if len(close_attempts) == 1:
+                raise OSError("injected first descriptor close failure")
+            original_close(fd)
+
+        monkeypatch.setattr(_task_io, "_write_fd_bytes", record_forward_writes)
+        monkeypatch.setattr(_task_io, "_close_rewrite_fd", fail_first_close)
+
+        with pytest.raises(SystemExit) as excinfo:
+            task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+
+        assert excinfo.value.code == 1
+        assert len(forward_fds) == 2
+        assert close_attempts[:2] == forward_fds
+        assert close_attempts[-1] == forward_fds[0]
+        assert (plan_root / "01-first").is_dir()
+        assert not (plan_root / "01-first-renamed").exists()
+        assert {path: path.read_bytes() for path in before} == before
+
 
 class TestTaskMoveCrossParentDeps:
     """Cross-parent moves drop sibling-only depends_on edges they strand, warning
