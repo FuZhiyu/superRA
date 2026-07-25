@@ -38,6 +38,7 @@ class ArtifactLimits:
     max_files: int = 512
     max_manifest_bytes: int = 256 * 1024
     manifest_entry_overhead: int = 256
+    max_traversal_entries: int = 4096
     max_preview_bytes: int = 2 * 1024 * 1024
     max_export_file_bytes: int = 2 * 1024 * 1024
     max_export_total_bytes: int = 20 * 1024 * 1024
@@ -82,6 +83,31 @@ class ArtifactFile:
             "previewable": self.previewable,
             "download_only": self.download_only,
         }
+
+
+@dataclass
+class _TraversalState:
+    max_entries: int
+    visited_entries: int = 0
+    limit_hit: bool = False
+
+    def scan(self, directory: Path) -> list[os.DirEntry[str]]:
+        """Return a bounded, sorted snapshot without materializing the directory."""
+        if self.limit_hit:
+            return []
+        entries: list[os.DirEntry[str]] = []
+        try:
+            with os.scandir(directory) as scanner:
+                for entry in scanner:
+                    if self.visited_entries >= self.max_entries:
+                        self.limit_hit = True
+                        break
+                    self.visited_entries += 1
+                    entries.append(entry)
+        except OSError:
+            return []
+        entries.sort(key=lambda entry: entry.name)
+        return entries
 
 
 _TEXT_SUFFIXES = {
@@ -203,7 +229,11 @@ def _artifact_file(path: Path, relative: str, placement: str, limits: ArtifactLi
     )
 
 
-def _attachment_candidates(task_dir: Path, limits: ArtifactLimits):
+def _attachment_candidates(
+    task_dir: Path,
+    limits: ArtifactLimits,
+    traversal: _TraversalState,
+):
     attachments = task_dir / ATTACHMENTS_DIRNAME
     try:
         if attachments.is_symlink() or not attachments.is_dir():
@@ -211,25 +241,24 @@ def _attachment_candidates(task_dir: Path, limits: ArtifactLimits):
     except OSError:
         return
 
-    for directory, dirnames, filenames in os.walk(attachments, topdown=True, followlinks=False):
-        current = Path(directory)
-        kept_dirs: list[str] = []
-        for name in sorted(dirnames):
-            candidate = current / name
-            if _hidden_or_cache(name):
+    pending = [attachments]
+    while pending and not traversal.limit_hit:
+        current = pending.pop()
+        child_dirs: list[Path] = []
+        for entry in traversal.scan(current):
+            if _hidden_or_cache(entry.name):
                 continue
             try:
-                if candidate.is_symlink():
+                if entry.is_symlink():
+                    continue
+                if entry.is_dir(follow_symlinks=False):
+                    child_dirs.append(Path(entry.path))
+                    continue
+                if not entry.is_file(follow_symlinks=False):
                     continue
             except OSError:
                 continue
-            kept_dirs.append(name)
-        dirnames[:] = kept_dirs
-
-        for name in sorted(filenames):
-            if _hidden_or_cache(name):
-                continue
-            candidate = current / name
+            candidate = Path(entry.path)
             try:
                 relative = candidate.relative_to(task_dir).as_posix()
             except ValueError:
@@ -237,6 +266,7 @@ def _attachment_candidates(task_dir: Path, limits: ArtifactLimits):
             item = _artifact_file(candidate, relative, "attachment", limits)
             if item is not None:
                 yield item
+        pending.extend(reversed(child_dirs))
 
 
 def build_manifest(
@@ -252,6 +282,7 @@ def build_manifest(
     ``attachments/`` are never traversed.
     """
     active_limits = limits or DEFAULT_ARTIFACT_LIMITS
+    traversal = _TraversalState(active_limits.max_traversal_entries)
     if not _task_dir_is_secure(plan_root, task):
         return {
             "task": task.path,
@@ -260,21 +291,19 @@ def build_manifest(
             "truncation_reason": None,
             "listed_bytes": 0,
             "manifest_bytes": 0,
+            "traversal_entries": 0,
             "limits": _manifest_limits(active_limits),
             "unavailable_reason": "synthetic-or-insecure-task",
         }
 
     direct: list[ArtifactFile] = []
     legacy: list[ArtifactFile] = []
-    try:
-        children = sorted(task.dir_path.iterdir(), key=lambda p: p.name)
-    except OSError:
-        children = []
-    for child in children:
+    for entry in traversal.scan(task.dir_path):
+        child = Path(entry.path)
         if _hidden_or_cache(child.name) or _reserved_direct(child.name):
             continue
         try:
-            if child.is_symlink() or not child.is_file():
+            if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
                 continue
         except OSError:
             continue
@@ -285,7 +314,7 @@ def build_manifest(
 
     ordered = itertools.chain(
         direct,
-        _attachment_candidates(task.dir_path, active_limits),
+        _attachment_candidates(task.dir_path, active_limits, traversal),
         legacy,
     )
     files: list[dict[str, object]] = []
@@ -307,6 +336,10 @@ def build_manifest(
         manifest_bytes += charge
         listed_bytes += item.size
 
+    if not truncated and traversal.limit_hit:
+        truncated = True
+        truncation_reason = "traversal-entry-limit"
+
     return {
         "task": task.path,
         "files": files,
@@ -314,6 +347,7 @@ def build_manifest(
         "truncation_reason": truncation_reason,
         "listed_bytes": listed_bytes,
         "manifest_bytes": manifest_bytes,
+        "traversal_entries": traversal.visited_entries,
         "limits": _manifest_limits(active_limits),
         "unavailable_reason": None,
     }
@@ -323,6 +357,7 @@ def _manifest_limits(limits: ArtifactLimits) -> dict[str, int]:
     return {
         "max_files": limits.max_files,
         "max_manifest_bytes": limits.max_manifest_bytes,
+        "max_traversal_entries": limits.max_traversal_entries,
         "max_preview_bytes": limits.max_preview_bytes,
     }
 
@@ -551,6 +586,7 @@ def build_standalone_artifacts(
         "limits": {
             "max_files_per_task": active_limits.max_files,
             "max_manifest_bytes_per_task": active_limits.max_manifest_bytes,
+            "max_traversal_entries_per_task": active_limits.max_traversal_entries,
             "max_preview_bytes_per_file": active_limits.max_preview_bytes,
             "max_export_bytes_per_file": active_limits.max_export_file_bytes,
             "max_export_bytes_total": active_limits.max_export_total_bytes,

@@ -25,24 +25,58 @@ TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 ATTACHMENTS_DIRNAME = "attachments"
 
 
+def is_opaque_task_path(path: Path, plan_root: Path) -> bool:
+    """Return whether *path* enters the reserved ``attachments/`` container."""
+    try:
+        relative = path.absolute().relative_to(plan_root.absolute())
+    except ValueError:
+        return False
+    return ATTACHMENTS_DIRNAME in relative.parts
+
+
+def iter_child_task_dirs(directory: Path) -> list[Path]:
+    """Return immediate structural child task directories in stable order."""
+    try:
+        children = directory.iterdir()
+        return sorted(
+            (
+                child
+                for child in children
+                if (
+                    child.name != ATTACHMENTS_DIRNAME
+                    and child.is_dir()
+                    and (child / "task.md").exists()
+                )
+            ),
+            key=lambda child: child.name,
+        )
+    except OSError:
+        return []
+
+
+def iter_task_markdown_files(plan_root: Path) -> list[Path]:
+    """Return structural ``task.md`` files without entering ancillary directories."""
+    task_files: list[Path] = []
+    pending = [plan_root]
+    while pending:
+        directory = pending.pop()
+        task_md = directory / "task.md"
+        if task_md.is_file():
+            task_files.append(task_md)
+        children = iter_child_task_dirs(directory)
+        pending.extend(reversed(children))
+    return task_files
+
+
 def default_plan_root() -> Path:
     return Path(TASK_ROOT_DIRNAME)
 
 
 def _has_child_task_dir(directory: Path) -> bool:
     """True if *directory* holds at least one immediate subdir with a ``task.md``."""
-    try:
-        # Materialize inside the guard: `iterdir()` is lazy, so a missing/racing
-        # directory raises FileNotFoundError (an OSError) only on consumption,
-        # which would escape a bare `try` wrapping just the `iterdir()` call.
-        children = list(directory.iterdir())
-    except OSError:
-        return False
     return any(
-        d.name != ATTACHMENTS_DIRNAME
-        and d.is_dir()
-        and (d / "task.md").is_file()
-        for d in children
+        (child / "task.md").is_file()
+        for child in iter_child_task_dirs(directory)
     )
 
 
@@ -350,9 +384,6 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
     parse), it is inferred via ``_find_plan_root``, which returns the nearest
     task-root directory so a standalone parse agrees with a known-root walk.
     """
-    text = task_md_path.read_text(encoding="utf-8")
-    fm, body = parse_frontmatter(text)
-
     task_dir = task_md_path.parent
     root = plan_root if plan_root is not None else _find_plan_root(task_dir)
     path = ""
@@ -364,7 +395,15 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
                 f"Task dir {task_dir} is outside the supplied plan root {root}; "
                 f"refusing to parse it as the root task"
             ) from None
+        if ATTACHMENTS_DIRNAME in rel.parts:
+            raise ValueError(
+                f"Task dir {task_dir} is inside reserved {ATTACHMENTS_DIRNAME}/; "
+                "refusing to parse asset content as a task"
+            )
         path = str(rel) if str(rel) != "." else ""
+
+    text = task_md_path.read_text(encoding="utf-8")
+    fm, body = parse_frontmatter(text)
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -440,13 +479,9 @@ def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) ->
     """
     updated: list[str] = []
     siblings = [
-        d for d in parent_dir.iterdir()
-        if (
-            d.name != ATTACHMENTS_DIRNAME
-            and d.is_dir()
-            and (d / "task.md").exists()
-            and d.name != new_slug
-        )
+        directory
+        for directory in iter_child_task_dirs(parent_dir)
+        if directory.name != new_slug
     ]
     for sibling_dir in siblings:
         task = parse_task(sibling_dir / "task.md")
@@ -695,18 +730,7 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     whole walk for all readers (dashboard, ``task query``, ``task read``).
     Mirrors the leniency design used for unknown status values.
     """
-    subdirs = sorted(
-        [
-            d
-            for d in directory.iterdir()
-            if (
-                d.name != ATTACHMENTS_DIRNAME
-                and d.is_dir()
-                and (d / "task.md").exists()
-            )
-        ],
-        key=lambda d: d.name,
-    )
+    subdirs = iter_child_task_dirs(directory)
     parsed: list[Task] = []
     for subdir in subdirs:
         try:
@@ -759,6 +783,10 @@ def resolve_path(plan_root: Path, task_path: str) -> Path:
     if not task_path:
         return plan_root
     task_path = strip_root_prefix(plan_root, task_path)
+    if ATTACHMENTS_DIRNAME in Path(task_path).parts:
+        raise ValueError(
+            f"Task path {task_path!r} enters reserved {ATTACHMENTS_DIRNAME}/"
+        )
     resolved = (plan_root / task_path).resolve()
     root_resolved = plan_root.resolve()
     if not resolved.is_relative_to(root_resolved):

@@ -17,7 +17,16 @@ SCRIPTS_DIR = Path(__file__).parents[1]
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _artifacts
+import _task_io
+import _task_validate
 import plan_dashboard
+import plan_migrate
+import task_create
+import task_hook
+import task_link
+import task_read
+import task_rename
+import task_update
 from _task_io import walk_plan
 from conftest import _write_task_md, _write_tiny_png
 
@@ -68,7 +77,9 @@ class TestArtifactDiscovery:
         (root / ".hidden.md").write_text("hidden", encoding="utf-8")
         (root / "child" / "child-note.md").write_text("child", encoding="utf-8")
 
-        deep = root / "attachments" / "bundle" / ("level-" * 30)
+        deep = root / "attachments" / "bundle"
+        for level in range(12):
+            deep /= f"level-{level:02d}"
         deep.mkdir(parents=True)
         (root / "attachments" / "task.md").write_text("opaque asset", encoding="utf-8")
         (deep / "result.csv").write_text("x\n1\n", encoding="utf-8")
@@ -140,6 +151,102 @@ class TestArtifactDiscovery:
         )
         assert len(byte_limited["files"]) == 1
         assert byte_limited["truncation_reason"] == "manifest-byte-limit"
+
+    def test_traversal_budget_bounds_wide_entries_and_empty_directory_work(self, tmp_path):
+        root = _tree(tmp_path)
+        for index in range(24):
+            (root / f"legacy-{index:02d}.bin").write_bytes(b"x")
+        direct = _artifacts.build_manifest(
+            root,
+            _task(root),
+            limits=_artifacts.ArtifactLimits(max_traversal_entries=8),
+        )
+        assert direct["traversal_entries"] == 8
+        assert direct["truncated"] is True
+        assert direct["truncation_reason"] == "traversal-entry-limit"
+
+        empty_root = _tree(tmp_path / "empty")
+        attachments = empty_root / "attachments"
+        attachments.mkdir()
+        for index in range(24):
+            (attachments / f"empty-{index:02d}").mkdir()
+        empty = _artifacts.build_manifest(
+            empty_root,
+            _task(empty_root),
+            limits=_artifacts.ArtifactLimits(max_traversal_entries=8),
+        )
+        assert empty["files"] == []
+        assert empty["traversal_entries"] == 8
+        assert empty["truncation_reason"] == "traversal-entry-limit"
+
+
+class TestAttachmentOpacity:
+    def test_task_scanners_mutators_hooks_and_migrations_share_opaque_rule(
+        self, tmp_path
+    ):
+        root = _tree(tmp_path)
+        attachments = root / "attachments"
+        attachments.mkdir()
+        asset_md = attachments / "task.md"
+        original = """---
+title: "Opaque asset"
+status: not-started
+depends_on:
+  - missing
+review_status: revise
+---
+
+## Steps
+
+- [ ] This is asset content.
+
+## Workflow Status
+
+Do not rewrite.
+"""
+        asset_md.write_text(original, encoding="utf-8")
+
+        assert [path.parent for path in _task_io.iter_task_markdown_files(root)] == [
+            root,
+            root / "child",
+        ]
+        assert _task_validate.validate_plan(root) == []
+        with pytest.raises(ValueError, match="reserved attachments"):
+            _task_io.parse_task(asset_md, root)
+        assert "attachments" not in task_read._sibling_map(root, _task(root, "child"))
+        assert task_hook._task_path_from_file_path(asset_md) is None
+        moved_asset = attachments / "renamed-bundle"
+        moved_asset.mkdir()
+        (moved_asset / "task.md").write_text("asset", encoding="utf-8")
+        assert task_hook._detect_same_parent_rename(
+            f"mv {attachments / 'bundle'} {moved_asset}",
+            tmp_path,
+            _task_io,
+        ) is None
+        assert plan_dashboard.rebuild_state_task(
+            plan_dashboard._build_worktree_state("wt", root),
+            "attachments",
+        ) == (None, False)
+
+        with pytest.raises(SystemExit):
+            task_update.update_task(root, "attachments", status="approved")
+        with pytest.raises(SystemExit):
+            task_rename.rename_task(root, "attachments", "renamed-assets")
+        with pytest.raises(SystemExit):
+            task_create.create_task(root, "attachments/new-task", "Not a task")
+        with pytest.raises(SystemExit):
+            task_create.create_task(
+                root,
+                "new-task",
+                "New task",
+                depends_on=["attachments"],
+            )
+        with pytest.raises(SystemExit):
+            task_link.link_task(root, "child", "attachments")
+
+        assert plan_migrate.upgrade_v1_to_v2(root) == []
+        assert plan_migrate.upgrade_status(root) == []
+        assert asset_md.read_text(encoding="utf-8") == original
 
 
 class TestArtifactResolution:
@@ -322,6 +429,60 @@ class TestArtifactWatcher:
         assert [event[0] for event in events] == ["artifacts:child"]
         assert "child/attachments" not in state.task_index
 
+    def test_deep_attachment_round_trip_manifest_content_watcher_and_export(
+        self, tmp_path
+    ):
+        watchfiles = pytest.importorskip("watchfiles")
+        root = _tree(tmp_path)
+        relative = Path("attachments")
+        for level in range(16):
+            relative /= f"level-{level:02d}"
+        relative /= "deep.csv"
+        deepest = root / "child" / relative
+        deepest.parent.mkdir(parents=True)
+        raw = b"x,y\r\n1,2\r\n"
+        deepest.write_bytes(raw)
+        relative_path = relative.as_posix()
+
+        manifest = _artifacts.build_manifest(root, _task(root, "child"))
+        assert relative_path in {
+            entry["path"]
+            for entry in manifest["files"]
+        }
+
+        with _client_for(root) as client:
+            response = client.get(
+                "/api/artifact",
+                params={
+                    "task": "child",
+                    "path": relative_path,
+                    "download": "true",
+                },
+            )
+            assert response.status_code == 200
+            assert response.content == raw
+
+        state = plan_dashboard._build_worktree_state("deep-wt", root)
+        events = self._events(
+            state,
+            {(watchfiles.Change.modified, str(deepest))},
+        )
+        assert [event[0] for event in events] == ["artifacts:child"]
+        assert relative_path in {
+            entry["path"]
+            for entry in json.loads(events[0][1])["files"]
+        }
+
+        payload = _standalone_payload(
+            plan_dashboard.render_standalone_html(root, root="child")
+        )
+        assert relative_path in {
+            entry["path"]
+            for entry in payload["manifests"][""]["files"]
+        }
+        packed = payload["contents"][""][relative_path]
+        assert base64.b64decode(packed["data"]) == raw
+
 
 class TestStandaloneArtifacts:
     def test_scoped_export_embeds_sources_reuses_figures_and_marks_size_fallback(
@@ -412,3 +573,45 @@ class TestStandaloneArtifacts:
             "reason": "total-byte-limit",
             "status": "omitted",
         }
+
+    def test_figure_reuse_requires_bytes_in_actual_standalone_image_map(
+        self, tmp_path, monkeypatch
+    ):
+        root = _tree(tmp_path)
+        child = root / "child"
+        unsupported = child / "unsupported.txt"
+        unreadable = child / "unreadable.png"
+        unsupported.write_bytes(b"not an image extension")
+        unreadable.write_bytes(b"png bytes retained for download")
+        task_md = child / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Results\n\n"
+            + "![unsupported](unsupported.txt)\n"
+            + "![temporarily unreadable](unreadable.png)\n",
+            encoding="utf-8",
+        )
+
+        original_read_bytes = Path.read_bytes
+
+        def selective_read_bytes(path: Path) -> bytes:
+            if path.resolve() == unreadable.resolve():
+                raise OSError("simulated image read failure")
+            return original_read_bytes(path)
+
+        monkeypatch.setattr(Path, "read_bytes", selective_read_bytes)
+        payload = _standalone_payload(
+            plan_dashboard.render_standalone_html(root, root="child")
+        )
+        entries = {
+            entry["path"]: entry
+            for entry in payload["manifests"][""]["files"]
+        }
+        assert entries["unsupported.txt"]["export"]["status"] == "embedded"
+        assert entries["unreadable.png"]["export"]["status"] == "embedded"
+        assert base64.b64decode(
+            payload["contents"][""]["unsupported.txt"]["data"]
+        ) == b"not an image extension"
+        assert base64.b64decode(
+            payload["contents"][""]["unreadable.png"]["data"]
+        ) == b"png bytes retained for download"

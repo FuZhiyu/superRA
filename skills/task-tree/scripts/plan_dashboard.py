@@ -48,6 +48,7 @@ from _task_io import (
     Task,
     _walk_children,
     collect_all_tasks,
+    is_opaque_task_path,
     parse_task,
     walk_plan,
 )
@@ -234,6 +235,8 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
     the caller to broadcast a full-reload instead of a single-task fragment.
     """
     task_dir = state.plan_root / task_path if task_path else state.plan_root
+    if is_opaque_task_path(task_dir, state.plan_root):
+        return None, False
     task_md = task_dir / "task.md"
     if not task_md.exists():
         state.task_index.pop(task_path, None)
@@ -1914,6 +1917,7 @@ def _build_standalone_images(
 def _standalone_image_artifact_keys(
     plan_root: Path,
     scoped_root: Task,
+    standalone_images: dict[str, str],
 ) -> dict[tuple[str, str], str]:
     """Map exported companion images to their existing ``STANDALONE_IMAGES`` key.
 
@@ -1940,6 +1944,8 @@ def _standalone_image_artifact_keys(
             ):
                 continue
             client_key = f"{task.path}/{src}" if task.path else src
+            if client_key not in standalone_images:
+                continue
             keys.setdefault((task.path, relative), client_key)
     return keys
 
@@ -2137,7 +2143,11 @@ def render_standalone_html(
         scoped_root,
         repo_file_base=repo_file_base,
         repo_root_prefix=repo_root_prefix.strip("/") or plan_root.resolve().name,
-        image_artifact_keys=_standalone_image_artifact_keys(plan_root, scoped_root),
+        image_artifact_keys=_standalone_image_artifact_keys(
+            plan_root,
+            scoped_root,
+            standalone_images,
+        ),
     )
     for task_path, manifest in standalone_artifacts["manifests"].items():
         fragments[f"/api/artifacts?task={task_path}"] = manifest

@@ -10,7 +10,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
     TASK_ROOT_DIRNAME,
+    iter_child_task_dirs,
     propagate_parent_status,
+    resolve_path,
     strip_root_prefix,
 )
 
@@ -59,16 +61,10 @@ def create_task(
 
     # Tolerate a redundant leading task-root segment regardless of entry surface.
     task_path = strip_root_prefix(plan_root, task_path)
-    task_dir = plan_root / task_path
-    resolved_root = plan_root.resolve()
-    resolved_task = task_dir.resolve()
     try:
-        resolved_task.relative_to(resolved_root)
-    except ValueError:
-        print(
-            f"Error: task path escapes the task root: {task_path!r}",
-            file=sys.stderr,
-        )
+        task_dir = resolve_path(plan_root, task_path)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
     if task_dir.exists():
@@ -80,9 +76,10 @@ def create_task(
         print(f"Error: parent directory does not exist: {parent_dir}", file=sys.stderr)
         sys.exit(1)
 
+    sibling_names = {directory.name for directory in iter_child_task_dirs(parent_dir)}
     for dep in depends_on:
-        dep_dir = parent_dir / dep
-        if not dep_dir.exists() or not (dep_dir / "task.md").exists():
+        if dep not in sibling_names:
+            dep_dir = parent_dir / dep
             print(f"Error: dependency not found: {dep} (expected {dep_dir}/task.md)", file=sys.stderr)
             sys.exit(1)
 

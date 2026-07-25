@@ -12,6 +12,7 @@ from _task_io import (
     TASK_ROOT_DIRNAME,
     cascade_depends_on_rename,
     compute_move_link_rewrites,
+    iter_child_task_dirs,
     parse_task,
     propagate_parent_status,
     resolve_path,
@@ -39,8 +40,9 @@ def _die(message: str) -> None:
 
 def _task_sibling_dirs(parent_dir: Path, *, skip: Path | None = None) -> list[Path]:
     return [
-        d for d in parent_dir.iterdir()
-        if d != skip and d.is_dir() and (d / "task.md").exists()
+        directory
+        for directory in iter_child_task_dirs(parent_dir)
+        if directory != skip
     ]
 
 
@@ -116,8 +118,11 @@ def _apply_dep_drops(
 
 
 def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
-    from_dir = resolve_path(plan_root, from_path)
-    to_dir = resolve_path(plan_root, to_path)
+    try:
+        from_dir = resolve_path(plan_root, from_path)
+        to_dir = resolve_path(plan_root, to_path)
+    except ValueError as exc:
+        _die(str(exc))
     plan_root_resolved = plan_root.resolve()
     from_status_path = from_dir.relative_to(plan_root_resolved).as_posix()
     to_status_path = to_dir.relative_to(plan_root_resolved).as_posix()
