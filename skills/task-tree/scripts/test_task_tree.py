@@ -3556,18 +3556,20 @@ class TestTaskCheck:
         c2.mkdir()
         _write_task_md(c2 / "task.md", "Child B", "not-started")
         findings = task_check.run_checks(root_dir, category="rollup")
-        assert any(
-            f.code == "rollup.mismatch"
-            and f.category == "rollup"
-            and f.subject == "status"
-            and f.actual == "approved"
-            and f.path == "01-parent"
-            and f.related_nodes == (
-                "01-parent/01-child",
-                "01-parent/02-child",
-            )
-            for f in findings
+        finding = next(
+            f for f in findings
+            if f.code == "rollup.mismatch" and f.path == "01-parent"
         )
+        assert finding.category == "rollup"
+        assert finding.subject == "status"
+        assert finding.actual == "approved"
+        assert finding.expected == "in-progress"
+        assert finding.path == "01-parent"
+        assert finding.related_nodes == (
+            "01-parent/01-child",
+            "01-parent/02-child",
+        )
+        assert finding.to_dict()["expected"] == "in-progress"
 
     def test_json_output_parseable(self, tmp_path):
         """--json output is valid JSON with expected keys."""
@@ -3605,6 +3607,7 @@ class TestTaskCheck:
             "severity",
             "subject",
             "actual",
+            "expected",
             "path",
             "task_path",
             "related_nodes",

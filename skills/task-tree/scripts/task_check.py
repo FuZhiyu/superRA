@@ -53,6 +53,7 @@ class Finding:
     path: str
     related_nodes: tuple[str, ...]
     message: str
+    expected: Any = None
 
     @property
     def task_path(self) -> str:
@@ -70,6 +71,7 @@ class Finding:
             "severity": self.severity,
             "subject": self.subject,
             "actual": self.actual,
+            "expected": self.expected,
             "path": self.path,
             "task_path": self.path,
             "related_nodes": list(self.related_nodes),
@@ -251,6 +253,7 @@ def _check_rollup_recursive(task: Task, findings: list[Finding]) -> None:
                 f"stored status is '{stored}' but computed rollup "
                 f"from children is '{computed}'"
             ),
+            expected=computed,
         ))
 
     for child in task.children:
