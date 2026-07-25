@@ -20,8 +20,13 @@ from always_loaded_live import (  # noqa: E402
     evaluate_always_loaded_behavior,
     expected_always_loaded_artifact,
 )
-from codex_load_evidence import CanaryReport, evaluate_canaries  # noqa: E402
+from codex_load_evidence import (  # noqa: E402
+    CommandEvidenceReport,
+    command_executions_from_events,
+    evaluate_command_specs,
+)
 from sdk_load_evidence import SkillLoadReport, evidence_from_hook_records  # noqa: E402
+from transcript_assertions import parse_json_events  # noqa: E402
 
 FIXTURE_ROOT = (
     REPO_ROOT
@@ -99,39 +104,124 @@ def test_red_claude_always_loaded_skill_loaded_on_demand():
 
 
 def test_green_codex_actual_commands_observed():
-    report = CanaryReport()
-    evaluate_canaries(
+    events = parse_json_events(
+        "\n".join(
+            json.dumps(item)
+            for item in [
+                {
+                    "type": "command_execution",
+                    "command": "./superRA/superra task read always-loaded-task",
+                    "exit_code": 0,
+                },
+                {
+                    "type": "command_execution",
+                    "command": "python3 /plugin/skills/report-in-markdown/scripts/check_markdown.py "
+                    "superRA/always-loaded-task/task.md",
+                    "exit_code": 0,
+                },
+            ]
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
         report,
         CODEX_ALWAYS_LOADED_COMMANDS,
-        command_strings=[
-            "./superRA/superra task read always-loaded-task",
-            "python3 /plugin/skills/report-in-markdown/scripts/check_markdown.py "
-            "superRA/always-loaded-task/task.md",
-        ],
+        command_executions_from_events(events),
     )
     report.assert_ok()
     assert len(report.observations) == 2
 
 
 def test_red_codex_missing_markdown_command():
-    report = CanaryReport()
-    evaluate_canaries(
+    events = parse_json_events(
+        json.dumps(
+            {
+                "type": "command_execution",
+                "command": "./superRA/superra task read always-loaded-task",
+                "exit_code": 0,
+            }
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
         report,
         CODEX_ALWAYS_LOADED_COMMANDS,
-        command_strings=["./superRA/superra task read always-loaded-task"],
+        command_executions_from_events(events),
     )
     assert not report.ok
 
 
 def test_red_codex_missing_task_read_command():
-    report = CanaryReport()
-    evaluate_canaries(
+    events = parse_json_events(
+        json.dumps(
+            {
+                "type": "command_execution",
+                "command": "python3 /plugin/skills/report-in-markdown/scripts/check_markdown.py "
+                "superRA/always-loaded-task/task.md",
+                "exit_code": 0,
+            }
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
         report,
         CODEX_ALWAYS_LOADED_COMMANDS,
-        command_strings=[
-            "python3 /plugin/skills/report-in-markdown/scripts/check_markdown.py "
-            "superRA/always-loaded-task/task.md"
-        ],
+        command_executions_from_events(events),
+    )
+    assert not report.ok
+
+
+def test_red_codex_command_mentions_do_not_count():
+    events = parse_json_events(
+        "\n".join(
+            json.dumps(item)
+            for item in [
+                {
+                    "type": "command_execution",
+                    "command": "printf './superRA/superra task read always-loaded-task'",
+                    "exit_code": 0,
+                },
+                {
+                    "type": "command_execution",
+                    "command": "rg check_markdown.py tests",
+                    "exit_code": 0,
+                },
+            ]
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
+        report,
+        CODEX_ALWAYS_LOADED_COMMANDS,
+        command_executions_from_events(events),
+    )
+    assert not report.ok
+
+
+def test_red_codex_failed_commands_do_not_count():
+    events = parse_json_events(
+        "\n".join(
+            json.dumps(item)
+            for item in [
+                {
+                    "type": "command_execution",
+                    "command": "./superRA/superra task read always-loaded-task",
+                    "exit_code": 2,
+                },
+                {
+                    "type": "command_execution",
+                    "command": "python3 /plugin/skills/report-in-markdown/scripts/check_markdown.py "
+                    "superRA/always-loaded-task/task.md",
+                    "exit_code": 1,
+                },
+            ]
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
+        report,
+        CODEX_ALWAYS_LOADED_COMMANDS,
+        command_executions_from_events(events),
     )
     assert not report.ok
 

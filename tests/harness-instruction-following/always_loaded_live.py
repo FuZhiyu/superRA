@@ -20,7 +20,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from codex_load_evidence import CanarySpec
+from codex_load_evidence import CommandSpec
 from sdk_load_evidence import (
     ALWAYS_LOADED_SKILLS,
     SkillLoadEvidence,
@@ -113,15 +113,18 @@ def check_claude_always_loaded_static(
 # These are command identities, not authored instruction text. The Codex live
 # evaluator accepts only command_execution evidence; the artifact is validated
 # separately against ``expected_always_loaded_artifact``.
-CODEX_REPORT_IN_MARKDOWN_COMMAND = CanarySpec(
-    skill="superRA:report-in-markdown",
-    token="check_markdown.py",
-    in_command=True,
+CODEX_REPORT_IN_MARKDOWN_COMMAND = CommandSpec(
+    subject="superRA:report-in-markdown markdown check",
+    executable="python3",
+    args=(
+        "check_markdown.py",
+        "superRA/always-loaded-task/task.md",
+    ),
 )
-CODEX_USING_SUPERRA_COMMAND = CanarySpec(
-    skill="superRA:using-superra",
-    token="./superRA/superra task read always-loaded-task",
-    in_command=True,
+CODEX_USING_SUPERRA_COMMAND = CommandSpec(
+    subject="superRA:using-superra task read",
+    executable="./superRA/superra",
+    args=("task", "read", "always-loaded-task"),
 )
 CODEX_ALWAYS_LOADED_COMMANDS = (
     CODEX_REPORT_IN_MARKDOWN_COMMAND,

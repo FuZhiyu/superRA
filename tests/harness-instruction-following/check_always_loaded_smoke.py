@@ -24,9 +24,9 @@ from always_loaded_live import (  # noqa: E402
     always_loaded_artifact_matches,
 )
 from codex_load_evidence import (  # noqa: E402
-    CanaryReport,
-    command_strings_from_events,
-    evaluate_canaries,
+    CommandEvidenceReport,
+    command_executions_from_events,
+    evaluate_command_specs,
     load_artifact,
 )
 from transcript_assertions import parse_codex_jsonl  # noqa: E402
@@ -39,14 +39,14 @@ def main() -> int:
     args = parser.parse_args()
 
     events = parse_codex_jsonl(args.transcript)
-    commands = command_strings_from_events(events)
+    executions = command_executions_from_events(events)
     artifact = load_artifact(args.artifact)
 
-    report = CanaryReport()
-    evaluate_canaries(
+    report = CommandEvidenceReport()
+    evaluate_command_specs(
         report,
         CODEX_ALWAYS_LOADED_COMMANDS,
-        command_strings=commands,
+        executions,
     )
 
     for note in report.observations:

@@ -3,20 +3,16 @@
 
 This module is the CI-safe Codex counterpart to ``sdk_load_evidence.py`` (the
 Claude SDK harness). It never imports or requires ``codex-cli`` and never makes a
-model call: it defines the two evidence channels a live Codex run produces and
-the assertion helpers the downstream stage/domain/always-loaded smokes (10-12)
-run against them.
+model call. It parses observable command executions and hook-backed dispatch
+records for downstream harness checks.
 
-Why two channels (see ``references/load-testing-research.md``): ``codex exec
---json`` exposes neither a ``skill_loaded`` event nor a ``spawn_agent`` item, so
-on Codex both skill loading and subagent dispatch must be established
-out-of-band:
+``codex exec --json`` exposes neither a ``skill_loaded`` event nor a
+``spawn_agent`` item. Observable command checks therefore validate parsed
+``command_execution`` records, while subagent dispatch uses a
+``SubagentStart`` hook log:
 
-1. **Canary / side-effect** — the fixture task instructs the agent to perform a
-   skill-unique observable action that is only producible if the named skill body
-   loaded: either a prescribed command (surfacing as a ``command_execution``
-   event in the JSONL) or a sentinel value written into the output artifact. The
-   :func:`evaluate_canary` evaluator scans both sources for the canary token.
+1. **Command execution** — command predicates match the executable and ordered
+   arguments, and reject a nonzero exit code when the event supplies one.
 2. **``SubagentStart`` hook log** — a ``SubagentStart`` hook (matcher = agent
    type) appends an agent-type sentinel to a log file on every dispatch, so
    orchestrator dispatch is verifiable even though the JSONL hides it. The hook
@@ -30,17 +26,16 @@ the default ``pytest`` path drives them on synthetic inputs with no codex-cli an
 no model call.
 
 Codex event shapes are pinned to codex-cli 0.140.0 (``type``/``agent_message``,
-``command_execution``, ``file_change``) per the research doc; the canary
-evaluator reuses ``transcript_assertions`` recursive search so a minor shape
-change degrades gracefully rather than crashing.
+``command_execution``, ``file_change``) per the research doc.
 """
 
 from __future__ import annotations
 
 import json
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Iterator, Sequence
 
 from structured_findings import Finding, add_missing, add_observation
 
@@ -60,38 +55,31 @@ _AGENT_TYPE_KEYS = (
 
 
 # --------------------------------------------------------------------------- #
-# Canary / side-effect evidence
+# Command-execution evidence
 # --------------------------------------------------------------------------- #
 
 
 @dataclass(frozen=True)
-class CanarySpec:
-    """A skill-unique observable the fixture task requires a loaded skill to emit.
+class CommandSpec:
+    """One expected executable and ordered argument vector."""
 
-    ``skill`` is the skill whose body prescribes the action (for the failure
-    message). ``token`` is the high-entropy sentinel string that proves the skill
-    body was in context. The token is checked against two sources, either of
-    which satisfies the canary:
+    subject: str
+    executable: str
+    args: tuple[str, ...]
+    exact_args: bool = True
 
-    - ``in_command``: the token appears in a ``command_execution`` command string
-      (a command the skill body told the agent to run), and/or
-    - ``in_artifact_field``: a JSON path (dotted, e.g. ``"loading.canary"``) in
-      the output artifact whose value must equal the token.
 
-    A spec sets at least one source. Keeping the convention to "token in command
-    OR token at artifact field" lets the stage (11) and domain (12) smokes reuse
-    one evaluator with per-skill ``CanarySpec`` rows and no bespoke parsing.
-    """
+@dataclass(frozen=True)
+class CommandExecution:
+    """One parsed Codex ``command_execution`` event."""
 
-    skill: str
-    token: str
-    in_command: bool = True
-    in_artifact_field: str | None = None
+    command: str
+    exit_code: int | None
 
 
 @dataclass
-class CanaryReport:
-    """Collect every failed canary expectation from one evidence check."""
+class CommandEvidenceReport:
+    """Collect command-execution findings."""
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
@@ -104,119 +92,120 @@ class CanaryReport:
     def assert_ok(self) -> None:
         if self.missing:
             joined = "\n".join(f"- {msg}" for msg in self.missing)
-            raise AssertionError(f"Codex canary evidence failures:\n{joined}")
+            raise AssertionError(f"Codex command evidence failures:\n{joined}")
 
 
-def _artifact_value_at(artifact: dict | None, dotted_path: str):
-    """Return the value at a dotted JSON path, or a sentinel ``_MISSING``."""
-
-    if artifact is None:
-        return _MISSING
-    node = artifact
-    for part in dotted_path.split("."):
-        if not isinstance(node, dict) or part not in node:
-            return _MISSING
-        node = node[part]
-    return node
+def _path_arg_matches(expected: str, actual: str) -> bool:
+    return actual == expected or actual.endswith(f"/{expected}")
 
 
-_MISSING = object()
-
-
-def evaluate_canary(
-    report: CanaryReport,
-    spec: CanarySpec,
-    *,
-    command_strings: Sequence[str] = (),
-    artifact: dict | None = None,
-) -> None:
-    """Check one canary against command strings and/or the output artifact.
-
-    ``command_strings`` is the list of ``command_execution`` command strings from
-    the codex JSONL (extract via :func:`command_strings_from_events`).
-    ``artifact`` is the parsed output-artifact JSON (or ``None`` if absent).
-
-    The canary passes if the token is found in any required source. A spec that
-    enables ``in_command`` is satisfied by the token in any command; a spec with
-    ``in_artifact_field`` is satisfied by that field equalling the token. The
-    canary fails only if none of its enabled sources carry the token — an absent
-    canary is a real "skill body did not load" finding to escalate, not a test
-    bug.
-    """
-
-    found_in_command = False
-    if spec.in_command:
-        found_in_command = any(spec.token in cmd for cmd in command_strings)
-
-    found_in_artifact = False
-    if spec.in_artifact_field is not None:
-        value = _artifact_value_at(artifact, spec.in_artifact_field)
-        found_in_artifact = value is not _MISSING and value == spec.token
-
-    if found_in_command or found_in_artifact:
-        where = []
-        if found_in_command:
-            where.append("command")
-        if found_in_artifact:
-            where.append(f"artifact field {spec.in_artifact_field!r}")
-        add_observation(
-            report,
-            "CANARY_PRESENT",
-            f"canary for skill {spec.skill!r} present in {' and '.join(where)}",
-            subject=spec.skill,
-            path=spec.in_artifact_field,
-            actual=where,
-        )
-        return
-
-    sources = []
-    if spec.in_command:
-        sources.append("any command_execution command")
-    if spec.in_artifact_field is not None:
-        sources.append(f"artifact field {spec.in_artifact_field!r}")
-    add_missing(
-        report,
-        "CANARY_MISSING",
-        f"canary for skill {spec.skill!r} (token {spec.token!r}) absent from "
-        f"{' / '.join(sources)} — the skill-unique side effect was not produced, "
-        f"so the skill body did not load",
-        subject=spec.skill,
-        path=spec.in_artifact_field,
-        actual=sources,
+def _execution_matches(spec: CommandSpec, execution: CommandExecution) -> bool:
+    try:
+        tokens = shlex.split(execution.command)
+    except ValueError:
+        return False
+    if not tokens:
+        return False
+    if "/" in spec.executable:
+        if tokens[0] != spec.executable:
+            return False
+    elif Path(tokens[0]).name != spec.executable:
+        return False
+    actual_args = tokens[1:]
+    if spec.exact_args and len(actual_args) != len(spec.args):
+        return False
+    if len(actual_args) < len(spec.args):
+        return False
+    return all(
+        _path_arg_matches(expected, actual)
+        for expected, actual in zip(spec.args, actual_args)
     )
 
 
-def evaluate_canaries(
-    report: CanaryReport,
-    specs: Iterable[CanarySpec],
-    *,
-    command_strings: Sequence[str] = (),
-    artifact: dict | None = None,
+def evaluate_command_specs(
+    report: CommandEvidenceReport,
+    specs: Iterable[CommandSpec],
+    executions: Sequence[CommandExecution],
 ) -> None:
-    """Run :func:`evaluate_canary` for every spec, collecting all failures."""
+    """Require one successful matching execution for every command spec."""
 
     for spec in specs:
-        evaluate_canary(
+        matches = [
+            execution
+            for execution in executions
+            if _execution_matches(spec, execution)
+        ]
+        known_outcomes = [
+            execution for execution in matches if execution.exit_code is not None
+        ]
+        successful = [
+            execution
+            for execution in (known_outcomes or matches)
+            if execution.exit_code in (None, 0)
+        ]
+        if successful:
+            execution = successful[0]
+            add_observation(
+                report,
+                "COMMAND_EXECUTED",
+                f"observed successful command execution for {spec.subject!r}",
+                subject=spec.subject,
+                actual={
+                    "command": execution.command,
+                    "exit_code": execution.exit_code,
+                },
+            )
+            continue
+        if matches:
+            add_missing(
+                report,
+                "COMMAND_FAILED",
+                f"matching command execution for {spec.subject!r} failed",
+                subject=spec.subject,
+                actual=[execution.exit_code for execution in matches],
+            )
+            continue
+        add_missing(
             report,
-            spec,
-            command_strings=command_strings,
-            artifact=artifact,
+            "COMMAND_NOT_EXECUTED",
+            f"no command execution matched {spec.subject!r}",
+            subject=spec.subject,
+            actual={
+                "executable": spec.executable,
+                "args": list(spec.args),
+            },
         )
 
 
-def command_strings_from_events(events: Sequence) -> list[str]:
-    """Extract ``command_execution`` command strings from parsed codex events.
+def _iter_command_nodes(value: Any) -> Iterator[dict[str, Any]]:
+    if isinstance(value, dict):
+        if value.get("type") == "command_execution":
+            yield value
+            return
+        for child in value.values():
+            yield from _iter_command_nodes(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _iter_command_nodes(child)
 
-    Accepts the ``TranscriptEvent`` objects produced by
-    ``transcript_assertions.parse_codex_jsonl``; each event already exposes a
-    ``commands`` tuple keyed off ``cmd``/``command``/``shell_command``. Returns a
-    flat list so :func:`evaluate_canary` can scan it directly.
-    """
 
-    out: list[str] = []
+def command_executions_from_events(events: Sequence) -> list[CommandExecution]:
+    """Extract structured command executions from parsed Codex events."""
+
+    executions: list[CommandExecution] = []
     for event in events:
-        out.extend(getattr(event, "commands", ()))
-    return out
+        for node in _iter_command_nodes(getattr(event, "raw", None)):
+            command = node.get("command")
+            exit_code = node.get("exit_code")
+            if not isinstance(command, str):
+                continue
+            executions.append(
+                CommandExecution(
+                    command=command,
+                    exit_code=exit_code if isinstance(exit_code, int) else None,
+                )
+            )
+    return executions
 
 
 # --------------------------------------------------------------------------- #

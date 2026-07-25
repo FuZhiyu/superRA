@@ -8,8 +8,7 @@ imported. Covers:
 - on-demand skill ordering: green plus the two red cases the parent objective
   names (required skill missing; skill loaded only after the first edit);
 - the static always-loaded frontmatter contract (green against the real role
-  specs; red against a synthetic spec missing a skill);
-- the reusable behavioral-canary checker task 10 consumes (green + red).
+  specs; red against a synthetic spec missing a skill).
 """
 
 from __future__ import annotations
@@ -24,10 +23,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from sdk_load_evidence import (  # noqa: E402
     ALWAYS_LOADED_SKILLS,
-    BehavioralCanarySpec,
     SkillLoadReport,
     check_always_loaded_frontmatter,
-    check_behavioral_canary,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
     normalize_skill_name,
@@ -304,50 +301,6 @@ def test_always_loaded_skills_constant_is_qualified():
     assert ALWAYS_LOADED_SKILLS == (
         "superRA:using-superra",
         "superRA:report-in-markdown",
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Behavioral canary (reusable checker; fixtures owned by task 10)
-# --------------------------------------------------------------------------- #
-
-
-def test_green_behavioral_canary_rule_applied():
-    # report-in-markdown prescribes file refs as markdown links with line anchors.
-    spec = BehavioralCanarySpec(
-        skill="superRA:report-in-markdown",
-        rule="file references cited as markdown links with line anchors",
-        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
-    )
-    output = "See [sdk_load_harness.py:42](sdk_load_harness.py#L42) for the hook."
-    report = SkillLoadReport()
-
-    check_behavioral_canary(report, spec, output)
-
-    report.assert_ok()
-    assert finding_codes(report, outcome="observed") == [
-        "BEHAVIORAL_CANARY_SATISFIED"
-    ]
-
-
-def test_red_behavioral_canary_rule_absent():
-    # Output uses a backtick path instead of the prescribed markdown-link form —
-    # the preloaded skill rule did not shape it.
-    spec = BehavioralCanarySpec(
-        skill="superRA:report-in-markdown",
-        rule="file references cited as markdown links with line anchors",
-        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
-    )
-    output = "See `sdk_load_harness.py` line 42 for the hook."
-    report = SkillLoadReport()
-
-    check_behavioral_canary(report, spec, output)
-
-    assert not report.ok
-    assert finding_codes(report, outcome="missing") == ["BEHAVIORAL_CANARY_FAILED"]
-    assert (
-        findings_for(report, "BEHAVIORAL_CANARY_FAILED")[0].subject
-        == "superRA:report-in-markdown"
     )
 
 

@@ -21,7 +21,9 @@
       "expected_evidence": [
         "source manifest names superRA:using-superra and superRA:report-in-markdown as always loaded",
         "role frontmatter lists those skills",
-        "live transcript shows the role loads/reads both before task file or code edits"
+        "Claude role dispatch mutates the expected schema/path artifact with zero on-demand Skill events for the frontmatter skills",
+        "Codex transcript contains successful task-read and markdown-check command executions matched by executable and arguments",
+        "live artifact matches the exact schema, task-path, and output-path identities"
       ],
       "classification": [
         "ci_safe_static",
@@ -41,7 +43,7 @@
         "manual_live_codex": [
           "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (task-read and markdown-check command executions; built/CI-tested, live-pending)"
         ],
-        "notes": "Claude live-verified (both always-loaded skills present via frontmatter autoload). Codex live not yet run."
+        "notes": "Claude frontmatter declarations and live mutation with zero on-demand loads verified. Codex live not yet run."
       }
     },
     {
