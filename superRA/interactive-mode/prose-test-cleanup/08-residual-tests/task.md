@@ -1,6 +1,6 @@
 ---
 title: "Delete Residual Prose-Layout Oracles"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
