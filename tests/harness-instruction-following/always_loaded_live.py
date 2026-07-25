@@ -120,6 +120,7 @@ CODEX_REPORT_IN_MARKDOWN_COMMAND = CommandSpec(
         "check_markdown.py",
         "superRA/always-loaded-task/task.md",
     ),
+    path_arg_indices=frozenset({0, 1}),
 )
 CODEX_USING_SUPERRA_COMMAND = CommandSpec(
     subject="superRA:using-superra task read",

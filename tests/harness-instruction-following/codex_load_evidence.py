@@ -61,12 +61,17 @@ _AGENT_TYPE_KEYS = (
 
 @dataclass(frozen=True)
 class CommandSpec:
-    """One expected executable and ordered argument vector."""
+    """One exact executable and ordered argument vector.
+
+    Arguments compare exactly unless their zero-based position is listed in
+    ``path_arg_indices``; those positions accept the exact value or a path with
+    that value as its suffix.
+    """
 
     subject: str
     executable: str
     args: tuple[str, ...]
-    exact_args: bool = True
+    path_arg_indices: frozenset[int] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -95,7 +100,7 @@ class CommandEvidenceReport:
             raise AssertionError(f"Codex command evidence failures:\n{joined}")
 
 
-def _path_arg_matches(expected: str, actual: str) -> bool:
+def _path_suffix_matches(expected: str, actual: str) -> bool:
     return actual == expected or actual.endswith(f"/{expected}")
 
 
@@ -106,20 +111,18 @@ def _execution_matches(spec: CommandSpec, execution: CommandExecution) -> bool:
         return False
     if not tokens:
         return False
-    if "/" in spec.executable:
-        if tokens[0] != spec.executable:
-            return False
-    elif Path(tokens[0]).name != spec.executable:
+    if tokens[0] != spec.executable:
         return False
     actual_args = tokens[1:]
-    if spec.exact_args and len(actual_args) != len(spec.args):
+    if len(actual_args) != len(spec.args):
         return False
-    if len(actual_args) < len(spec.args):
-        return False
-    return all(
-        _path_arg_matches(expected, actual)
-        for expected, actual in zip(spec.args, actual_args)
-    )
+    for index, (expected, actual) in enumerate(zip(spec.args, actual_args)):
+        if index in spec.path_arg_indices:
+            if not _path_suffix_matches(expected, actual):
+                return False
+        elif actual != expected:
+            return False
+    return True
 
 
 def evaluate_command_specs(
@@ -135,13 +138,10 @@ def evaluate_command_specs(
             for execution in executions
             if _execution_matches(spec, execution)
         ]
-        known_outcomes = [
-            execution for execution in matches if execution.exit_code is not None
-        ]
         successful = [
             execution
-            for execution in (known_outcomes or matches)
-            if execution.exit_code in (None, 0)
+            for execution in matches
+            if execution.exit_code == 0
         ]
         if successful:
             execution = successful[0]
@@ -157,12 +157,24 @@ def evaluate_command_specs(
             )
             continue
         if matches:
+            completed = [
+                execution for execution in matches if execution.exit_code is not None
+            ]
+            if not completed:
+                add_missing(
+                    report,
+                    "COMMAND_INCOMPLETE",
+                    f"matching command execution for {spec.subject!r} did not complete",
+                    subject=spec.subject,
+                    actual=[execution.command for execution in matches],
+                )
+                continue
             add_missing(
                 report,
                 "COMMAND_FAILED",
                 f"matching command execution for {spec.subject!r} failed",
                 subject=spec.subject,
-                actual=[execution.exit_code for execution in matches],
+                actual=[execution.exit_code for execution in completed],
             )
             continue
         add_missing(

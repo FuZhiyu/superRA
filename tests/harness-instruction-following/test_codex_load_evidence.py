@@ -123,6 +123,42 @@ def test_red_matching_command_with_nonzero_exit():
     assert finding_codes(report, outcome="missing") == ["COMMAND_FAILED"]
 
 
+def test_red_matching_start_only_event_is_incomplete():
+    spec = CommandSpec(subject="task-read", executable="tool", args=("read",))
+    events = parse_codex_jsonl_str(
+        json.dumps(
+            {
+                "type": "item.started",
+                "item": {"type": "command_execution", "command": "tool read"},
+            }
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
+    assert finding_codes(report, outcome="missing") == ["COMMAND_INCOMPLETE"]
+
+
+def test_red_path_suffixed_non_path_arguments_do_not_match():
+    spec = CommandSpec(
+        subject="task-read",
+        executable="./superRA/superra",
+        args=("task", "read", "always-loaded-task"),
+    )
+    events = parse_codex_jsonl_str(
+        json.dumps(
+            {
+                "type": "command_execution",
+                "command": "./superRA/superra /tmp/task /tmp/read "
+                "/tmp/always-loaded-task",
+                "exit_code": 0,
+            }
+        )
+    )
+    report = CommandEvidenceReport()
+    evaluate_command_specs(report, (spec,), command_executions_from_events(events))
+    assert finding_codes(report, outcome="missing") == ["COMMAND_NOT_EXECUTED"]
+
+
 def test_red_completed_failure_overrides_started_event_without_outcome():
     spec = CommandSpec(subject="task-read", executable="tool", args=("read",))
     events = parse_codex_jsonl_str(
