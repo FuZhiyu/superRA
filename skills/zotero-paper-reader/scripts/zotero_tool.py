@@ -50,12 +50,72 @@ def emit(payload: object) -> None:
     sys.stdout.write("\n")
 
 
-def fail(message: str, code: int = 1) -> "int":
-    """Emit a structured error to stderr and return an exit code.
+class ToolError(RuntimeError):
+    """Expected tool failure with a stable machine-readable identity."""
 
-    The message is constructed by the tool, never echoing credential values.
-    """
-    eprint(f"error: {message}")
+    code = "operation_failed"
+
+
+class AccessUnavailableError(ToolError):
+    code = "access_unavailable"
+
+
+class InvalidLibraryError(ToolError):
+    code = "invalid_library"
+
+
+class SelectionRequiredError(ToolError):
+    code = "selection_required"
+
+
+class ItemNotFoundError(ToolError):
+    code = "item_not_found"
+
+
+class CitationTargetError(ToolError):
+    code = "citation_target_required"
+
+
+class DraftNotFoundError(ToolError):
+    code = "draft_not_found"
+
+
+class MarkerNotFoundError(ToolError):
+    code = "marker_not_found"
+
+
+def redact_secrets(message: str) -> str:
+    """Remove configured API-key values from diagnostic presentation text."""
+    secrets = [os.environ.get("ZOTERO_API_KEY")]
+    try:
+        secrets.append(load_env_file().get("ZOTERO_API_KEY"))
+    except OSError:
+        pass
+    for secret in sorted(filter(None, secrets), key=len, reverse=True):
+        message = message.replace(secret, "[REDACTED]")
+    return message
+
+
+def fail(error: BaseException | str, code: int = 1) -> "int":
+    """Emit a structured error identity to stderr and return an exit code."""
+    if isinstance(error, ToolError):
+        error_code = error.code
+        error_type = type(error).__name__
+    elif isinstance(error, BaseException):
+        error_code = "unexpected_error"
+        error_type = type(error).__name__
+    else:
+        error_code = ToolError.code
+        error_type = ToolError.__name__
+    payload = {
+        "error": {
+            "code": error_code,
+            "type": error_type,
+            "message": redact_secrets(str(error)),
+        }
+    }
+    json.dump(payload, sys.stderr, indent=2)
+    sys.stderr.write("\n")
     return code
 
 
@@ -132,13 +192,13 @@ def parse_library(spec: str | None) -> "tuple[str, str | None]":
     """Resolve a ``--library`` spec to ``(library_type, group_id)``.
 
     ``user`` (or None) -> ``("user", None)``; a bare numeric id or ``group:<id>``
-    -> ``("group", "<id>")``. Raises RuntimeError on an unparseable spec.
+    -> ``("group", "<id>")``. Raises InvalidLibraryError on an unparseable spec.
     """
     if spec is None or spec == "user":
         return "user", None
     gid = spec.split(":", 1)[1] if spec.startswith("group:") else spec
     if not gid.isdigit():
-        raise RuntimeError(
+        raise InvalidLibraryError(
             f"invalid --library {spec!r}: use 'user', a numeric group id, "
             "or 'group:<id>' (list ids with the 'libraries' command)"
         )
@@ -150,8 +210,8 @@ def make_client(prefer: str = "auto", library: str | None = "user"):
 
     ``prefer`` is one of ``auto`` (local if available, else web), ``local``,
     or ``web``. ``library`` is ``user`` (default), a numeric group id, or
-    ``group:<id>``. Raises RuntimeError with a credential-free message when the
-    requested mode cannot be constructed.
+    ``group:<id>``. Raises AccessUnavailableError when the requested mode cannot
+    be constructed.
     """
     from pyzotero.zotero import Zotero
 
@@ -170,7 +230,7 @@ def make_client(prefer: str = "auto", library: str | None = "user"):
 
     def build_web() -> "tuple[object, str]":
         if not cfg["api_key"]:
-            raise RuntimeError(
+            raise AccessUnavailableError(
                 "Web API mode needs ZOTERO_LIBRARY_ID and ZOTERO_API_KEY "
                 "(set in the environment or Notes/.env)"
             )
@@ -180,7 +240,7 @@ def make_client(prefer: str = "auto", library: str | None = "user"):
             )
             return zot, "web"
         if not cfg["library_id"]:
-            raise RuntimeError(
+            raise AccessUnavailableError(
                 "Web API mode needs ZOTERO_LIBRARY_ID and ZOTERO_API_KEY "
                 "(set in the environment or Notes/.env)"
             )
@@ -318,7 +378,7 @@ def builtin_bibliography(zot, item_keys: list[str], style: str) -> list[str]:
         if rendered and rendered.strip():
             entries.append(rendered.strip())
     if not entries:
-        raise RuntimeError(
+        raise ToolError(
             "built-in bibliography rendering produced no entries for the "
             "requested items"
         )
@@ -392,7 +452,7 @@ def builtin_bibtex(zot, item_keys: list[str]) -> str:
         if text:
             chunks.append(text)
     if not chunks:
-        raise RuntimeError(
+        raise ToolError(
             "built-in BibTeX export produced no entries for the requested items"
         )
     return "\n\n".join(chunks) + "\n"
@@ -518,11 +578,12 @@ def cmd_health(args: argparse.Namespace) -> int:
     )
     sys.stdout.flush()
     if active is None:
-        eprint(
-            "no usable access mode: enable the Zotero Desktop local API or "
-            "configure Web API credentials (see references/access-modes.md)"
+        return fail(
+            AccessUnavailableError(
+                "no usable access mode: enable the Zotero Desktop local API or "
+                "configure Web API credentials (see references/access-modes.md)"
+            )
         )
-        return 1
     return 0
 
 
@@ -539,7 +600,7 @@ def cmd_libraries(args: argparse.Namespace) -> int:
     try:
         groups = zot.everything(zot.groups())
     except Exception as exc:  # noqa: BLE001
-        return fail(f"could not list group libraries: {exc}")
+        return fail(ToolError(f"could not list group libraries: {exc}"))
     for g in groups:
         libraries.append(
             {
@@ -596,7 +657,7 @@ def cmd_fulltext(args: argparse.Namespace) -> int:
     try:
         result = zot.fulltext_item(args.attachment_key)
     except Exception as exc:  # noqa: BLE001
-        return fail(f"could not retrieve full text for attachment: {exc}")
+        return fail(ToolError(f"could not retrieve full text for attachment: {exc}"))
     emit({"mode": mode, "attachment_key": args.attachment_key, "fulltext": result})
     return 0
 
@@ -634,9 +695,12 @@ def cmd_pdf(args: argparse.Namespace) -> int:
     # 2. Web API download.
     try:
         zot, _ = make_client(prefer="web", library=args.library)
-    except RuntimeError as exc:
+    except AccessUnavailableError as exc:
         return fail(
-            f"PDF not in local storage and Web API not configured for download — {exc}"
+            AccessUnavailableError(
+                "PDF not in local storage and Web API not configured for "
+                f"download — {exc}"
+            )
         )
 
     # Recover the original filename from item metadata; fall back to the key.
@@ -652,13 +716,15 @@ def cmd_pdf(args: argparse.Namespace) -> int:
     try:
         content = zot.file(key)
     except Exception as exc:  # noqa: BLE001
-        return fail(f"Web API download failed: {exc}")
+        return fail(ToolError(f"Web API download failed: {exc}"))
 
     out_path.write_bytes(content)
     if not out_path.exists() or out_path.stat().st_size < PDF_MIN_BYTES:
         return fail(
-            f"downloaded file is too small ({out_path.stat().st_size} bytes); "
-            "the attachment may be a linked file or have no stored PDF"
+            ToolError(
+                f"downloaded file is too small ({out_path.stat().st_size} bytes); "
+                "the attachment may be a linked file or have no stored PDF"
+            )
         )
     emit({"source": "web-download", "path": str(out_path)})
     return 0
@@ -693,12 +759,12 @@ def select_item_keys(zot, args: argparse.Namespace) -> list[str]:
             if doi in index:
                 keys.append(index[doi])
             else:
-                raise RuntimeError(f"no library item found for DOI {doi!r}")
+                raise ItemNotFoundError(f"no library item found for DOI {doi!r}")
     # De-duplicate, preserving order.
     seen: set[str] = set()
     ordered = [k for k in keys if not (k in seen or seen.add(k))]
     if not ordered:
-        raise RuntimeError(
+        raise SelectionRequiredError(
             "no items selected: pass --item-key, --query, and/or --doi"
         )
     return ordered
@@ -707,7 +773,9 @@ def select_item_keys(zot, args: argparse.Namespace) -> list[str]:
 def cmd_bibtex(args: argparse.Namespace) -> int:
     """Emit BibTeX (BBT citekeys by default) and optionally sync a master .bib."""
     if not (args.item_key or args.query or args.doi):
-        return fail("select items with --item-key, --query, and/or --doi")
+        raise SelectionRequiredError(
+            "select items with --item-key, --query, and/or --doi"
+        )
     zot, mode = make_client(prefer=args.mode, library=args.library)
     item_keys = select_item_keys(zot, args)
     bbt_used, citekeys, text = resolve_keys(zot, item_keys, args.library)
@@ -747,14 +815,14 @@ def bbt_fallback_warning() -> None:
 def check_draft_target(draft: "Path", marker: str | None) -> None:
     """Validate the draft target (and marker, if given) without mutating it.
 
-    Raises RuntimeError if the draft is absent or a given marker is not present.
-    Lets ``cmd_cite`` reject a bad target *before* it syncs the master ``.bib``,
-    so a typo'd ``--marker`` cannot pollute the user's `.bib`.
+    Raises a typed ToolError if the draft is absent or a given marker is not
+    present. Lets ``cmd_cite`` reject a bad target *before* it syncs the master
+    ``.bib``, so a typo'd ``--marker`` cannot pollute the user's `.bib`.
     """
     if not draft.exists():
-        raise RuntimeError(f"draft file not found: {draft}")
+        raise DraftNotFoundError(f"draft file not found: {draft}")
     if marker is not None and marker not in draft.read_text(encoding="utf-8"):
-        raise RuntimeError(
+        raise MarkerNotFoundError(
             f"marker {marker!r} not found in {draft} — nothing replaced"
         )
 
@@ -763,9 +831,9 @@ def insert_citation(draft: "Path", citation: str, marker: str | None) -> None:
     """Insert ``citation`` into ``draft``: replace the first ``marker`` or append.
 
     With ``marker`` given, the first occurrence is replaced in place; a missing
-    marker raises RuntimeError rather than appending. Without ``marker``, the
-    citation is appended on its own line. Raises RuntimeError if the draft is
-    absent (the citation targets an existing draft, not a fresh file).
+    marker raises MarkerNotFoundError rather than appending. Without ``marker``,
+    the citation is appended on its own line. Raises DraftNotFoundError if the
+    draft is absent (the citation targets an existing draft, not a fresh file).
     """
     check_draft_target(draft, marker)
     text = draft.read_text(encoding="utf-8")
@@ -780,9 +848,11 @@ def insert_citation(draft: "Path", citation: str, marker: str | None) -> None:
 def cmd_cite(args: argparse.Namespace) -> int:
     """Insert a citation into a draft and sync its entry into the master .bib."""
     if not (args.item_key or args.query or args.doi):
-        return fail("select an item with --item-key, --query, and/or --doi")
+        raise SelectionRequiredError(
+            "select an item with --item-key, --query, and/or --doi"
+        )
     if bool(args.tex) == bool(args.markdown):
-        return fail("pass exactly one of --tex or --markdown")
+        raise CitationTargetError("pass exactly one of --tex or --markdown")
     zot, mode = make_client(prefer=args.mode, library=args.library)
     item_keys = select_item_keys(zot, args)
     bbt_used, citekeys, text = resolve_keys(zot, item_keys, args.library)
@@ -825,7 +895,9 @@ def cmd_cite(args: argparse.Namespace) -> int:
 def cmd_bibliography(args: argparse.Namespace) -> int:
     """Render formatted reference entries (default APA) for selected items."""
     if not (args.item_key or args.query or args.doi):
-        return fail("select items with --item-key, --query, and/or --doi")
+        raise SelectionRequiredError(
+            "select items with --item-key, --query, and/or --doi"
+        )
     zot, mode = make_client(prefer=args.mode, library=args.library)
     item_keys = select_item_keys(zot, args)
     bbt_used, entries = resolve_bibliography(zot, item_keys, args.library, args.style)
@@ -1059,12 +1131,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except RuntimeError as exc:
-        return fail(str(exc))
+    except ToolError as exc:
+        return fail(exc)
     except Exception as exc:  # noqa: BLE001
-        # Defensive: pyzotero / network errors. Message is tool-constructed and
-        # the exception text from pyzotero does not contain credential values.
-        return fail(f"{type(exc).__name__}: {exc}")
+        return fail(exc)
 
 
 if __name__ == "__main__":
