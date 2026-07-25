@@ -83,6 +83,12 @@ def render_workflow(config: WorkflowConfig | None = None) -> str:
         }
     )
     for token, value in replacements.items():
+        token_index = template.find(token)
+        if token_index >= 0 and "\n" in value:
+            line_start = template.rfind("\n", 0, token_index) + 1
+            indent = template[line_start:token_index]
+            if not indent.strip():
+                value = value.replace("\n", f"\n{indent}")
         template = template.replace(token, value)
     return template
 

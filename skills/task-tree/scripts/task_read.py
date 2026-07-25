@@ -105,10 +105,19 @@ def _dep_tasks(target_task: Task, siblings: dict[str, Task]) -> list[tuple[str, 
 # Open-comment helpers
 # ---------------------------------------------------------------------------
 
+LEGACY_COMMENT_FORMAT = "legacy-comment-format"
+LEGACY_COMMENT_FORMAT_MESSAGE = (
+    "open comments unavailable: legacy sidecar format — "
+    "re-run under uv or re-save to migrate"
+)
+
+
 def _open_comments(target_task: Task) -> list[dict]:
     """Return unresolved comments for *target_task*, each with its full block.
 
-    Each entry is ``{author, section, block, preview, body, orphaned, degraded}``.
+    Each entry is
+    ``{author, section, block, preview, body, orphaned, degraded,
+    degraded_code}``.
     ``block`` is the full anchored block text (no length cap), or ``None`` for an
     orphaned comment (its anchored block moved/was edited away); orphaned entries
     carry the stored ``text_preview`` under ``preview`` instead. Resolved comments
@@ -116,8 +125,8 @@ def _open_comments(target_task: Task) -> list[dict]:
 
     Comment loading never crashes the read: if the sidecar is a legacy block-YAML
     file and ``pyyaml`` is unavailable (bare ``python3``), this returns a single
-    ``degraded`` sentinel entry carrying a visible note instead of raising, so the
-    rest of the read (frontmatter, sections, sibling deps) still emits with exit 0.
+    ``degraded_code`` sentinel entry instead of raising, so the rest of the read
+    (frontmatter, sections, sibling deps) still emits with exit 0.
     """
     try:
         loaded = load_comments(target_task.dir_path)
@@ -129,8 +138,8 @@ def _open_comments(target_task: Task) -> list[dict]:
             "preview": None,
             "body": None,
             "orphaned": False,
-            "degraded": "open comments unavailable: legacy sidecar format — "
-                        "re-run under uv or re-save to migrate",
+            "degraded": LEGACY_COMMENT_FORMAT_MESSAGE,
+            "degraded_code": LEGACY_COMMENT_FORMAT,
         }]
     comments = [c for c in loaded if not c.resolved]
     if not comments:
@@ -146,6 +155,7 @@ def _open_comments(target_task: Task) -> list[dict]:
             "body": c.body,
             "orphaned": block is None,
             "degraded": None,
+            "degraded_code": None,
         })
     return entries
 
@@ -236,7 +246,7 @@ def render_human(
     if open_comments:
         parts.append("=== Open Comments ===\n")
         for c in open_comments:
-            if c.get("degraded"):
+            if c.get("degraded_code") == LEGACY_COMMENT_FORMAT:
                 parts.append(f"  [{c['degraded']}]")
                 parts.append("")
                 continue
@@ -331,8 +341,12 @@ def render_json(
             "preview": c["preview"],      # stored anchor preview (retained for orphans)
             "body": c["body"],
             "orphaned": c["orphaned"],
-            "degraded": c.get("degraded"),  # set only when a legacy sidecar could
-                                            # not be read under bare python3
+            # Retained for compatibility; consumers should branch on
+            # ``degraded_code`` rather than this human-facing explanation.
+            "degraded": c.get("degraded"),
+            # Stable machine-readable degradation state. Human rendering owns
+            # the explanatory copy independently.
+            "degraded_code": c.get("degraded_code"),
         }
         for c in _open_comments(target_task)
     ]
