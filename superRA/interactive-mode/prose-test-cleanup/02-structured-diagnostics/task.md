@@ -1,15 +1,15 @@
 ---
-title: "Replace Diagnostic Wording Assertions with Structured Findings"
+title: "Delete Low-Value Wording Assertions"
 status: not-started
 depends_on:  []
 ---
 
 ## Objective
 
-Replace tests that assert human diagnostic prose or authored instruction wording with structured finding codes/subjects and observable outcomes. Cover transcript assertions, SDK/Codex load evidence, contract tests, generated-agent conflict handling, and any interactive behavior evaluator reached by Protect. Preserve legitimate structural/generated contracts. Success: reports expose stable structured fields, CLI prose remains untested presentation, and targeted/full suites pass with red-green evidence.
+Delete exact diagnostic, warning, UI-label, heading-count, and remediation-copy assertions across the audited test surfaces. Keep an existing behavioral assertion when it already exposes a cheap important outcome such as exit status, unchanged files, JSON shape, event order, or secret absence. Do not modify production code or add helper APIs. Success: the test diff is net-negative, no new execution cost is introduced, and the remaining assertions protect stable behavior rather than wording.
 
 ## Planner Guidance
 
-Audit inventory: test_contract prose/list/fixture scans; transcript_assertions and its tests; SDK/Codex evidence tests; stage/domain diagnostic-message assertions; sync_codex_agents unmanaged-conflict stderr assertion. The active protection fix already owns interactive transcript/seat behavior and should land into this child rather than exact prose assertions.
+Use the completed audit as navigation across harness contract/diagnostics, task-tree CLI/dashboard/comments, worktree-data-sync, hook adapter, Zotero CLI, and report-in-markdown. Replacements are allowed only when they reuse an existing result/state in a few local assertions; otherwise delete. Preserve the branch-specific interactive transcript/seat behavioral checks already present before this task.
 
 ## Results

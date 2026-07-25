@@ -1,15 +1,15 @@
 ---
-title: "Replace Prose-Specific Tests with Behavioral Contracts"
+title: "Prune Prose-Specific Tests Conservatively"
 status: not-started
 depends_on:  []
 ---
 
 ## Objective
 
-Remove existing tests that treat authored instruction prose, labels, or diagnostic wording as exact regression oracles. Preserve only structured contracts and observable behavior: parsed tables/frontmatter/schema/path identities, generated-artifact equality, tool/event ordering, file/status mutations, command execution, and dispatch evidence. Refactor affected reports to expose structured finding codes/subjects where tests currently match human messages. Update harness documentation and fixtures so no deleted prose canary remains. Success: a whole-repo test audit finds no exact authored-instruction sentence/phrase oracle; behavior-oriented replacements pass with red-green evidence; no legitimate structural or generated-artifact contract is weakened.
+Remove tests that treat authored instruction prose, labels, layout, or diagnostic wording as regression oracles. Keep existing cheap checks for important behavior that is easy to miss: destructive or missing file mutations, exit status, generated schemas/identities, tool or dispatch ordering, and secret exposure. Prefer deleting a prose assertion over building new test infrastructure. Success: the cleanup changes tests and fixtures only, adds no live/network/agent execution, introduces no production API or helper framework, has a net-negative test diff, and retains the existing high-value behavioral suite.
 
 ## Planner Guidance
 
-The read-only integration audit identified affected surfaces across harness test_contract, always-loaded/stage/domain live canaries and fixtures, transcript diagnostics, SDK/Codex evidence tests, and sync_codex_agents stderr wording. Use that inventory as navigation, reclassifying each assertion before deletion. This is the researcher-confirmed cleanup prompted during Protect.
+Budget: use an existing observable field or state only when the replacement is local and simpler than the prose assertion. Otherwise delete the assertion or its test. Do not add subprocesses, live harness calls, network access, structured diagnostic APIs, new error taxonomies, or production changes solely for testability. Preserve tests for branch-specific interactive routing and review behavior already protected before this task.
 
 ## Results
