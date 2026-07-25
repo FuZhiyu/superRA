@@ -1,6 +1,6 @@
 ---
 title: "Replace Task-Tree Core Prose Oracles"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -37,3 +37,8 @@ Own test_cli.py, test_task_tree.py, _task_validate.py, task_check.py, and direct
   `Finding` lacked the new fields. Green evidence: the focused run passed 44
   tests; the two owned modules passed 308 tests; the full task-tree suite passed
   723 tests with zero failures.
+
+## Review Notes
+
+1. **MAJOR** — [`task_check.py:241-253`](../../../../skills/task-tree/scripts/task_check.py#L241-L253): the `rollup.mismatch` finding exposes the stored status as `actual`, but the computed expected status remains available only inside `message`. This leaves a semantic operand in presentation prose, contrary to the objective that human text be presentation-only, and forces JSON consumers either to parse wording or re-walk the tree to learn the expected value. Add a structured expected value (or an equivalent structured actual/expected pair), serialize it without removing the legacy keys, and assert it in the rollup and JSON contract tests.
+2. **MINOR** — [`_task_validate.py:18-26`](../../../../skills/task-tree/scripts/_task_validate.py#L18-L26): `ValidationFinding` is only shallowly frozen because `actual: Any` can hold mutable lists or mappings (for example, a malformed `depends_on` list), so the Results description of the findings as immutable is not generally true. Either canonicalize mutable operands into immutable values or narrow the Results claim.
