@@ -1,6 +1,6 @@
 ---
 title: "Replace Dashboard and Comment Prose Oracles"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
