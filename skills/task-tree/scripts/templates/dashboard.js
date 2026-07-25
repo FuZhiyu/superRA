@@ -121,6 +121,43 @@ function repoFileHref(path) {
   return '';
 }
 
+function isRelativeResource(value) {
+  return !!value
+    && value.charAt(0) !== '/'
+    && value.indexOf('//') !== 0
+    && !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value);
+}
+
+function artifactDirectory(path) {
+  var i = (path || '').lastIndexOf('/');
+  return i === -1 ? '' : path.slice(0, i);
+}
+
+/* Resolve a link from a companion's own directory while staying inside the
+   owning task's public artifact surface: one direct file or attachments/**. */
+function resolveArtifactRelativePath(sourcePath, href) {
+  if (!isRelativeResource(href) || href.charAt(0) === '#') return '';
+  var clean = href.replace(/[?#].*$/, '');
+  try { clean = decodeURIComponent(clean); } catch (e) {}
+  var base = artifactDirectory(sourcePath);
+  var parts = (base ? base.split('/') : []).concat(clean.split('/'));
+  var out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      if (!out.length) return '';
+      out.pop();
+    } else {
+      out.push(part);
+    }
+  }
+  if (!out.length) return '';
+  if (out.length > 1 && out[0] !== 'attachments') return '';
+  if (out[0].toLowerCase() === 'task.md' || out[0].toLowerCase() === 'comments.yaml') return '';
+  return out.join('/');
+}
+
 /* Membership oracle for in-tree task references. Every task's tree path, as a
    set, so renderMarkdown can decide whether a relative body link points at a
    real task in this tree (-> internal navigation) or at a plain file (-> the
@@ -137,7 +174,7 @@ var TASK_PATHS = (function () {
    task's canonical tree path; otherwise null (caller keeps the vscode:// path).
    A target is an in-tree task when, after dropping a trailing `/task.md` or a
    bare trailing `/`, the normalized tree path is in TASK_PATHS. */
-function resolveInternalTaskPath(href, taskPath) {
+function resolveInternalTaskPath(href, taskPath, contentBaseDir) {
   /* Strip any #fragment / ?query — they don't affect which task is referenced. */
   var clean = href.replace(/[?#].*$/, '');
   if (!clean) return null;
@@ -160,7 +197,9 @@ function resolveInternalTaskPath(href, taskPath) {
   } else if (clean.charAt(0) === '/') {
     return null;  /* filesystem-absolute, not a tree path */
   } else {
-    segs = (taskPath ? taskPath.split('/') : []).concat(clean.split('/'));
+    segs = (taskPath ? taskPath.split('/') : [])
+      .concat(contentBaseDir ? contentBaseDir.split('/') : [])
+      .concat(clean.split('/'));
   }
 
   /* Normalize . / .. segments into a clean tree path. */
@@ -189,7 +228,7 @@ function resolveInternalTaskPath(href, taskPath) {
  * - Wrap each block-level element in a .commentable-block container
  *   with data-section and data-block attributes (when sectionName given)
  */
-function renderMarkdown(text, sectionName, taskPath) {
+function renderMarkdown(text, sectionName, taskPath, contentBase) {
   /* markdown-it runs with html:true so agent-authored HTML (layouts, diagrams,
      callouts) survives. Exports are published, so every render result is
      untrusted reader input — sanitize before it touches the DOM. DOMPurify's
@@ -206,14 +245,17 @@ function renderMarkdown(text, sectionName, taskPath) {
        prepended to RESOLVED_ROOT (absolute) for the local vscode://file link.
      - repoPathPrefix: the same path prefixed with the root's repo-relative name
        (ROOT_PREFIX), passed to repoFileHref for the GitHub branch. */
+  var artifactPath = contentBase && contentBase.artifactPath;
+  var contentBaseDir = artifactPath ? artifactDirectory(artifactPath) : '';
   var taskDirRel = taskPath ? taskPath + '/' : '';
+  var contentDirRel = taskDirRel + (contentBaseDir ? contentBaseDir + '/' : '');
   var rootRel = ROOT_PREFIX ? ROOT_PREFIX + '/' : '';
-  var repoPathPrefix = rootRel + taskDirRel;
+  var repoPathPrefix = rootRel + contentDirRel;
   /* The GitHub-branch prefix uses the repo-root-relative root path (so a tree
      below the repo root keeps its `docs/...` prefix); /files/ and vscode keep
      ROOT_PREFIX / RESOLVED_ROOT. */
   var repoRootRel = REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '';
-  var repoLinkPrefix = repoRootRel + taskDirRel;
+  var repoLinkPrefix = repoRootRel + contentDirRel;
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -221,8 +263,8 @@ function renderMarkdown(text, sectionName, taskPath) {
      figures, paths outside the tree) keeps the vscode://file rewrite. */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
-    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
-      var internal = resolveInternalTaskPath(href, taskPath);
+    if (href && isRelativeResource(href) && !href.startsWith('#')) {
+      var internal = resolveInternalTaskPath(href, taskPath, contentBaseDir);
       if (internal !== null) {
         a.setAttribute('href', '#/' + internal);
         a.removeAttribute('target');
@@ -231,6 +273,14 @@ function renderMarkdown(text, sectionName, taskPath) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
+        if (artifactPath) {
+          var artifactTarget = resolveArtifactRelativePath(artifactPath, href);
+          if (artifactTarget) {
+            a.setAttribute('href', artifactOpenHref(taskPath, artifactTarget));
+            a.setAttribute('target', '_blank');
+          }
+          return;
+        }
         if (window.DOC_MODE) {
           /* Doc pages cite repo files by repo-root-relative path (the authoring
              contract), so the href IS the repo path — resolve it against the repo
@@ -254,7 +304,7 @@ function renderMarkdown(text, sectionName, taskPath) {
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
         } else {
-          var filePath = taskDirRel + href;
+          var filePath = contentDirRel + href;
           var loc = '';
           var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
           if (lm) {
@@ -274,8 +324,14 @@ function renderMarkdown(text, sectionName, taskPath) {
      so figures load from a file:// open. */
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');
-    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
-      if (window.STANDALONE) {
+    if (src && isRelativeResource(src)) {
+      if (artifactPath) {
+        var artifactImage = resolveArtifactRelativePath(artifactPath, src);
+        var artifactImageUrl = artifactImage
+          ? artifactResourceUrl(taskPath, artifactImage)
+          : '';
+        if (artifactImageUrl) img.setAttribute('src', artifactImageUrl);
+      } else if (window.STANDALONE) {
         /* Prefer the base64 data URI embedded at build time (figure-portable in a
            moved/offline file). Key it exactly as the build helper does: taskPath +
            '/' + src for a task body, bare src for the root body. Fall back to the
@@ -989,6 +1045,9 @@ async function loadActiveNode(path) {
       /* Open this task's task.md in the configured file target. */
       + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
       + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
+      + '<button class="artifact-toggle-btn" type="button" aria-controls="artifact-sidecar"'
+      + ' aria-expanded="' + (_artifactSidecarOpen ? 'true' : 'false') + '">'
+      + '<span>Files</span><span class="artifact-count" aria-hidden="true"></span></button>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -997,7 +1056,10 @@ async function loadActiveNode(path) {
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
-      + '<div class="task-node active-node-body" data-path="' + path + '">' + body + '</div>';
+      + '<div class="task-node active-node-body" data-path="' + escapeAttr(path) + '">' + body + '</div>'
+      + (window.STANDALONE ? '' :
+         '<span class="artifact-event-sink" data-artifact-owner="' + escapeAttr(path)
+         + '" sse-swap="artifacts:' + escapeAttr(path) + '" hx-swap="none"></span>');
 
     /* Set the title via textContent (avoids HTML injection from titles). In
        doc-mode the slug is task anatomy — show the title alone. */
@@ -1013,6 +1075,10 @@ async function loadActiveNode(path) {
        carry the path safely (a quoted path breaks the double-quoted attribute). */
     var shareBtn = region.querySelector('.share-btn');
     if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
+    var filesBtn = region.querySelector('.artifact-toggle-btn');
+    if (filesBtn) {
+      filesBtn.onclick = function() { toggleArtifactSidecar(path, filesBtn); };
+    }
 
     /* a11y: on a user-initiated navigation, move focus to the new heading so
        keyboard/SR users land on the freshly-loaded content. Consume the flag so
@@ -1032,6 +1098,11 @@ async function loadActiveNode(path) {
       });
       loadComments(path);
     }
+
+    /* Bind the task-scoped artifact event sink to the existing htmx EventSource,
+       then fetch the current manifest for the header count / optional sidecar. */
+    if (window.htmx) htmx.process(region);
+    loadArtifactManifest(path);
 
     /* If the sidebar row hadn't landed yet, the status badge is missing. The
        deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
@@ -1057,6 +1128,778 @@ function shareSubtree(path) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Task companion-file canvas. activePath remains the owning task; opening a
+   file changes only this sidecar and never writes hash/history state.
+   ════════════════════════════════════════════════════════════════════════ */
+var _artifactSidecarOpen = false;
+var _artifactManifestOwner = null;
+var _artifactManifest = null;
+var _artifactSelectedPath = '';
+var _artifactManifestToken = 0;
+var _artifactPreviewToken = 0;
+var _artifactReturnFocus = null;
+
+function artifactApiUrl(taskPath, artifactPath, download) {
+  var url = '/api/artifact?task=' + encodeURIComponent(taskPath || '')
+    + '&path=' + encodeURIComponent(artifactPath || '');
+  if (download) url += '&download=true';
+  return wtUrl(url);
+}
+
+function artifactManifestEntry(taskPath, artifactPath) {
+  var manifest = (_artifactManifestOwner === taskPath) ? _artifactManifest : null;
+  if (!manifest && window.STANDALONE && window.STANDALONE_ARTIFACTS) {
+    manifest = STANDALONE_ARTIFACTS.manifests[taskPath];
+  }
+  var files = manifest && manifest.files ? manifest.files : [];
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].path === artifactPath) return files[i];
+  }
+  return null;
+}
+
+function standaloneArtifactDataUrl(taskPath, entry) {
+  if (!window.STANDALONE || !entry || !window.STANDALONE_ARTIFACTS) return '';
+  var exported = entry.export || {};
+  if (exported.status === 'figure' && exported.image_key
+      && window.STANDALONE_IMAGES
+      && STANDALONE_IMAGES.hasOwnProperty(exported.image_key)) {
+    return STANDALONE_IMAGES[exported.image_key];
+  }
+  var taskContents = STANDALONE_ARTIFACTS.contents[taskPath] || {};
+  var payload = taskContents[entry.path];
+  if (!payload || payload.encoding !== 'base64') return '';
+  return 'data:' + (payload.mime || entry.mime || 'application/octet-stream')
+    + ';base64,' + payload.data;
+}
+
+function artifactResourceUrl(taskPath, artifactPath) {
+  if (!window.STANDALONE) return artifactApiUrl(taskPath, artifactPath, false);
+  var entry = artifactManifestEntry(taskPath, artifactPath);
+  return standaloneArtifactDataUrl(taskPath, entry) || (entry && entry.repo_url) || '';
+}
+
+function artifactOpenHref(taskPath, artifactPath) {
+  return artifactResourceUrl(taskPath, artifactPath) || '#';
+}
+
+function artifactDownloadHref(taskPath, entry) {
+  if (!entry) return '';
+  if (!window.STANDALONE) return artifactApiUrl(taskPath, entry.path, true);
+  return standaloneArtifactDataUrl(taskPath, entry) || entry.repo_url || '';
+}
+
+function standaloneArtifactText(taskPath, entry) {
+  var taskContents = window.STANDALONE_ARTIFACTS
+    && STANDALONE_ARTIFACTS.contents[taskPath];
+  var payload = taskContents && taskContents[entry.path];
+  if (!payload || payload.encoding !== 'base64') {
+    return Promise.reject(new Error('This file was not embedded in the export.'));
+  }
+  try {
+    var binary = atob(payload.data);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return Promise.resolve(new TextDecoder('utf-8').decode(bytes));
+  } catch (e) {
+    return Promise.reject(new Error('The embedded file could not be decoded.'));
+  }
+}
+
+function readArtifactText(taskPath, entry) {
+  if (window.STANDALONE) return standaloneArtifactText(taskPath, entry);
+  return fetch(artifactApiUrl(taskPath, entry.path, false)).then(function(resp) {
+    if (!resp.ok) {
+      if (resp.status === 413) throw new Error('Preview unavailable: file exceeds the preview limit.');
+      throw new Error('Preview unavailable (' + resp.status + ').');
+    }
+    return resp.text();
+  });
+}
+
+function formatArtifactBytes(value) {
+  var size = Number(value) || 0;
+  if (size < 1024) return size + ' B';
+  if (size < 1024 * 1024) return (size / 1024).toFixed(size < 10 * 1024 ? 1 : 0) + ' KiB';
+  return (size / (1024 * 1024)).toFixed(1) + ' MiB';
+}
+
+function artifactUnavailableReason(entry) {
+  if (entry.previewable) return '';
+  if (!entry.download_only) return 'Preview unavailable — file exceeds the preview limit.';
+  return 'Download only — active or unsupported content is never rendered.';
+}
+
+function updateArtifactControls(taskPath, manifest) {
+  var count = manifest && manifest.files ? manifest.files.length : 0;
+  var button = document.querySelector('#active-node .artifact-toggle-btn');
+  if (button && taskPath === activePath) {
+    button.setAttribute('aria-expanded', _artifactSidecarOpen ? 'true' : 'false');
+    button.title = count ? ('Browse ' + count + ' task file' + (count === 1 ? '' : 's')) : 'Browse task files';
+    var countEl = button.querySelector('.artifact-count');
+    if (countEl) {
+      countEl.textContent = count ? String(count) : '';
+      countEl.classList.toggle('hidden', !count);
+    }
+  }
+  patchNavArtifactBadge(taskPath, count);
+}
+
+function patchNavArtifactBadge(taskPath, count) {
+  var node = document.getElementById(navNodeId(taskPath));
+  var row = node && node.querySelector(':scope > .task-row');
+  if (!row) return;
+  var existing = row.querySelector(':scope > .artifact-count-btn');
+  if (!count) {
+    if (existing) existing.remove();
+    return;
+  }
+  var button = existing || document.createElement('button');
+  button.type = 'button';
+  button.className = 'artifact-count-btn';
+  button.textContent = String(count);
+  button.title = count + ' task file' + (count === 1 ? '' : 's');
+  button.setAttribute('aria-label', 'Open ' + count + ' files for ' + (pathTitles[taskPath] || taskPath || 'root'));
+  button.onclick = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (activePath !== taskPath) setActive(taskPath);
+    openArtifactSidecar(taskPath, button);
+  };
+  if (!existing) {
+    var status = row.querySelector(':scope > .badge');
+    row.insertBefore(button, status || null);
+  }
+}
+
+function loadArtifactManifest(taskPath, suppliedManifest) {
+  var token = ++_artifactManifestToken;
+  var manifestPromise;
+  if (suppliedManifest) {
+    manifestPromise = Promise.resolve(suppliedManifest);
+  } else if (window.STANDALONE) {
+    var embedded = window.STANDALONE_ARTIFACTS
+      && STANDALONE_ARTIFACTS.manifests[taskPath];
+    manifestPromise = embedded
+      ? Promise.resolve(embedded)
+      : Promise.reject(new Error('Files are unavailable in this export.'));
+  } else {
+    manifestPromise = fetch(wtUrl('/api/artifacts?task=' + encodeURIComponent(taskPath || '')))
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('Files are unavailable (' + resp.status + ').');
+        return resp.json();
+      });
+  }
+  return manifestPromise.then(function(manifest) {
+    if (token !== _artifactManifestToken || taskPath !== activePath) return;
+    var ownerChanged = _artifactManifestOwner !== taskPath;
+    _artifactManifestOwner = taskPath;
+    _artifactManifest = manifest;
+    if (ownerChanged) _artifactSelectedPath = '';
+    updateArtifactControls(taskPath, manifest);
+    if (_artifactSidecarOpen) renderArtifactSidecar(taskPath, manifest, false);
+  }).catch(function(error) {
+    if (token !== _artifactManifestToken || taskPath !== activePath) return;
+    _artifactManifestOwner = taskPath;
+    _artifactManifest = null;
+    updateArtifactControls(taskPath, null);
+    if (_artifactSidecarOpen) showArtifactSidecarState(error.message, 'unavailable');
+  });
+}
+
+function toggleArtifactSidecar(taskPath, returnFocus) {
+  if (_artifactSidecarOpen) {
+    closeArtifactSidecar();
+  } else {
+    openArtifactSidecar(taskPath, returnFocus);
+  }
+}
+
+function openArtifactSidecar(taskPath, returnFocus) {
+  var sidecar = document.getElementById('artifact-sidecar');
+  if (!sidecar) return;
+  _artifactSidecarOpen = true;
+  _artifactReturnFocus = returnFocus || document.activeElement;
+  sidecar.classList.add('open');
+  sidecar.setAttribute('aria-hidden', 'false');
+  var toggle = document.querySelector('#active-node .artifact-toggle-btn');
+  if (toggle) toggle.setAttribute('aria-expanded', 'true');
+  if (_artifactManifestOwner === taskPath && _artifactManifest) {
+    renderArtifactSidecar(taskPath, _artifactManifest, false);
+  } else {
+    showArtifactSidecarState('Loading files…', 'loading');
+    loadArtifactManifest(taskPath);
+  }
+  var close = sidecar.querySelector('.artifact-close');
+  if (close) close.focus({ preventScroll: true });
+}
+
+function closeArtifactSidecar() {
+  var sidecar = document.getElementById('artifact-sidecar');
+  if (!sidecar) return;
+  _artifactSidecarOpen = false;
+  sidecar.classList.remove('open');
+  sidecar.setAttribute('aria-hidden', 'true');
+  var toggle = document.querySelector('#active-node .artifact-toggle-btn');
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  var returnFocus = _artifactReturnFocus && document.contains(_artifactReturnFocus)
+    ? _artifactReturnFocus
+    : toggle;
+  if (returnFocus) returnFocus.focus({ preventScroll: true });
+  _artifactReturnFocus = null;
+}
+
+function showArtifactSidecarState(message, state) {
+  var list = document.getElementById('artifact-list');
+  var preview = document.getElementById('artifact-preview');
+  if (list) {
+    list.innerHTML = '';
+    var p = document.createElement('p');
+    p.className = 'artifact-state artifact-state-' + (state || 'empty');
+    p.textContent = message;
+    list.appendChild(p);
+  }
+  if (preview) preview.innerHTML = '';
+}
+
+function renderArtifactSidecar(taskPath, manifest, refreshPreview) {
+  var list = document.getElementById('artifact-list');
+  var preview = document.getElementById('artifact-preview');
+  var title = document.getElementById('artifact-sidecar-title');
+  if (!list || !preview) return;
+  var listScroll = list.scrollTop;
+  var previewScroll = preview.scrollTop;
+  if (title) title.textContent = 'Files · ' + (pathTitles[taskPath] || taskPath || 'root');
+  list.innerHTML = '';
+
+  if (manifest.unavailable_reason) {
+    showArtifactSidecarState('This task file workspace is unavailable.', 'unavailable');
+    return;
+  }
+  var files = manifest.files || [];
+  if (!files.length) {
+    showArtifactSidecarState('No companion files are retained with this task.', 'empty');
+    return;
+  }
+
+  var groups = [
+    { placement: 'direct', label: 'Companions', note: 'Markdown, source, and notebooks beside task.md' },
+    { placement: 'attachment', label: 'Attachments', note: 'Generated outputs and supporting files' },
+    { placement: 'legacy', label: 'Other direct files', note: 'Legacy placement; reachable for download' },
+  ];
+  groups.forEach(function(group) {
+    var entries = files.filter(function(entry) { return entry.placement === group.placement; });
+    if (!entries.length) return;
+    var section = document.createElement(group.placement === 'legacy' ? 'details' : 'section');
+    section.className = 'artifact-group artifact-group-' + group.placement;
+    if (group.placement !== 'legacy') {
+      var heading = document.createElement('h3');
+      heading.textContent = group.label;
+      section.appendChild(heading);
+    } else {
+      var summary = document.createElement('summary');
+      summary.textContent = group.label + ' (' + entries.length + ')';
+      section.appendChild(summary);
+    }
+    var note = document.createElement('p');
+    note.className = 'artifact-group-note';
+    note.textContent = group.note;
+    section.appendChild(note);
+    var rows = document.createElement('ul');
+    rows.className = 'artifact-rows';
+    entries.forEach(function(entry) {
+      rows.appendChild(buildArtifactRow(taskPath, entry));
+    });
+    section.appendChild(rows);
+    list.appendChild(section);
+  });
+
+  if (manifest.truncated) {
+    var truncated = document.createElement('p');
+    truncated.className = 'artifact-state artifact-state-warning';
+    truncated.textContent = 'File list truncated: ' + (manifest.truncation_reason || 'resource limit') + '.';
+    list.appendChild(truncated);
+  }
+  list.scrollTop = listScroll;
+
+  var selected = files.find(function(entry) { return entry.path === _artifactSelectedPath; });
+  if (refreshPreview && selected && selected.previewable) {
+    openArtifactPreview(taskPath, selected, previewScroll);
+  } else if (!selected) {
+    preview.innerHTML = '';
+    var prompt = document.createElement('p');
+    prompt.className = 'artifact-preview-prompt';
+    prompt.textContent = 'Choose a file to preview it here.';
+    preview.appendChild(prompt);
+  }
+}
+
+function buildArtifactRow(taskPath, entry) {
+  var row = document.createElement('li');
+  row.className = 'artifact-row';
+  row.dataset.artifactPath = entry.path;
+  if (entry.path === _artifactSelectedPath) row.classList.add('selected');
+
+  var identity = document.createElement('div');
+  identity.className = 'artifact-identity';
+  var name = document.createElement('span');
+  name.className = 'artifact-name';
+  name.textContent = entry.placement === 'attachment' ? entry.path : entry.name;
+  var meta = document.createElement('span');
+  meta.className = 'artifact-meta';
+  meta.textContent = entry.kind + ' · ' + formatArtifactBytes(entry.size);
+  var reason = artifactUnavailableReason(entry);
+  if (reason) meta.title = reason;
+  identity.appendChild(name);
+  identity.appendChild(meta);
+  row.appendChild(identity);
+
+  var actions = document.createElement('div');
+  actions.className = 'artifact-actions';
+  if (entry.previewable) {
+    var open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'artifact-action';
+    open.textContent = 'Open';
+    open.onclick = function() { openArtifactPreview(taskPath, entry, 0); };
+    actions.appendChild(open);
+  }
+  var downloadHref = artifactDownloadHref(taskPath, entry);
+  if (downloadHref) {
+    var download = document.createElement('a');
+    download.className = 'artifact-action';
+    download.href = downloadHref;
+    download.textContent = 'Download';
+    if (downloadHref.indexOf('data:') === 0) download.download = entry.name;
+    else download.target = '_blank';
+    actions.appendChild(download);
+  } else {
+    var unavailable = document.createElement('span');
+    unavailable.className = 'artifact-action artifact-action-disabled';
+    unavailable.textContent = 'Unavailable';
+    unavailable.title = (entry.export && entry.export.reason)
+      ? ('Export omitted: ' + entry.export.reason)
+      : reason;
+    actions.appendChild(unavailable);
+  }
+  row.appendChild(actions);
+  return row;
+}
+
+function buildArtifactPreviewHead(taskPath, entry) {
+  var head = document.createElement('header');
+  head.className = 'artifact-preview-head';
+  var heading = document.createElement('h3');
+  heading.textContent = entry.path;
+  head.appendChild(heading);
+  var actions = document.createElement('div');
+  actions.className = 'artifact-actions';
+  var rawHref = artifactOpenHref(taskPath, entry.path);
+  if (rawHref && rawHref !== '#') {
+    var raw = document.createElement('a');
+    raw.className = 'artifact-action';
+    raw.href = rawHref;
+    raw.target = '_blank';
+    raw.textContent = 'Open raw';
+    actions.appendChild(raw);
+  }
+  var downloadHref = artifactDownloadHref(taskPath, entry);
+  if (downloadHref) {
+    var download = document.createElement('a');
+    download.className = 'artifact-action';
+    download.href = downloadHref;
+    download.textContent = 'Download';
+    if (downloadHref.indexOf('data:') === 0) download.download = entry.name;
+    else download.target = '_blank';
+    actions.appendChild(download);
+  }
+  head.appendChild(actions);
+  return head;
+}
+
+function renderArtifactCode(text, language) {
+  var pre = document.createElement('pre');
+  var code = document.createElement('code');
+  if (language && window.hljs && hljs.getLanguage(language)) {
+    try {
+      code.className = 'hljs language-' + language;
+      code.innerHTML = hljs.highlight(text, {
+        language: language,
+        ignoreIllegals: true,
+      }).value;
+    } catch (e) {
+      code.textContent = text;
+    }
+  } else {
+    code.textContent = text;
+  }
+  pre.appendChild(code);
+  return pre;
+}
+
+function openArtifactPreview(taskPath, entry, restoreScroll) {
+  var preview = document.getElementById('artifact-preview');
+  if (!preview) return;
+  var token = ++_artifactPreviewToken;
+  _artifactSelectedPath = entry.path;
+  document.querySelectorAll('#artifact-list .artifact-row').forEach(function(row) {
+    row.classList.toggle('selected', row.dataset.artifactPath === entry.path);
+  });
+  preview.innerHTML = '';
+  preview.appendChild(buildArtifactPreviewHead(taskPath, entry));
+  var body = document.createElement('div');
+  body.className = 'artifact-preview-body';
+  preview.appendChild(body);
+
+  if (!entry.previewable) {
+    var unavailable = document.createElement('p');
+    unavailable.className = 'artifact-state artifact-state-unavailable';
+    unavailable.textContent = artifactUnavailableReason(entry);
+    body.appendChild(unavailable);
+    return;
+  }
+
+  if (entry.kind === 'image') {
+    var imageUrl = artifactResourceUrl(taskPath, entry.path);
+    if (!imageUrl) {
+      body.textContent = 'Image preview is unavailable in this export.';
+      return;
+    }
+    var image = document.createElement('img');
+    image.className = 'artifact-image-preview';
+    image.src = imageUrl;
+    image.alt = entry.name;
+    body.appendChild(image);
+    return;
+  }
+  if (entry.kind === 'pdf') {
+    var pdfUrl = artifactResourceUrl(taskPath, entry.path);
+    if (!pdfUrl) {
+      body.textContent = 'PDF preview is unavailable in this export.';
+      return;
+    }
+    var frame = document.createElement('iframe');
+    frame.className = 'artifact-pdf-preview';
+    frame.setAttribute('sandbox', '');
+    frame.title = 'PDF preview: ' + entry.name;
+    frame.src = pdfUrl;
+    body.appendChild(frame);
+    return;
+  }
+
+  body.textContent = 'Loading preview…';
+  readArtifactText(taskPath, entry).then(function(text) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || entry.path !== _artifactSelectedPath) return;
+    body.innerHTML = '';
+    if (entry.kind === 'markdown') {
+      var markdown = document.createElement('div');
+      markdown.className = 'rendered-md artifact-markdown-preview';
+      markdown.innerHTML = renderMarkdown(text, null, taskPath, { artifactPath: entry.path });
+      body.appendChild(markdown);
+    } else if (entry.kind === 'notebook') {
+      body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
+    } else {
+      var languages = { python: 'python', julia: 'julia', r: 'r' };
+      body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
+    }
+    preview.scrollTop = restoreScroll || 0;
+  }).catch(function(error) {
+    if (token !== _artifactPreviewToken) return;
+    body.innerHTML = '';
+    var message = document.createElement('p');
+    message.className = 'artifact-state artifact-state-unavailable';
+    message.textContent = error.message;
+    body.appendChild(message);
+  });
+}
+
+function onArtifactManifestEvent(taskPath, manifest) {
+  if (taskPath !== activePath) return;
+  var list = document.getElementById('artifact-list');
+  var preview = document.getElementById('artifact-preview');
+  var listScroll = list ? list.scrollTop : 0;
+  var previewScroll = preview ? preview.scrollTop : 0;
+  _artifactManifestToken++;
+  _artifactManifestOwner = taskPath;
+  _artifactManifest = manifest;
+  updateArtifactControls(taskPath, manifest);
+  if (_artifactSidecarOpen) {
+    renderArtifactSidecar(taskPath, manifest, true);
+    if (list) list.scrollTop = listScroll;
+    if (preview && !_artifactSelectedPath) preview.scrollTop = previewScroll;
+  }
+}
+
+/* notebookjs supplies the notebook/worksheet/cell model. Its permissive default
+   renderers are replaced once with this dashboard's existing safe stack. */
+var _notebookRenderContext = null;
+
+function notebookJoin(value) {
+  if (Array.isArray(value)) return value.map(notebookJoin).join('');
+  return value == null ? '' : String(value);
+}
+
+function notebookUnsupported(label) {
+  var fallback = document.createElement('div');
+  fallback.className = 'nb-unsupported-output';
+  fallback.setAttribute('role', 'note');
+  fallback.textContent = 'Unsupported notebook content: ' + label;
+  return fallback;
+}
+
+function notebookLanguage(cell) {
+  var ctx = _notebookRenderContext || {};
+  var notebook = ctx.notebook || {};
+  var metadata = notebook.metadata || {};
+  var value = (cell.raw && cell.raw.language)
+    || metadata.language
+    || (metadata.kernelspec && metadata.kernelspec.language)
+    || (metadata.language_info && metadata.language_info.name)
+    || '';
+  return String(value).toLowerCase() === 'r' ? 'r' : String(value).toLowerCase();
+}
+
+function utf8ToBase64(value) {
+  var bytes = new TextEncoder().encode(value);
+  var binary = '';
+  for (var i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function notebookAttachmentDataUrl(bundle) {
+  if (!bundle || typeof bundle !== 'object') return '';
+  if (bundle['image/png']) {
+    return 'data:image/png;base64,' + notebookJoin(bundle['image/png']).replace(/\s/g, '');
+  }
+  if (bundle['image/jpeg']) {
+    return 'data:image/jpeg;base64,' + notebookJoin(bundle['image/jpeg']).replace(/\s/g, '');
+  }
+  if (bundle['image/svg+xml']) {
+    var safeSvg = DOMPurify.sanitize(notebookJoin(bundle['image/svg+xml']), {
+      USE_PROFILES: { svg: true, svgFilters: true },
+    });
+    return 'data:image/svg+xml;base64,' + utf8ToBase64(safeSvg);
+  }
+  return '';
+}
+
+function materializeNotebookAttachments(markdown, attachments) {
+  var warnings = [];
+  var text = markdown.replace(/attachment:([^\s)"'<>]+)/g, function(match, encodedName) {
+    var name = encodedName;
+    try { name = decodeURIComponent(encodedName); } catch (e) {}
+    var value = notebookAttachmentDataUrl(attachments && attachments[name]);
+    if (!value) {
+      if (warnings.indexOf(name) === -1) warnings.push(name);
+      return match;
+    }
+    return value;
+  });
+  return { text: text, warnings: warnings };
+}
+
+function renderNotebookHtml(value) {
+  var ctx = _notebookRenderContext || {};
+  var holder = document.createElement('div');
+  holder.className = 'nb-html-output rendered-md';
+  holder.innerHTML = renderMarkdown(
+    notebookJoin(value),
+    null,
+    ctx.taskPath || '',
+    { artifactPath: ctx.artifactPath || '' }
+  );
+  return holder;
+}
+
+function renderNotebookSvg(value) {
+  var holder = document.createElement('div');
+  holder.className = 'nb-svg-output';
+  holder.innerHTML = DOMPurify.sanitize(notebookJoin(value), {
+    USE_PROFILES: { svg: true, svgFilters: true },
+  });
+  return holder;
+}
+
+function renderNotebookOutput(raw) {
+  raw = raw || {};
+  if (raw.output_type === 'stream') {
+    var stream = renderArtifactCode(notebookJoin(raw.text), '');
+    stream.classList.add('nb-stream-output');
+    return stream;
+  }
+  if (raw.output_type === 'error' || raw.output_type === 'pyerr') {
+    var traceback = raw.traceback
+      ? notebookJoin(Array.isArray(raw.traceback) ? raw.traceback.join('\n') : raw.traceback)
+      : [raw.ename, raw.evalue].filter(Boolean).join(': ');
+    var error = renderArtifactCode(traceback, '');
+    error.classList.add('nb-error-output');
+    return error;
+  }
+
+  var bundle = raw.data || raw;
+  var safeFormats = [
+    'image/png', 'png', 'image/jpeg', 'jpeg',
+    'image/svg+xml', 'text/svg+xml', 'svg',
+    'text/html', 'html', 'text/markdown',
+    'text/latex', 'latex', 'text/plain', 'text',
+  ];
+  var format = safeFormats.find(function(name) {
+    return bundle[name] !== undefined && bundle[name] !== null;
+  });
+  if (!format) {
+    var formats = Object.keys(bundle).filter(function(name) {
+      return name.indexOf('/') !== -1 || name === 'javascript';
+    });
+    return notebookUnsupported(formats.length ? formats.join(', ') : (raw.output_type || 'unknown output'));
+  }
+  var value = bundle[format];
+  if (format === 'image/png' || format === 'png'
+      || format === 'image/jpeg' || format === 'jpeg') {
+    var image = document.createElement('img');
+    image.className = 'nb-image-output';
+    var subtype = (format === 'image/jpeg' || format === 'jpeg') ? 'jpeg' : 'png';
+    image.src = 'data:image/' + subtype + ';base64,' + notebookJoin(value).replace(/\s/g, '');
+    image.alt = 'Notebook output';
+    return image;
+  }
+  if (format === 'image/svg+xml' || format === 'text/svg+xml' || format === 'svg') {
+    return renderNotebookSvg(value);
+  }
+  if (format === 'text/html' || format === 'html' || format === 'text/markdown') {
+    return renderNotebookHtml(value);
+  }
+  if (format === 'text/latex' || format === 'latex') {
+    return renderNotebookHtml('$$\n' + notebookJoin(value) + '\n$$');
+  }
+  return renderArtifactCode(notebookJoin(value), '');
+}
+
+function installNotebookAdapter() {
+  if (!window.nb || nb._superraAdapterInstalled) return !!window.nb;
+  nb._superraAdapterInstalled = true;
+  nb.executeJavaScript = false;
+  nb.sanitizer = function(value) {
+    return DOMPurify.sanitize(value, { ADD_ATTR: ['style', 'class'] });
+  };
+  nb.markdown = function(value) {
+    var ctx = _notebookRenderContext || {};
+    return renderMarkdown(
+      notebookJoin(value),
+      null,
+      ctx.taskPath || '',
+      { artifactPath: ctx.artifactPath || '' }
+    );
+  };
+  nb.highlighter = function(value, pre, code, language) {
+    if (!language || !window.hljs || !hljs.getLanguage(language)) return value;
+    try {
+      return hljs.highlight(value, {
+        language: language,
+        ignoreIllegals: true,
+      }).value;
+    } catch (e) {
+      return value;
+    }
+  };
+
+  nb.Output.prototype.render = function() {
+    var outer = document.createElement('div');
+    outer.className = 'nb-output';
+    outer.appendChild(renderNotebookOutput(this.raw));
+    this.el = outer;
+    return outer;
+  };
+  nb.Cell.prototype.render = function() {
+    var cell = document.createElement('section');
+    cell.className = 'nb-cell nb-' + (this.type || 'unknown') + '-cell';
+    if (this.type === 'markdown') {
+      var attached = materializeNotebookAttachments(
+        notebookJoin(this.raw.source),
+        this.raw.attachments || {}
+      );
+      var markdown = document.createElement('div');
+      markdown.className = 'rendered-md';
+      var ctx = _notebookRenderContext || {};
+      markdown.innerHTML = renderMarkdown(
+        attached.text,
+        null,
+        ctx.taskPath || '',
+        { artifactPath: ctx.artifactPath || '' }
+      );
+      cell.appendChild(markdown);
+      attached.warnings.forEach(function(name) {
+        cell.appendChild(notebookUnsupported('cell attachment ' + name));
+      });
+    } else if (this.type === 'raw') {
+      var raw = document.createElement('pre');
+      raw.className = 'nb-raw-cell';
+      raw.textContent = notebookJoin(this.raw.source);
+      cell.appendChild(raw);
+    } else if (this.type === 'code') {
+      var source = this.input ? notebookJoin(this.input.raw) : notebookJoin(this.raw.source || this.raw.input);
+      if (source) {
+        var input = document.createElement('div');
+        input.className = 'nb-input';
+        input.appendChild(renderArtifactCode(source, notebookLanguage(this)));
+        cell.appendChild(input);
+      }
+      (this.outputs || []).forEach(function(output) {
+        cell.appendChild(output.render());
+      });
+    } else {
+      cell.appendChild(notebookUnsupported('cell type ' + (this.type || 'unknown')));
+    }
+    this.el = cell;
+    return cell;
+  };
+  return true;
+}
+
+function renderNotebookPreview(rawText, taskPath, artifactPath) {
+  var outer = document.createElement('div');
+  outer.className = 'notebook-preview';
+  if (!installNotebookAdapter()) {
+    outer.appendChild(notebookUnsupported('notebook renderer unavailable'));
+    return outer;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (e) {
+    outer.appendChild(notebookUnsupported('invalid notebook JSON'));
+    return outer;
+  }
+  if (!parsed || typeof parsed !== 'object'
+      || (!Array.isArray(parsed.cells)
+          && !(Array.isArray(parsed.worksheets) && parsed.worksheets.length))) {
+    outer.appendChild(notebookUnsupported('missing cells'));
+    return outer;
+  }
+  _notebookRenderContext = {
+    taskPath: taskPath,
+    artifactPath: artifactPath,
+    notebook: parsed,
+  };
+  try {
+    var rendered = nb.parse(parsed).render();
+    var staging = document.createElement('div');
+    staging.appendChild(rendered);
+    outer.innerHTML = DOMPurify.sanitize(staging.innerHTML, {
+      ADD_ATTR: ['style', 'class', 'data-prompt-number', 'data-language'],
+    });
+  } catch (e) {
+    outer.innerHTML = '';
+    outer.appendChild(notebookUnsupported('malformed notebook structure'));
+  } finally {
+    _notebookRenderContext = null;
+  }
+  return outer;
 }
 
 /* Open one section in the active-node card: mirror toggleSection's expand
@@ -2369,6 +3212,23 @@ function withinCommentEditWindow(taskPath) {
   return !!(ts && (Date.now() - ts) < 3000);
 }
 document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  var artifactOwner = event.target && event.target.dataset
+    ? event.target.dataset.artifactOwner
+    : undefined;
+  if (artifactOwner !== undefined) {
+    event.preventDefault();
+    try {
+      var artifactData = event.detail && event.detail.data !== undefined
+        ? event.detail.data
+        : event.data;
+      onArtifactManifestEvent(artifactOwner, JSON.parse(artifactData));
+    } catch (e) {
+      if (_artifactSidecarOpen && artifactOwner === activePath) {
+        showArtifactSidecarState('The updated file list could not be read.', 'unavailable');
+      }
+    }
+    return;
+  }
   var taskPath = event.target && event.target.dataset ? event.target.dataset.path : undefined;
   if (taskPath === undefined) return;  /* not a sidebar row (summary bar / full-reload) */
   if (withinCommentEditWindow(taskPath)) {
@@ -2530,6 +3390,8 @@ async function applyWorktree(wtId, path) {
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */
   _childrenDagCache = {};
+  _artifactManifestOwner = null;
+  _artifactManifest = null;
   reconnectSse();
   await loadNavTree();
   await refreshSearchIndex();

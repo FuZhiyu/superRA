@@ -26,6 +26,7 @@
 <script>{{ standalone_assets.hljs_js | safe }}</script>
 <script>{{ standalone_assets.hljs_julia_js | safe }}</script>
 <script>{{ standalone_assets.purify_js | safe }}</script>
+<script>{{ standalone_assets.notebook_js | safe }}</script>
 {% else %}
 {# Live mode: every render library is served from this process's own
    /static/{name} route (vendored under vendor/, see vendor/README.md) instead
@@ -41,6 +42,7 @@
 <script src="/static/highlight.min.js"></script>
 <script src="/static/languages/julia.min.js"></script>
 <script src="/static/purify.min.js"></script>
+<script src="/static/notebook.min.js"></script>
 {% endif %}
 {% if standalone %}
 <style>{{ standalone_assets.dashboard_css | safe }}</style>
@@ -196,6 +198,20 @@
       <div id="active-node" class="active-node"></div>
       <div id="children-dag" class="children-dag"></div>
     </main>
+    <aside id="artifact-sidecar" class="artifact-sidecar" aria-hidden="true"
+           aria-labelledby="artifact-sidecar-title">
+      <header class="artifact-sidecar-head">
+        <div>
+          <p class="artifact-sidecar-kicker">Task canvas</p>
+          <h2 id="artifact-sidecar-title">Files</h2>
+        </div>
+        <button class="artifact-close" type="button" aria-label="Close Files view"
+                onclick="closeArtifactSidecar()">&times;</button>
+      </header>
+      <div id="artifact-list" class="artifact-list" aria-live="polite"></div>
+      <section id="artifact-preview" class="artifact-preview" aria-live="polite"
+               aria-label="File preview"></section>
+    </aside>
     {#- Drawer backdrop (narrow screens): inside the workspace so the
         .sb-drawer-open mode class reaches it; fixed-position covers the page. -#}
     <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeDrawer()"></div>

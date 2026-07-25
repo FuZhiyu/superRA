@@ -1137,6 +1137,7 @@ _VENDOR_ASSET_TYPES = {
     "texmath.min.js": "text/javascript; charset=utf-8",
     "highlight.min.js": "text/javascript; charset=utf-8",
     "languages/julia.min.js": "text/javascript; charset=utf-8",
+    "notebook.min.js": "text/javascript; charset=utf-8",
     "purify.min.js": "text/javascript; charset=utf-8",
     **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
 }
@@ -1995,8 +1996,8 @@ def _build_standalone_assets() -> dict[str, str]:
     serves them, standalone inlines them).
 
     Returns ``htmx_js`` / ``sse_js`` / ``markdown_it_js`` / ``katex_js`` /
-    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``purify_js`` /
-    ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
+    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``notebook_js`` /
+    ``purify_js`` / ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
     ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as inline ``<style>``
     bodies; ``katex_css`` additionally has every ``@font-face`` rewritten to a
     base64 woff2 ``data:`` URI).
@@ -2021,6 +2022,7 @@ def _build_standalone_assets() -> dict[str, str]:
         "texmath_js": _read_js(_VENDOR_DIR, "texmath.min.js"),
         "hljs_js": _read_js(_VENDOR_DIR, "highlight.min.js"),
         "hljs_julia_js": _read_js(_VENDOR_DIR, "languages/julia.min.js"),
+        "notebook_js": _read_js(_VENDOR_DIR, "notebook.min.js"),
         "purify_js": _read_js(_VENDOR_DIR, "purify.min.js"),
         "dashboard_js": _read_js(_TEMPLATES_DIR, "dashboard.js"),
         "katex_css": katex_css,

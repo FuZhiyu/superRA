@@ -2767,7 +2767,7 @@ var DOMPurify = { sanitize: function (html) { return html; } };
 def _render_markdown_image_src(
     root_prefix, task_path, src, active_wt="", repo_file_base=""
 ):
-    defs = _extract_js_defs(["wtUrl", "renderMarkdown"])
+    defs = _extract_js_defs(["wtUrl", "isRelativeResource", "renderMarkdown"])
     harness = (
         _RENDER_MD_SHIM
         + "var ACTIVE_WT = " + json.dumps(active_wt) + ";\n"
@@ -3029,7 +3029,7 @@ class TestFileLinkConsistency:
         assert "/superRA/" not in fn  # no hardcoded path segment
         # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
         assert "vscode://file/' + RESOLVED_ROOT + '/' + filePath" in BASE_HTML
-        assert "var repoPathPrefix = rootRel + taskDirRel;" in BASE_HTML
+        assert "var repoPathPrefix = rootRel + contentDirRel;" in BASE_HTML
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
         assert "pathPrefix = taskPath ? 'superRA/'" not in BASE_HTML
@@ -4099,8 +4099,13 @@ class TestDocMode:
         a repo-relative authority link resolves repo-root-relative against the
         blob base (not against the doc node dir), a sibling-export link stays a
         plain relative href, and with doc-mode off the link is task-relative."""
-        defs = _extract_js_defs(["encodeRepoPath", "repoFileHref",
-                                 "resolveInternalTaskPath", "renderMarkdown"])
+        defs = _extract_js_defs([
+            "encodeRepoPath",
+            "repoFileHref",
+            "isRelativeResource",
+            "resolveInternalTaskPath",
+            "renderMarkdown",
+        ])
         shim = r"""
 var md = { render: function (text) {
   var out = text;

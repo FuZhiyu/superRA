@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: not-started
+status: implemented
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -29,3 +29,17 @@ The existing Highlight.js common bundle already includes R, while the dashboard 
 Companion search is optional for this scope: add it only if the existing index can accept owner-task file records without duplicating discovery or creating a second navigation model. The required discovery surface is the Files view on the owning task.
 
 ## Results
+
+### Implemented
+
+- Added a task-owned Files sidecar and count affordances without changing `activePath` or admitting companions into task navigation. The canvas groups first-class direct companions, recursive attachments, and collapsed legacy direct files; exposes explicit preview/download/unavailable actions; and renders supported Markdown, source, image, PDF, and text types ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1135), [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css#L1139), [base.html](../../../../skills/task-tree/scripts/templates/base.html#L201)).
+- Generalized the existing Markdown renderer with a companion content base. Relative links and images now resolve from the companion's directory through the bounded artifact API/export data, while task-body links retain their prior task-relative behavior ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L231)).
+- Vendored NotebookJS 0.8.3 and replaced its permissive output renderers with the dashboard's Markdown, KaTeX, Highlight.js, and DOMPurify stack. The adapter supports Markdown/raw/code cells, attachments, stream/error outputs, and safe static text/HTML/Markdown/LaTeX/PNG/JPEG/SVG output; JavaScript, widgets, and unknown MIME types render explicit inert fallbacks and no code executes ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1640), [vendor/README.md](../../../../skills/task-tree/scripts/vendor/README.md#L40)).
+- Kept live and standalone paths aligned by serving/inlining the pinned library and embedded artifact payloads. Task-scoped SSE refreshes re-render an open preview from `event.detail.data` while preserving hash, breadcrumbs, theme, scroll, and worktree selection; close actions restore keyboard focus even if the active-card button was re-rendered ([plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py#L2020), [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1619)).
+
+### Verification
+
+- Added five server/browser regressions covering direct/attachment/legacy grouping, companion-relative URLs, Python/Julia/case-insensitive R highlighting, NotebookJS cell/output types, attachment images, malicious HTML/SVG sanitization, unsupported active MIME fallbacks, downloads, SSE hot reload and state preservation, keyboard focus, standalone operation, and worktree switching ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py#L213)).
+- Full task-tree suite: `770 passed` with four non-failing warnings via `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts`.
+- Static checks passed: `node --check` for `dashboard.js`, Python byte-compilation for the changed Python/tests, and `git diff --check`. Desktop Chromium inspection at 1440×900 confirmed the Files list and notebook preview remain legible alongside the active task.
+- `notebook.min.js` matches the documented SHA-256 `673b1916c250d2093c8c8920e5503348a2283ef67d6ad429f0b0dc6c98f7c115`. The generic skill-creator validator was not applicable as a clean gate: it rejects the task-tree skill's pre-existing `user-invocable` frontmatter key, which this task did not modify.

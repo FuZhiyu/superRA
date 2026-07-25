@@ -148,7 +148,9 @@ html[data-doc-mode] #filter-status { display: none !important; }
 html[data-doc-mode] #search-trigger { display: none !important; }
 html[data-doc-mode] .worktree-selector { display: none !important; }
 html[data-doc-mode] .vscode-btn,
-html[data-doc-mode] .share-btn { display: none !important; }
+html[data-doc-mode] .share-btn,
+html[data-doc-mode] .artifact-toggle-btn,
+html[data-doc-mode] .artifact-sidecar { display: none !important; }
 
 /* ── Doc-mode reading chrome ──
    Strip the task-anatomy framing from each page so the body reads as a document.
@@ -1067,7 +1069,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 /* Share/Export control — sits at the trailing edge beside the VS Code button.
    The VS Code button (rendered just before it) carries the margin-left:auto that
    claims the free space; both then group together, spaced by the header gap. */
-.share-btn {
+.share-btn,
+.artifact-toggle-btn {
   box-sizing: border-box;
   height: var(--control-h);
   align-self: center;
@@ -1084,10 +1087,21 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.share-btn:hover {
+.share-btn:hover,
+.artifact-toggle-btn:hover,
+.artifact-toggle-btn[aria-expanded="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);
+}
+.artifact-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-micro);
+  text-align: center;
 }
 /* Open-in-VS-Code control — jumps the active task's task.md into the editor.
    Sits beside Share at the trailing edge (margin-left:auto claims the free
@@ -1121,6 +1135,260 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 /* The card body reuses the tree-body section/comment chrome, but it is always
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }
+
+/* ── Task companion-file canvas ── */
+.artifact-event-sink { display: none; }
+.artifact-sidecar {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 125;
+  width: min(660px, 52vw);
+  min-width: 360px;
+  display: grid;
+  grid-template-rows: auto minmax(150px, 38vh) minmax(0, 1fr);
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  box-shadow: -10px 0 32px rgba(44,42,37,0.18);
+  transform: translateX(102%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.24s;
+}
+.artifact-sidecar.open {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.artifact-sidecar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) 18px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.artifact-sidecar-head h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-head);
+  color: var(--text);
+}
+.artifact-sidecar-kicker {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.artifact-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: var(--fs-title);
+  line-height: 1;
+  cursor: pointer;
+}
+.artifact-close:hover { background: var(--bg-hover); color: var(--text); }
+.artifact-close:focus-visible,
+.artifact-action:focus-visible,
+.artifact-count-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.artifact-list,
+.artifact-preview {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.artifact-list {
+  padding: 14px 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.artifact-preview {
+  padding: 16px 18px max(28px, env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+.artifact-group + .artifact-group { margin-top: 16px; }
+.artifact-group > h3,
+.artifact-group > summary {
+  font-family: var(--font-display);
+  font-size: var(--fs-emph);
+  font-weight: 600;
+  color: var(--text);
+}
+.artifact-group > summary { cursor: pointer; }
+.artifact-group-note {
+  margin: 2px 0 8px;
+  color: var(--text-mute);
+  font-size: var(--fs-meta);
+}
+.artifact-rows { list-style: none; }
+.artifact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.artifact-row + .artifact-row { margin-top: 2px; }
+.artifact-row:hover { background: var(--bg-hover); }
+.artifact-row.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.artifact-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.artifact-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+}
+.artifact-meta {
+  color: var(--text-mute);
+  font-size: var(--fs-micro);
+  text-transform: capitalize;
+}
+.artifact-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.artifact-action {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  padding: 3px 7px;
+  font: inherit;
+  font-size: var(--fs-micro);
+  text-decoration: none;
+  cursor: pointer;
+}
+.artifact-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.artifact-action-disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.artifact-state,
+.artifact-preview-prompt {
+  padding: 12px;
+  border-radius: 6px;
+  color: var(--text-mute);
+  background: var(--bg-alt);
+}
+.artifact-state-warning {
+  margin-top: 12px;
+  color: var(--st-impl-t);
+  background: var(--st-impl);
+}
+.artifact-state-unavailable { color: var(--st-rev-t); background: var(--st-rev); }
+.artifact-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.artifact-preview-head h3 {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: var(--fs-emph);
+  color: var(--text);
+}
+.artifact-preview-body { min-width: 0; }
+.artifact-preview-body > pre,
+.nb-input > pre,
+.nb-output > pre,
+.nb-raw-cell {
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--border-lt);
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 4;
+}
+.artifact-image-preview,
+.nb-image-output,
+.nb-svg-output svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+.artifact-pdf-preview {
+  width: 100%;
+  min-height: 65vh;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
+.artifact-markdown-preview { padding-top: 0; }
+.notebook-preview .nb-cell {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-lt);
+}
+.notebook-preview .nb-cell:first-child { border-top: 0; padding-top: 0; }
+.notebook-preview .nb-output { margin-top: 8px; }
+.nb-error-output { color: var(--st-rev-t) !important; }
+.nb-unsupported-output {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--st-impl-t);
+  background: var(--st-impl);
+  color: var(--st-impl-t);
+  font-size: var(--fs-meta);
+}
+.nb-raw-cell { white-space: pre-wrap; }
+
+/* Sidebar file counts are buttons, not tree nodes: activating one opens the
+   owning task's Files view while the task row remains the navigation unit. */
+.artifact-count-btn {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.artifact-count-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 760px) {
+  .artifact-sidecar {
+    width: 100vw;
+    min-width: 0;
+  }
+}
 
 /* ── Children subtask cards (flat grid + layered dependency flow) ── */
 .children-dag { margin-top: 26px; }
