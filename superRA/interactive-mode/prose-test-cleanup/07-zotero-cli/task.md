@@ -1,6 +1,6 @@
 ---
 title: "Replace Zotero CLI Prose Oracles"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -47,3 +47,41 @@ Verification:
 
 The suite remains credential-free and does not replace the separate live-library
 smoke coverage referenced by its full-text test.
+
+## Review Notes
+
+1. **MAJOR** — The suite does not protect the stated ordering invariant that a
+   missing draft or marker leaves the master bibliography unchanged. The CLI
+   guard cases snapshot the bibliography only for failures that occur before
+   client construction
+   ([test-zotero-tool.sh:279-310](../../../../tests/test-zotero-tool.sh#L279-L310)),
+   while the missing-draft and missing-marker checks call only
+   `check_draft_target` in isolation
+   ([test-zotero-tool.sh:368-400](../../../../tests/test-zotero-tool.sh#L368-L400)).
+   Moving `sync_bib` ahead of `check_draft_target` in `cmd_cite` would therefore
+   leave all 26 checks green while violating the objective
+   ([zotero_tool.py:848-876](../../../../skills/zotero-paper-reader/scripts/zotero_tool.py#L848-L876)).
+   Add a credential-free handler-level probe with stubbed Zotero resolution that
+   exercises missing-draft and missing-marker failures and verifies the
+   bibliography and draft targets remain byte-for-byte unchanged.
+
+2. **MAJOR** — The `Notes/.env` no-secret check never exercises the new redaction
+   path: `health` sees the fake credentials as configured and neither its
+   success JSON nor its diagnostics contain the key to redact
+   ([test-zotero-tool.sh:196-225](../../../../tests/test-zotero-tool.sh#L196-L225)).
+   Only the environment-variable branch injects a secret into an exception
+   message
+   ([test-zotero-tool.sh:402-419](../../../../tests/test-zotero-tool.sh#L402-L419)).
+   Removing the `.env` lookup from `redact_secrets` would thus keep the suite
+   green despite invalidating the claimed protection
+   ([zotero_tool.py:87-96](../../../../skills/zotero-paper-reader/scripts/zotero_tool.py#L87-L96)).
+   Add a deterministic failure whose exception text contains an API key loaded
+   solely from a temporary `Notes/.env`, then assert the JSON identity and the
+   key's absence from both streams.
+
+3. **MINOR** — The newly stable `ItemNotFoundError` / `item_not_found` identity
+   is not covered by either a CLI or unit assertion
+   ([zotero_tool.py:71-72](../../../../skills/zotero-paper-reader/scripts/zotero_tool.py#L71-L72),
+   [zotero_tool.py:750-762](../../../../skills/zotero-paper-reader/scripts/zotero_tool.py#L750-L762)).
+   Add a credential-free `select_item_keys` probe with a missing DOI so this
+   structural error identity cannot drift unnoticed.
