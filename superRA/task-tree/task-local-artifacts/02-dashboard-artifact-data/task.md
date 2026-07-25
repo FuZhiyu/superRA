@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: implemented
+status: approved
 depends_on:
   - 01-artifact-contract
 ---
@@ -46,8 +46,3 @@ Verification:
 - Combined task-tree and artifact regression suite: 308 passed.
 - Full task-tree script suite: 765 passed with four expected warnings from dependency deprecations and intentional malformed-task fixtures.
 - Python compilation, focused Ruff syntax checks, repository harness-compatibility validation, Markdown integrity checks, and `git diff --check` passed.
-
-## Review Notes
-
-1. **MAJOR** — The rewrite transaction still commits bytes before descriptor finalization has succeeded. [`apply_move_link_rewrites`](../../../../skills/task-tree/scripts/_task_io.py#L797-L824) restores touched files only for exceptions raised inside the write loop, then closes every write descriptor in an outer `finally`; a close error therefore escapes after all new bytes have been committed without entering byte rollback. Injecting `OSError` on the first queued write-descriptor close made [`rename_task`](../../../../skills/task-tree/scripts/task_rename.py#L198-L209) restore the source directory, but both inbound files remained rewritten to the now-nonexistent destination. Include descriptor finalization in the transaction success boundary, restore every original byte sequence before reporting any close/finalization failure, close the remaining descriptors even if one close fails, and add a failure-order regression proving both task paths and all queued bytes remain unchanged.
-   → implemented: [descriptor finalization and path restoration](../../../../skills/task-tree/scripts/_task_io.py#L709-L750) now attempt every close without short-circuiting and restore every queued original byte sequence through fresh contained descriptors after any close error; the [transaction success boundary](../../../../skills/task-tree/scripts/_task_io.py#L829-L880) retries failed original closes only after restoration and then reports the error for directory rollback. The [two-write/first-close-failure regression](../../../../skills/task-tree/scripts/test_task_tree.py#L1179-L1216) proves the second original descriptor closes immediately after the first fails, the failed descriptor retries last, both task paths remain unchanged, and both queued files are restored byte-for-byte.
