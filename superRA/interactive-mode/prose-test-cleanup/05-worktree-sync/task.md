@@ -1,6 +1,6 @@
 ---
 title: "Replace Worktree-Sync Prose Oracles"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
