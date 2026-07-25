@@ -20,9 +20,30 @@ from worktree_data_discovery import discover_managed_entries, resolve_endpoints
 Action = Literal["overwrite", "rename"]
 Status = Literal["new", "modified", "unchanged"]
 SeedSyncMode = Literal["auto", "force-symlink", "force-cow"]
+ValidationErrorCode = Literal[
+    "absolute_path",
+    "parent_traversal",
+    "empty_path",
+    "path_outside_root",
+    "path_escape",
+    "source_outside_managed_roots",
+    "missing_target_path",
+    "missing_directory",
+    "missing_source_path",
+    "endpoint_mismatch",
+]
 
 # SF_DATALESS flag indicating cloud-only file (Dropbox, iCloud, etc.)
 SF_DATALESS = 0x40000000
+
+
+class SyncValidationError(ValueError):
+    """Sync input validation failure with stable code and structured fields."""
+
+    def __init__(self, code: ValidationErrorCode, message: str, **fields: object) -> None:
+        super().__init__(message)
+        self.code = code
+        self.fields = fields
 
 
 @dataclass
@@ -743,15 +764,27 @@ def _is_within(base: Path, candidate: Path) -> bool:
 def _normalize_user_relative_path(path_text: str) -> Path:
     candidate = Path(path_text)
     if candidate.is_absolute():
-        raise ValueError(f"Path must be relative: {path_text}")
+        raise SyncValidationError(
+            "absolute_path",
+            f"Path must be relative: {path_text}",
+            path=path_text,
+        )
     if any(part == ".." for part in candidate.parts):
-        raise ValueError(f"Parent directory traversal is not allowed: {path_text}")
+        raise SyncValidationError(
+            "parent_traversal",
+            f"Parent directory traversal is not allowed: {path_text}",
+            path=path_text,
+        )
 
     normalized = Path(os.path.normpath(str(candidate)))
     if normalized == Path(".") or str(normalized) == "":
-        raise ValueError("Path must not be empty")
+        raise SyncValidationError("empty_path", "Path must not be empty", path=path_text)
     if normalized.is_absolute() or any(part == ".." for part in normalized.parts):
-        raise ValueError(f"Path must stay within worktree roots: {path_text}")
+        raise SyncValidationError(
+            "path_outside_root",
+            f"Path must stay within worktree roots: {path_text}",
+            path=path_text,
+        )
     return normalized
 
 
@@ -759,7 +792,13 @@ def _safe_join_under(base: Path, relative: Path) -> Path:
     base_abs = Path(os.path.abspath(base))
     joined = Path(os.path.abspath(base_abs / relative))
     if not _is_within(base_abs, joined):
-        raise ValueError(f"Resolved path escapes base root: {joined}")
+        raise SyncValidationError(
+            "path_escape",
+            f"Resolved path escapes base root: {joined}",
+            base=base_abs,
+            relative=relative,
+            resolved=joined,
+        )
     return joined
 
 
@@ -778,19 +817,32 @@ def _validate_source_path(source_path: Path, allowed_roots: list[Path] | None) -
 
     resolved_source = source_path.resolve(strict=False)
     if not any(_is_within(root, resolved_source) for root in allowed_roots):
-        raise ValueError(f"Source path is outside managed roots: {resolved_source}")
+        raise SyncValidationError(
+            "source_outside_managed_roots",
+            f"Source path is outside managed roots: {resolved_source}",
+            source=resolved_source,
+            allowed_roots=tuple(allowed_roots),
+        )
 
 
 def _build_target_path_from_change(change: dict, destination_root: Path | None) -> Path:
     if destination_root is None:
         target_path = change.get("target_path") or change.get("destination_path")
         if not target_path:
-            raise ValueError("Each change record must include target_path or destination_path")
+            raise SyncValidationError(
+                "missing_target_path",
+                "Each change record must include target_path or destination_path",
+                change=change,
+            )
         return Path(target_path)
 
     directory = change.get("directory")
     if not directory:
-        raise ValueError("Each change record must include directory when --to is provided")
+        raise SyncValidationError(
+            "missing_directory",
+            "Each change record must include directory when --to is provided",
+            change=change,
+        )
 
     rel_target = _normalize_user_relative_path(str(directory))
     relative_path = change.get("relative_path")
@@ -849,7 +901,11 @@ def process_changes(
     for idx, change in enumerate(filtered, 1):
         source_path_value = change.get("source_path")
         if not source_path_value:
-            raise ValueError("Each change record must include source_path")
+            raise SyncValidationError(
+                "missing_source_path",
+                "Each change record must include source_path",
+                change=change,
+            )
 
         if verbose and total > 1:
             display = change.get("directory", "")
@@ -888,15 +944,23 @@ def process_from_json(
     if source_root is not None and data.get("from_worktree"):
         json_source = Path(data["from_worktree"]).resolve(strict=False)
         if json_source != source_root.resolve(strict=False):
-            raise ValueError(
-                f"JSON from_worktree does not match --from endpoint: {json_source} != {source_root}"
+            raise SyncValidationError(
+                "endpoint_mismatch",
+                f"JSON from_worktree does not match --from endpoint: {json_source} != {source_root}",
+                endpoint="from",
+                expected=source_root.resolve(strict=False),
+                actual=json_source,
             )
 
     if destination_root is not None and data.get("to_worktree"):
         json_destination = Path(data["to_worktree"]).resolve(strict=False)
         if json_destination != destination_root.resolve(strict=False):
-            raise ValueError(
-                f"JSON to_worktree does not match --to endpoint: {json_destination} != {destination_root}"
+            raise SyncValidationError(
+                "endpoint_mismatch",
+                f"JSON to_worktree does not match --to endpoint: {json_destination} != {destination_root}",
+                endpoint="to",
+                expected=destination_root.resolve(strict=False),
+                actual=json_destination,
             )
 
     changes = data.get("changes", [])
@@ -1019,15 +1083,23 @@ def interactive_mode(
     if source_root is not None and data.get("from_worktree"):
         json_source = Path(data["from_worktree"]).resolve(strict=False)
         if json_source != source_root.resolve(strict=False):
-            raise ValueError(
-                f"JSON from_worktree does not match --from endpoint: {json_source} != {source_root}"
+            raise SyncValidationError(
+                "endpoint_mismatch",
+                f"JSON from_worktree does not match --from endpoint: {json_source} != {source_root}",
+                endpoint="from",
+                expected=source_root.resolve(strict=False),
+                actual=json_source,
             )
 
     if destination_root is not None and data.get("to_worktree"):
         json_destination = Path(data["to_worktree"]).resolve(strict=False)
         if json_destination != destination_root.resolve(strict=False):
-            raise ValueError(
-                f"JSON to_worktree does not match --to endpoint: {json_destination} != {destination_root}"
+            raise SyncValidationError(
+                "endpoint_mismatch",
+                f"JSON to_worktree does not match --to endpoint: {json_destination} != {destination_root}",
+                endpoint="to",
+                expected=destination_root.resolve(strict=False),
+                actual=json_destination,
             )
 
     changes = [change for change in data.get("changes", []) if change.get("status") in ("new", "modified")]
@@ -1087,7 +1159,11 @@ def interactive_mode(
 
         source_path_value = change.get("source_path")
         if not source_path_value:
-            raise ValueError("Each change record must include source_path")
+            raise SyncValidationError(
+                "missing_source_path",
+                "Each change record must include source_path",
+                change=change,
+            )
 
         source_path = Path(source_path_value).resolve(strict=False)
         allowed_roots = _allowed_source_roots(entries) if entries else None
