@@ -1,6 +1,6 @@
 ---
 title: "Seat assignment: support main or subagent in either role"
-status: approved
+status: revise
 depends_on:
   - execution-mode-contract
 ---
@@ -37,3 +37,8 @@ Delivered against the success criteria:
 DRY + Necessity: the section does not restate the modes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/implementer.md`, `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them.
 
 **Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks all three autonomous seat structures, excludes main/main, and requires both main-seat paths to invoke the canonical role protocol. The stale Tier-1 "do trivial work inline, no subagent" path in [agent-orchestration/SKILL.md](../../../skills/agent-orchestration/SKILL.md) is now the main-implementer/subagent-reviewer structure, avoiding an implementer spawn without dropping the reviewer seat. The red run failed on the stale inline path and passed after correction.
+
+## Review Notes
+
+1. MAJOR — [agent-orchestration/SKILL.md:10-18](../../../skills/agent-orchestration/SKILL.md#L10-L18) and [agent-orchestration/SKILL.md:93-103](../../../skills/agent-orchestration/SKILL.md#L93-L103). The protection fix repeats the same small-task seat-selection rule in the overview, Tier 1, and the seat table. Under the repository's blocking DRY + Necessity gate, the overview echo does not change behavior and the Tier/table criteria now have two authoritative homes. Fix: keep the detailed choice criterion in one owning section and make the other surface a pointer only; remove the non-behavioral overview echo.
+2. MAJOR — [test_contract.py:215-225](../../../tests/harness-instruction-following/test_contract.py#L215-L225) and [README.md:54-60](../../../tests/harness-instruction-following/README.md#L54-L60). The seat protection asserts literal table/prose fragments rather than the harness's structured or behavioral evidence, contrary to its own test design. It is brittle to equivalent wording and does not show that a main-seat agent actually loads and follows the canonical role contract. Fix: parse the seat table structurally and add a fixture/smoke for at least the two main-seat routes, with red-green evidence that omitting the role load or opposite-seat dispatch is detected.

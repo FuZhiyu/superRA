@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: approved
+status: revise
 depends_on:
   - superplan-decrowd
 ---
@@ -53,3 +53,7 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 Review (interactive-mode branch): the one blocking finding — the intro pointer read "(§The loop, step 4)" after the required keep-task-updated step renumbered the loop — is fixed; the review prompt is step 5 and the pointer now matches.
 
 **Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks the required ordering and content of the canvas loop: the task's `## Results` and `status` move before each pause, then the tool-backed review-now/defer/skip question fires, with no autonomous reviewer dispatch. The red run caught the conflicting Codex mandatory-review override; the restored contract passes.
+
+## Review Notes
+
+1. MAJOR — [test_contract.py:189-212](../../../tests/harness-instruction-following/test_contract.py#L189-L212), [README.md:54-60](../../../tests/harness-instruction-following/README.md#L54-L60), and [load_contract.json:657-693](../../../tests/harness-instruction-following/load_contract.json#L657-L693). The claimed protection matches exact authored sentences and labels, even though the harness contract says authored instruction sentences are not test oracles. It therefore fails on harmless prose refactors but can pass while an agent ignores the required canvas behavior; no fixture or live interactive scenario observes `## Results`/`status` being written before a pause or a structural user-question tool event before reviewer dispatch. Fix: add an explicitly opted-in interactive fixture/smoke whose artifact and transcript demonstrate the required ordering, red-green the evaluator, and limit static checks to stable structured routing surfaces.

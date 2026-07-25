@@ -1,6 +1,6 @@
 ---
 title: "Rewrite the execution-mode contract: two axes as presets + seat knob"
-status: approved
+status: revise
 depends_on:
   - interactive-reference
 ---
@@ -39,3 +39,7 @@ Removed the old "Direct mode is a fallback: only for trivial tasks" framing and 
 **Verification:** `grep -i "trivial\|fallback\|manual\|direct-mode-implementer\|direct-mode-reviewer"` over `main-agent.md §Execution Modes` returns no matches.
 
 **Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now checks autonomous/subagent defaulting, explicit interactive opt-in, the no-trivial-jots boundary, required canvas recording, ask-before-review, and canonical main-agent seat protocols. The contradictory Codex-only mandatory-review rule was removed from [codex-instructions.md](../../../skills/using-superra/references/codex-instructions.md), leaving the shared mode contract authoritative. The red run failed on that contradiction and passed after its removal.
+
+## Review Notes
+
+1. MAJOR — [codex-instructions.md:17-22](../../../skills/using-superra/references/codex-instructions.md#L17-L22) and [load_contract.json:657-693](../../../tests/harness-instruction-following/load_contract.json#L657-L693). Removing the mandatory-review paragraph also removed the only concrete instruction for the legitimate agent-tools-unavailable case: the adapter now says only “in-session execution” and “state that it was forced.” That case is not researcher-opted interactive mode, while every autonomous seat structure requires a dispatch, so neither mode now defines which role protocol, review guarantee, or task-status path applies. The protection audit also deleted the fallback finding/tests rather than covering this retained behavior separately. Fix: define the harness-forced fallback without weakening the strict default-dispatch smoke, then add dedicated coverage that distinguishes unavailable tools from missing named-agent installation.
