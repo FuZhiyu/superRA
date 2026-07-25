@@ -1,6 +1,6 @@
 ---
 title: "Delete Rule-Recitation Canaries"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -47,3 +47,23 @@ Verification:
   artifact-field canary, stage/domain recitation field, or introspection prompt.
 - Test/fixture/documentation diff before this task-file update: 175 insertions,
   1,424 deletions; no production file changed.
+
+## Review Notes
+
+1. **MAJOR — Test documentation still advertises evidence paths deleted by this
+   commit.** The detailed stage/domain sections still say fixture artifacts
+   satisfy canaries and explicitly claim Codex artifact-list canaries
+   ([README.md:100](../../../../tests/harness-instruction-following/README.md#L100),
+   [README.md:119](../../../../tests/harness-instruction-following/README.md#L119));
+   the evidence-policy section still says `evaluate_canary` scans artifact
+   fields ([README.md:175](../../../../tests/harness-instruction-following/README.md#L175));
+   and the CI-boundary section still lists `always_loaded_live.py` as a gated
+   Python live entry even though that module now ends after its static checker
+   ([README.md:191](../../../../tests/harness-instruction-following/README.md#L191),
+   [always_loaded_live.py:38-44](../../../../tests/harness-instruction-following/always_loaded_live.py#L38-L44)).
+   The supporting research note likewise retains the deleted Claude behavioral
+   canary claim
+   ([load-testing-research.md:23](../../../../tests/harness-instruction-following/references/load-testing-research.md#L23)).
+   Reconcile these test documents with the command-only/schema-only evidence
+   that remains; this is also required to make the task's `## Results` claim
+   that the documentation stopped making these claims accurate.
