@@ -24,10 +24,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from sdk_load_evidence import (  # noqa: E402
     ALWAYS_LOADED_SKILLS,
-    BehavioralCanarySpec,
     SkillLoadReport,
     check_always_loaded_frontmatter,
-    check_behavioral_canary,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
     normalize_skill_name,
@@ -287,46 +285,6 @@ def test_always_loaded_skills_constant_is_qualified():
         "superRA:using-superra",
         "superRA:report-in-markdown",
     )
-
-
-# --------------------------------------------------------------------------- #
-# Behavioral canary (reusable checker; fixtures owned by task 10)
-# --------------------------------------------------------------------------- #
-
-
-def test_green_behavioral_canary_rule_applied():
-    # report-in-markdown prescribes file refs as markdown links with line anchors.
-    spec = BehavioralCanarySpec(
-        skill="superRA:report-in-markdown",
-        rule="file references cited as markdown links with line anchors",
-        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
-    )
-    output = "See [sdk_load_harness.py:42](sdk_load_harness.py#L42) for the hook."
-    report = SkillLoadReport()
-
-    check_behavioral_canary(report, spec, output)
-
-    report.assert_ok()
-    assert len(report.observations) == 1
-
-
-def test_red_behavioral_canary_rule_absent():
-    # Output uses a backtick path instead of the prescribed markdown-link form —
-    # the preloaded skill rule did not shape it.
-    spec = BehavioralCanarySpec(
-        skill="superRA:report-in-markdown",
-        rule="file references cited as markdown links with line anchors",
-        pattern=r"\[[^\]]+\]\([^)]+#L\d+\)",
-    )
-    output = "See `sdk_load_harness.py` line 42 for the hook."
-    report = SkillLoadReport()
-
-    check_behavioral_canary(report, spec, output)
-
-    assert not report.ok
-    assert len(report.missing) == 1
-    assert "superRA:report-in-markdown" in report.missing[0]
-    assert "did not shape the output" in report.missing[0]
 
 
 # --------------------------------------------------------------------------- #

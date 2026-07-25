@@ -1,7 +1,7 @@
 ---
 title: "Prune Prose-Specific Tests Conservatively"
-status: not-started
-depends_on:  []
+status: in-progress
+depends_on: []
 ---
 
 ## Objective

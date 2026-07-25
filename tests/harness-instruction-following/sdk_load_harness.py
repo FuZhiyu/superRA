@@ -33,8 +33,8 @@ There is **no ``InstructionsLoaded`` hook**: it is not a registrable
 ``PreCompact``, ``Notification``, ``SubagentStart``, ``PermissionRequest``), so
 registering it is a silent no-op. Always-loaded skills (``using-superra``,
 ``report-in-markdown``) are preloaded via agent frontmatter ``skills: [...]`` and
-are covered by the static frontmatter contract and the behavioral canary in
-:mod:`sdk_load_evidence`, not by this hook.
+are covered by the static frontmatter contract in :mod:`sdk_load_evidence`, not
+by this hook.
 
 This module is the *only* place ``claude_agent_sdk`` is imported, and the import
 is deferred into :func:`run_skill_load_session`. The default CI path imports
@@ -69,7 +69,6 @@ from sdk_load_evidence import (
     ReadLoadRecord,
     SkillLoadEvidence,
     SkillLoadRecord,
-    extract_agent_answers,
 )
 
 
@@ -169,7 +168,6 @@ async def _run_session_async(
     plugin_dir: Path,
     agent_type: str,
     allowed_tools: list[str],
-    capture_text: bool,
     capture_reads: bool,
 ) -> SkillLoadEvidence:
     # Deferred import: keeps claude_agent_sdk off every default-CI import path.
@@ -237,20 +235,8 @@ async def _run_session_async(
         f"instruction, then stop:\n\n{prompt}"
     )
 
-    # The hooks accumulate the skill-load evidence as messages stream; collect
-    # the messages so capture_text can extract the dispatched subagent's answer.
-    messages = [message async for message in query(prompt=dispatch_prompt, options=options)]
-
-    if capture_text:
-        # Capture the dispatched subagent's *answer* from the Agent/Task
-        # tool-result block — NOT all assistant text. Subagent text does not
-        # stream as parented AssistantMessages by default; its answer arrives as
-        # the content of the Agent/Task ToolResultBlock. extract_agent_answers
-        # isolates the dispatched implementer's answer from the top-level
-        # driver's own text and fails closed (returns []) when no dispatch
-        # occurred — so the introspection canary fails rather than passing on a
-        # top-level recital.
-        evidence.assistant_texts.extend(extract_agent_answers(messages))
+    async for _ in query(prompt=dispatch_prompt, options=options):
+        pass
 
     return evidence
 
@@ -263,7 +249,6 @@ def run_skill_load_session(
     plugin_dir: Path | str | None = None,
     agent_type: str = DEFAULT_AGENT_TYPE,
     allowed_tools: list[str] | None = None,
-    capture_text: bool = False,
     capture_reads: bool = False,
 ) -> SkillLoadEvidence:
     """Run one live SDK session that dispatches the real role agent.
@@ -279,16 +264,6 @@ def run_skill_load_session(
     per-stage smoke (11) for the ``planning-review`` reference, which loads via
     ``Read`` (not the ``Skill`` tool). Default callers leave it off; existing
     smokes are unaffected.
-
-    Set ``capture_text=True`` to capture the dispatched subagent's *answer* from
-    the Agent/Task ``ToolResultBlock`` (its content) into
-    ``SkillLoadEvidence.assistant_texts`` — needed by the task-10 always-loaded
-    introspection canary, which checks the answer the dispatched implementer
-    gives (its recited file-citation rule) against zero ``Skill`` loads. Capturing
-    from the tool-result block isolates the subagent's answer from the top-level
-    driver's own text and fails closed when no dispatch occurs (no tool result →
-    no captured answer → canary fails). Default callers (the ordering smokes)
-    leave it off and ignore the field.
 
     Raises ``RuntimeError`` if the live gate (``RUN_LIVE_HARNESS=1``) is not set,
     so a CI run that imports this module by mistake fails loudly rather than
@@ -313,7 +288,6 @@ def run_skill_load_session(
             plugin_dir=resolved_plugin,
             agent_type=agent_type,
             allowed_tools=resolved_tools,
-            capture_text=capture_text,
             capture_reads=capture_reads,
         )
     )

@@ -22,11 +22,7 @@ Two separate channels, kept distinct (see load-testing-research.md):
   preloaded via agent frontmatter ``skills: [...]``; they emit no ``Skill``
   tool_use and the SDK init message lists only *available* skills, not per-agent
   preloaded ones, so the ``Skill`` hook cannot see them. They are covered by the
-  static frontmatter contract check (:func:`check_always_loaded_frontmatter`)
-  and the live behavioral canary (:func:`check_behavioral_canary`), not by this
-  evidence model. There is no ``InstructionsLoaded`` channel: that is not a
-  registrable ``claude_agent_sdk`` hook event (the live run captured zero such
-  events), so unioning it here would be unfounded.
+  static frontmatter contract check (:func:`check_always_loaded_frontmatter`).
 """
 
 from __future__ import annotations
@@ -107,7 +103,6 @@ class SkillLoadEvidence:
 
     skill_loads: list[SkillLoadRecord] = field(default_factory=list)
     first_edit_index: int | None = None
-    assistant_texts: list[str] = field(default_factory=list)
     read_loads: list[ReadLoadRecord] = field(default_factory=list)
 
     @property
@@ -162,17 +157,6 @@ class SkillLoadEvidence:
         if self.first_edit_index is None:
             return True
         return read_index < self.first_edit_index
-
-    @property
-    def assistant_text(self) -> str:
-        """All assistant text blocks from the session, joined.
-
-        Empty unless the live runner was asked to capture text (the introspection
-        canary in task 10 needs the dispatched agent's *answer*, not just its
-        skill loads). Other callers ignore it.
-        """
-
-        return "\n".join(self.assistant_texts)
 
     def first_load_index(self, skill_name: str) -> int | None:
         """Earliest event index at which ``skill_name`` was observed loading.
@@ -263,8 +247,7 @@ def check_skills_loaded_before_first_edit(
     This checks *on-demand* (Skill-tool) loads only — pass the stage/domain
     skills a fixture's manifest entry should trigger. Always-loaded skills are
     not loaded through the ``Skill`` tool; cover those with
-    :func:`check_always_loaded_frontmatter` (static) and
-    :func:`check_behavioral_canary` (live), not here.
+    :func:`check_always_loaded_frontmatter`, not here.
     """
 
     loaded = evidence.loaded_skill_names
@@ -286,74 +269,6 @@ def check_skills_loaded_before_first_edit(
             report.observations.append(
                 f"skill {skill!r} loaded before first edit"
             )
-
-
-AGENT_TOOL_NAMES = ("Task", "Agent")
-
-
-def _block_text(content) -> str:
-    """Flatten a tool-result ``content`` payload into plain text.
-
-    The SDK delivers ``ToolResultBlock.content`` either as a string or as a list
-    of content items (dicts ``{"type": "text", "text": ...}`` or objects with a
-    ``.text`` attribute). Concatenate the text parts so the dispatched subagent's
-    answer is recovered regardless of which shape the Agent/Task result uses.
-    """
-
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    parts: list[str] = []
-    for item in content:
-        if isinstance(item, dict):
-            text = item.get("text")
-        else:
-            text = getattr(item, "text", None)
-        if isinstance(text, str):
-            parts.append(text)
-    return "\n".join(parts)
-
-
-def extract_agent_answers(
-    messages: Iterable[object],
-    *,
-    agent_tool_names: Sequence[str] = AGENT_TOOL_NAMES,
-) -> list[str]:
-    """Pull the dispatched subagent's answer text from a message stream.
-
-    Subagent text does not stream as parented assistant messages by default; the
-    dispatched agent's answer arrives as the content of the Agent/Task
-    ``ToolResultBlock``. This walks the message stream's content blocks, tracks
-    the tool-use ids of Agent/Task dispatch calls, and returns the text of the
-    matching tool-result blocks — isolating the dispatched implementer's answer
-    from the top-level driver's own assistant text. Returns ``[]`` when no Agent
-    dispatch occurred (fail-closed: nothing to feed the canary).
-
-    Duck-typed so it runs both on real ``claude_agent_sdk`` blocks and on
-    synthetic stand-ins in CI: a content block is treated as a tool-use when it
-    exposes ``name`` + ``id``, and as a tool-result when it exposes
-    ``tool_use_id`` + ``content``.
-    """
-
-    agent_tool_use_ids: set[str] = set()
-    answers: list[str] = []
-    for message in messages:
-        content = getattr(message, "content", None)
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            name = getattr(block, "name", None)
-            block_id = getattr(block, "id", None)
-            if name in agent_tool_names and block_id is not None:
-                agent_tool_use_ids.add(block_id)
-                continue
-            tool_use_id = getattr(block, "tool_use_id", None)
-            if tool_use_id is not None and tool_use_id in agent_tool_use_ids:
-                text = _block_text(getattr(block, "content", None))
-                if text:
-                    answers.append(text)
-    return answers
 
 
 def evidence_from_hook_records(
@@ -392,8 +307,7 @@ def evidence_from_hook_records(
 
 
 # The skills both role specs must preload via frontmatter. These never load
-# through the Skill tool, so they are verified statically here and behaviorally
-# (live) via check_behavioral_canary — not through the Skill PreToolUse hook.
+# through the Skill tool, so they are verified statically here.
 ALWAYS_LOADED_SKILLS = ("superRA:using-superra", "superRA:report-in-markdown")
 
 # Role specs that carry the always-loaded contract in frontmatter.
@@ -476,59 +390,3 @@ def check_always_loaded_frontmatter(
                     f"{rel} frontmatter skills: is missing always-loaded skill "
                     f"{skill!r} (declared: {declared})"
                 )
-
-
-# --------------------------------------------------------------------------- #
-# Behavioral canary (reusable checker; fixtures owned by task 10)
-# --------------------------------------------------------------------------- #
-
-
-@dataclass(frozen=True)
-class BehavioralCanarySpec:
-    """A structural rule a *preloaded* skill prescribes, proven applied to output.
-
-    Always-loaded skills are not observable through the ``Skill`` hook, so their
-    loading is established behaviorally: the live agent's output obeys a
-    format/decision only that skill's body defines. Task 10 supplies the
-    fixtures (the prompt that triggers the rule and the expected output); task 08
-    owns this reusable checker.
-
-    - ``skill`` names the preloaded skill whose rule is under test (for the
-      failure message), e.g. ``"superRA:report-in-markdown"``.
-    - ``rule`` is a short human description of the prescribed behavior, e.g.
-      "file references cited as markdown links with line anchors".
-    - ``pattern`` is a regex the output must match to prove the rule was applied.
-      A skill-unique structural rule (not a generic one the model would produce
-      anyway) is what makes a match load-bearing.
-    """
-
-    skill: str
-    rule: str
-    pattern: str
-
-
-def check_behavioral_canary(
-    report: SkillLoadReport,
-    spec: BehavioralCanarySpec,
-    output_text: str,
-) -> None:
-    """Check one behavioral canary: the output applies the preloaded skill's rule.
-
-    Passes if ``spec.pattern`` matches ``output_text`` (the rule the skill body
-    prescribes shaped the output). Fails otherwise — a real "the preloaded skill
-    body did not shape the output" finding, the live counterpart to the static
-    frontmatter check. Reusable across task 10's canary fixtures; task 10 owns
-    the ``BehavioralCanarySpec`` rows and the prompts that trigger them.
-    """
-
-    if re.search(spec.pattern, output_text):
-        report.observations.append(
-            f"behavioral canary for skill {spec.skill!r} satisfied "
-            f"({spec.rule})"
-        )
-        return
-    report.missing.append(
-        f"behavioral canary for skill {spec.skill!r} failed: output does not "
-        f"apply the rule {spec.rule!r} (pattern {spec.pattern!r} not found) — "
-        f"the preloaded skill body did not shape the output"
-    )

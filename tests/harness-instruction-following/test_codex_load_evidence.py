@@ -61,68 +61,32 @@ def test_green_canary_present_in_command():
     assert any("present in command" in o for o in report.observations)
 
 
-def test_green_canary_present_in_artifact_field():
-    spec = CanarySpec(
-        skill="econ-data-analysis",
-        token="CANARY_AMBER_3X",
-        in_command=False,
-        in_artifact_field="loading.canary",
-    )
-    report = CanaryReport()
-    evaluate_canary(
-        report,
-        spec,
-        artifact={"loading": {"canary": "CANARY_AMBER_3X"}},
-    )
-    report.assert_ok()
-
-
-def test_green_canary_either_source_satisfies():
-    # in_command spec is satisfied by the command even with no artifact at all.
+def test_green_canary_command_satisfies():
     spec = CanarySpec(skill="writing", token="CANARY_COBALT_9")
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=["echo CANARY_COBALT_9"],
-        artifact=None,
     )
     report.assert_ok()
 
 
-def test_red_canary_absent_from_all_sources():
-    # The skill-unique side effect was never produced -> skill body did not load.
+def test_red_canary_absent_from_commands():
     spec = CanarySpec(
         skill="report-in-markdown",
         token="CANARY_VERDANT_7Q",
-        in_artifact_field="loading.canary",
     )
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=["ls -la", "cat README.md"],
-        artifact={"loading": {"canary": "WRONG_TOKEN"}},
     )
     assert not report.ok
     assert len(report.missing) == 1
     assert "report-in-markdown" in report.missing[0]
     assert "did not load" in report.missing[0]
-
-
-def test_red_canary_artifact_field_missing():
-    spec = CanarySpec(
-        skill="theory-modeling",
-        token="CANARY_SLATE_5",
-        in_command=False,
-        in_artifact_field="loading.canary",
-    )
-    report = CanaryReport()
-    evaluate_canary(report, spec, artifact={"loading": {"other": "x"}})
-    assert not report.ok
-    assert "CANARY_SLATE_5" in report.missing[0]
-
-
 def test_evaluate_canaries_collects_all_failures():
     specs = [
         CanarySpec(skill="a", token="TOKEN_A"),

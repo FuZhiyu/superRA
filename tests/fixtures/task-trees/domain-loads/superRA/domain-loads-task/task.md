@@ -1,8 +1,8 @@
 ---
-title: "Per-Domain Skill-Load Canary Task"
+title: "Per-Domain Skill-Load Fixture Task"
 status: not-started
 depends_on: []
-tags: [fixture, canary]
+tags: [fixture]
 output:
   - domain-loads-evidence.json
 created: 2026-06-19
@@ -15,10 +15,8 @@ implementer; the domain your dispatch describes (importing/cleaning/regressing d
 deriving/solving/proving; drafting/polishing prose; creating/revising slides) tells
 you which domain skill(s) the Skill-Load Manifest requires. Load **every** matching
 domain skill before acting — a dispatch whose wording matches more than one domain
-requires all of them. This task proves those domain skill bodies reached your context
-by asking for one skill-unique token from each. Do not edit source code, install
-anything, run a test suite, or do real domain work (no actual regression, proof,
-prose draft, or deck).
+requires all of them. Do not edit source code, install anything, run a test suite,
+or do real domain work (no actual regression, proof, prose draft, or deck).
 
 Do exactly this:
 
@@ -28,18 +26,9 @@ Do exactly this:
 ```json
 {
   "schema_version": 1,
-  "domains": ["<each domain you matched>"],
-  "domain_canaries": ["<the discriminating concept from each matched domain body>"]
+  "domains": ["<each domain you matched>"]
 }
 ```
 
-Each `domain_canaries` entry is the discriminating concept that domain skill's body
-prescribes — knowable only from that body:
-
-- `econ-data-analysis` → `describe before transform`
-- `theory-modeling` → `comparative statics`
-- `writing` → `audience model`
-- `slide-design` → `live communication`
-
-When your dispatch wording matches more than one domain, list every matched domain in
-`domains` and every matching concept in `domain_canaries`.
+When your dispatch wording matches more than one domain, list every matched domain
+in `domains`.

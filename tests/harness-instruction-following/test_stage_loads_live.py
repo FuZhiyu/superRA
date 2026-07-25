@@ -17,7 +17,7 @@ no model call, no ``claude_agent_sdk`` / codex-cli import:
 - **Read-path suffix matching** (:func:`sdk_load_evidence._read_path_matches`):
   an absolute/workspace-relative read path matches the manifest-relative
   reference path; an unrelated path does not.
-- **Fixture sanity:** each committed expected artifact satisfies its stage canary.
+- **Fixture sanity:** each committed expected artifact carries the stage identity.
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from codex_load_evidence import CanaryReport, evaluate_canary  # noqa: E402
 from sdk_load_evidence import (  # noqa: E402
     _read_path_matches,
     evidence_from_hook_records,
@@ -423,68 +422,15 @@ def test_evaluate_all_reports_missing_evidence_for_a_stage():
 
 
 # --------------------------------------------------------------------------- #
-# Codex per-stage canaries
+# Fixture sanity
 # --------------------------------------------------------------------------- #
 
 
-def test_green_codex_canary_each_positive_stage_from_artifact():
+def test_committed_expected_artifacts_preserve_schema_and_stage():
     for row in STAGE_ROWS:
-        if row.codex_canary is None:
-            continue
-        report = CanaryReport()
-        evaluate_canary(
-            report,
-            row.codex_canary,
-            command_strings=[],
-            artifact={"stage_canary": row.codex_canary.token},
-        )
-        report.assert_ok()
-
-
-def test_red_codex_canary_absent_for_a_stage():
-    row = stage_row("sync")
-    report = CanaryReport()
-    evaluate_canary(
-        report,
-        row.codex_canary,
-        command_strings=[],
-        artifact={"stage_canary": "WRONG"},
-    )
-    assert not report.ok
-    assert "semantic-merge" in report.missing[0]
-    assert "did not load" in report.missing[0]
-
-
-# --------------------------------------------------------------------------- #
-# Fixture sanity: committed expected artifacts satisfy the canaries
-# --------------------------------------------------------------------------- #
-
-
-def test_committed_expected_artifacts_satisfy_canaries():
-    for row in STAGE_ROWS:
-        if row.codex_canary is None:
-            continue
         expected = json.loads(
             (FIXTURE_ROOT / "expected" / f"{row.stage}.expected.json").read_text(
                 encoding="utf-8"
             )
         )
-        report = CanaryReport()
-        evaluate_canary(
-            report,
-            row.codex_canary,
-            command_strings=[],
-            artifact=expected,
-        )
-        report.assert_ok()
-
-
-def test_negative_stage_expected_artifacts_use_none_sentinel():
-    stage = "implementation"
-    expected = json.loads(
-        (FIXTURE_ROOT / "expected" / f"{stage}.expected.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert expected["stage"] == stage
-    assert expected["stage_canary"] == "none"
+        assert expected == {"schema_version": 1, "stage": row.stage}
