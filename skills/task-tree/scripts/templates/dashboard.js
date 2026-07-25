@@ -1426,7 +1426,7 @@ function renderArtifactSidecar(taskPath, manifest, refreshPreview) {
   list.scrollTop = listScroll;
 
   var selected = files.find(function(entry) { return entry.path === _artifactSelectedPath; });
-  if (refreshPreview && selected && selected.previewable) {
+  if (refreshPreview && selected) {
     openArtifactPreview(taskPath, selected, previewScroll);
   } else if (!selected) {
     preview.innerHTML = '';
@@ -3014,6 +3014,10 @@ function initTreeKeyboard() {
   root.addEventListener('keydown', function(ev) {
     var row = ev.target.closest ? ev.target.closest('.task-row') : null;
     if (!row || !root.contains(row)) return;
+    var interactive = ev.target.closest
+      ? ev.target.closest('button, a, input, select, textarea, [role="button"]')
+      : null;
+    if (interactive && interactive !== row) return;
     var node = row.closest('.task-node');
     var toggle = row.querySelector(':scope > .task-toggle');
     var isParent = toggle && !toggle.classList.contains('leaf');

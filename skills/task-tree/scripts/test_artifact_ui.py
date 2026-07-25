@@ -210,6 +210,21 @@ def _stop_server(server, thread):
     plan_dashboard._worktree_cache.clear()
 
 
+def _broadcast_manifest(loop, task_path):
+    async def broadcast():
+        state = plan_dashboard._worktree_cache[plan_dashboard._launch_wt_id]
+        manifest = _artifacts.build_manifest(
+            state.plan_root, state.task_index[task_path]
+        )
+        await plan_dashboard._broadcast(
+            f"artifacts:{task_path}",
+            json.dumps(manifest, separators=(",", ":")),
+            state.wt_id,
+        )
+
+    asyncio.run_coroutine_threadsafe(broadcast(), loop).result(timeout=5)
+
+
 class TestArtifactCanvasServerRendering:
     def test_vendor_shell_and_standalone_payload(self, tmp_path):
         from starlette.testclient import TestClient
@@ -376,20 +391,7 @@ class TestArtifactCanvasBrowser:
                     encoding="utf-8",
                 )
 
-                async def broadcast_manifest():
-                    state = plan_dashboard._worktree_cache[plan_dashboard._launch_wt_id]
-                    manifest = _artifacts.build_manifest(
-                        state.plan_root, state.task_index["01-artifact"]
-                    )
-                    await plan_dashboard._broadcast(
-                        "artifacts:01-artifact",
-                        json.dumps(manifest, separators=(",", ":")),
-                        state.wt_id,
-                    )
-
-                asyncio.run_coroutine_threadsafe(
-                    broadcast_manifest(), loop
-                ).result(timeout=5)
+                _broadcast_manifest(loop, "01-artifact")
                 page.wait_for_function(
                     "(() => {"
                     " const heading = document.querySelector('.artifact-markdown-preview h1');"
@@ -409,6 +411,117 @@ class TestArtifactCanvasBrowser:
                 assert page.get_attribute("#artifact-sidecar", "aria-hidden") == "true"
                 assert page.get_attribute(".artifact-toggle-btn", "aria-expanded") == "false"
                 assert page.evaluate("document.activeElement.classList.contains('artifact-toggle-btn')")
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+
+    @pytest.mark.parametrize("key", ["Enter", "Space"])
+    def test_artifact_count_keyboard_opens_files_without_row_activation(
+        self, tmp_path, key
+    ):
+        from playwright.sync_api import sync_playwright
+
+        root = _artifact_tree(tmp_path)
+        port, server, _loop, thread = _start_server(root)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                page = browser.new_page()
+                page.set_default_timeout(5000)
+                page.goto(
+                    f"http://127.0.0.1:{port}/#/01-artifact",
+                    wait_until="domcontentloaded",
+                )
+                count = page.locator(".artifact-count-btn")
+                count.wait_for()
+                original_hash = page.evaluate("location.hash")
+                original_title = page.inner_text(".active-node-title")
+                count.focus()
+                page.keyboard.press(key)
+                page.wait_for_selector("#artifact-sidecar.open")
+                assert page.evaluate("location.hash") == original_hash
+                assert page.inner_text(".active-node-title") == original_title
+                assert not page.evaluate(
+                    "document.activeElement.classList.contains('active-node-title')"
+                )
+
+                page.locator(".artifact-close").focus()
+                page.keyboard.press("Enter")
+                assert page.get_attribute("#artifact-sidecar", "aria-hidden") == "true"
+                assert page.evaluate(
+                    "document.activeElement.classList.contains('artifact-count-btn')"
+                )
+
+                page.evaluate("setActive('')")
+                page.wait_for_function("location.hash === '#/'")
+                row = page.locator(
+                    '#nav-tree .task-node[data-path="01-artifact"] > .task-row'
+                )
+                row.focus()
+                page.keyboard.press("Enter")
+                page.wait_for_function("location.hash === '#/01-artifact'")
+                page.wait_for_function(
+                    "document.querySelector('.active-node-title')"
+                    " && document.querySelector('.active-node-title')"
+                    ".textContent.includes('Artifact task')"
+                )
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+
+    def test_artifact_hot_reload_replaces_stale_preview_when_oversized(
+        self, tmp_path
+    ):
+        from playwright.sync_api import sync_playwright
+
+        root = _artifact_tree(tmp_path)
+        port, server, loop, thread = _start_server(root)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                page = browser.new_page(viewport={"width": 1440, "height": 900})
+                page.set_default_timeout(5000)
+                page.goto(
+                    f"http://127.0.0.1:{port}/#/01-artifact",
+                    wait_until="domcontentloaded",
+                )
+                page.wait_for_selector(".artifact-count-btn")
+                page.click(".artifact-toggle-btn")
+                report_row = page.locator(
+                    '.artifact-row[data-artifact-path="attachments/notes/report.md"]'
+                )
+                report_row.get_by_role("button", name="Open").click()
+                page.wait_for_selector(".artifact-markdown-preview h1")
+
+                original_hash = page.evaluate("location.hash")
+                original_crumbs = page.inner_text("#crumbs")
+                page.evaluate(
+                    "document.documentElement.setAttribute('data-theme', 'dark');"
+                    "document.querySelector('.detail-panel').scrollTop = 120"
+                )
+                original_scroll = page.eval_on_selector(
+                    ".detail-panel", "element => element.scrollTop"
+                )
+                report = root / "01-artifact" / "attachments" / "notes" / "report.md"
+                report.write_bytes(
+                    b"x" * (_artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes + 1)
+                )
+                _broadcast_manifest(loop, "01-artifact")
+
+                page.wait_for_selector(
+                    ".artifact-preview-body .artifact-state-unavailable"
+                )
+                assert "exceeds the preview limit" in page.inner_text(
+                    ".artifact-preview-body .artifact-state-unavailable"
+                )
+                assert page.locator(".artifact-markdown-preview").count() == 0
+                assert report_row.get_by_role("button", name="Open").count() == 0
+                assert page.evaluate("location.hash") == original_hash
+                assert page.inner_text("#crumbs") == original_crumbs
+                assert page.get_attribute("html", "data-theme") == "dark"
+                assert page.eval_on_selector(
+                    ".detail-panel", "element => element.scrollTop"
+                ) == original_scroll
                 browser.close()
         finally:
             _stop_server(server, thread)
