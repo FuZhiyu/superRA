@@ -55,6 +55,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sdk_load_evidence import SkillLoadEvidence
+from structured_findings import Finding, add_missing, add_observation
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "stage-loads"
@@ -186,6 +187,7 @@ class StageLoadReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -224,41 +226,75 @@ def evaluate_stage_load(
     if row.channel == CHANNEL_SKILL:
         for skill in row.expected_skills:
             if skill not in evidence.loaded_skill_names:
-                report.missing.append(
+                add_missing(
+                    report,
+                    "STAGE_SKILL_MISSING",
                     f"stage {row.stage!r}: required skill {skill!r} never loaded "
-                    f"(observed skill loads: {sorted(evidence.loaded_skill_names)})"
+                    f"(observed skill loads: {sorted(evidence.loaded_skill_names)})",
+                    subject=row.stage,
+                    path=skill,
+                    actual=sorted(evidence.loaded_skill_names),
                 )
             elif not evidence.loaded_before_first_edit(skill):
-                report.missing.append(
+                add_missing(
+                    report,
+                    "STAGE_SKILL_LATE",
                     f"stage {row.stage!r}: skill {skill!r} loaded at event "
                     f"{evidence.first_load_index(skill)} but the first edit/write "
                     f"was at event {evidence.first_edit_index} — must load before "
-                    f"the first edit"
+                    f"the first edit",
+                    subject=row.stage,
+                    path=skill,
+                    event_index=evidence.first_load_index(skill),
+                    related_index=evidence.first_edit_index,
                 )
             else:
-                report.observations.append(
-                    f"stage {row.stage!r}: skill {skill!r} loaded before first edit"
+                add_observation(
+                    report,
+                    "STAGE_SKILL_LOADED",
+                    f"stage {row.stage!r}: skill {skill!r} loaded before first edit",
+                    subject=row.stage,
+                    path=skill,
+                    event_index=evidence.first_load_index(skill),
+                    related_index=evidence.first_edit_index,
                 )
 
     elif row.channel == CHANNEL_READ:
         ref = row.expected
         if evidence.first_read_index(ref) is None:
-            report.missing.append(
+            add_missing(
+                report,
+                "STAGE_REFERENCE_MISSING",
                 f"stage {row.stage!r}: required reference {ref!r} never read "
                 f"(observed reads: {sorted(evidence.read_paths)}) — the "
                 f"reference loads via the Read tool, so run the session with "
-                f"capture_reads=True"
+                f"capture_reads=True",
+                subject=row.stage,
+                path=ref,
+                actual=sorted(evidence.read_paths),
             )
         elif not evidence.read_before_first_edit(ref):
-            report.missing.append(
+            add_missing(
+                report,
+                "STAGE_REFERENCE_LATE",
                 f"stage {row.stage!r}: reference {ref!r} read at event "
                 f"{evidence.first_read_index(ref)} but the first edit/write was "
                 f"at event {evidence.first_edit_index} — must read before the "
-                f"first edit"
+                f"first edit",
+                subject=row.stage,
+                path=ref,
+                event_index=evidence.first_read_index(ref),
+                related_index=evidence.first_edit_index,
             )
         else:
-            report.observations.append(
-                f"stage {row.stage!r}: reference {ref!r} read before first edit"
+            add_observation(
+                report,
+                "STAGE_REFERENCE_LOADED",
+                f"stage {row.stage!r}: reference {ref!r} read before first edit",
+                subject=row.stage,
+                path=ref,
+                event_index=evidence.first_read_index(ref),
+                related_index=evidence.first_edit_index,
             )
 
     elif row.channel == CHANNEL_NONE:
@@ -266,18 +302,31 @@ def evaluate_stage_load(
             evidence.loaded_skill_names & ALL_STAGE_SKILLS
         )
         if loaded_stage_skills:
-            report.missing.append(
+            add_missing(
+                report,
+                "STAGE_OVERLOAD",
                 f"stage {row.stage!r} carries no stage-skill expectation, but the "
                 f"dispatch loaded stage skill(s) {loaded_stage_skills} — an "
-                f"over-load finding"
+                f"over-load finding",
+                subject=row.stage,
+                actual=loaded_stage_skills,
             )
         else:
-            report.observations.append(
-                f"stage {row.stage!r}: no stage skill loaded (negative case holds)"
+            add_observation(
+                report,
+                "STAGE_NEGATIVE_CLEAN",
+                f"stage {row.stage!r}: no stage skill loaded (negative case holds)",
+                subject=row.stage,
             )
 
     else:  # pragma: no cover - guarded by the table
-        report.missing.append(f"stage {row.stage!r}: unknown channel {row.channel!r}")
+        add_missing(
+            report,
+            "STAGE_CHANNEL_UNKNOWN",
+            f"stage {row.stage!r}: unknown channel {row.channel!r}",
+            subject=row.stage,
+            actual=row.channel,
+        )
 
 
 def evaluate_all_stage_loads(
@@ -288,8 +337,11 @@ def evaluate_all_stage_loads(
 
     for row in STAGE_ROWS:
         if row.stage not in evidence_by_stage:
-            report.missing.append(
-                f"stage {row.stage!r}: no captured evidence supplied"
+            add_missing(
+                report,
+                "STAGE_EVIDENCE_MISSING",
+                f"stage {row.stage!r}: no captured evidence supplied",
+                subject=row.stage,
             )
             continue
         evaluate_stage_load(report, row, evidence_by_stage[row.stage])

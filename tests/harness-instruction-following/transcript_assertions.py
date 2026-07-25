@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
 
+from structured_findings import Finding, add_missing, add_observation
+
 
 JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 
@@ -166,19 +168,34 @@ class AssertionReport:
     missing: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return not self.missing
 
-    def require(self, condition: bool, message: str) -> None:
+    def require(
+        self,
+        condition: bool,
+        code: str,
+        message: str,
+        **fields: Any,
+    ) -> None:
         if not condition:
-            self.missing.append(message)
+            add_missing(self, code, message, **fields)
 
     def assert_ok(self) -> None:
         if self.missing:
             joined = "\n".join(f"- {msg}" for msg in self.missing)
             raise AssertionError(f"Missing transcript evidence:\n{joined}")
+
+
+class JsonEventParseError(ValueError):
+    """A malformed JSON-shaped transcript line with a stable location field."""
+
+    def __init__(self, line_number: int, error: json.JSONDecodeError) -> None:
+        self.line_number = line_number
+        super().__init__(f"invalid JSON event on line {line_number}: {error}")
 
 
 def parse_json_events(text: str) -> list[TranscriptEvent]:
@@ -207,7 +224,7 @@ def parse_json_events(text: str) -> list[TranscriptEvent]:
             try:
                 raw_events.append(json.loads(line))
             except json.JSONDecodeError as exc:
-                raise ValueError(f"invalid JSON event on line {lineno}: {exc}") from exc
+                raise JsonEventParseError(lineno, exc) from exc
     else:
         raw_events = parsed if isinstance(parsed, list) else [parsed]
 
@@ -248,8 +265,11 @@ def check_event_before_write(
     )
     report.require(
         found is not None,
+        "EVENT_BEFORE_WRITE_MISSING",
         f"{label}: expected {list(needles)} before first write"
         + (f" to {write_path}" if write_path else ""),
+        subject=label,
+        path=write_path,
     )
 
 
@@ -268,9 +288,12 @@ def check_task_read_before_write(
     )
     report.require(
         found is not None,
+        "TASK_READ_MISSING",
         f"task read for {task_path}: expected command event invoking "
         f"superra task read {task_path} before first write"
         + (f" to {write_path}" if write_path else ""),
+        subject=task_path,
+        path=write_path,
     )
 
 
@@ -301,8 +324,11 @@ def check_file_reads_before_write(
     for path in paths:
         report.require(
             any(event.is_read_of(path) for event in events[:boundary]),
+            "FILE_READ_MISSING",
             f"file read for {path}: expected read before first write"
             + (f" to {write_path}" if write_path else ""),
+            subject=write_path,
+            path=path,
         )
 
 
@@ -324,11 +350,16 @@ def check_interactive_canvas_order(
     )
     report.require(
         status is not None and status.group(1) == "implemented",
+        "INTERACTIVE_STATUS_INVALID",
         "interactive artifact: task status must be implemented before review",
+        path=str(task_artifact),
+        actual=status.group(1) if status is not None else None,
     )
     report.require(
         results is not None and bool(results.group("body").strip()),
+        "INTERACTIVE_RESULTS_EMPTY",
         "interactive artifact: task Results must be non-empty before review",
+        path=str(task_artifact),
     )
 
     opt_in = next(
@@ -364,25 +395,43 @@ def check_interactive_canvas_order(
         None,
     )
 
-    report.require(opt_in is not None, "interactive transcript: missing explicit mode opt-in")
-    report.require(task_update is not None, "interactive transcript: missing task update")
+    report.require(
+        opt_in is not None,
+        "INTERACTIVE_OPT_IN_MISSING",
+        "interactive transcript: missing explicit mode opt-in",
+    )
+    report.require(
+        task_update is not None,
+        "TASK_UPDATE_MISSING",
+        "interactive transcript: missing task update",
+        path=task_path,
+    )
     report.require(
         question is not None,
+        "REVIEW_QUESTION_MISSING",
         "interactive transcript: missing review question tool event",
     )
     report.require(
         reviewer is not None,
+        "REVIEWER_DISPATCH_MISSING",
         "interactive transcript: missing reviewer dispatch for review-now path",
+        subject="superra_reviewer",
     )
     if task_update is not None and question is not None:
         report.require(
             task_update.index < question.index,
+            "TASK_UPDATE_AFTER_QUESTION",
             "interactive ordering: task update must precede review question",
+            event_index=task_update.index,
+            related_index=question.index,
         )
     if question is not None and reviewer is not None:
         report.require(
             question.index < reviewer.index,
+            "QUESTION_AFTER_REVIEWER_DISPATCH",
             "interactive ordering: review question must precede reviewer dispatch",
+            event_index=question.index,
+            related_index=reviewer.index,
         )
 
 
@@ -400,11 +449,16 @@ def check_main_seat_route(
     role_path = f"agents/{main_role}.md"
     report.require(
         any(event.is_read_of(role_path) for event in events),
+        "MAIN_ROLE_LOAD_MISSING",
         f"main {main_role} seat: missing role load for {role_path}",
+        subject=main_role,
+        path=role_path,
     )
     report.require(
         any(event.is_dispatch_of(f"superra_{opposite}") for event in events),
+        "OPPOSITE_SEAT_DISPATCH_MISSING",
         f"main {main_role} seat: missing opposite-seat {opposite} dispatch",
+        subject=opposite,
     )
 
 
@@ -424,16 +478,26 @@ def check_orchestrator_dispatches(
     has_reviewer = any(event.is_dispatch_of(reviewer_type)
                        for event in events)
     if has_implementer and has_reviewer:
-        report.observations.append("orchestrator dispatch events observed")
+        add_observation(
+            report,
+            "ORCHESTRATOR_DISPATCH_COMPLETE",
+            "orchestrator dispatch events observed",
+        )
         return
 
     if not has_implementer:
-        report.missing.append(
-            f"orchestrator dispatch: missing implementer event {list(implementer_needles)}"
+        add_missing(
+            report,
+            "IMPLEMENTER_DISPATCH_MISSING",
+            f"orchestrator dispatch: missing implementer event {list(implementer_needles)}",
+            subject=implementer_type,
         )
     if not has_reviewer:
-        report.missing.append(
-            f"orchestrator dispatch: missing reviewer event {list(reviewer_needles)}"
+        add_missing(
+            report,
+            "REVIEWER_DISPATCH_MISSING",
+            f"orchestrator dispatch: missing reviewer event {list(reviewer_needles)}",
+            subject=reviewer_type,
         )
 
 
@@ -450,11 +514,20 @@ def check_json_artifact(
     actual_scalars = dict(_iter_scalar_paths(actual))
     for path, expected_value in _iter_scalar_paths(expected):
         if path not in actual_scalars:
-            report.missing.append(f"artifact {path}: missing expected value")
+            add_missing(
+                report,
+                "ARTIFACT_PATH_MISSING",
+                f"artifact {path}: missing expected value",
+                path=path,
+            )
         elif actual_scalars[path] != expected_value:
-            report.missing.append(
+            add_missing(
+                report,
+                "ARTIFACT_VALUE_MISMATCH",
                 f"artifact {path}: expected {expected_value!r}, "
-                f"got {actual_scalars[path]!r}"
+                f"got {actual_scalars[path]!r}",
+                path=path,
+                actual=actual_scalars[path],
             )
 
 

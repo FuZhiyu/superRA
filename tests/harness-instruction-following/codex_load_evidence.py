@@ -42,6 +42,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from structured_findings import Finding, add_missing, add_observation
+
 # Payload keys a codex SubagentStart hook may use to name the dispatched agent
 # type. The matcher is the agent type, but the payload also carries it; we accept
 # the plausible spellings so a minor codex-cli payload-shape change degrades to a
@@ -93,6 +95,7 @@ class CanaryReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -156,8 +159,13 @@ def evaluate_canary(
             where.append("command")
         if found_in_artifact:
             where.append(f"artifact field {spec.in_artifact_field!r}")
-        report.observations.append(
-            f"canary for skill {spec.skill!r} present in {' and '.join(where)}"
+        add_observation(
+            report,
+            "CANARY_PRESENT",
+            f"canary for skill {spec.skill!r} present in {' and '.join(where)}",
+            subject=spec.skill,
+            path=spec.in_artifact_field,
+            actual=where,
         )
         return
 
@@ -166,10 +174,15 @@ def evaluate_canary(
         sources.append("any command_execution command")
     if spec.in_artifact_field is not None:
         sources.append(f"artifact field {spec.in_artifact_field!r}")
-    report.missing.append(
+    add_missing(
+        report,
+        "CANARY_MISSING",
         f"canary for skill {spec.skill!r} (token {spec.token!r}) absent from "
         f"{' / '.join(sources)} — the skill-unique side effect was not produced, "
-        f"so the skill body did not load"
+        f"so the skill body did not load",
+        subject=spec.skill,
+        path=spec.in_artifact_field,
+        actual=sources,
     )
 
 
@@ -262,6 +275,7 @@ class DispatchReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -297,11 +311,20 @@ def evaluate_dispatch_log(
     dispatched = dispatched_agent_types(log_text)
     for agent_type in required_agent_types:
         if agent_type in dispatched:
-            report.observations.append(f"dispatch sentinel {agent_type!r} logged")
+            add_observation(
+                report,
+                "DISPATCH_LOGGED",
+                f"dispatch sentinel {agent_type!r} logged",
+                subject=agent_type,
+            )
         else:
-            report.missing.append(
+            add_missing(
+                report,
+                "DISPATCH_LOG_MISSING",
                 f"SubagentStart log missing dispatch sentinel {agent_type!r} "
-                f"(observed: {dispatched})"
+                f"(observed: {dispatched})",
+                subject=agent_type,
+                actual=dispatched,
             )
 
 

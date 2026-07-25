@@ -42,6 +42,7 @@ from domain_loads_live import (  # noqa: E402
     evaluate_multi_domain_load,
     expected_domain_artifact,
 )
+from structured_findings import finding_codes, findings_for  # noqa: E402
 
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "domain-loads"
 
@@ -105,7 +106,8 @@ def test_green_each_domain_loaded_before_edit():
         report = DomainLoadReport()
         evaluate_domain_load(report, row, evidence)
         report.assert_ok()
-        assert len(report.observations) == 1
+        assert finding_codes(report, outcome="observed") == ["DOMAIN_SKILL_LOADED"]
+        assert report.findings[0].subject == row.skill
 
 
 def test_green_domain_loaded_as_plugin_qualified_name():
@@ -131,8 +133,8 @@ def test_red_domain_never_loaded():
     report = DomainLoadReport()
     evaluate_domain_load(report, row, evidence)
     assert not report.ok
-    assert "theory-modeling" in report.missing[0]
-    assert "never loaded" in report.missing[0]
+    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_MISSING"]
+    assert findings_for(report, "DOMAIN_SKILL_MISSING")[0].subject == "theory-modeling"
 
 
 def test_red_domain_loaded_after_first_edit():
@@ -144,7 +146,13 @@ def test_red_domain_loaded_after_first_edit():
     report = DomainLoadReport()
     evaluate_domain_load(report, row, evidence)
     assert not report.ok
-    assert "before the first edit" in report.missing[0]
+    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_LATE"]
+    finding = findings_for(report, "DOMAIN_SKILL_LATE")[0]
+    assert (finding.subject, finding.event_index, finding.related_index) == (
+        "writing",
+        5,
+        2,
+    )
 
 
 def test_evaluate_all_green_across_all_domains():
@@ -155,14 +163,18 @@ def test_evaluate_all_green_across_all_domains():
     report = DomainLoadReport()
     evaluate_all_domain_loads(report, evidence_by_domain)
     report.assert_ok()
-    assert len(report.observations) == len(DOMAIN_ROWS)
+    assert finding_codes(report, outcome="observed") == [
+        "DOMAIN_SKILL_LOADED"
+    ] * len(DOMAIN_ROWS)
 
 
 def test_evaluate_all_reports_missing_evidence_for_a_domain():
     report = DomainLoadReport()
     evaluate_all_domain_loads(report, {})
-    assert len(report.missing) == len(DOMAIN_ROWS)
-    assert all("no captured evidence" in m for m in report.missing)
+    assert finding_codes(report, outcome="missing") == [
+        "DOMAIN_EVIDENCE_MISSING"
+    ] * len(DOMAIN_ROWS)
+    assert {finding.subject for finding in report.findings} == ALL_DOMAIN_SKILLS
 
 
 # --------------------------------------------------------------------------- #
@@ -183,7 +195,9 @@ def test_green_multi_domain_all_loaded():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     report.assert_ok()
-    assert len(report.observations) == len(MULTI_DOMAIN_SKILLS)
+    assert finding_codes(report, outcome="observed") == [
+        "DOMAIN_SKILL_LOADED"
+    ] * len(MULTI_DOMAIN_SKILLS)
 
 
 def test_red_multi_domain_loaded_only_one():
@@ -197,9 +211,14 @@ def test_red_multi_domain_loaded_only_one():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     assert not report.ok
-    assert any("writing" in m and "never loaded" in m for m in report.missing)
+    assert finding_codes(report, outcome="missing") == ["DOMAIN_SKILL_MISSING"]
+    assert findings_for(report, "DOMAIN_SKILL_MISSING")[0].subject == "writing"
     # theory-modeling DID load, so it is not in the failures.
-    assert not any("'theory-modeling' never loaded" in m for m in report.missing)
+    assert "theory-modeling" not in {
+        finding.subject
+        for finding in report.findings
+        if finding.outcome == "missing"
+    }
 
 
 def test_red_multi_domain_none_loaded():
@@ -210,66 +229,13 @@ def test_red_multi_domain_none_loaded():
     report = DomainLoadReport()
     evaluate_multi_domain_load(report, MULTI_DOMAIN_SKILLS, evidence)
     assert not report.ok
-    assert len(report.missing) == len(MULTI_DOMAIN_SKILLS)
+    assert finding_codes(report, outcome="missing") == [
+        "DOMAIN_SKILL_MISSING"
+    ] * len(MULTI_DOMAIN_SKILLS)
 
 
 # --------------------------------------------------------------------------- #
-# Codex per-domain artifact canaries
-# --------------------------------------------------------------------------- #
-
-
-def test_green_codex_canary_each_domain_from_artifact_list():
-    for row in DOMAIN_ROWS:
-        report = DomainLoadReport()
-        evaluate_codex_domain_canary(
-            report,
-            row.codex_canary,
-            {"domain_canaries": [row.codex_canary.token]},
-        )
-        report.assert_ok()
-
-
-def test_red_codex_canary_absent_for_a_domain():
-    row = domain_row("slide-design")
-    report = DomainLoadReport()
-    evaluate_codex_domain_canary(
-        report,
-        row.codex_canary,
-        {"domain_canaries": ["WRONG"]},
-    )
-    assert not report.ok
-    assert "slide-design" in report.missing[0]
-    assert "did not load" in report.missing[0]
-
-
-def test_green_codex_multi_domain_all_tokens_present():
-    artifact = {
-        "domain_canaries": [spec.token for spec in MULTI_DOMAIN_CANARIES],
-    }
-    report = DomainLoadReport()
-    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, artifact)
-    report.assert_ok()
-    assert len(report.observations) == len(MULTI_DOMAIN_CANARIES)
-
-
-def test_red_codex_multi_domain_missing_one_token():
-    # Only the first matched domain's token present -> the others fail.
-    artifact = {"domain_canaries": [MULTI_DOMAIN_CANARIES[0].token]}
-    report = DomainLoadReport()
-    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, artifact)
-    assert not report.ok
-    assert len(report.missing) == len(MULTI_DOMAIN_CANARIES) - 1
-
-
-def test_codex_canary_absent_artifact_fails():
-    row = domain_row("econ-data-analysis")
-    report = DomainLoadReport()
-    evaluate_codex_domain_canary(report, row.codex_canary, None)
-    assert not report.ok
-
-
-# --------------------------------------------------------------------------- #
-# Fixture sanity: committed expected artifacts satisfy the canaries
+# Structured artifact contract
 # --------------------------------------------------------------------------- #
 
 

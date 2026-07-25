@@ -31,6 +31,7 @@ from codex_load_evidence import (  # noqa: E402
     handle_subagent_start_payload,
     load_artifact,
 )
+from structured_findings import finding_codes, findings_for  # noqa: E402
 
 
 def test_default_ci_path_never_imports_codex_cli():
@@ -58,7 +59,8 @@ def test_green_canary_present_in_command():
         ],
     )
     report.assert_ok()
-    assert any("present in command" in o for o in report.observations)
+    assert finding_codes(report, outcome="observed") == ["CANARY_PRESENT"]
+    assert findings_for(report, "CANARY_PRESENT")[0].actual == ["command"]
 
 
 def test_green_canary_present_in_artifact_field():
@@ -105,9 +107,12 @@ def test_red_canary_absent_from_all_sources():
         artifact={"loading": {"canary": "WRONG_TOKEN"}},
     )
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "report-in-markdown" in report.missing[0]
-    assert "did not load" in report.missing[0]
+    assert finding_codes(report, outcome="missing") == ["CANARY_MISSING"]
+    finding = findings_for(report, "CANARY_MISSING")[0]
+    assert (finding.subject, finding.path) == (
+        "report-in-markdown",
+        "loading.canary",
+    )
 
 
 def test_red_canary_artifact_field_missing():
@@ -120,7 +125,8 @@ def test_red_canary_artifact_field_missing():
     report = CanaryReport()
     evaluate_canary(report, spec, artifact={"loading": {"other": "x"}})
     assert not report.ok
-    assert "CANARY_SLATE_5" in report.missing[0]
+    assert finding_codes(report, outcome="missing") == ["CANARY_MISSING"]
+    assert findings_for(report, "CANARY_MISSING")[0].subject == "theory-modeling"
 
 
 def test_evaluate_canaries_collects_all_failures():
@@ -130,9 +136,9 @@ def test_evaluate_canaries_collects_all_failures():
     ]
     report = CanaryReport()
     evaluate_canaries(report, specs, command_strings=["echo TOKEN_A"])
-    assert len(report.missing) == 1
-    assert "skill 'b'" in report.missing[0]
-    assert len(report.observations) == 1
+    assert finding_codes(report, outcome="missing") == ["CANARY_MISSING"]
+    assert findings_for(report, "CANARY_MISSING")[0].subject == "b"
+    assert finding_codes(report, outcome="observed") == ["CANARY_PRESENT"]
 
 
 def test_command_strings_from_events_pulls_codex_command_execution():
@@ -210,21 +216,24 @@ def test_green_dispatch_log_has_both_sentinels():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\nsuperra_reviewer\n")
     report.assert_ok()
-    assert len(report.observations) == 2
+    assert finding_codes(report, outcome="observed") == ["DISPATCH_LOGGED"] * 2
 
 
 def test_red_dispatch_log_missing_reviewer():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\n")
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "superra_reviewer" in report.missing[0]
+    assert finding_codes(report, outcome="missing") == ["DISPATCH_LOG_MISSING"]
+    assert (
+        findings_for(report, "DISPATCH_LOG_MISSING")[0].subject
+        == "superra_reviewer"
+    )
 
 
 def test_red_dispatch_log_empty():
     report = DispatchReport()
     evaluate_dispatch_log(report, "")
-    assert len(report.missing) == 2
+    assert finding_codes(report, outcome="missing") == ["DISPATCH_LOG_MISSING"] * 2
 
 
 # --------------------------------------------------------------------------- #

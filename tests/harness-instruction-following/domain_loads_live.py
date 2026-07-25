@@ -50,6 +50,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sdk_load_evidence import SkillLoadEvidence, normalize_skill_name
+from structured_findings import Finding, add_missing, add_observation
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "domain-loads"
@@ -141,6 +142,7 @@ class DomainLoadReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -165,19 +167,33 @@ def _check_one_skill(
     """
 
     if normalize_skill_name(skill) not in evidence.loaded_skill_names:
-        report.missing.append(
+        add_missing(
+            report,
+            "DOMAIN_SKILL_MISSING",
             f"{context}: required domain skill {skill!r} never loaded "
-            f"(observed skill loads: {sorted(evidence.loaded_skill_names)})"
+            f"(observed skill loads: {sorted(evidence.loaded_skill_names)})",
+            subject=skill,
+            actual=sorted(evidence.loaded_skill_names),
         )
     elif not evidence.loaded_before_first_edit(skill):
-        report.missing.append(
+        add_missing(
+            report,
+            "DOMAIN_SKILL_LATE",
             f"{context}: domain skill {skill!r} loaded at event "
             f"{evidence.first_load_index(skill)} but the first edit/write was at "
-            f"event {evidence.first_edit_index} — must load before the first edit"
+            f"event {evidence.first_edit_index} — must load before the first edit",
+            subject=skill,
+            event_index=evidence.first_load_index(skill),
+            related_index=evidence.first_edit_index,
         )
     else:
-        report.observations.append(
-            f"{context}: domain skill {skill!r} loaded before first edit"
+        add_observation(
+            report,
+            "DOMAIN_SKILL_LOADED",
+            f"{context}: domain skill {skill!r} loaded before first edit",
+            subject=skill,
+            event_index=evidence.first_load_index(skill),
+            related_index=evidence.first_edit_index,
         )
 
 
@@ -221,8 +237,11 @@ def evaluate_all_domain_loads(
 
     for row in DOMAIN_ROWS:
         if row.skill not in evidence_by_domain:
-            report.missing.append(
-                f"domain {row.skill!r}: no captured evidence supplied"
+            add_missing(
+                report,
+                "DOMAIN_EVIDENCE_MISSING",
+                f"domain {row.skill!r}: no captured evidence supplied",
+                subject=row.skill,
             )
             continue
         evaluate_domain_load(report, row, evidence_by_domain[row.skill])

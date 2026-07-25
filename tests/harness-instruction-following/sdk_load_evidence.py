@@ -36,6 +36,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from structured_findings import Finding, add_missing, add_observation
+
 
 @dataclass(frozen=True)
 class SkillLoadRecord:
@@ -238,6 +240,7 @@ class SkillLoadReport:
 
     missing: list[str] = field(default_factory=list)
     observations: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -270,21 +273,35 @@ def check_skills_loaded_before_first_edit(
     loaded = evidence.loaded_skill_names
     for skill in required_skills:
         if normalize_skill_name(skill) not in loaded:
-            report.missing.append(
+            add_missing(
+                report,
+                "SKILL_NEVER_LOADED",
                 f"required skill {skill!r} never loaded "
-                f"(observed: {sorted(loaded)})"
+                f"(observed: {sorted(loaded)})",
+                subject=skill,
+                actual=sorted(loaded),
             )
             continue
         if not evidence.loaded_before_first_edit(skill):
-            report.missing.append(
+            add_missing(
+                report,
+                "SKILL_LOADED_AFTER_EDIT",
                 f"required skill {skill!r} loaded at event "
                 f"{evidence.first_load_index(skill)} but the first edit/write "
                 f"was at event {evidence.first_edit_index} — skill must load "
-                f"before the first edit"
+                f"before the first edit",
+                subject=skill,
+                event_index=evidence.first_load_index(skill),
+                related_index=evidence.first_edit_index,
             )
         else:
-            report.observations.append(
-                f"skill {skill!r} loaded before first edit"
+            add_observation(
+                report,
+                "SKILL_LOADED_BEFORE_EDIT",
+                f"skill {skill!r} loaded before first edit",
+                subject=skill,
+                event_index=evidence.first_load_index(skill),
+                related_index=evidence.first_edit_index,
             )
 
 
@@ -463,18 +480,33 @@ def check_always_loaded_frontmatter(
     for rel in role_spec_files:
         path = root / rel
         if not path.exists():
-            report.missing.append(f"role spec {rel} not found at {path}")
+            add_missing(
+                report,
+                "ROLE_SPEC_MISSING",
+                f"role spec {rel} not found at {path}",
+                path=rel,
+                actual=str(path),
+            )
             continue
         declared = parse_frontmatter_skills(path.read_text(encoding="utf-8"))
         for skill in required:
             if skill in declared:
-                report.observations.append(
-                    f"{rel} declares always-loaded skill {skill!r}"
+                add_observation(
+                    report,
+                    "ALWAYS_LOADED_DECLARED",
+                    f"{rel} declares always-loaded skill {skill!r}",
+                    subject=skill,
+                    path=rel,
                 )
             else:
-                report.missing.append(
+                add_missing(
+                    report,
+                    "ALWAYS_LOADED_MISSING",
                     f"{rel} frontmatter skills: is missing always-loaded skill "
-                    f"{skill!r} (declared: {declared})"
+                    f"{skill!r} (declared: {declared})",
+                    subject=skill,
+                    path=rel,
+                    actual=declared,
                 )
 
 
@@ -522,13 +554,19 @@ def check_behavioral_canary(
     """
 
     if re.search(spec.pattern, output_text):
-        report.observations.append(
+        add_observation(
+            report,
+            "BEHAVIORAL_CANARY_SATISFIED",
             f"behavioral canary for skill {spec.skill!r} satisfied "
-            f"({spec.rule})"
+            f"({spec.rule})",
+            subject=spec.skill,
         )
         return
-    report.missing.append(
+    add_missing(
+        report,
+        "BEHAVIORAL_CANARY_FAILED",
         f"behavioral canary for skill {spec.skill!r} failed: output does not "
         f"apply the rule {spec.rule!r} (pattern {spec.pattern!r} not found) — "
-        f"the preloaded skill body did not shape the output"
+        f"the preloaded skill body did not shape the output",
+        subject=spec.skill,
     )
