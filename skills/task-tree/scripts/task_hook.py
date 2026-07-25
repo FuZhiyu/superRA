@@ -377,8 +377,7 @@ def _handle_bash(data: dict) -> None:
                     parent_dir / new_slug,
                     moved_root=parent_dir / new_slug,
                 )
-                for path, content in link_rewrites.items():
-                    path.write_text(content, encoding="utf-8")
+                task_io.apply_move_link_rewrites(link_root, link_rewrites)
                 if link_rewrites:
                     rewire_feedback.append(
                         f"Auto-rewrote relative markdown links in "

@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
     TASK_ROOT_DIRNAME,
+    apply_move_link_rewrites,
     cascade_depends_on_rename,
     compute_move_link_rewrites,
     iter_child_task_dirs,
@@ -129,7 +130,10 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
 
     if not from_dir.exists():
         _die(f"source not found: {from_dir}")
-    if not (from_dir / "task.md").exists():
+    source_task_md = from_dir / "task.md"
+    if source_task_md.is_symlink():
+        _die(f"source task.md is a symlink: {source_task_md}")
+    if not source_task_md.is_file():
         _die(f"source is not a task directory: {from_dir}")
     if to_dir.exists():
         _die(f"destination already exists: {to_dir}")
@@ -163,8 +167,17 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     # Computed before the rename, while the moved subtree is readable at from_dir.
     link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)
     from_dir.rename(to_dir)
-    for path, content in link_rewrites.items():
-        path.write_text(content, encoding="utf-8")
+    try:
+        apply_move_link_rewrites(plan_root, link_rewrites)
+    except (OSError, ValueError) as exc:
+        try:
+            to_dir.rename(from_dir)
+        except OSError as rollback_exc:
+            _die(
+                f"unsafe Markdown rewrite after move ({exc}); "
+                f"rollback also failed: {rollback_exc}"
+            )
+        _die(f"unsafe Markdown rewrite after move; move rolled back: {exc}")
     print(f"Moved {from_dir} -> {to_dir}")
 
     if from_parent == to_parent:

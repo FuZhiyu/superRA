@@ -10,6 +10,7 @@ from __future__ import annotations
 import heapq
 import os
 import re
+import stat
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -614,6 +615,102 @@ def _rewrite_relative_links(
     return "".join(rewritten_lines)
 
 
+def _contained_regular_relative(path: Path, plan_root: Path) -> Path:
+    """Return a safe root-relative path or raise without following symlinks."""
+    root = plan_root.resolve(strict=True)
+    candidate = path.absolute()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError:
+        raise ValueError(f"Markdown rewrite target escapes task root: {path}") from None
+    if not relative.parts:
+        raise ValueError(f"Markdown rewrite target is not a file: {path}")
+
+    current = root
+    for index, part in enumerate(relative.parts):
+        current /= part
+        try:
+            info = current.lstat()
+        except OSError as exc:
+            raise ValueError(f"Markdown rewrite target is unavailable: {path}") from exc
+        if stat.S_ISLNK(info.st_mode):
+            raise ValueError(
+                f"Markdown rewrite target contains a symlink component: {path}"
+            )
+        if index < len(relative.parts) - 1 and not stat.S_ISDIR(info.st_mode):
+            raise ValueError(
+                f"Markdown rewrite target has a non-directory component: {path}"
+            )
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+    return relative
+
+
+def _open_contained_regular(
+    path: Path, plan_root: Path, flags: int
+) -> int:
+    """Open a contained regular file without following any path symlink."""
+    root = plan_root.resolve(strict=True)
+    relative = _contained_regular_relative(path, root)
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    directory_fd = os.open(root, directory_flags | no_follow)
+    try:
+        for part in relative.parts[:-1]:
+            child_fd = os.open(
+                part,
+                directory_flags | no_follow,
+                dir_fd=directory_fd,
+            )
+            os.close(directory_fd)
+            directory_fd = child_fd
+        file_fd = os.open(
+            relative.parts[-1],
+            flags | no_follow,
+            dir_fd=directory_fd,
+        )
+    finally:
+        os.close(directory_fd)
+
+    if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+        os.close(file_fd)
+        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+    return file_fd
+
+
+def _read_contained_markdown(path: Path, plan_root: Path) -> str:
+    fd = _open_contained_regular(path, plan_root, os.O_RDONLY)
+    with os.fdopen(fd, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _iter_contained_markdown(root: Path, plan_root: Path):
+    """Yield regular Markdown files without entering symlinked directories."""
+    task_root = plan_root.resolve(strict=True)
+    scan_root = root.absolute()
+    try:
+        scan_root.relative_to(task_root)
+    except ValueError:
+        return
+    if has_symlink_task_component(scan_root, task_root) or not scan_root.is_dir():
+        return
+
+    for directory, dirnames, filenames in os.walk(scan_root, followlinks=False):
+        current = Path(directory)
+        dirnames[:] = sorted(
+            name for name in dirnames if not (current / name).is_symlink()
+        )
+        for name in sorted(filenames):
+            candidate = current / name
+            if candidate.suffix.lower() != ".md":
+                continue
+            try:
+                _contained_regular_relative(candidate, task_root)
+            except ValueError:
+                continue
+            yield candidate
+
+
 def compute_move_link_rewrites(
     plan_root: Path, from_dir: Path, to_dir: Path, *, moved_root: Path
 ) -> dict[Path, str]:
@@ -628,20 +725,21 @@ def compute_move_link_rewrites(
     every other file in ``plan_root`` whose links point into the moved subtree
     (keyed by their unchanged paths). Files whose links are unaffected are omitted.
     """
+    plan_root = plan_root.resolve(strict=True)
     rewrites: dict[Path, str] = {}
     from_dir_resolved = from_dir.resolve()
     to_dir_resolved = to_dir.resolve()
 
-    for src_md in moved_root.rglob("*.md"):
+    for src_md in _iter_contained_markdown(moved_root, plan_root):
         rel = src_md.relative_to(moved_root)
-        original = src_md.read_text(encoding="utf-8")
+        original = _read_contained_markdown(src_md, plan_root)
         rewritten = _rewrite_relative_links(
             original, from_dir / rel, to_dir / rel, from_dir, to_dir
         )
         if rewritten != original:
             rewrites[to_dir / rel] = rewritten
 
-    for md in plan_root.rglob("*.md"):
+    for md in _iter_contained_markdown(plan_root, plan_root):
         md_resolved = md.resolve()
         in_subtree = False
         for boundary in (from_dir_resolved, to_dir_resolved):
@@ -653,13 +751,26 @@ def compute_move_link_rewrites(
             break
         if in_subtree:
             continue  # part of the moved subtree (pre- or post-move) — handled above
-        original = md.read_text(encoding="utf-8")
+        original = _read_contained_markdown(md, plan_root)
         rewritten = _rewrite_relative_links(
             original, md, md, from_dir, to_dir, only_into_subtree=True
         )
         if rewritten != original:
             rewrites[md] = rewritten
     return rewrites
+
+
+def apply_move_link_rewrites(
+    plan_root: Path, rewrites: dict[Path, str]
+) -> None:
+    """Validate every queued destination, then apply rewrites without symlinks."""
+    ordered = sorted(rewrites.items(), key=lambda item: str(item[0]))
+    for path, _content in ordered:
+        _contained_regular_relative(path, plan_root)
+    for path, content in ordered:
+        fd = _open_contained_regular(path, plan_root, os.O_WRONLY | os.O_TRUNC)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:
