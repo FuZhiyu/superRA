@@ -10,6 +10,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from transcript_assertions import (  # noqa: E402
     AssertionReport,
+    check_interactive_canvas_order,
+    check_main_seat_route,
     check_event_before_write,
     check_file_reads_before_write,
     check_json_artifact,
@@ -105,6 +107,112 @@ def test_interactive_narration_does_not_excuse_missing_default_dispatch():
     assert len(report.missing) == 2
     assert "missing implementer event" in report.missing[0]
     assert "missing reviewer event" in report.missing[1]
+
+
+def test_interactive_canvas_fixture_records_before_question_and_review():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.interactive.jsonl")
+    report = AssertionReport()
+
+    check_interactive_canvas_order(
+        report,
+        events,
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
+    )
+
+    report.assert_ok()
+
+
+def test_interactive_canvas_evaluator_rejects_wrong_event_order():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "AskUserQuestion",
+                "input": {"options": ["Review now", "Defer", "Skip"]},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "interactive-fixture/task.md"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:reviewer"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_interactive_canvas_order(
+        report,
+        events,
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
+    )
+
+    assert any("task update must precede review question" in item for item in report.missing)
+
+
+def test_interactive_canvas_evaluator_requires_structured_opt_in():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "interactive-fixture/task.md"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "AskUserQuestion",
+                "input": {},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:reviewer"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_interactive_canvas_order(
+        report,
+        events,
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
+    )
+
+    assert any("missing explicit mode opt-in" in item for item in report.missing)
+
+
+def test_main_reviewer_seat_fixture_loads_role_and_dispatches_implementer():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.main-reviewer-seat.jsonl")
+    report = AssertionReport()
+
+    check_main_seat_route(report, events, main_role="reviewer")
+
+    report.assert_ok()
+
+
+def test_main_implementer_seat_fixture_loads_role_and_dispatches_reviewer():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.main-implementer-seat.jsonl")
+    report = AssertionReport()
+
+    check_main_seat_route(report, events, main_role="implementer")
+
+    report.assert_ok()
+
+
+def test_main_seat_evaluator_detects_missing_role_load_and_opposite_dispatch():
+    report = AssertionReport()
+
+    check_main_seat_route(report, [], main_role="reviewer")
+
+    assert len(report.missing) == 2
+    assert "agents/reviewer.md" in report.missing[0]
+    assert "implementer dispatch" in report.missing[1]
 
 
 def test_task_read_narration_without_command_event_fails():

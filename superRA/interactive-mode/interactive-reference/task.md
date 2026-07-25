@@ -1,6 +1,6 @@
 ---
 title: "Author the interactive-mode canvas-loop reference"
-status: revise
+status: implemented
 depends_on:
   - superplan-decrowd
 ---
@@ -35,7 +35,7 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 
 **The reference** (self-contained for a main agent running the full spectrum):
 
-- **Framing** — a fused light-plan → execute-yourself → record loop the main agent runs with the researcher, filling both seats and pausing often. Selection axis is autonomy (concentrated, closely-steered work), not difficulty; explicit opt-in over the autonomous-subagent default; not for trivial jots.
+- **Framing** — a fused light-plan → execute-yourself → record loop the main agent runs with the researcher, doing the work itself and pausing often. Selection axis is autonomy (concentrated, closely-steered work), not difficulty; explicit opt-in over the autonomous-subagent default; not for trivial jots.
 - **Spectrum** — forward light-plan-then-execute (positioning retained, exploration/domain-gate/decomposition choreography skipped) and retroactive capture (results-first), the latter pointing to `task-tree-design.md §Retroactive Task-Tree Creation` rather than forking a parallel path.
 - **Loop** — co-edit via `using-superra` §Task Interface; self-review always against the active domain skill's gated checklist; commit instantly per `using-superra` §Commit Hygiene; prompt review now (dispatch reviewer → `approved`) / defer / skip (leave at `implemented` for a deferred sweep), reusing the existing enum; continue with frequent pauses.
 - **Positioning + intent gate** — routes to `task-tree-design.md §Placing Work`; the confirm-intent gate for tree changes collapses when the human is the editor (their message is the authorization), remaining only for agent-initiated scope changes. All same-`references/` sibling citations use bare filenames per the house convention.
@@ -52,8 +52,9 @@ Added [interactive-mode.md](../../../skills/superplan/references/interactive-mod
 
 Review (interactive-mode branch): the one blocking finding — the intro pointer read "(§The loop, step 4)" after the required keep-task-updated step renumbered the loop — is fixed; the review prompt is step 5 and the pointer now matches.
 
-**Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks the required ordering and content of the canvas loop: the task's `## Results` and `status` move before each pause, then the tool-backed review-now/defer/skip question fires, with no autonomous reviewer dispatch. The red run caught the conflicting Codex mandatory-review override; the restored contract passes.
+**Regression protection.** Authored instruction prose and labels are never test oracles; protection uses structured surfaces or observable behavior. A committed task artifact plus transcript fixture in [samples](../../../tests/harness-instruction-following/samples/) carries a structured interactive opt-in and demonstrates non-empty `## Results` and `status: implemented` landing before a structural question-tool event, which precedes reviewer dispatch. [transcript_assertions.py](../../../tests/harness-instruction-following/transcript_assertions.py) evaluates the ordering without matching authored instruction prose or option labels. Red-green verification reordered the update and question events, observed the expected failure, restored the fixture, and passed.
 
 ## Review Notes
 
 1. MAJOR — [test_contract.py:189-212](../../../tests/harness-instruction-following/test_contract.py#L189-L212), [README.md:54-60](../../../tests/harness-instruction-following/README.md#L54-L60), and [load_contract.json:657-693](../../../tests/harness-instruction-following/load_contract.json#L657-L693). The claimed protection matches exact authored sentences and labels, even though the harness contract says authored instruction sentences are not test oracles. It therefore fails on harmless prose refactors but can pass while an agent ignores the required canvas behavior; no fixture or live interactive scenario observes `## Results`/`status` being written before a pause or a structural user-question tool event before reviewer dispatch. Fix: add an explicitly opted-in interactive fixture/smoke whose artifact and transcript demonstrate the required ordering, red-green the evaluator, and limit static checks to stable structured routing surfaces.
+   → implemented: replaced prose needles with an artifact/transcript evaluator that requires implemented status and non-empty Results before a question-tool event and reviewer dispatch; added positive, reordered-event, and red-green fixtures ([transcript_assertions.py](../../../tests/harness-instruction-following/transcript_assertions.py), [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py)).

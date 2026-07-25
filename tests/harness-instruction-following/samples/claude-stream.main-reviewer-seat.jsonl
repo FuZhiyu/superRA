@@ -1,0 +1,2 @@
+{"type":"tool_use","name":"Agent","input":{"subagent_type":"superRA:implementer"}}
+{"type":"tool_use","name":"Read","input":{"file_path":"agents/reviewer.md"}}

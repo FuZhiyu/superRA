@@ -186,43 +186,46 @@ def test_skill_load_manifest_tables_match_contract():
     }
 
 
-def test_interactive_mode_is_explicit_and_records_before_review_prompt():
-    main_agent = read_text("skills/using-superra/references/main-agent.md")
-    interactive = read_text("skills/superplan/references/interactive-mode.md")
-    superimplement = read_text("skills/superimplement/SKILL.md")
+def test_codex_availability_routes_distinguish_tool_and_agent_absence():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
+    rows = markdown_table_rows(codex, "### Availability routing")
+    routes = {
+        (row[0], row[1]): tuple(inline_code(cell) for cell in row[2:])
+        for row in rows
+    }
 
-    assert "interactive — co-edit with the researcher, pausing often — is an explicit opt-in" in main_agent
-    assert "Default to subagent-driven execution" in superimplement
-    assert "unless the researcher explicitly requests interactive" in superimplement
-    assert "It is not for trivial jots" in interactive
+    assert set(routes) == {
+        ("available", "available"),
+        ("available", "missing"),
+        ("unavailable", "any"),
+    }
+    assert routes[("available", "available")] == (
+        ("named-dispatch",),
+        (),
+        (),
+    )
+    assert routes[("available", "missing")] == (
+        ("setup",),
+        ("codex-superra-setup",),
+        (),
+    )
+    assert routes[("unavailable", "any")] == (
+        ("harness-forced-inline",),
+        ("agents/implementer.md", "agents/reviewer.md"),
+        ("implemented", "approved", "revise"),
+    )
 
-    record_step = interactive.index("**Keep the task updated — required.**")
-    review_step = interactive.index("**Ask before review, with a tool — required.**")
-    assert record_step < review_step
-    record_contract = interactive[record_step:review_step]
-    assert "Before each pause" in record_contract
-    assert "## Results" in record_contract
-    assert "`in-progress` → `implemented`" in record_contract
 
-    review_contract = interactive[review_step:]
-    assert "Use `AskUserQuestion`" in review_contract
-    assert "review now / defer / skip" in review_contract
-    assert "Never dispatch a reviewer on your own read of the situation" in review_contract
-    assert "Independent review is mandatory" not in codex
-
-
-def test_autonomous_main_agent_seats_keep_canonical_role_protocol():
+def test_seat_assignment_table_has_three_supported_structures():
     orchestration = read_text("skills/agent-orchestration/SKILL.md")
+    rows = markdown_table_rows(orchestration, "## Seat Assignment")
+    structures = {(row[0], row[1]) for row in rows}
 
-    assert "do trivial work inline" not in orchestration
-    assert "| subagent | subagent |" in orchestration
-    assert "| subagent | main |" in orchestration
-    assert "| main | subagent |" in orchestration
-    assert "| main | main |" not in orchestration
-    assert "Load `agents/reviewer.md`" in orchestration
-    assert "runs `agents/implementer.md` over its own work" in orchestration
-    assert "then dispatches a reviewer" in orchestration
+    assert structures == {
+        ("subagent", "subagent"),
+        ("subagent", "main"),
+        ("main", "subagent"),
+    }
 
 
 def test_superplan_routing_split_preserves_gates_and_references():
@@ -230,34 +233,37 @@ def test_superplan_routing_split_preserves_gates_and_references():
     decomposition = read_text("skills/superplan/references/decomposition.md")
     changing = read_text("skills/superplan/references/changing-the-tree.md")
 
-    assert "references/decomposition.md" in superplan
-    assert "references/changing-the-tree.md" in superplan
-    assert "Stop here, load the matching domain skill" in superplan
-    assert "REVISE findings must be fixed before proceeding to User Review" in superplan
-    assert "### User Review" in superplan
-    assert "### Execution Handoff" in superplan
+    routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
+    assert {
+        "references/decomposition.md",
+        "references/changing-the-tree.md",
+    } <= routed_paths
+    assert all((REPO_ROOT / "skills" / "superplan" / path).is_file()
+               for path in routed_paths)
 
-    for gate in (
-        "it must exist before any subagent is dispatched",
-        "**No checkboxes.**",
-        "no cycles, no references to nonexistent siblings",
-        "## Self-Review",
-        "**Domain inventory coverage",
-        "**Handoff test:**",
-        "**Dependency graph sanity:**",
-    ):
-        assert gate in decomposition
+    phase_headings = re.findall(r"(?m)^## Phase \d+:", superplan)
+    assert len(phase_headings) == 4
+    phase_four = re.search(
+        r"(?ms)^## Phase 4:.*?(?=^## |\Z)",
+        superplan,
+    )
+    assert phase_four is not None
+    assert len(re.findall(r"(?m)^### ", phase_four.group())) == 4
 
-    for gate in (
-        "**Confirm intent.**",
-        "**Update `superRA/` inline:**",
-        "**Update statuses**",
-        "**Sweep for stale content**",
-        "**Commit atomically**",
-        "**Resume**",
-        "Do not resume the in-flight task before the change is committed",
-    ):
-        assert gate in changing
+    def ordered_run_lengths(text: str) -> list[int]:
+        numbers = [
+            int(match.group(1))
+            for match in re.finditer(r"(?m)^(\d+)\. ", text)
+        ]
+        runs: list[int] = []
+        current = 0
+        for number in numbers:
+            current = current + 1 if number == current + 1 else 1
+            runs.append(current)
+        return runs
+
+    assert 9 in ordered_run_lengths(decomposition)
+    assert 6 in ordered_run_lengths(changing)
 
 
 def test_codex_tool_map_matches_contract():

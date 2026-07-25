@@ -7,7 +7,7 @@ description: Coordinate superRA agents and handoffs. Requires superRA:using-supe
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops; balance seat assignment against spawn cost per task.
+You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops.
 
 ## Workload Balancing
 
@@ -15,11 +15,7 @@ Every dispatch has spawn cost — skill-load, context hydration, per-turn overhe
 
 ### Tier 1 — Small: main implementer seat
 
-Use §Seat Assignment's main-implementer / subagent-reviewer structure when implementation fits in a single edit, reads no unfamiliar files, and needs no domain skill beyond what the orchestrator already has loaded.
-
-- Typo or comment fix in one file.
-- A 2-line constant change the orchestrator has already read.
-- Removing a known-dead import.
+Use the small-task structure in §Seat Assignment.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 

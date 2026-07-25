@@ -667,8 +667,9 @@
       ],
       "trigger": "User invokes superimplement or implementation workflow over a task tree.",
       "expected_evidence": [
-        "static contract test confirms interactive is explicit opt-in, records Results/status before pauses, and asks before reviewer dispatch",
-        "static contract test confirms autonomous main-agent seats load the canonical role protocol",
+        "structured Codex availability table distinguishes missing named agents from an unavailable agent tool",
+        "interactive fixture records implemented status and non-empty Results before a question-tool event, which precedes reviewer dispatch",
+        "seat fixtures show each main-seat route reading its canonical role file and dispatching the opposite seat",
         "fixture parser requires structural implementer and reviewer dispatches for the default superimplement smoke",
         "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the default path"
       ],
@@ -679,10 +680,10 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_interactive_mode_is_explicit_and_records_before_review_prompt; test_contract.py::test_autonomous_main_agent_seats_keep_canonical_role_protocol"
+          "test_contract.py::test_codex_availability_routes_distinguish_tool_and_agent_absence; test_contract.py::test_seat_assignment_table_has_three_supported_structures"
         ],
         "fixture_unit": [
-          "test_transcript_assertions.py (dispatch detection rejects prose-only interactive narration); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
+          "test_transcript_assertions.py (interactive ordering and both main-seat role-load/opposite-dispatch fixtures); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
         ],
         "manual_live_claude": [
           "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events) — built/CI-tested; live run not part of the 08-12 expansion"

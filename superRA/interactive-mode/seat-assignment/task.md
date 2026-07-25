@@ -1,6 +1,6 @@
 ---
 title: "Seat assignment: support main or subagent in either role"
-status: revise
+status: implemented
 depends_on:
   - execution-mode-contract
 ---
@@ -34,11 +34,13 @@ Delivered against the success criteria:
 
 **Follow-up revision (interactive-mode branch review).** Per researcher feedback the `main/main` (manual) row was dropped (→ three configs), and the autonomous main-implementer seat was decoupled from the interactive canvas: that seat runs `implementer.md`; the interactive canvas loop is the separate **interactive** mode.
 
-DRY + Necessity: the section does not restate the modes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/implementer.md`, `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them.
+DRY + Necessity: the section does not restate the modes model (owned by `main-agent.md §Execution Modes`, which defers seat mechanics here) and points to `agents/implementer.md`, `agents/reviewer.md`, `interactive-mode.md`, and §Handling Reviewer Feedback rather than paraphrasing them. The seat table is the sole owner of the small-task choice criterion; Workload Balancing now points to it, and the Overview carries no seat-selection echo.
 
-**Regression protection.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) now locks all three autonomous seat structures, excludes main/main, and requires both main-seat paths to invoke the canonical role protocol. The stale Tier-1 "do trivial work inline, no subagent" path in [agent-orchestration/SKILL.md](../../../skills/agent-orchestration/SKILL.md) is now the main-implementer/subagent-reviewer structure, avoiding an implementer spawn without dropping the reviewer seat. The red run failed on the stale inline path and passed after correction.
+**Regression protection.** Authored instruction prose and labels are never test oracles; protection uses structured surfaces or observable behavior. [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) parses the seat table structurally and requires exactly the three supported seat pairs. Two transcript fixtures evaluated by [transcript_assertions.py](../../../tests/harness-instruction-following/transcript_assertions.py) require the main reviewer route to read `agents/reviewer.md` and dispatch an implementer, and the main implementer route to read `agents/implementer.md` and dispatch a reviewer. Red-green verification independently removed each required event, observed both failures, restored the fixtures, and passed.
 
 ## Review Notes
 
 1. MAJOR — [agent-orchestration/SKILL.md:10-18](../../../skills/agent-orchestration/SKILL.md#L10-L18) and [agent-orchestration/SKILL.md:93-103](../../../skills/agent-orchestration/SKILL.md#L93-L103). The protection fix repeats the same small-task seat-selection rule in the overview, Tier 1, and the seat table. Under the repository's blocking DRY + Necessity gate, the overview echo does not change behavior and the Tier/table criteria now have two authoritative homes. Fix: keep the detailed choice criterion in one owning section and make the other surface a pointer only; remove the non-behavioral overview echo.
+   → implemented: removed the overview echo and Tier-1 criteria/examples; Tier 1 now only points to the seat table, which remains the single detailed owner ([agent-orchestration/SKILL.md](../../../skills/agent-orchestration/SKILL.md)).
 2. MAJOR — [test_contract.py:215-225](../../../tests/harness-instruction-following/test_contract.py#L215-L225) and [README.md:54-60](../../../tests/harness-instruction-following/README.md#L54-L60). The seat protection asserts literal table/prose fragments rather than the harness's structured or behavioral evidence, contrary to its own test design. It is brittle to equivalent wording and does not show that a main-seat agent actually loads and follows the canonical role contract. Fix: parse the seat table structurally and add a fixture/smoke for at least the two main-seat routes, with red-green evidence that omitting the role load or opposite-seat dispatch is detected.
+   → implemented: parse the seat table as row pairs and evaluate both main-seat route fixtures for canonical role-file reads plus opposite-seat dispatch, with negative and perturbed-fixture evidence ([test_contract.py](../../../tests/harness-instruction-following/test_contract.py), [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py)).
