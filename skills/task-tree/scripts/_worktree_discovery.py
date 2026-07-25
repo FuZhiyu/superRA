@@ -158,7 +158,10 @@ def _parse_porcelain(output: str) -> list[dict[str, str]]:
 def _is_task_root(candidate: Path) -> bool:
     """True if *candidate* is a valid task root: it holds an umbrella ``task.md``
     (single tree) or at least one immediate child task dir (a rootless forest)."""
-    if (candidate / "task.md").is_file():
+    task_md = candidate / "task.md"
+    if candidate.is_symlink():
+        return False
+    if not task_md.is_symlink() and task_md.is_file():
         return True
     return any(
         (child / "task.md").is_file()

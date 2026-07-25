@@ -26,17 +26,42 @@ ATTACHMENTS_DIRNAME = "attachments"
 
 
 def is_opaque_task_path(path: Path, plan_root: Path) -> bool:
-    """Return whether *path* enters the reserved ``attachments/`` container."""
+    """Return whether *path* lexically or canonically enters ``attachments/``."""
+    try:
+        lexical_relative = path.absolute().relative_to(plan_root.absolute())
+    except ValueError:
+        return False
+    if ATTACHMENTS_DIRNAME in lexical_relative.parts:
+        return True
+    try:
+        canonical_relative = path.resolve().relative_to(plan_root.resolve())
+    except (OSError, ValueError):
+        return False
+    return ATTACHMENTS_DIRNAME in canonical_relative.parts
+
+
+def has_symlink_task_component(path: Path, plan_root: Path) -> bool:
+    """Return whether a task-root-relative component of *path* is a symlink."""
     try:
         relative = path.absolute().relative_to(plan_root.absolute())
     except ValueError:
         return False
-    return ATTACHMENTS_DIRNAME in relative.parts
+    current = plan_root.absolute()
+    for part in relative.parts:
+        current /= part
+        try:
+            if current.is_symlink():
+                return True
+        except OSError:
+            return True
+    return False
 
 
 def iter_child_task_dirs(directory: Path) -> list[Path]:
     """Return immediate structural child task directories in stable order."""
     try:
+        if directory.is_symlink():
+            return []
         children = directory.iterdir()
         return sorted(
             (
@@ -44,7 +69,9 @@ def iter_child_task_dirs(directory: Path) -> list[Path]:
                 for child in children
                 if (
                     child.name != ATTACHMENTS_DIRNAME
+                    and not child.is_symlink()
                     and child.is_dir()
+                    and not (child / "task.md").is_symlink()
                     and (child / "task.md").exists()
                 )
             ),
@@ -56,12 +83,14 @@ def iter_child_task_dirs(directory: Path) -> list[Path]:
 
 def iter_task_markdown_files(plan_root: Path) -> list[Path]:
     """Return structural ``task.md`` files without entering ancillary directories."""
+    if plan_root.is_symlink():
+        return []
     task_files: list[Path] = []
     pending = [plan_root]
     while pending:
         directory = pending.pop()
         task_md = directory / "task.md"
-        if task_md.is_file():
+        if not task_md.is_symlink() and task_md.is_file():
             task_files.append(task_md)
         children = iter_child_task_dirs(directory)
         pending.extend(reversed(children))
@@ -86,7 +115,14 @@ def _is_task_root_dir(directory: Path) -> bool:
     task dir (a rootless forest). A forest needs no umbrella ``task.md``."""
     if directory.name not in TASK_ROOT_DIRNAMES:
         return False
-    return (directory / "task.md").is_file() or _has_child_task_dir(directory)
+    task_md = directory / "task.md"
+    return (
+        not directory.is_symlink()
+        and (
+            (not task_md.is_symlink() and task_md.is_file())
+            or _has_child_task_dir(directory)
+        )
+    )
 
 
 def autodetect_plan_root(start: Path | None = None) -> Path | None:
@@ -388,6 +424,11 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
     root = plan_root if plan_root is not None else _find_plan_root(task_dir)
     path = ""
     if root is not None:
+        if task_md_path.is_symlink() or has_symlink_task_component(task_dir, root):
+            raise ValueError(
+                f"Task path {task_md_path} contains a symlink; "
+                "refusing to parse external task content"
+            )
         try:
             rel = task_dir.resolve().relative_to(root.resolve())
         except ValueError:
@@ -669,7 +710,7 @@ def walk_plan(plan_root: Path) -> Task:
     ``SYNTHETIC_ROOT_TITLE``.
     """
     root_task_md = plan_root / "task.md"
-    if root_task_md.exists():
+    if not root_task_md.is_symlink() and root_task_md.exists():
         root = parse_task(root_task_md, plan_root)
     else:
         root = Task(path="", dir_path=plan_root, title=SYNTHETIC_ROOT_TITLE)
@@ -783,15 +824,30 @@ def resolve_path(plan_root: Path, task_path: str) -> Path:
     if not task_path:
         return plan_root
     task_path = strip_root_prefix(plan_root, task_path)
-    if ATTACHMENTS_DIRNAME in Path(task_path).parts:
+    requested = Path(task_path)
+    if requested.is_absolute() or ".." in requested.parts:
+        raise ValueError(
+            f"Task path {task_path!r} escapes plan root {plan_root}"
+        )
+    if ATTACHMENTS_DIRNAME in requested.parts:
         raise ValueError(
             f"Task path {task_path!r} enters reserved {ATTACHMENTS_DIRNAME}/"
         )
-    resolved = (plan_root / task_path).resolve()
+    candidate = plan_root / requested
+    if has_symlink_task_component(candidate, plan_root):
+        raise ValueError(f"Task path {task_path!r} contains a symlink component")
+    resolved = candidate.resolve()
     root_resolved = plan_root.resolve()
-    if not resolved.is_relative_to(root_resolved):
+    try:
+        canonical_relative = resolved.relative_to(root_resolved)
+    except ValueError:
         raise ValueError(
             f"Task path {task_path!r} escapes plan root {plan_root}"
+        ) from None
+    if ATTACHMENTS_DIRNAME in canonical_relative.parts:
+        raise ValueError(
+            f"Task path {task_path!r} resolves inside reserved "
+            f"{ATTACHMENTS_DIRNAME}/"
         )
     return resolved
 

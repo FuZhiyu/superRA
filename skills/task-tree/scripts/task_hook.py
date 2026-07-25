@@ -276,7 +276,11 @@ def _detect_same_parent_rename(
                for p in parts):
         return None
     plan_root = task_io._find_plan_root(parent)
-    if plan_root is None or task_io.is_opaque_task_path(parent, plan_root):
+    if (
+        plan_root is None
+        or task_io.is_opaque_task_path(parent, plan_root)
+        or task_io.has_symlink_task_component(parent, plan_root)
+    ):
         return None
     # The renamed directory must itself be a task (have a task.md post-move).
     if not (dst_abs / "task.md").exists():
@@ -450,6 +454,7 @@ def _handle_edit_write(data: dict) -> None:
         if (
             plan_root is not None
             and not task_io.is_opaque_task_path(file_path.parent, plan_root)
+            and not task_io.has_symlink_task_component(file_path.parent, plan_root)
         ):
             task_path = str(file_path.parent.relative_to(plan_root))
             if task_path == ".":
@@ -478,6 +483,7 @@ def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
     if (
         plan_root is None
         or task_io.is_opaque_task_path(file_path.parent, plan_root)
+        or task_io.has_symlink_task_component(file_path.parent, plan_root)
     ):
         return None
 

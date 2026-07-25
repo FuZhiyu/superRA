@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: revise
+status: implemented
 depends_on:
   - 01-artifact-contract
 ---
@@ -29,23 +29,22 @@ Notebook rendering is read-only and does not create filesystem entries. Exclude 
 
 Implemented one bounded companion-file data layer for the dashboard. The [manifest builder](../../../../skills/task-tree/scripts/_artifacts.py#L272-L362) classifies supported direct sources, recursive attachments, and unexpected legacy direct files while excluding hidden/cache state and symlinks. Its resolver and no-follow reader enforce owning-task and task-root containment, reject absolute/traversal/reserved paths and symlink components, and apply the documented 512-file, 256 KiB manifest, 4,096-entry traversal, 2 MiB preview, 2 MiB standalone-file, and 20 MiB standalone-total defaults. Listing itself is bounded: the [scanner](../../../../skills/task-tree/scripts/_artifacts.py#L88-L110) stops before materializing more than the traversal budget, and attachment recursion charges both files and directories.
 
-The structural exception is centralized in [_task_io.py](../../../../skills/task-tree/scripts/_task_io.py#L28-L68): child enumeration, task parsing, task-path resolution, validation, sibling/dependency reads, command mutators, dashboard rebuilds, hooks, root discovery, and both migration passes now share the rule that `attachments/` is opaque. A retained `attachments/**/task.md` can be listed as an artifact but cannot become a task, dependency target, move/update target, hook reconciliation target, or migration input.
+The structural exception is centralized in [_task_io.py](../../../../skills/task-tree/scripts/_task_io.py#L28-L97): child enumeration, task parsing, task-path resolution, validation, sibling/dependency reads, command mutators, dashboard rebuilds, hooks, root discovery, and both migration passes share the rule that `attachments/` is opaque. Structural scans reject symlink task directories and symlink `task.md` files before reading them. The [task-path resolver](../../../../skills/task-tree/scripts/_task_io.py#L814-L852) rejects every task-relative symlink component, then rechecks containment and `attachments/` against the canonical resolved path before returning a location to any mutator. A retained `attachments/**/task.md` can be listed as an artifact but cannot become a task, dependency target, move/update target, hook reconciliation target, migration input, or alias-based write destination.
 
 The dashboard exposes query-parameter manifest and content/download APIs resolved from the request's selected worktree. Safe previews use byte-bounded no-follow reads; unsafe types and explicit downloads use attachment disposition, and artifact responses carry `X-Content-Type-Options: nosniff`. Add, modify, and delete events emit only the owning task's artifact manifest event, without task-tree rebuilds or global reloads.
 
 Standalone whole-tree and subtree exports use the same resolver to pack scoped manifests and source/download bytes. Each entry records embedded, figure-reused, per-file-omitted, total-budget-omitted, or unreadable state; commit-pinned repository URLs are included when supplied. Figure reuse is now gated by the [actual embedded image map](../../../../skills/task-tree/scripts/plan_dashboard.py#L1917-L1949), so unsupported or unreadable image references fall back to ordinary bounded artifact packing instead of losing their bytes.
 
-Focused regressions cover [structural opacity and traversal budgets](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L155-L255), path security and live APIs, artifact-scoped watcher events, [a sixteen-level manifest/content/watcher/export round trip](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L432-L484), and [standalone image-map fallbacks](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L577-L617). The contributor-facing [dashboard internals](../../../../skills/task-tree/references/internals.md#companion-file-data-path) document the shared invariant, API, and ceilings.
+Focused regressions cover [external task symlinks and atomic alias rejection](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L183-L245), structural opacity and traversal budgets, path security and live APIs, artifact-scoped watcher events, a sixteen-level manifest/content/watcher/export round trip, and standalone image-map fallbacks. The contributor-facing [dashboard internals](../../../../skills/task-tree/references/internals.md#companion-file-data-path) document the shared invariant, API, and ceilings.
 
 Verification:
 
-- Focused artifact suite: 23 passed.
-- Combined task-tree and artifact regression suite: 297 passed with two expected intentional-fixture warnings.
-- Dashboard, multi-worktree, state-preservation, and artifact suite: 377 passed with two dependency deprecation warnings.
-- Full task-tree script suite: 754 passed with four expected warnings from dependency deprecations and intentional malformed-task fixtures.
-- Python compilation, focused `_artifacts.py` Ruff import/error checks, repository harness-compatibility validation, Markdown integrity checks, and `git diff --check` passed.
+- Focused artifact suite: 25 passed.
+- Combined task-tree and artifact regression suite: 299 passed.
+- Full task-tree script suite: 756 passed with four expected warnings from dependency deprecations and intentional malformed-task fixtures.
+- Python compilation, focused Ruff syntax checks, repository harness-compatibility validation, Markdown integrity checks, and `git diff --check` passed.
 
 ## Review Notes
 
 1. **CRITICAL** — The shared structural helpers still let symlinks bypass the opaque-task invariant. [`iter_child_task_dirs`](../../../../skills/task-tree/scripts/_task_io.py#L37-L52) follows a symlinked directory through `Path.is_dir()`, so [`iter_task_markdown_files`](../../../../skills/task-tree/scripts/_task_io.py#L57-L68) can now hand an external `task.md` to both migration writers ([`upgrade_v1_to_v2`](../../../../skills/task-tree/scripts/plan_migrate.py#L399-L417), [`upgrade_status`](../../../../skills/task-tree/scripts/plan_migrate.py#L442-L456)). Separately, [`resolve_path`](../../../../skills/task-tree/scripts/_task_io.py#L773-L796) checks `attachments` only in the lexical request before resolving it: with `alias -> attachments`, [`create_task`](../../../../skills/task-tree/scripts/task_create.py#L52-L107) writes `attachments/new-task/task.md` and only then fails during parent propagation, leaving a partial mutation inside the opaque container. Reject symlink task directories and path components, enforce opacity on the resolved task-root-relative path before any write, and add regressions for an external symlinked task during migration and a symlink alias into `attachments/` during mutation.
-   → implemented: centralized structural child, opaque-path, and migration iteration in [_task_io.py](../../../../skills/task-tree/scripts/_task_io.py#L28-L68), routed every cited scanner/mutator/hook through it, and added the cross-surface regression in [test_artifacts.py](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L183-L255).
+   → implemented: structural enumeration now rejects [symlink task directories and task files](../../../../skills/task-tree/scripts/_task_io.py#L60-L97), while [task-path resolution](../../../../skills/task-tree/scripts/_task_io.py#L814-L852) rejects symlink components and canonical `attachments/` aliases before mutation; both external-migration and no-partial-create reproductions are covered in [test_artifacts.py](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L183-L245).

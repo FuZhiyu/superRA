@@ -48,6 +48,7 @@ from _task_io import (
     Task,
     _walk_children,
     collect_all_tasks,
+    has_symlink_task_component,
     is_opaque_task_path,
     parse_task,
     walk_plan,
@@ -235,7 +236,10 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
     the caller to broadcast a full-reload instead of a single-task fragment.
     """
     task_dir = state.plan_root / task_path if task_path else state.plan_root
-    if is_opaque_task_path(task_dir, state.plan_root):
+    if (
+        is_opaque_task_path(task_dir, state.plan_root)
+        or has_symlink_task_component(task_dir, state.plan_root)
+    ):
         return None, False
     task_md = task_dir / "task.md"
     if not task_md.exists():

@@ -181,6 +181,69 @@ class TestArtifactDiscovery:
 
 
 class TestAttachmentOpacity:
+    def test_migrations_ignore_symlinked_task_directory_and_task_file(
+        self, tmp_path
+    ):
+        root = _tree(tmp_path)
+        external = tmp_path / "external-task"
+        external.mkdir()
+        external_task_md = external / "task.md"
+        original = """---
+title: "External"
+status: not-started
+review_status: revise
+---
+
+## Steps
+
+- [ ] External content must stay untouched.
+
+## Workflow Status
+
+External state.
+"""
+        external_task_md.write_text(original, encoding="utf-8")
+        try:
+            (root / "linked-task").symlink_to(external, target_is_directory=True)
+            file_link_task = root / "linked-task-file"
+            file_link_task.mkdir()
+            (file_link_task / "task.md").symlink_to(external_task_md)
+        except OSError:
+            pytest.skip("symlinks unavailable")
+
+        assert [path.parent for path in _task_io.iter_task_markdown_files(root)] == [
+            root,
+            root / "child",
+        ]
+        assert plan_migrate.upgrade_v1_to_v2(root) == []
+        assert plan_migrate.upgrade_status(root) == []
+        assert external_task_md.read_text(encoding="utf-8") == original
+
+    def test_create_rejects_symlink_alias_before_writing_inside_attachments(
+        self, tmp_path
+    ):
+        root = _tree(tmp_path)
+        attachments = root / "attachments"
+        attachments.mkdir()
+        _write_task_md(
+            attachments / "task.md",
+            "Opaque asset",
+            "not-started",
+            objective="Asset content.",
+        )
+        alias = root / "alias"
+        try:
+            alias.symlink_to(attachments, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlinks unavailable")
+
+        with pytest.raises(ValueError, match="symlink component"):
+            _task_io.resolve_path(root, "alias/new-task")
+        assert task_hook._task_path_from_file_path(alias / "task.md") is None
+        with pytest.raises(SystemExit):
+            task_create.create_task(root, "alias/new-task", "Must not be created")
+        assert not (attachments / "new-task").exists()
+
     def test_task_scanners_mutators_hooks_and_migrations_share_opaque_rule(
         self, tmp_path
     ):
