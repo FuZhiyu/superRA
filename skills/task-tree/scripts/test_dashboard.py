@@ -3557,9 +3557,11 @@ class TestDashboard:
     def test_whole_tree_export_unchanged_by_root_param(self, plan_root):
         """generate_dashboard(root=None) is byte-identical to the bare call —
         adding the subtree-scoping branch did not perturb the whole-tree path."""
-        a = plan_dashboard.generate_dashboard(plan_root, plan_root / "a.html")
+        output_dir = plan_root.parent / "exports"
+        output_dir.mkdir()
+        a = plan_dashboard.generate_dashboard(plan_root, output_dir / "a.html")
         b = plan_dashboard.generate_dashboard(
-            plan_root, plan_root / "b.html", root=None
+            plan_root, output_dir / "b.html", root=None
         )
         assert a.read_text("utf-8") == b.read_text("utf-8")
 

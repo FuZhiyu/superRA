@@ -219,6 +219,11 @@ var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
    file. The key matches the string the img[src] loop computes (taskPath + '/'
    + src, or bare src for the root body). #}
 var STANDALONE_IMAGES = {{ standalone_images | tojson }};
+{# Bounded companion manifests and base64 payloads for the Files view. Each file
+   records whether bytes are embedded, reused from STANDALONE_IMAGES, or omitted
+   by a named budget; a commit-pinned repo fallback is included when the export
+   caller supplied REPO_FILE_BASE. #}
+var STANDALONE_ARTIFACTS = {{ standalone_artifacts | tojson }};
 {% endif %}
 {# Doc-mode: render this tree as documentation rather than a task tracker; this
    flag gates the one piece built in JS — the active-node head badge. Strictly

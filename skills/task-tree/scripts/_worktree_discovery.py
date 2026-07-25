@@ -13,7 +13,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from _task_io import LEGACY_TASK_ROOT_DIRNAME, TASK_ROOT_DIRNAME
+from _task_io import ATTACHMENTS_DIRNAME, LEGACY_TASK_ROOT_DIRNAME, TASK_ROOT_DIRNAME
 
 # Minimal frontmatter title extraction keeps discovery independent of full task
 # parsing.
@@ -163,7 +163,12 @@ def _is_task_root(candidate: Path) -> bool:
         children = list(candidate.iterdir())
     except OSError:
         return False
-    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+    return any(
+        d.name != ATTACHMENTS_DIRNAME
+        and d.is_dir()
+        and (d / "task.md").is_file()
+        for d in children
+    )
 
 
 def _find_plan_root(worktree_path: str, preferred_dirname: str) -> tuple[Path, str | None] | tuple[None, None]:

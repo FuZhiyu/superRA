@@ -22,6 +22,7 @@ VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approv
 TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
+ATTACHMENTS_DIRNAME = "attachments"
 
 
 def default_plan_root() -> Path:
@@ -37,7 +38,12 @@ def _has_child_task_dir(directory: Path) -> bool:
         children = list(directory.iterdir())
     except OSError:
         return False
-    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+    return any(
+        d.name != ATTACHMENTS_DIRNAME
+        and d.is_dir()
+        and (d / "task.md").is_file()
+        for d in children
+    )
 
 
 def _is_task_root_dir(directory: Path) -> bool:
@@ -435,7 +441,12 @@ def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) ->
     updated: list[str] = []
     siblings = [
         d for d in parent_dir.iterdir()
-        if d.is_dir() and (d / "task.md").exists() and d.name != new_slug
+        if (
+            d.name != ATTACHMENTS_DIRNAME
+            and d.is_dir()
+            and (d / "task.md").exists()
+            and d.name != new_slug
+        )
     ]
     for sibling_dir in siblings:
         task = parse_task(sibling_dir / "task.md")
@@ -685,7 +696,15 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     Mirrors the leniency design used for unknown status values.
     """
     subdirs = sorted(
-        [d for d in directory.iterdir() if d.is_dir() and (d / "task.md").exists()],
+        [
+            d
+            for d in directory.iterdir()
+            if (
+                d.name != ATTACHMENTS_DIRNAME
+                and d.is_dir()
+                and (d / "task.md").exists()
+            )
+        ],
         key=lambda d: d.name,
     )
     parsed: list[Task] = []
