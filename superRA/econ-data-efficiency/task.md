@@ -26,3 +26,21 @@ Both refinements folded into [skills/econ-data-analysis/SKILL.md](../../skills/e
 **Fix #2 — prefer visualization in results** ([SKILL.md](../../skills/econ-data-analysis/SKILL.md)): added a `[BLOCKING]` **Headline findings presented visually.** item to §Documentation and handoff, before the existing figure-save/embed mechanics item. Carries the built-in judgment escape ("unless a figure would not clarify it — a lone scalar, or a small table that already reads clearly") so it is a default-with-escape, not a mechanical every-result requirement. Distinct from the Describe-phase visualization `[ADVISORY]` items (histograms/scatter/line plots of *input* variables about to be transformed): this item governs presentation of *headline findings* in `## Results`.
 
 Both edits are positively framed and carry no cross-skill citations in the shipped prose (the `agents/reviewer.md` pointer sits in a pre-existing line, not in the new text). Verified: `grep` confirms the new phrases are present and no new backtick cross-skill path citations were introduced by the added lines.
+
+### Integration protection
+
+The researcher confirmed that both behavioral rules remain independent retained
+scope in PR #50. Integrate and release documentation must therefore name the
+econ-data targeted-verification default and headline-figure gate alongside the
+interactive-mode work.
+
+The protection audit found only domain-load coverage: the harness proves that
+`econ-data-analysis` loads for data tasks, but neither rule has a structured
+output or deterministic runtime surface to test once loaded. Both are authored
+instruction behavior, so the researcher explicitly selected design and reviewer
+gates rather than prose-specific regression tests. Their durable protection is
+the task Objective and Results, the contributor DRY + Necessity gate for skill
+edits, and independent review of later changes to
+[skills/econ-data-analysis/SKILL.md](../../skills/econ-data-analysis/SKILL.md).
+No string or sentence oracle was added. The existing deterministic domain-load
+suite passed all 22 tests, and the task record passed the Markdown checker.
