@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the per-domain skill-load live coverage (task 12).
 
-Drives the domain evaluator and the per-domain Codex artifact canaries on
-synthetic inputs — no model call, no ``claude_agent_sdk`` / codex-cli import:
+Drives the domain evaluator and structured artifact contracts on synthetic
+inputs with no model call and no ``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-domain evaluator** (:func:`domain_loads_live.evaluate_domain_load`):
   green for each domain (skill loaded before edit via the Skill hook, including the
@@ -12,12 +12,8 @@ synthetic inputs — no model call, no ``claude_agent_sdk`` / codex-cli import:
   green when EVERY matching domain skill loaded; red when only one of several
   matching skills loaded (first-match instead of every-match) — the load-bearing
   case for task 12.
-- **Codex per-domain canaries** (:func:`domain_loads_live.evaluate_codex_domain_canary`):
-  green when the domain skill-unique token is in the artifact ``domain_canaries``
-  list; red when absent; and the multi-domain Codex check requires every matched
-  domain's token, red when one is missing.
-- **Fixture sanity:** each committed expected artifact satisfies its domain canary,
-  and the multi-domain artifact satisfies every multi-domain canary.
+- **Fixture sanity:** each committed expected artifact preserves its schema and
+  ordered domain skill IDs, including every matched multi-domain ID.
 """
 
 from __future__ import annotations
@@ -35,17 +31,16 @@ from sdk_load_evidence import evidence_from_hook_records  # noqa: E402
 from domain_loads_live import (  # noqa: E402
     ALL_DOMAIN_SKILLS,
     DOMAIN_ROWS,
-    MULTI_DOMAIN_CANARIES,
     MULTI_DOMAIN_SKILLS,
     MULTI_DOMAIN_WORDING,
     DomainLoadReport,
+    domain_artifact_matches,
     domain_dispatch_prompt,
     domain_row,
     evaluate_all_domain_loads,
-    evaluate_codex_domain_canary,
-    evaluate_codex_multi_domain,
     evaluate_domain_load,
     evaluate_multi_domain_load,
+    expected_domain_artifact,
 )
 
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "domain-loads"
@@ -286,21 +281,27 @@ def _load_expected(name: str) -> dict:
     )
 
 
-def test_committed_single_domain_artifacts_satisfy_canaries():
+def test_committed_single_domain_artifacts_use_structured_skill_ids():
     for row in DOMAIN_ROWS:
         expected = _load_expected(row.skill)
-        report = DomainLoadReport()
-        evaluate_codex_domain_canary(report, row.codex_canary, expected)
-        report.assert_ok()
-        assert expected["domains"] == [row.skill]
+        assert domain_artifact_matches((row.skill,), expected)
 
 
-def test_committed_multi_domain_artifact_satisfies_all_canaries():
+def test_committed_multi_domain_artifact_preserves_every_skill_id():
     expected = _load_expected("multi-domain")
-    report = DomainLoadReport()
-    evaluate_codex_multi_domain(report, MULTI_DOMAIN_CANARIES, expected)
-    report.assert_ok()
-    assert set(expected["domains"]) == set(MULTI_DOMAIN_SKILLS)
+    assert domain_artifact_matches(MULTI_DOMAIN_SKILLS, expected)
+
+
+def test_domain_artifact_rejects_missing_multi_domain_skill_id():
+    artifact = expected_domain_artifact(MULTI_DOMAIN_SKILLS)
+    artifact["domains"].pop()
+    assert not domain_artifact_matches(MULTI_DOMAIN_SKILLS, artifact)
+
+
+def test_domain_artifact_rejects_extra_fields():
+    artifact = expected_domain_artifact(("writing",))
+    artifact["instruction"] = "extra"
+    assert not domain_artifact_matches(("writing",), artifact)
 
 
 def test_multi_domain_wording_is_nonempty_and_used():

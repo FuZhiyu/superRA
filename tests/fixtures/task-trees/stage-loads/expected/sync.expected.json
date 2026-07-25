@@ -1,5 +1,7 @@
 {
-  "schema_version": 1,
+  "schema": "superra.stage-load-evidence/v1",
   "stage": "sync",
-  "stage_canary": "intent conflict"
+  "loads": [
+    {"kind": "skill", "id": "semantic-merge"}
+  ]
 }

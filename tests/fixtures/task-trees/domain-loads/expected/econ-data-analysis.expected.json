@@ -1,5 +1,4 @@
 {
-  "schema_version": 1,
-  "domains": ["econ-data-analysis"],
-  "domain_canaries": ["describe before transform"]
+  "schema": "superra.domain-load-evidence/v1",
+  "domains": ["econ-data-analysis"]
 }

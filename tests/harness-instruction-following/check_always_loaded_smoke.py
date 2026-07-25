@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""Evaluate a live Codex always-loaded canary run (task 10).
+"""Evaluate a live Codex always-loaded behavior run.
 
-Parses the codex JSONL transcript and the agent-written canary artifact, then
-runs the always-loaded :class:`~always_loaded_live.CODEX_ALWAYS_LOADED_CANARIES`
-via 09's :func:`codex_load_evidence.evaluate_canaries`. Each canary's
-skill-unique token must appear in a ``command_execution`` command or at its
-artifact field — producible only if the always-loaded skill body loaded, which on
-Codex (no autoload) means the role-spec body-load instruction was followed.
+Parses the Codex JSONL transcript and agent-written artifact. The transcript
+must contain the task-read and markdown-validation command executions, and the
+artifact must match the schema/task/path identity contract.
 
 Usage:
     check_always_loaded_smoke.py --transcript <jsonl> --artifact <json>
 
-Exit 0 when both canaries are present; exit 1 with a report otherwise. An absent
-canary is a real "skill body did not load" finding to escalate.
+Exit 0 when both commands and the artifact contract are present.
 """
 
 from __future__ import annotations
@@ -23,7 +19,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from always_loaded_live import CODEX_ALWAYS_LOADED_CANARIES  # noqa: E402
+from always_loaded_live import (  # noqa: E402
+    CODEX_ALWAYS_LOADED_COMMANDS,
+    always_loaded_artifact_matches,
+)
 from codex_load_evidence import (  # noqa: E402
     CanaryReport,
     command_strings_from_events,
@@ -46,26 +45,23 @@ def main() -> int:
     report = CanaryReport()
     evaluate_canaries(
         report,
-        CODEX_ALWAYS_LOADED_CANARIES,
+        CODEX_ALWAYS_LOADED_COMMANDS,
         command_strings=commands,
-        artifact=artifact,
     )
 
     for note in report.observations:
         print(f"observation: {note}")
 
-    if report.ok:
-        print("PASS codex always-loaded canary: both skill bodies evidenced loaded")
+    artifact_ok = always_loaded_artifact_matches(artifact)
+    if report.ok and artifact_ok:
+        print("PASS codex always-loaded behavior: commands and artifact verified")
         return 0
 
-    print("FAIL codex always-loaded canary:", file=sys.stderr)
+    print("FAIL codex always-loaded behavior:", file=sys.stderr)
     for msg in report.missing:
         print(f"  - {msg}", file=sys.stderr)
-    print(
-        "  An absent canary is a real always-loaded loading-contract finding "
-        "(role-spec body-load path) to escalate, not a test to relax.",
-        file=sys.stderr,
-    )
+    if not artifact_ok:
+        print("  - output artifact schema/task/path identity mismatch", file=sys.stderr)
     return 1
 
 

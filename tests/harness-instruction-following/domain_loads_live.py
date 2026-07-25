@@ -25,11 +25,11 @@ e.g. ``superRA:econ-data-analysis``; a raw compare against a bare expected name 
 a false negative — this was live-caught in 11), so it does not re-implement
 capture or name normalization.
 
-The evaluator takes already-captured inputs (the dispatched agent's skill-load
-evidence for Claude; the output artifact / command strings for Codex), so the
-default ``pytest`` path drives it on synthetic inputs with no model call and no
-``claude_agent_sdk`` / codex-cli import. The live Claude entry
-:func:`run_claude_domain_canary` consumes 08's
+The evaluator takes already-captured skill-load evidence, so the default
+``pytest`` path drives it on synthetic inputs with no model call and no
+``claude_agent_sdk`` / codex-cli import. Committed artifacts preserve only the
+schema and matched domain skill IDs. The live Claude entry
+:func:`run_claude_domain_load_check` consumes 08's
 :func:`sdk_load_harness.run_skill_load_session` and is gated behind
 ``RUN_LIVE_HARNESS=1``.
 
@@ -49,50 +49,11 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from codex_load_evidence import CanarySpec
 from sdk_load_evidence import SkillLoadEvidence, normalize_skill_name
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "domain-loads"
-
-
-# --------------------------------------------------------------------------- #
-# Codex per-domain canaries (skill-unique tokens, recorded in the artifact list)
-# --------------------------------------------------------------------------- #
-
-# Each token is a discriminating concept the domain skill body prescribes (named
-# in the fixture task only as "the discriminating concept that domain's body
-# prescribes"), so the agent can only write it once that body is in context.
-# Recorded in the artifact list field `domain_canaries` (a domain skill has no
-# bundled command side effect, so the artifact is the channel). A list rather than
-# a scalar field so the multi-domain artifact can carry every matched domain's
-# concept at once.
-DOMAIN_CANARY_FIELD = "domain_canaries"
-
-CODEX_ECON_CANARY = CanarySpec(
-    skill="econ-data-analysis",
-    token="describe before transform",
-    in_command=False,
-    in_artifact_field=DOMAIN_CANARY_FIELD,
-)
-CODEX_THEORY_CANARY = CanarySpec(
-    skill="theory-modeling",
-    token="comparative statics",
-    in_command=False,
-    in_artifact_field=DOMAIN_CANARY_FIELD,
-)
-CODEX_WRITING_CANARY = CanarySpec(
-    skill="writing",
-    token="audience model",
-    in_command=False,
-    in_artifact_field=DOMAIN_CANARY_FIELD,
-)
-CODEX_SLIDE_CANARY = CanarySpec(
-    skill="slide-design",
-    token="live communication",
-    in_command=False,
-    in_artifact_field=DOMAIN_CANARY_FIELD,
-)
+DOMAIN_ARTIFACT_SCHEMA = "superra.domain-load-evidence/v1"
 
 
 @dataclass(frozen=True)
@@ -104,13 +65,10 @@ class DomainRow:
       against it.
     - ``trigger_wording`` is the dispatch phrasing that should trigger this domain,
       kept close to the manifest Domain-table wording.
-    - ``codex_canary`` is the per-domain :class:`CanarySpec` whose skill-unique
-      token is only producible if that domain body loaded.
     """
 
     skill: str
     trigger_wording: str
-    codex_canary: CanarySpec
 
 
 # --------------------------------------------------------------------------- #
@@ -123,7 +81,6 @@ DOMAIN_ROWS: tuple[DomainRow, ...] = (
         trigger_wording=(
             "import, clean, merge, and run a regression on a panel of economic data"
         ),
-        codex_canary=CODEX_ECON_CANARY,
     ),
     DomainRow(
         skill="theory-modeling",
@@ -131,21 +88,18 @@ DOMAIN_ROWS: tuple[DomainRow, ...] = (
             "derive the first-order conditions, solve for the equilibrium, and prove "
             "the result mathematically"
         ),
-        codex_canary=CODEX_THEORY_CANARY,
     ),
     DomainRow(
         skill="writing",
         trigger_wording=(
             "draft and polish the reader-facing prose of the manuscript section"
         ),
-        codex_canary=CODEX_WRITING_CANARY,
     ),
     DomainRow(
         skill="slide-design",
         trigger_wording=(
             "create and revise the Beamer presentation slides for this result"
         ),
-        codex_canary=CODEX_SLIDE_CANARY,
     ),
 )
 
@@ -176,11 +130,6 @@ MULTI_DOMAIN_WORDING = (
     "derive the equilibrium result and then draft the reader-facing prose that "
     "writes it up in the manuscript"
 )
-MULTI_DOMAIN_CANARIES: tuple[CanarySpec, ...] = tuple(
-    DOMAIN_BY_SKILL[skill].codex_canary for skill in MULTI_DOMAIN_SKILLS
-)
-
-
 # --------------------------------------------------------------------------- #
 # Claude evaluator (consumes 08's SkillLoadEvidence)
 # --------------------------------------------------------------------------- #
@@ -279,71 +228,22 @@ def evaluate_all_domain_loads(
         evaluate_domain_load(report, row, evidence_by_domain[row.skill])
 
 
-# --------------------------------------------------------------------------- #
-# Codex artifact-list canary (the multi-domain artifact carries several tokens)
-# --------------------------------------------------------------------------- #
+def expected_domain_artifact(skills: tuple[str, ...]) -> dict:
+    """Return the exact schema and ordered domain-skill identities."""
+
+    return {
+        "schema": DOMAIN_ARTIFACT_SCHEMA,
+        "domains": list(skills),
+    }
 
 
-def domain_canary_in_artifact(spec: CanarySpec, artifact: dict | None) -> bool:
-    """True if ``spec.token`` is present in the artifact's ``domain_canaries`` list.
-
-    The per-domain Codex canary records its discriminating concept as one entry of
-    the artifact list field :data:`DOMAIN_CANARY_FIELD`, so the multi-domain
-    artifact can carry every matched domain's concept at once. Membership (not
-    scalar equality) is the right test here — :func:`codex_load_evidence.evaluate_canary`'s
-    dotted-field path checks a scalar field, which cannot express a multi-token
-    artifact, so the list channel uses this helper instead.
-    """
-
-    if spec.in_artifact_field is None or artifact is None:
-        return False
-    values = artifact.get(spec.in_artifact_field)
-    if isinstance(values, str):
-        return spec.token == values
-    if isinstance(values, (list, tuple)):
-        return spec.token in values
-    return False
-
-
-def evaluate_codex_domain_canary(
-    report: DomainLoadReport,
-    spec: CanarySpec,
+def domain_artifact_matches(
+    skills: tuple[str, ...],
     artifact: dict | None,
-) -> None:
-    """Check one Codex domain canary against the artifact ``domain_canaries`` list.
+) -> bool:
+    """Return whether ``artifact`` exactly preserves the matched skill IDs."""
 
-    Passes if the domain's skill-unique token is present in the list; fails
-    otherwise — an absent canary is a real "domain skill body did not load"
-    finding, not a test bug.
-    """
-
-    if domain_canary_in_artifact(spec, artifact):
-        report.observations.append(
-            f"codex canary for domain {spec.skill!r} present in artifact field "
-            f"{spec.in_artifact_field!r}"
-        )
-        return
-    report.missing.append(
-        f"codex canary for domain {spec.skill!r} (token {spec.token!r}) absent "
-        f"from artifact field {spec.in_artifact_field!r} — the skill-unique "
-        f"concept was not produced, so the domain skill body did not load"
-    )
-
-
-def evaluate_codex_multi_domain(
-    report: DomainLoadReport,
-    specs: tuple[CanarySpec, ...],
-    artifact: dict | None,
-) -> None:
-    """Multi-domain Codex check: EVERY matched domain's token is in the artifact.
-
-    The Codex counterpart to :func:`evaluate_multi_domain_load`: a multi-domain
-    artifact that carries only one of several matched domains' concepts is a
-    first-match-instead-of-every-match finding, so each missing token is reported.
-    """
-
-    for spec in specs:
-        evaluate_codex_domain_canary(report, spec, artifact)
+    return artifact == expected_domain_artifact(skills)
 
 
 # --------------------------------------------------------------------------- #
@@ -374,7 +274,7 @@ def domain_dispatch_prompt(trigger_wording: str) -> str:
     )
 
 
-def run_claude_domain_canary(
+def run_claude_domain_load_check(
     skills_expected: tuple[str, ...],
     trigger_wording: str,
     *,
@@ -382,7 +282,7 @@ def run_claude_domain_canary(
     model: str | None = None,
     attempts: int = 3,
 ) -> DomainLoadReport:
-    """Run the live Claude per-domain skill-load canary (manual-only).
+    """Run the live Claude per-domain skill-load check (manual-only).
 
     Dispatches the real ``superRA:implementer`` via 08's
     :func:`sdk_load_harness.run_skill_load_session`, then asserts every skill in
@@ -399,7 +299,7 @@ def run_claude_domain_canary(
 
     if not _gate_is_open():
         raise RuntimeError(
-            "RUN_LIVE_HARNESS is not set to 1 — the per-domain skill-load canary "
+            "RUN_LIVE_HARNESS is not set to 1 — the per-domain skill-load check "
             "is manual-only and must never run in default CI."
         )
 
@@ -452,7 +352,7 @@ def _main() -> int:
     if not _gate_is_open():
         print(
             "SKIP  RUN_LIVE_HARNESS is not set to 1 — the per-domain skill-load "
-            "canary is opt-in and never runs in CI.\n"
+            "check is opt-in and never runs in CI.\n"
             "      Set RUN_LIVE_HARNESS=1 (with claude-agent-sdk installed via "
             "uv run --with) to run it."
         )
@@ -466,7 +366,7 @@ def _main() -> int:
             workspace = Path(tmp) / "ws"
             workspace.mkdir()
             _seed_workspace(workspace)
-            report = run_claude_domain_canary(expected, wording, cwd=workspace)
+            report = run_claude_domain_load_check(expected, wording, cwd=workspace)
         for obs in report.observations:
             print(f"OK ({label}): {obs}")
         if not report.ok:

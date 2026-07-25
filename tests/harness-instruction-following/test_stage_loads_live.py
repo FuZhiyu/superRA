@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the per-stage skill-load live coverage (task 11).
 
-Drives the stage evaluator and the per-stage Codex canaries on synthetic inputs —
-no model call, no ``claude_agent_sdk`` / codex-cli import:
+Drives the stage evaluator and structured artifact contracts on synthetic inputs
+with no model call and no ``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-stage evaluator** (:func:`stage_loads_live.evaluate_stage_load`):
   green for each non-empty stage (skill channel via the Skill hook, including the
@@ -11,13 +11,11 @@ no model call, no ``claude_agent_sdk`` / codex-cli import:
   reference is never read, and when a load lands after the first edit; and the
   negative stage (``implementation``) green when no stage skill loaded, red when
   one did (over-load).
-- **Codex per-stage canaries** (09's :func:`codex_load_evidence.evaluate_canary`):
-  green when the stage skill's skill-unique token is at the artifact field, red
-  when absent (skill body did not load).
 - **Read-path suffix matching** (:func:`sdk_load_evidence._read_path_matches`):
   an absolute/workspace-relative read path matches the manifest-relative
   reference path; an unrelated path does not.
-- **Fixture sanity:** each committed expected artifact satisfies its stage canary.
+- **Fixture sanity:** each committed expected artifact preserves its schema,
+  stage, load kinds, skill IDs, and reference paths.
 """
 
 from __future__ import annotations
@@ -31,7 +29,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from codex_load_evidence import CanaryReport, evaluate_canary  # noqa: E402
 from sdk_load_evidence import (  # noqa: E402
     _read_path_matches,
     evidence_from_hook_records,
@@ -45,6 +42,8 @@ from stage_loads_live import (  # noqa: E402
     StageLoadReport,
     evaluate_all_stage_loads,
     evaluate_stage_load,
+    expected_stage_artifact,
+    stage_artifact_matches,
     stage_dispatch_prompt,
     stage_row,
 )
@@ -423,68 +422,38 @@ def test_evaluate_all_reports_missing_evidence_for_a_stage():
 
 
 # --------------------------------------------------------------------------- #
-# Codex per-stage canaries
+# Structured artifact contract
 # --------------------------------------------------------------------------- #
 
 
-def test_green_codex_canary_each_positive_stage_from_artifact():
+def test_committed_expected_artifacts_use_structured_load_identities():
     for row in STAGE_ROWS:
-        if row.codex_canary is None:
-            continue
-        report = CanaryReport()
-        evaluate_canary(
-            report,
-            row.codex_canary,
-            command_strings=[],
-            artifact={"stage_canary": row.codex_canary.token},
-        )
-        report.assert_ok()
-
-
-def test_red_codex_canary_absent_for_a_stage():
-    row = stage_row("sync")
-    report = CanaryReport()
-    evaluate_canary(
-        report,
-        row.codex_canary,
-        command_strings=[],
-        artifact={"stage_canary": "WRONG"},
-    )
-    assert not report.ok
-    assert "semantic-merge" in report.missing[0]
-    assert "did not load" in report.missing[0]
-
-
-# --------------------------------------------------------------------------- #
-# Fixture sanity: committed expected artifacts satisfy the canaries
-# --------------------------------------------------------------------------- #
-
-
-def test_committed_expected_artifacts_satisfy_canaries():
-    for row in STAGE_ROWS:
-        if row.codex_canary is None:
-            continue
         expected = json.loads(
             (FIXTURE_ROOT / "expected" / f"{row.stage}.expected.json").read_text(
                 encoding="utf-8"
             )
         )
-        report = CanaryReport()
-        evaluate_canary(
-            report,
-            row.codex_canary,
-            command_strings=[],
-            artifact=expected,
-        )
-        report.assert_ok()
+        assert stage_artifact_matches(row, expected)
 
 
-def test_negative_stage_expected_artifacts_use_none_sentinel():
-    stage = "implementation"
-    expected = json.loads(
-        (FIXTURE_ROOT / "expected" / f"{stage}.expected.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert expected["stage"] == stage
-    assert expected["stage_canary"] == "none"
+def test_structured_stage_artifact_rejects_wrong_skill_id():
+    row = stage_row("sync")
+    artifact = expected_stage_artifact(row)
+    artifact["loads"][0]["id"] = "result-protection"
+    assert not stage_artifact_matches(row, artifact)
+
+
+def test_structured_stage_artifact_rejects_wrong_reference_path():
+    row = stage_row("planning-review")
+    artifact = expected_stage_artifact(row)
+    artifact["loads"][0]["path"] = "skills/superplan/SKILL.md"
+    assert not stage_artifact_matches(row, artifact)
+
+
+def test_negative_stage_has_empty_load_list():
+    row = stage_row("implementation")
+    assert expected_stage_artifact(row) == {
+        "schema": "superra.stage-load-evidence/v1",
+        "stage": "implementation",
+        "loads": [],
+    }

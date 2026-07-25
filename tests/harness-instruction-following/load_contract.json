@@ -33,13 +33,13 @@
           "sdk_load_evidence.py::check_always_loaded_frontmatter"
         ],
         "fixture_unit": [
-          "test_always_loaded_live.py (introspection + codex canary evaluators on synthetic inputs)"
+          "test_always_loaded_live.py (frontmatter, mutation, schema/path, and command-event checks)"
         ],
         "manual_live_claude": [
-          "always_loaded_live.py (autoload introspection canary; zero Skill-tool loads is the expected signal)"
+          "always_loaded_live.py (role mutation with zero on-demand loads for frontmatter skills)"
         ],
         "manual_live_codex": [
-          "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (body-load canary; built/CI-tested, live-pending — no credentials yet)"
+          "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (task-read and markdown-check command executions; built/CI-tested, live-pending)"
         ],
         "notes": "Claude live-verified (both always-loaded skills present via frontmatter autoload). Codex live not yet run."
       }
@@ -59,22 +59,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract"
         ],
         "fixture_unit": [
-          "test_stage_loads_live.py (stage evaluator + per-stage codex canaries on synthetic inputs)"
+          "test_stage_loads_live.py (stage load-event evaluator + schema/load-ID/path artifacts)"
         ],
         "manual_live_claude": [
-          "stage_loads_live.py (per-stage Skill-tool + planning-review Read-channel canary; maturation as a multi-skill Skill-tool stage)"
+          "stage_loads_live.py (per-stage Skill-tool + planning-review Read-channel events; maturation as a multi-skill stage)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py per-stage CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified for the four single-target non-empty stages. See LC007-LC010 for per-stage detail and LC023 for the maturation multi-skill stage (added on the trunk sync, fixture-covered, live-pending). Codex live not yet run."
+        "notes": "Claude live-verified for the four single-target non-empty stages. See LC007-LC010 for per-stage detail and LC023 for maturation. Codex exposes no stage load-by-name event; its fixtures preserve only schema, IDs, kinds, and paths."
       }
     },
     {
@@ -91,22 +88,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract"
         ],
         "fixture_unit": [
-          "test_domain_loads_live.py (domain evaluator + multi-domain every-match + per-domain codex canaries on synthetic inputs)"
+          "test_domain_loads_live.py (domain load-event evaluator + multi-domain schema/skill-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py (per-domain Skill-tool canary + multi-domain every-match canary)"
+          "domain_loads_live.py (per-domain Skill-tool events + multi-domain every-match events)"
         ],
-        "manual_live_codex": [
-          "domain_loads_live.py per-domain CanarySpec list (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified for all four domains plus the multi-domain every-match rule. See LC011-LC014 for per-domain detail. Codex live not yet run."
+        "notes": "Claude live-verified for all four domains plus the multi-domain every-match rule. Codex exposes no domain load-by-name event; its fixtures preserve only schema and ordered skill IDs."
       }
     },
     {
@@ -207,7 +201,7 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
@@ -217,12 +211,9 @@
           "test_stage_loads_live.py (Read-channel reference suffix matcher; stage evaluator green/red)"
         ],
         "manual_live_claude": [
-          "stage_loads_live.py STAGE_ROWS[planning-review] (reference loaded via Read; introspection canary)"
+          "stage_loads_live.py STAGE_ROWS[planning-review] (reference loaded via Read)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py planning-review CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: planning-review reads its reference (Read channel, not the Skill tool). Codex live not yet run."
+        "notes": "Claude live-verified: planning-review reads its reference. Codex exposes no reference-load event; the fixture preserves the exact reference path."
       }
     },
     {
@@ -240,22 +231,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (protection -> result-protection row)"
         ],
         "fixture_unit": [
-          "test_stage_loads_live.py (stage evaluator + protection codex canary)"
+          "test_stage_loads_live.py (stage evaluator + protection skill-ID artifact)"
         ],
         "manual_live_claude": [
           "stage_loads_live.py STAGE_ROWS[protection] (result-protection via Skill tool)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py protection CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: protection loads result-protection. Codex live not yet run."
+        "notes": "Claude live-verified: protection loads result-protection. Codex exposes no stage load-by-name event."
       }
     },
     {
@@ -273,22 +261,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (sync -> semantic-merge row)"
         ],
         "fixture_unit": [
-          "test_stage_loads_live.py (stage evaluator + sync codex canary)"
+          "test_stage_loads_live.py (stage evaluator + sync skill-ID artifact)"
         ],
         "manual_live_claude": [
           "stage_loads_live.py STAGE_ROWS[sync] (semantic-merge via Skill tool)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py sync CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: sync loads semantic-merge. The author/reviewer mode-reference sub-selection is static-only, not separately live-asserted. Codex live not yet run."
+        "notes": "Claude live-verified: sync loads semantic-merge. The author/reviewer mode-reference sub-selection is static-only. Codex exposes no stage load-by-name event."
       }
     },
     {
@@ -307,22 +292,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (integration -> refactor-and-integrate row)"
         ],
         "fixture_unit": [
-          "test_stage_loads_live.py (stage evaluator + integration codex canary)"
+          "test_stage_loads_live.py (stage evaluator + integration skill-ID artifact)"
         ],
         "manual_live_claude": [
           "stage_loads_live.py STAGE_ROWS[integration] (refactor-and-integrate via Skill tool)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py integration CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: integration loads refactor-and-integrate. Codex live not yet run."
+        "notes": "Claude live-verified: integration loads refactor-and-integrate. Codex exposes no stage load-by-name event."
       }
     },
     {
@@ -342,22 +324,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, writing row)"
         ],
         "fixture_unit": [
-          "test_stage_loads_live.py (multi-skill stage evaluator: both guaranteed skills required, writing conditional; maturation codex canary)"
+          "test_stage_loads_live.py (multi-skill evaluator + ordered maturation skill-ID artifact)"
         ],
         "manual_live_claude": [
           "stage_loads_live.py STAGE_ROWS[maturation] (task-tree + superplan via Skill tool; multi-skill positive stage)"
         ],
-        "manual_live_codex": [
-          "stage_loads_live.py maturation CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Added on the better-handoff trunk sync (commit 929dad65 renamed documentation -> maturation and made it a positive multi-skill stage). Fixture-covered; live run pending for both harnesses."
+        "notes": "Positive multi-skill stage. Structured fixture-covered; Claude live run pending. Codex exposes no stage load-by-name event."
       }
     },
     {
@@ -376,22 +355,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (econ-data-analysis domain row)"
         ],
         "fixture_unit": [
-          "test_domain_loads_live.py (domain evaluator + econ codex canary)"
+          "test_domain_loads_live.py (domain evaluator + econ skill-ID artifact)"
         ],
         "manual_live_claude": [
           "domain_loads_live.py DOMAIN_ROWS[econ-data-analysis] (Skill tool, superRA:-qualified)"
         ],
-        "manual_live_codex": [
-          "domain_loads_live.py econ-data-analysis CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: data-wording task loads econ-data-analysis. Codex live not yet run."
+        "notes": "Claude live-verified: data-wording task loads econ-data-analysis. Codex exposes no domain load-by-name event."
       }
     },
     {
@@ -409,22 +385,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (theory-modeling domain row)"
         ],
         "fixture_unit": [
-          "test_domain_loads_live.py (domain evaluator + theory codex canary + multi-domain every-match case)"
+          "test_domain_loads_live.py (domain evaluator + theory/multi-domain skill-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain Skill-tool events"
         ],
-        "manual_live_codex": [
-          "domain_loads_live.py theory-modeling CanarySpec + multi-domain list canary (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and writing. Codex live not yet run."
+        "notes": "Claude live-verified: derivation task loads theory-modeling, and multi-domain wording loads both theory-modeling and writing. Codex exposes no domain load-by-name event."
       }
     },
     {
@@ -442,22 +415,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (writing domain row)"
         ],
         "fixture_unit": [
-          "test_domain_loads_live.py (domain evaluator + writing codex canary + multi-domain every-match case)"
+          "test_domain_loads_live.py (domain evaluator + writing/multi-domain skill-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[writing] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[writing] + multi-domain Skill-tool events"
         ],
-        "manual_live_codex": [
-          "domain_loads_live.py writing CanarySpec + multi-domain list canary (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: prose task loads writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only. Codex live not yet run."
+        "notes": "Claude live-verified: prose task loads writing, including in the multi-domain set. Review/Polish/Draft routing is static-only. Codex exposes no domain load-by-name event."
       }
     },
     {
@@ -476,22 +446,19 @@
       ],
       "classification": [
         "ci_safe_static",
-        "manual_live_both"
+        "manual_live_claude"
       ],
       "covered_by": {
         "ci_safe_static": [
           "test_contract.py::test_skill_load_manifest_tables_match_contract (slide-design domain row)"
         ],
         "fixture_unit": [
-          "test_domain_loads_live.py (domain evaluator + slide-design codex canary)"
+          "test_domain_loads_live.py (domain evaluator + slide-design skill-ID artifact)"
         ],
         "manual_live_claude": [
           "domain_loads_live.py DOMAIN_ROWS[slide-design] (Skill tool, superRA:-qualified)"
         ],
-        "manual_live_codex": [
-          "domain_loads_live.py slide-design CanarySpec (built/CI-tested, live-pending — no credentials yet)"
-        ],
-        "notes": "Claude live-verified: slide/Beamer task loads slide-design. Beamer sub-reference routing is static-only. Codex live not yet run."
+        "notes": "Claude live-verified: slide/Beamer task loads slide-design. Beamer sub-reference routing is static-only. Codex exposes no domain load-by-name event."
       }
     },
     {

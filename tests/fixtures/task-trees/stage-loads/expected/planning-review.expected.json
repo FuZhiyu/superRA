@@ -1,5 +1,10 @@
 {
-  "schema_version": 1,
+  "schema": "superra.stage-load-evidence/v1",
   "stage": "planning-review",
-  "stage_canary": "handoff-readiness"
+  "loads": [
+    {
+      "kind": "reference",
+      "path": "skills/superplan/references/planning-review.md"
+    }
+  ]
 }

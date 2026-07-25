@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
-  "report_in_markdown_canary": "check_markdown.py",
-  "using_superra_canary": "superra task read"
+  "schema": "superra.always-loaded-evidence/v1",
+  "task_path": "always-loaded-task",
+  "output_path": "always-loaded-evidence.json"
 }

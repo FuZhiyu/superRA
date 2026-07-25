@@ -1,5 +1,7 @@
 {
-  "schema_version": 1,
+  "schema": "superra.stage-load-evidence/v1",
   "stage": "integration",
-  "stage_canary": "minimum net diff"
+  "loads": [
+    {"kind": "skill", "id": "refactor-and-integrate"}
+  ]
 }
