@@ -1,6 +1,6 @@
 ---
 title: "Remove Prose Canaries from Live Load Harnesses"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -58,8 +58,3 @@ Verification:
   `check_behavioral_canary`, assistant-answer capture path, `CanarySpec`,
   artifact-field evaluator route, flattened-command extractor, or associated
   finding codes outside these historical review notes.
-
-## Review Notes
-
-1. **MAJOR** — The structured Codex predicate still accepts evidence that does not establish a successful execution of the intended command. A matching start-only record with `exit_code=None` is classified as successful ([codex_load_evidence.py:138-157](../../../../tests/harness-instruction-following/codex_load_evidence.py#L138-L157)), so a truncated transcript can satisfy LC001 before the command completes; the new paired-event test covers a later explicit failure but not the start-only red case ([test_codex_load_evidence.py:126-149](../../../../tests/harness-instruction-following/test_codex_load_evidence.py#L126-L149)). Separately, `_path_arg_matches` applies suffix matching to every argument ([codex_load_evidence.py:98-122](../../../../tests/harness-instruction-following/codex_load_evidence.py#L98-L122)), so `./superRA/superra /tmp/task /tmp/read /tmp/always-loaded-task` incorrectly matches the required `task read always-loaded-task` vector. Require completed zero-exit evidence and exact matching for non-path arguments (with any intentional path normalization represented explicitly), then add red coverage for start-only records and path-suffixed non-path arguments.
-   → implemented: command matches now require `exit_code == 0`; incomplete matches receive a structured failure, non-path arguments compare exactly, and suffix normalization is opt-in through `path_arg_indices`. Red tests cover both start-only evidence and path-suffixed junk arguments ([codex_load_evidence.py:62](../../../../tests/harness-instruction-following/codex_load_evidence.py#L62), [test_codex_load_evidence.py:126](../../../../tests/harness-instruction-following/test_codex_load_evidence.py#L126)).
