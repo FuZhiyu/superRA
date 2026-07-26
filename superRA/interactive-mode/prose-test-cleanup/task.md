@@ -12,6 +12,10 @@ Remove tests that treat authored instruction prose, labels, layout, or diagnosti
 
 Budget: use an existing observable field or state only when the replacement is local and simpler than the prose assertion. Otherwise delete the assertion or its test. Do not add subprocesses, live harness calls, network access, structured diagnostic APIs, new error taxonomies, or production changes solely for testability. Preserve tests for branch-specific interactive routing and review behavior already protected before this task.
 
+## Review Notes
+
+1. MAJOR — [task.md:28-49](task.md#L28-L49). The permanent record's narrow cleanup accounting does not reproduce: it reports 294 additions, 2,423 deletions, and 42 files, while `git diff --numstat 6be18283..64440306 -- tests ':(glob)skills/**/test*.py' ':(glob)skills/**/tests/**'` yields 349 additions, 2,386 deletions, and 43 files. The later full-branch 663/2,551/52 accounting is correct. Recompute or remove the narrow figures and name the exact accepted range/path scope so the Results remain independently reproducible.
+
 ## Results
 
 Completed the conservative prose-test cleanup in two focused passes:
