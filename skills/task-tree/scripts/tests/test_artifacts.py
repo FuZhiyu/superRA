@@ -740,14 +740,28 @@ class TestStandaloneArtifacts:
             encoding="utf-8",
         )
 
-        original_read_bytes = Path.read_bytes
+        original_open_artifact_file = _artifacts.open_artifact_file
+        failed_figure_read = False
 
-        def selective_read_bytes(path: Path) -> bytes:
-            if path.resolve() == unreadable.resolve():
+        def selective_open_artifact_file(plan_root, task, requested_path):
+            nonlocal failed_figure_read
+            if (
+                requested_path == "attachments/unreadable.png"
+                and not failed_figure_read
+            ):
+                failed_figure_read = True
                 raise OSError("simulated image read failure")
-            return original_read_bytes(path)
+            return original_open_artifact_file(
+                plan_root,
+                task,
+                requested_path,
+            )
 
-        monkeypatch.setattr(Path, "read_bytes", selective_read_bytes)
+        monkeypatch.setattr(
+            _artifacts,
+            "open_artifact_file",
+            selective_open_artifact_file,
+        )
         payload = _standalone_payload(
             plan_dashboard.render_standalone_html(root, root="child")
         )
@@ -763,3 +777,43 @@ class TestStandaloneArtifacts:
         assert base64.b64decode(
             payload["contents"][""]["attachments/unreadable.png"]["data"]
         ) == b"png bytes retained for download"
+
+    def test_standalone_figure_rejects_intermediate_component_symlink_swap(
+        self, tmp_path, monkeypatch
+    ):
+        root = _tree(tmp_path)
+        child = root / "child"
+        attachments = child / "attachments"
+        nested = attachments / "nested"
+        nested.mkdir(parents=True)
+        _write_tiny_png(nested / "figure.png")
+        outside = tmp_path / "outside-images"
+        outside.mkdir()
+        secret = b"outside-image-secret"
+        (outside / "figure.png").write_bytes(secret)
+        task_md = child / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Results\n\n"
+            + "![figure](attachments/nested/figure.png)\n",
+            encoding="utf-8",
+        )
+        original_resolve = _artifacts.resolve_artifact
+        swapped = False
+
+        def swap_after_resolve(plan_root, task, requested_path):
+            nonlocal swapped
+            resolved = original_resolve(plan_root, task, requested_path)
+            if (
+                not swapped
+                and requested_path == "attachments/nested/figure.png"
+            ):
+                nested.rename(attachments / "nested-original")
+                nested.symlink_to(outside, target_is_directory=True)
+                swapped = True
+            return resolved
+
+        monkeypatch.setattr(_artifacts, "resolve_artifact", swap_after_resolve)
+        html = plan_dashboard.render_standalone_html(root, root="child")
+
+        assert base64.b64encode(secret).decode("ascii") not in html

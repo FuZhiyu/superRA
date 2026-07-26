@@ -1898,14 +1898,20 @@ def _build_standalone_images(
             mime = _IMG_MIME.get(ext)
             if mime is None:
                 continue
-            img_path: Path
             parts = Path(clean).parts
-            companion_shaped = bool(parts) and (
-                len(parts) == 1 or parts[0] == "attachments"
-            )
-            if plan_root is not None and companion_shaped:
+            if (
+                plan_root is not None
+                and parts
+                and parts[0] == "attachments"
+            ):
                 try:
-                    img_path = artifacts.resolve_artifact(plan_root, task, clean)
+                    artifacts.resolve_artifact(plan_root, task, clean)
+                    with artifacts.open_artifact_file(
+                        plan_root,
+                        task,
+                        clean,
+                    ) as handle:
+                        raw = handle.read()
                 except (
                     OSError,
                     artifacts.ArtifactPathError,
@@ -1932,10 +1938,10 @@ def _build_standalone_images(
                             break
                     if escaped_by_symlink:
                         continue
-            try:
-                raw = img_path.read_bytes()
-            except OSError:
-                continue
+                try:
+                    raw = img_path.read_bytes()
+                except OSError:
+                    continue
             b64 = base64.b64encode(raw).decode("ascii")
             images[key] = f"data:{mime};base64,{b64}"
     return images
