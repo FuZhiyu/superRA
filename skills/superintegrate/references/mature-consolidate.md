@@ -6,7 +6,7 @@ Load `superplan/references/task-tree-design.md`, `superplan/references/consolida
 
 ## Step 1: Assemble the maturation input
 
-Read the Protect commit, the affected tasks’ working `## Results`, the selected durable homes, and the post-Sync governing diff. Survey every affected task and subtree against its durable owner. Key results selected at Protect must appear in the permanent record; results selected to drop must not be preserved indirectly as standalone findings.
+Read the researcher’s confirmed Protect choices, any protection artifacts or commit created from them, the affected tasks’ working `## Results`, and the post-Sync governing diff. Survey every affected task and subtree against its selected durable home. Key results selected at Protect must appear in the permanent record; results selected to drop must not be preserved indirectly as standalone findings.
 
 ## Step 2: Materialize the permanent record and mature the tree
 
@@ -65,4 +65,4 @@ Present one review surface containing:
 2. the mature task tree and its durable `## Results`; and
 3. the temporary refactoring task, including proposed pruning and other refactoring.
 
-Ask whether to approve this record and proposal. If the researcher requests changes, revise or undo the recoverable maturation commits, rebuild the refactoring task, repeat Step 4, and present the updated surface. On approval, commit any incorporated changes with `integrate(mature): …`; the commit body records the reviewed SHA and decision. Then enter Integrate.
+Ask whether to approve this record and proposal. If the researcher requests changes, revise or undo the recoverable maturation commits, rebuild the refactoring task, repeat Step 4, and present the updated surface. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files. Then enter Integrate.

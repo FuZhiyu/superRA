@@ -22,6 +22,5 @@ Always run the existing protection suite on every integration pass. Creating new
 
    Which option should I use? What should I add, remove, or protect differently?
    ```
-4. **Dispatch the protection creator.** `Stage: protection`, canonical implementer template. Record the selected results, durable homes, and mechanisms in the affected tasks' working `## Results`; create only the selected automated protection.
-5. **Dispatch the protection reviewer.** `Stage: protection`, canonical reviewer template. When drift tests were selected, apply `result-protection/references/drift-test-quality.md`.
-6. **Run the protection suite and commit.** The protection commit (`integrate(protect): …`) records the choices and any new automated protection. Mature & Consolidate consumes those choices after Sync.
+4. **Create selected pre-maturation protection.** When the choices add automated checks or another protection artifact before maturation, dispatch the `Stage: protection` creator and reviewer with the canonical templates, then commit those artifacts as `integrate(protect): …`.
+5. **Run the existing protection suite and proceed.** Carry the confirmed choices into Mature & Consolidate. When documentation alone is sufficient and Protect changes no files, skip task edits, creator/reviewer dispatch, and a separate Protect commit.

@@ -39,11 +39,6 @@ Agent(subagent_type: "superRA:reviewer"):
   Task: <temporary refactoring task>
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-
-  Additionally: verify the final diff against the approved task and its linked
-    protected record. Confirm the proposed pruning and refactoring were executed,
-    no protected result or required support path was lost, every surviving
-    in-scope hunk is justified, and the Final-Diff-Self-Check is fresh.
 ```
 
 ## Step 5: Refactor loop

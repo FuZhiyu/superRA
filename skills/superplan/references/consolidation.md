@@ -116,8 +116,6 @@ Execution applies the researcher’s choices. During INTEGRATE those choices com
 
 ## Standalone vs Integration Use
 
-The same protocol (survey, classify, propose, approve, execute atomically) applies in both entry paths:
-
 **Standalone:** The user asks to clean up the tree. The consolidator runs every step itself — survey, author the proposal, get approval, execute.
 
 **During integration:** `superintegrate/references/mature-consolidate.md` owns the choreography — after Sync it materializes the permanent documentation, applies the structural fold and `## Results` maturation together in recoverable commits, prepares the temporary refactoring task, and presents the finished record, tree, and proposal for one researcher review before Integrate executes the refactoring.
