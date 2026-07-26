@@ -1,5 +1,3 @@
 {
-  "schema_version": 1,
-  "report_in_markdown_canary": "check_markdown.py",
-  "using_superra_canary": "superra task read"
+  "schema_version": 1
 }

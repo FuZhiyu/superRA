@@ -7,21 +7,15 @@ description: Coordinate superRA agents and handoffs. Requires superRA:using-supe
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops; do trivial work inline.
+You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops.
 
 ## Workload Balancing
 
 Every dispatch has spawn cost — skill-load, context hydration, per-turn overhead. Pick the tier that matches the work:
 
-### Tier 1 — Trivial: do it inline
+### Tier 1 — Small: main implementer seat
 
-The orchestrator executes the task itself, no subagent. Use when the task fits in a single edit, reads no unfamiliar files, and needs no domain skill beyond what the orchestrator already has loaded.
-
-- Typo or comment fix in one file.
-- A 2-line constant change the orchestrator has already read.
-- Removing a known-dead import.
-
-Dispatch cost > work content. Just do it.
+Use the small-task structure in §Seat Assignment.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 
@@ -87,6 +81,18 @@ Agent(subagent_type: "superRA:reviewer"):
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
+
+## Seat Assignment
+
+Each task has an implementer seat and a reviewer seat; each is independently filled by the main agent or a dispatched subagent. These are the seat structures of **subagent** mode (`using-superra/references/main-agent.md §Execution Modes`):
+
+| Implementer | Reviewer | Choose when |
+|---|---|---|
+| subagent | subagent | Default for large or routine work. |
+| subagent | main | Small or high-stakes work where the main context should carry adversarial review. |
+| main | subagent | Small or context-heavy implementation that still needs independent review. |
+
+When the main agent fills a seat, resolve and load the canonical role spec for that seat, plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer. The active harness adapter routes canonical-role path resolution.
 
 ## Orchestrator Duties
 

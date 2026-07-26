@@ -16,7 +16,7 @@ Keep a repo-shared dashboard scoped to the invoking worktree across launch and s
 
 ### Generated-artifact boundary
 
-This task does not change canonical role specs. Do not edit `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, or `.codex/agents/superra_reviewer.toml`; if scope expands into `agents/*`, regenerate and check them with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
+This task does not change canonical role specs. Do not edit `.codex/agents/superra_implementer.toml` or `.codex/agents/superra_reviewer.toml`; if scope expands into `agents/*`, regenerate and check them with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
 
 ## Results
 

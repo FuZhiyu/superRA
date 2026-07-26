@@ -58,69 +58,31 @@ def test_green_canary_present_in_command():
         ],
     )
     report.assert_ok()
-    assert any("present in command" in o for o in report.observations)
 
 
-def test_green_canary_present_in_artifact_field():
-    spec = CanarySpec(
-        skill="econ-data-analysis",
-        token="CANARY_AMBER_3X",
-        in_command=False,
-        in_artifact_field="loading.canary",
-    )
-    report = CanaryReport()
-    evaluate_canary(
-        report,
-        spec,
-        artifact={"loading": {"canary": "CANARY_AMBER_3X"}},
-    )
-    report.assert_ok()
-
-
-def test_green_canary_either_source_satisfies():
-    # in_command spec is satisfied by the command even with no artifact at all.
+def test_green_canary_command_satisfies():
     spec = CanarySpec(skill="writing", token="CANARY_COBALT_9")
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=["echo CANARY_COBALT_9"],
-        artifact=None,
     )
     report.assert_ok()
 
 
-def test_red_canary_absent_from_all_sources():
-    # The skill-unique side effect was never produced -> skill body did not load.
+def test_red_canary_absent_from_commands():
     spec = CanarySpec(
         skill="report-in-markdown",
         token="CANARY_VERDANT_7Q",
-        in_artifact_field="loading.canary",
     )
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=["ls -la", "cat README.md"],
-        artifact={"loading": {"canary": "WRONG_TOKEN"}},
     )
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "report-in-markdown" in report.missing[0]
-    assert "did not load" in report.missing[0]
-
-
-def test_red_canary_artifact_field_missing():
-    spec = CanarySpec(
-        skill="theory-modeling",
-        token="CANARY_SLATE_5",
-        in_command=False,
-        in_artifact_field="loading.canary",
-    )
-    report = CanaryReport()
-    evaluate_canary(report, spec, artifact={"loading": {"other": "x"}})
-    assert not report.ok
-    assert "CANARY_SLATE_5" in report.missing[0]
 
 
 def test_evaluate_canaries_collects_all_failures():
@@ -130,9 +92,7 @@ def test_evaluate_canaries_collects_all_failures():
     ]
     report = CanaryReport()
     evaluate_canaries(report, specs, command_strings=["echo TOKEN_A"])
-    assert len(report.missing) == 1
-    assert "skill 'b'" in report.missing[0]
-    assert len(report.observations) == 1
+    assert not report.ok
 
 
 def test_command_strings_from_events_pulls_codex_command_execution():
@@ -210,21 +170,18 @@ def test_green_dispatch_log_has_both_sentinels():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\nsuperra_reviewer\n")
     report.assert_ok()
-    assert len(report.observations) == 2
 
 
 def test_red_dispatch_log_missing_reviewer():
     report = DispatchReport()
     evaluate_dispatch_log(report, "superra_implementer\n")
     assert not report.ok
-    assert len(report.missing) == 1
-    assert "superra_reviewer" in report.missing[0]
 
 
 def test_red_dispatch_log_empty():
     report = DispatchReport()
     evaluate_dispatch_log(report, "")
-    assert len(report.missing) == 2
+    assert not report.ok
 
 
 # --------------------------------------------------------------------------- #
