@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: approved
+status: revise
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -10,7 +10,8 @@ depends_on:
 Expose task companion files as a lightweight, read-only canvas inside the owning task's dashboard detail view.
 
 - Keep the sidebar semantic: task rows may show a companion-file count that opens the Files view, but files never become rows in the task hierarchy, dependency graph, status rollup, frontier, or Kanban board.
-- Add a Files view that lists direct Markdown, Python, Julia, R, and notebook companions first, then attachment contents in a secondary group using their relative paths. Unexpected legacy direct files may remain reachable without being presented as the normal placement model.
+- Add a Files view that lists direct Markdown, Python, Julia, R, and notebook companions first, then attachment contents in a secondary group using their relative paths. Keep unexpected direct files reachable without presenting placement history as a user-facing taxonomy, and exclude the task-tree's required root wrapper from companion discovery.
+- Retain one representative Markdown companion and one representative Python companion with this task so the live Files canvas demonstrates both renderers.
 - Render Markdown companions through the existing markdown-it, KaTeX, syntax-highlighting, and DOMPurify boundary. Resolve their relative links and images from the companion's own directory rather than from `task.md`.
 - Vendor and pin `notebookjs` for read-only `.ipynb` rendering, wiring it to the dashboard's existing Markdown, KaTeX, Highlight.js (including Julia and R), and DOMPurify stack. Support Markdown, raw, and code cells plus stream, error, safe text/HTML/Markdown/LaTeX, and PNG/JPEG/sanitized-SVG outputs and cell attachments. Never execute notebook code, JavaScript outputs, widgets, or other active MIME types; show an explicit unsupported-output fallback.
 - Give every companion an explicit open or download action; provide safe inline previews for supported image, PDF, and text/source types without executing scripts or active content.
@@ -27,6 +28,10 @@ Keep `activePath` as the owning task path and open a companion within that task'
 The existing Highlight.js common bundle already includes R, while the dashboard loads Julia from its existing separate language asset. R support therefore needs only extension/language mapping and regression coverage, not another package or vendored file.
 
 Companion search is optional for this scope: add it only if the existing index can accept owner-task file records without duplicating discovery or creating a second navigation model. The required discovery surface is the Files view on the owning task.
+
+## Revision Notes
+
+The Files canvas currently calls unexpected direct files “legacy placement,” and the required root `superra` wrapper is the only such file visible at the task-tree root. Remove that misleading user-facing distinction, reserve the wrapper as task-tree infrastructure, and add Markdown/Python companions here for visual inspection.
 
 ## Results
 
