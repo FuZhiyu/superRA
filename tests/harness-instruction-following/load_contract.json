@@ -634,7 +634,6 @@
       "trigger": "User invokes superimplement or implementation workflow over a task tree.",
       "expected_evidence": [
         "structured Codex availability table distinguishes missing named agents from an unavailable agent tool",
-        "structured interactive disposition table maps now, deferred, and skipped choices to durable status and resume routes",
         "structured superimplement seat-execution table routes main fillers through canonical roles and subagent fillers through dispatch",
         "interactive fixture records implemented status and non-empty Results before a question-tool event, which precedes reviewer dispatch",
         "seat fixtures show each main-seat route resolving and reading its canonical role file before dispatching the opposite seat",

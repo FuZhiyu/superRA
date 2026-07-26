@@ -102,10 +102,6 @@ Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initi
 
 At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
 
-## Living Task Tree
-
-Load `references/changing-the-tree.md` for drift classification and the durable tracker contract.
-
 ## User Feedback and Changing the Task Tree
 
 Route task-tree changes through `references/changing-the-tree.md`.

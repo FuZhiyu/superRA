@@ -1,6 +1,6 @@
 ---
 title: "Execution Mode Model & Interactive Canvas"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -13,7 +13,7 @@ Reshape superRA's execution-mode model and add an interactive canvas mode. Model
 
 Two modes over these dials: **subagent** (autonomous — default; Axis B picks one of three seat structures, main-in-a-seat runs that seat's role spec) and **interactive** (main executes directly at high human cadence — the canvas). There is no `manual` preset; main-fills-both is served by interactive with review deferred. Seat assignment is a knob `agent-orchestration` owns, not a mode.
 
-**Interactive mode** replaces the old direct mode's behavior (renamed `interactive`, `direct` kept as an alias; old full-gate behavior retired). It is a fused **light-plan → execute-yourself → record** loop, not only an implementer mode: it spans lightly scoping a target into a task and executing it, through **retroactive capture** — writing up work already done (a handoff note, or a task reflecting what changed) by running the same loop results-first. In it: co-edit the task file as a live canvas; **self-review always**; **keep the task updated** (results + status) and **ask before review with a tool** as required loop steps; independent review elective (now / defer / skip) reusing `implemented` / `approved` — no new status; positioning retained; full gate ceremony and automatic reviewer dispatch dropped. The selection axis is autonomy/human-involvement — interactive is for work the researcher steers closely, often hard and concentrated. Routed through `superplan`.
+**Interactive mode** replaces the old direct mode's behavior (renamed `interactive`, `direct` kept as an alias; old full-gate behavior retired). It is a fused **light-plan → execute-yourself → record** loop, not only an implementer mode: it spans lightly scoping a target into a task and executing it, through **retroactive capture** — writing up work already done (a handoff note, or a task reflecting what changed) by running the same loop results-first. In it: co-edit the task file as a live canvas; **self-review always**; **keep the task updated** (results + status) and **ask before review with a tool** as required loop steps; defer / skip leaves the task `implemented`; positioning retained; full gate ceremony and automatic reviewer dispatch dropped. The selection axis is autonomy/human-involvement — interactive is for work the researcher steers closely, often hard and concentrated. Routed through `superplan`.
 
 Success: the contract documents the two modes on the autonomy axis; the interactive canvas is a loadable superplan reference sized for concentrated work, with keep-updated and tool-ask-before-review as required steps; `agent-orchestration` supports per-task seat assignment (three structures); `superimplement` defaults to subagent unless interactive is requested; the generated direct-mode role references are removed and their generator updated; no gate is silently weakened by the superplan de-crowd.
 
@@ -65,7 +65,7 @@ remain untouched.
 
 The conservative test cleanup remains test-, fixture-, and test-documentation
 only, adds no live/model/network execution or production testability surface,
-and is net-negative. The branch-wide test diff is 663 additions and 2,551
+and is net-negative. The branch-wide test diff is 721 additions and 2,556
 deletions across 52 files, including the retained structured interactive and
 seat-routing tests. See
 [prose-test-cleanup/task.md](prose-test-cleanup/task.md) for its narrower
@@ -73,7 +73,7 @@ accepted-cleanup accounting and preserved behavior classes.
 
 Verification on the integrated tree:
 
-- Full CI-safe Python suite: `899 passed`, `0 failed`, four expected warnings.
+- Task-tree and harness suites: `824 passed`, `0 failed`, four expected warnings.
 - Harness compatibility: exit `0`; generator tests `3/3`; committed Codex
   agents up to date.
 - Codex hook shell suite: `15/15`.

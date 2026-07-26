@@ -13,7 +13,7 @@ Before your first substantive response:
 
 There is no durable workflow-stage to look up. The frontmatter field set is closed and INTEGRATE keeps no stage marker, so task `status` plus the git log *are* the state — "which phase are we in" (implemented-or-not, integrated-or-not) is read from statuses and commits, never from a file field. Resuming is therefore status-driven, and mixed state is normal:
 
-- **Tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix. Interactive tasks recorded as `deferred` or `skipped` are already `approved`; reopen only `deferred` tasks when the researcher requests the deferred-review sweep.
+- **Tree not all-approved** → there is implementation work. Resume the implement loop (`superimplement`): `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` to review, `revise` to fix.
 
 On a replan, a directly widened `approved` task flips to `revise`, and its `depends_on` dependents reset to `not-started` (`superplan/references/task-tree-design.md` §Objective rewrites on scope expansion owns the rule), while unrelated approved tasks stay approved; the reset tasks reappear on `task frontier` and the loop above picks them up. If `superRA/` is missing, untracked, or contradicted by a material user decision not yet in the task objectives, enter `superplan` first. If durable facts disagree in a way you cannot repair mechanically, stop under §Proceeding and Pausing.
 

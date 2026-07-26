@@ -228,21 +228,6 @@ def test_seat_assignment_table_has_three_supported_structures():
     }
 
 
-def test_interactive_review_dispositions_route_lifecycle():
-    interactive = read_text("skills/superplan/references/interactive-mode.md")
-    rows = markdown_table_rows(interactive, "### Review disposition")
-    routes = {
-        row[0]: tuple(inline_code(cell) for cell in row[1:])
-        for row in rows
-    }
-
-    assert routes == {
-        "Now": (("now",), ("implemented",), ("review",)),
-        "Defer": (("deferred",), ("approved",), ("complete",)),
-        "Skip": (("skipped",), ("approved",), ("complete",)),
-    }
-
-
 def test_superimplement_executes_each_selected_seat_filler():
     superimplement = read_text("skills/superimplement/SKILL.md")
     rows = markdown_table_rows(superimplement, "#### Seat execution")
