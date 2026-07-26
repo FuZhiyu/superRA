@@ -1,6 +1,6 @@
 ---
 title: "Econ-data-analysis: reviewer read-first default and prefer-visualization"
-status: approved
+status: implemented
 depends_on: []
 ---
 
@@ -44,3 +44,31 @@ edits, and independent review of later changes to
 [skills/econ-data-analysis/SKILL.md](../../skills/econ-data-analysis/SKILL.md).
 No string or sentence oracle was added. The existing deterministic domain-load
 suite passed all 22 tests, and the task record passed the Markdown checker.
+
+### Integration fit
+
+Both instruction hunks survive the branch-wide minimum-net-diff audit. The
+targeted-effort paragraph remains a concrete data-domain instantiation at
+[SKILL.md:44](../../skills/econ-data-analysis/SKILL.md#L44), not a paraphrase of
+generic reviewer mechanics. The headline-figure gate remains in Documentation
+and Handoff with its judgment escape. Neither rule introduces a structured
+runtime surface suitable for a sentence oracle, so the approved design/reviewer
+protection remains the minimum consistent choice.
+
+[RELEASE-NOTES.md:25-33](../../RELEASE-NOTES.md#L25-L33) now includes both
+econ-data rules alongside the interactive contract and conservative prose-test
+cleanup, preserving this task as independent PR and release scope. The generic
+role specs and generated Codex agents remain unchanged.
+
+Fresh integrated-tree verification passed the full CI-safe Python suite (`899
+passed`, four expected warnings), harness compatibility (including generator
+tests `3/3` and generated-agent equality), Codex hooks (`15/15`), Zotero
+(`18/18`), the Markdown checker, and `git diff --check`.
+
+**Final diff self-check:** `git diff origin/main...HEAD`; surviving hunks for
+this task are the two domain-discipline additions, this task record, and the
+release-note coverage required by Integration protection. The
+instruction hunks are suspicious by class but justified directly by the
+approved Objective, remain positively framed and DRY, and introduce no
+cross-skill citation or prose-specific regression test. No scope-ambiguous hunk
+remains.

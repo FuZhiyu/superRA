@@ -51,7 +51,7 @@ Legitimate stop points:
 
 Any REVISE verdict at any step is adjudicated per `agent-orchestration` §Handling Reviewer Feedback and iterated until APPROVE.
 
-A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference; a trivial Sync lands inline in Direct mode (`references/sync.md` Step 3).
+A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference; a trivial Sync lands inline (`references/sync.md` Step 3).
 
 ## When to Lighten
 

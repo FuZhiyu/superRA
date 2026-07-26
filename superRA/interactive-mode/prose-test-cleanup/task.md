@@ -36,5 +36,23 @@ Verification:
 - Diagnostic/presentation focused Python suite: `801 passed`.
 - Codex hook and Zotero shell suites after the accepted revision: `15/15` and
   `18/18`.
-- Final full Python suite after the accepted revision: `899 passed`, `0 failed`, with four expected
-  warnings.
+- Final full Python suite after the accepted revision: `899 passed`, `0 failed`,
+  with four expected warnings.
+
+The integration re-audit confirmed that every non-task-record path in the
+accepted cleanup range is a test, fixture, or test-documentation file; the range
+adds no production API, helper framework, live agent/model call, or network
+path. Across the full branch, the test surface remains net-negative at 663
+additions and 2,551 deletions across 52 files, including the structured
+interactive-order and main-seat routing coverage that predates the bounded
+cleanup. Fresh verification reproduced `899 passed` with four expected warnings,
+Codex hooks `15/15`, Zotero `18/18`, and harness compatibility exit `0`.
+
+**Final diff self-check:** `git diff origin/main...HEAD`; surviving classes
+within this task are deletion of authored-prose, diagnostic-copy, help/UI-label,
+and layout oracles; local replacements using existing state/schema/path/exit/
+ordering/mutation/secret observables; fixture and test-documentation
+reconciliation; and retained structured interactive/seat behavior tests.
+Suspicious broad deletion hunks are justified by this task's explicit
+net-negative cleanup objective and the retained behavior inventory above; no
+cleanup hunk changes production code or creates execution infrastructure.

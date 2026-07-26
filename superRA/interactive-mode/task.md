@@ -33,3 +33,69 @@ superRA-internal skill authoring. Follow `CLAUDE.md` — the DRY + Necessity gat
 Reachability/routing pass over the two-mode + seat-knob rewrite. All six load scenarios resolve: interactive-mode.md is self-contained for the main-agent executor (loop, positioning/intent-gate, status semantics all present; role specs explicitly not loaded); `main-agent.md §Execution Modes` → `agent-orchestration §Seat Assignment` → `reviewer.md`/`implementer.md` seat routing all resolve; the retroactive path lands in `task-tree-design.md §Retroactive Task-Tree Creation`; and the slimmed superplan spine's pointers (decomposition, thorough-planning, changing-the-tree, task-tree-design, planning-review, interactive-mode) all resolve. No surviving `manual` preset or four-seat-configuration instruction remains in `skills/`/`agents/`; the generated direct-mode role references are gone and no skill/CLAUDE.md pointer dangles to them.
 
 1. MINOR — [skills/using-superra/references/codex-instructions.md:22-24](../../skills/using-superra/references/codex-instructions.md#L22-L24). The rename to `interactive` (with `direct` as alias) and the "select by autonomy, not difficulty / not for trivial jots" definition were not propagated to this Codex adapter, which still frames "Direct mode" as a fallback to "use it only when ... the task is trivial." The "trivial task" trigger now contradicts the authoritative definition in [interactive-mode.md:5](../../skills/superplan/references/interactive-mode.md#L5) and [main-agent.md:53](../../skills/using-superra/references/main-agent.md#L53). Non-blocking: `direct` still resolves as an alias and the agent-tools-unavailable fallback is legitimate; only the difficulty-keyed trigger is stale. Fix: re-key the trigger to the new autonomy/tools-unavailable framing, or drop the "task is trivial" clause.
+
+## Results
+
+The integrated branch now carries one coherent execution contract:
+
+- [main-agent.md:42-52](../../skills/using-superra/references/main-agent.md#L42-L52)
+  defines autonomous/subagent as the default and interactive as the explicit
+  high-human-cadence opt-in.
+- [agent-orchestration/SKILL.md:85-109](../../skills/agent-orchestration/SKILL.md#L85-L109)
+  owns the three autonomous seat structures and routes a main-filled seat
+  through the same canonical role spec as a dispatched seat.
+- [interactive-mode.md:14-27](../../skills/superplan/references/interactive-mode.md#L14-L27)
+  owns the self-contained canvas loop: self-review, live task updates, and a
+  tool-mediated review-now/defer/skip question.
+- [codex-instructions.md:10-30](../../skills/using-superra/references/codex-instructions.md#L10-L30)
+  keeps harness-forced inline execution separate from interactive mode.
+
+The obsolete generated direct-mode role mirrors and their generator path are
+gone. The canonical [implementer](../../agents/implementer.md) and
+[reviewer](../../agents/reviewer.md) specs remain unchanged and the committed
+`.codex/agents` TOMLs byte-match generator output. A current-surface sweep found
+no stale direct-mode function names, deleted mirror paths, `manual` preset, or
+trivial-task interactive fallback outside dated historical records.
+
+The Project Doc Audit reconciled the current user and workflow surfaces:
+[README.md:9-26](../../README.md#L9-L26) and the documentation-site overview,
+quickstart, workflow, domain, and status pages now distinguish default
+autonomous review from interactive self-review and elective independent review.
+The trivial Sync and integration-pruning paths are described as inline paths,
+not automatic switches into interactive mode
+([sync.md:1-50](../../skills/superintegrate/references/sync.md#L1-L50)).
+[RELEASE-NOTES.md:9-33](../../RELEASE-NOTES.md#L9-L33) names the interactive
+contract, generated-role cleanup, retained econ-data rules, and conservative
+prose-test cleanup as the three PR concerns. Historical plan and release records
+remain untouched.
+
+The conservative test cleanup remains test-, fixture-, and test-documentation
+only, adds no live/model/network execution or production testability surface,
+and is net-negative. The branch-wide test diff is 663 additions and 2,551
+deletions across 52 files, including the retained structured interactive and
+seat-routing tests. See
+[prose-test-cleanup/task.md](prose-test-cleanup/task.md) for its narrower
+accepted-cleanup accounting and preserved behavior classes.
+
+Verification on the integrated tree:
+
+- Full CI-safe Python suite: `899 passed`, `0 failed`, four expected warnings.
+- Harness compatibility: exit `0`; generator tests `3/3`; committed Codex
+  agents up to date.
+- Codex hook shell suite: `15/15`.
+- Zotero shell suite: `18/18`.
+- Markdown checker on every integration-edited Markdown file: clean.
+- `git diff --check`: clean.
+
+**Final diff self-check:** `git diff origin/main...HEAD`; surviving-change
+classes are the two-mode/seat contract, interactive canvas and routed
+superplan refactor, canonical-agent generator simplification, econ-data
+efficiency rules, conservative test/fixture/test-doc pruning, current user and
+workflow documentation currency, release metadata, and task records.
+Suspicious hunks are justified: instruction edits under `skills/*` implement
+the approved contract and DRY/necessity gates; deleted direct-mode mirrors and
+generator logic retire the explicitly obsolete generated surface while the
+Codex TOMLs remain source-generated; broad test deletions are the approved
+net-negative prose-oracle cleanup with state/schema/path/exit/order/mutation/
+secret coverage retained; current-doc migrations correct claims contradicted by
+the contract; no scope-ambiguous hunk remains.
