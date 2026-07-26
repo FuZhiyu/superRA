@@ -20,7 +20,7 @@ Load whichever domain skill(s) the work actually touches; each routes its own do
 
 Before triaging anything, fix the governing diff — the playing field for every decision below. It is the set of changes made on *this branch* since it diverged from the base: `git diff BASE...HEAD` (three-dot), equivalently `git diff $(git merge-base BASE HEAD)..HEAD`. When a dispatch hands you an explicit range, use that range.
 
-The **minimum net diff** is the smallest set of surviving hunks in the governing diff that achieves the task objective or supports the protected record. Everything below works toward it.
+The **minimum net diff** is the smallest set of surviving hunks that supports the protected record when one exists, or achieves the task objective in standalone use. Everything below works toward it.
 
 ## Apply the reviewed refactoring task
 
@@ -40,15 +40,13 @@ An intentional deviation is fine when the local convention does not fit, but it 
 
 ## Triage every hunk
 
-Walk the governing diff hunk by hunk. Every hunk must earn its place by contributing to the task objective or supporting the protected record; a hunk that does not is pruned.
+Walk the governing diff hunk by hunk.
 
-Three outcomes, by what justifies the hunk:
+**With a protected record:** only a result shown in the permanent documentation, result files, or mature task results—or a reproduction, validation, interpretation, or presentation path explicitly documented there—excludes an in-scope hunk from the automatic pruning list. Before researcher approval, put every unmatched hunk in the temporary task as a pruning action. Task objectives, checklist items, task-file coherence, matching documentation, logged decisions, and Sync Impact may explain the hunk or shape its proposed action; they do not exempt it. After approval, execute that task and return to the researcher gate before materially changing its actions.
 
-- **Confident junk → revert.** Debug prints, reformatting, speculative abstraction, a dead helper — reverting loses no real work.
-- **Justified → keep it.** A kept hunk traces to the protected record or one of the documented sources: an approved task objective, the codebase-coherence checklist below, task-file coherence, docs matching the code, a logged user decision, or supplied Sync impact context.
-- **Scope-ambiguous but plausibly load-bearing → resolve at the active boundary.** Before researcher approval, put the uncertainty and recommended action in the temporary refactoring task. After approval, return to the owning workflow gate when resolving it would materially change the approved task or protected outcome. Without that workflow context, keep and raise the hunk.
+**Standalone:** confident junk is reverted; a hunk justified by the objective, checklist, task-file coherence, matching documentation, a logged decision, or Sync Impact is kept; a scope-ambiguous but plausibly load-bearing hunk is kept and raised.
 
-The same warrant gates base-current deletions and relocations: restore or move base code only when one of the sources above requires it.
+The same mode-specific boundary gates base-current deletions and relocations.
 
 ## Consolidate for maintainability
 
@@ -83,7 +81,7 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When a task file carries a `## Sync Impact` section, use it as self-contained evidence for why a hunk already exists in the governing diff. Sync impact justifies existing hunks; it does not create new refactor targets or excuse unrelated codebase changes.
+When a task file carries a `## Sync Impact` section, use it as self-contained evidence for why a hunk already exists in the governing diff. In a protected-record workflow it does not exclude the hunk from the pruning list unless the record explicitly documents the supported path. In standalone use it can justify an existing hunk; it does not create new refactor targets or excuse unrelated codebase changes.
 
 ## Final Diff Self-Check
 
@@ -93,7 +91,7 @@ Implementers run this immediately before every return or commit, including no-ch
 2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <protected record or standalone objective>; <removed and surviving change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
-5. **Triage** per §Triage every hunk: confident junk reverted, justified hunks kept, scope-ambiguous but load-bearing hunks kept and raised (as a `## Review Notes` item when a task file exists, else in the status return).
+5. **Triage** per §Triage every hunk: with a protected record, every survivor traces to that record or an explicit support path and every unmatched hunk appears in the approved pruning actions; standalone work records kept, reverted, and raised classes.
 6. **Respect the dispatch scope.** Refactor implementer and integration reviewer act on the reopened or changed tasks in the dispatch, plus any `approved` task the branch-wide surviving-diff sweep reopens when it surfaces an unjustified hunk touching that task.
 
 The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
@@ -107,8 +105,8 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Final Diff Self-Check present and fresh** per §Final Diff Self-Check.
 - `[BLOCKING]` **Reviewed refactoring task honored when supplied:** every proposed action was executed or returned to the researcher gate before the proposal changed.
 - `[BLOCKING]` **Protected record preserved:** permanent documentation, mature task results, and their required support paths remain coherent and reproducible.
-- `[BLOCKING]` **Triage performed hunk by hunk** per §Triage every hunk: every surviving hunk ties to a justification source, and no hunk was silently deleted.
-- `[BLOCKING]` **Base-current deletions / relocations honored by default:** base code is restored or moved only when a justification source requires it.
+- `[BLOCKING]` **Triage performed hunk by hunk** per §Triage every hunk: protected-record survivors trace only to the record or an explicit support path, every unmatched hunk entered the approved pruning actions, and no hunk was silently deleted.
+- `[BLOCKING]` **Base-current deletions / relocations honor the active boundary:** protected-record workflows use only the record or an explicit support path; standalone work uses its justification sources.
 - `[BLOCKING]` **Host-project fit** per §Fit the host project: names, utility reuse, and patterns match the host; deviations carry a reason.
 - `[BLOCKING]` **No debug artifacts:** no leftover debug prints, commented-out experiments, or temporary variables.
 - `[ADVISORY]` **Consolidation** per §Consolidate for maintainability, where the task or codebase-coherence review demanded the touch.

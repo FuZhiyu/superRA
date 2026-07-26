@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -42,6 +42,7 @@ Rebuilt INTEGRATE around a protected permanent record and one researcher-reviewe
 - [result-protection](../../../skills/result-protection/SKILL.md), [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md), the task-file contract, sync references, runtime routing, and user-facing workflow documentation now share the same ordering and ownership boundaries. Standalone result protection and task-tree consolidation remain available.
 - The discarded redesign was not restored. Its independently useful subtree-removal implementation remains only on the recovery branch for future evaluation; this workflow does not require a special deletion command.
 - Review follow-up removed duplicate domain confirmation prompts, corrected theory protection routing, scoped proposal-before-execution to standalone consolidation, reduced repeated dispatch instructions, and made every later approval durable even when it changes no files.
+- The loaded refactoring discipline now uses the protected record as the sole workflow exemption from the automatic pruning list; its broader justification sources remain available only in standalone use.
 
 Verification completed on the implementation diff:
 
@@ -60,5 +61,7 @@ Verification completed on the implementation diff:
 ## Review Notes
 
 1. **MAJOR — the loaded refactor discipline still permits unmatched changes to escape the automatic pruning list.** Integrate now correctly requires every in-scope change outside the protected record and its explicit support paths to become a pruning item ([integrate.md:11-19](../../../skills/superintegrate/references/integrate.md#L11-L19)). However, `Stage: integration` loads refactor-and-integrate, whose hunk triage still allows an approved objective, checklist item, task-file coherence, code-matching documentation, a logged decision, or Sync Impact to justify a hunk independently of that record, and lets scope-ambiguous work enter the task merely as an uncertainty with a recommended action ([refactor-and-integrate:41-51](../../../skills/refactor-and-integrate/SKILL.md#L41-L51)). In the walkthrough, an unmatched diagnostic can therefore be “justified” by its implementation task or Sync note instead of automatically appearing as a pruning action. For workflow use, make the protected record or an explicitly documented support path the only basis for excluding an in-scope change from the pruning list; retain the broader justification sources only for standalone use, and align the checklist with that boundary.
+   → implemented: [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md) now separates protected-record and standalone triage, including Sync Impact, base-current changes, self-check, and checklist gates.
 
 2. **MAJOR — consolidation retains a stale gate owner that contradicts the new boundary and fails DRY / Necessity.** The reference correctly says Integrate owns the combined gate at [consolidation.md:71-73](../../../skills/superplan/references/consolidation.md#L71-L73) and again at [consolidation.md:117-121](../../../skills/superplan/references/consolidation.md#L117-L121), but [consolidation.md:103](../../../skills/superplan/references/consolidation.md#L103) still says Mature & Consolidate owns that gate and recovery loop. Remove the stale sentence or point it to Integrate so a maturation agent cannot reintroduce a proposal gate while materializing the protected record.
+   → implemented: [consolidation](../../../skills/superplan/references/consolidation.md) now points the combined gate and recovery loop to Integrate at every occurrence.
