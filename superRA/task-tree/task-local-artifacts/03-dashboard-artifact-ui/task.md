@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: revise
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -96,25 +96,21 @@ unified-tree regression passed `1 passed`.
 
 ## Review Notes
 
-1. **MAJOR:** The accessibility portion of the prior finding remains
-   incomplete. The dashboard declares one `role="tree"` with a roving-tabindex
-   model, but that model still manages only `.task-row` elements
-   ([dashboard.js:2875-2930](../../../../skills/task-tree/scripts/templates/dashboard.js#L2875-L2930)).
-   Every attachment toggle/file is a native button with no managed `tabindex`,
-   so expanding a branch creates many additional Tab stops; its separate arrow
-   handler navigates only attachment controls and cannot move between the owner
-   task row, attachments, and following task rows as one tree
-   ([dashboard.js:2212-2259](../../../../skills/task-tree/scripts/templates/dashboard.js#L2212-L2259)).
-   Nested directory labels are also non-treeitems while descendant files claim
-   a deeper `aria-level`, leaving the announced hierarchy without the
-   corresponding parent treeitem
-   ([dashboard.js:1325-1346](../../../../skills/task-tree/scripts/templates/dashboard.js#L1325-L1346)).
-   Integrate task and attachment pseudo-nodes into one roving focus/arrow model
-   (including nested directory parents), and extend the browser regression
-   beyond programmatically focusing the attachment toggle to verify Tab entry,
-   owner-to-attachment traversal, nested-directory traversal, and exit to the
-   following task row. The other prior findings are confirmed fixed, and the
-   installed-Chromium suite now passes `4 passed`.
+1. **MAJOR:** The unified tree now has one Tab stop, nested directory
+   treeitems/groups, and cross-boundary Up/Down/Right behavior, but return
+   traversal to the owner task is still broken. On `ArrowLeft` from a collapsed
+   Attachments disclosure, the generic non-task parent lookup resolves
+   `.attachment-branch-toggle` back to itself, so focus never returns to the
+   owning task row
+   ([dashboard.js:3034-3047](../../../../skills/task-tree/scripts/templates/dashboard.js#L3034-L3047)).
+   The new test returns only as far as the Attachments disclosure, collapses it,
+   and then tests `ArrowDown`; it never presses `ArrowLeft` again to verify the
+   owner return required by the unified hierarchy
+   ([test_artifact_ui.py:337-350](../../../../skills/task-tree/scripts/test_artifact_ui.py#L337-L350)).
+   Special-case the disclosure's parent as its owning `.task-row` and extend the
+   regression through file → directory → Attachments → owner before separately
+   checking collapsed Attachments → following task. The installed-Chromium
+   suite otherwise passes `4 passed`.
    → implemented: added regressions for task SSE, worktree isolation,
    task/DAG/Kanban exclusion, ARIA treeitem/group levels, arrow-key operation,
    and native attachment activation; dedicated installed-Chromium tests pass
