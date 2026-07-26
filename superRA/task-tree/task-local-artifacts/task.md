@@ -82,3 +82,9 @@ observed `7 failed`, then restored the expectations and reran green
 (`7 passed`, two dependency deprecation warnings). The complete
 harness-instruction suite passed `127` tests. The complete task-tree suite
 passed `741` tests with four known non-failing fixture/dependency warnings.
+
+## Review Notes
+
+1. **MAJOR — The contract regression does not protect the confirmed placement/lifecycle result.** The [new test](../../../tests/harness-instruction-following/test_contract.py#L273-L289) proves that one file has the canonical filename and that two skills point to it, but it never checks the substantive classification, `attachments/` placement, Results/provenance, promotion, or maturation invariants in the [authoritative contract](../../../skills/using-superra/references/task-companion-files.md#L5-L38). Emptying that reference while leaving the two pointers intact remains green, so the researcher-confirmed contract can drift without detection and the result-protection coverage gate is not met. Add stable semantic/section-level assertions for the lifecycle invariants (or an equally durable instruction-behavior regression) and run the selected red-green cycle again; this need not use a brittle full-sentence oracle.
+
+2. **MAJOR — The Results give conflicting current full-suite totals.** The earlier verification says [the full task-tree suite passed 772 tests](task.md#L46-L49), while the protection record says [the complete task-tree suite passed 741](task.md#L79-L84). The latter is reproducible on the protected commit (`741 passed, 4 warnings`); the former predates the sync that consolidated the suite. Reconcile the earlier paragraph with the current result (or explicitly distinguish immutable commit-scoped evidence) so `## Results` is a self-contained latest-state account rather than two incompatible unqualified totals.
