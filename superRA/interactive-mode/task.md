@@ -1,6 +1,6 @@
 ---
 title: "Execution Mode Model & Interactive Canvas"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
@@ -27,23 +27,6 @@ superRA-internal skill authoring. Follow `CLAUDE.md` — the DRY + Necessity gat
 - The contract *names* the seat model; `agent-orchestration` owns the seat-assignment *mechanics* — point, do not duplicate.
 - Reuse the existing status enum; no new status for the elective-review state.
 - Editable-from-dashboard is out of scope — the dashboard is a read-only live canvas view for this workstream.
-
-## Review Notes
-
-1. MAJOR — [interactive-mode.md:22-26](../../skills/superplan/references/interactive-mode.md#L22-L26), [main-agent.md:14-16](../../skills/using-superra/references/main-agent.md#L14-L16), and [superimplement/SKILL.md:90-110](../../skills/superimplement/SKILL.md#L90-L110). The elective-review lifecycle is not coherent: **Defer** and **Skip** both leave the only durable state as `implemented`; session resume treats every `implemented` task as requiring review; and `superimplement` refuses reproducibility/completion handoff until every task is `approved`. A skip is therefore neither distinguishable nor durable, while a deferred interactive task cannot reach the completion menu without the supposedly elective review. Fix the status/results routing so now, defer, and skip have distinct durable effects while reusing the existing status enum, and make the resume and completion paths honor the recorded choice.
-   → implemented: [interactive-mode.md:22-32](../../skills/superplan/references/interactive-mode.md#L22-L32) records distinct dispositions and routes defer/skip to `approved`; [main-agent.md:16](../../skills/using-superra/references/main-agent.md#L16) preserves those choices on resume.
-
-2. MAJOR — [superimplement/SKILL.md:20-25](../../skills/superimplement/SKILL.md#L20-L25), [superimplement/SKILL.md:74-83](../../skills/superimplement/SKILL.md#L74-L83), and [agent-orchestration/SKILL.md:85-109](../../skills/agent-orchestration/SKILL.md#L85-L109). The autonomous workflow still mandates implementer and reviewer **subagent** dispatches, so its executable process contradicts the new main/subagent seat structures. Fix `superimplement` to select and execute the per-task seat structure rather than hard-code two dispatches.
-   → implemented: [superimplement/SKILL.md:20-24](../../skills/superimplement/SKILL.md#L20-L24) and [superimplement/SKILL.md:74-89](../../skills/superimplement/SKILL.md#L74-L89) now select the structure and execute each filler through a structured main/dispatch route.
-
-3. MAJOR — [agent-orchestration/SKILL.md:101-109](../../skills/agent-orchestration/SKILL.md#L101-L109), [codex-instructions.md:10-18](../../skills/using-superra/references/codex-instructions.md#L10-L18), and [codex-superra-setup/SKILL.md:36-43](../../skills/codex-superra-setup/SKILL.md#L36-L43). Named-agent installation is correctly required/prompted and the generated agents are current, but main-seat and harness-forced-inline paths load bare `agents/*.md` paths without a cross-repo resolution rule. The setup skill recognizes that plugin use runs from another repository and resolves its own resource relative to the skill directory; the new transcript fixtures prove role reads only from this repository's cwd. Give main-filled and forced-inline seats a plugin-resolvable path to the canonical role specs and cover that packaged, cross-repo path.
-   → implemented: [codex-instructions.md:16-20](../../skills/using-superra/references/codex-instructions.md#L16-L20) routes both paths through `canonical-role`; [codex-superra-setup/SKILL.md:74-83](../../skills/codex-superra-setup/SKILL.md#L74-L83) and its resolver emit the plugin-relative canonical path, covered from a foreign working directory.
-
-4. MAJOR — [interactive-mode.md:16-20](../../skills/superplan/references/interactive-mode.md#L16-L20). The reference promises “self-review always” and deliberately loads no role spec, but its sole review instruction is to walk the active **domain** checklist. A no-domain task—such as superRA workflow maintenance itself—therefore has no self-review operation at all. Add the minimum domain-neutral objective/evidence/verification pass, with active domain gates applied in addition when present.
-   → implemented: [interactive-mode.md:18-19](../../skills/superplan/references/interactive-mode.md#L18-L19) now requires a domain-neutral objective/diff/output/verification pass before adding active domain gates.
-
-5. MAJOR — [CLAUDE.md:46-66](../../CLAUDE.md#L46-L66), [agent-orchestration/SKILL.md:89-107](../../skills/agent-orchestration/SKILL.md#L89-L107), and [superplan/SKILL.md:105-111](../../skills/superplan/SKILL.md#L105-L111). The instruction diff fails the repository's explicit blocking DRY/Necessity gate. `agent-orchestration` repeats the seat-choice criteria in both the table and the following signal list, then restates reviewer-owned review-note/verdict behavior immediately after requiring `agents/reviewer.md`; the slimmed `superplan` spine paraphrases the drift distinction, tracker rule, full change protocol, and stop rule already owned by `changing-the-tree.md`. Keep the seat-specific orchestration delta and routing conditions, but remove the duplicated role/reference content and point to the authoritative owners.
-   → implemented: [agent-orchestration/SKILL.md:85-95](../../skills/agent-orchestration/SKILL.md#L85-L95) retains one seat-choice table plus the orchestration delta; [superplan/SKILL.md:104-110](../../skills/superplan/SKILL.md#L104-L110) now routes without paraphrasing the owner.
 
 ## Results
 

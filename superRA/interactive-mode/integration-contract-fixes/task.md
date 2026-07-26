@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -11,11 +11,6 @@ Resolve the integration review blockers as one coherent execution-contract repai
 ## Planner Guidance
 
 The authoritative findings are in superRA/interactive-mode/task.md and superRA/interactive-mode/prose-test-cleanup/task.md at review commit f88a42f5. Reuse the existing status enum; do not add a review-status field unless unavoidable. Keep role behavior in agents/*, harness resolution in the Codex adapter/setup owner, and changing-tree behavior in its reference. Load skill-creator before skills/* edits. Apply DRY/Necessity line by line and keep the diff bounded to these findings.
-
-## Review Notes
-
-1. MAJOR — [superimplement/SKILL.md:18-24](../../../skills/superimplement/SKILL.md#L18-L24). The process selects a seat structure before requiring `agent-orchestration` to be loaded; the existing load instruction only triggers before writing a dispatch prompt. Codex intentionally does not hook-autoload orchestration, so a main-filled first seat can be chosen without the owning criteria or canonical-role mechanics in context. Require the skill before seat selection, not only before prompt construction.
-   → implemented: [superimplement/SKILL.md:18](../../../skills/superimplement/SKILL.md#L18) now loads the owner before either seat selection or dispatch-prompt construction; the frontier wording also distinguishes direct execution from parallel dispatch.
 
 ## Results
 
