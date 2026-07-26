@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -38,13 +38,16 @@ The authoritative [task companion-file contract](../../../../skills/using-superr
 
 The contract also requires links and reproducibility metadata, promotes permanent artifacts without duplicate sources of truth, and carries retained companions through Mature & Consolidate without dropping protected-result support. It remains routed from the universal [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and the smallest planning, implementation, integration, maturation, task-tree, reporting, and [user-facing documentation](../../../../README.md#how-it-works) surfaces. Canonical role specs and generated role artifacts remain unchanged.
 
+The owning ancestor's injected `## Results` now states the same attachment-only boundary and identifies the data-path and UI redesigns as pending rather than presenting their rejected direct-companion behavior as current.
+
 Verification:
 
 - `uv run --with pyyaml python .../skill-creator/scripts/quick_validate.py skills/using-superra` reported `Skill is valid!`.
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
 - A fresh isolated Codex harness read the revised contract, removed calculation scratch, retained a hand-authored Markdown note and reproducible CSV under the task's `attachments/`, and promoted the runtime-consumed Python generator to the fixture project's `src/` path without a task-local duplicate. Independent checks confirmed the task directory contained only `task.md` and `attachments/`, all recorded files existed, and a fresh generator run reproduced the retained CSV byte-for-byte.
-- The Markdown checker reported both task-owned Markdown files clean, `superra task check` found no issues, and `git diff --check` passed.
+- The Markdown checker reported the contract, this task, and its owning ancestor clean; `superra task check` found no issues, and `git diff --check` passed.
 
 ## Review Notes
 
 1. **MAJOR:** The revised contract correctly requires every retained task-local companion to live under `attachments/` ([task-companion-files.md:13-18](../../../../skills/using-superra/references/task-companion-files.md#L13-L18)), but the owning ancestor still states that Markdown, Python, Julia, R, and notebook companions may sit beside `task.md` and that dashboard discovery includes direct companions ([../task.md:41-47](../task.md#L41-L47)). Because `superra task read` injects ancestor context into every child dispatch, this stale current-state `## Results` directly contradicts the authoritative placement rule agents receive. Replace the ancestor's superseded direct-companion results with the attachment-only contract (and leave dashboard implementation claims to the reopened downstream tasks) before approving this contract revision.
+   → implemented: replaced the ancestor's stale completion narrative with the attachment-only contract and marked both dashboard redesign tasks pending ([../task.md:41-45](../task.md#L41-L45)).
