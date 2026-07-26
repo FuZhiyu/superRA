@@ -18,14 +18,27 @@ class SyncCodexAgentsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home:
             home_dir = Path(home)
             target_dir = home_dir / ".codex" / "agents"
+            foreign_repo = home_dir / "research-project"
+            foreign_repo.mkdir()
 
-            self.run_script("--scope", "global", "--home-dir", str(home_dir))
+            self.run_script(
+                "--scope",
+                "global",
+                "--home-dir",
+                str(home_dir),
+                cwd=foreign_repo,
+            )
             self.assertEqual(
                 sorted(path.name for path in target_dir.iterdir()),
                 ["superra_implementer.toml", "superra_reviewer.toml"],
             )
-            self.assertTrue((target_dir / "superra_implementer.toml").exists())
-            self.assertTrue((target_dir / "superra_reviewer.toml").exists())
+            for filename in ("superra_implementer.toml", "superra_reviewer.toml"):
+                self.assertEqual(
+                    (target_dir / filename).read_text(encoding="utf-8"),
+                    (REPO_ROOT / ".codex" / "agents" / filename).read_text(
+                        encoding="utf-8"
+                    ),
+                )
 
             self.run_script("--scope", "global", "--home-dir", str(home_dir))
 
@@ -81,10 +94,10 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 generated,
             )
 
-    def run_script(self, *args: str) -> None:
+    def run_script(self, *args: str, cwd: Path = REPO_ROOT) -> None:
         subprocess.run(
             ["python3", str(SCRIPT), *args],
-            cwd=REPO_ROOT,
+            cwd=cwd,
             check=True,
             capture_output=True,
             text=True,
