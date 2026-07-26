@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: implemented
+status: approved
 depends_on:
   - 01-artifact-contract
 ---
@@ -24,10 +24,6 @@ Centralize attachment resolution so listing, serving, watching, search/export pr
 
 Notebook rendering is read-only and does not create filesystem entries. Exclude `.ipynb_checkpoints` and similar hidden tool state; attachment recursion exists for outputs created by separately executed code or tools, not because viewing an `.ipynb` requires companion directories.
 
-## Revision Notes
-
-The storage contract now has one boundary: `attachments/`. Remove the direct/attachment placement taxonomy while preserving the approved containment, watcher, export, rollback, and resource-limit guarantees.
-
 ## Results
 
 The dashboard data layer now exposes exactly one task-local storage boundary. The [recursive manifest builder](../../../../skills/task-tree/scripts/_artifacts.py#L221-L317) walks only the owning task's `attachments/` directory, preserves arbitrary-depth relative paths, excludes hidden/cache components and symlinks, retains file-count, manifest-byte, traversal-entry, and preview-byte ceilings, and no longer emits a direct/attachment placement field. Files beside `task.md` are absent from the manifest.
@@ -39,10 +35,3 @@ Watcher ownership is likewise attachment-only: [direct changes return no artifac
 Focused regressions cover direct-file exclusion and access rejection, removal of placement metadata, recursive attachment ownership, hidden/checkpoint and symlink exclusion, listing and byte budgets, MIME and download headers, worktree/custom-root/rootless isolation, attachment-only watcher events, a sixteen-level manifest/content/watcher/export round trip, scoped export, size fallback, figure reuse, [intermediate-directory symlink swaps for explicit and unsafe implicit downloads](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L487), and [the equivalent standalone attachment-figure race](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L781-L819).
 
 Verification: `test_artifacts.py` passed 28 tests. Python compilation, Markdown integrity checks, and `git diff --check` passed. The full task-tree suite is intentionally deferred to the combined task 02/03 verification pass.
-
-## Review Notes
-
-1. **MAJOR** — Standalone export still has a nested-component validation-to-read race for attachment figures, so preview, download, and standalone do not yet share one stable read mechanism. The new [`open_artifact_file`](../../../../skills/task-tree/scripts/_artifacts.py#L399-L478) correctly walks the owning-task and attachment components relative to stable directory descriptors with `O_NOFOLLOW`, and both nested swap download modes now pass ([test_artifacts.py:448-487](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L487)). However, [`_build_standalone_images`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1901-L1938) still resolves an attachment pathname and later calls `Path.read_bytes()` on it. In a focused reproduction, swapping `attachments/nested/` to an outside-directory symlink immediately after `resolve_artifact` caused the outside PNG bytes to be base64-embedded in the exported HTML. Route attachment-figure reads through the stable descriptor helper as well and add an export regression that changes a nested path entry after validation and proves outside bytes are not embedded.
-   → implemented: download responses now open a no-follow verified regular-file descriptor before returning and stream that stable identity; both swap paths return 403 without outside bytes ([plan_dashboard.py:1454-1469](../../../../skills/task-tree/scripts/plan_dashboard.py#L1454-L1469), [test_artifacts.py:448-485](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L485)).
-   → implemented: all artifact reads now walk from a stable task-root descriptor and reject symlinks in every relative component; explicit and unsafe implicit download regressions swap `attachments/nested/` and return 403 without outside bytes ([_artifacts.py:401-493](../../../../skills/task-tree/scripts/_artifacts.py#L401-L493), [test_artifacts.py:448-487](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L487)).
-   → implemented: standalone attachment figures now use the stable descriptor walker; a nested-directory swap after resolution cannot embed the outside image bytes ([plan_dashboard.py:1901-1946](../../../../skills/task-tree/scripts/plan_dashboard.py#L1901-L1946), [test_artifacts.py:781-819](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L781-L819)).
