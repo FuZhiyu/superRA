@@ -12,7 +12,7 @@ The tasks are approved, so the work is correct, but correct work can still break
 
 ### Protect — choose the permanent record and how to guard it
 
-Before permanent documentation is written, superRA surveys the provisional findings and proposes concrete choices: which results to keep or drop, what the final documentation and result files should look like, where they should live, and how each kept result should be protected. You choose among those options while the work is still easy to reshape.
+Before permanent documentation is written, superRA surveys the provisional findings and proposes concrete choices: which results to keep or drop, what the final documentation and result files should look like, where they should live, how the affected task tree should consolidate, and how each kept result should be protected. You choose among those options while the work is still easy to reshape. The approved choices are recorded in a decision commit so later agents and resumed sessions share the same specification.
 
 Permanent results documentation can be sufficient protection. For a headline coefficient or another result where automated drift detection is valuable, you can also request a drift test: a small check that fails when a later sync or refactor moves the saved value. Existing protection checks continue to run throughout integration.
 
@@ -26,7 +26,7 @@ It does this **by intent, not by line**. A plain `git merge` resolves conflicts 
 
 After Sync, one drafter creates the agreed user-facing documentation and result files, then consolidates the task tree and matures its `## Results` against those artifacts. A task whose output is a document points to that document instead of duplicating it; finished update scaffolding folds into its durable owner.
 
-Together, the permanent documentation, result files, and mature task results are the protected record. One reviewer verifies that record, compares every in-scope change against it, and writes one temporary task containing the automatic pruning list and other worthwhile consolidation or refactoring.
+Together, the permanent documentation, result files, and mature task results are the protected record. One reviewer checks those paths against the recorded Protect decision, compares every in-scope change against that record, and writes one temporary task containing the automatic pruning list and other worthwhile consolidation or refactoring.
 
 ### Integrate — approve and execute the refactoring task
 

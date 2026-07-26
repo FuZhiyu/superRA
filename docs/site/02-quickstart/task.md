@@ -125,7 +125,7 @@ The tasks are done and approved, but a correct result still has to be landed saf
 
 Superintegration consists of five stages, and each stage guards against a different way good work goes wrong after it is done:
 
-1. **Protect** — review the agent’s proposed permanent documentation, choose which provisional results to keep or drop, and decide whether documentation alone or an additional drift test should protect each kept result.
+1. **Protect** — review the agent’s proposed permanent documentation and task-tree consolidation, choose which provisional results to keep or drop, and decide whether documentation alone or an additional drift test should protect each kept result. The approved specification is committed for later agents and resumed sessions.
 2. **Sync** — when the base branch has moved (a coauthor pushed while you worked, say), fold those changes in **semantically**: superRA reads the intent behind each incoming change and reconciles it, rather than resolving conflicts line by line — never a bare `git merge`.
 3. **Mature & Consolidate** — one drafter creates the user-facing documentation and matures the task tree; one reviewer verifies that protected record and writes the temporary pruning-and-refactoring task.
 4. **Integrate** — let you review that task with the finished record, then execute and verify it.

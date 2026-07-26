@@ -10,7 +10,7 @@ Run every existing protection check plus the mechanisms selected at Protect. A f
 
 ## Step 2: Recover the task state
 
-Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing or incomplete against Mature & Consolidate Step 3, return there. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
+Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing or does not identify the Protect decision commit, protected-record paths, `BASE_HEAD_SHA`, bounded actions, and verification, return to Mature & Consolidate Step 3. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
 
 - `not-started` — execute the approved task;
 - `implemented` or `revise` — enter the review or fix loop;
@@ -24,11 +24,11 @@ Present one review surface containing:
 2. the mature task tree and its durable `## Results`; and
 3. the temporary task, including automatic pruning items and other refactoring opportunities.
 
-Ask whether to approve the protected record and task. A requested change to the protected record returns to Mature & Consolidate Step 2; a task-only change returns to its reviewer at Step 3. Present the surface again after either revision. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files.
+Ask whether to approve the protected record and task. A requested change to the Protect decision returns to Protect; a correction to its materialization returns to Mature & Consolidate Step 2; a task-only change returns to its reviewer at Step 3. Present the surface again after any revision. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files.
 
 ## Step 4: Execute the approved task
 
-Fill the `Stage: integration` implementer seat:
+Assign the `Stage: integration` implementer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
@@ -43,7 +43,9 @@ The implementer writes the execution outcome and verification evidence to the te
 
 Resolve concerns inside the approved task through an implementer fix. If execution reveals a materially different protected outcome, return to Mature & Consolidate Step 2; if it reveals a materially different refactoring action, return to its reviewer at Step 3. Repeat the researcher gate before applying the new work.
 
-## Step 6: Fill the reviewer seat
+## Step 6: Assign the reviewer seat
+
+Assign it per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):

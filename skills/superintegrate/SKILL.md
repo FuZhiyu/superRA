@@ -35,7 +35,7 @@ Load each step's reference on entry; each is self-contained for its step:
 
 ## Stop Points
 
-Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — progress is recovered from commits and task statuses. When the researcher chooses documentation-only protection and Protect changes no files, carry that decision in the current workflow context; an interruption before maturation re-enters Protect because no intermediate record was requested. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
+Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — progress is recovered from commits and task statuses. The `integrate(protect)` decision commit records the researcher-confirmed permanent-record, consolidation, and protection choices even when Protect changes no files. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
 
 Legitimate stop points:
 

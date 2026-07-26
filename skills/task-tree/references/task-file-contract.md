@@ -50,7 +50,7 @@ Results live in each task's `## Results` section. The same section matures throu
 ### Two-Stage Lifecycle
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. Re-implementation replaces a task's results; it does not append history.
-- **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects the results, documentation homes, and protection mechanisms, create the user-facing documentation and result files first. Then distil each touched task's `## Results` to one of the dispositions below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. `superintegrate/references/mature-consolidate.md` owns the ordering and record verification.
+- **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects the results, documentation homes, consolidation dispositions, and protection mechanisms, create the user-facing documentation and result files first. Then distil each touched task's `## Results` to one of the dispositions below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. `superintegrate/references/mature-consolidate.md` owns the ordering and record verification.
 
 ### Maturation Disposition Menu
 
