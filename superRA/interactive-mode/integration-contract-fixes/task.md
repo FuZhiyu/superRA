@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -75,14 +75,3 @@ deletions retain only structured contract coverage per
 no stale claim in the root `CLAUDE.md`, root `README.md`, or harness
 [README.md](../../../tests/harness-instruction-following/README.md). No
 unjustified or scope-ambiguous hunk remains.
-
-## Review Notes
-
-1. MAJOR — [agent-orchestration/SKILL.md:95](../../../skills/agent-orchestration/SKILL.md#L95), [codex-instructions.md:20](../../../skills/using-superra/references/codex-instructions.md#L20), and [codex-superra-setup/SKILL.md:74-83](../../../skills/codex-superra-setup/SKILL.md#L74-L83). The shared seat contract requires every main-filled seat to resolve and load the canonical role spec, but the only executable resolution rule lives in the Codex-only adapter/setup skill. No Claude adapter or shared resolver tells a Claude main-seat filler how to turn the packaged plugin into an absolute role path; the committed Claude fixture invents `/plugin/superRA/...` and invokes the Codex setup script, so it does not prove that the shipped instructions can discover that path in cross-repo plugin use. This leaves one supported harness unable to execute the new main-implementer/main-reviewer structures from the documented contract. Add a harness-appropriate packaged-role resolver for Claude (or move canonical-role resolution to a genuinely shared owner and have each adapter point to it), then cover discovery from a foreign project rather than only parsing a fabricated absolute-path transcript.
-   → implemented: added a shared packaged-role resolver, routed both adapters to it, and covered copied-plugin discovery from a foreign project ([resolve_role.py](../../../skills/using-superra/scripts/resolve_role.py), [test_resolve_role.py](../../../skills/using-superra/scripts/test_resolve_role.py)).
-
-2. MAJOR — [task.md:40-48](task.md#L40-L48) and [interactive-mode/task.md:84-95](../task.md#L84-L95). This task's implementer changed the governing diff after the umbrella trail was written but never recorded a Final-Diff-Self-Check in this assigned task. The umbrella trail still generically justifies all `skills/*` instruction edits and does not identify the later cross-repo role-resolution, self-review, or seat-execution hunks that triggered this fix task. This fails the integration-stage `[BLOCKING]` freshness gate even though `origin/main...HEAD` currently resolves to the supplied base range. Recompute `git diff 84d451deff42cab17944fd8ab038ca8d092428d1..HEAD` after the accepted fixes and add a fresh, task-local trail that classifies and justifies those suspicious instruction hunks.
-   → implemented: added the fresh task-local candidate-tree audit above, including explicit justifications for cross-repo role resolution, interactive self-review, seat execution, and the DRY cleanup ([task.md](task.md)).
-
-3. MAJOR — [superplan/SKILL.md:34](../../../skills/superplan/SKILL.md#L34), [superplan/SKILL.md:64-70](../../../skills/superplan/SKILL.md#L64-L70), and [superimplement/SKILL.md:20-24](../../../skills/superimplement/SKILL.md#L20-L24). Several surviving instruction additions fail the repository's `[BLOCKING]` DRY + Necessity test. The superplan routing spine describes what `interactive-mode.md` fuses, enumerates the mechanics in `decomposition.md`, and repeats that reference's self-review checklist immediately while requiring it to be loaded. Superimplement's top-level process repeats the seat-selection, seat-execution, and verdict loop defined again at [superimplement/SKILL.md:76-89](../../../skills/superimplement/SKILL.md#L76-L89), while its interactive route at [superimplement/SKILL.md:93](../../../skills/superimplement/SKILL.md#L93) paraphrases the loaded reference's self-review/review-disposition contract. Removing these echoes would not change behavior because the authoritative references or detailed step are already loaded in the same path. Keep only the routing/choreography needed to reach each owner and delete the duplicate summaries.
-   → implemented: reduced both workflow spines to routing and phase choreography while leaving the detailed procedures in their loaded owners ([superplan/SKILL.md](../../../skills/superplan/SKILL.md), [superimplement/SKILL.md](../../../skills/superimplement/SKILL.md)).
