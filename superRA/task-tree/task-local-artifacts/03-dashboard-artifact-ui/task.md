@@ -73,8 +73,10 @@ Verification:
   separately in the preceding invocation.
 - `node --check`, Python byte-compilation, Markdown integrity, example-script
   execution (`f(2) = 5`, `f(3) = 10`), and `git diff --check` passed.
-- The full task-tree suite is deferred to the orchestrator's combined
-  post-review verification pass.
+- Full task-tree suite: `772 passed` with four known non-failing fixture and
+  dependency warnings. The first run exposed one stale breadcrumb source
+  assertion after attachment-aware routing; the targeted regression and full
+  rerun passed after aligning it with the new active-attachment condition.
 
 The review round removed the dormant Files-sidecar implementation and styles,
 made task-row SSE swaps rebuild attachment branches without losing expansion or

@@ -26,10 +26,6 @@ Put every retained task-local file in `attachments/`. The agent-facing contract 
 
 The existing [HTML Dashboard](../dashboard/task.md) concern covers dashboard behavior but not the cross-workflow storage and promotion contract, so this work is a sibling durable concern under Task Tree Skill. The contract lands first; the backend data path and user interface then follow in dependency order.
 
-## Revision Notes
-
-Researcher visual review replaced the direct-companion/modal model with a single `attachments/` storage boundary and tree-native, full-pane reading.
-
 ## Critical Files
 
 - [using-superra/SKILL.md](../../../skills/using-superra/SKILL.md) — universal task interface loaded by main agents, implementers, reviewers, and direct mode
@@ -40,6 +36,14 @@ Researcher visual review replaced the direct-companion/modal model with a single
 
 ## Results
 
-The [companion-file contract](01-artifact-contract/task.md#results) implements one storage boundary: every retained task-local file belongs under `attachments/`; only `task.md` and child-task directories occupy the task directory itself. It distinguishes disposable scratch, retained task-local evidence, and permanent project artifacts; requires result links and reproducibility metadata; and promotes shared or maintained artifacts into project-conventional paths before Integrate closes.
+The approved companion-file lifecycle and dashboard now use one storage boundary
+and one reading surface:
 
-The dashboard redesign is pending. The [attachment-only data path](02-dashboard-artifact-data/task.md#objective) and [tree-native attachment UI](03-dashboard-artifact-ui/task.md#objective) remain `not-started` and must replace the rejected direct-companion discovery and Files-canvas behavior in dependency order. Their pre-revision implementation records are not current completion claims for this parent.
+- The [companion-file contract](01-artifact-contract/task.md#results) requires every retained task-local file under `attachments/`; only `task.md` and child-task directories occupy the task directory itself. It distinguishes scratch, retained evidence, and permanent project artifacts; requires reproducibility metadata; and promotes shared or maintained artifacts before Integrate closes.
+- The [attachment-only data path](02-dashboard-artifact-data/task.md#results) recursively discovers and serves only `attachments/`, with bounded no-follow descriptor reads shared by previews, downloads, and standalone attachment images. Direct files are excluded, and attachment nodes remain outside task discovery and status semantics.
+- The [tree-native attachment UI](03-dashboard-artifact-ui/task.md#results) removes the Files modal. A collapsed Attachments pseudo-branch lives beneath each owning task, while selected Markdown, highlighted source, notebooks, images, PDFs, and text render in the normal full-width detail pane with URL/history, live refresh, standalone, worktree, and unified keyboard-tree behavior.
+
+Independent review approved all three children. The full task-tree suite passed
+`772` tests with four known non-failing warnings; dedicated installed-Chromium
+regressions cover rendering, sanitization, hot reload, worktree isolation, and
+the unified attachment/task navigation model.

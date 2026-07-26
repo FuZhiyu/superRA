@@ -3078,7 +3078,7 @@ class TestFileLinkConsistency:
         # setActive('') — the entry point that returns to the container. The
         # label is 'root' in tracker mode and the site title in doc-mode, so the
         # assertion pins the empty-path ascent, not the literal label.
-        assert "addCrumb(rootLabel, '', segs.length === 0)" in BASE_HTML
+        assert "addCrumb(rootLabel, '', segs.length === 0 && !artifactPath)" in BASE_HTML
 
     # --- Subtree export resolved-root basis -------------------------------
 
