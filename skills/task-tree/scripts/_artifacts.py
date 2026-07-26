@@ -396,24 +396,18 @@ def _open_relative_component(parent_fd: int, name: str, flags: int) -> int:
         raise ArtifactSecurityError("Artifact could not be opened securely") from exc
 
 
-def open_artifact_file(
-    plan_root: Path,
-    task: Task,
-    requested_path: str,
-) -> BinaryIO:
-    """Open an artifact by walking from a stable task-root descriptor."""
-    if not _task_dir_is_secure(plan_root, task):
-        raise ArtifactSecurityError("Owning task is unavailable")
-    parts = _validated_parts(requested_path)
+def open_regular_file_nofollow(root_path: Path, parts: tuple[str, ...]) -> BinaryIO:
+    """Open ``root_path/*parts`` as a regular file via a stable no-follow walk.
+
+    Every intermediate component is opened relative to its parent directory
+    descriptor with ``O_DIRECTORY | O_NOFOLLOW``, and the final component is
+    opened with ``O_NOFOLLOW`` and verified as a regular file — closing the
+    check-then-act gap between a symlink check and a later pathname read.
+    """
     if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
         raise ArtifactSecurityError("Secure artifact opening is unavailable")
-    try:
-        task_parts = task.dir_path.absolute().relative_to(
-            plan_root.absolute()
-        ).parts
-        root_path = plan_root.resolve(strict=True)
-    except (OSError, ValueError) as exc:
-        raise ArtifactSecurityError("Owning task is unavailable") from exc
+    if not parts:
+        raise ArtifactSecurityError("Artifact could not be opened securely")
 
     directory_flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):
@@ -434,7 +428,7 @@ def open_artifact_file(
         raise ArtifactSecurityError("Artifact could not be opened securely") from exc
 
     try:
-        for part in (*task_parts, *parts[:-1]):
+        for part in parts[:-1]:
             next_fd = _open_relative_component(
                 directory_fd,
                 part,
@@ -463,6 +457,25 @@ def open_artifact_file(
     except BaseException:
         os.close(file_fd)
         raise
+
+
+def open_artifact_file(
+    plan_root: Path,
+    task: Task,
+    requested_path: str,
+) -> BinaryIO:
+    """Open an artifact by walking from a stable task-root descriptor."""
+    if not _task_dir_is_secure(plan_root, task):
+        raise ArtifactSecurityError("Owning task is unavailable")
+    parts = _validated_parts(requested_path)
+    try:
+        task_parts = task.dir_path.absolute().relative_to(
+            plan_root.absolute()
+        ).parts
+        root_path = plan_root.resolve(strict=True)
+    except (OSError, ValueError) as exc:
+        raise ArtifactSecurityError("Owning task is unavailable") from exc
+    return open_regular_file_nofollow(root_path, (*task_parts, *parts))
 
 
 def iter_artifact_file(
@@ -595,7 +608,6 @@ def build_standalone_artifacts(
                 continue
 
             try:
-                resolved = resolve_artifact(plan_root, task, relative)
                 raw = read_artifact_bytes(
                     plan_root,
                     task,

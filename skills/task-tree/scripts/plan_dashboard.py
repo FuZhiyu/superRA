@@ -1929,19 +1929,18 @@ def _build_standalone_images(
                         rel_parts = raw_path.absolute().relative_to(project_root.absolute()).parts
                     except ValueError:
                         continue
-                    current = project_root.absolute()
-                    escaped_by_symlink = False
-                    for part in rel_parts:
-                        current = current / part
-                        if current.is_symlink():
-                            escaped_by_symlink = True
-                            break
-                    if escaped_by_symlink:
+                    try:
+                        with artifacts.open_regular_file_nofollow(
+                            project_root, rel_parts
+                        ) as handle:
+                            raw = handle.read()
+                    except (OSError, artifacts.ArtifactSecurityError):
                         continue
-                try:
-                    raw = img_path.read_bytes()
-                except OSError:
-                    continue
+                else:
+                    try:
+                        raw = img_path.read_bytes()
+                    except OSError:
+                        continue
             b64 = base64.b64encode(raw).decode("ascii")
             images[key] = f"data:{mime};base64,{b64}"
     return images

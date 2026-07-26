@@ -818,3 +818,40 @@ class TestStandaloneArtifacts:
         html = plan_dashboard.render_standalone_html(root, root="child")
 
         assert base64.b64encode(secret).decode("ascii") not in html
+
+    def test_standalone_figure_rejects_non_attachment_intermediate_symlink_swap(
+        self, tmp_path, monkeypatch
+    ):
+        root = _tree(tmp_path)
+        child = root / "child"
+        figures = child / "figures"
+        figures.mkdir(parents=True)
+        _write_tiny_png(figures / "figure.png")
+        outside = tmp_path / "outside-images"
+        outside.mkdir()
+        secret = b"outside-image-secret"
+        (outside / "figure.png").write_bytes(secret)
+        task_md = child / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Results\n\n"
+            + "![figure](figures/figure.png)\n",
+            encoding="utf-8",
+        )
+        original_open = _artifacts.open_regular_file_nofollow
+        swapped = False
+
+        def swap_before_open(root_path, parts):
+            nonlocal swapped
+            if not swapped and parts[-2:] == ("figures", "figure.png"):
+                figures.rename(child / "figures-original")
+                figures.symlink_to(outside, target_is_directory=True)
+                swapped = True
+            return original_open(root_path, parts)
+
+        monkeypatch.setattr(
+            _artifacts, "open_regular_file_nofollow", swap_before_open
+        )
+        html = plan_dashboard.render_standalone_html(root, root="child")
+
+        assert base64.b64encode(secret).decode("ascii") not in html
