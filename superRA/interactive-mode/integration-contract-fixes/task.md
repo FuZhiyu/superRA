@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -15,6 +15,7 @@ The authoritative findings are in superRA/interactive-mode/task.md and superRA/i
 ## Review Notes
 
 1. MAJOR — [superimplement/SKILL.md:18-24](../../../skills/superimplement/SKILL.md#L18-L24). The process selects a seat structure before requiring `agent-orchestration` to be loaded; the existing load instruction only triggers before writing a dispatch prompt. Codex intentionally does not hook-autoload orchestration, so a main-filled first seat can be chosen without the owning criteria or canonical-role mechanics in context. Require the skill before seat selection, not only before prompt construction.
+   → implemented: [superimplement/SKILL.md:18](../../../skills/superimplement/SKILL.md#L18) now loads the owner before either seat selection or dispatch-prompt construction; the frontier wording also distinguishes direct execution from parallel dispatch.
 
 ## Results
 

@@ -15,7 +15,7 @@ Default to subagent-driven execution on a built tree unless the researcher expli
 
 ## The Process
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt.**
+**Load `superRA:agent-orchestration` before selecting seats or writing any dispatch prompt.**
 
 1. Read the task tree, compute the frontier;
 2. **Go through frontier work units:**
@@ -69,7 +69,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Tasks on the frontier may be dispatched singly, as one or more same-parent bundles, or as a parallel Agent-tool batch (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
 
 #### Task Execution Steps
 
