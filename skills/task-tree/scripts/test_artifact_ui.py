@@ -141,6 +141,14 @@ def _attachment_tree(tmp_path: Path, *, label: str = "A") -> Path:
     (attachments / "model.ipynb").write_text(
         json.dumps(notebook), encoding="utf-8"
     )
+    following = root / "02-following"
+    following.mkdir()
+    _write_task_md(
+        following / "task.md",
+        "Following task",
+        "not-started",
+        objective="Verify attachment navigation exits to the following task.",
+    )
     return root
 
 
@@ -287,19 +295,59 @@ class TestAttachmentSurfaceBrowser:
                 assert branch.locator(".attachment-branch-children").get_attribute(
                     "role"
                 ) == "group"
-                branch.locator(".attachment-branch-toggle").focus()
+                page.wait_for_function(
+                    "() => document.querySelector("
+                    "'.task-node[data-path=\"01-reader\"] > .task-row')"
+                    ".getAttribute('tabindex') === '0'"
+                )
+                page.locator("#pin-toggle").focus()
+                page.keyboard.press("Tab")
+                assert page.evaluate(
+                    "document.activeElement === document.querySelector("
+                    "'.task-node[data-path=\"01-reader\"] > .task-row')"
+                )
+                page.keyboard.press("ArrowRight")
+                assert page.evaluate(
+                    "document.activeElement.classList.contains("
+                    "'attachment-branch-toggle')"
+                )
+                assert page.locator(
+                    "#nav-tree [tabindex='0']"
+                ).count() == 1
                 page.keyboard.press("ArrowRight")
                 assert branch.locator(".attachment-branch-children").is_visible()
+                page.keyboard.press("ArrowRight")
+                assert page.evaluate(
+                    "document.activeElement.classList.contains("
+                    "'attachment-directory-row')"
+                )
                 page.keyboard.press("ArrowDown")
                 assert page.evaluate(
                     "document.activeElement.classList.contains('attachment-file-row')"
                 )
+                page.keyboard.press("ArrowDown")
+                assert page.evaluate(
+                    "document.activeElement.textContent.trim().includes('notes')"
+                )
+                page.keyboard.press("ArrowRight")
+                assert page.evaluate(
+                    "document.activeElement.dataset.artifactPath"
+                    " === 'attachments/notes/report.md'"
+                )
+                page.keyboard.press("ArrowLeft")
+                page.keyboard.press("ArrowLeft")
                 page.keyboard.press("ArrowLeft")
                 assert page.evaluate(
-                    "document.activeElement.classList.contains('attachment-branch-toggle')"
+                    "document.activeElement.classList.contains("
+                    "'attachment-branch-toggle')"
                 )
                 page.keyboard.press("ArrowLeft")
                 assert branch.locator(".attachment-branch-children").is_hidden()
+                page.keyboard.press("ArrowDown")
+                assert page.evaluate(
+                    "document.activeElement === document.querySelector("
+                    "'.task-node[data-path=\"02-following\"] > .task-row')"
+                )
                 branch.locator(".attachment-branch-toggle").click()
                 assert branch.locator(".attachment-branch-children").is_visible()
                 assert branch.locator(".attachment-directory-label").all_inner_texts() == [

@@ -1327,13 +1327,30 @@ function renderAttachmentLevel(owner, tree, level, taskLevel) {
     var item = document.createElement('li');
     item.className = 'attachment-directory';
     item.setAttribute('role', 'none');
+    var directory = document.createElement('button');
+    directory.type = 'button';
+    directory.className = 'attachment-directory-row';
+    directory.setAttribute('role', 'treeitem');
+    directory.setAttribute('aria-level', String(taskLevel + level + 2));
+    directory.setAttribute('aria-expanded', 'true');
+    directory.tabIndex = -1;
+    directory.innerHTML =
+      '<span class="attachment-directory-caret" aria-hidden="true">▾</span>';
     var label = document.createElement('span');
     label.className = 'attachment-directory-label';
     label.textContent = name;
-    item.appendChild(label);
-    item.appendChild(
-      renderAttachmentLevel(owner, tree.directories[name], level + 1, taskLevel)
+    directory.appendChild(label);
+    var nested = renderAttachmentLevel(
+      owner, tree.directories[name], level + 1, taskLevel
     );
+    directory.onclick = function(event) {
+      event.stopPropagation();
+      var expanded = directory.getAttribute('aria-expanded') === 'true';
+      directory.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      nested.hidden = expanded;
+    };
+    item.appendChild(directory);
+    item.appendChild(nested);
     list.appendChild(item);
   });
   tree.files.sort(function(a, b) { return a.name.localeCompare(b.name); })
@@ -1344,6 +1361,7 @@ function renderAttachmentLevel(owner, tree, level, taskLevel) {
       button.className = 'attachment-file-row';
       button.setAttribute('role', 'treeitem');
       button.setAttribute('aria-level', String(taskLevel + level + 2));
+      button.tabIndex = -1;
       button.dataset.artifactOwner = owner;
       button.dataset.artifactPath = file.entry.path;
       button.setAttribute('aria-label', 'Open attachment ' + file.entry.path);
@@ -1387,6 +1405,7 @@ function renderAttachmentBranch(taskPath, manifest) {
   var toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'attachment-branch-toggle';
+  toggle.tabIndex = -1;
   toggle.setAttribute('role', 'treeitem');
   var taskRow = node.querySelector(':scope > .task-row');
   var taskLevel = Number(taskRow && taskRow.getAttribute('aria-level')) || 1;
@@ -1423,6 +1442,7 @@ function renderAttachmentBranch(taskPath, manifest) {
   var childrenContainer = node.querySelector(':scope > .task-children');
   node.insertBefore(branch, childrenContainer || null);
   if (window.htmx) htmx.process(branch);
+  refreshRovingTabindex();
 }
 
 function loadAttachmentBranches(scope) {
@@ -2227,36 +2247,6 @@ function initSidebarEvents() {
       if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
     }
   });
-  container.addEventListener('keydown', function(ev) {
-    var control = ev.target.closest(
-      '.attachment-branch-toggle, .attachment-file-row'
-    );
-    if (!control || !container.contains(control)) return;
-    var branch = control.closest('.attachment-branch');
-    var toggle = branch && branch.querySelector(':scope > .attachment-branch-toggle');
-    if (control === toggle && (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft')) {
-      var wantsOpen = ev.key === 'ArrowRight';
-      if (branch.classList.contains('expanded') !== wantsOpen) toggle.click();
-      ev.preventDefault();
-      return;
-    }
-    if (control.classList.contains('attachment-file-row') && ev.key === 'ArrowLeft') {
-      ev.preventDefault();
-      if (toggle) toggle.focus();
-      return;
-    }
-    if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
-    var controls = Array.prototype.filter.call(
-      container.querySelectorAll('.attachment-branch-toggle, .attachment-file-row'),
-      function(item) { return item.offsetParent !== null; }
-    );
-    var index = controls.indexOf(control);
-    var next = ev.key === 'ArrowDown' ? index + 1 : index - 1;
-    if (next >= 0 && next < controls.length) {
-      ev.preventDefault();
-      controls[next].focus();
-    }
-  });
 }
 
 /* Fold/unfold one node's children in the sidebar only — never touches
@@ -2923,9 +2913,13 @@ function nodeDepth(node) {
 function refreshRovingTabindex() {
   var root = document.getElementById('nav-tree');
   if (!root) return;
-  var rows = root.querySelectorAll('.task-row');
+  var rows = root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  );
   rows.forEach(function(r) { r.setAttribute('tabindex', '-1'); });
-  var active = root.querySelector('.task-row.nav-active');
+  var active = root.querySelector('.attachment-file-row.nav-active')
+    || root.querySelector('.task-row.nav-active');
   var target = (active && isRowVisible(active)) ? active : firstVisibleRow();
   if (target) target.setAttribute('tabindex', '0');
 }
@@ -2936,6 +2930,7 @@ function isRowVisible(row) {
   var el = row;
   while (el && el.id !== 'nav-tree') {
     if (el.nodeType === 1) {
+      if (el.hidden) return false;
       var cs = el.style && el.style.display === 'none';
       if (cs || (el.classList && el.classList.contains('hidden'))) return false;
     }
@@ -2947,7 +2942,10 @@ function isRowVisible(row) {
 function firstVisibleRow() {
   var root = document.getElementById('nav-tree');
   if (!root) return null;
-  var rows = root.querySelectorAll('.task-row');
+  var rows = root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  );
   for (var i = 0; i < rows.length; i++) {
     if (isRowVisible(rows[i])) return rows[i];
   }
@@ -2959,14 +2957,20 @@ function visibleRows() {
   var root = document.getElementById('nav-tree');
   if (!root) return [];
   return Array.prototype.filter.call(
-    root.querySelectorAll('.task-row'), isRowVisible);
+    root.querySelectorAll(
+      '.task-row, .attachment-branch-toggle, '
+      + '.attachment-directory-row, .attachment-file-row'
+    ), isRowVisible);
 }
 
 /* Move roving focus to a row: make it the only tabbable row and focus it. */
 function focusRow(row) {
   if (!row) return;
   var root = document.getElementById('nav-tree');
-  if (root) root.querySelectorAll('.task-row').forEach(function(r) {
+  if (root) root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  ).forEach(function(r) {
     r.setAttribute('tabindex', '-1');
   });
   row.setAttribute('tabindex', '0');
@@ -2981,16 +2985,21 @@ function initTreeKeyboard() {
   var root = document.getElementById('nav-tree');
   if (!root) return;
   root.addEventListener('keydown', function(ev) {
-    var row = ev.target.closest ? ev.target.closest('.task-row') : null;
+    var row = ev.target.closest ? ev.target.closest(
+      '.task-row, .attachment-branch-toggle, '
+      + '.attachment-directory-row, .attachment-file-row'
+    ) : null;
     if (!row || !root.contains(row)) return;
-    var interactive = ev.target.closest
-      ? ev.target.closest('button, a, input, select, textarea, [role="button"]')
-      : null;
-    if (interactive && interactive !== row) return;
-    var node = row.closest('.task-node');
-    var toggle = row.querySelector(':scope > .task-toggle');
-    var isParent = toggle && !toggle.classList.contains('leaf');
-    var expanded = isParent && toggle.classList.contains('expanded');
+    var isTask = row.classList.contains('task-row');
+    var node = isTask ? row.closest('.task-node') : null;
+    var toggle = isTask ? row.querySelector(':scope > .task-toggle') : null;
+    var isAttachmentParent = row.classList.contains('attachment-branch-toggle')
+      || row.classList.contains('attachment-directory-row');
+    var isParent = isAttachmentParent
+      || (toggle && !toggle.classList.contains('leaf'));
+    var expanded = isAttachmentParent
+      ? row.getAttribute('aria-expanded') === 'true'
+      : (isParent && toggle.classList.contains('expanded'));
     var rows = visibleRows();
     var idx = rows.indexOf(row);
 
@@ -3005,21 +3014,38 @@ function initTreeKeyboard() {
         break;
       case 'ArrowRight':
         ev.preventDefault();
-        if (isParent && !expanded) {
-          /* Expand (may lazy-load); focus stays on the row. */
-          toggleNavCaret(node).then(function() {
-            applyTreeAria();
-          });
-        } else if (isParent && expanded) {
-          /* Already open: move into the first visible child. */
-          var after = visibleRows();
-          var ai = after.indexOf(row);
-          if (ai >= 0 && ai < after.length - 1) focusRow(after[ai + 1]);
+        if (isTask) {
+          var attachmentChild = node.querySelector(
+            ':scope > .attachment-branch > .attachment-branch-toggle'
+          );
+          if (attachmentChild) {
+            focusRow(attachmentChild);
+          } else if (isParent && !expanded) {
+            toggleNavCaret(node).then(function() { applyTreeAria(); });
+          } else if (isParent && expanded && idx < rows.length - 1) {
+            focusRow(rows[idx + 1]);
+          }
+        } else if (isParent && !expanded) {
+          row.click();
+        } else if (isParent && expanded && idx < rows.length - 1) {
+          focusRow(rows[idx + 1]);
         }
         break;
       case 'ArrowLeft':
         ev.preventDefault();
-        if (isParent && expanded) {
+        if (!isTask && isParent && expanded) {
+          row.click();
+        } else if (!isTask) {
+          var parentGroup = row.parentElement
+            ? row.parentElement.parentElement : null;
+          var parentDirectory = parentGroup
+            ? parentGroup.closest('.attachment-directory') : null;
+          var parentControl = parentDirectory
+            ? parentDirectory.querySelector(':scope > .attachment-directory-row')
+            : row.closest('.attachment-branch')
+              .querySelector(':scope > .attachment-branch-toggle');
+          if (parentControl) focusRow(parentControl);
+        } else if (isParent && expanded) {
           toggleNavCaret(node);                 /* collapse */
           applyTreeAria();
         } else {
@@ -3033,8 +3059,10 @@ function initTreeKeyboard() {
         break;
       case 'Enter':
       case ' ':
-        ev.preventDefault();
-        if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        if (isTask) {
+          ev.preventDefault();
+          if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        }
         break;
       case 'Home':
         ev.preventDefault();

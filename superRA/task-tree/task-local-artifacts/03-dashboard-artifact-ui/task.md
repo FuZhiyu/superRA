@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: revise
+status: implemented
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -87,6 +87,13 @@ and added worktree-isolation plus accessible keyboard/tree regressions. The
 dedicated installed-Chromium live and standalone tests passed `2 passed`; the
 installed-Chromium worktree-switch test passed `1 passed`.
 
+The accessibility fix now treats task rows, the Attachments disclosure,
+directory parents, and file nodes as one roving-tabindex tree. Exactly one
+visible treeitem is tabbable; Up/Down crosses task and attachment boundaries,
+Right/Left enters and exits each hierarchy level, and nested directories own
+their descendant `role="group"` elements. The dedicated installed-Chromium
+unified-tree regression passed `1 passed`.
+
 ## Review Notes
 
 1. **MAJOR:** The accessibility portion of the prior finding remains
@@ -112,3 +119,9 @@ installed-Chromium worktree-switch test passed `1 passed`.
    task/DAG/Kanban exclusion, ARIA treeitem/group levels, arrow-key operation,
    and native attachment activation; dedicated installed-Chromium tests pass
    ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
+   → implemented: integrated task, attachment, directory, and file nodes into
+   one roving focus model with a single Tab stop and cross-boundary arrow
+   navigation; the regression verifies Tab entry, owner-to-attachment entry,
+   nested-directory traversal, and exit to the following task
+   ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
+   [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).

@@ -1133,6 +1133,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   padding-left: 8px;
 }
 .attachment-branch-toggle,
+.attachment-directory-row,
 .attachment-file-row {
   width: 100%;
   min-width: 0;
@@ -1156,8 +1157,10 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   letter-spacing: 0.02em;
 }
 .attachment-branch-toggle:hover,
+.attachment-directory-row:hover,
 .attachment-file-row:hover { background: var(--bg-hover); }
 .attachment-branch-toggle:focus-visible,
+.attachment-directory-row:focus-visible,
 .attachment-file-row:focus-visible,
 .attachment-owner-action:focus-visible {
   outline: 2px solid var(--accent);
@@ -1180,11 +1183,20 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 }
 .attachment-branch-children > .attachment-tree-level { padding-left: 2px; }
 .attachment-directory-label {
-  display: block;
-  padding: 3px 6px 1px;
+  min-width: 0;
   color: var(--text-mute);
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
+}
+.attachment-directory-row {
+  padding: 3px 6px;
+}
+.attachment-directory-caret {
+  color: var(--text-mute);
+  transition: transform 0.12s ease;
+}
+.attachment-directory-row[aria-expanded="false"] .attachment-directory-caret {
+  transform: rotate(-90deg);
 }
 .attachment-file-row {
   padding: 4px 6px;
