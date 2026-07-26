@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: revise
+status: implemented
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -80,6 +80,13 @@ Verification:
 - The full task-tree suite is deferred to the orchestrator's combined
   post-review verification pass.
 
+The review round removed the dormant Files-sidecar implementation and styles,
+made task-row SSE swaps rebuild attachment branches without losing expansion or
+the active file, added explicit sanitized KaTeX rendering for notebook LaTeX,
+and added worktree-isolation plus accessible keyboard/tree regressions. The
+dedicated installed-Chromium live and standalone tests passed `2 passed`; the
+installed-Chromium worktree-switch test passed `1 passed`.
+
 ## Review Notes
 
 1. **MAJOR:** The required installed-Chromium suite is not green: the notebook
@@ -88,6 +95,9 @@ Verification:
    fails (`1 failed, 2 passed`) under the exact command reported in Results.
    Restore notebook Markdown/LaTeX math rendering through the existing
    markdown-it/KaTeX stack and make the dedicated browser suite pass.
+   → implemented: notebook Markdown and LaTeX now produce two verified KaTeX
+   surfaces, with LaTeX rendered explicitly through the pinned KaTeX sanitizer
+   boundary ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js)).
 
 2. **MAJOR:** Task-content SSE breaks attachment state. Each task row is replaced
    wholesale by `hx-swap="outerHTML"`
@@ -102,6 +112,10 @@ Verification:
    attachment (or leave it intact), with URL, pane, selection, and expansion
    state remaining consistent; add a browser regression that exercises a real
    task event while a file is open.
+   → implemented: task SSE snapshots branch expansion, rebuilds the injected
+   branch after the row swap, and re-renders the active attachment without
+   changing its URL; the browser test broadcasts a real task event while
+   `note.md` is open ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
 
 3. **MAJOR:** The separate Files canvas was removed only from the HTML. The old
    sidecar state and renderer still remain as a second implementation from
@@ -113,6 +127,11 @@ Verification:
    sidecar rather than maintain two render targets. Delete the obsolete state,
    functions, and styles, retaining only helpers genuinely shared by the
    full-pane implementation.
+   → implemented: removed all Files-sidecar state, list/row renderers,
+   open/close paths, count controls, and sidecar CSS; only attachment data,
+   preview helpers, pseudo-tree navigation, and full-pane rendering remain
+   ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
+   [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css)).
 
 4. **MAJOR:** The rewritten regression file does not provide the objective's
    required evidence for worktree switching, task-SSE preservation, attachment
@@ -123,3 +142,7 @@ Verification:
    Add focused regressions for those named requirements, including the nested
    pseudo-branch's accessible tree/group relationships and keyboard operation,
    then run the dedicated and full task-tree suites successfully.
+   → implemented: added regressions for task SSE, worktree isolation,
+   task/DAG/Kanban exclusion, ARIA treeitem/group levels, arrow-key operation,
+   and native attachment activation; dedicated installed-Chromium tests pass
+   ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).

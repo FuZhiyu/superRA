@@ -23,6 +23,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _artifacts
 import plan_dashboard
+from _worktree_discovery import WorktreeInfo
 from conftest import _write_task_md, _write_tiny_png
 
 
@@ -208,6 +209,18 @@ def _broadcast_manifest(loop, task_path):
     asyncio.run_coroutine_threadsafe(broadcast(), loop).result(timeout=5)
 
 
+def _broadcast_task(loop, task_path):
+    async def broadcast():
+        state = plan_dashboard._worktree_cache[plan_dashboard._launch_wt_id]
+        await plan_dashboard._broadcast(
+            f"task:{task_path}",
+            plan_dashboard._render_nav_node(state.task_index[task_path]),
+            state.wt_id,
+        )
+
+    asyncio.run_coroutine_threadsafe(broadcast(), loop).result(timeout=5)
+
+
 class TestAttachmentSurfaceServer:
     def test_shell_has_one_reading_surface_and_offline_payload(self, tmp_path):
         from starlette.testclient import TestClient
@@ -232,7 +245,11 @@ class TestAttachmentSurfaceServer:
                 and "placement" not in entry
                 for entry in manifest["files"]
             )
-
+            assert "model.py" not in client.get("/kanban").text
+            graph = client.get(
+                "/api/children-graph", params={"root": "01-reader"}
+            ).json()
+            assert "model.py" not in json.dumps(graph)
         standalone = plan_dashboard.render_standalone_html(root)
         assert "var STANDALONE_ARTIFACTS =" in standalone
         assert "function loadActiveArtifact" in standalone
@@ -263,6 +280,25 @@ class TestAttachmentSurfaceBrowser:
                 assert page.locator(".artifact-toggle-btn").count() == 0
                 assert branch.locator(".attachment-branch-toggle").count() == 1
                 assert branch.locator(".attachment-file-row").count() == 9
+                assert branch.locator(".attachment-branch-children").is_hidden()
+                assert branch.locator(".attachment-branch-toggle").get_attribute(
+                    "role"
+                ) == "treeitem"
+                assert branch.locator(".attachment-branch-children").get_attribute(
+                    "role"
+                ) == "group"
+                branch.locator(".attachment-branch-toggle").focus()
+                page.keyboard.press("ArrowRight")
+                assert branch.locator(".attachment-branch-children").is_visible()
+                page.keyboard.press("ArrowDown")
+                assert page.evaluate(
+                    "document.activeElement.classList.contains('attachment-file-row')"
+                )
+                page.keyboard.press("ArrowLeft")
+                assert page.evaluate(
+                    "document.activeElement.classList.contains('attachment-branch-toggle')"
+                )
+                page.keyboard.press("ArrowLeft")
                 assert branch.locator(".attachment-branch-children").is_hidden()
                 branch.locator(".attachment-branch-toggle").click()
                 assert branch.locator(".attachment-branch-children").is_visible()
@@ -316,12 +352,14 @@ class TestAttachmentSurfaceBrowser:
                     '.attachment-file-row[data-artifact-path="attachments/model.ipynb"]'
                 ).click()
                 page.wait_for_selector("#active-node .notebook-preview .nb-code-cell")
+                page.wait_for_selector("#active-node #safe-html")
+                page.locator("#active-node .katex").nth(1).wait_for()
                 assert page.locator("#active-node .nb-markdown-cell").count() == 1
                 assert page.locator("#active-node section.nb-raw-cell").count() == 1
                 assert page.locator("#active-node .nb-stream-output").count() == 1
                 assert page.locator("#active-node .nb-error-output").count() == 1
                 assert page.locator("#active-node #safe-html").count() == 1
-                assert page.locator("#active-node .katex").count() >= 1
+                assert page.locator("#active-node .katex").count() >= 2
                 assert page.locator("#active-node .nb-unsupported-output").count() == 1
                 assert page.locator("#active-node script").count() == 0
                 assert page.locator("#active-node [onload]").count() == 0
@@ -358,6 +396,19 @@ class TestAttachmentSurfaceBrowser:
                     and time.monotonic() < deadline
                 ):
                     time.sleep(0.02)
+                original_hash = page.evaluate("location.hash")
+                _broadcast_task(loop, "01-reader")
+                page.wait_for_function(
+                    "() => document.querySelector("
+                    "'.task-node[data-path=\"01-reader\"] > .attachment-branch')"
+                )
+                page.wait_for_selector("#active-node .artifact-markdown-preview h1")
+                assert page.evaluate("location.hash") == original_hash
+                assert page.inner_text("#active-node h1") == "Main note"
+                assert page.locator(
+                    '.task-node[data-path="01-reader"] '
+                    "> .attachment-branch.expanded"
+                ).count() == 1
                 (root / "01-reader" / "attachments" / "note.md").write_text(
                     "# Updated attachment\n", encoding="utf-8"
                 )
@@ -401,3 +452,58 @@ class TestAttachmentSurfaceBrowser:
             download = page.locator("#active-node .artifact-action", has_text="Download")
             assert download.get_attribute("href").startswith("data:text/plain")
             browser.close()
+
+    def test_worktree_switch_keeps_attachment_route_isolated(
+        self, tmp_path, monkeypatch
+    ):
+        from playwright.sync_api import sync_playwright
+
+        root_a = _attachment_tree(tmp_path / "wt-a", label="A")
+        root_b = _attachment_tree(tmp_path / "wt-b", label="B")
+
+        def info(root, branch):
+            return WorktreeInfo(
+                path=str(root.parent),
+                branch=branch,
+                head="a" * 40,
+                plan_root=str(root),
+                plan_title=branch,
+                is_current=branch == "main",
+                is_locked=False,
+                is_prunable=False,
+                is_agent=False,
+                last_activity=1.0,
+            )
+
+        monkeypatch.setattr(
+            plan_dashboard,
+            "discover_worktrees",
+            lambda: [info(root_a, "main"), info(root_b, "other")],
+        )
+        port, server, _loop, thread = _start_server(root_a)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                page = browser.new_page()
+                page.goto(f"http://127.0.0.1:{port}/#/01-reader")
+                branch = page.locator(
+                    '.task-node[data-path="01-reader"] > .attachment-branch'
+                )
+                branch.wait_for()
+                branch.locator(".attachment-branch-toggle").click()
+                branch.locator(
+                    '[data-artifact-path="attachments/readme.txt"]'
+                ).click()
+                page.wait_for_selector("#active-node .attachment-active-body pre")
+                assert "attachment from A" in page.inner_text("#active-node")
+                page.select_option("#worktree-select", "wt-b")
+                page.wait_for_function(
+                    "() => document.querySelector('#active-node')"
+                    ".textContent.includes('attachment from B')"
+                )
+                assert "attachment=attachments%2Freadme.txt" in page.evaluate(
+                    "location.hash"
+                )
+                browser.close()
+        finally:
+            _stop_server(server, thread)
