@@ -211,7 +211,7 @@ def test_codex_availability_routes_distinguish_tool_and_agent_absence():
     )
     assert routes[("unavailable", "any")] == (
         ("harness-forced-inline",),
-        ("agents/implementer.md", "agents/reviewer.md"),
+        ("canonical-role", "canonical-role"),
         ("implemented", "approved", "revise"),
     )
 

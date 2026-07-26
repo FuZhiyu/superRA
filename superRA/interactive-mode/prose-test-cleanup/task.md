@@ -15,6 +15,7 @@ Budget: use an existing observable field or state only when the replacement is l
 ## Review Notes
 
 1. MAJOR — [task.md:28-49](task.md#L28-L49). The permanent record's narrow cleanup accounting does not reproduce: it reports 294 additions, 2,423 deletions, and 42 files, while `git diff --numstat 6be18283..64440306 -- tests ':(glob)skills/**/test*.py' ':(glob)skills/**/tests/**'` yields 349 additions, 2,386 deletions, and 43 files. The later full-branch 663/2,551/52 accounting is correct. Recompute or remove the narrow figures and name the exact accepted range/path scope so the Results remain independently reproducible.
+   → implemented: replaced the stale figures with the reproduced totals and recorded the exact range and pathspec below.
 
 ## Results
 
@@ -29,10 +30,11 @@ Completed the conservative prose-test cleanup in two focused passes:
   exit, ordering, mutation, and secret-absence checks
   ([02-structured-diagnostics/task.md](02-structured-diagnostics/task.md)).
 
-Across `tests/` and test/documentation files under `skills/`, the cleanup
-removed 2,423 lines and added 294 local replacement/documentation lines across
-42 existing files. It introduced no production changes, new files, helper APIs,
-live agents, or network/filesystem setup.
+For the accepted range `6be18283..64440306`, the exact path scope `tests`,
+`:(glob)skills/**/test*.py`, and `:(glob)skills/**/tests/**` adds 349 lines and
+deletes 2,386 across 43 files. The accounting comes from `git diff --numstat`
+over that range and pathspec. It introduced no production changes, new helper
+APIs, live agents, or network/filesystem setup.
 
 Verification:
 

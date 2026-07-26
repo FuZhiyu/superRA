@@ -399,6 +399,16 @@ def check_main_seat_route(
     opposite = "reviewer" if main_role == "implementer" else "implementer"
     role_path = f"agents/{main_role}.md"
     report.require(
+        any(
+            any(
+                "--role-path" in command and main_role in command
+                for command in event.commands
+            )
+            for event in events
+        ),
+        f"main {main_role} seat: missing canonical-role resolution",
+    )
+    report.require(
         any(event.is_read_of(role_path) for event in events),
         f"main {main_role} seat: missing role load for {role_path}",
     )

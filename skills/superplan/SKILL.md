@@ -104,8 +104,8 @@ At any point during planning, when you hit a genuine design tradeoff with distin
 
 ## Living Task Tree
 
-The task tree is not a static spec — it evolves in place as work reveals surprises, and `superRA/` (not chat or `TodoWrite`) is the authoritative tracker of record. Distinguish **agent-discovered refinements** (handled as inline body edits) from **researcher-initiated scope changes** (routed through §User Feedback and Changing the Task Tree below). `references/changing-the-tree.md` owns the drift distinction, the tracker-of-record rule, and the live-`## Results` record.
+Load `references/changing-the-tree.md` for drift classification and the durable tracker contract.
 
 ## User Feedback and Changing the Task Tree
 
-When the task tree changes — details updated, tasks added/removed/restructured, objective shifted, whether raised mid-execution or after integration/merge — route through `references/changing-the-tree.md`. It owns the materiality test (material scope changes vs. non-material inline discovery edits) and the full protocol: confirm intent → update `superRA/` inline → reset statuses → sweep stale content → commit atomically (`plan(<sub-step>): …`) → resume on the affected frontier. Do not resume the in-flight task before the change is committed, and do not treat an invalidated milestone as license to clear unrelated approved tasks.
+Route task-tree changes through `references/changing-the-tree.md`.

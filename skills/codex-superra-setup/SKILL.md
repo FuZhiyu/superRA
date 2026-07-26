@@ -71,6 +71,17 @@ The generated agents are:
 
 They expect the superRA skills to be available in the parent session. If the named agents exist but the skills are missing, install or enable the superRA plugin first.
 
+## Canonical Role Resolution
+
+For a main-filled or harness-forced-inline seat, resolve the canonical role from this skill directory, then read the emitted absolute path:
+
+```bash
+python3 scripts/sync_codex_agents.py --role-path implementer
+python3 scripts/sync_codex_agents.py --role-path reviewer
+```
+
+Do not resolve `agents/*.md` from the active project directory; plugin use normally runs in another repository.
+
 ## Notes
 
 - The canonical role instructions still live in `agents/implementer.md` and `agents/reviewer.md`.

@@ -40,6 +40,18 @@ class SyncCodexAgentsTests(unittest.TestCase):
                     ),
                 )
 
+            resolved = subprocess.run(
+                ["python3", str(SCRIPT), "--role-path", "implementer"],
+                cwd=foreign_repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(
+                Path(resolved.stdout.strip()),
+                REPO_ROOT / "agents" / "implementer.md",
+            )
+
             self.run_script("--scope", "global", "--home-dir", str(home_dir))
 
             unmanaged = target_dir / "superra_reviewer.toml"
