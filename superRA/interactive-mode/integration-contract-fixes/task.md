@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: implemented
+status: approved
 depends_on: []
 ---
 
