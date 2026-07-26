@@ -25,8 +25,6 @@ Social-science research needs a different rhythm than software engineering: it i
 
 A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit your codebase, documented, and shipped.
 
-Use three locations according to lifespan and ownership. Disposable session work stays in scratch outside `superRA/`. A **task companion** is any retained file—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results; it belongs in that task's `attachments/`. Maintained code, shared or runtime-consumed files, and promised durable deliverables belong in the project's conventional permanent paths. The [task companion-file contract](skills/using-superra/references/task-companion-files.md) covers reproducibility, promotion, and maturation.
-
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
