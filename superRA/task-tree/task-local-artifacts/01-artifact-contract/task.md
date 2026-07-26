@@ -9,7 +9,7 @@ depends_on: []
 Teach every superRA execution mode one concise, authoritative lifecycle for task companion files.
 
 - Keep one authoritative load-on-demand reference for the full lifecycle, but state the placement decision itself in the always-loaded `using-superra` §Task Interface and the user-facing README: session-only working files go to scratch outside `superRA/`; retained files—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results go under that task's `attachments/`; maintained code, shared/runtime inputs, and promised durable outputs go to the project's conventional permanent path.
-- Add the task-specific result-producing code case to `econ-data-analysis`, using the companion-file definition rather than treating all analysis code as permanent project code.
+- When `econ-data-analysis` is used for a superRA task, add the task-specific result-producing code case using the companion-file definition rather than treating all analysis code as permanent project code; keep standalone use outside this storage rule.
 - Define one placement rule: every retained task-local companion belongs under `attachments/`; only `task.md` and child-task directories occupy the task directory itself. Directories containing `task.md` are subtasks, but `attachments/` remains an asset container even if a generated bundle contains that filename.
 - Keep an artifact task-local only when one task owns it and a later agent needs it to reproduce, review, or interpret that task's results. Link every retained artifact from `## Results` and record the generating command, inputs, and provenance needed to reproduce it; do not retain artifacts generated only from unrecorded REPL state.
 - Promote an artifact before Integrate closes when another task or runtime path consumes it, it becomes a maintained pipeline/tool, or it is a promised reader-facing deliverable. Move to the project's existing convention and update the task pointer rather than preserving duplicate sources of truth.
@@ -19,7 +19,7 @@ Teach every superRA execution mode one concise, authoritative lifecycle for task
 
 ## Revision Notes
 
-On 2026-07-25 the researcher reported that the existing bare pointers do not teach users or newly dispatched agents when to choose scratch, task-local `attachments/`, or a permanent project path. The researcher then clarified that a companion is defined by single-task ownership, not short lifespan: task-specific code kept solely to produce or support that task's results is a companion. Preserve the detailed reference as the single lifecycle authority, make the three-tier placement decision visible at the two surfaces where users and agents first need it, and give economic-data agents the concrete code case.
+On 2026-07-25 the researcher reported that the existing bare pointers do not teach users or newly dispatched agents when to choose scratch, task-local `attachments/`, or a permanent project path. The researcher then clarified that a companion is defined by single-task ownership, not short lifespan: task-specific code kept solely to produce or support that task's results is a companion. The economic-data specialization applies only when that skill is used for a superRA task, not in standalone use. Preserve the detailed reference as the single lifecycle authority, make the three-tier placement decision visible at the two surfaces where users and agents first need it, and give superRA economic-data agents the concrete code case.
 
 ## Planner Guidance
 
