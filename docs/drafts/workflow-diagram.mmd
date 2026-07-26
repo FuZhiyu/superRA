@@ -3,9 +3,9 @@
 
 ```mermaid
 flowchart TB
-    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B review-led sync + refactor<br/>C mature RESULTS.md + doc audit<br/>D merge / PR / cleanup"]
+    INTEGRATE["<b>INTEGRATE</b><br/>A choose record + protection<br/>B review-led sync<br/>C mature docs + task tree<br/>D approve + execute refactoring<br/>E merge / PR / cleanup"]
     MERGED(["merged"])
 
     PLAN --> IMPLEMENT

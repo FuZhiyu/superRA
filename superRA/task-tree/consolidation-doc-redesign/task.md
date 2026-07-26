@@ -1,40 +1,68 @@
 ---
-title: "Consolidation + Documentation Stage Redesign"
+title: "Protection-Led Integration"
 status: approved
 depends_on: []
 ---
 
 ## Objective
 
-Redesign the INTEGRATE phase's task-tree consolidation and documentation maturation so consolidation can no longer be silently skipped, and so `approved` is consistently treated as *review-passed / ready-for-integration* (reversible) rather than *final*.
+Starting from the current `main` workflow, make the minimum changes needed for result protection to guide documentation maturation and for one reviewed refactoring proposal to govern later cleanup.
 
-**Problem.** The former Consolidation Gate was orchestrator-inline judgment with a "clean-enough" escape hatch that agents skipped or rationalized away — most often by reading the "does not grant authority to restructure approved work unilaterally" line as "approved tasks must not be touched," which collides with the create-then-merge update-task lifecycle that *expects* an approved update task to be folded at integration.
-
-**Design (the binding contract):**
-
-1. **Ordering is code-integration first → consolidation → documentation.** The results-bearing fold actions (Merge, Mature/Rename) are atomic over objective + results + directory and must run on *final* results, so the order is forced.
-2. **Merge the Consolidation Gate and Document into one post-Integrate stage** ("task-artifact maturation"). Both manage the same surface (task structure + `## Results`), and the maturation home *is* a function of the consolidated structure, so the two are one decision, made once after Integrate closes.
-3. **The orchestrator owns the proposal; the user decides.** The orchestrator screens the whole tree, presents one combined proposal per touched subtree (durable home + structure change + results disposition), records decisions as `## Revision Notes` on affected tasks, and dispatches implementer(s); one whole-tree reviewer verifies structure + matured results.
-4. **Anti-skip is structural.** The distillation decision is a mandatory blocking question (`AskUserQuestion`, or plain text) that always fires — even a clean subtree gets an explicit confirm — batched one question per touched subtree, each with that subtree's candidate actions plus an explicit keep-as-is option and the screened recommendation first. The whole-tree reviewer independently verifies no update-task or action-verb scaffolding was left stranded. The forced question plus the independent verification replace the skippable inline gate.
-5. **Consolidation and maturation are one act: per-task distillation.** For each touched task, decide what survives and where it lands, along a spectrum (drop / one-line note or pointer folded into the parent / short retained subsection / matured narrative at the durable home). The structural fold and the results altitude are the same decision viewed from two sides. Guardrails: key results selected at Protect are never dropped; when a task's own output *is* a document, distil its `## Results` to a pointer to that document.
-6. **The distillation plan is proposed and reviewed, not auto-classified.** The user-sign-off gate is the existing `superplan §User Feedback` material-change boundary; routine distillation is presented as what-will-happen and the user can veto.
-7. **"Approved" is fixed positively, with no negative instructions.** At this stage `approved` means the work is settled and verified — the precondition for distilling it, not a shield against it. In-scope work is named positively (reopened or changed tasks, plus any approved task the surviving-diff sweep reopens); no "approval does not mean X" line anywhere.
+- During Protect, before agents write permanent documentation, survey the provisional results and propose concrete options for the final documentation and its durable homes, which results to keep or drop, how the affected task tree should consolidate, and how each kept result should be protected. Record the confirmed specification in a decision commit so the drafter, reviewer, and resumed sessions share one source of truth.
+- Use one drafter seat to produce the agreed user-facing documentation and result files, consolidate the task tree, and mature its `## Results`. Those permanent artifacts and mature task results are the protected record.
+- Use one reviewer seat to verify the protected record, compare every in-scope change against it, and create one recognizably temporary refactoring task. The task automatically lists every change not justified by the protected record or an explicitly documented reproduction, validation, interpretation, or presentation path as a pruning target and proposes other consolidation, simplification, duplication-removal, convention-fit, and stale-documentation actions.
+- Give the researcher one later review of the completed permanent record, mature task tree, and temporary refactoring task together. Approval authorizes agents to execute that proposal mechanically. If execution would materially change the protected outcome or the approved proposal, return to maturation, revise the proposal, and present it again.
+- Make the workflow resumable from the Protect decision commit before the temporary task exists, then from the temporary task, its status, and the approval commit; do not add another progress artifact or researcher gate.
+- Verify the workflow with realistic behavior-level coverage and update the user-facing and harness-facing descriptions that materially depend on the changed ordering.
 
 ### Constraints
 
-- superRA-internal skill work: load `skill-creator` before editing any `skills/*/SKILL.md`; every instruction line passes the DRY + Necessity gate.
-- Ownership boundaries: choreography in `superintegrate`; consolidation mechanics in `superplan/references/consolidation.md`; results shape in `task-tree/references/task-file-contract.md`; manifest in `using-superra`; canonical role behavior in `agents/`. Generated Codex / direct-mode artifacts are regenerated via `skills/codex-superra-setup/scripts/sync_codex_agents.py`, never hand-edited.
-- `consolidation.md` stays standalone-usable (loadable when a researcher asks to clean up a tree, not only via integration routing).
-- The Skill-Load Manifest entry for the merged stage lists skills (`task-tree`, `superplan`, `report-in-markdown`, and `writing` conditionally); the stage reference inside `superintegrate` names which references the implementer reads.
+- Do not use the term the researcher prohibited in any new workflow name, instruction, task, test, or documentation.
+- Do not introduce input or result ID registries, lineage annexes, a second keep manifest, wording-driven readability proxies, or another parallel result-selection system.
+- Preserve the original standalone consolidation and result-protection mechanisms except where the agreed ordering and user decisions require a change.
+- Keep the two researcher touchpoints distinct: early protection and documentation choices, then one review of the completed record and proposed refactoring.
+
+## Planner Guidance
+
+This task replaces the durable concern's former code-first ordering with the researcher's protection-led documentation and refactoring sequence.
+
+Use the current `main` versions of [superintegrate](../../../skills/superintegrate/SKILL.md), [Protect](../../../skills/superintegrate/references/protect.md), [Mature & Consolidate](../../../skills/superintegrate/references/mature-consolidate.md), [Integrate](../../../skills/superintegrate/references/integrate.md), and [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md) as the baseline. Reorder and connect their existing mechanisms instead of rebuilding the discarded redesign.
+
+The recovery branch `backup/pruning-redesign-before-restart-20260725` contains a generic safety-checked `task remove` implementation. Re-evaluate it independently and reuse it only if the new workflow needs mechanical subtree deletion; do not restore the surrounding workflow or task files.
+
+Follow the instruction-authoring and generated-artifact rules in [CLAUDE.md](../../../CLAUDE.md). Prefer a small end-to-end workflow fixture over prose canaries or exhaustive protocol simulations.
+
+The maturation-only ownership change touches [agents/reviewer.md](../../../agents/reviewer.md); regenerate [.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml) with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
 
 ## Results
 
-All seven decisions shipped, landing across the `superintegrate` choreography, its owning references, the role specs, the manifest, and the user docs.
+Rebuilt INTEGRATE around a protected permanent record, one maturation drafter, one reviewer seat, and one researcher-reviewed refactoring task:
 
-- **One merged stage.** The former §Consolidation Gate and §Document are a single post-Integrate **Mature & Consolidate** stage (`Stage: maturation`) in `skills/superintegrate/SKILL.md`. The code-first spine is preserved (Protect → Sync → Integrate → Mature & Consolidate → Finish); per touched task the structural fold and the results altitude are one decision.
-- **Structural anti-skip.** The distillation decision is a mandatory `AskUserQuestion` that always fires, batched one question per touched subtree, and a whole-tree reviewer independently verifies no scaffolding was left stranded.
-- **Positive `approved` semantics.** The escape-hatch line and the exclusionary scoping phrase are gone; in-scope work is named positively, with no "approval does not mean X" line. An audit confirmed the rest of the codebase already treats `approved` as a reversible validity marker.
-- **Distillation mechanics and menu.** `skills/superplan/references/consolidation.md` reads as positive distillation lifecycle (an approved update task is in the expected state to fold), and `skills/task-tree/references/task-file-contract.md §Results Shape` gained a §Maturation Disposition Menu (Mature / Trim-to-pointer / Drop) with the key-results-never-dropped guardrail.
-- **Wiring and docs.** `Stage: maturation` is in the Skill-Load Manifest (`skills/using-superra/SKILL.md`) and both role specs; the four Codex / direct-mode artifacts were regenerated; user docs (README, docs/site, CATEGORIES) and workflow-layer references were repointed from "Document" to "Mature & Consolidate". A four-scenario walkthrough exercised all dispositions and confirmed a stranded update-task is caught by the whole-tree reviewer.
+- [superintegrate](../../../skills/superintegrate/SKILL.md) now orders Protect → Sync → Mature & Consolidate → Integrate → Finish. [Protect](../../../skills/superintegrate/references/protect.md) asks the researcher which provisional results to keep or drop, where the permanent documentation and mature task results belong, how each affected subtree should consolidate, and whether each kept result needs documentation alone or an additional automated check.
+- Protect records the approved scope, result dispositions, permanent paths, task-tree dispositions, and protection mechanisms in an `integrate(protect)` decision commit. Documentation-only choices skip the protection-agent pair but still use an empty decision commit, so maturation can resume without conversation context.
+- [Mature & Consolidate](../../../skills/superintegrate/references/mature-consolidate.md) assigns one drafter seat to write the agreed user-facing documentation, result files, and mature tree from that commit. One reviewer seat then verifies the same decision against the named artifacts, compares `BASE_HEAD_SHA..HEAD` under [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md), and writes the temporary refactoring task.
+- The temporary task stays `not-started`, links the Protect decision and protected-record paths, records `BASE_HEAD_SHA`, names bounded pruning and refactoring actions, and carries the required verification. It does not duplicate result prose or create a separate keep manifest.
+- [Integrate](../../../skills/superintegrate/references/integrate.md) recovers first from the Protect decision commit, then from the temporary task, its status, and the `integrate(mature)` approval commit: missing or incomplete task returns to maturation review; an unapproved task reaches the researcher gate; `not-started`, `implemented`/`revise`, and `approved` resume at execution, review/fix, and closeout respectively.
+- The researcher still sees one combined review surface. After approval, the existing implementer/reviewer loop executes and verifies the task; a materially changed record or action returns to the corresponding maturation step and repeats the gate.
+- [result-protection](../../../skills/result-protection/SKILL.md), [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md), the task-file contract, sync references, runtime routing, and user-facing workflow documentation now share the same ordering and ownership boundaries. Standalone result protection and task-tree consolidation remain available.
+- The discarded redesign was not restored. Its independently useful subtree-removal implementation remains only on the recovery branch for future evaluation; this workflow does not require a special deletion command.
+- Review follow-up removed duplicate domain confirmation prompts, corrected theory protection routing, scoped proposal-before-execution to standalone consolidation, reduced repeated dispatch instructions, and made every later approval durable even when it changes no files.
+- The loaded refactoring discipline now uses the protected record as the sole workflow exemption from the automatic pruning list; its broader justification sources remain available only in standalone use.
+- [agents/reviewer.md](../../../agents/reviewer.md) carries the narrow maturation-only task-creation ownership exception, and the generated [.codex reviewer](../../../.codex/agents/superra_reviewer.toml) is current.
+- Main-seat review removed a duplicate refactoring-protocol echo and aligned the reviewer’s edit, self-check, and commit boundaries with its temporary-task ownership.
 
-At integration the branch synced onto `better-handoff`, whose concurrent integration-thoroughness work had restructured Integrate into a do-then-verify pass. The two redesigns were orthogonal: the merged Mature & Consolidate stage now sits after the do-then-verify Integrate. The shipped skill files are the source of truth.
+Verification completed on the implementation diff:
+
+- `quick_validate.py` passed for the changed `superintegrate` and `superplan` skills.
+- The Markdown checker passed for every changed Markdown file.
+- `./superRA/superra task check` passed.
+- `git diff --check` passed.
+- The focused instruction-following and generator contract suite passed (`17 passed`).
+- Harness compatibility passed, including canonical-to-generated reviewer synchronization.
+- The documentation site built successfully.
+- The skill validator passed for `superintegrate`; `task-tree` retains its pre-existing `user-invocable` frontmatter incompatibility with the generic validator.
+- A repository-wide search over active workflow, documentation, and task surfaces found no use of the prohibited term.
+- A five-state recovery walkthrough covered missing task, unapproved `not-started`, approved `not-started`, `implemented`/`revise`, and `approved` task states without another progress artifact.
+- The recovery walkthrough now begins from an `integrate(protect)` decision commit and verifies that both maturation seats receive its SHA.
+
+**Final diff self-check:** `git diff 329d6751..HEAD`; the surviving changes establish the protection-led workflow, preserve consolidation choice inside the existing Protect gate, and make the decision available to both maturation seats through the existing commit mechanism. Temporary-task derivation remains in the maturation reviewer seat, and task-status/approval-commit recovery remains explicit. No parallel result registry, separate keep manifest, extra researcher gate, or unrelated recovery-branch implementation was introduced.

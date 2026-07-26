@@ -4,8 +4,6 @@ Load during Protect when preparing drift tests that guard a data analysis's key 
 
 Answers the data-analysis-specific questions: what should a drift test protect, how to set econ tolerances, and how to pull candidate invariants out of task `## Results` sections.
 
-For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), also load `skills/result-protection/references/drift-test-quality.md`.
-
 ---
 
 ## Identifying Key Results from Task Results
@@ -22,10 +20,6 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Intermediate merge row counts (covered by the describe-analyze-validate audit trail in task files)
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
-
-**Confirm the candidate list with the researcher before writing tests** — coverage encodes what counts as a "key result." Key-result selection mechanics are owned by `result-protection`.
-
----
 
 ## Tolerance Conventions for Econ Results
 

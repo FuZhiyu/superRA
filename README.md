@@ -23,13 +23,13 @@ Social-science research needs a different rhythm than software engineering: it i
 
 ## How it works
 
-A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit your codebase, documented, and shipped.
+A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, you first choose which results belong in the permanent record, how that record should look, and whether documentation or additional drift tests should protect each result. The agent syncs with your base branch, writes the permanent record, proposes pruning and other refactoring in one temporary task, asks you to approve the finished record and proposal together, then executes and ships.
 
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>Protect results <br/>Sync with base<br/>Integrate/refactor<br/>Mature & consolidate<br/>Finish"]
+    INTEGRATE["<b>INTEGRATE</b><br/>Choose results & protection<br/>Sync with base<br/>Mature documentation & task tree<br/>Review refactoring proposal<br/>Execute & finish"]
     FINISHED(["finished"])
 
     PLAN --> IMPLEMENT

@@ -8,11 +8,11 @@ description: "Integrate code-complete superRA work. Requires superRA:using-super
 Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified branch through five steps:
 
 ```
-Protect              -> protect key results (default: drift tests)
+Protect              -> choose results, permanent documentation, and protection
 Sync                 -> bring the branch onto the current base via semantic-merge
-Integrate            -> refactor with Sync context (do-then-verify), then pass integration review
-Mature & Consolidate -> distil each touched task: where its content lands + how
-                        much of its ## Results survives, decided as one act
+Mature & Consolidate -> write the permanent record, mature the task tree, and
+                        review both into one temporary refactoring task
+Integrate            -> approve, execute, and verify that refactoring task
 Finish               -> final freshness check, PR or fast-forward, and cleanup
 
 Any step -> superplan §User Feedback and Changing the Task Tree
@@ -29,20 +29,19 @@ Load each step's reference on entry; each is self-contained for its step:
 |---|---|
 | Protect | `references/protect.md` |
 | Sync | `references/sync.md` |
-| Integrate | `references/integrate.md` |
 | Mature & Consolidate | `references/mature-consolidate.md` |
+| Integrate | `references/integrate.md` |
 | Finish | `references/finish.md` |
 
 ## Stop Points
 
-Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — each step's completion is recorded by its commit and the per-task `status` it leaves behind, so a resumed session reads progress from git and statuses, not from a tracker section. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
+Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — progress is recovered from commits and task statuses. The `integrate(protect)` decision commit records the researcher-confirmed permanent-record, consolidation, and protection choices even when Protect changes no files. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
 
 Legitimate stop points:
 
-- **Protect:** key-result protection confirmation.
+- **Protect:** result, documentation, and protection choices before permanent documentation is written.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
-- **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the first-pass self-review or the integration reviewer.
-- **Mature & Consolidate:** the distillation question, one per touched subtree, always fires before any execution — even a clean subtree gets an explicit confirm.
+- **Integrate:** the researcher reviews the completed protected record and mechanically derived refactoring task together before execution; return to Mature & Consolidate when a requested or discovered change would alter the protected record.
 - **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
 ## Dispatch Convention
@@ -55,7 +54,7 @@ A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer a
 
 ## When to Lighten
 
-- **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to an inline pruning sweep plus a short reviewer pass.
+- **Standalone analysis:** Protect still runs. Sync may be a no-op. Permanent results documentation may be sufficient protection, and Integrate often collapses to an inline refactoring sweep plus a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
-- **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** The distillation question always fires, but a clean subtree's content scales to zero — an explicit confirm, no structural fold — see `references/mature-consolidate.md`.
+- **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect offers document build and outline stability as protection options, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
+- **Task tree consolidation:** Standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, the Mature & Consolidate reviewer derives the temporary refactoring task after the structural fold; Integrate owns the researcher gate.

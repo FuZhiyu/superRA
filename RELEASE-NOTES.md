@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-07-26
+
+### Changed
+
+- Tasks now keep retained task-local companion files in `attachments/`, with a
+  documented lifecycle for reproduction, promotion, maturation, and
+  consolidation.
+- Live and standalone task-tree dashboards expose those attachments as a
+  navigable, full-width reading surface for supported text, code, notebook,
+  image, and PDF files.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.5` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.3.4] - 2026-07-23
 
 ### Changed

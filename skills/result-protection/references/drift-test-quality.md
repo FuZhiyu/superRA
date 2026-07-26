@@ -47,8 +47,8 @@ Walk every item. `[BLOCKING]` items must pass for approval; `[ADVISORY]` items m
 
 **Coverage:**
 
-- `[BLOCKING]` Every user-confirmed key result has at least one test.
-- `[BLOCKING]` No key result is skipped or left unprotected.
+- `[BLOCKING]` Every result selected for drift-test protection has at least one test.
+- `[BLOCKING]` No result selected for drift-test protection is skipped.
 - `[ADVISORY]` Tests focus on findings that define conclusions, not every intermediate number.
 
 **Tolerance calibration:**
