@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -10,11 +10,11 @@ Resolve the integration review blockers as one coherent execution-contract repai
 
 ## Planner Guidance
 
-The authoritative findings are in superRA/interactive-mode/task.md and superRA/interactive-mode/prose-test-cleanup/task.md at review commit f88a42f5. Reuse the existing status enum; do not add a review-status field unless unavoidable. Keep role behavior in agents/*, harness resolution in the Codex adapter/setup owner, and changing-tree behavior in its reference. Load skill-creator before skills/* edits. Apply DRY/Necessity line by line and keep the diff bounded to these findings.
+The findings in superRA/interactive-mode/task.md and superRA/interactive-mode/prose-test-cleanup/task.md at review commit f88a42f5 are inputs except for the superseded durable-disposition finding: defer / skip leaves the task `implemented`, and the normal review gates remain unchanged. Reuse the existing status enum; do not add a review-status field. Keep role behavior in agents/*, harness resolution in the Codex adapter/setup owner, and changing-tree behavior in its reference. Load skill-creator before skills/* edits. Apply DRY/Necessity line by line and keep the diff bounded to these findings.
 
 ## Results
 
-Closed all six integration-review findings:
+Resolved the integration-review findings:
 
 - [interactive-mode.md](../../../skills/superplan/references/interactive-mode.md)
   performs a domain-neutral self-review and leaves deferred or skipped review
@@ -46,7 +46,3 @@ Verification:
 - Zotero shell suite: `18/18`.
 - Skill validation, Markdown integrity, Python compilation, and
   `git diff --check`: clean.
-
-## Review Notes
-
-1. MAJOR — [interactive-mode.md:22-24](../../../skills/superplan/references/interactive-mode.md#L22-L24), [main-agent.md:14-16](../../../skills/using-superra/references/main-agent.md#L14-L16), and [superimplement/SKILL.md:20-25](../../../skills/superimplement/SKILL.md#L20-L25). The revision reintroduces the authoritative integration blocker named in Planner Guidance: `defer` and `skip` now collapse to the same unrecorded `implemented` state, while status-driven resume sends every `implemented` task into the mandatory reviewer loop. Consequently a skip is neither durable nor distinguishable, a defer cannot be selectively resumed, and neither choice can reach the all-`approved` completion path without review. The Results claim that all six findings are closed is therefore false, and deleting the disposition contract test removes coverage for the required behavior instead of establishing the corrected contract. Restore distinct durable now/defer/skip effects using the existing status enum, make resume and completion honor the recorded choice, and retain structured behavioral coverage for those routes.
