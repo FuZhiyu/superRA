@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -33,11 +33,6 @@ The recovery branch `backup/pruning-redesign-before-restart-20260725` contains a
 Follow the instruction-authoring and generated-artifact rules in [CLAUDE.md](../../../CLAUDE.md). Prefer a small end-to-end workflow fixture over prose canaries or exhaustive protocol simulations.
 
 The maturation-only ownership change touches [agents/reviewer.md](../../../agents/reviewer.md); regenerate [.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml) with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-
-## Revision Notes
-
-- Preserve the former user choice over consolidation without restoring its separate late question: include it in Protect's existing researcher gate.
-- Make the Protect decision durable and explicitly available to both maturation seats; clarify seat assignment language.
 
 ## Results
 
