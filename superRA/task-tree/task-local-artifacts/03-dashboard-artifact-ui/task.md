@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: revise
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -79,3 +79,47 @@ Verification:
   execution (`f(2) = 5`, `f(3) = 10`), and `git diff --check` passed.
 - The full task-tree suite is deferred to the orchestrator's combined
   post-review verification pass.
+
+## Review Notes
+
+1. **MAJOR:** The required installed-Chromium suite is not green: the notebook
+   preview contains no KaTeX output, so the assertion at
+   [test_artifact_ui.py:324](../../../../skills/task-tree/scripts/test_artifact_ui.py#L324)
+   fails (`1 failed, 2 passed`) under the exact command reported in Results.
+   Restore notebook Markdown/LaTeX math rendering through the existing
+   markdown-it/KaTeX stack and make the dedicated browser suite pass.
+
+2. **MAJOR:** Task-content SSE breaks attachment state. Each task row is replaced
+   wholesale by `hx-swap="outerHTML"`
+   ([nav_node.html:21-32](../../../../skills/task-tree/scripts/templates/nav_node.html#L21-L32)),
+   which removes its injected attachment branch, but the task-update handler
+   neither rebuilds that branch nor preserves its expanded state. Worse, when
+   an attachment is selected, the same handler unconditionally calls
+   `loadActiveNode(path)`, replacing the file preview with task content while
+   leaving the attachment URL/state active
+   ([dashboard.js:3392-3407](../../../../skills/task-tree/scripts/templates/dashboard.js#L3392-L3407)).
+   Make task SSE updates preserve/rebuild the branch and re-render the selected
+   attachment (or leave it intact), with URL, pane, selection, and expansion
+   state remaining consistent; add a browser regression that exercises a real
+   task event while a file is open.
+
+3. **MAJOR:** The separate Files canvas was removed only from the HTML. The old
+   sidecar state and renderer still remain as a second implementation from
+   [dashboard.js:1142-1648](../../../../skills/task-tree/scripts/templates/dashboard.js#L1142-L1648),
+   including the obsolete Files badge/open/close/list/preview paths, and the
+   old sidecar presentation remains from
+   [dashboard.css:1277](../../../../skills/task-tree/scripts/templates/dashboard.css#L1277).
+   This directly contradicts the objective and Planner Guidance to remove the
+   sidecar rather than maintain two render targets. Delete the obsolete state,
+   functions, and styles, retaining only helpers genuinely shared by the
+   full-pane implementation.
+
+4. **MAJOR:** The rewritten regression file does not provide the objective's
+   required evidence for worktree switching, task-SSE preservation, attachment
+   accessibility/keyboard behavior, or unchanged task/frontier/DAG/Kanban
+   semantics; its browser coverage consists only of the combined happy-path
+   test and one standalone test
+   ([test_artifact_ui.py:243-403](../../../../skills/task-tree/scripts/test_artifact_ui.py#L243-L403)).
+   Add focused regressions for those named requirements, including the nested
+   pseudo-branch's accessible tree/group relationships and keyboard operation,
+   then run the dedicated and full task-tree suites successfully.
