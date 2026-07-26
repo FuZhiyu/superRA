@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: approved
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -28,10 +28,6 @@ Keep the owning task as the semantic owner while giving the selected attachment 
 The existing Highlight.js common bundle already includes R, while the dashboard loads Julia from its existing separate language asset. R support therefore needs only extension/language mapping and regression coverage, not another package or vendored file.
 
 Companion search is optional for this scope: add it only if the existing index can accept owner-task file records without duplicating discovery or creating a second navigation model.
-
-## Revision Notes
-
-Researcher review rejected the modal Files canvas as cramped and redundant. Replace it with a collapsed Attachments pseudo-branch in the existing tree and render selected files in the normal main detail pane.
 
 ## Results
 
@@ -99,36 +95,3 @@ disclosure directly to its owning task row. The installed-Chromium regression
 now verifies file → directory → Attachments → owner, then re-enters the
 collapsed disclosure and verifies `ArrowDown` exits to the following task;
 the test passed `1 passed`.
-
-## Review Notes
-
-1. **MAJOR:** The unified tree now has one Tab stop, nested directory
-   treeitems/groups, and cross-boundary Up/Down/Right behavior, but return
-   traversal to the owner task is still broken. On `ArrowLeft` from a collapsed
-   Attachments disclosure, the generic non-task parent lookup resolves
-   `.attachment-branch-toggle` back to itself, so focus never returns to the
-   owning task row
-   ([dashboard.js:3034-3047](../../../../skills/task-tree/scripts/templates/dashboard.js#L3034-L3047)).
-   The new test returns only as far as the Attachments disclosure, collapses it,
-   and then tests `ArrowDown`; it never presses `ArrowLeft` again to verify the
-   owner return required by the unified hierarchy
-   ([test_artifact_ui.py:337-350](../../../../skills/task-tree/scripts/test_artifact_ui.py#L337-L350)).
-   Special-case the disclosure's parent as its owning `.task-row` and extend the
-   regression through file → directory → Attachments → owner before separately
-   checking collapsed Attachments → following task. The installed-Chromium
-   suite otherwise passes `4 passed`.
-   → implemented: added regressions for task SSE, worktree isolation,
-   task/DAG/Kanban exclusion, ARIA treeitem/group levels, arrow-key operation,
-   and native attachment activation; dedicated installed-Chromium tests pass
-   ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
-   → implemented: integrated task, attachment, directory, and file nodes into
-   one roving focus model with a single Tab stop and cross-boundary arrow
-   navigation; the regression verifies Tab entry, owner-to-attachment entry,
-   nested-directory traversal, and exit to the following task
-   ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
-   [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
-   → implemented: special-cased the collapsed Attachments disclosure to focus
-   its owning task row and extended the installed-Chromium regression through
-   the complete return path before separately checking exit to the following
-   task ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
-   [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
