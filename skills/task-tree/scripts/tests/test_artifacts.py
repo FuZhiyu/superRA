@@ -450,9 +450,10 @@ class TestArtifactAPI:
         [
             ("explicit.txt", True),
             ("unsafe.html", False),
+            ("preview.md", False),
         ],
     )
-    def test_download_rejects_intermediate_component_symlink_swap(
+    def test_api_rejects_intermediate_component_symlink_swap(
         self, tmp_path, monkeypatch, name, download
     ):
         root = _tree(tmp_path)

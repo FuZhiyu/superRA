@@ -47,3 +47,38 @@ Independent review approved all three children. The full task-tree suite passed
 `772` tests with four known non-failing warnings; dedicated installed-Chromium
 regressions cover rendering, sanitization, hot reload, worktree isolation, and
 the unified attachment/task navigation model.
+
+### Result protection
+
+The researcher confirmed three key results for drift protection:
+
+- **One authoritative companion contract.** The new
+  [canonical-route regression](../../../tests/harness-instruction-following/test_contract.py#L273-L289)
+  requires exactly one `task-companion-files.md` under `skills/` and verifies
+  that the always-loaded task interface and reporting skill route to it. The
+  lifecycle prose remains governed by this task's Objective and Results plus
+  the contributor DRY + Necessity review gate; no brittle sentence or Markdown
+  layout oracle was added.
+- **Attachment-only, race-safe data access.** Existing
+  [attachment discovery coverage](../../../skills/task-tree/scripts/tests/test_artifacts.py#L68-L109)
+  proves direct files stay outside the manifest. The
+  [descriptor-race regression](../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L488)
+  now exercises safe Markdown preview in addition to explicit and unsafe
+  implicit downloads, and the
+  [standalone-figure race regression](../../../skills/task-tree/scripts/tests/test_artifacts.py#L782-L820)
+  continues to reject an intermediate-directory symlink swap without exposing
+  outside bytes.
+- **Tree-native sanitized reading.** The existing
+  [installed-Chromium regression](../../../skills/task-tree/scripts/test_artifact_ui.py#L270-L480)
+  protects the collapsed pseudo-branch, unified roving-tabindex tree,
+  full-width routing and history, sanitized Markdown/notebook/SVG/HTML output,
+  highlighted Python/Julia/R, relative attachment links, and hot reload.
+
+These are categorical path, security, and UI invariants, so numerical
+tolerances do not apply. Each test builds its own temporary fixture and runs
+without a project pipeline. Red-green verification ran the selected protections
+green (`7 passed`), deliberately perturbed every selected expectation and
+observed `7 failed`, then restored the expectations and reran green
+(`7 passed`, two dependency deprecation warnings). The complete
+harness-instruction suite passed `127` tests. The complete task-tree suite
+passed `741` tests with four known non-failing fixture/dependency warnings.
