@@ -1,17 +1,17 @@
 ---
 title: "Task Companion Files and Dashboard"
-status: approved
+status: revise
 depends_on: []
 ---
 
 ## Objective
 
-Make each `superRA/<task>/` directory a flat, version-controlled workspace for small companion files that support one task without becoming permanent project code, and make those files legible in the dashboard.
+Give every task one version-controlled `attachments/` workspace for small companion files that support the task without becoming permanent project code, and make those files first-class reading surfaces in the dashboard.
 
 - Distinguish ephemeral scratch, retained task-local companions, and permanent project artifacts; require retained files to be reproducible and linked from the owning task's `## Results`.
-- Keep the visible layout and task model simple: Markdown notes, Python/Julia/R scripts, and Jupyter notebooks may sit directly beside `task.md`; generated outputs, supporting data, and other retained files go in `attachments/`. Immediate directories containing `task.md` are subtasks, while `attachments/` is always a non-task asset container.
+- Keep the storage boundary simple: every retained task-local file goes under `attachments/`. Immediate directories containing `task.md` are subtasks, while `attachments/` is always a non-task asset container.
 - Promote shared, pipeline-critical, or promised deliverables into project-conventional paths during Integrate, before integration review. Mature & Consolidate must retain, relocate, or drop the companion files that remain task-local without breaking their links.
-- Let the live and standalone dashboards browse direct companions and attachments, safely render Markdown, Python, Julia, R, and the common static subset of Jupyter notebooks, and open or download other files across worktrees and custom/rootless task roots. Files never become task-tree, DAG, status-rollup, frontier, or Kanban nodes.
+- Let the live and standalone dashboards expose a collapsed Attachments pseudo-branch beneath the owning task and render selected Markdown, Python, Julia, R, notebook, image, PDF, and text files in the normal full-width detail pane. Attachment nodes participate in navigation only; they never become task-tree, DAG, status-rollup, frontier, or Kanban nodes.
 - Verify instruction behavior with a realistic harness exercise and dashboard behavior with focused and full task-tree tests.
 
 ### Generated artifacts
@@ -22,9 +22,13 @@ Canonical role specs are outside the intended scope, so no generated role output
 
 The repository already carries figures in task-local `attachments/`, moves the whole task directory, rewrites links in every Markdown file under a moved task, and runs Markdown integrity checks on sidecars. The missing capability is the lifecycle contract plus dashboard discovery, safe delivery, hot reload, rendering, and export.
 
-Put first-class companion documents and code—`.md`, `.py`, `.jl`, `.r`/`.R`, and `.ipynb`—directly beside `task.md`. Put generated outputs, supporting data, and every other retained file in `attachments/`. The agent-facing contract should name that destination without teaching a nesting policy; the dashboard and file APIs should tolerate recursively generated attachment layouts as an implementation detail. Do not require a manifest file; the owning `## Results` is the concise provenance and entry-point record.
+Put every retained task-local file in `attachments/`. The agent-facing contract should name that destination without teaching a nesting policy; the dashboard and file APIs should tolerate recursively generated attachment layouts as an implementation detail. Do not require a manifest file; the owning `## Results` is the concise provenance and entry-point record.
 
 The existing [HTML Dashboard](../dashboard/task.md) concern covers dashboard behavior but not the cross-workflow storage and promotion contract, so this work is a sibling durable concern under Task Tree Skill. The contract lands first; the backend data path and user interface then follow in dependency order.
+
+## Revision Notes
+
+Researcher visual review replaced the direct-companion/modal model with a single `attachments/` storage boundary and tree-native, full-pane reading.
 
 ## Critical Files
 
