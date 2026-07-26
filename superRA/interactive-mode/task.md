@@ -44,6 +44,19 @@ The integrated branch now carries one coherent execution contract:
 - [codex-instructions.md:10-30](../../skills/using-superra/references/codex-instructions.md#L10-L30)
   keeps harness-forced inline execution separate from interactive mode.
 
+### Integration contract repair
+
+Review-now/defer/skip now uses the existing lifecycle: defer and skip leave the
+task `implemented`, without a parallel review-status field. The shared
+[canonical-role resolver](../../skills/using-superra/references/canonical-role.md)
+makes the canonical implementer and reviewer specs available to main-filled and
+forced-inline seats in both Claude and Codex, including installed cross-repo
+use. Contract owners now point to those shared mechanics; duplicate lifecycle,
+tree-change, and seat-routing instructions were pruned under the DRY/Necessity
+gate. Focused verification passed for packaged role resolution (`1` test),
+Codex agent generation (`3` tests), execution-contract behavior (`32` tests),
+the CI-safe harness (`126` tests), and all five edited skill directories.
+
 The obsolete generated direct-mode role mirrors and their generator path are
 gone. The canonical [implementer](../../agents/implementer.md) and
 [reviewer](../../agents/reviewer.md) specs remain unchanged and the committed
@@ -93,10 +106,3 @@ Codex TOMLs remain source-generated; broad test deletions are the approved
 net-negative prose-oracle cleanup with state/schema/path/exit/order/mutation/
 secret coverage retained; current-doc migrations correct claims contradicted by
 the contract; no scope-ambiguous hunk remains.
-
-## Revision Notes
-
-The researcher confirmed the integration-stage distillation: fold
-`integration-contract-fixes` into this durable parent, retain its validated
-lifecycle, cross-harness role-resolution, and DRY/Necessity outcomes as a short
-Results subsection, and remove the temporary update-task directory.
