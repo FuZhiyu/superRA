@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: revise
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -89,59 +89,25 @@ installed-Chromium worktree-switch test passed `1 passed`.
 
 ## Review Notes
 
-1. **MAJOR:** The required installed-Chromium suite is not green: the notebook
-   preview contains no KaTeX output, so the assertion at
-   [test_artifact_ui.py:324](../../../../skills/task-tree/scripts/test_artifact_ui.py#L324)
-   fails (`1 failed, 2 passed`) under the exact command reported in Results.
-   Restore notebook Markdown/LaTeX math rendering through the existing
-   markdown-it/KaTeX stack and make the dedicated browser suite pass.
-   → implemented: notebook Markdown and LaTeX now produce two verified KaTeX
-   surfaces, with LaTeX rendered explicitly through the pinned KaTeX sanitizer
-   boundary ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js)).
-
-2. **MAJOR:** Task-content SSE breaks attachment state. Each task row is replaced
-   wholesale by `hx-swap="outerHTML"`
-   ([nav_node.html:21-32](../../../../skills/task-tree/scripts/templates/nav_node.html#L21-L32)),
-   which removes its injected attachment branch, but the task-update handler
-   neither rebuilds that branch nor preserves its expanded state. Worse, when
-   an attachment is selected, the same handler unconditionally calls
-   `loadActiveNode(path)`, replacing the file preview with task content while
-   leaving the attachment URL/state active
-   ([dashboard.js:3392-3407](../../../../skills/task-tree/scripts/templates/dashboard.js#L3392-L3407)).
-   Make task SSE updates preserve/rebuild the branch and re-render the selected
-   attachment (or leave it intact), with URL, pane, selection, and expansion
-   state remaining consistent; add a browser regression that exercises a real
-   task event while a file is open.
-   → implemented: task SSE snapshots branch expansion, rebuilds the injected
-   branch after the row swap, and re-renders the active attachment without
-   changing its URL; the browser test broadcasts a real task event while
-   `note.md` is open ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
-
-3. **MAJOR:** The separate Files canvas was removed only from the HTML. The old
-   sidecar state and renderer still remain as a second implementation from
-   [dashboard.js:1142-1648](../../../../skills/task-tree/scripts/templates/dashboard.js#L1142-L1648),
-   including the obsolete Files badge/open/close/list/preview paths, and the
-   old sidecar presentation remains from
-   [dashboard.css:1277](../../../../skills/task-tree/scripts/templates/dashboard.css#L1277).
-   This directly contradicts the objective and Planner Guidance to remove the
-   sidecar rather than maintain two render targets. Delete the obsolete state,
-   functions, and styles, retaining only helpers genuinely shared by the
-   full-pane implementation.
-   → implemented: removed all Files-sidecar state, list/row renderers,
-   open/close paths, count controls, and sidecar CSS; only attachment data,
-   preview helpers, pseudo-tree navigation, and full-pane rendering remain
-   ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
-   [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css)).
-
-4. **MAJOR:** The rewritten regression file does not provide the objective's
-   required evidence for worktree switching, task-SSE preservation, attachment
-   accessibility/keyboard behavior, or unchanged task/frontier/DAG/Kanban
-   semantics; its browser coverage consists only of the combined happy-path
-   test and one standalone test
-   ([test_artifact_ui.py:243-403](../../../../skills/task-tree/scripts/test_artifact_ui.py#L243-L403)).
-   Add focused regressions for those named requirements, including the nested
-   pseudo-branch's accessible tree/group relationships and keyboard operation,
-   then run the dedicated and full task-tree suites successfully.
+1. **MAJOR:** The accessibility portion of the prior finding remains
+   incomplete. The dashboard declares one `role="tree"` with a roving-tabindex
+   model, but that model still manages only `.task-row` elements
+   ([dashboard.js:2875-2930](../../../../skills/task-tree/scripts/templates/dashboard.js#L2875-L2930)).
+   Every attachment toggle/file is a native button with no managed `tabindex`,
+   so expanding a branch creates many additional Tab stops; its separate arrow
+   handler navigates only attachment controls and cannot move between the owner
+   task row, attachments, and following task rows as one tree
+   ([dashboard.js:2212-2259](../../../../skills/task-tree/scripts/templates/dashboard.js#L2212-L2259)).
+   Nested directory labels are also non-treeitems while descendant files claim
+   a deeper `aria-level`, leaving the announced hierarchy without the
+   corresponding parent treeitem
+   ([dashboard.js:1325-1346](../../../../skills/task-tree/scripts/templates/dashboard.js#L1325-L1346)).
+   Integrate task and attachment pseudo-nodes into one roving focus/arrow model
+   (including nested directory parents), and extend the browser regression
+   beyond programmatically focusing the attachment toggle to verify Tab entry,
+   owner-to-attachment traversal, nested-directory traversal, and exit to the
+   following task row. The other prior findings are confirmed fixed, and the
+   installed-Chromium suite now passes `4 passed`.
    → implemented: added regressions for task SSE, worktree isolation,
    task/DAG/Kanban exclusion, ARIA treeitem/group levels, arrow-key operation,
    and native attachment activation; dedicated installed-Chromium tests pass
