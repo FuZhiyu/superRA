@@ -1,6 +1,6 @@
 ---
 title: "Close Interactive Integration Contract Gaps"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -46,3 +46,7 @@ Verification:
 - Zotero shell suite: `18/18`.
 - Skill validation, Markdown integrity, Python compilation, and
   `git diff --check`: clean.
+
+## Review Notes
+
+1. MAJOR — [interactive-mode.md:22-24](../../../skills/superplan/references/interactive-mode.md#L22-L24), [main-agent.md:14-16](../../../skills/using-superra/references/main-agent.md#L14-L16), and [superimplement/SKILL.md:20-25](../../../skills/superimplement/SKILL.md#L20-L25). The revision reintroduces the authoritative integration blocker named in Planner Guidance: `defer` and `skip` now collapse to the same unrecorded `implemented` state, while status-driven resume sends every `implemented` task into the mandatory reviewer loop. Consequently a skip is neither durable nor distinguishable, a defer cannot be selectively resumed, and neither choice can reach the all-`approved` completion path without review. The Results claim that all six findings are closed is therefore false, and deleting the disposition contract test removes coverage for the required behavior instead of establishing the corrected contract. Restore distinct durable now/defer/skip effects using the existing status enum, make resume and completion honor the recorded choice, and retain structured behavioral coverage for those routes.
