@@ -26,13 +26,8 @@
 #
 # Harness-evidence limitation: dispatch evidence is structural, never prose
 # claims. Claude exposes subagent dispatch as Task/Agent tool events carrying a
-# subagent_type; Codex exposes it as spawn_agent(agent_type="superra_implementer"
-# / "superra_reviewer"). The shared check_orchestrator_dispatches keys off those
-# event shapes. If a harness cannot expose subagent dispatch events at all, the
-# evaluator records the documented direct-mode fallback (the agent naming direct
-# mode plus a reviewer dispatch) and the smoke passes-with-skip rather than
-# failing on invisible behavior. A main agent that silently implements inline
-# with neither dispatch events nor a documented fallback fails the smoke.
+# subagent_type; Codex exposes it through the SubagentStart dispatch log. The
+# shared check_orchestrator_dispatches keys off those event shapes.
 
 set -uo pipefail
 

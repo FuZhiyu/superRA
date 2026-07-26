@@ -1,5 +1,4 @@
 {
   "schema_version": 1,
-  "stage": "maturation",
-  "stage_canary": "frontier"
+  "stage": "maturation"
 }

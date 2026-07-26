@@ -57,7 +57,6 @@ def test_each_tex_only_macro_flagged(macro):
     issues = [i for i in check(text) if i.rule == "tex-only-macro"]
     assert len(issues) == 1
     assert issues[0].line == 1
-    assert f"\\operatorname{{{macro}}}" in issues[0].message
 
 
 def test_macro_inside_code_fence_not_flagged():

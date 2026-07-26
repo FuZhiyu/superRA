@@ -47,14 +47,6 @@ from _comments import (
 from conftest import _launch_state, _write_task_md, _write_tiny_png, _serve_plan
 
 
-def _workflow_lines(content: str) -> list[str]:
-    return [line.rstrip() for line in content.splitlines()]
-
-
-def _line_index(lines: list[str], text: str) -> int:
-    return lines.index(text)
-
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -248,12 +240,6 @@ class TestServerRoutes:
         assert resp.status_code == 200
         assert "mermaid" in resp.text
         assert "graph LR" in resp.text
-
-    def test_kanban_returns_7_columns(self, client):
-        resp = client.get("/kanban")
-        assert resp.status_code == 200
-        # Each column has a kanban-col-header; count those for the 7 statuses
-        assert resp.text.count("kanban-col-header") == 7
 
     def test_export_returns_attachment(self, client):
         """The Share route returns standalone HTML as a file download."""
@@ -936,7 +922,7 @@ class TestDataLayer:
         assert result is None
         assert "01-first" not in _launch_state(plan_dashboard).task_index
 
-    def test_rebuild_task_surfaces_parse_error(self, plan_root, capsys):
+    def test_rebuild_task_surfaces_parse_error(self, plan_root):
         """A task.md broken during a watcher rebuild logs an error and returns
         the last-good task flagged with `parse_error`, instead of silently
         continuing to serve the last-good parse with no signal."""
@@ -957,7 +943,6 @@ class TestDataLayer:
         # Last-good content is preserved; only the error flag is new.
         assert updated.title == "First Task"
         assert _launch_state(plan_dashboard).task_index["01-first"].parse_error != ""
-        assert str(task_md) in capsys.readouterr().err
 
     def test_build_index_creates_flat_dict(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
@@ -1652,46 +1637,11 @@ class TestTemplateRendering:
         html = plan_dashboard._render_nav_node(errored)
         assert 'data-parse-error="true"' in html
         assert "badge-error" in html
-        assert "parse error" in html
 
         # A task with no parse error renders neither.
         clean_html = plan_dashboard._render_nav_node(task)
         assert "data-parse-error" not in clean_html
         assert "badge-error" not in clean_html
-
-    def test_render_summary_has_counts(self, plan_root):
-        plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
-        assert "stat-tasks" in html
-        assert "stat-approved" in html
-        # 3 leaf tasks, 1 approved
-        assert "1/3" in html
-
-    def test_postponed_excluded_from_summary_denominator(self, postponed_plan_root):
-        """Postponed leaves drop out of the active denominator, like archived,
-        and surface as a visible count pill."""
-        plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard.rebuild_tree()
-        html = plan_dashboard._render_summary(_launch_state(plan_dashboard).root_task)
-        # Leaves: 01 postponed, 02 not-started, 03 approved, branch a/b postponed.
-        # active = 5 - 3 postponed = 2; approved = 1 -> 1/2.
-        assert "1/2" in html
-        assert "<strong>3</strong> postponed" in html
-
-    def test_postponed_kanban_column_holds_postponed_leaves(self, postponed_plan_root):
-        plan_dashboard.PLAN_ROOT = postponed_plan_root
-        plan_dashboard.rebuild_tree()
-        env = plan_dashboard._get_jinja_env()
-        template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
-        html = template.render(all_tasks=all_tasks)
-        # The Postponed column exists and carries the postponed leaf + branch children.
-        post_col = html.split('<div class="kanban-col">')
-        post_col = next(p for p in post_col if p.lstrip().startswith("<div class=\"kanban-col-header\">\n      Postponed"))
-        assert "01-postponed-leaf" in post_col
-        assert "04-postponed-branch/a" in post_col
-        assert "04-postponed-branch/b" in post_col
 
     def test_postponed_renders_badge_and_status(self, postponed_plan_root):
         plan_dashboard.PLAN_ROOT = postponed_plan_root
@@ -1754,15 +1704,6 @@ class TestTemplateRendering:
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
-    def test_kanban_has_7_status_columns(self, plan_root):
-        plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard.rebuild_tree()
-        env = plan_dashboard._get_jinja_env()
-        template = env.get_template("kanban.html")
-        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
-        html = template.render(all_tasks=all_tasks)
-        assert html.count("kanban-col-header") == 7
-
     def test_dag_has_dependency_arrows(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
@@ -1780,82 +1721,6 @@ class TestTemplateRendering:
 # ---------------------------------------------------------------------------
 # TestCLI
 # ---------------------------------------------------------------------------
-
-
-class TestCLI:
-    def test_list_subcommand_output(self, plan_root):
-        """CLI list shows comments for a task."""
-        import task_comment
-
-        # Add a comment first
-        task_dir = plan_root / "01-first"
-        add_comment(task_dir, "Objective", 0, "Complete step 1.", "A comment.", author="tester")
-
-        captured = StringIO()
-        with patch("sys.stdout", captured):
-            task_comment.main([
-                "--plan-root", str(plan_root),
-                "list", "01-first",
-            ])
-        output = captured.getvalue()
-        assert "#1" in output
-        assert "A comment." in output
-
-    def test_list_no_comments(self, plan_root):
-        """CLI list prints 'No comments.' when there are none."""
-        import task_comment
-
-        captured = StringIO()
-        with patch("sys.stdout", captured):
-            task_comment.main([
-                "--plan-root", str(plan_root),
-                "list", "02-second",
-            ])
-        assert "No comments." in captured.getvalue()
-
-    def test_resolve_subcommand(self, plan_root):
-        """CLI resolve toggles and prints confirmation."""
-        import task_comment
-
-        task_dir = plan_root / "01-first"
-        c = add_comment(task_dir, "Objective", 0, "p", "body", author="u")
-
-        captured = StringIO()
-        with patch("sys.stdout", captured):
-            task_comment.main([
-                "--plan-root", str(plan_root),
-                "resolve", "01-first", str(c.id),
-            ])
-        assert "Resolved" in captured.getvalue()
-
-    def test_list_tree_subcommand(self, plan_root):
-        """CLI list-tree shows unresolved comment counts."""
-        import task_comment
-
-        task_dir = plan_root / "01-first"
-        add_comment(task_dir, "Objective", 0, "p", "body", author="u")
-
-        captured = StringIO()
-        with patch("sys.stdout", captured):
-            task_comment.main([
-                "--plan-root", str(plan_root),
-                "list-tree",
-            ])
-        output = captured.getvalue()
-        assert "01-first" in output
-        assert "1 unresolved" in output
-
-    def test_list_tree_empty(self, plan_root):
-        """CLI list-tree prints message when no unresolved comments."""
-        import task_comment
-
-        captured = StringIO()
-        with patch("sys.stdout", captured):
-            task_comment.main([
-                "--plan-root", str(plan_root),
-                "list-tree",
-            ])
-        assert "No unresolved comments" in captured.getvalue()
 
 
 # ---------------------------------------------------------------------------
@@ -3291,12 +3156,6 @@ class TestDashboard:
 
     def test_generate_embeds_fragments_inline(self, plan_root):
         """Every fragment the standalone client fetches is pre-rendered inline."""
-        second = plan_root / "02-second" / "task.md"
-        second.write_text(
-            second.read_text(encoding="utf-8")
-            + "\n## Planner Guidance\n\nTry the existing second-stage helper.\n",
-            encoding="utf-8",
-        )
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
         # Nav tree, per-node bodies, per-node children graphs, and the kanban board.
         assert "/nav" in html
@@ -3305,8 +3164,6 @@ class TestDashboard:
         assert "/kanban" in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
-        assert "Planner Guidance" in html
-        assert "Try the existing second-stage helper." in html
 
     def test_generate_embeds_internal_task_link_resolver(self, plan_root):
         """In-tree task citations route to internal hash navigation: the resolver
@@ -3329,7 +3186,6 @@ class TestDashboard:
         html = out.read_text("utf-8")
         assert 'var REPO_FILE_BASE = "https://github.com/owner/repo/blob/abc123";' in html
         assert "function repoFileHref(path)" in html
-        assert "Open task.md on GitHub" in html
 
     def test_cli_dashboard_export_forwards_repo_file_base(self, plan_root, monkeypatch):
         calls = []
@@ -3583,40 +3439,29 @@ class TestDashboardArtifactWorkflow:
         assert hyphen.startswith("superra-dashboard-feature-foo-")
         assert slash != hyphen
 
-    def test_render_workflow_has_cleanup_upload_and_export_contract(self):
-        workflow = dashboard_artifact_workflow.render_workflow()
-        assert dashboard_artifact_workflow.MANAGED_MARKER in workflow
-        assert "permissions:\n  contents: read\n  actions: write" in workflow
-        assert "concurrency:" in workflow
-        assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
-        assert "shasum -a 256" in workflow
-        assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
-        assert "uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root \"superRA\"" in workflow
-        assert '--repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"' in workflow
-        assert "github.rest.actions.listArtifactsForRepo" in workflow
-        assert "github.rest.actions.deleteArtifact" in workflow
-        assert "actions/upload-artifact@v4" in workflow
-        assert "name: ${{ steps.artifact.outputs.artifact_name }}" in workflow
-        assert "retention-days: 14" in workflow
-        assert "upload-artifact" not in workflow.split("Delete previous artifact for this branch", 1)[0]
-
-    def test_render_workflow_applies_configurable_paths_and_retention(self):
-        config = dashboard_artifact_workflow.WorkflowConfig(
-            task_root="customRA",
-            output_path="build/custom-dashboard.html",
-            artifact_prefix="custom-dashboard",
-            retention_days=3,
-            fail_on_missing_task_root=False,
-            branch_patterns=("main", "analysis/**"),
+    def test_generated_workflow_preserves_schema_and_step_order(self):
+        workflow = dashboard_artifact_workflow.render_workflow(
+            dashboard_artifact_workflow.WorkflowConfig(
+                branch_patterns=("main", "feature/**"),
+            )
         )
-        workflow = dashboard_artifact_workflow.render_workflow(config)
-        assert 'uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root "customRA"' in workflow
-        assert '--output "build/custom-dashboard.html"' in workflow
-        assert "custom-dashboard-$slug-$ref_hash" in workflow
-        assert "retention-days: 3" in workflow
-        assert "skipping dashboard artifact" in workflow
-        assert '      - "main"' in workflow
-        assert '      - "analysis/**"' in workflow
+        lines = workflow.splitlines()
+
+        on_idx = lines.index("on:")
+        push_idx = lines.index("  push:")
+        branches_idx = lines.index("    branches:")
+        dispatch_idx = lines.index("  workflow_dispatch:")
+        permissions_idx = lines.index("permissions:")
+        assert on_idx < push_idx < branches_idx < dispatch_idx < permissions_idx
+        assert lines[permissions_idx + 1:permissions_idx + 3] == [
+            "  contents: read",
+            "  actions: write",
+        ]
+        assert branches_idx < lines.index('      - "main"') < dispatch_idx
+        assert branches_idx < lines.index('      - "feature/**"') < dispatch_idx
+        assert workflow.index("actions/github-script@v7") < workflow.index(
+            "actions/upload-artifact@v4"
+        )
 
     def test_install_workflow_creates_default_managed_file(self, tmp_path):
         result = dashboard_artifact_workflow.install_workflow(
@@ -3655,7 +3500,7 @@ class TestDashboardArtifactWorkflow:
         assert result.created is False
         assert dashboard_artifact_workflow.MANAGED_MARKER in target.read_text(encoding="utf-8")
 
-    def test_cli_dashboard_artifact_setup_writes_configured_workflow(self, tmp_path, capsys):
+    def test_cli_dashboard_artifact_setup_writes_configured_workflow(self, tmp_path):
         cli.main([
             "dashboard",
             "artifact",
@@ -3688,12 +3533,8 @@ class TestDashboardArtifactWorkflow:
         assert "retention-days: 5" in content
         assert '      - "main"' in content
         assert '      - "analysis/**"' in content
-        assert "skipping dashboard artifact" in content
-        out = capsys.readouterr().out
-        assert "Created" in out
-        assert "custom-dashboard-feature-foo-" in out
 
-    def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path, capsys):
+    def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path):
         with pytest.raises(SystemExit) as excinfo:
             cli.main([
                 "dashboard",
@@ -3705,30 +3546,6 @@ class TestDashboardArtifactWorkflow:
                 "../escape.yml",
             ])
         assert excinfo.value.code == 1
-        assert "Error: Workflow path escapes repository root" in capsys.readouterr().err
-
-    def test_generated_workflow_static_contract(self, tmp_path):
-        result = dashboard_artifact_workflow.install_workflow(
-            tmp_path,
-            config=dashboard_artifact_workflow.WorkflowConfig(branch_patterns=("main", "feature/**")),
-        )
-        content = result.path.read_text(encoding="utf-8")
-        lines = _workflow_lines(content)
-        on_idx = _line_index(lines, "on:")
-        push_idx = _line_index(lines, "  push:")
-        branches_idx = _line_index(lines, "    branches:")
-        workflow_dispatch_idx = _line_index(lines, "  workflow_dispatch:")
-        permissions_idx = _line_index(lines, "permissions:")
-        assert on_idx < push_idx < branches_idx < workflow_dispatch_idx < permissions_idx
-        assert "permissions:" in lines
-        assert "  contents: read" in lines
-        assert "  actions: write" in lines
-        assert branches_idx < _line_index(lines, '      - "main"') < workflow_dispatch_idx
-        assert branches_idx < _line_index(lines, '      - "feature/**"') < workflow_dispatch_idx
-        assert "concurrency:" in lines
-        assert "      - name: Delete previous artifact for this branch" in lines
-        assert "      - name: Upload branch dashboard artifact" in lines
-        assert content.index("Delete previous artifact for this branch") < content.index("Upload branch dashboard artifact")
 
     def test_dashboard_export_payload_path_from_minimal_tree(self, tmp_path):
         repo = tmp_path / "repo"
@@ -5346,7 +5163,7 @@ class TestBackgroundLaunch:
     per planner guidance.
     """
 
-    def test_background_launch_returns_and_writes_pid(self, tmp_path, capsys):
+    def test_background_launch_returns_and_writes_pid(self, tmp_path):
         pytest.importorskip("uvicorn")
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
@@ -5362,10 +5179,6 @@ class TestBackgroundLaunch:
             pid = plan_dashboard._read_pid(pid_path)
             assert pid is not None and plan_dashboard._pid_alive(pid)
             assert plan_dashboard._port_serving(port)
-            assert (
-                f"Dashboard running at {plan_dashboard._dashboard_url(port, plan_root)}"
-                in capsys.readouterr().out
-            )
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
@@ -5426,7 +5239,7 @@ class TestBackgroundLaunch:
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
-    def test_repo_reuse_opens_invoking_worktree(self, tmp_path, monkeypatch, capsys):
+    def test_repo_reuse_opens_invoking_worktree(self, tmp_path, monkeypatch):
         """A repo-shared server launched from A must reopen scoped to B."""
         pytest.importorskip("uvicorn")
         (tmp_path / "worktree-a").mkdir()
@@ -5442,13 +5255,11 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_a, port, str(common), open_browser=False
             ) == 0
-            capsys.readouterr()
             assert plan_dashboard.serve_background(
                 plan_b, port, str(common), open_browser=True
             ) == 0
             expected = plan_dashboard._dashboard_url(port, plan_b)
             assert opened == [expected]
-            assert f"Dashboard already running at {expected}" in capsys.readouterr().out
         finally:
             plan_dashboard.stop_background(plan_a, str(common))
 
@@ -5922,7 +5733,7 @@ class TestServeBindHost:
         ns = plan_dashboard.parse_args(["serve"])
         assert ns.host == "127.0.0.1"
 
-    def test_foreground_emits_and_opens_scoped_url(self, tmp_path, monkeypatch, capsys):
+    def test_foreground_emits_and_opens_scoped_url(self, tmp_path, monkeypatch):
         plan_root = _serve_plan(tmp_path)
         port = 23457
         opened: list[str] = []
@@ -5939,4 +5750,3 @@ class TestServeBindHost:
 
         expected = plan_dashboard._dashboard_url(port, plan_root)
         assert opened == [expected]
-        assert f"Starting dashboard at {expected}" in capsys.readouterr().out

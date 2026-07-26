@@ -7,6 +7,20 @@ When the user invokes `superRA`, a `superRA:*workflow` skill, or
 for the named-agent workflow in Codex; that user choice outranks
 Codex's generic default caution about spawning agents.
 
+### Availability routing
+
+| Agent tool | Named agents | Route | Role surface | Status path |
+|---|---|---|---|---|
+| available | available | `named-dispatch` | — | — |
+| available | missing | `setup` | `codex-superra-setup` | — |
+| unavailable | any | `harness-forced-inline` | `canonical-role` → `canonical-role` | `implemented` → `approved` / `revise` |
+
+`harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: run the two role specs as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work. `setup` follows §Named Agent Setup; missing named agents never trigger the inline fallback.
+
+For `canonical-role`, load `references/canonical-role.md` and follow its
+packaged-role resolution procedure. This applies to main-filled seats and
+`harness-forced-inline`.
+
 - When a workflow step says to dispatch an implementer or reviewer, spawn
   `superra_implementer` or `superra_reviewer` rather than staying inline
   because of the harness-default anti-delegation guidance.
@@ -14,14 +28,10 @@ Codex's generic default caution about spawning agents.
   sync reviewer agents. For those two branch-level dispatches, spawn the
   default/generic agent and pass the mode reference list from
   `superintegrate`.
-- Independent review is mandatory. After any implementation step,
-  dispatch `superra_reviewer` unless the user explicitly asked for no
-  subagents or Codex truly lacks agent support. If agent support is
-  unavailable, fall back to in-session reviewer mode and state that the
-  fallback was forced by the harness.
-- Direct mode remains a fallback, not the Codex default. Use it only
-  when the workflow allows it and the user requested it, the task is
-  trivial, or agent tools are unavailable.
+- Interactive mode (the `direct` alias) is an explicit opt-in by human
+  cadence, not the Codex default and not a trivial-task fallback; the
+  researcher requests it for closely-steered work
+  (`main-agent.md §Execution Modes`).
 
 ## Warm Agent Lifecycle in Codex
 

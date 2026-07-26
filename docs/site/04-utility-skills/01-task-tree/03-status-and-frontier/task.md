@@ -10,12 +10,14 @@ created: 2026-06-11
 
 Status and the frontier are both computed from the tree. When you ask the agent to plan, implement, and review, the picture updates on its own — you read it, you do not maintain it.
 
-A leaf task moves through the implement-review cycle, and the agent drives every step:
+A leaf task moves through implementation and, when independently reviewed, the review cycle:
 
 ```
 not-started → in-progress → implemented → approved
                                         ↘ revise → implemented → approved
 ```
+
+Interactive work remains `implemented` when independent review is deferred or skipped.
 
 The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (treated as resolved so dependents can proceed); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
 
@@ -23,7 +25,7 @@ The two statuses that are yours to set are scope decisions: tell the agent to dr
 |---|---|
 | `not-started` | Waiting to be dispatched. |
 | `in-progress` | An implementer is on it. |
-| `implemented` | Done by the implementer; awaiting review. |
+| `implemented` | Done and awaiting or deferring independent review. |
 | `revise` | A reviewer sent it back with findings. |
 | `approved` | Signed off. |
 | `archived` | You dropped it from scope. |

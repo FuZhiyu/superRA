@@ -11,19 +11,16 @@ Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task disp
 
 ## Execution Modes
 
-Subagent mode is the default (one implementer per task, fresh context); the mode contract — Direct-mode fallback conditions and its never-skipped review — is in `using-superra/references/main-agent.md §Execution Modes`.
+Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive; interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
 
 ## The Process
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt.**
+**Load `superRA:agent-orchestration` before selecting seats or writing any dispatch prompt.**
 
-1. Read the task tree, compute the frontier;
-2. **Go through frontier work units:**
-   a. Dispatch one task or a same-parent bundle per `agent-orchestration` §Dispatch Templates. Answer context questions, re-dispatch if needed.
-   b. Dispatch reviewer subagent for the same task or bundle (one comprehensive pass per task).
-   c. **APPROVE** → next frontier recompute. **REVISE** → adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback. Loop until APPROVE.
-3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
-4. Present Step 4 completion menu; dispatch `superintegrate` on merge/PR.
+1. Complete Steps 0–1.
+2. Execute frontier tasks through Step 2 until none require implementation or review.
+3. Verify pipeline and reproducibility through Step 3.
+4. Present the Step 4 completion menu.
 
 ### Step 0: Branch Check
 
@@ -69,18 +66,28 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Tasks on the frontier may be dispatched singly, as one or more same-parent bundles, or as a parallel Agent-tool batch (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
 
 #### Task Execution Steps
 
-1. **Dispatch implementer** per `superRA:agent-orchestration`. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
-2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (`agent-orchestration` §Orchestrator Duties).
-3. **Once DONE or DONE_WITH_CONCERNS:** dispatch the reviewer for one comprehensive task-local pass per assigned task. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
-4. **Once APPROVE:** a generic APPROVE with no file/line citations is a red flag — re-dispatch the reviewer to cite the code paths it examined. In a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
+1. Select the per-task seat structure through `superRA:agent-orchestration`.
+2. Execute the implementer seat. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
+3. **If NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
+4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat for one comprehensive task-local pass per assigned task. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+5. **Once APPROVE:** a generic APPROVE with no file/line citations is a red flag — rerun the reviewer seat to cite the code paths it examined. In a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
+
+#### Seat execution
+
+| Filler | Execute |
+|---|---|
+| `main` | `canonical-role` |
+| `subagent` | `dispatch` |
+
+`canonical-role` means resolve and run the selected seat's canonical role spec as defined by `agent-orchestration` §Seat Assignment. `dispatch` uses that skill's dispatch template.
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
 
-**In direct mode:** the main agent does Steps 1–2 directly; Steps 3–4 still dispatch reviewer subagents unless the user overrides.
+**In interactive mode:** follow `superplan/references/interactive-mode.md`.
 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)

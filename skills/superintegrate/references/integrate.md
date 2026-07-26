@@ -12,7 +12,7 @@ Run the full suite after Sync and before refactor. Failing drift tests block Int
 
 ## Step 2: Integration implementer pass (refactor + self-review)
 
-Dispatch `Stage: integration` implementer(s) to fit the post-sync diff to the host project and run the Final-Diff-Self-Check. A trivial post-sync diff collapses to an orchestrator-inline pruning sweep in Direct mode instead of a dispatch.
+Dispatch `Stage: integration` implementer(s) to fit the post-sync diff to the host project and run the Final-Diff-Self-Check. A trivial post-sync diff collapses to an orchestrator-inline pruning sweep instead of a dispatch.
 
 ```text
 Agent(subagent_type: "superRA:implementer"):

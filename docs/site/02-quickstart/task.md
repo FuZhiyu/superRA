@@ -76,11 +76,11 @@ Now run a task. Ask Claude to `superimplement`:
 superimplement @superRA/showcase-analysis.
 ```
 
-By default, the main agent dispatches a separate implementer subagent for each task. This keeps the main agent's context window clean, so it stays sharp and can run far longer without degrading — at the cost of more tokens than working inline. To work inline instead, ask the main agent to run in **direct mode**.
+By default, the main agent runs tasks autonomously through implementer and reviewer seats, usually dispatching both to subagents. This keeps the main agent's context window clean, so it stays sharp and can run far longer without degrading. For closely steered work, explicitly ask for **interactive mode** (`direct` remains an alias): the main agent co-edits and executes with you, self-reviews, and asks whether to run independent review now, defer it, or skip it.
 
-Here is superRA's central discipline: every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*.
+In this default autonomous mode, every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*.
 
-The reviewer is adversarial by design. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances through a superRA project has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
+The reviewer is adversarial by design. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances in this mode has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
 
 The implementer writes its findings straight into the task file, so the panel task's `## Results` reads like this:
 

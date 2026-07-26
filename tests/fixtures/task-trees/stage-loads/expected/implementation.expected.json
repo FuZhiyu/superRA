@@ -1,5 +1,4 @@
 {
   "schema_version": 1,
-  "stage": "implementation",
-  "stage_canary": "none"
+  "stage": "implementation"
 }

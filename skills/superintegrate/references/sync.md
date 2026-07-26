@@ -1,6 +1,6 @@
 # Sync
 
-Sync brings the branch onto the current base before refactor starts. A trivial sync (per Step 3) lands inline in Direct mode; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization. A dispatched sync (its own `Stage: sync`) commits under the `sync` stage verb; an inline Direct-mode sync lands as `integrate(sync): …` per `SKILL.md` §Stop Points.
+Sync brings the branch onto the current base before refactor starts. A trivial sync (per Step 3) lands inline; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization. A dispatched sync (its own `Stage: sync`) commits under the `sync` stage verb; an inline sync lands as `integrate(sync): …` per `SKILL.md` §Stop Points.
 
 ## Step 1: Resolve the target base
 
@@ -47,7 +47,7 @@ BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 
 If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced — proceed to Integrate.
 
-Otherwise size the sync against `semantic-merge §Scope the merge first`. When it scopes trivial, announce the Direct-mode switch and land the merge inline following that section, then skip the author and reviewer dispatch that follow and proceed to Integrate — its reviewer pass over `BASE_HEAD_SHA..HEAD` verifies the landed merge.
+Otherwise size the sync against `semantic-merge §Scope the merge first`. When it scopes trivial, announce the inline path and land the merge following that section, then skip the author and reviewer dispatch that follow and proceed to Integrate — its reviewer pass over `BASE_HEAD_SHA..HEAD` verifies the landed merge.
 
 When the sync is non-trivial, dispatch one generic sync author:
 

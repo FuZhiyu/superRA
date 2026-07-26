@@ -68,13 +68,12 @@ PY
 
 section "Codex adapter references"
 test -f skills/using-superra/references/codex-instructions.md
-test -f skills/using-superra/references/direct-mode-implementer.md
-test -f skills/using-superra/references/direct-mode-reviewer.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 
 section "Codex agent generation"
 python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
+python3 skills/using-superra/scripts/test_resolve_role.py
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
 
 section "Codex skill packaging invariants"

@@ -96,7 +96,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Lean agents, rich references.** Prototype agents carry role protocol and load stage/domain references at dispatch time. The Skill-Load Manifest in `using-superra` is the authoritative map from `Stage:` value and task domain to required skills.
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md` and `README.md`, not in nested directories.
 - **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
-- **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
+- **Generated artifacts stay generated.** Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
 ## Agent Load Surface
@@ -143,9 +143,8 @@ Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contra
 
 - **Canonical instructions stay shared.** Workflow behavior lives in root `skills/`; role behavior lives in `agents/`. Do not create Codex-only copies of shared behavior.
 - **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superra/references/`, such as `codex-instructions.md`.
-- **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superra/references/`.
 - **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
-- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superra/references/direct-mode-implementer.md`, `skills/using-superra/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
+- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
 - **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 

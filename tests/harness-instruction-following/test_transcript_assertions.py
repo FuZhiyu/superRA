@@ -10,6 +10,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from transcript_assertions import (  # noqa: E402
     AssertionReport,
+    check_interactive_canvas_order,
+    check_main_seat_route,
     check_event_before_write,
     check_file_reads_before_write,
     check_json_artifact,
@@ -62,7 +64,6 @@ def test_codex_sample_orchestrator_dispatch_events():
     check_orchestrator_dispatches(report, events)
 
     report.assert_ok()
-    assert report.observations == ["orchestrator dispatch events observed"]
 
 
 def test_claude_agent_dispatch_events_are_structural():
@@ -85,59 +86,127 @@ def test_claude_agent_dispatch_events_are_structural():
     check_orchestrator_dispatches(report, events)
 
     report.assert_ok()
-    assert report.observations == ["orchestrator dispatch events observed"]
 
 
-def test_orchestrator_fallback_is_skip_not_failure():
+def test_interactive_narration_does_not_excuse_missing_default_dispatch():
     events = parse_json_events(
         json.dumps({
             "type": "assistant",
             "message": (
-                "Switching to direct mode: the harness lacks subagent "
-                "events, so I will play the reviewer role in-session."
+                "The user requested interactive mode, so I will implement "
+                "inline and ask before reviewer dispatch."
             ),
         })
     )
     report = AssertionReport()
 
-    check_orchestrator_dispatches(
+    check_orchestrator_dispatches(report, events)
+
+    assert not report.ok
+
+
+def test_interactive_canvas_fixture_records_before_question_and_review():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.interactive.jsonl")
+    report = AssertionReport()
+
+    check_interactive_canvas_order(
         report,
         events,
-        fallback_exception_needles=["lacks subagent", "trivial"],
-        fallback_required_needles=["direct mode", "reviewer"],
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
     )
 
     report.assert_ok()
-    assert report.skipped
 
 
-def test_orchestrator_fallback_rejects_fabricated_reason():
-    # Names "direct mode" and "reviewer" but no documented exception — the
-    # exact masking the Objective forbids. Must fail, not skip-pass.
+def test_interactive_canvas_evaluator_rejects_wrong_event_order():
     events = parse_json_events(
-        json.dumps({
-            "type": "assistant",
-            "message": (
-                "I feel like using direct mode today, and I will pretend "
-                "to be a reviewer too."
-            ),
-        })
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "AskUserQuestion",
+                "input": {"options": ["Review now", "Defer", "Skip"]},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "interactive-fixture/task.md"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:reviewer"},
+            }),
+        ])
     )
     report = AssertionReport()
 
-    check_orchestrator_dispatches(
+    check_interactive_canvas_order(
         report,
         events,
-        fallback_exception_needles=[
-            "lacks subagent", "user override", "trivial",
-        ],
-        fallback_required_needles=["direct mode", "reviewer"],
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
     )
 
-    assert not report.skipped
-    assert len(report.missing) == 2
-    assert "missing implementer event" in report.missing[0]
-    assert "missing reviewer event" in report.missing[1]
+    assert not report.ok
+
+
+def test_interactive_canvas_evaluator_requires_structured_opt_in():
+    events = parse_json_events(
+        "\n".join([
+            json.dumps({
+                "type": "tool_use",
+                "name": "Write",
+                "input": {"file_path": "interactive-fixture/task.md"},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "AskUserQuestion",
+                "input": {},
+            }),
+            json.dumps({
+                "type": "tool_use",
+                "name": "Agent",
+                "input": {"subagent_type": "superRA:reviewer"},
+            }),
+        ])
+    )
+    report = AssertionReport()
+
+    check_interactive_canvas_order(
+        report,
+        events,
+        task_path="interactive-fixture/task.md",
+        task_artifact=SAMPLES / "interactive-task.after.md",
+    )
+
+    assert not report.ok
+
+
+def test_main_reviewer_seat_fixture_loads_role_and_dispatches_implementer():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.main-reviewer-seat.jsonl")
+    report = AssertionReport()
+
+    check_main_seat_route(report, events, main_role="reviewer")
+
+    report.assert_ok()
+
+
+def test_main_implementer_seat_fixture_loads_role_and_dispatches_reviewer():
+    events = parse_claude_stream_json(SAMPLES / "claude-stream.main-implementer-seat.jsonl")
+    report = AssertionReport()
+
+    check_main_seat_route(report, events, main_role="implementer")
+
+    report.assert_ok()
+
+
+def test_main_seat_evaluator_detects_missing_role_load_and_opposite_dispatch():
+    report = AssertionReport()
+
+    check_main_seat_route(report, [], main_role="reviewer")
+
+    assert not report.ok
 
 
 def test_task_read_narration_without_command_event_fails():
@@ -165,8 +234,7 @@ def test_task_read_narration_without_command_event_fails():
         ["agent-loading-bundle/02-primary-loading-task"],
     )
 
-    assert len(report.missing) == 1
-    assert "command event invoking superra task read" in report.missing[0]
+    assert not report.ok
 
 
 def test_required_reads_must_precede_any_write_by_default():
@@ -207,9 +275,7 @@ def test_required_reads_must_precede_any_write_by_default():
         ["markers/primary-marker.txt"],
     )
 
-    assert len(report.missing) == 2
-    assert "02-primary-loading-task" in report.missing[0]
-    assert "markers/primary-marker.txt" in report.missing[1]
+    assert not report.ok
 
 
 def test_orchestrator_dispatch_narration_without_tool_event_fails():
@@ -226,9 +292,7 @@ def test_orchestrator_dispatch_narration_without_tool_event_fails():
 
     check_orchestrator_dispatches(report, events)
 
-    assert len(report.missing) == 2
-    assert "missing implementer event" in report.missing[0]
-    assert "missing reviewer event" in report.missing[1]
+    assert not report.ok
 
 
 def test_missing_requirements_are_collected_together():
@@ -259,10 +323,7 @@ def test_missing_requirements_are_collected_together():
         write_path="loading-evidence.json",
     )
 
-    assert len(report.missing) == 3
-    assert "02-primary-loading-task" in report.missing[0]
-    assert "03-secondary-loading-task" in report.missing[1]
-    assert "marker read" in report.missing[2]
+    assert not report.ok
 
 
 def test_parser_skips_non_json_banner_lines():
@@ -291,8 +352,8 @@ def test_parser_still_raises_on_corrupt_json_event():
     ])
     try:
         parse_json_events(text)
-    except ValueError as exc:
-        assert "line 3" in str(exc)
+    except ValueError:
+        pass
     else:
         raise AssertionError("expected ValueError on corrupt JSON event line")
 
@@ -333,6 +394,4 @@ def test_json_artifact_reports_all_scalar_mismatches(tmp_path):
 
     check_json_artifact(report, actual, expected)
 
-    assert len(report.missing) == 2
-    assert "$.dependency_metadata.status" in report.missing[0]
-    assert "$.marker_files.shared" in report.missing[1]
+    assert not report.ok

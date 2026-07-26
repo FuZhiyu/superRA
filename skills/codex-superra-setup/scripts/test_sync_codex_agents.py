@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import runpy
 import subprocess
 import tempfile
 import unittest
@@ -12,7 +11,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "skills" / "codex-superra-setup" / "scripts" / "sync_codex_agents.py"
-SCRIPT_NS = runpy.run_path(str(SCRIPT))
 
 
 class SyncCodexAgentsTests(unittest.TestCase):
@@ -20,10 +18,27 @@ class SyncCodexAgentsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home:
             home_dir = Path(home)
             target_dir = home_dir / ".codex" / "agents"
+            foreign_repo = home_dir / "research-project"
+            foreign_repo.mkdir()
 
-            self.run_script("--scope", "global", "--home-dir", str(home_dir))
-            self.assertTrue((target_dir / "superra_implementer.toml").exists())
-            self.assertTrue((target_dir / "superra_reviewer.toml").exists())
+            self.run_script(
+                "--scope",
+                "global",
+                "--home-dir",
+                str(home_dir),
+                cwd=foreign_repo,
+            )
+            self.assertEqual(
+                sorted(path.name for path in target_dir.iterdir()),
+                ["superra_implementer.toml", "superra_reviewer.toml"],
+            )
+            for filename in ("superra_implementer.toml", "superra_reviewer.toml"):
+                self.assertEqual(
+                    (target_dir / filename).read_text(encoding="utf-8"),
+                    (REPO_ROOT / ".codex" / "agents" / filename).read_text(
+                        encoding="utf-8"
+                    ),
+                )
 
             self.run_script("--scope", "global", "--home-dir", str(home_dir))
 
@@ -44,7 +59,7 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 check=False,
             )
             self.assertNotEqual(failed.returncode, 0)
-            self.assertIn("Refusing to overwrite unmanaged file", failed.stderr)
+            self.assertEqual(unmanaged.read_text(encoding="utf-8"), "name = \"custom\"\n")
 
             self.run_script(
                 "--scope",
@@ -60,28 +75,6 @@ class SyncCodexAgentsTests(unittest.TestCase):
 
     def test_project_check_matches_committed_generated_artifacts(self) -> None:
         self.run_script("--scope", "project", "--check")
-
-    def test_committed_direct_mode_refs_match_generator(self) -> None:
-        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
-        for relative_path, content in expected.items():
-            self.assertEqual(
-                (REPO_ROOT / relative_path).read_text(encoding="utf-8"),
-                content,
-            )
-
-    def test_generated_direct_mode_refs_have_managed_headers(self) -> None:
-        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
-        for relative_path, content in expected.items():
-            self.assertIn("Managed by superRA codex-superra-setup", content)
-            self.assertIn(
-                "<!-- Regenerate with: rerun superRA:codex-superra-setup -->",
-                content,
-            )
-            self.assertNotIn("temporary manual mirror", content.lower())
-            self.assertNotIn(
-                "skills/codex-superra-setup/scripts/sync_codex_agents.py",
-                content,
-            )
 
     def test_generated_agents_have_repo_agnostic_regenerate_hint(self) -> None:
         with tempfile.TemporaryDirectory() as home:
@@ -101,10 +94,10 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 generated,
             )
 
-    def run_script(self, *args: str) -> None:
+    def run_script(self, *args: str, cwd: Path = REPO_ROOT) -> None:
         subprocess.run(
             ["python3", str(SCRIPT), *args],
-            cwd=REPO_ROOT,
+            cwd=cwd,
             check=True,
             capture_output=True,
             text=True,

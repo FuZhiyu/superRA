@@ -51,13 +51,13 @@ superRA turns an AI coding agent into a disciplined research assistant. It runs 
 What it is:
 
 - A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. [Here](#/07-showcase) is an example — and you are looking at the dashboard right now, since this documentation site is built on the very same system.
-- An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
+- An adaptive **plan-implement-integrate workflow** with autonomous implementer–reviewer execution by default, a closely steered interactive mode, and long-term reproducibility.
 - **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design.
 - **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They generate more code than anyone will carefully review. They drift as the context window fills, and starting fresh loses the thread of what was done and why. They drop half the sample before a regression runs, then report "everything looks good". superRA brings discipline at every step: no result ships without adversarial review, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent, not a pile of single-shot outputs.
+AI agents are fast but undisciplined. They generate more code than anyone will carefully review. They drift as the context window fills, and starting fresh loses the thread of what was done and why. They drop half the sample before a regression runs, then report "everything looks good". superRA brings review discipline to every step, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent, not a pile of single-shot outputs.
 
 ## Why not an existing framework like Superpowers?
 
@@ -117,7 +117,7 @@ A typical superRA workflow looks like this:
 </svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, an implementer agent executes one task and a separate reviewer agent inspects it adversarially; work advances only on `APPROVE`. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped.
+In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped.
 
 Research is rarely this linear, though: unanticipated issues surface mid-implementation, and exploratory sessions turn up findings worth recording as tasks for later. superRA supports changing the plan on the fly, or retroactively creating tasks to be reviewed and integrated.
 
@@ -126,7 +126,7 @@ Research is rarely this linear, though: unanticipated issues surface mid-impleme
 superRA's design centers on a few ideas:
 
 - **The repo reflects the latest state of every task.** Each task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. So you can always start a fresh agent and continue the work without losing the context.
-- **Adversarial review at every step.** A separate reviewer agent must `APPROVE` each task before it advances; a `REVISE` loops the work back until it passes.
+- **Review discipline at every step.** Autonomous subagent mode requires an adversarial reviewer to `APPROVE` each task; interactive mode always self-reviews and asks you whether to run independent review now, defer it, or skip it.
 - **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
 - **Composable and adaptive.** superRA hands the agent composable mechanisms rather than a fixed pipeline. The workflow is domain-neutral, so you can drop in your own domain skill (say, model simulation) without forking it.
 

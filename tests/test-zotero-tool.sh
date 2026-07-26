@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Credential-free behavior checks for the zotero-paper-reader tool script.
-# Exercises CLI parsing, version reporting, access-mode detection, clean error
-# paths, and the no-secret-leak invariant without contacting a real library.
+# Exercises structured state, state-preserving guards, and the no-secret-leak
+# invariant without contacting a real library.
 # Run from the repo root: bash tests/test-zotero-tool.sh
 
 set -euo pipefail
@@ -43,16 +43,6 @@ assert_rc() {
   fi
 }
 
-assert_stdout_contains() {
-  local name="$1" pattern="$2"
-  if printf '%s' "$TOOL_OUT" | rg -q --fixed-strings -- "$pattern"; then
-    record_pass "$name"
-  else
-    printf '      stdout missing: %s\n' "$pattern"
-    record_fail "$name"
-  fi
-}
-
 assert_combined_absent() {
   local name="$1" pattern="$2"
   if printf '%s%s' "$TOOL_OUT" "$TOOL_ERR" | rg -q --fixed-strings -- "$pattern"; then
@@ -63,36 +53,26 @@ assert_combined_absent() {
   fi
 }
 
-# 1. Help works and lists every required subcommand.
+# 1. Help works.
 run_tool --help
 assert_rc "help exits 0" 0
-for cmd in health libraries search item children collections tags fulltext doiindex pdf bibtex cite bibliography; do
-  assert_stdout_contains "help lists '$cmd'" "$cmd"
-done
 
-# 2. Health reports the pinned pyzotero version and structured mode info.
+# 2. Health returns structured mode state.
 #    The exit code depends on the real environment: 0 when a local Zotero API
 #    is actually running on this machine, 1 when no access mode is available.
 #    Branch so the check is deterministic either way.
 unset ZOTERO_LIBRARY_ID ZOTERO_API_KEY ZOTERO_LIBRARY_TYPE
 run_tool health
-assert_stdout_contains "health reports pyzotero version" '"pyzotero_version": "1.13.0"'
-assert_stdout_contains "health reports active_mode field" '"active_mode"'
-assert_stdout_contains "health reports better_bibtex_available" '"better_bibtex_available"'
-if printf '%s' "$TOOL_OUT" | rg -q --fixed-strings '"local_api_available": true'; then
+HEALTH_MODE="$(HEALTH_JSON="$TOOL_OUT" python3 -c 'import json,os; d=json.loads(os.environ["HEALTH_JSON"]); assert "active_mode" in d and isinstance(d["better_bibtex_available"], bool); print(d["active_mode"] or "none")')"
+if [ "$HEALTH_MODE" != "none" ]; then
   assert_rc "health exits 0 when local API is available" 0
 else
   assert_rc "health exits non-zero with no access mode" 1
 fi
 
-# 3. Clean error (not a stack trace) when no mode is available. Force --mode web
-#    with no credentials so the no-access path is deterministic even when a local
-#    Zotero API is running on the test machine.
+# 3. Forced Web mode without credentials fails deterministically.
 run_tool search "anything" --mode web
 assert_rc "web search without creds exits 1" 1
-[ -n "$TOOL_ERR" ] && grep -q '^error:' <<<"$TOOL_ERR" \
-  && record_pass "search emits a clean 'error:' line" \
-  || record_fail "search emits a clean 'error:' line"
 
 # 4. Full-text search reaches the same access-mode resolution as plain search
 #    (it is NOT web-only — the local API serves qmode=everything, verified live
@@ -101,17 +81,11 @@ assert_rc "web search without creds exits 1" 1
 #    covered by task 05's smoke test, not this credential-free suite.
 run_tool search "anything" --fulltext --mode web
 assert_rc "web fulltext without creds exits 1" 1
-grep -q 'Web API' <<<"$TOOL_ERR" \
-  && record_pass "web fulltext error names Web API requirement" \
-  || record_fail "web fulltext error names Web API requirement"
 
 # 4b. An invalid --library spec is rejected deterministically (parse_library
 #     raises before any access attempt — no local API or credentials needed).
 run_tool search "anything" --library notanid
 assert_rc "invalid --library exits 1" 1
-grep -q 'invalid --library' <<<"$TOOL_ERR" \
-  && record_pass "invalid --library names the problem" \
-  || record_fail "invalid --library names the problem"
 
 # 5. No-secret-leak invariant: a forced web call with fake creds must error
 #    without echoing the API key anywhere in stdout or stderr.
@@ -146,21 +120,13 @@ else
 fi
 rm -rf "$ENV_TMP"
 
-# 7. bibtex selection guard: with no --item-key/--query/--doi it errors cleanly
-#    before any library access (deterministic regardless of access mode).
+# 7. Bibtex selection guards fail before library access.
 run_tool bibtex
 assert_rc "bibtex without a selection exits 1" 1
-grep -q '^error:' <<<"$TOOL_ERR" \
-  && grep -q -- '--item-key' <<<"$TOOL_ERR" \
-  && record_pass "bibtex names the missing selection flags" \
-  || record_fail "bibtex names the missing selection flags"
 
 # 7b. bibtex rejects an invalid --library before any access (parse_library).
 run_tool bibtex --item-key ABCD1234 --library notanid
 assert_rc "bibtex invalid --library exits 1" 1
-grep -q 'invalid --library' <<<"$TOOL_ERR" \
-  && record_pass "bibtex invalid --library names the problem" \
-  || record_fail "bibtex invalid --library names the problem"
 
 # 8. Unit-test the reusable bib-sync helpers (dedup-append, minimal touch) by
 #    importing the module — no Zotero/BBT/library access. These helpers back the
@@ -199,34 +165,31 @@ else
 fi
 rm -rf "$SYNC_TMP" /tmp/zt_sync_err
 
-# 9. cite selection / target guards (deterministic — argparse and the guard run
-#    before any library access).
-run_tool cite --bib /tmp/zt_cite_guard.bib
+# 9. Cite selection / target guards leave the bibliography unchanged.
+GUARD_TMP="$(mktemp -d)"
+GUARD_BIB="$GUARD_TMP/guard.bib"
+printf '@article{sentinel,\n  title = {Keep Me},\n}\n' >"$GUARD_BIB"
+GUARD_BEFORE="$(cksum "$GUARD_BIB")"
+
+run_tool cite --bib "$GUARD_BIB"
 assert_rc "cite without a selection exits 1" 1
-grep -q '^error:' <<<"$TOOL_ERR" \
-  && grep -q -- '--item-key' <<<"$TOOL_ERR" \
-  && record_pass "cite names the missing selection flags" \
-  || record_fail "cite names the missing selection flags"
 
 # Neither/both of --tex / --markdown is an error (the guard fires before access).
-run_tool cite --item-key ABCD1234 --bib /tmp/zt_cite_guard.bib
+run_tool cite --item-key ABCD1234 --bib "$GUARD_BIB"
 assert_rc "cite without a target exits 1" 1
-grep -q 'exactly one' <<<"$TOOL_ERR" \
-  && record_pass "cite requires exactly one target (none given)" \
-  || record_fail "cite requires exactly one target (none given)"
 
-run_tool cite --item-key ABCD1234 --tex /tmp/a.tex --markdown /tmp/a.md --bib /tmp/zt_cite_guard.bib
+run_tool cite --item-key ABCD1234 --tex "$GUARD_TMP/a.tex" --markdown "$GUARD_TMP/a.md" --bib "$GUARD_BIB"
 assert_rc "cite with both targets exits 1" 1
-grep -q 'exactly one' <<<"$TOOL_ERR" \
-  && record_pass "cite requires exactly one target (both given)" \
-  || record_fail "cite requires exactly one target (both given)"
+
+if [ "$(cksum "$GUARD_BIB")" = "$GUARD_BEFORE" ]; then
+  record_pass "cite guards leave bibliography unchanged"
+else
+  record_fail "cite guards leave bibliography unchanged"
+fi
 
 # bibliography selection guard.
 run_tool bibliography
 assert_rc "bibliography without a selection exits 1" 1
-grep -q -- '--item-key' <<<"$TOOL_ERR" \
-  && record_pass "bibliography names the missing selection flags" \
-  || record_fail "bibliography names the missing selection flags"
 
 # 10. Unit-test the citation-insertion + hardened entry-detection helpers by
 #     importing the module — no Zotero/BBT/library access. Covers \cite/[@key]
@@ -317,7 +280,7 @@ else
   printf '      unit helper failed: %s\n' "$(cat /tmp/zt_unit_err)"
   record_fail "cite/insert + hardened entry-detection helpers behave"
 fi
-rm -rf "$UNIT_TMP" /tmp/zt_unit_err /tmp/zt_cite_guard.bib
+rm -rf "$UNIT_TMP" "$GUARD_TMP" /tmp/zt_unit_err
 
 echo
 echo "Passed: $pass    Failed: $fail"

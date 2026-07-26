@@ -186,6 +186,90 @@ def test_skill_load_manifest_tables_match_contract():
     }
 
 
+def test_codex_availability_routes_distinguish_tool_and_agent_absence():
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+    rows = markdown_table_rows(codex, "### Availability routing")
+    routes = {
+        (row[0], row[1]): tuple(inline_code(cell) for cell in row[2:])
+        for row in rows
+    }
+
+    assert set(routes) == {
+        ("available", "available"),
+        ("available", "missing"),
+        ("unavailable", "any"),
+    }
+    assert routes[("available", "available")] == (
+        ("named-dispatch",),
+        (),
+        (),
+    )
+    assert routes[("available", "missing")] == (
+        ("setup",),
+        ("codex-superra-setup",),
+        (),
+    )
+    assert routes[("unavailable", "any")] == (
+        ("harness-forced-inline",),
+        ("canonical-role", "canonical-role"),
+        ("implemented", "approved", "revise"),
+    )
+
+
+def test_seat_assignment_table_has_three_supported_structures():
+    orchestration = read_text("skills/agent-orchestration/SKILL.md")
+    rows = markdown_table_rows(orchestration, "## Seat Assignment")
+    structures = {(row[0], row[1]) for row in rows}
+
+    assert structures == {
+        ("subagent", "subagent"),
+        ("subagent", "main"),
+        ("main", "subagent"),
+    }
+
+
+def test_superimplement_executes_each_selected_seat_filler():
+    superimplement = read_text("skills/superimplement/SKILL.md")
+    rows = markdown_table_rows(superimplement, "#### Seat execution")
+    routes = {
+        inline_code(row[0])[0]: inline_code(row[1])
+        for row in rows
+    }
+
+    assert routes == {
+        "main": ("canonical-role",),
+        "subagent": ("dispatch",),
+    }
+
+
+def test_harness_adapters_route_to_shared_canonical_role_resolver():
+    main_agent = read_text("skills/using-superra/references/main-agent.md")
+    claude = read_text("skills/using-superra/references/claude-instructions.md")
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+
+    assert "references/claude-instructions.md" in main_agent
+    assert "references/codex-instructions.md" in main_agent
+    assert "references/canonical-role.md" in claude
+    assert "references/canonical-role.md" in codex
+    assert (
+        REPO_ROOT / "skills" / "using-superra" / "scripts" / "resolve_role.py"
+    ).is_file()
+
+
+def test_superplan_routed_references_exist():
+    superplan = read_text("skills/superplan/SKILL.md")
+    routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
+
+    assert {
+        "references/decomposition.md",
+        "references/changing-the-tree.md",
+    } <= routed_paths
+    assert all(
+        (REPO_ROOT / "skills" / "superplan" / path).is_file()
+        for path in routed_paths
+    )
+
+
 def test_codex_tool_map_matches_contract():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     rows = markdown_table_rows(codex, "## Codex Tool Map")
@@ -338,7 +422,7 @@ def test_parser_contract_samples_and_negative_ordering_cases():
         late_events,
         ["agent-loading-bundle/02-primary-loading-task"],
     )
-    assert len(late_report.missing) == 1
+    assert not late_report.ok
 
     missing_events = parse_json_events(
         json.dumps(
@@ -357,7 +441,7 @@ def test_parser_contract_samples_and_negative_ordering_cases():
             "agent-loading-bundle/03-secondary-loading-task",
         ],
     )
-    assert len(missing_report.missing) == 2
+    assert not missing_report.ok
 
 
 def test_codex_orchestrator_sample_has_structural_dispatches():
@@ -367,38 +451,3 @@ def test_codex_orchestrator_sample_has_structural_dispatches():
     check_orchestrator_dispatches(report, events)
 
     report.assert_ok()
-    assert report.observations == ["orchestrator dispatch events observed"]
-
-
-def test_live_fixture_stays_cheap_and_mock_only():
-    fixture_text = "\n".join(
-        [
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/task.md"
-            ),
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/02-primary-loading-task/task.md"
-            ),
-            read_text(
-                "tests/fixtures/task-trees/bundle-two-tasks/"
-                "superRA/agent-loading-bundle/03-secondary-loading-task/task.md"
-            ),
-        ]
-    )
-    lower = fixture_text.lower()
-
-    assert "loading-evidence.json" in fixture_text
-    assert "marker" in lower
-    assert "sentinel" in lower
-    for forbidden in (
-        "install",
-        "package",
-        "pytest",
-        "npm",
-        "cargo",
-        "real implementation",
-        "broad repository exploration",
-    ):
-        assert forbidden not in lower

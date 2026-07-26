@@ -32,10 +32,9 @@ and which of the two channels carries it — load-bearing for the harness design
   that records read paths; the evaluator matches the manifest reference path
   against the captured reads.
 
-The evaluator takes already-captured inputs (the dispatched agent's skill-load +
-read evidence for Claude; command strings + the output artifact for Codex), so
-the default ``pytest`` path drives it on synthetic inputs with no model call and
-no ``claude_agent_sdk`` / codex-cli import. The live Claude entry
+The evaluator takes already-captured skill-load and read evidence, so the default
+``pytest`` path drives it on synthetic inputs with no model call and no
+``claude_agent_sdk`` import. The live Claude entry
 :func:`run_claude_stage_canary` consumes 08's
 :func:`sdk_load_harness.run_skill_load_session` and is gated behind
 ``RUN_LIVE_HARNESS=1``.
@@ -54,7 +53,6 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from codex_load_evidence import CanarySpec
 from sdk_load_evidence import SkillLoadEvidence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -83,66 +81,12 @@ class StageRow:
     - For a negative stage, both ``expected`` is ``None`` and ``expected_skills``
       is empty.
     - ``channel`` selects how the evaluator looks for the evidence.
-    - ``codex_canary`` is the per-stage Codex :class:`CanarySpec` whose
-      skill-unique token is only producible if a stage skill/reference body
-      loaded; ``None`` for a negative stage.
     """
 
     stage: str
     expected: str | None
     channel: str
-    codex_canary: CanarySpec | None
     expected_skills: tuple[str, ...] = ()
-
-
-# --------------------------------------------------------------------------- #
-# Codex per-stage canaries (skill-unique tokens, recorded at the artifact field)
-# --------------------------------------------------------------------------- #
-
-# Each token is a discriminating concept the stage skill/reference body
-# prescribes (named in the fixture task only as "the discriminating concept that
-# stage's body prescribes"), so the agent can only write it once that body is in
-# context. Recorded at the artifact field `stage_canary` (the same artifact-field
-# convention task 10's always-loaded canaries use); a stage skill with no
-# bundled script has no command-execution side effect, so the artifact field is
-# the channel.
-_STAGE_CANARY_FIELD = "stage_canary"
-
-CODEX_PROTECTION_CANARY = CanarySpec(
-    skill="result-protection",
-    token="drift test",
-    in_command=False,
-    in_artifact_field=_STAGE_CANARY_FIELD,
-)
-CODEX_SYNC_CANARY = CanarySpec(
-    skill="semantic-merge",
-    token="intent conflict",
-    in_command=False,
-    in_artifact_field=_STAGE_CANARY_FIELD,
-)
-CODEX_INTEGRATION_CANARY = CanarySpec(
-    skill="refactor-and-integrate",
-    token="minimum net diff",
-    in_command=False,
-    in_artifact_field=_STAGE_CANARY_FIELD,
-)
-CODEX_PLANNING_REVIEW_CANARY = CanarySpec(
-    skill="skills/superplan/references/planning-review.md",
-    token="handoff-readiness",
-    in_command=False,
-    in_artifact_field=_STAGE_CANARY_FIELD,
-)
-# maturation loads task-tree + superplan (always) and writing (conditional). The
-# canary anchors on a concept unique to one *always-loaded* maturation skill —
-# task-tree's `frontier` view — so the token is producible only if that body
-# reached context. We do NOT anchor on writing (conditional) lest a maturation
-# run that legitimately skips the prose-heavy load red the canary.
-CODEX_MATURATION_CANARY = CanarySpec(
-    skill="task-tree",
-    token="frontier",
-    in_command=False,
-    in_artifact_field=_STAGE_CANARY_FIELD,
-)
 
 
 # --------------------------------------------------------------------------- #
@@ -154,27 +98,23 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         stage="planning-review",
         expected="skills/superplan/references/planning-review.md",
         channel=CHANNEL_READ,
-        codex_canary=CODEX_PLANNING_REVIEW_CANARY,
     ),
     StageRow(
         stage="protection",
         expected=None,
         channel=CHANNEL_SKILL,
-        codex_canary=CODEX_PROTECTION_CANARY,
         expected_skills=("result-protection",),
     ),
     StageRow(
         stage="sync",
         expected=None,
         channel=CHANNEL_SKILL,
-        codex_canary=CODEX_SYNC_CANARY,
         expected_skills=("semantic-merge",),
     ),
     StageRow(
         stage="integration",
         expected=None,
         channel=CHANNEL_SKILL,
-        codex_canary=CODEX_INTEGRATION_CANARY,
         expected_skills=("refactor-and-integrate",),
     ),
     # Positive multi-skill stage: maturation always loads task-tree + superplan.
@@ -184,11 +124,10 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         stage="maturation",
         expected=None,
         channel=CHANNEL_SKILL,
-        codex_canary=CODEX_MATURATION_CANARY,
         expected_skills=("task-tree", "superplan"),
     ),
     # Negative stage: no extra stage-skill expectation.
-    StageRow(stage="implementation", expected=None, channel=CHANNEL_NONE, codex_canary=None),
+    StageRow(stage="implementation", expected=None, channel=CHANNEL_NONE),
 )
 
 # All stage skill names, for the negative-case "no stage skill loaded" check.

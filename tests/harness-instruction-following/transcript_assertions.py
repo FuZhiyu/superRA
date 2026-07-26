@@ -48,6 +48,11 @@ SHELL_TOOL_NAMES = {
     "shell",
 }
 
+QUESTION_TOOL_NAMES = {
+    "askuserquestion",
+    "request_user_input",
+}
+
 CLAUDE_AGENT_TOOL_NAMES = {
     "agent",
     "task",
@@ -301,26 +306,126 @@ def check_file_reads_before_write(
         )
 
 
+def check_interactive_canvas_order(
+    report: AssertionReport,
+    events: Sequence[TranscriptEvent],
+    *,
+    task_path: str,
+    task_artifact: Path | str,
+) -> None:
+    """Require a landed task update before the review question and dispatch."""
+
+    artifact = Path(task_artifact).read_text(encoding="utf-8")
+    frontmatter = artifact.split("---", 2)[1] if artifact.startswith("---") else ""
+    status = re.search(r"(?m)^status:\s*(\S+)\s*$", frontmatter)
+    results = re.search(
+        r"(?ms)^## Results\s*\n(?P<body>.*?)(?=^## |\Z)",
+        artifact,
+    )
+    report.require(
+        status is not None and status.group(1) == "implemented",
+        "interactive artifact: task status must be implemented before review",
+    )
+    report.require(
+        results is not None and bool(results.group("body").strip()),
+        "interactive artifact: task Results must be non-empty before review",
+    )
+
+    opt_in = next(
+        (
+            event
+            for event in events
+            if any(
+                key.lower() in {"execution_mode", "mode"}
+                and value.lower() == "interactive"
+                for key, value in event.key_values
+            )
+        ),
+        None,
+    )
+    task_update = next(
+        (
+            event
+            for event in events
+            if event.is_write_event() and task_path in event.haystack
+        ),
+        None,
+    )
+    question = next(
+        (
+            event
+            for event in events
+            if {name.lower() for name in event.tool_names} & QUESTION_TOOL_NAMES
+        ),
+        None,
+    )
+    reviewer = next(
+        (event for event in events if event.is_dispatch_of("superra_reviewer")),
+        None,
+    )
+
+    report.require(opt_in is not None, "interactive transcript: missing explicit mode opt-in")
+    report.require(task_update is not None, "interactive transcript: missing task update")
+    report.require(
+        question is not None,
+        "interactive transcript: missing review question tool event",
+    )
+    report.require(
+        reviewer is not None,
+        "interactive transcript: missing reviewer dispatch for review-now path",
+    )
+    if task_update is not None and question is not None:
+        report.require(
+            task_update.index < question.index,
+            "interactive ordering: task update must precede review question",
+        )
+    if question is not None and reviewer is not None:
+        report.require(
+            question.index < reviewer.index,
+            "interactive ordering: review question must precede reviewer dispatch",
+        )
+
+
+def check_main_seat_route(
+    report: AssertionReport,
+    events: Sequence[TranscriptEvent],
+    *,
+    main_role: str,
+) -> None:
+    """Require the main seat's role load and the opposite-seat dispatch."""
+
+    if main_role not in {"implementer", "reviewer"}:
+        raise ValueError(f"unsupported main role: {main_role}")
+    opposite = "reviewer" if main_role == "implementer" else "implementer"
+    role_path = f"agents/{main_role}.md"
+    report.require(
+        any(
+            any(
+                "resolve_role.py" in command and main_role in command
+                for command in event.commands
+            )
+            for event in events
+        ),
+        f"main {main_role} seat: missing canonical-role resolution",
+    )
+    report.require(
+        any(event.is_read_of(role_path) for event in events),
+        f"main {main_role} seat: missing role load for {role_path}",
+    )
+    report.require(
+        any(event.is_dispatch_of(f"superra_{opposite}") for event in events),
+        f"main {main_role} seat: missing opposite-seat {opposite} dispatch",
+    )
+
+
 def check_orchestrator_dispatches(
     report: AssertionReport,
     events: Sequence[TranscriptEvent],
     *,
     implementer_needles: Sequence[str] = ("superra_implementer",),
     reviewer_needles: Sequence[str] = ("superra_reviewer",),
-    fallback_exception_needles: Sequence[str] | None = None,
-    fallback_required_needles: Sequence[str] = (),
 ) -> None:
-    """Require implementer/reviewer dispatch evidence or record fallback.
-
-    The skip-pass fallback is taken only when a single event carries every
-    needle in ``fallback_required_needles`` (the direct-mode + reviewer-
-    preservation signal) *and* at least one needle from
-    ``fallback_exception_needles`` (the documented direct-mode exceptions: no
-    harness subagent support, explicit user override, or task triviality). Mere
-    keyword co-occurrence of "direct mode" and "reviewer" no longer qualifies —
-    a genuinely documented exception must be named, so a fabricated reason
-    cannot mask a missing dispatch.
-    """
+    """Require structural implementer and reviewer dispatch evidence."""
 
     implementer_type = implementer_needles[0]
     reviewer_type = reviewer_needles[0]
@@ -330,17 +435,6 @@ def check_orchestrator_dispatches(
                        for event in events)
     if has_implementer and has_reviewer:
         report.observations.append("orchestrator dispatch events observed")
-        return
-
-    if fallback_exception_needles and any(
-        event.contains_all(fallback_required_needles)
-        and event.contains_any(fallback_exception_needles)
-        for event in events
-    ):
-        report.skipped.append(
-            "subagent dispatch events unavailable; documented direct-mode "
-            "exception observed with reviewer preserved"
-        )
         return
 
     if not has_implementer:
