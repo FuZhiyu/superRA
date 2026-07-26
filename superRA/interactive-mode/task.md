@@ -93,3 +93,10 @@ Codex TOMLs remain source-generated; broad test deletions are the approved
 net-negative prose-oracle cleanup with state/schema/path/exit/order/mutation/
 secret coverage retained; current-doc migrations correct claims contradicted by
 the contract; no scope-ambiguous hunk remains.
+
+## Revision Notes
+
+The researcher confirmed the integration-stage distillation: fold
+`integration-contract-fixes` into this durable parent, retain its validated
+lifecycle, cross-harness role-resolution, and DRY/Necessity outcomes as a short
+Results subsection, and remove the temporary update-task directory.

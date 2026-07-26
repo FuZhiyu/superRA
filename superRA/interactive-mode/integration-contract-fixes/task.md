@@ -75,3 +75,10 @@ deletions retain only structured contract coverage per
 no stale claim in the root `CLAUDE.md`, root `README.md`, or harness
 [README.md](../../../tests/harness-instruction-following/README.md). No
 unjustified or scope-ambiguous hunk remains.
+
+## Revision Notes
+
+The researcher confirmed that this integration update task folds into
+`interactive-mode`: move the durable lifecycle, cross-harness role-resolution,
+and DRY/Necessity outcomes into a short parent Results subsection, then remove
+this temporary task directory.
