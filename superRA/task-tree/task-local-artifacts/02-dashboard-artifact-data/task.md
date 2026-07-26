@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: implemented
+status: revise
 depends_on:
   - 01-artifact-contract
 ---
@@ -39,3 +39,7 @@ Watcher ownership is likewise attachment-only: [direct changes return no artifac
 Focused regressions cover direct-file exclusion and access rejection, removal of placement metadata, recursive attachment ownership, hidden/checkpoint and symlink exclusion, listing and byte budgets, MIME and download headers, worktree/custom-root/rootless isolation, attachment-only watcher events, a sixteen-level manifest/content/watcher/export round trip, scoped export, size fallback, and figure reuse in [test_artifacts.py](../../../../skills/task-tree/scripts/tests/test_artifacts.py).
 
 Verification: `test_artifacts.py` passed 25 tests. `git diff --check` passed. The full task-tree suite is intentionally deferred to the combined task 02/03 verification pass.
+
+## Review Notes
+
+1. **MAJOR** — Explicit and download-only responses can still escape the owning task through a validation-to-open symlink race. [`artifact_content`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1405-L1459) validates and describes the path, but then hands the pathname to `FileResponse`, which reopens it later without the no-follow protection used by [`read_artifact_bytes`](../../../../skills/task-tree/scripts/_artifacts.py#L389-L402). In a focused reproduction, replacing `attachments/payload.bin` with a symlink to an out-of-workspace file inside a patched `describe_resolved` call made `GET /api/artifact?...&download=true` return `200` with the outside file's bytes. Keep the validated file identity through response streaming, or reopen through a no-follow descriptor and verify the opened regular file before streaming; add a regression that swaps the final component after resolution and proves both explicit downloads and unsafe-type implicit downloads cannot disclose outside bytes.
