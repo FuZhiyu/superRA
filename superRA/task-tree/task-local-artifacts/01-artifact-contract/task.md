@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: implemented
+status: approved
 depends_on: []
 ---
 
