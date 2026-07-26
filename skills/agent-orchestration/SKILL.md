@@ -92,7 +92,7 @@ Each task has an implementer seat and a reviewer seat; each is independently fil
 | subagent | main | Small or high-stakes work where the main context should carry adversarial review. |
 | main | subagent | Small or context-heavy implementation that still needs independent review. |
 
-When the main agent fills a seat, resolve and load the canonical role spec for that seat, plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer. The active harness adapter owns canonical-role path resolution.
+When the main agent fills a seat, resolve and load the canonical role spec for that seat, plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer. The active harness adapter routes canonical-role path resolution.
 
 ## Orchestrator Duties
 

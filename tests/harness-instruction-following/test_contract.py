@@ -242,6 +242,20 @@ def test_superimplement_executes_each_selected_seat_filler():
     }
 
 
+def test_harness_adapters_route_to_shared_canonical_role_resolver():
+    main_agent = read_text("skills/using-superra/references/main-agent.md")
+    claude = read_text("skills/using-superra/references/claude-instructions.md")
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+
+    assert "references/claude-instructions.md" in main_agent
+    assert "references/codex-instructions.md" in main_agent
+    assert "references/canonical-role.md" in claude
+    assert "references/canonical-role.md" in codex
+    assert (
+        REPO_ROOT / "skills" / "using-superra" / "scripts" / "resolve_role.py"
+    ).is_file()
+
+
 def test_superplan_routed_references_exist():
     superplan = read_text("skills/superplan/SKILL.md")
     routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))

@@ -401,7 +401,7 @@ def check_main_seat_route(
     report.require(
         any(
             any(
-                "--role-path" in command and main_role in command
+                "resolve_role.py" in command and main_role in command
                 for command in event.commands
             )
             for event in events

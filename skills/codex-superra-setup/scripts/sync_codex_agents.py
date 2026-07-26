@@ -46,11 +46,6 @@ def parse_args() -> argparse.Namespace:
         choices=("project", "global"),
         help="Install into this repo's .codex/agents or into ~/.codex/agents.",
     )
-    action.add_argument(
-        "--role-path",
-        choices=("implementer", "reviewer"),
-        help="Print the canonical role-spec path for an inline Codex seat.",
-    )
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -79,10 +74,6 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     repo_root = args.repo_root.resolve()
-
-    if args.role_path:
-        print(resolve_role_path(repo_root, args.role_path))
-        return 0
 
     target_dir = resolve_target_dir(args.scope, repo_root, args.home_dir.resolve())
     codex_agents = render_all_agents(repo_root)
@@ -115,16 +106,6 @@ def resolve_target_dir(scope: str, repo_root: Path, home_dir: Path) -> Path:
     if scope == "project":
         return repo_root / ".codex" / "agents"
     return home_dir / ".codex" / "agents"
-
-
-def resolve_role_path(repo_root: Path, role: str) -> Path:
-    for spec in ROLE_SPECS:
-        if spec.codex_name == f"superra_{role}":
-            path = (repo_root / spec.source_md).resolve()
-            if not path.is_file():
-                raise FileNotFoundError(f"Missing canonical role spec: {path}")
-            return path
-    raise ValueError(f"Unknown role: {role}")
 
 
 def render_all_agents(repo_root: Path) -> dict[str, str]:

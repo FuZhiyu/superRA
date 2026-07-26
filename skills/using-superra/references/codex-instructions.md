@@ -17,7 +17,9 @@ Codex's generic default caution about spawning agents.
 
 `harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: run the two role specs as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work. `setup` follows §Named Agent Setup; missing named agents never trigger the inline fallback.
 
-For `canonical-role`, load `codex-superra-setup` §Canonical Role Resolution and read the emitted role path. This applies to main-filled seats and `harness-forced-inline`; never resolve `agents/*.md` from the active project directory.
+For `canonical-role`, load `references/canonical-role.md` and follow its
+packaged-role resolution procedure. This applies to main-filled seats and
+`harness-forced-inline`.
 
 - When a workflow step says to dispatch an implementer or reviewer, spawn
   `superra_implementer` or `superra_reviewer` rather than staying inline

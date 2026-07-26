@@ -17,13 +17,10 @@ Default to subagent-driven execution on a built tree unless the researcher expli
 
 **Load `superRA:agent-orchestration` before selecting seats or writing any dispatch prompt.**
 
-1. Read the task tree, compute the frontier;
-2. **Go through frontier work units:**
-   a. Select the seat structure per `agent-orchestration` §Seat Assignment and execute the implementer seat for one task or same-parent bundle.
-   b. Execute the reviewer seat for the same task or bundle (one comprehensive pass per task).
-   c. **APPROVE** → next frontier recompute. **REVISE** → adjudicate and fix per `agent-orchestration` §Handling Reviewer Feedback. Loop until APPROVE.
-3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
-4. Present Step 4 completion menu; dispatch `superintegrate` on merge/PR.
+1. Complete Steps 0–1.
+2. Execute frontier tasks through Step 2 until none require implementation or review.
+3. Verify pipeline and reproducibility through Step 3.
+4. Present the Step 4 completion menu.
 
 ### Step 0: Branch Check
 
@@ -90,7 +87,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
 
-**In interactive mode:** the main agent executes the task directly and runs the canvas loop — self-review always, independent review elective — per `superplan/references/interactive-mode.md`.
+**In interactive mode:** follow `superplan/references/interactive-mode.md`.
 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
