@@ -65,9 +65,7 @@ def _standalone_payload(html: str) -> dict:
 
 
 class TestArtifactDiscovery:
-    def test_direct_attachment_and_other_classification_preserves_task_ownership(
-        self, tmp_path
-    ):
+    def test_only_recursive_attachments_are_listed_for_the_owning_task(self, tmp_path):
         root = _tree(tmp_path)
         (root / "note.md").write_text("# note", encoding="utf-8")
         (root / "model.py").write_text("print('ok')\n", encoding="utf-8")
@@ -83,6 +81,9 @@ class TestArtifactDiscovery:
             deep /= f"level-{level:02d}"
         deep.mkdir(parents=True)
         (root / "attachments" / "task.md").write_text("opaque asset", encoding="utf-8")
+        (root / "attachments" / "model.py").write_text("print('ok')\n", encoding="utf-8")
+        (root / "attachments" / "analysis.R").write_text("summary(x)\n", encoding="utf-8")
+        (root / "attachments" / "unexpected.bin").write_bytes(b"\x00\x01")
         (deep / "result.csv").write_text("x\n1\n", encoding="utf-8")
         (root / "attachments" / ".ipynb_checkpoints").mkdir()
         (root / "attachments" / ".ipynb_checkpoints" / "x.ipynb").write_text("{}")
@@ -92,20 +93,21 @@ class TestArtifactDiscovery:
         manifest = _artifacts.build_manifest(root, tree)
         by_path = {entry["path"]: entry for entry in manifest["files"]}
 
-        assert by_path["note.md"]["placement"] == "direct"
-        assert by_path["model.py"]["kind"] == "python"
-        assert by_path["analysis.R"]["kind"] == "r"
-        assert by_path["unexpected.bin"]["placement"] == "other"
-        assert by_path["attachments/task.md"]["placement"] == "attachment"
+        assert set(by_path) >= {
+            "attachments/task.md",
+            "attachments/model.py",
+            "attachments/analysis.R",
+            "attachments/unexpected.bin",
+        }
+        assert by_path["attachments/model.py"]["kind"] == "python"
+        assert by_path["attachments/analysis.R"]["kind"] == "r"
+        assert all("placement" not in entry for entry in by_path.values())
         assert any(path.endswith("/result.csv") for path in by_path)
-        assert "comments.yaml" not in by_path
-        assert "superra" not in by_path
-        assert ".hidden.md" not in by_path
-        assert "child/child-note.md" not in by_path
+        assert not {"note.md", "model.py", "analysis.R", "unexpected.bin"} & by_path.keys()
         assert not any(".ipynb_checkpoints" in path for path in by_path)
 
         child_manifest = _artifacts.build_manifest(root, _task(root, "child"))
-        assert [entry["path"] for entry in child_manifest["files"]] == ["child-note.md"]
+        assert child_manifest["files"] == []
 
     def test_symlinks_and_ancillary_directories_are_ignored(self, tmp_path):
         root = _tree(tmp_path)
@@ -130,8 +132,9 @@ class TestArtifactDiscovery:
 
     def test_file_count_and_manifest_byte_budgets_truncate_deterministically(self, tmp_path):
         root = _tree(tmp_path)
+        (root / "attachments").mkdir()
         for name in ("a.md", "b.py", "c.jl"):
-            (root / name).write_text(name, encoding="utf-8")
+            (root / "attachments" / name).write_text(name, encoding="utf-8")
         task = _task(root)
 
         count_limited = _artifacts.build_manifest(
@@ -139,7 +142,10 @@ class TestArtifactDiscovery:
             task,
             limits=_artifacts.ArtifactLimits(max_files=2),
         )
-        assert [entry["path"] for entry in count_limited["files"]] == ["a.md", "b.py"]
+        assert [entry["path"] for entry in count_limited["files"]] == [
+            "attachments/a.md",
+            "attachments/b.py",
+        ]
         assert count_limited["truncated"] is True
         assert count_limited["truncation_reason"] == "file-count-limit"
 
@@ -147,7 +153,7 @@ class TestArtifactDiscovery:
             root,
             task,
             limits=_artifacts.ArtifactLimits(
-                max_manifest_bytes=260,
+                max_manifest_bytes=280,
                 manifest_entry_overhead=256,
             ),
         )
@@ -156,16 +162,18 @@ class TestArtifactDiscovery:
 
     def test_traversal_budget_bounds_wide_entries_and_empty_directory_work(self, tmp_path):
         root = _tree(tmp_path)
+        attachments = root / "attachments"
+        attachments.mkdir()
         for index in range(24):
-            (root / f"unexpected-{index:02d}.bin").write_bytes(b"x")
-        direct = _artifacts.build_manifest(
+            (attachments / f"file-{index:02d}.bin").write_bytes(b"x")
+        bounded = _artifacts.build_manifest(
             root,
             _task(root),
             limits=_artifacts.ArtifactLimits(max_traversal_entries=8),
         )
-        assert direct["traversal_entries"] == 8
-        assert direct["truncated"] is True
-        assert direct["truncation_reason"] == "traversal-entry-limit"
+        assert bounded["traversal_entries"] == 8
+        assert bounded["truncated"] is True
+        assert bounded["truncation_reason"] == "traversal-entry-limit"
 
         empty_root = _tree(tmp_path / "empty")
         attachments = empty_root / "attachments"
@@ -340,21 +348,27 @@ class TestArtifactResolution:
         root = _tree(tmp_path)
         outside = tmp_path / "outside.txt"
         outside.write_text("secret", encoding="utf-8")
+        (root / "attachments").mkdir()
         try:
-            (root / "escape.txt").symlink_to(outside)
+            (root / "attachments" / "escape.txt").symlink_to(outside)
         except OSError:
             pytest.skip("symlinks unavailable")
         with pytest.raises(_artifacts.ArtifactSecurityError):
-            _artifacts.resolve_artifact(root, _task(root), "escape.txt")
+            _artifacts.resolve_artifact(
+                root, _task(root), "attachments/escape.txt"
+            )
 
 
 class TestArtifactAPI:
     def test_manifest_content_mime_download_and_exact_bytes(self, tmp_path):
         root = _tree(tmp_path)
         (root / "note.md").write_bytes(b"# caf\xc3\xa9\n")
-        (root / "analysis.R").write_text("summary(x)\n", encoding="utf-8")
-        (root / "unsafe.html").write_text("<script>alert(1)</script>", encoding="utf-8")
         (root / "attachments").mkdir()
+        (root / "attachments" / "note.md").write_bytes(b"# caf\xc3\xa9\n")
+        (root / "attachments" / "analysis.R").write_text("summary(x)\n", encoding="utf-8")
+        (root / "attachments" / "unsafe.html").write_text(
+            "<script>alert(1)</script>", encoding="utf-8"
+        )
         raw = b"\x00\xff\x10binary\r\n"
         (root / "attachments" / "raw.bin").write_bytes(raw)
 
@@ -362,14 +376,18 @@ class TestArtifactAPI:
             manifest = client.get("/api/artifacts", params={"task": ""})
             assert manifest.status_code == 200
             assert {item["path"] for item in manifest.json()["files"]} == {
-                "note.md",
-                "analysis.R",
+                "attachments/note.md",
+                "attachments/analysis.R",
                 "attachments/raw.bin",
-                "unsafe.html",
+                "attachments/unsafe.html",
             }
+            assert "placement" not in manifest.json()["files"][0]
+            assert client.get(
+                "/api/artifact", params={"task": "", "path": "note.md"}
+            ).status_code == 400
 
             note = client.get(
-                "/api/artifact", params={"task": "", "path": "note.md"}
+                "/api/artifact", params={"task": "", "path": "attachments/note.md"}
             )
             assert note.status_code == 200
             assert note.content == b"# caf\xc3\xa9\n"
@@ -378,12 +396,12 @@ class TestArtifactAPI:
             assert note.headers["content-disposition"].startswith("inline")
 
             r_source = client.get(
-                "/api/artifact", params={"task": "", "path": "analysis.R"}
+                "/api/artifact", params={"task": "", "path": "attachments/analysis.R"}
             )
             assert r_source.headers["content-type"].startswith("text/x-r-source")
 
             unsafe = client.get(
-                "/api/artifact", params={"task": "", "path": "unsafe.html"}
+                "/api/artifact", params={"task": "", "path": "attachments/unsafe.html"}
             )
             assert unsafe.status_code == 200
             assert unsafe.headers["content-disposition"].startswith("attachment")
@@ -399,7 +417,8 @@ class TestArtifactAPI:
 
     def test_api_rejects_attacks_and_reports_oversized_preview(self, tmp_path, monkeypatch):
         root = _tree(tmp_path)
-        (root / "large.md").write_bytes(b"12345")
+        (root / "attachments").mkdir()
+        (root / "attachments" / "large.md").write_bytes(b"12345")
         monkeypatch.setattr(
             _artifacts,
             "DEFAULT_ARTIFACT_LIMITS",
@@ -413,31 +432,41 @@ class TestArtifactAPI:
                 "/api/artifact", params={"task": "", "path": ".hidden"}
             ).status_code == 403
             too_large = client.get(
-                "/api/artifact", params={"task": "", "path": "large.md"}
+                "/api/artifact", params={"task": "", "path": "attachments/large.md"}
             )
             assert too_large.status_code == 413
             assert too_large.json()["detail"]["reason"] == "preview-byte-limit"
             assert client.get(
                 "/api/artifact",
-                params={"task": "", "path": "large.md", "download": "true"},
+                params={
+                    "task": "",
+                    "path": "attachments/large.md",
+                    "download": "true",
+                },
             ).content == b"12345"
 
     def test_worktree_isolation_and_custom_root(self, tmp_path):
         root_a = _tree(tmp_path / "a", "tasks")
         root_b = _tree(tmp_path / "b", "tasks")
-        (root_a / "note.md").write_text("from-a", encoding="utf-8")
-        (root_b / "note.md").write_text("from-b", encoding="utf-8")
+        (root_a / "attachments").mkdir()
+        (root_b / "attachments").mkdir()
+        (root_a / "attachments" / "note.md").write_text("from-a", encoding="utf-8")
+        (root_b / "attachments" / "note.md").write_text("from-b", encoding="utf-8")
 
         with _client_for(root_a) as client:
             plan_dashboard._worktree_cache["other"] = plan_dashboard._build_worktree_state(
                 "other", root_b
             )
             assert client.get(
-                "/api/artifact", params={"task": "", "path": "note.md"}
+                "/api/artifact", params={"task": "", "path": "attachments/note.md"}
             ).text == "from-a"
             assert client.get(
                 "/api/artifact",
-                params={"task": "", "path": "note.md", "wt": "other"},
+                params={
+                    "task": "",
+                    "path": "attachments/note.md",
+                    "wt": "other",
+                },
             ).text == "from-b"
 
     def test_rootless_forest_exposes_real_tasks_not_synthetic_container(self, tmp_path):
@@ -445,13 +474,14 @@ class TestArtifactAPI:
         child = root / "alpha"
         child.mkdir(parents=True)
         _write_task_md(child / "task.md", "Alpha", "not-started", objective="A.")
-        (child / "note.md").write_text("alpha", encoding="utf-8")
+        (child / "attachments").mkdir()
+        (child / "attachments" / "note.md").write_text("alpha", encoding="utf-8")
 
         with _client_for(root) as client:
             assert client.get("/api/artifacts", params={"task": ""}).status_code == 404
             manifest = client.get("/api/artifacts", params={"task": "alpha"})
             assert manifest.status_code == 200
-            assert manifest.json()["files"][0]["path"] == "note.md"
+            assert manifest.json()["files"][0]["path"] == "attachments/note.md"
 
 
 class TestArtifactWatcher:
@@ -465,7 +495,9 @@ class TestArtifactWatcher:
         watchfiles = pytest.importorskip("watchfiles")
         root = _tree(tmp_path)
         state = plan_dashboard._build_worktree_state("chosen", root)
-        note = root / "child" / "note.md"
+        attachment_dir = root / "child" / "attachments"
+        attachment_dir.mkdir()
+        note = attachment_dir / "note.md"
 
         note.write_text("one", encoding="utf-8")
         added = self._events(state, {(watchfiles.Change.added, str(note))})
@@ -478,9 +510,15 @@ class TestArtifactWatcher:
             assert [event[0] for event in events] == ["artifacts:child"]
             assert events[0][2] == "chosen"
             assert "full-reload" not in [event[0] for event in events]
-        assert json.loads(added[0][1])["files"][0]["path"] == "note.md"
+        assert json.loads(added[0][1])["files"][0]["path"] == "attachments/note.md"
         assert json.loads(modified[0][1])["files"][0]["size"] == 3
         assert json.loads(deleted[0][1])["files"] == []
+
+        direct = root / "child" / "direct.md"
+        direct.write_text("ignored", encoding="utf-8")
+        assert self._events(
+            state, {(watchfiles.Change.added, str(direct))}
+        ) == []
 
     def test_task_md_inside_attachments_is_artifact_not_subtask(self, tmp_path):
         watchfiles = pytest.importorskip("watchfiles")
@@ -555,9 +593,11 @@ class TestStandaloneArtifacts:
     ):
         root = _tree(tmp_path)
         child = root / "child"
-        (child / "note.md").write_text("# source\n", encoding="utf-8")
-        (child / "model.ipynb").write_text('{"cells":[]}', encoding="utf-8")
         (child / "attachments").mkdir()
+        (child / "attachments" / "note.md").write_text("# source\n", encoding="utf-8")
+        (child / "attachments" / "model.ipynb").write_text(
+            '{"cells":[]}', encoding="utf-8"
+        )
         _write_tiny_png(child / "attachments" / "figure.png")
         (child / "attachments" / "large.bin").write_bytes(b"x" * 20)
         sibling = root / "sibling"
@@ -602,8 +642,8 @@ class TestStandaloneArtifacts:
         )
         assert "other.md" not in entries
 
-        note = payload["contents"][""]["note.md"]
-        notebook = payload["contents"][""]["model.ipynb"]
+        note = payload["contents"][""]["attachments/note.md"]
+        notebook = payload["contents"][""]["attachments/model.ipynb"]
         assert base64.b64decode(note["data"]) == b"# source\n"
         assert base64.b64decode(notebook["data"]) == b'{"cells":[]}'
         figure_b64 = base64.b64encode(
@@ -614,8 +654,9 @@ class TestStandaloneArtifacts:
 
     def test_total_export_budget_marks_later_files_omitted(self, tmp_path, monkeypatch):
         root = _tree(tmp_path)
-        (root / "a.md").write_bytes(b"aaaa")
-        (root / "b.py").write_bytes(b"bbbb")
+        (root / "attachments").mkdir()
+        (root / "attachments" / "a.md").write_bytes(b"aaaa")
+        (root / "attachments" / "b.py").write_bytes(b"bbbb")
         monkeypatch.setattr(
             _artifacts,
             "DEFAULT_ARTIFACT_LIMITS",
@@ -632,8 +673,8 @@ class TestStandaloneArtifacts:
             entry["path"]: entry
             for entry in payload["manifests"][""]["files"]
         }
-        assert entries["a.md"]["export"]["status"] == "embedded"
-        assert entries["b.py"]["export"] == {
+        assert entries["attachments/a.md"]["export"]["status"] == "embedded"
+        assert entries["attachments/b.py"]["export"] == {
             "bytes": 4,
             "reason": "total-byte-limit",
             "status": "omitted",
@@ -644,16 +685,17 @@ class TestStandaloneArtifacts:
     ):
         root = _tree(tmp_path)
         child = root / "child"
-        unsupported = child / "unsupported.txt"
-        unreadable = child / "unreadable.png"
+        (child / "attachments").mkdir()
+        unsupported = child / "attachments" / "unsupported.txt"
+        unreadable = child / "attachments" / "unreadable.png"
         unsupported.write_bytes(b"not an image extension")
         unreadable.write_bytes(b"png bytes retained for download")
         task_md = child / "task.md"
         task_md.write_text(
             task_md.read_text(encoding="utf-8")
             + "\n## Results\n\n"
-            + "![unsupported](unsupported.txt)\n"
-            + "![temporarily unreadable](unreadable.png)\n",
+            + "![unsupported](attachments/unsupported.txt)\n"
+            + "![temporarily unreadable](attachments/unreadable.png)\n",
             encoding="utf-8",
         )
 
@@ -672,11 +714,11 @@ class TestStandaloneArtifacts:
             entry["path"]: entry
             for entry in payload["manifests"][""]["files"]
         }
-        assert entries["unsupported.txt"]["export"]["status"] == "embedded"
-        assert entries["unreadable.png"]["export"]["status"] == "embedded"
+        assert entries["attachments/unsupported.txt"]["export"]["status"] == "embedded"
+        assert entries["attachments/unreadable.png"]["export"]["status"] == "embedded"
         assert base64.b64decode(
-            payload["contents"][""]["unsupported.txt"]["data"]
+            payload["contents"][""]["attachments/unsupported.txt"]["data"]
         ) == b"not an image extension"
         assert base64.b64decode(
-            payload["contents"][""]["unreadable.png"]["data"]
+            payload["contents"][""]["attachments/unreadable.png"]["data"]
         ) == b"png bytes retained for download"
