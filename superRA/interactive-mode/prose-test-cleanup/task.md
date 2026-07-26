@@ -1,6 +1,6 @@
 ---
 title: "Prune Prose-Specific Tests Conservatively"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
@@ -38,16 +38,3 @@ Verification:
   `18/18`.
 - Final full Python suite after the accepted revision: `899 passed`, `0 failed`, with four expected
   warnings.
-
-## Review Notes
-
-1. **MAJOR — Child 01 still has one stale Codex artifact-canary claim in a test
-   module docstring.** The remaining documentation-only correction is recorded
-   in
-   [01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes).
-   → implemented: reconciled the harness documentation and annotated the
-   child-local finding
-   ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).
-   → implemented: removed the final stale stage-canary docstring claim and
-   annotated the child-local finding
-   ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).

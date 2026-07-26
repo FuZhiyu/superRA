@@ -1,6 +1,6 @@
 ---
 title: "Delete Rule-Recitation Canaries"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -64,23 +64,3 @@ Revision:
   ([test_stage_loads_live.py:2](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L2)).
   The scoped stage-canary search and Python compilation passed; the module's
   test suite passed `24` tests in `0.05s`.
-
-## Review Notes
-
-1. **MAJOR — The documentation reconciliation is incomplete.** The
-   `test_stage_loads_live.py` module docstring still says the suite drives Codex
-   per-stage canaries on synthetic inputs and that skill-unique tokens are
-   checked at artifact fields
-   ([test_stage_loads_live.py:4-16](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L4-L16)),
-   although those evaluators and artifact fields were removed. Delete that
-   stale paragraph and describe only the surviving Claude evaluator plus
-   schema/stage-identity fixture check; then rerun the stale-claim search so the
-   revision's “search is clean” statement is accurate.
-   → implemented: removed the stale stage/domain artifact-canary,
-   `evaluate_canary`, `always_loaded_live.py` live-gate, and Claude
-   behavioral-canary claims; documented only the remaining structural evidence
-   ([README.md:98](../../../../tests/harness-instruction-following/README.md#L98),
-   [load-testing-research.md:23](../../../../tests/harness-instruction-following/references/load-testing-research.md#L23)).
-   → implemented: removed the remaining synthetic Codex artifact-field canary
-   claim and documented the surviving evaluator and schema/identity check
-   ([test_stage_loads_live.py:2](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L2)).

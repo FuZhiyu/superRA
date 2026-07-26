@@ -1,6 +1,6 @@
 ---
 title: "Execution Mode Model & Interactive Canvas"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
