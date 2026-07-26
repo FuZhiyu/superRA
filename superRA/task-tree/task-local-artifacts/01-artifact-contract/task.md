@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -24,14 +24,6 @@ Preserve the figure mechanics and existing `attachments/` links in `report-in-ma
 
 Keep the agent-facing placement instruction silent about attachment depth. Tooling may preserve nested paths emitted by external tools, but nesting is neither a second organizational model nor a choice agents need to make.
 
-## Revision Notes
-
-Researcher review rejected the direct-companion placement model. Require all retained companions under `attachments/` so storage and dashboard navigation share one unambiguous boundary.
-
-### Generated artifacts
-
-No generated outputs are expected because `agents/*` is out of scope. If that changes, edit canonical role specs and run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` for the four generated role surfaces listed in the parent task; do not edit those outputs directly.
-
 ## Results
 
 The authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify) classifies scratch, task-local, and permanent files and now gives retained task-local files one placement boundary: `attachments/`. Only `task.md` and child-task directories occupy the task directory itself; the `attachments/` asset-container exception still applies when a generated bundle contains a file named `task.md`.
@@ -46,8 +38,3 @@ Verification:
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
 - A fresh isolated Codex harness read the revised contract, removed calculation scratch, retained a hand-authored Markdown note and reproducible CSV under the task's `attachments/`, and promoted the runtime-consumed Python generator to the fixture project's `src/` path without a task-local duplicate. Independent checks confirmed the task directory contained only `task.md` and `attachments/`, all recorded files existed, and a fresh generator run reproduced the retained CSV byte-for-byte.
 - The Markdown checker reported the contract, this task, and its owning ancestor clean; `superra task check` found no issues, and `git diff --check` passed.
-
-## Review Notes
-
-1. **MAJOR:** The revised contract correctly requires every retained task-local companion to live under `attachments/` ([task-companion-files.md:13-18](../../../../skills/using-superra/references/task-companion-files.md#L13-L18)), but the owning ancestor still states that Markdown, Python, Julia, R, and notebook companions may sit beside `task.md` and that dashboard discovery includes direct companions ([../task.md:41-47](../task.md#L41-L47)). Because `superra task read` injects ancestor context into every child dispatch, this stale current-state `## Results` directly contradicts the authoritative placement rule agents receive. Replace the ancestor's superseded direct-companion results with the attachment-only contract (and leave dashboard implementation claims to the reopened downstream tasks) before approving this contract revision.
-   → implemented: replaced the ancestor's stale completion narrative with the attachment-only contract and marked both dashboard redesign tasks pending ([../task.md:41-45](../task.md#L41-L45)).
