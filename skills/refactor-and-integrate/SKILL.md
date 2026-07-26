@@ -20,7 +20,13 @@ Load whichever domain skill(s) the work actually touches; each routes its own do
 
 Before triaging anything, fix the governing diff — the playing field for every decision below. It is the set of changes made on *this branch* since it diverged from the base: `git diff BASE...HEAD` (three-dot), equivalently `git diff $(git merge-base BASE HEAD)..HEAD`. When a dispatch hands you an explicit range, use that range.
 
-The **minimum net diff** is the smallest set of surviving hunks in the governing diff that achieves the task objective. Everything below works toward it.
+The **minimum net diff** is the smallest set of surviving hunks in the governing diff that achieves the task objective or supports the protected record. Everything below works toward it.
+
+## Apply the reviewed refactoring task
+
+When the dispatch supplies a researcher-reviewed temporary refactoring task, execute its objective against the linked permanent documentation, result files, and mature task results. Those artifacts define the protected record; their documented reproduction, validation, interpretation, and presentation paths justify supporting carriers.
+
+The reviewed task is the action boundary. Apply its pruning and other refactoring mechanically. If new evidence requires a materially different protected outcome or refactoring action, return to the owning workflow gate so the record and task can be revised before that work runs.
 
 ## Fit the host project
 
@@ -34,13 +40,13 @@ An intentional deviation is fine when the local convention does not fit, but it 
 
 ## Triage every hunk
 
-Walk the governing diff hunk by hunk. Every hunk must earn its place by contributing to the task objective; a hunk that does not is pruned. Never silently delete — when you are unsure, keep the hunk and raise it.
+Walk the governing diff hunk by hunk. Every hunk must earn its place by contributing to the task objective or supporting the protected record; a hunk that does not is pruned.
 
 Three outcomes, by what justifies the hunk:
 
 - **Confident junk → revert.** Debug prints, reformatting, speculative abstraction, a dead helper — reverting loses no real work.
-- **Justified → keep it.** A kept hunk traces to one of the documented sources: an approved task objective, the codebase-coherence checklist below, task-file coherence, docs matching the code, a logged user decision, or supplied Sync impact context.
-- **Scope-ambiguous but plausibly load-bearing → keep and raise it.** A hunk you cannot confidently tie to a source yet that looks load-bearing stays in, and you flag it — never revert on your own authority. A hunk genuinely needed but covered by no source is evidence the task tree is stale; route that to `superplan §User Feedback and Changing the Task Tree`.
+- **Justified → keep it.** A kept hunk traces to the protected record or one of the documented sources: an approved task objective, the codebase-coherence checklist below, task-file coherence, docs matching the code, a logged user decision, or supplied Sync impact context.
+- **Scope-ambiguous but plausibly load-bearing → resolve at the active boundary.** Before researcher approval, put the uncertainty and recommended action in the temporary refactoring task. After approval, return to the owning workflow gate when resolving it would materially change the approved task or protected outcome. Without that workflow context, keep and raise the hunk.
 
 The same warrant gates base-current deletions and relocations: restore or move base code only when one of the sources above requires it.
 
@@ -56,7 +62,7 @@ Minimum net diff is not only deletion. Look across the surviving changes and ask
 Keep abstractions that aid clarity; clarity over brevity. Two guardrails, because the obvious "safe" reading of each is wrong for research integration:
 
 - **Target the net-minimum diff, not the files you happened to touch.** The smallest change that leaves the codebase consistent often means reaching into existing shared code to extend a utility minimally, rather than leaving it untouched and duplicating its logic alongside. The minimal extension *is* the net-min-diff move; "only refine code you already touched" is not the boundary.
-- **The drift suite is the behavior guardrail.** Consolidating toward host conventions can shift a protected result slightly; that is acceptable while the drift tests pass. When a consistency or consolidation fix *does* move a protected result, treat it as a signal to investigate — the inconsistency may have been producing the wrong number — and adjudicate it per the drift-test discipline the workflow runs around Integrate. Never silently revert to preserve the old output, and never silently re-expect the new one.
+- **The selected protection is the behavior guardrail.** A refactor must preserve the permanent record and pass every automated mechanism selected at Protect. Investigate any movement rather than silently revising documentation or test expectations.
 
 This is the domain-agnostic eye. Domain-specific consolidation rules (redundant intermediary datasets, variable-construction consistency, and the like) live in the domain `integration.md` references; load the domain skill for those.
 
@@ -84,7 +90,7 @@ When a task file carries a `## Sync Impact` section, use it as self-contained ev
 Implementers run this immediately before every return or commit, including no-change cases:
 
 1. **Recompute the governing diff** using the range from §Establish the baseline first.
-2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
+2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <protected record or standalone objective>; <removed and surviving change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Triage** per §Triage every hunk: confident junk reverted, justified hunks kept, scope-ambiguous but load-bearing hunks kept and raised (as a `## Review Notes` item when a task file exists, else in the status return).
@@ -99,6 +105,8 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 **Code integration:**
 
 - `[BLOCKING]` **Final Diff Self-Check present and fresh** per §Final Diff Self-Check.
+- `[BLOCKING]` **Reviewed refactoring task honored when supplied:** every proposed action was executed or returned to the researcher gate before the proposal changed.
+- `[BLOCKING]` **Protected record preserved:** permanent documentation, mature task results, and their required support paths remain coherent and reproducible.
 - `[BLOCKING]` **Triage performed hunk by hunk** per §Triage every hunk: every surviving hunk ties to a justification source, and no hunk was silently deleted.
 - `[BLOCKING]` **Base-current deletions / relocations honored by default:** base code is restored or moved only when a justification source requires it.
 - `[BLOCKING]` **Host-project fit** per §Fit the host project: names, utility reuse, and patterns match the host; deviations carry a reason.

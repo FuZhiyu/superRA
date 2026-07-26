@@ -16,6 +16,6 @@ Ask the agent to rework a correct-but-rough branch so it fits the project and la
 
 `this branch works but it's a mess — reuse our existing helpers, match naming conventions, and fix any docs the diff contradicts`
 
-The core move is **minimum net diff**: it walks the governing diff (`git diff <base>..HEAD`) hunk by hunk and reverts anything not tied to an approved objective, a convention fix, a logged decision, or supplied Sync-impact evidence. Reused helpers, matched names, and a doc audit that walks up from each touched file to the repo root keep new code reading like the rest. It prunes form, not method — different control sets, sample filters, or normalization choices are research decisions, so it escalates those to you.
+The core move is **minimum net diff**: during INTEGRATE it executes the temporary refactoring task you reviewed against the permanent record, pruning work that supports neither that record nor its documented reproduction and validation paths. Reused helpers, matched names, and a doc audit that walks up from each touched file to the repo root keep new code reading like the rest. It prunes form, not method — different control sets, sample filters, or normalization choices are research decisions, so it escalates those to you.
 
 Inside superRA it runs automatically at the `superintegrate` Integrate step. The full gate list, checklist, doc-audit walk-up, and Final Diff Self-Check format live in [`refactor-and-integrate`](skills/refactor-and-integrate/SKILL.md).

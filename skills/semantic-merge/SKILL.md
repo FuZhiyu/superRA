@@ -14,7 +14,7 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 Load exactly the mode reference that matches the call path:
 
 - **Workflow sync author:** `references/workflow-sync-author.md` when `superintegrate` dispatches an agent to bring the current branch onto a confirmed base.
-- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `superintegrate` dispatches a separate reviewer before Integrate begins.
+- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `superintegrate` dispatches a separate reviewer before maturation begins.
 - **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow.
 
 All modes walk the §Semantic Coherence Checklist below as the shared gated checklist.
@@ -85,7 +85,7 @@ Fold every answer into the relevant task objective (rewriting it to be self-suff
 
 Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when current-branch intent, an approved task objective, or a logged user decision justifies it.
 
-**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage from `superintegrate` Protect in workflow mode, or existing tests and drift tests when standalone. Per-commit protection-pass is the lower bound; the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary.
+**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing the existing automated protection selected before Sync, or existing tests and drift tests when standalone. Per-commit protection-pass is the lower bound; the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary.
 
 Include the conflict resolution, resolved docs, and the mode-specific sync record with the commits that produce them — the git log (commit messages) plus the task-local `## Sync Impact` sections in workflow mode, and the commit body in standalone mode. Broader **codebase-coherence** work is owned by `refactor-and-integrate` and out of scope here. The sync record may capture context that explains the post-sync diff for later codebase review; it does not carry unresolved semantic-merge work into Integrate.
 

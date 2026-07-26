@@ -1,62 +1,68 @@
 # Mature & Consolidate
 
-Once Integrate closes, every task this integration touched is a distillation candidate: its work is settled and verified. For each touched task, decide and execute as **one act** the structural fold (content merged into the parent, kept as its own task, directory removed) together with the results altitude (dropped / a folded pointer or one-line note / a short retained subsection / a matured reader-facing narrative at the durable home). Run this stage once, after Integrate, on final results — the fold actions are atomic over objective + results + directory and must not run on pre-Integrate state.
+Run this stage after Sync and before Integrate. The researcher’s Protect choices determine which results survive, where the permanent documentation belongs, and which automated protection to add. This stage materializes that record, matures the task tree, and prepares the refactoring work the researcher will review.
 
-Screening and the user-facing proposal are orchestrator inline work, not a dispatched implementer, because consolidation is user-involving. Execution is dispatched.
+Load `superplan/references/task-tree-design.md`, `superplan/references/consolidation.md`, and `task-tree/references/task-file-contract.md`.
 
-## Step 1: Screen the whole affected tree (mandatory)
+## Step 1: Assemble the maturation input
 
-Load `superplan/references/task-tree-design.md` and survey every task and subtree the integration touched — including approved and in-flight update tasks — against its parent and other candidate durable owners. Run `superra task tree` and `superra task dag` as structural evidence for the manual survey. Identify every update-task, action-verb parent, and misplacement, and per touched subtree draft the distillation: each task's durable home, the structure change that realizes it, and the altitude its `## Results` distils to. Key results selected at Protect are never dropped; when a task's own output *is* a document, distil its `## Results` to a pointer to that document.
+Read the Protect commit, the affected tasks’ working `## Results`, the selected durable homes, and the post-Sync governing diff. Survey every affected task and subtree against its durable owner. Key results selected at Protect must appear in the permanent record; results selected to drop must not be preserved indirectly as standalone findings.
 
-## Step 2: Ask the distillation question, one per touched subtree (always fires)
+## Step 2: Materialize the permanent record and mature the tree
 
-Ask one options-with-recommendation question per touched subtree (`AskUserQuestion`), across as many calls as the harness per-call limit takes. The question always fires — a clean subtree still gets one, with the recommended option carrying no fold ("keep as-is, mature at <home>"). Each question's options are that subtree's candidate consolidation actions plus an explicit keep-as-is option that lets the user veto; mark the orchestrator's screened recommendation first. The recommended option states the proposed structural action(s) and the resulting `## Results` altitude:
-
-```text
-Subtree <subtree-path> — consolidate how?
-  ▸ [Recommended] Fold <task-a> into <parent> (results → one-line note);
-    drop <task-c> (already in <parent> diff); <task-b> matures at <home>
-  ▸ Keep all tasks as-is; mature each in place
-  ▸ <other meaningful variant — e.g. a different durable home for <task-b>>
-```
-
-Material tree changes route through `superplan §User Feedback and Changing the Task Tree` for explicit approval — pruning a task whose result a reader would expect, merging substantive concerns, or a scope-expansion that invalidates downstream. Routine distillation is the recommended default the user can veto. Execution cannot begin before the answer.
-
-## Step 3: Record, then dispatch execution
-
-Fold each subtree's decision into `## Revision Notes` on the affected tasks, then dispatch implementer(s) to execute the distillation — structural folds and results altitude together, per subtree (fan out per subtree when large):
+Dispatch `Stage: maturation` implementers per affected subtree. Create or revise the agreed user-facing documentation and result files first. Then consolidate the task structure and distil each affected task’s `## Results` against those permanent artifacts:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: maturation
-  Task: Execute the distillation for <subtree-path>
-  Tasks in scope: <task paths in this subtree>
+  Tasks: <affected task paths>
 
-  Additionally: execute the recorded `## Revision Notes` distillation —
-    structural folds per `superplan/references/consolidation.md`, and the
-    `## Results` altitude per `task-tree/references/task-file-contract.md`
-    §Results Shape (drop / pointer / short subsection / matured narrative),
-    materializing figures with `report-in-markdown` where a matured home needs
-    them. Edit task.md files in place; land one recoverable commit per task or
-    logical group and report which sub-commits landed.
+  Additionally: apply the researcher’s Protect choices. Write the selected
+    permanent documentation and result files first, then consolidate the task
+    structure per `superplan/references/consolidation.md` and mature `## Results`
+    per `task-tree/references/task-file-contract.md` §Results Shape. Land
+    recoverable commits per affected subtree.
 ```
 
-## Step 4: Whole-tree review
+The task record points to a permanent document when that document is the source of truth; it does not duplicate it. Structural folds and result maturation still happen together so removed task content lands at its durable home.
 
-Dispatch one whole-tree reviewer for structure (not parallelized); results distillation may fan out per subtree when large:
+## Step 3: Prepare the temporary refactoring task
+
+Create one recognizably temporary task under the lowest durable task ancestor that covers the affected scope, or at the task-tree root when no such ancestor exists. Leave it `not-started`; Integrate executes it.
+
+Its `## Objective` links to the permanent documentation, result files, and mature task results, then states the proposed work:
+
+- pruning of tasks, code, outputs, diagnostics, and documentation not justified by the protected record or its documented reproduction, validation, interpretation, and presentation paths;
+- consolidation, simplification, duplication removal, host-project convention fit, and stale-documentation repair; and
+- verification that must pass after those changes.
+
+Name the affected artifacts or tightly bounded families. Do not copy the protected result prose into the task or create another keep list.
+
+## Step 4: Review the completed record and proposal
+
+Dispatch a fresh reviewer over the affected tasks, permanent artifacts, proposed final tree, and temporary refactoring task:
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: maturation
-  Task: Verify consolidated structure and distilled results
-  Git range: <BASE_SHA>..<HEAD_SHA>
-  Tasks in scope: <whole affected tree>
+  Tasks: <affected durable task paths>
+  Git range: <pre-maturation SHA>..HEAD
 
-  Additionally: verify the consolidated structure — no update-task or
-    action-verb scaffolding left stranded, placement clean, Protect key
-    results retained — and the distilled `## Results` per
-    `task-tree/references/task-file-contract.md` §Results Shape.
-    <prior-round adjudication notes if re-dispatching>
+  Additionally: verify that the permanent documentation and result files
+    implement the Protect choices; the task tree and `## Results` are mature and
+    navigable; and every in-scope change is justified by the protected record or
+    appears as an actionable item in the temporary refactoring task. Review that
+    task as an artifact; leave it `not-started` for Integrate.
 ```
 
-If a REVISE finding traces to the code, re-enter Integrate. On APPROVE, commit the consolidated, matured tree (`integrate(mature): …`).
+Iterate until the permanent record, tree, and proposal pass review.
+
+## Step 5: Run the researcher gate
+
+Present one review surface containing:
+
+1. the completed user-facing documentation and result files;
+2. the mature task tree and its durable `## Results`; and
+3. the temporary refactoring task, including proposed pruning and other refactoring.
+
+Ask whether to approve this record and proposal. If the researcher requests changes, revise or undo the recoverable maturation commits, rebuild the refactoring task, repeat Step 4, and present the updated surface. On approval, commit any incorporated changes with `integrate(mature): …`; the commit body records the reviewed SHA and decision. Then enter Integrate.
