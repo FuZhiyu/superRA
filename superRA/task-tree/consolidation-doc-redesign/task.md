@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -33,10 +33,6 @@ The recovery branch `backup/pruning-redesign-before-restart-20260725` contains a
 Follow the instruction-authoring and generated-artifact rules in [CLAUDE.md](../../../CLAUDE.md). Prefer a small end-to-end workflow fixture over prose canaries or exhaustive protocol simulations.
 
 The maturation-only ownership change touches [agents/reviewer.md](../../../agents/reviewer.md); regenerate [.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml) with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-
-## Revision Notes
-
-The researcher replaced separate record verification and proposal derivation with one reviewer pass after maturation. That reviewer verifies the protected record, derives the pruning and consolidation actions, and writes the temporary refactoring task before the existing combined researcher gate. The temporary task plus git history must carry resumable state without another manifest or status field.
 
 ## Results
 
