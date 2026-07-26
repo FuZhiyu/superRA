@@ -10,7 +10,7 @@ Run every existing protection check plus the mechanisms selected at Protect. A f
 
 ## Step 2: Recover the task state
 
-Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing, return to Mature & Consolidate Step 3. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
+Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing or incomplete against Mature & Consolidate Step 3, return there. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
 
 - `not-started` — execute the approved task;
 - `implemented` or `revise` — enter the review or fix loop;

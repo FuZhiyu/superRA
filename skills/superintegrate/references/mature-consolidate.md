@@ -47,7 +47,7 @@ Agent(subagent_type: "superRA:reviewer"):
     that must pass.
 ```
 
-Iterate the same drafter and reviewer seats until the protected record passes review and the temporary task is complete. Mature & Consolidate is complete when that task exists at `not-started`; if the record exists but the task does not, resume at this step.
+Iterate the same drafter and reviewer seats until the protected record passes review and the temporary task is complete. Mature & Consolidate is complete when that task is `not-started` and satisfies the dispatch contract above; otherwise resume at this step.
 
 ## Step 4: Enter Integrate
 
