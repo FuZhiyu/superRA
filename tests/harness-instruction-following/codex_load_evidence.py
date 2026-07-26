@@ -13,10 +13,8 @@ on Codex both skill loading and subagent dispatch must be established
 out-of-band:
 
 1. **Canary / side-effect** — the fixture task instructs the agent to perform a
-   skill-unique observable action that is only producible if the named skill body
-   loaded: either a prescribed command (surfacing as a ``command_execution``
-   event in the JSONL) or a sentinel value written into the output artifact. The
-   :func:`evaluate_canary` evaluator scans both sources for the canary token.
+   skill-unique command that surfaces as a ``command_execution`` event in the
+   JSONL. :func:`evaluate_canary` checks that command evidence.
 2. **``SubagentStart`` hook log** — a ``SubagentStart`` hook (matcher = agent
    type) appends an agent-type sentinel to a log file on every dispatch, so
    orchestrator dispatch is verifiable even though the JSONL hides it. The hook
@@ -25,7 +23,7 @@ out-of-band:
    the unit test share; :func:`evaluate_dispatch_log` checks the resulting log.
 
 Both evaluators take already-parsed inputs (the codex JSONL events via the shared
-``transcript_assertions`` parser, the artifact JSON, the dispatch log text), so
+``transcript_assertions`` parser and the dispatch log text), so
 the default ``pytest`` path drives them on synthetic inputs with no codex-cli and
 no model call.
 
@@ -67,24 +65,12 @@ class CanarySpec:
     """A skill-unique observable the fixture task requires a loaded skill to emit.
 
     ``skill`` is the skill whose body prescribes the action (for the failure
-    message). ``token`` is the high-entropy sentinel string that proves the skill
-    body was in context. The token is checked against two sources, either of
-    which satisfies the canary:
-
-    - ``in_command``: the token appears in a ``command_execution`` command string
-      (a command the skill body told the agent to run), and/or
-    - ``in_artifact_field``: a JSON path (dotted, e.g. ``"loading.canary"``) in
-      the output artifact whose value must equal the token.
-
-    A spec sets at least one source. Keeping the convention to "token in command
-    OR token at artifact field" lets the stage (11) and domain (12) smokes reuse
-    one evaluator with per-skill ``CanarySpec`` rows and no bespoke parsing.
+    message). ``token`` is the high-entropy sentinel string checked against
+    ``command_execution`` command strings.
     """
 
     skill: str
     token: str
-    in_command: bool = True
-    in_artifact_field: str | None = None
 
 
 @dataclass
@@ -104,71 +90,27 @@ class CanaryReport:
             raise AssertionError(f"Codex canary evidence failures:\n{joined}")
 
 
-def _artifact_value_at(artifact: dict | None, dotted_path: str):
-    """Return the value at a dotted JSON path, or a sentinel ``_MISSING``."""
-
-    if artifact is None:
-        return _MISSING
-    node = artifact
-    for part in dotted_path.split("."):
-        if not isinstance(node, dict) or part not in node:
-            return _MISSING
-        node = node[part]
-    return node
-
-
-_MISSING = object()
-
-
 def evaluate_canary(
     report: CanaryReport,
     spec: CanarySpec,
     *,
     command_strings: Sequence[str] = (),
-    artifact: dict | None = None,
 ) -> None:
-    """Check one canary against command strings and/or the output artifact.
+    """Check one canary against command strings.
 
     ``command_strings`` is the list of ``command_execution`` command strings from
     the codex JSONL (extract via :func:`command_strings_from_events`).
-    ``artifact`` is the parsed output-artifact JSON (or ``None`` if absent).
-
-    The canary passes if the token is found in any required source. A spec that
-    enables ``in_command`` is satisfied by the token in any command; a spec with
-    ``in_artifact_field`` is satisfied by that field equalling the token. The
-    canary fails only if none of its enabled sources carry the token — an absent
-    canary is a real "skill body did not load" finding to escalate, not a test
-    bug.
     """
 
-    found_in_command = False
-    if spec.in_command:
-        found_in_command = any(spec.token in cmd for cmd in command_strings)
-
-    found_in_artifact = False
-    if spec.in_artifact_field is not None:
-        value = _artifact_value_at(artifact, spec.in_artifact_field)
-        found_in_artifact = value is not _MISSING and value == spec.token
-
-    if found_in_command or found_in_artifact:
-        where = []
-        if found_in_command:
-            where.append("command")
-        if found_in_artifact:
-            where.append(f"artifact field {spec.in_artifact_field!r}")
+    if any(spec.token in cmd for cmd in command_strings):
         report.observations.append(
-            f"canary for skill {spec.skill!r} present in {' and '.join(where)}"
+            f"canary for skill {spec.skill!r} present in command"
         )
         return
 
-    sources = []
-    if spec.in_command:
-        sources.append("any command_execution command")
-    if spec.in_artifact_field is not None:
-        sources.append(f"artifact field {spec.in_artifact_field!r}")
     report.missing.append(
         f"canary for skill {spec.skill!r} (token {spec.token!r}) absent from "
-        f"{' / '.join(sources)} — the skill-unique side effect was not produced, "
+        "command_execution commands — the skill-unique side effect was not produced, "
         f"so the skill body did not load"
     )
 
@@ -178,7 +120,6 @@ def evaluate_canaries(
     specs: Iterable[CanarySpec],
     *,
     command_strings: Sequence[str] = (),
-    artifact: dict | None = None,
 ) -> None:
     """Run :func:`evaluate_canary` for every spec, collecting all failures."""
 
@@ -187,7 +128,6 @@ def evaluate_canaries(
             report,
             spec,
             command_strings=command_strings,
-            artifact=artifact,
         )
 
 
@@ -291,9 +231,7 @@ def evaluate_dispatch_log(
 
     The SubagentStart hook supersedes JSONL-based dispatch detection for the
     Codex orchestrator path (the JSONL hides ``spawn_agent``). A required type
-    that never appears is a missing-dispatch finding; the caller decides whether
-    a documented direct-mode fallback (handled out-of-band by the smoke) excuses
-    it.
+    that never appears is a missing-dispatch finding.
     """
 
     dispatched = dispatched_agent_types(log_text)

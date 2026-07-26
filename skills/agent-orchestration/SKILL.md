@@ -7,21 +7,15 @@ description: Coordinate superRA agents and handoffs. Requires superRA:using-supe
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops; do trivial work inline.
+You delegate tasks to specialized agents with isolated context. Parallel-dispatch independent tasks/reviews; serialize iterative loops.
 
 ## Workload Balancing
 
 Every dispatch has spawn cost — skill-load, context hydration, per-turn overhead. Pick the tier that matches the work:
 
-### Tier 1 — Trivial: do it inline
+### Tier 1 — Small: main implementer seat
 
-The orchestrator executes the task itself, no subagent. Use when the task fits in a single edit, reads no unfamiliar files, and needs no domain skill beyond what the orchestrator already has loaded.
-
-- Typo or comment fix in one file.
-- A 2-line constant change the orchestrator has already read.
-- Removing a known-dead import.
-
-Dispatch cost > work content. Just do it.
+Use the small-task structure in §Seat Assignment.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 
@@ -90,29 +84,15 @@ Agent(subagent_type: "superRA:reviewer"):
 
 ## Seat Assignment
 
-Each task has an implementer seat and a reviewer seat; each is independently filled by the main agent or a dispatched subagent. These are the seat structures of **subagent** mode (`using-superra/references/main-agent.md §Execution Modes`) — below are the three configurations and how to choose per task. Whoever fills a seat runs that seat's role spec — `agents/implementer.md` for the implementer, `agents/reviewer.md` for the reviewer — main agent or subagent alike.
+Each task has an implementer seat and a reviewer seat; each is independently filled by the main agent or a dispatched subagent. These are the seat structures of **subagent** mode (`using-superra/references/main-agent.md §Execution Modes`):
 
 | Implementer | Reviewer | Choose when |
 |---|---|---|
-| subagent | subagent | Default. Large or routine subtrees — keep both seats off the main context. |
-| subagent | main | Small or high-stakes task — strongest model on the adversarial seat, routine implementation delegated. |
-| main | subagent | A task too context-heavy to hand off but still worth independent review — main implements on the main context, an independent subagent gates it. |
+| subagent | subagent | Default for large or routine work. |
+| subagent | main | Small or high-stakes work where the main context should carry adversarial review. |
+| main | subagent | Small or context-heavy implementation that still needs independent review. |
 
-Per-task signals:
-
-- **Size / routineness** → subagent reviewer, to keep the main context lean.
-- **Stakes / silent-error risk** → main-agent reviewer, to put the strongest model on the seat that catches a wrong result before it ships.
-- **Context cost** → send whichever seat you cannot afford to carry inline to a subagent.
-
-### Main agent in the reviewer seat
-
-When the main agent reviews a subagent's implementation there is no reviewer dispatch — the main agent runs the review itself over the same `Git range:` the implementer produced:
-
-1. Load `agents/reviewer.md` and the task's stage + domain skills from the Skill-Load Manifest — the same load a dispatched reviewer gets.
-2. Review the range as an adversary and write `## Review Notes` into the task file, walking the stage/domain gated checklist as a subagent reviewer would.
-3. Being also the orchestrator, §Handling Reviewer Feedback collapses to writing only the findings you would forward, then re-dispatching the implementer subagent; on a clean pass set `status: approved` inline.
-
-The mirror — main in the implementer seat, subagent reviews — runs `agents/implementer.md` over its own work, then dispatches a reviewer through the template above over the main agent's own commits. (The interactive canvas loop is the separate **interactive** mode, `superplan/references/interactive-mode.md`, not this autonomous seat.)
+When the main agent fills a seat, resolve and load the canonical role spec for that seat, plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer. The active harness adapter routes canonical-role path resolution.
 
 ## Orchestrator Duties
 

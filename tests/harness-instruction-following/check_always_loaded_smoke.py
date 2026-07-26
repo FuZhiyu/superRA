@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""Evaluate a live Codex always-loaded canary run (task 10).
+"""Evaluate a live Codex always-loaded smoke run.
 
-Parses the codex JSONL transcript and the agent-written canary artifact, then
+Parses the Codex JSONL transcript and the agent-written schema artifact, then
 runs the always-loaded :class:`~always_loaded_live.CODEX_ALWAYS_LOADED_CANARIES`
-via 09's :func:`codex_load_evidence.evaluate_canaries`. Each canary's
-skill-unique token must appear in a ``command_execution`` command or at its
-artifact field — producible only if the always-loaded skill body loaded, which on
-Codex (no autoload) means the role-spec body-load instruction was followed.
+against existing ``command_execution`` events.
 
 Usage:
     check_always_loaded_smoke.py --transcript <jsonl> --artifact <json>
 
-Exit 0 when both canaries are present; exit 1 with a report otherwise. An absent
-canary is a real "skill body did not load" finding to escalate.
+Exit 0 when both commands and the exact artifact schema are present.
 """
 
 from __future__ import annotations
@@ -23,7 +19,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from always_loaded_live import CODEX_ALWAYS_LOADED_CANARIES  # noqa: E402
+from always_loaded_live import (  # noqa: E402
+    CODEX_ALWAYS_LOADED_CANARIES,
+    EXPECTED_ARTIFACT,
+)
 from codex_load_evidence import (  # noqa: E402
     CanaryReport,
     command_strings_from_events,
@@ -48,14 +47,15 @@ def main() -> int:
         report,
         CODEX_ALWAYS_LOADED_CANARIES,
         command_strings=commands,
-        artifact=artifact,
     )
+    if artifact != EXPECTED_ARTIFACT:
+        report.missing.append("always-loaded evidence artifact schema mismatch")
 
     for note in report.observations:
         print(f"observation: {note}")
 
     if report.ok:
-        print("PASS codex always-loaded canary: both skill bodies evidenced loaded")
+        print("PASS codex always-loaded command and artifact evidence")
         return 0
 
     print("FAIL codex always-loaded canary:", file=sys.stderr)

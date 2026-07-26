@@ -31,7 +31,7 @@ Before exploration or task design, assess three independent dimensions of the in
 
 **3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
 
-When the researcher opts into **interactive canvas cadence** — co-editing the task file and executing it yourself rather than dispatching, running to completion — load `references/interactive-mode.md`. It fuses light planning, self-execution, and recording across the forward light-plan and retroactive-capture forms.
+When the researcher opts into **interactive canvas cadence**, load `references/interactive-mode.md`.
 
 **Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing.
 
@@ -61,13 +61,13 @@ If the task is in a domain without an implemented domain skill: proceed to Phase
 
 ## Phase 3: Design & Task Decomposition
 
-Map the artifact pipeline, decompose the work into tasks with the active domain skill's full discipline applied, wire dependencies, and create the `superRA/` directory. Load `references/decomposition.md` for the mechanics — artifact pipeline and pipeline file, task structure, wrapper-first creation, the no-checkboxes rule, dependency tracing, task anatomy, and the umbrella-task decision.
+Load `references/decomposition.md` and follow its task-decomposition procedure.
 
 ## Phase 4: Review & Commit
 
 ### Self-Review
 
-After writing the complete task tree, run the self-review checklist in `references/decomposition.md` §Self-Review — domain-inventory coverage, placeholder scan, pipeline consistency, validation and verification coverage, objective/guidance split, handoff test, dependency-graph sanity, and subtask coverage. Fix issues inline; no need to re-review.
+Run `references/decomposition.md` §Self-Review.
 
 ### Agent Review
 
@@ -102,10 +102,6 @@ Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initi
 
 At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
 
-## Living Task Tree
-
-The task tree is not a static spec — it evolves in place as work reveals surprises, and `superRA/` (not chat or `TodoWrite`) is the authoritative tracker of record. Distinguish **agent-discovered refinements** (handled as inline body edits) from **researcher-initiated scope changes** (routed through §User Feedback and Changing the Task Tree below). `references/changing-the-tree.md` owns the drift distinction, the tracker-of-record rule, and the live-`## Results` record.
-
 ## User Feedback and Changing the Task Tree
 
-When the task tree changes — details updated, tasks added/removed/restructured, objective shifted, whether raised mid-execution or after integration/merge — route through `references/changing-the-tree.md`. It owns the materiality test (material scope changes vs. non-material inline discovery edits) and the full protocol: confirm intent → update `superRA/` inline → reset statuses → sweep stale content → commit atomically (`plan(<sub-step>): …`) → resume on the affected frontier. Do not resume the in-flight task before the change is committed, and do not treat an invalidated milestone as license to clear unrelated approved tasks.
+Route task-tree changes through `references/changing-the-tree.md`.

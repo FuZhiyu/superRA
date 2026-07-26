@@ -30,9 +30,12 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
 
-Literature review now ships as a user-invocable Utility skill (`literature-review`, below) rather than a workflow-loaded domain skill: its two-part workflow is orchestrator-driven and standalone, so it is not auto-loaded by the Skill-Load Manifest.
+Literature review now ships as a user-invocable Utility skill (`literature-review`)
+rather than a workflow-loaded domain skill: its two-part workflow is
+orchestrator-driven and standalone, so it is not auto-loaded by the Skill-Load
+Manifest.
 
-Each future vertical plugs into the same workflow scaffolding — implementer + reviewer pair, task-tree handoff, autonomous-with-human-in-loop, semantic merges.
+Each future vertical plugs into the same workflow scaffolding — implementation and review discipline, task-tree handoff, autonomous-with-human-in-loop, semantic merges.
 
 ## Utility — reusable, domain-neutral tools
 

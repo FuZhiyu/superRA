@@ -17,9 +17,20 @@
 - The interactive canvas loop is self-contained (it loads no role specs) and now
   makes *keep the task updated* and *ask before review with a tool* required
   steps. Retroactive capture is reframed around its real trigger — writing up
-  work already done — routed through the same loop.
+  work already done — routed through the same loop. The generated direct-mode
+  role mirrors are retired; the named Codex agents remain generated from the
+  canonical role specs.
 - The `superplan` SKILL.md spine was tightened (Depth Tiers rendered as a table);
   phase choreography and review gates remain owned by the spine.
+- Economic-data work now assesses committed diagnostics and outputs first,
+  re-executes when a discrepancy is suspected, limits fix iterations to the
+  changed step and its downstream dependents, and presents headline findings
+  visually unless a figure would not clarify them.
+- Prose-specific test oracles were removed conservatively: authored instruction
+  wording, labels, and layout are no longer regression contracts, while cheap
+  mutation, status, schema, identity, ordering, and secret-exposure checks
+  remain. The cleanup adds no live harness, network, or production testability
+  infrastructure.
 
 ### Release Prep
 

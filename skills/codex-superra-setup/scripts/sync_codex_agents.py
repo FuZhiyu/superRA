@@ -40,10 +40,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate and install superRA Codex custom agents."
     )
-    parser.add_argument(
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument(
         "--scope",
         choices=("project", "global"),
-        required=True,
         help="Install into this repo's .codex/agents or into ~/.codex/agents.",
     )
     parser.add_argument(
@@ -74,6 +74,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     repo_root = args.repo_root.resolve()
+
     target_dir = resolve_target_dir(args.scope, repo_root, args.home_dir.resolve())
     codex_agents = render_all_agents(repo_root)
 

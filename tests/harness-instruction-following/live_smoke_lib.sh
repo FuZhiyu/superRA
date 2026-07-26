@@ -128,8 +128,6 @@ bundle and each is a shallow sentinel-collection task that writes loading-eviden
 
 Follow the documented default dispatch path: dispatch an implementer subagent for
 the frontier, then dispatch a reviewer subagent to review the implementation. Do
-not implement the task inline yourself unless a documented direct-mode exception
-applies; if you do fall back to direct mode, state the documented reason and still
-dispatch a reviewer subagent.
+not switch to interactive mode: this prompt does not opt into it.
 EOF
 }

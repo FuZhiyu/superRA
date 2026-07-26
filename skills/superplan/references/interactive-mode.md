@@ -16,14 +16,12 @@ One task file carries the whole range of plan/execute interleaving:
 You do not load the implementer or reviewer role specs here — this loop is your protocol for handling the task file.
 
 1. **Co-edit** the target and objective into the task file through the `using-superra` §Task Interface.
-2. **Self-review always.** Walk the active domain skill's gated checklist as a genuine judgment pass (e.g. the Iron Law for modeling, evidence-before-claims for data work) — every `[BLOCKING]` item, sized to the work, not a heavy multi-item ceremony.
+2. **Self-review always.** Compare the changed artifacts and recorded results with the objective; inspect the diff and outputs for correctness, completeness, and unintended scope; and run fresh verification for each completion claim. Apply every `[BLOCKING]` item from active domain skills in addition.
 3. **Keep the task updated — required.** Before each pause, record what you did into the task's `## Results` and move `status` as the work lands (`in-progress` → `implemented`). The task file, not the chat or the commit log alone, is the state of record; code commits without a task update are an incomplete step.
 4. **Commit instantly** per edit, per `using-superra` §Commit Hygiene.
 5. **Ask before review, with a tool — required.** Use `AskUserQuestion` (plain text only if the harness lacks it) to ask the researcher: review now / defer / skip. Never dispatch a reviewer on your own read of the situation.
    - **Now** — dispatch a reviewer subagent for a full gated pass (via `superRA:agent-orchestration`); on APPROVE the task reaches `approved`.
-   - **Defer / skip** — leave the task at `implemented` for a later deferred-review sweep.
-
-   Reuse `implemented` / `approved` for these states; do not invent an awaiting-review status.
+   - **Defer / skip** — leave the task at `implemented`.
 6. **Continue**, pausing frequently for feedback before the next unit of work.
 
 ## Positioning and the intent gate
