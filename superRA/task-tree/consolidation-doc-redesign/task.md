@@ -1,6 +1,6 @@
 ---
 title: "Consolidation + Documentation Stage Redesign"
-status: approved
+status: not-started
 depends_on: []
 ---
 
