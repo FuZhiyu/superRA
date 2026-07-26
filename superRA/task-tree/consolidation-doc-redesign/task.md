@@ -53,6 +53,7 @@ Rebuilt INTEGRATE around a protected permanent record, one maturation drafter, o
 - Review follow-up removed duplicate domain confirmation prompts, corrected theory protection routing, scoped proposal-before-execution to standalone consolidation, reduced repeated dispatch instructions, and made every later approval durable even when it changes no files.
 - The loaded refactoring discipline now uses the protected record as the sole workflow exemption from the automatic pruning list; its broader justification sources remain available only in standalone use.
 - [agents/reviewer.md](../../../agents/reviewer.md) carries the narrow maturation-only task-creation ownership exception, and the generated [.codex reviewer](../../../.codex/agents/superra_reviewer.toml) is current.
+- Main-seat review removed a duplicate refactoring-protocol echo and aligned the reviewer’s edit, self-check, and commit boundaries with its temporary-task ownership.
 
 Verification completed on the implementation diff:
 

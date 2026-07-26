@@ -106,7 +106,7 @@ When `## Review Notes` is empty, remove the section entirely and (with `## Revis
 
 ### Commit
 
-Stage assigned task.md files only, following `superRA:using-superra` §Commit Hygiene:
+Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format

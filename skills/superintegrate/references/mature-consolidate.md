@@ -40,14 +40,12 @@ Agent(subagent_type: "superRA:reviewer"):
   Additionally: load `superRA:refactor-and-integrate`. Verify that the Protect
     choices are fully and navigably represented and every support path that
     must survive refactoring is explicit. Once the record passes, create one
-    temporary refactoring task under the lowest durable ancestor covering the
-    scope. Leave it `not-started`; link its `## Objective` to the protected
-    record; record `BASE_HEAD_SHA`; name every pruning or refactoring action by
-    artifact or tightly bounded family; and include the verification that must
-    pass.
+    recognizably temporary refactoring task under the lowest durable ancestor
+    covering the scope. Leave it `not-started`; link its `## Objective` to the
+    protected record; record `BASE_HEAD_SHA`; name every pruning or refactoring
+    action by artifact or tightly bounded family; and include the verification
+    that must pass.
 ```
-
-Applying `refactor-and-integrate`, the reviewer places every unmatched in-scope change on the task’s pruning list and proposes consolidation, simplification, duplication removal, convention fit, and stale-documentation repair where warranted. The task does not copy result prose or create a parallel keep list.
 
 Iterate the same drafter and reviewer seats until the protected record passes review and the temporary task is complete. Mature & Consolidate is complete when that task exists at `not-started`; if the record exists but the task does not, resume at this step.
 

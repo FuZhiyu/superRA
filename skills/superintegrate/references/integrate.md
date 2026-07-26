@@ -28,7 +28,7 @@ Ask whether to approve the protected record and task. A requested change to the 
 
 ## Step 4: Execute the approved task
 
-Dispatch a `Stage: integration` implementer:
+Fill the `Stage: integration` implementer seat:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
