@@ -123,6 +123,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 ### Documentation and handoff
 
 - `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
+- `[BLOCKING]` **When this skill is used for a superRA task, task-specific result-producing code follows the companion boundary.** Code retained solely to produce or support that task's recorded results is a task companion under `attachments/`, even when it remains committed long term. Promote it to the project's conventional path per `using-superra` §Task Interface when it becomes maintained, shared, runtime-consumed, or a promised deliverable.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
 - `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
 - `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings shipped.

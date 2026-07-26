@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -31,15 +31,15 @@ Keep the agent-facing placement instruction silent about attachment depth. Tooli
 
 ## Results
 
-The authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify) classifies scratch, task-local, and permanent files and now gives retained task-local files one placement boundary: `attachments/`. Only `task.md` and child-task directories occupy the task directory itself; the `attachments/` asset-container exception still applies when a generated bundle contains a file named `task.md`.
+The always-loaded [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and [user-facing README](../../../../README.md#how-it-works) now teach the three-way placement decision directly rather than presenting a bare pointer. They define a task companion as any retained file—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results. Disposable session work stays in scratch outside `superRA/`; task companions go under the owning task's `attachments/`; maintained code, shared or runtime-consumed files, and promised durable deliverables go to conventional permanent project paths.
 
-The contract also requires links and reproducibility metadata, promotes permanent artifacts without duplicate sources of truth, and carries retained companions through Mature & Consolidate without dropping protected-result support. It remains routed from the universal [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and the smallest planning, implementation, integration, maturation, task-tree, reporting, and [user-facing documentation](../../../../README.md#how-it-works) surfaces. Canonical role specs and generated role artifacts remain unchanged.
+The authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify) now makes explicit that scratch stays outside `superRA/` and that long-lived retention does not by itself make a file a permanent project artifact. Its existing reproducibility, promotion, and maturation mechanics remain the single detailed source.
 
-The owning ancestor's injected `## Results` now states the same attachment-only boundary and identifies the data-path and UI redesigns as pending rather than presenting their rejected direct-companion behavior as current.
+The [economic-data handoff gate](../../../../skills/econ-data-analysis/SKILL.md#documentation-and-handoff) applies the boundary only when `econ-data-analysis` is used for a superRA task: task-specific result-producing code is a companion even when committed long term, while maintained, shared, runtime-consumed, or promised code and outputs are promoted. Standalone use is unchanged. Canonical role specs and generated role artifacts remain unchanged.
 
 Verification:
 
 - `uv run --with pyyaml python .../skill-creator/scripts/quick_validate.py skills/using-superra` reported `Skill is valid!`.
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
-- A fresh isolated Codex harness read the revised contract, removed calculation scratch, retained a hand-authored Markdown note and reproducible CSV under the task's `attachments/`, and promoted the runtime-consumed Python generator to the fixture project's `src/` path without a task-local duplicate. Independent checks confirmed the task directory contained only `task.md` and `attachments/`, all recorded files existed, and a fresh generator run reproduced the retained CSV byte-for-byte.
-- The Markdown checker reported the contract, this task, and its owning ancestor clean; `superra task check` found no issues, and `git diff --check` passed.
+- A fresh read-only Codex harness loaded `using-superra` and `econ-data-analysis`, kept a committed long-lived Python analysis script used only for one task under that task's `attachments/`, and promoted a shared runtime loader and promised reader-facing table to permanent project paths. It also removed unrecorded REPL scratch and required task-result links plus reproduction metadata.
+- The Markdown checker reported all four changed instruction files and this task clean; `superra task check` found no issues, and `git diff --check` passed.

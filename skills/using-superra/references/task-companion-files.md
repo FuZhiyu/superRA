@@ -6,8 +6,8 @@ Load this reference before planning, creating, reviewing, integrating, or maturi
 
 Classify each file before deciding where it belongs:
 
-- **Ephemeral scratch** supports only the current session. Keep it uncommitted and remove it before handoff.
-- **Task-local companion** belongs to one task and is needed by a later agent to reproduce, review, or interpret that task's results. Commit it with the task.
+- **Ephemeral scratch** supports only the current session. Keep it outside `superRA/`, uncommitted, and remove it before handoff.
+- **Task companion** is any retained file—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results. Commit it with the task; long-lived does not by itself mean permanent project artifact.
 - **Permanent project artifact** is consumed by another task or runtime path, maintained as a pipeline or tool, or promised as a reader-facing deliverable. Store it in the project's existing conventional path.
 
 ## Place
