@@ -343,6 +343,16 @@ class TestAttachmentSurfaceBrowser:
                 )
                 page.keyboard.press("ArrowLeft")
                 assert branch.locator(".attachment-branch-children").is_hidden()
+                page.keyboard.press("ArrowLeft")
+                assert page.evaluate(
+                    "document.activeElement === document.querySelector("
+                    "'.task-node[data-path=\"01-reader\"] > .task-row')"
+                )
+                page.keyboard.press("ArrowRight")
+                assert page.evaluate(
+                    "document.activeElement.classList.contains("
+                    "'attachment-branch-toggle')"
+                )
                 page.keyboard.press("ArrowDown")
                 assert page.evaluate(
                     "document.activeElement === document.querySelector("

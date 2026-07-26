@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: revise
+status: implemented
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -94,6 +94,12 @@ Right/Left enters and exits each hierarchy level, and nested directories own
 their descendant `role="group"` elements. The dedicated installed-Chromium
 unified-tree regression passed `1 passed`.
 
+The final return-path fix maps `ArrowLeft` from a collapsed Attachments
+disclosure directly to its owning task row. The installed-Chromium regression
+now verifies file → directory → Attachments → owner, then re-enters the
+collapsed disclosure and verifies `ArrowDown` exits to the following task;
+the test passed `1 passed`.
+
 ## Review Notes
 
 1. **MAJOR:** The unified tree now has one Tab stop, nested directory
@@ -120,4 +126,9 @@ unified-tree regression passed `1 passed`.
    navigation; the regression verifies Tab entry, owner-to-attachment entry,
    nested-directory traversal, and exit to the following task
    ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
+   [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
+   → implemented: special-cased the collapsed Attachments disclosure to focus
+   its owning task row and extended the installed-Chromium regression through
+   the complete return path before separately checking exit to the following
+   task ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
    [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).

@@ -3036,6 +3036,12 @@ function initTreeKeyboard() {
         if (!isTask && isParent && expanded) {
           row.click();
         } else if (!isTask) {
+          if (row.classList.contains('attachment-branch-toggle')) {
+            var ownerRow = row.closest('.task-node')
+              .querySelector(':scope > .task-row');
+            if (ownerRow) focusRow(ownerRow);
+            break;
+          }
           var parentGroup = row.parentElement
             ? row.parentElement.parentElement : null;
           var parentDirectory = parentGroup
