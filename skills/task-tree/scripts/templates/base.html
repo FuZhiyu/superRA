@@ -198,20 +198,6 @@
       <div id="active-node" class="active-node"></div>
       <div id="children-dag" class="children-dag"></div>
     </main>
-    <aside id="artifact-sidecar" class="artifact-sidecar" aria-hidden="true"
-           aria-labelledby="artifact-sidecar-title">
-      <header class="artifact-sidecar-head">
-        <div>
-          <p class="artifact-sidecar-kicker">Task canvas</p>
-          <h2 id="artifact-sidecar-title">Files</h2>
-        </div>
-        <button class="artifact-close" type="button" aria-label="Close Files view"
-                onclick="closeArtifactSidecar()">&times;</button>
-      </header>
-      <div id="artifact-list" class="artifact-list" aria-live="polite"></div>
-      <section id="artifact-preview" class="artifact-preview" aria-live="polite"
-               aria-label="File preview"></section>
-    </aside>
     {#- Drawer backdrop (narrow screens): inside the workspace so the
         .sb-drawer-open mode class reaches it; fixed-position covers the page. -#}
     <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeDrawer()"></div>
@@ -235,7 +221,7 @@ var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
    file. The key matches the string the img[src] loop computes (taskPath + '/'
    + src, or bare src for the root body). #}
 var STANDALONE_IMAGES = {{ standalone_images | tojson }};
-{# Bounded companion manifests and base64 payloads for the Files view. Each file
+{# Bounded attachment manifests and base64 payloads for the tree and reading pane. Each file
    records whether bytes are embedded, reused from STANDALONE_IMAGES, or omitted
    by a named budget; a commit-pinned repo fallback is included when the export
    caller supplied REPO_FILE_BASE. #}

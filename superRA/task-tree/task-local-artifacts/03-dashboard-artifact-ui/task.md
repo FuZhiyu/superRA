@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: not-started
+status: implemented
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -35,21 +35,47 @@ Researcher review rejected the modal Files canvas as cramped and redundant. Repl
 
 ## Results
 
-### Implemented
+The dashboard now presents retained files through one navigation tree and one
+reading surface. Each task with a non-empty manifest gets a visually distinct,
+collapsed-by-default **Attachments** pseudo-branch. Expanding it shows nested
+directories and file nodes without giving them task status, dependencies,
+frontier membership, DAG cards, or Kanban semantics
+([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js),
+[dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css)).
 
-- Added a task-owned Files sidecar and count affordances without changing `activePath` or admitting companions into task navigation. The canvas groups first-class direct companions and recursive attachments, with genuinely unexpected direct files kept in a collapsed, neutrally named **Additional files** group; explicit preview/download/unavailable actions cover supported Markdown, source, image, PDF, and text types ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1135), [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1388), [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css#L1139)).
-- Reserved the required root `superra` wrapper as task-tree infrastructure so it does not enter companion manifests or standalone exports. Unexpected direct files remain discoverable with the neutral internal placement `other` ([\_artifacts.py](../../../../skills/task-tree/scripts/_artifacts.py#L17), [\_artifacts.py](../../../../skills/task-tree/scripts/_artifacts.py#L277)).
-- Generalized the existing Markdown renderer with a companion content base. Relative links and images now resolve from the companion's directory through the bounded artifact API/export data, while task-body links retain their prior task-relative behavior ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L231)).
-- Vendored NotebookJS 0.8.3 and replaced its permissive output renderers with the dashboard's Markdown, KaTeX, Highlight.js, and DOMPurify stack. The adapter supports Markdown/raw/code cells, attachments, stream/error outputs, and safe static text/HTML/Markdown/LaTeX/PNG/JPEG/SVG output; JavaScript, widgets, and unknown MIME types render explicit inert fallbacks and no code executes ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1640), [vendor/README.md](../../../../skills/task-tree/scripts/vendor/README.md#L40)).
-- Kept live and standalone paths aligned by serving/inlining the pinned library and embedded artifact payloads. Task-scoped SSE refreshes re-render an open preview from `event.detail.data` while preserving hash, breadcrumbs, theme, scroll, and worktree selection; close actions restore keyboard focus even if the active-card button was re-rendered ([plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py#L2020), [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1619)).
-- Fixed the review-round interaction edges: delegated tree keyboard handling now leaves nested controls to native Enter/Space activation while retaining ordinary row navigation, and every still-selected artifact re-enters the preview renderer after SSE refresh so newly oversized or unavailable files replace stale content with the explicit unavailable state ([dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L1428), [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L3011)).
-- Retained hand-authored [renderer-example.md](renderer-example.md) and [renderer-example.py](renderer-example.py) beside this task as visual fixtures requested by the researcher. Their decision basis is renderer inspection: the Markdown file exercises headings, a relative companion link, inline/display math, fenced Python, and a table; the Python file exercises source highlighting with a small executable example.
+Selecting a file records its owning task and `attachments/...` path in the URL
+hash, renders it in the normal full-width `#active-node` pane, clears the child
+DAG, and participates in browser Back/Forward navigation. Selecting the owner or
+using **Back to task** restores the task body. The Files button, count badge, and
+sidecar markup are absent. Live attachment events replace the owning pseudo-branch
+and re-render an open file; worktree switches clear manifest caches and preserve
+the attachment route only when its owner survives
+([base.html](../../../../skills/task-tree/scripts/templates/base.html),
+[dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js)).
 
-### Verification
+Markdown, notebook, image, PDF, and text/source previews reuse the existing
+bounded data path and renderer stack. Relative Markdown links and images resolve
+from the selected attachment's directory. Python, Julia, and case-insensitive R
+source previews use Highlight.js with visible token colors; notebooks remain
+read-only and sanitize active HTML/SVG while showing inert unsupported-output
+fallbacks. Live and standalone exports share these renderers and download
+actions ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)).
 
-- Server and browser regressions cover direct/attachment/additional grouping, root-wrapper exclusion, companion-relative URLs, Python/Julia/case-insensitive R highlighting, NotebookJS cell/output types, attachment images, malicious HTML/SVG sanitization, unsupported active MIME fallbacks, downloads, Enter/Space Files activation and focus return, ordinary tree-row keyboard navigation, oversized SSE transitions and state preservation, standalone operation, and worktree switching ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py#L238), [test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py#L276), [test_artifacts.py](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L67)).
-- Focused artifact UI/discovery suite: `33 passed` with two non-failing warnings via `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts/test_artifact_ui.py skills/task-tree/scripts/tests/test_artifacts.py -q`.
-- Full task-tree suite: `773 passed` with four non-failing warnings via `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts`.
-- Static checks passed: `node --check` for `dashboard.js`, Python byte-compilation for the changed Python/tests, and `git diff --check`. Desktop Chromium inspection at 1440×900 confirmed the Files list and notebook preview remain legible alongside the active task.
-- The example script printed `f(2) = 5` and `f(3) = 10`; the Markdown companion passed `skills/report-in-markdown/scripts/check_markdown.py`.
-- `notebook.min.js` matches the documented SHA-256 `673b1916c250d2093c8c8920e5503348a2283ef67d6ad429f0b0dc6c98f7c115`. The generic skill-creator validator was not applicable as a clean gate: it rejects the task-tree skill's pre-existing `user-invocable` frontmatter key, which this task did not modify.
+The hand-authored visual fixtures now obey the attachment-only contract:
+[renderer-example.md](attachments/renderer-example.md) exercises Markdown,
+relative links, math, fenced code, and a table; [renderer-example.py](attachments/renderer-example.py)
+exercises highlighted Python. Their decision basis is the researcher's request
+for representative renderer examples.
+
+Verification:
+
+- Browser UI suite: `3 passed` with two non-failing deprecation warnings via
+  `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright python -m pytest skills/task-tree/scripts/test_artifact_ui.py -q`.
+- Focused UI/data suite: `29 passed, 2 skipped` with one cache-permission warning
+  via the same command targeting `test_artifact_ui.py` and
+  `tests/test_artifacts.py`; the skipped cases are the browser tests proven
+  separately in the preceding invocation.
+- `node --check`, Python byte-compilation, Markdown integrity, example-script
+  execution (`f(2) = 5`, `f(3) = 10`), and `git diff --check` passed.
+- The full task-tree suite is deferred to the orchestrator's combined
+  post-review verification pass.

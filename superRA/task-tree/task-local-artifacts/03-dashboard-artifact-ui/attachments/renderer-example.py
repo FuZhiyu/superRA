@@ -1,4 +1,4 @@
-"""Small task-local source file for visually checking the Files canvas."""
+"""Small task-local source file for checking the attachment reading pane."""
 
 from __future__ import annotations
 

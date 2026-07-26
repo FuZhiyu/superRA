@@ -148,9 +148,7 @@ html[data-doc-mode] #filter-status { display: none !important; }
 html[data-doc-mode] #search-trigger { display: none !important; }
 html[data-doc-mode] .worktree-selector { display: none !important; }
 html[data-doc-mode] .vscode-btn,
-html[data-doc-mode] .share-btn,
-html[data-doc-mode] .artifact-toggle-btn,
-html[data-doc-mode] .artifact-sidecar { display: none !important; }
+html[data-doc-mode] .share-btn { display: none !important; }
 
 /* ── Doc-mode reading chrome ──
    Strip the task-anatomy framing from each page so the body reads as a document.
@@ -1138,6 +1136,144 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 
 /* ── Task companion-file canvas ── */
 .artifact-event-sink { display: none; }
+
+/* Attachment navigation lives directly under its owning task row. It is
+   intentionally quieter than a task node: no status dot, badge, or task slug. */
+.attachment-branch {
+  margin: 2px 0 3px 24px;
+  border-left: 1px dashed var(--border);
+  padding-left: 8px;
+}
+.attachment-branch-toggle,
+.attachment-file-row {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.attachment-branch-toggle {
+  padding: 4px 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.attachment-branch-toggle:hover,
+.attachment-file-row:hover { background: var(--bg-hover); }
+.attachment-branch-toggle:focus-visible,
+.attachment-file-row:focus-visible,
+.attachment-owner-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.attachment-branch-caret {
+  display: inline-block;
+  transition: transform 0.12s ease;
+}
+.attachment-branch.expanded .attachment-branch-caret { transform: rotate(90deg); }
+.attachment-branch-count {
+  margin-left: auto;
+  color: var(--text-mute);
+  font-weight: 400;
+}
+.attachment-tree-level {
+  margin: 0;
+  padding: 0 0 0 12px;
+  list-style: none;
+}
+.attachment-branch-children > .attachment-tree-level { padding-left: 2px; }
+.attachment-directory-label {
+  display: block;
+  padding: 3px 6px 1px;
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+.attachment-file-row {
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+.attachment-file-row.nav-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.attachment-file-icon { color: var(--accent); }
+.attachment-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-file-kind {
+  margin-left: auto;
+  color: var(--text-mute);
+  font-size: var(--fs-micro);
+  text-transform: lowercase;
+}
+.attachment-active-head .attachment-owner-action {
+  margin-left: auto;
+}
+.attachment-owner-action {
+  height: var(--control-h);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.attachment-owner-action:hover,
+.attachment-owner-action:focus { border-color: var(--accent); color: var(--accent); }
+.attachment-active-meta {
+  margin: 0 0 18px;
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+}
+.attachment-active-body {
+  min-height: 50vh;
+  font-size: var(--fs-body);
+}
+.attachment-active-body > pre {
+  padding: 18px 20px;
+  font-size: var(--fs-body);
+  line-height: 1.65;
+}
+.artifact-preview-body .hljs-keyword,
+.artifact-preview-body .hljs-literal,
+.artifact-preview-body .hljs-selector-tag { color: var(--hl-keyword); }
+.artifact-preview-body .hljs-string,
+.artifact-preview-body .hljs-regexp { color: var(--hl-string); }
+.artifact-preview-body .hljs-number { color: var(--hl-number); }
+.artifact-preview-body .hljs-comment,
+.artifact-preview-body .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.artifact-preview-body .hljs-function .hljs-title,
+.artifact-preview-body .hljs-title.function_ { color: var(--hl-function); }
+.artifact-preview-body .hljs-title,
+.artifact-preview-body .hljs-section { color: var(--hl-title); }
+.artifact-preview-body .hljs-type,
+.artifact-preview-body .hljs-title.class_ { color: var(--hl-type); }
+.artifact-preview-body .hljs-built_in,
+.artifact-preview-body .hljs-builtin-name { color: var(--hl-builtin); }
+.artifact-preview-body .hljs-meta { color: var(--hl-meta); }
+.artifact-preview-body .hljs-attr,
+.artifact-preview-body .hljs-attribute,
+.artifact-preview-body .hljs-property { color: var(--hl-attr); }
+.artifact-preview-body .hljs-symbol,
+.artifact-preview-body .hljs-variable,
+.artifact-preview-body .hljs-operator { color: var(--hl-symbol); }
 .artifact-sidecar {
   position: fixed;
   inset: 0 0 0 auto;

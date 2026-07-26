@@ -860,7 +860,8 @@ async function renderKanbanView() {
    browser's own back/forward stack drives navigation via popstate.
    ════════════════════════════════════════════════════════════════════════ */
 
-var activePath = '';        /* '' = root */
+var activePath = '';        /* owning task; '' = root */
+var activeArtifactPath = ''; /* attachment selected in the normal reading pane */
 var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
 var _moveFocusOnLoad = false; /* set per user-nav so loadActiveNode lands focus on the new heading */
 /* The in-flight (or last-settled) updateSidebar() promise from the current
@@ -877,17 +878,29 @@ function parseHash() {
   var h = location.hash || '';
   if (h.charAt(0) === '#') h = h.slice(1);   /* strip leading # */
   if (h.charAt(0) === '/') h = h.slice(1);   /* strip leading / */
-  return h;
+  var query = h.indexOf('?');
+  return query === -1 ? h : h.slice(0, query);
+}
+
+function parseArtifactHash() {
+  var h = location.hash || '';
+  var query = h.indexOf('?');
+  if (query === -1) return '';
+  var params = new URLSearchParams(h.slice(query + 1));
+  return params.get('attachment') || '';
 }
 
 /* The one navigation entry point. Sets activePath, writes history (unless
    restoring), then refreshes every derived region. */
-function setActive(path) {
+function setActive(path, artifactPath) {
   path = path || '';
   activePath = path;
+  activeArtifactPath = artifactPath || '';
 
   if (!restoring) {
-    var hash = '#/' + path;
+    var hash = '#/' + path + (activeArtifactPath
+      ? '?attachment=' + encodeURIComponent(activeArtifactPath)
+      : '');
     /* Relative '#/...' keeps location.search (the ?wt=) intact, so a task-path
        navigation never drops the active worktree from the URL. */
     if (location.hash !== hash) history.pushState({ path: path, wt: ACTIVE_WT }, '', hash);
@@ -901,10 +914,16 @@ function setActive(path) {
   /* A node click always means "show me the workspace." */
   if (currentView !== 'workspace') showView('workspace');
 
-  updateBreadcrumb(path);
+  updateBreadcrumb(path, activeArtifactPath);
   _lastSidebarUpdate = updateSidebar(path);
-  loadActiveNode(path);
-  loadChildrenDag(path);
+  if (activeArtifactPath) {
+    loadActiveArtifact(path, activeArtifactPath);
+    var children = document.getElementById('children-dag');
+    if (children) children.innerHTML = '';
+  } else {
+    loadActiveNode(path);
+    loadChildrenDag(path);
+  }
 
   /* Chrome: a selection means "done navigating" — auto-hide the unpinned
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
@@ -915,7 +934,7 @@ function setActive(path) {
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
    Each non-active crumb is a button that ascends by setting that ancestor
    active; the active crumb is inert. */
-function updateBreadcrumb(path) {
+function updateBreadcrumb(path, artifactPath) {
   var crumbs = document.getElementById('crumbs');
   if (!crumbs) return;
   crumbs.innerHTML = '';
@@ -950,7 +969,7 @@ function updateBreadcrumb(path) {
     var hdr = document.getElementById('header-title');
     if (hdr && hdr.textContent.trim()) rootLabel = hdr.textContent.trim();
   }
-  addCrumb(rootLabel, '', segs.length === 0);
+  addCrumb(rootLabel, '', segs.length === 0 && !artifactPath);
 
   var accumulated = '';
   for (var i = 0; i < segs.length; i++) {
@@ -958,7 +977,11 @@ function updateBreadcrumb(path) {
     addSep();
     /* Prefer the real title once the sidebar supplies it; fall back to slug. */
     var label = pathTitles[accumulated] || segs[i];
-    addCrumb(label, accumulated, i === segs.length - 1);
+    addCrumb(label, accumulated, i === segs.length - 1 && !artifactPath);
+  }
+  if (artifactPath) {
+    addSep();
+    addCrumb(artifactPath.replace(/^attachments\//, ''), path, true);
   }
 }
 
@@ -1045,9 +1068,6 @@ async function loadActiveNode(path) {
       /* Open this task's task.md in the configured file target. */
       + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
       + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
-      + '<button class="artifact-toggle-btn" type="button" aria-controls="artifact-sidecar"'
-      + ' aria-expanded="' + (_artifactSidecarOpen ? 'true' : 'false') + '">'
-      + '<span>Files</span><span class="artifact-count" aria-hidden="true"></span></button>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -1057,9 +1077,7 @@ async function loadActiveNode(path) {
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
       + '<div class="task-node active-node-body" data-path="' + escapeAttr(path) + '">' + body + '</div>'
-      + (window.STANDALONE ? '' :
-         '<span class="artifact-event-sink" data-artifact-owner="' + escapeAttr(path)
-         + '" sse-swap="artifacts:' + escapeAttr(path) + '" hx-swap="none"></span>');
+      + '';
 
     /* Set the title via textContent (avoids HTML injection from titles). In
        doc-mode the slug is task anatomy — show the title alone. */
@@ -1075,10 +1093,6 @@ async function loadActiveNode(path) {
        carry the path safely (a quoted path breaks the double-quoted attribute). */
     var shareBtn = region.querySelector('.share-btn');
     if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
-    var filesBtn = region.querySelector('.artifact-toggle-btn');
-    if (filesBtn) {
-      filesBtn.onclick = function() { toggleArtifactSidecar(path, filesBtn); };
-    }
 
     /* a11y: on a user-initiated navigation, move focus to the new heading so
        keyboard/SR users land on the freshly-loaded content. Consume the flag so
@@ -1098,11 +1112,6 @@ async function loadActiveNode(path) {
       });
       loadComments(path);
     }
-
-    /* Bind the task-scoped artifact event sink to the existing htmx EventSource,
-       then fetch the current manifest for the header count / optional sidecar. */
-    if (window.htmx) htmx.process(region);
-    loadArtifactManifest(path);
 
     /* If the sidebar row hadn't landed yet, the status badge is missing. The
        deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
@@ -1141,6 +1150,7 @@ var _artifactSelectedPath = '';
 var _artifactManifestToken = 0;
 var _artifactPreviewToken = 0;
 var _artifactReturnFocus = null;
+var _artifactManifests = {};
 
 function artifactApiUrl(taskPath, artifactPath, download) {
   var url = '/api/artifact?task=' + encodeURIComponent(taskPath || '')
@@ -1150,7 +1160,8 @@ function artifactApiUrl(taskPath, artifactPath, download) {
 }
 
 function artifactManifestEntry(taskPath, artifactPath) {
-  var manifest = (_artifactManifestOwner === taskPath) ? _artifactManifest : null;
+  var manifest = _artifactManifests[taskPath]
+    || ((_artifactManifestOwner === taskPath) ? _artifactManifest : null);
   if (!manifest && window.STANDALONE && window.STANDALONE_ARTIFACTS) {
     manifest = STANDALONE_ARTIFACTS.manifests[taskPath];
   }
@@ -1633,6 +1644,254 @@ function onArtifactManifestEvent(taskPath, manifest) {
     renderArtifactSidecar(taskPath, manifest, true);
     if (list) list.scrollTop = listScroll;
     if (preview && !_artifactSelectedPath) preview.scrollTop = previewScroll;
+  }
+}
+
+/* Attachments share the task tree and the normal reading pane. They are
+   navigation-only pseudo-nodes: the owning task remains activePath, while the
+   attachment path is the optional second part of the URL state. */
+function attachmentManifest(taskPath) {
+  return _artifactManifests[taskPath]
+    || (window.STANDALONE && window.STANDALONE_ARTIFACTS
+      && STANDALONE_ARTIFACTS.manifests[taskPath])
+    || null;
+}
+
+function fetchAttachmentManifest(taskPath) {
+  var embedded = attachmentManifest(taskPath);
+  if (embedded) return Promise.resolve(embedded);
+  if (window.STANDALONE) return Promise.resolve(null);
+  return fetch(wtUrl('/api/artifacts?task=' + encodeURIComponent(taskPath || '')))
+    .then(function(resp) { return resp.ok ? resp.json() : null; });
+}
+
+function attachmentTree(entries) {
+  var root = { directories: {}, files: [] };
+  (entries || []).forEach(function(entry) {
+    var parts = entry.path.replace(/^attachments\//, '').split('/');
+    var cursor = root;
+    for (var i = 0; i < parts.length - 1; i++) {
+      cursor.directories[parts[i]] = cursor.directories[parts[i]]
+        || { directories: {}, files: [] };
+      cursor = cursor.directories[parts[i]];
+    }
+    cursor.files.push({ name: parts[parts.length - 1], entry: entry });
+  });
+  return root;
+}
+
+function renderAttachmentLevel(owner, tree, level) {
+  var list = document.createElement('ul');
+  list.className = 'attachment-tree-level';
+  Object.keys(tree.directories).sort().forEach(function(name) {
+    var item = document.createElement('li');
+    item.className = 'attachment-directory';
+    var label = document.createElement('span');
+    label.className = 'attachment-directory-label';
+    label.textContent = name;
+    item.appendChild(label);
+    item.appendChild(renderAttachmentLevel(owner, tree.directories[name], level + 1));
+    list.appendChild(item);
+  });
+  tree.files.sort(function(a, b) { return a.name.localeCompare(b.name); })
+    .forEach(function(file) {
+      var item = document.createElement('li');
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'attachment-file-row';
+      button.dataset.artifactOwner = owner;
+      button.dataset.artifactPath = file.entry.path;
+      button.setAttribute('aria-label', 'Open attachment ' + file.entry.path);
+      button.innerHTML = '<span class="attachment-file-icon" aria-hidden="true">◇</span>';
+      var name = document.createElement('span');
+      name.className = 'attachment-file-name';
+      name.textContent = file.name;
+      button.appendChild(name);
+      var kind = document.createElement('span');
+      kind.className = 'attachment-file-kind';
+      kind.textContent = file.entry.kind;
+      button.appendChild(kind);
+      button.classList.toggle(
+        'nav-active',
+        owner === activePath && file.entry.path === activeArtifactPath
+      );
+      button.onclick = function(event) {
+        event.stopPropagation();
+        setActive(owner, file.entry.path);
+      };
+      item.appendChild(button);
+      list.appendChild(item);
+    });
+  return list;
+}
+
+function renderAttachmentBranch(taskPath, manifest) {
+  var node = document.getElementById(navNodeId(taskPath));
+  if (!node) return;
+  var old = node.querySelector(':scope > .attachment-branch');
+  var wasExpanded = !!(old && old.classList.contains('expanded'));
+  if (old) old.remove();
+  var files = manifest && manifest.files ? manifest.files : [];
+  if (!files.length) return;
+
+  var branch = document.createElement('div');
+  branch.className = 'attachment-branch' + (wasExpanded ? ' expanded' : '');
+  branch.dataset.owner = taskPath;
+  var toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'attachment-branch-toggle';
+  toggle.setAttribute('aria-expanded', wasExpanded ? 'true' : 'false');
+  toggle.innerHTML = '<span class="attachment-branch-caret" aria-hidden="true">▸</span>'
+    + '<span>Attachments</span><span class="attachment-branch-count">'
+    + files.length + '</span>';
+  var children = document.createElement('div');
+  children.className = 'attachment-branch-children';
+  children.hidden = !wasExpanded;
+  children.appendChild(renderAttachmentLevel(taskPath, attachmentTree(files), 0));
+  toggle.onclick = function(event) {
+    event.stopPropagation();
+    var expanded = !branch.classList.contains('expanded');
+    branch.classList.toggle('expanded', expanded);
+    children.hidden = !expanded;
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  };
+  branch.appendChild(toggle);
+  branch.appendChild(children);
+  if (!window.STANDALONE) {
+    var sink = document.createElement('span');
+    sink.className = 'artifact-event-sink';
+    sink.dataset.artifactOwner = taskPath;
+    sink.setAttribute('sse-swap', 'artifacts:' + taskPath);
+    sink.setAttribute('hx-swap', 'none');
+    branch.appendChild(sink);
+  }
+  var childrenContainer = node.querySelector(':scope > .task-children');
+  node.insertBefore(branch, childrenContainer || null);
+  if (window.htmx) htmx.process(branch);
+}
+
+function loadAttachmentBranches(scope) {
+  var nodes = (scope || document).querySelectorAll('.task-node[data-path]');
+  nodes.forEach(function(node) {
+    var owner = node.dataset.path || '';
+    fetchAttachmentManifest(owner).then(function(manifest) {
+      if (!manifest) return;
+      _artifactManifests[owner] = manifest;
+      renderAttachmentBranch(owner, manifest);
+    }).catch(function() {});
+  });
+}
+
+function renderActiveArtifactBody(taskPath, entry, body, token) {
+  if (!entry.previewable) {
+    var unavailable = document.createElement('p');
+    unavailable.className = 'artifact-state artifact-state-unavailable';
+    unavailable.textContent = artifactUnavailableReason(entry);
+    body.appendChild(unavailable);
+    return;
+  }
+  if (entry.kind === 'image') {
+    var image = document.createElement('img');
+    image.className = 'artifact-image-preview';
+    image.src = artifactResourceUrl(taskPath, entry.path);
+    image.alt = entry.name;
+    body.appendChild(image);
+    return;
+  }
+  if (entry.kind === 'pdf') {
+    var frame = document.createElement('iframe');
+    frame.className = 'artifact-pdf-preview';
+    frame.setAttribute('sandbox', '');
+    frame.title = 'PDF preview: ' + entry.name;
+    frame.src = artifactResourceUrl(taskPath, entry.path);
+    body.appendChild(frame);
+    return;
+  }
+  body.textContent = 'Loading preview…';
+  readArtifactText(taskPath, entry).then(function(text) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || entry.path !== activeArtifactPath) return;
+    body.innerHTML = '';
+    if (entry.kind === 'markdown') {
+      var markdown = document.createElement('div');
+      markdown.className = 'rendered-md artifact-markdown-preview';
+      markdown.innerHTML = renderMarkdown(
+        text, null, taskPath, { artifactPath: entry.path }
+      );
+      body.appendChild(markdown);
+    } else if (entry.kind === 'notebook') {
+      body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
+    } else {
+      var languages = { python: 'python', julia: 'julia', r: 'r' };
+      body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
+    }
+  }).catch(function(error) {
+    if (token !== _artifactPreviewToken) return;
+    body.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+    body.firstChild.textContent = error.message;
+  });
+}
+
+function loadActiveArtifact(taskPath, artifactPath) {
+  var region = document.getElementById('active-node');
+  if (!region) return;
+  var token = ++_artifactPreviewToken;
+  region.innerHTML = '<p class="artifact-state">Loading attachment…</p>';
+  fetchAttachmentManifest(taskPath).then(function(manifest) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || artifactPath !== activeArtifactPath) return;
+    _artifactManifests[taskPath] = manifest;
+    renderAttachmentBranch(taskPath, manifest);
+    var entry = artifactManifestEntry(taskPath, artifactPath);
+    if (!entry) throw new Error('This attachment is unavailable.');
+    region.innerHTML = '';
+    var head = document.createElement('header');
+    head.className = 'active-node-head attachment-active-head';
+    var heading = document.createElement('h2');
+    heading.className = 'active-node-title';
+    heading.tabIndex = -1;
+    heading.textContent = entry.name;
+    head.appendChild(heading);
+    var owner = document.createElement('button');
+    owner.type = 'button';
+    owner.className = 'attachment-owner-action';
+    owner.textContent = 'Back to task';
+    owner.onclick = function() { setActive(taskPath); };
+    head.appendChild(owner);
+    var actions = buildArtifactPreviewHead(taskPath, entry)
+      .querySelector('.artifact-actions');
+    if (actions) head.appendChild(actions);
+    region.appendChild(head);
+    var meta = document.createElement('p');
+    meta.className = 'attachment-active-meta';
+    meta.textContent = entry.path + ' · ' + entry.kind + ' · '
+      + formatArtifactBytes(entry.size);
+    region.appendChild(meta);
+    var body = document.createElement('div');
+    body.className = 'artifact-preview-body attachment-active-body';
+    region.appendChild(body);
+    renderActiveArtifactBody(taskPath, entry, body, token);
+    document.querySelectorAll('.attachment-file-row').forEach(function(row) {
+      row.classList.toggle('nav-active',
+        row.dataset.artifactOwner === taskPath
+        && row.dataset.artifactPath === artifactPath);
+    });
+    if (_moveFocusOnLoad) {
+      _moveFocusOnLoad = false;
+      heading.focus({ preventScroll: true });
+    }
+  }).catch(function(error) {
+    if (token !== _artifactPreviewToken) return;
+    region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+    region.firstChild.textContent = error.message;
+  });
+}
+
+function refreshAttachmentManifest(taskPath, manifest) {
+  _artifactManifests[taskPath] = manifest;
+  renderAttachmentBranch(taskPath, manifest);
+  if (taskPath === activePath && activeArtifactPath) {
+    loadActiveArtifact(taskPath, activeArtifactPath);
   }
 }
 
@@ -2178,11 +2437,11 @@ function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 window.addEventListener('popstate', function() {
   var urlWt = readActiveWt();
   if (urlWt !== ACTIVE_WT) {
-    applyWorktree(urlWt, parseHash());
+    applyWorktree(urlWt, parseHash(), parseArtifactHash());
     return;
   }
   restoring = true;
-  setActive(parseHash());
+  setActive(parseHash(), parseArtifactHash());
   restoring = false;
 });
 
@@ -2191,9 +2450,9 @@ window.addEventListener('popstate', function() {
    re-fires this event, so no-op when the hash already matches activePath;
    otherwise apply it in restoring mode (no extra pushState/history entry). */
 window.addEventListener('hashchange', function() {
-  if (parseHash() === activePath) return;
+  if (parseHash() === activePath && parseArtifactHash() === activeArtifactPath) return;
   restoring = true;
-  setActive(parseHash());
+  setActive(parseHash(), parseArtifactHash());
   restoring = false;
 });
 
@@ -2201,9 +2460,16 @@ window.addEventListener('hashchange', function() {
    replaceState so reload/back land cleanly, then activate it. */
 function initRouter() {
   var path = parseHash();
+  var artifactPath = parseArtifactHash();
   restoring = true;
-  history.replaceState({ path: path, wt: ACTIVE_WT }, '', '#/' + path);
-  setActive(path);
+  history.replaceState(
+    { path: path, attachment: artifactPath, wt: ACTIVE_WT },
+    '',
+    '#/' + path + (artifactPath
+      ? '?attachment=' + encodeURIComponent(artifactPath)
+      : '')
+  );
+  setActive(path, artifactPath);
   restoring = false;
 }
 
@@ -2231,6 +2497,7 @@ async function loadNavTree() {
     markLazyNodes();
     indexNavTitles(container);
     applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
+    loadAttachmentBranches(container);
     /* Bind the freshly-injected rows' declarative sse-swap="task:<path>" to the
        live EventSource. htmx only wires sse-swap elements it has processed, and
        innerHTML injection bypasses that — so process the new subtree explicitly.
@@ -2336,6 +2603,7 @@ async function loadNavChildren(node) {
     markLazyNodes();
     indexNavTitles(children);
     applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
+    loadAttachmentBranches(children);
     /* Wire the lazily-loaded rows' sse-swap to the EventSource (see loadNavTree). */
     if (window.htmx) htmx.process(children);
     return true;
@@ -3136,7 +3404,7 @@ function onTaskUpdate(path) {
      without a structural full-reload. */
   setTimeout(function() {
     indexNavTitles();
-    updateBreadcrumb(activePath);
+    updateBreadcrumb(activePath, activeArtifactPath);
     if (path !== activePath && parentPath(path) === activePath) {
       loadChildrenDag(activePath);
     }
@@ -3174,7 +3442,7 @@ async function onFullReload() {
     /* Relative '#/...' preserves the ?wt= in location.search. */
     history.replaceState({ path: target, wt: ACTIVE_WT }, '', '#/' + target);
   }
-  setActive(target);
+  setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
 }
 
@@ -3227,10 +3495,15 @@ document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
       var artifactData = event.detail && event.detail.data !== undefined
         ? event.detail.data
         : event.data;
-      onArtifactManifestEvent(artifactOwner, JSON.parse(artifactData));
+      refreshAttachmentManifest(artifactOwner, JSON.parse(artifactData));
     } catch (e) {
-      if (_artifactSidecarOpen && artifactOwner === activePath) {
-        showArtifactSidecarState('The updated file list could not be read.', 'unavailable');
+      if (artifactOwner === activePath && activeArtifactPath) {
+        var activeRegion = document.getElementById('active-node');
+        if (activeRegion) {
+          activeRegion.innerHTML =
+            '<p class="artifact-state artifact-state-unavailable">'
+            + 'The updated attachment list could not be read.</p>';
+        }
       }
     }
     return;
@@ -3382,8 +3655,12 @@ function switchWorktree(token) {
   if (token === ACTIVE_WT) return;
   var hash = location.hash || '';
   var search = token ? ('?wt=' + encodeURIComponent(token)) : '';
-  history.pushState({ path: parseHash(), wt: token }, '', location.pathname + search + hash);
-  applyWorktree(token, parseHash());
+  history.pushState(
+    { path: parseHash(), attachment: parseArtifactHash(), wt: token },
+    '',
+    location.pathname + search + hash
+  );
+  applyWorktree(token, parseHash(), parseArtifactHash());
 }
 
 /* Re-point the whole tab at worktree *wtId* (the ?wt= token) without a full page
@@ -3391,13 +3668,14 @@ function switchWorktree(token) {
    worktree, refresh PROJECT_ROOT + the selector, then rebuild the sidebar and
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
-async function applyWorktree(wtId, path) {
+async function applyWorktree(wtId, path, artifactPath) {
   ACTIVE_WT = wtId || '';
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */
   _childrenDagCache = {};
   _artifactManifestOwner = null;
   _artifactManifest = null;
+  _artifactManifests = {};
   reconnectSse();
   await loadNavTree();
   await refreshSearchIndex();
@@ -3407,7 +3685,7 @@ async function applyWorktree(wtId, path) {
   if (target !== (path || '')) {
     history.replaceState({ path: target, wt: ACTIVE_WT }, '', location.pathname + location.search + '#/' + target);
   }
-  setActive(target);
+  setActive(target, target === (path || '') ? (artifactPath || '') : '');
   restoring = false;
 }
 
