@@ -24,22 +24,22 @@ Current-branch intent comes from the `superRA/` task tree (root and task objecti
 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Carry the branch-level narrative — incoming intent, resolution thesis, cluster breakdown — in the merge commit message and any propagation commit messages. User decisions are also folded into the relevant task `## Objective` per `SKILL.md §Shared Steps` step 4.
-3. Add a `## Sync Impact` section only to tasks whose post-sync diff needs task-specific context during Integrate.
+3. Add a `## Sync Impact` section only to tasks whose post-sync diff needs task-specific context during maturation or Integrate.
 4. **Land the merge commit plus any propagation commits needed to reach semantic coherence** per `SKILL.md §Shared Steps` step 5, including each affected task's `## Sync Impact` section with the commits that produce it.
 
 ## `## Sync Impact` Format
 
-When the post-sync diff to a task needs task-specific context to be understood during Integrate, add a self-contained `## Sync Impact` section to that task's `task.md`:
+When the post-sync diff to a task needs task-specific context to be understood during maturation or Integrate, add a self-contained `## Sync Impact` section to that task's `task.md`:
 
 ```markdown
 ## Sync Impact
 
-<Task-specific post-sync context: what the sync changed in this task's area, what was kept/dropped/synthesized, and any assumption a later Integrate implementer or reviewer needs to read the approved diff.> Sync commits: `<sha>`[, `<sha>`...].
+<Task-specific post-sync context: what the sync changed in this task's area, what was kept/dropped/synthesized, and any assumption a later maturation or Integrate implementer or reviewer needs to read the approved diff.> Sync commits: `<sha>`[, `<sha>`...].
 ```
 
 It is a top-level section, self-anchoring like `## Results` — not anchored to any inline field. It does not reference a branch-level Sync Map (there is none) and does not restate the branch narrative carried by the commit messages; cite the sync commit SHA(s) for that context instead. It is not an Integrate to-do list.
 
-**Lifecycle.** `## Sync Impact` is temporary scaffolding for the active Sync / Integrate round, added only to tasks that need it. Remove it at Integrate closeout, unless a lasting task assumption belongs in the task — in which case fold that into `## Objective` and drop the `## Sync Impact` section. A warn-only `superra task check` rule flags any `## Sync Impact` that survives closeout.
+**Lifecycle.** `## Sync Impact` is temporary scaffolding for the active Sync / maturation / Integrate round, added only to tasks that need it. Remove it at Integrate closeout, unless a lasting task assumption belongs in the task — in which case fold that into `## Objective` and drop the `## Sync Impact` section. A warn-only `superra task check` rule flags any `## Sync Impact` that survives closeout.
 
 ## Status Return
 

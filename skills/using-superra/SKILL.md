@@ -23,7 +23,7 @@ SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
 1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
 2. `superimplement` executes tasks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
-3. `superintegrate` protects key results, syncs and refactors against the integration base, consolidates the task tree and matures its results, and performs the final merge / PR / cleanup action.
+3. `superintegrate` selects how key results will be documented and protected, syncs against the integration base, matures the permanent record and task tree, derives and obtains approval for a temporary refactoring task, executes that refactoring, and performs the final merge / PR / cleanup action.
 
 The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session resumes from durable state — task `status` plus the git log — re-entering at the earliest unfinished layer for the affected frontier while preserving unrelated approved work. Main agents follow `references/main-agent.md` §Resuming Work.
 

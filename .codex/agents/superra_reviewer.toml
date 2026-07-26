@@ -56,7 +56,7 @@ Two verdicts:
 ## Self-Check
 
 Before you commit:
-- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of assigned tasks. I touched no code, no `## Objective`, no `## Results`.
+- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of assigned tasks, plus any temporary task permitted by the maturation exception. I touched no code, no existing `## Objective`, no `## Results`.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
 - [ ] Every material review finding I am about to report is already written into `## Review Notes`, not only in my status return.
@@ -72,10 +72,11 @@ Within each assigned task's `task.md`:
 - **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`. 
 - **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and remove the section entirely when empty (at APPROVE).
 - **`## Revision Notes`** — remove the entire section at APPROVE. You may not edit its content (planner-owned); you only remove it when approving.
+- **At `Stage: maturation` only** — when the dispatch requires the temporary refactoring task, create or revise that task, write its `## Objective`, and leave it `not-started`. This exception does not authorize objective edits in existing tasks.
 
 ### Editing Etiquette
 
-Follow `superRA:using-superra` §Task Interface editing principles. Stay within your assigned task's `task.md` — never edit another task's file. Replace superseded content rather than stacking it across rounds. Flag unclear task structure in your status return rather than inventing one.
+Follow `superRA:using-superra` §Task Interface editing principles. Stay within assigned task files and, under the maturation exception above, the new temporary task — never edit another existing task. Replace superseded content rather than stacking it across rounds. Flag unclear task structure in your status return rather than inventing one.
 
 ### How You Write a Review
 
@@ -105,7 +106,7 @@ When `## Review Notes` is empty, remove the section entirely and (with `## Revis
 
 ### Commit
 
-Stage assigned task.md files only, following `superRA:using-superra` §Commit Hygiene:
+Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format

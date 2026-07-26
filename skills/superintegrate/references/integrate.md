@@ -1,87 +1,68 @@
 # Integrate
 
-Integrate is the post-sync quality gate, and it runs do-then-verify: a combined refactor + self-review pass first produces the codebase-fit work and the Final-Diff-Self-Check trail, the orchestrator adjudicates that pass's first-round concerns, and only then does an independent reviewer verify the result. It uses task-local `## Sync Impact` sections plus the sync commit messages (git log) as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
+Integrate obtains researcher approval for the protected record and reviewer-authored temporary refactoring task, then executes and reviews that task.
 
 **Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base (`PRE_SYNC_BASE_SHA`) for minimum-net-diff review after Sync.
 
-The number of integration implementers and reviewers is discretionary, scaled to the post-sync delta per `agent-orchestration §Workload Balancing`: a small single-subtree delta takes one implementer pass (or an inline sweep) plus one reviewer; a large or multi-subtree delta fans out per subtree.
+## Step 1: Run the protection suite
 
-## Step 1: Run the full drift-test suite
+Run every existing protection check plus the mechanisms selected at Protect. A failing drift test or document check blocks Integrate until classified under its owning protection discipline.
 
-Run the full suite after Sync and before refactor. Failing drift tests block Integrate until classified per `result-protection/references/drift-test-quality.md`.
+## Step 2: Recover the task state
 
-## Step 2: Integration implementer pass (refactor + self-review)
+Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing or does not identify the Protect decision commit, protected-record paths, `BASE_HEAD_SHA`, bounded actions, and verification, return to Mature & Consolidate Step 3. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
 
-Dispatch `Stage: integration` implementer(s) to fit the post-sync diff to the host project and run the Final-Diff-Self-Check. A trivial post-sync diff collapses to an orchestrator-inline pruning sweep instead of a dispatch.
+- `not-started` — execute the approved task;
+- `implemented` or `revise` — enter the review or fix loop;
+- `approved` — close Integrate.
+
+## Step 3: Run the researcher gate
+
+Present one review surface containing:
+
+1. the completed permanent documentation and result files;
+2. the mature task tree and its durable `## Results`; and
+3. the temporary task, including automatic pruning items and other refactoring opportunities.
+
+Ask whether to approve the protected record and task. A requested change to the Protect decision returns to Protect; a correction to its materialization returns to Mature & Consolidate Step 2; a task-only change returns to its reviewer at Step 3. Present the surface again after any revision. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files.
+
+## Step 4: Execute the approved task
+
+Assign the `Stage: integration` implementer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: integration
-  Task: Post-sync codebase-fit refactor and self-review for <task-path-list>
-  Tasks in scope: <task paths touched or Sync-impact-affected>
+  Task: <temporary refactoring task>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-
-  Additionally: read task-local `## Sync Impact` sections and the sync commit messages
-    as context, fit `git diff <BASE_HEAD_SHA>..HEAD` to the host project, and run the
-    Final-Diff-Self-Check; self-review and surface concerns per §What You Own. Commit
-    code + task.md atomically. Do not touch tasks outside `Tasks in scope`.
 ```
 
-## Step 3: Orchestrator adjudication
+The implementer writes the execution outcome and verification evidence to the temporary task’s `## Results` and leaves it `implemented`.
 
-For each first-pass concern returned in `## Review Notes`:
+## Step 5: Adjudicate implementation concerns
 
-- **fix** — dispatch an implementer to revert the junk or address the finding; or
-- **amend** — fold the justification into the relevant task objective via `superplan §User Feedback and Changing the Task Tree`, dropping the concern.
+Resolve concerns inside the approved task through an implementer fix. If execution reveals a materially different protected outcome, return to Mature & Consolidate Step 2; if it reveals a materially different refactoring action, return to its reviewer at Step 3. Repeat the researcher gate before applying the new work.
 
-The resolving commit clears the now-moot first-pass note so the independent reviewer in Step 4 starts from a clean `## Review Notes`. Batch all user-owned questions into one stop point; route substantive task-tree restructures through `superplan §User Feedback and Changing the Task Tree`.
+## Step 6: Assign the reviewer seat
 
-## Step 4: Dispatch the independent integration reviewer
-
-Dispatch fresh `Stage: integration` reviewer(s) for a full first review of the codebase-fit pass against its trail:
+Assign it per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
-  Task: Post-sync integration review for <task-path-list>
-  Tasks in scope: <task paths touched or Sync-impact-affected>
+  Task: <temporary refactoring task>
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-  Sync context: task-local `## Sync Impact` sections plus the sync commit messages (git log)
-
-  Additionally: read task-local `## Sync Impact` sections and the sync commit messages
-    as context, then review `git diff <BASE_HEAD_SHA>..HEAD` against the Final-Diff-Self-Check
-    trail. For every in-scope task, either set `status: approved` in its frontmatter or
-    write review notes in `## Review Notes` and set `status: revise`. Findings should
-    cover minimum surviving branch delta, codebase fit, project-doc audit,
-    drift-test implications, and task-file coherence. Do not recreate
-    incoming-intent research or re-review semantic coherence already approved
-    by sync review.
 ```
 
-## Step 5: Refactor loop
+## Step 7: Refactor loop
 
-Dispatch implementer(s) for the accepted `status: revise` findings:
+Adjudicate any REVISE findings through `agent-orchestration` and iterate implementer fixes plus narrow re-review until the temporary task is `approved` and the `refactor-and-integrate` checklist passes. A fix that expands or materially changes the approved task returns to Mature & Consolidate Step 3 and then the researcher gate; a change to the protected record returns to Mature & Consolidate Step 2.
 
-```text
-Agent(subagent_type: "superRA:implementer"):
-  Stage: integration
-  Task: Fix integration review items for <task-path-list>
-  Tasks in scope: <task paths with status: revise>
-  BASE_HEAD_SHA: <BASE_HEAD_SHA>
+## Step 8: Close Integrate
 
-  Additionally: read task-local `## Sync Impact` sections and the sync commit messages
-    as context, address accepted review findings, and run the minimum-net-diff
-    self-check against `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Commit code + task.md
-    atomically. Do not touch tasks outside `Tasks in scope` except where required by an accepted
-    reviewer finding.
-```
+Run the protection suite again. After it passes and integration review approves:
 
-For non-minor fixes that require reviewer re-dispatch per `agent-orchestration` §Handling Reviewer Feedback, include narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
-
-## Step 6: Close Integrate
-
-Run the full drift-test suite again. When it passes and integration review is APPROVED:
-
-- remove every temporary task-local `## Sync Impact` section, unless a lasting task assumption still belongs in the task.md — in which case fold that assumption into the task's `## Objective` and remove the section. Then run `superra task check` (warn-only `sync-impact` category) and confirm it flags no surviving `## Sync Impact`.
-- commit the closeout edit (`integrate(fit): …`); that commit plus the in-scope tasks' `status: approved` is the record that Integrate closed.
+- remove the temporary refactoring task, then run `superra task check`;
+- remove every temporary task-local `## Sync Impact` section, folding any lasting task assumption into the task’s `## Objective`; and
+- commit the closeout edit (`integrate(fit): …`). The approval commit, reviewed execution commit, approved durable tasks, and closeout commit record that Integrate closed.

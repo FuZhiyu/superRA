@@ -1,6 +1,6 @@
 # Task Tree Consolidation
 
-Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches, or temporary update scaffolding — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via the `superintegrate` Mature & Consolidate stage, which screens the tree, drives the user proposal, and dispatches an implementer to execute the actions defined here.
+Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches, or temporary update scaffolding — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via the `superintegrate` Mature & Consolidate stage, which applies the actions here while preparing the protected record.
 
 Consolidation distils each task: it decides what of the task's work survives and where it lands in a durable owner. Most scaffolding and dev-log detail drops once the work is integrated — a simple update task may collapse to a single inline line in its parent. The actions below choose the surviving altitude rather than carry a task over wholesale.
 
@@ -70,7 +70,7 @@ For each identified issue, classify the action. Each action sets the altitude th
 
 ## User Approval Gate
 
-Consolidation changes the tree structure. The proposal is authored from a whole-tree screening and presented before any execution. Under the `superintegrate` Mature & Consolidate stage the orchestrator authors it from its screening and it carries the combined maturation decision (each touched subtree's durable home, the structure change that realizes it, and its `## Results` altitude); a researcher running consolidation standalone authors the same proposal directly.
+Consolidation changes the tree structure. In standalone use, author and approve the proposal before execution. During INTEGRATE, Protect already supplies the result and durable-home choices, so Mature & Consolidate applies the structural fold in recoverable commits; its reviewer then derives the temporary refactoring task. Integrate owns the combined researcher gate.
 
 **Proposal format:**
 
@@ -100,13 +100,11 @@ Proposed tree after consolidation:
 Should I proceed with all changes, a subset, or none?
 ```
 
-Wait for explicit approval. A passing remark is not authorization — confirm intent if ambiguous.
-
-The sign-off boundary is the existing one in `superplan §User Feedback and Changing the Task Tree`: material changes — pruning a task whose result a reader would expect, merging two substantive concerns, an ambiguous durable home, or a status-invalidating scope-expansion rewrite — need explicit approval and route through that protocol; routine distillation is presented as the proposed default the user can veto and otherwise executes as lifecycle. The approved proposal is the authority for structural edits.
+In standalone use, wait for explicit approval.
 
 ## Execution Mechanics
 
-Execution applies the approved proposal. Under the merged stage the orchestrator records each subtree's approved decision as `## Revision Notes` on the affected tasks and dispatches an implementer to execute them; a standalone consolidator executes its own approved proposal. Either way the steps are the same:
+Execution applies the researcher’s choices. During INTEGRATE those choices come from Protect and the edits land before the combined review; a standalone consolidator executes its approved proposal. Either way the mechanics are the same:
 
 1. **Apply changes** with the task-tree CLI (`superra task create` / `rename` / `dep add` / `dep remove`) plus direct edits for objective rewrites, in dependency order: links and restructures first, then merges and splits, then prunes last — so `depends_on` references are repointed before their targets disappear. Status cascading follows each action's rule in §Action Details.
 
@@ -114,12 +112,10 @@ Execution applies the approved proposal. Under the merged stage the orchestrator
 
 3. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist — consolidation often strands references in objectives and results. Remove stale delta prose after scope expansion once the objective carries the current contract.
 
-4. **Commit atomically** — all changed task files in one commit titled `plan: consolidate task tree — <summary>`.
+4. **Commit recoverably** — all changed task files in one commit titled `plan: consolidate task tree — <summary>` for standalone use or the `integrate(mature): …` series owned by Mature & Consolidate.
 
 ## Standalone vs Integration Use
 
-The same protocol (survey, classify, propose, approve, execute atomically) applies in both entry paths:
-
 **Standalone:** The user asks to clean up the tree. The consolidator runs every step itself — survey, author the proposal, get approval, execute.
 
-**During integration:** `superintegrate/references/mature-consolidate.md` owns the choreography — it screens the whole touched tree once after Integrate closes, drives the distillation question that always fires, records decisions as `## Revision Notes`, and dispatches an implementer who applies the actions and mechanics defined here. The implementer executes the structural fold and the `## Results` altitude together on final results.
+**During integration:** `superintegrate/references/mature-consolidate.md` materializes and reviews the permanent documentation, structural fold, and `## Results` maturation after Sync, then derives the temporary refactoring task. `superintegrate/references/integrate.md` runs the combined researcher gate and executes the approved work.

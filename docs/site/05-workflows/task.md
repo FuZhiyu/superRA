@@ -16,4 +16,4 @@ The cycle is re-enterable. A discovery mid-implementation or a scope change afte
 
 - **[PLAN](#/05-workflows/01-plan)** — scope and decompose the work into a task tree you approve before any code is written.
 - **[IMPLEMENT](#/05-workflows/02-implement)** — run tasks autonomously through implementer and reviewer seats, or opt into closely steered interactive execution.
-- **[INTEGRATE](#/05-workflows/03-integrate)** — protect the results, sync with your base, refactor for fit, and open the PR.
+- **[INTEGRATE](#/05-workflows/03-integrate)** — choose the permanent record and its protection, sync with your base, approve one refactoring proposal, execute it, and open the PR.

@@ -50,19 +50,19 @@ Results live in each task's `## Results` section. The same section matures throu
 ### Two-Stage Lifecycle
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. Re-implementation replaces a task's results; it does not append history.
-- **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** Each touched task's `## Results` is distilled to one of the dispositions below. The structural fold that moves or removes the task is `skills/superplan/references/consolidation.md`'s; the disposition here sets how much of the results survive. The disposition is chosen in the merged stage's combined proposal and arrives to the implementer as a `## Revision Notes` instruction on the affected task; `superintegrate/references/mature-consolidate.md` owns when and who decides.
+- **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects the results, documentation homes, consolidation dispositions, and protection mechanisms, create the user-facing documentation and result files first. Then distil each touched task's `## Results` to one of the dispositions below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. `superintegrate/references/mature-consolidate.md` owns the ordering and record verification.
 
 ### Maturation Disposition Menu
 
 Distilling a task's `## Results` at Stage 2 picks one disposition:
 
-- **Mature** — synthesize the substantive findings into a reader-facing narrative at the durable home: the highest task the integration actually touched, per affected subtree — not the global root, not a separate report doc — with links down to the leaf tasks holding per-task evidence, whose `## Results` stay as lightly-cleaned evidence and caveats. The default for key or substantive results. A *short retained subsection* — a few findings kept in place rather than synthesized upward — is the lighter end of this disposition when a full narrative would over-state minor work.
+- **Mature** — synthesize substantive findings into the agreed user-facing document or result file at its project-appropriate durable home, then leave a concise reader-facing account in the durable task with links to the permanent artifact and any retained task-local evidence. The default for key or substantive results. A short retained subsection is appropriate when a full narrative would overstate minor work.
 - **Trim-to-pointer** — when a task's own output *is* a document (a report, rendered note, manuscript section), reduce its `## Results` to a one-line pointer to that document, so the document is the single source of truth instead of a summary that duplicates it and drifts.
-- **Drop** — when a task is a minor fix not worth surfacing as a feature, trim heavily or drop its `## Results`, because each retained file is added drift surface to maintain.
+- **Drop** — when Protect selected a provisional result for omission or a task is a minor fix not worth surfacing as an outcome, trim heavily or drop its `## Results`.
 
 When the consolidation fold removes a task's directory (Merge or Flatten), its distilled results move into the **target** task's `## Results` at the chosen level — a one-line note, a short subsection, or folded into the target's narrative. Nothing is left behind in the deleted directory.
 
-**Guardrail:** key results selected at Protect (`result-protection`) are never dropped. Trimming and dropping apply to non-key, low-value, or document-duplicated results only.
+**Guardrail:** results selected to keep at Protect are never dropped. The permanent documentation, result files, and mature task results together form the protected record; any selected automated checks supplement that record.
 
 ### Per-task results template
 

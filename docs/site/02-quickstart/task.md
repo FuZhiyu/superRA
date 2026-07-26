@@ -125,10 +125,10 @@ The tasks are done and approved, but a correct result still has to be landed saf
 
 Superintegration consists of five stages, and each stage guards against a different way good work goes wrong after it is done:
 
-1. **Protect** — pin the key results from the implementation phase with small drift tests, guided by what you flag as important, so a later change that moves a number you care about fails loudly instead of slipping through silently.
+1. **Protect** — review the agent’s proposed permanent documentation and task-tree consolidation, choose which provisional results to keep or drop, and decide whether documentation alone or an additional drift test should protect each kept result. The approved specification is committed for later agents and resumed sessions.
 2. **Sync** — when the base branch has moved (a coauthor pushed while you worked, say), fold those changes in **semantically**: superRA reads the intent behind each incoming change and reconciles it, rather than resolving conflicts line by line — never a bare `git merge`.
-3. **Refactor** — reshape the agent's working code to fit your codebase: reuse the utilities and conventions you already have, consolidate throwaway exploration scripts into coherent modules, and leave a minimal, reviewable diff instead of a pile of single-shot files.
-4. **Mature & Consolidate** — a running project accumulates many small interim tasks, which become noise for anyone reading it later. This stage settles the tree's shape — fold finished scaffolding into the tasks that own it, prune what is not worth keeping — and distills the surviving findings into documentation a future reader can follow.
+3. **Mature & Consolidate** — one drafter creates the user-facing documentation and matures the task tree; one reviewer verifies that protected record and writes the temporary pruning-and-refactoring task.
+4. **Integrate** — let you review that task with the finished record, then execute and verify it.
 5. **Finish** — ship by PR or merge.
 
 The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).

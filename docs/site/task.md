@@ -103,8 +103,8 @@ A typical superRA workflow looks like this:
     <rect x="170" y="190" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
     <rect x="171" y="198" width="3" height="46" rx="1.5" fill="var(--accent)"/>
     <text x="188" y="213" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">INTEGRATE</text>
-    <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Protect results &middot; Sync with base</text>
-    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Refactor &middot; Mature &amp; consolidate &middot; Finish</text>
+    <text x="188" y="231" style="font-size:13px;fill:var(--text-mid);">Choose results &middot; Sync &middot; Mature record</text>
+    <text x="188" y="246" style="font-size:13px;fill:var(--text-mid);">Review refactoring &middot; Execute &middot; Finish</text>
   </g>
 
   <rect x="298" y="282" width="116" height="36" rx="18" fill="var(--st-ok)" stroke="var(--st-ok-t)"/>
@@ -117,7 +117,7 @@ A typical superRA workflow looks like this:
 </svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, the finished work is protected against future drift, synced with your base branch intent-first (never a blind merge), refactored to fit the codebase, documented, and shipped.
+In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, you choose the permanent record and protection, the agent syncs and matures that record, you approve one temporary refactoring task, and the agent executes and ships.
 
 Research is rarely this linear, though: unanticipated issues surface mid-implementation, and exploratory sessions turn up findings worth recording as tasks for later. superRA supports changing the plan on the fly, or retroactively creating tasks to be reviewed and integrated.
 

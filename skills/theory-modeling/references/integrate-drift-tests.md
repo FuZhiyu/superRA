@@ -1,6 +1,6 @@
 # Drift Tests for Theory-Modeling Results
 
-Load at the **INTEGRATE phase** when preparing drift tests that guard a theory/modeling project's key results before merge. `superintegrate` Phase A invokes this reference alongside `result-protection/references/drift-test-quality.md` (generic test quality checklist + cross-cutting integrity Red Flags).
+Load during Protect when preparing selected drift tests for a theory/modeling project.
 
 ---
 
@@ -20,10 +20,6 @@ Drift tests should protect **headline findings**, not every intermediate line of
 - notation-only rewrites that do not change the underlying object
 - exploratory parameter sweeps that are not part of the reported findings
 - formatting details of rendered equations
-
-**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a key result.
-
----
 
 ## Tolerance Conventions for Modeling Results
 

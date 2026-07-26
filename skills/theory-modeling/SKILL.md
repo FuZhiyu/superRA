@@ -15,7 +15,7 @@ Load per stage; do not load them all at every dispatch.
 | Reference | Load when |
 |---|---|
 | `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map hard gate** and the **Verification Plan**. Loaded by `superplan` when the work is theory/modeling. |
-| `references/integrate-drift-tests.md` | `drift-test` stage - identifies modeling results worth protecting, sets symbolic and numerical tolerance conventions, and catalogs theory-modeling failure modes drift tests catch. Loaded by `superintegrate` Phase A. |
+| `references/integrate-drift-tests.md` | `protection` stage when a drift test was selected - modeling-result candidates, symbolic and numerical tolerance conventions, and theory-modeling failure modes. |
 | `references/integration.md` | `integration` stage - readability layer for reader-ready output: ex-post structural rewriting (objective-first), per-step local obviousness, cross-document coherence, prose-to-math precision, rendering legibility, and refactor-survival of correctness artifacts. |
 | `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
 
