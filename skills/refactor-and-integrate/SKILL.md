@@ -81,7 +81,7 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When a task file carries a `## Sync Impact` section, use it as self-contained evidence for why a hunk already exists in the governing diff. In a protected-record workflow it does not exclude the hunk from the pruning list unless the record explicitly documents the supported path. In standalone use it can justify an existing hunk; it does not create new refactor targets or excuse unrelated codebase changes.
+In standalone use, a task-local `## Sync Impact` section can justify an existing hunk; it does not create new refactor targets or excuse unrelated codebase changes.
 
 ## Final Diff Self-Check
 

@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -61,3 +61,4 @@ Verification completed on the implementation diff:
 ## Review Notes
 
 1. **MAJOR — the fixes are behaviorally correct but add same-file echoes that fail the blocking DRY / Necessity gate.** Consolidation now assigns the later gate to Integrate at [consolidation.md:71-73](../../../skills/superplan/references/consolidation.md#L71-L73), repeats that assignment immediately after the standalone proposal example at [consolidation.md:103](../../../skills/superplan/references/consolidation.md#L103), and repeats it again in the entry-path summary at [consolidation.md:117-121](../../../skills/superplan/references/consolidation.md#L117-L121). The middle integration clause adds no behavior; retain only its standalone wait instruction. Refactor-and-integrate likewise states that Sync Impact cannot exempt an unmatched workflow hunk in the governing triage rule ([refactor-and-integrate:41-49](../../../skills/refactor-and-integrate/SKILL.md#L41-L49)) and repeats the same rule in its Sync Impact section ([refactor-and-integrate:82-84](../../../skills/refactor-and-integrate/SKILL.md#L82-L84)). Keep one authoritative workflow rule and let the other location point to it or carry only the standalone-specific behavior.
+   → implemented: [consolidation](../../../skills/superplan/references/consolidation.md) now keeps only the standalone wait at the proposal site, and [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md) keeps the workflow boundary only in hunk triage while its Sync Impact section carries standalone behavior.

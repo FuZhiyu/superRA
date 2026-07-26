@@ -100,7 +100,7 @@ Proposed tree after consolidation:
 Should I proceed with all changes, a subset, or none?
 ```
 
-In standalone use, wait for explicit approval. During INTEGRATE, `superintegrate/references/integrate.md` owns the later combined gate and its recovery loop.
+In standalone use, wait for explicit approval.
 
 ## Execution Mechanics
 
