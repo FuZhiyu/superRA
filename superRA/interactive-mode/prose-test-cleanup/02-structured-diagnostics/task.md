@@ -1,6 +1,6 @@
 ---
 title: "Delete Low-Value Wording Assertions"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -69,44 +69,3 @@ Revision:
 - Revision verification: `15 passed` focused Python tests; `15/15` Codex hook
   cases; `18/18` Zotero cases; full suite `899 passed`, `0 failed`, with four
   expected warnings in `84.58s`.
-
-## Review Notes
-
-1. **MAJOR — Cheap branch and exit-status coverage was deleted together with
-   diagnostic prose.** The Codex Stop-hook suite now covers only a heading-style
-   plan, an already-active hook, and an ordinary non-plan turn
-   ([test-codex-hooks.sh:268-306](../../../../tests/hooks/test-codex-hooks.sh#L268-L306)),
-   after deleting the pre-existing cases for a `<proposed_plan>` tag, quoted
-   tags outside plan mode, non-plan output in plan mode, and a negated
-   proposed-plan phrase. Those cases exercise distinct routing branches in the
-   marker parser
-   ([codex-plan-stop:50-59](../../../../hooks/codex-plan-stop#L50-L59)) and can
-   be retained using only the existing structured `decision` or empty-JSON
-   result. The commit also deleted the missing-dashboard-dependency test instead
-   of retaining its existing `SystemExit.code == 1` assertion for the
-   `ImportError` branch
-   ([cli.py:167-183](../../../../skills/task-tree/scripts/cli.py#L167-L183)).
-   Restore these cheap behavioral cases without checking reminder/error wording.
-   → implemented: restored the four parser branches with structured
-   decision/empty-JSON assertions and the missing-dependency path with only
-   `SystemExit.code == 1`
-   ([test-codex-hooks.sh:282](../../../../tests/hooks/test-codex-hooks.sh#L282),
-   [test_cli.py:500](../../../../skills/task-tree/scripts/test_cli.py#L500)).
-
-2. **MAJOR — Stable path and ordering checks were removed as if they were prose
-   assertions.** The cleanup deleted the superplan routed-reference existence
-   check even though the referenced paths remain executable routing contracts
-   ([SKILL.md:64-70](../../../../skills/superplan/SKILL.md#L64-L70),
-   [SKILL.md:107-111](../../../../skills/superplan/SKILL.md#L107-L111)). It also
-   deleted the generated dashboard-workflow contract that checked permissions,
-   configured paths, cleanup-before-upload order, and branch/trigger ordering;
-   the surviving tests cover installation and a few substitutions but not those
-   invariants
-   ([test_dashboard.py:3423-3511](../../../../skills/task-tree/scripts/test_dashboard.py#L3423-L3511)).
-   Restore only the cheap reference-path and generated-workflow
-   schema/command-order checks, omitting headings, labels, and remediation copy.
-   → implemented: restored routed-file existence plus workflow schema,
-   permission, configured-path, branch-trigger, and cleanup-before-upload
-   ordering checks
-   ([test_contract.py:231](../../../../tests/harness-instruction-following/test_contract.py#L231),
-   [test_dashboard.py:3442](../../../../skills/task-tree/scripts/test_dashboard.py#L3442)).

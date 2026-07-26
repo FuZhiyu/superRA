@@ -1,6 +1,6 @@
 ---
 title: "Delete Rule-Recitation Canaries"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -61,23 +61,15 @@ Revision:
 
 ## Review Notes
 
-1. **MAJOR — Test documentation still advertises evidence paths deleted by this
-   commit.** The detailed stage/domain sections still say fixture artifacts
-   satisfy canaries and explicitly claim Codex artifact-list canaries
-   ([README.md:100](../../../../tests/harness-instruction-following/README.md#L100),
-   [README.md:119](../../../../tests/harness-instruction-following/README.md#L119));
-   the evidence-policy section still says `evaluate_canary` scans artifact
-   fields ([README.md:175](../../../../tests/harness-instruction-following/README.md#L175));
-   and the CI-boundary section still lists `always_loaded_live.py` as a gated
-   Python live entry even though that module now ends after its static checker
-   ([README.md:191](../../../../tests/harness-instruction-following/README.md#L191),
-   [always_loaded_live.py:38-44](../../../../tests/harness-instruction-following/always_loaded_live.py#L38-L44)).
-   The supporting research note likewise retains the deleted Claude behavioral
-   canary claim
-   ([load-testing-research.md:23](../../../../tests/harness-instruction-following/references/load-testing-research.md#L23)).
-   Reconcile these test documents with the command-only/schema-only evidence
-   that remains; this is also required to make the task's `## Results` claim
-   that the documentation stopped making these claims accurate.
+1. **MAJOR — The documentation reconciliation is incomplete.** The
+   `test_stage_loads_live.py` module docstring still says the suite drives Codex
+   per-stage canaries on synthetic inputs and that skill-unique tokens are
+   checked at artifact fields
+   ([test_stage_loads_live.py:4-16](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L4-L16)),
+   although those evaluators and artifact fields were removed. Delete that
+   stale paragraph and describe only the surviving Claude evaluator plus
+   schema/stage-identity fixture check; then rerun the stale-claim search so the
+   revision's “search is clean” statement is accurate.
    → implemented: removed the stale stage/domain artifact-canary,
    `evaluate_canary`, `always_loaded_live.py` live-gate, and Claude
    behavioral-canary claims; documented only the remaining structural evidence

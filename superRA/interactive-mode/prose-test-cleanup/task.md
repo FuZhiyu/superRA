@@ -1,6 +1,6 @@
 ---
 title: "Prune Prose-Specific Tests Conservatively"
-status: in-progress
+status: revise
 depends_on: []
 ---
 
@@ -41,19 +41,10 @@ Verification:
 
 ## Review Notes
 
-1. **MAJOR — Child 01 leaves the harness documentation inconsistent with the
-   canary paths it removed.** The current issue and required documentation-only
-   reconciliation are recorded in
+1. **MAJOR — Child 01 still has one stale Codex artifact-canary claim in a test
+   module docstring.** The remaining documentation-only correction is recorded
+   in
    [01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes).
    → implemented: reconciled the harness documentation and annotated the
    child-local finding
    ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).
-
-2. **MAJOR — Child 02 exceeds the conservative deletion budget by removing
-   cheap exit-status, routing-branch, generated-path, and command-order
-   coverage.** The focused restorations that avoid prose assertions are recorded
-   in
-   [02-structured-diagnostics/task.md](02-structured-diagnostics/task.md#review-notes).
-   → implemented: restored only the accepted structural coverage and annotated
-   both child-local findings
-   ([02-structured-diagnostics/task.md](02-structured-diagnostics/task.md#review-notes)).
