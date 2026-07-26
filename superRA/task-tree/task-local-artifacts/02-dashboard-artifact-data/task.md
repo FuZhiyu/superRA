@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: implemented
+status: revise
 depends_on:
   - 01-artifact-contract
 ---
@@ -42,5 +42,5 @@ Verification: `test_artifacts.py` passed 27 tests. Python compilation, Markdown 
 
 ## Review Notes
 
-1. **MAJOR** — Explicit and download-only responses can still escape the owning task through a validation-to-open symlink race. [`artifact_content`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1405-L1459) validates and describes the path, but then hands the pathname to `FileResponse`, which reopens it later without the no-follow protection used by [`read_artifact_bytes`](../../../../skills/task-tree/scripts/_artifacts.py#L389-L402). In a focused reproduction, replacing `attachments/payload.bin` with a symlink to an out-of-workspace file inside a patched `describe_resolved` call made `GET /api/artifact?...&download=true` return `200` with the outside file's bytes. Keep the validated file identity through response streaming, or reopen through a no-follow descriptor and verify the opened regular file before streaming; add a regression that swaps the final component after resolution and proves both explicit downloads and unsafe-type implicit downloads cannot disclose outside bytes.
+1. **MAJOR** — Download responses remain vulnerable to the same validation-to-open containment race through an intermediate path component. [`open_artifact_file`](../../../../skills/task-tree/scripts/_artifacts.py#L390-L415) adds `O_NOFOLLOW` only to the final-component open and then compares that descriptor with `path.lstat()`; both operations still follow a swapped parent-directory symlink. In a focused reproduction, after validation of `attachments/nested/payload.bin`, renaming `nested/` and replacing it with a symlink to an outside directory containing `payload.bin` made the explicit-download API return `200` with the outside secret. The final-component swap regressions pass for explicit safe-type and implicit unsafe-type downloads ([test_artifacts.py:448-485](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L485)), and [`iter_artifact_file`](../../../../skills/task-tree/scripts/_artifacts.py#L418-L431) closes a started stream in `finally`, but the opened descriptor is not yet the already-validated file identity. Open from a stable owning-task/attachments directory descriptor, walking every component without following symlinks (or use an equivalent handle-preserving mechanism), and extend both download-mode regressions to swap an intermediate path entry.
    → implemented: download responses now open a no-follow verified regular-file descriptor before returning and stream that stable identity; both swap paths return 403 without outside bytes ([plan_dashboard.py:1454-1469](../../../../skills/task-tree/scripts/plan_dashboard.py#L1454-L1469), [test_artifacts.py:448-485](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L485)).
