@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: approved
+status: revise
 depends_on: []
 ---
 
@@ -9,9 +9,10 @@ depends_on: []
 Starting from the current `main` workflow, make the minimum changes needed for result protection to guide documentation maturation and for one reviewed refactoring proposal to govern later cleanup.
 
 - During Protect, before agents write permanent documentation, survey the provisional results and propose concrete options for the final documentation and its durable homes, which results to keep or drop, and how each kept result should be protected. Let the researcher choose whether permanent results documentation is sufficient or whether a drift test or another existing protection mechanism should also be created.
-- Produce the agreed user-facing documentation and result files, then consolidate the task tree and mature its `## Results`. Those permanent artifacts and mature task results are the protected record.
-- Before destructive cleanup, create one recognizably temporary refactoring task. Automatically place every in-scope change not justified by the protected record or an explicitly documented reproduction, validation, interpretation, or presentation path on its pruning list. The task also documents other opportunities, including consolidation, simplification, duplication removal, convention fit, and stale-documentation cleanup.
+- Use one drafter seat to produce the agreed user-facing documentation and result files, consolidate the task tree, and mature its `## Results`. Those permanent artifacts and mature task results are the protected record.
+- Use one reviewer seat to verify the protected record, compare every in-scope change against it, and create one recognizably temporary refactoring task. The task automatically lists every change not justified by the protected record or an explicitly documented reproduction, validation, interpretation, or presentation path as a pruning target and proposes other consolidation, simplification, duplication-removal, convention-fit, and stale-documentation actions.
 - Give the researcher one later review of the completed permanent record, mature task tree, and temporary refactoring task together. Approval authorizes agents to execute that proposal mechanically. If execution would materially change the protected outcome or the approved proposal, return to maturation, revise the proposal, and present it again.
+- Make the handoff resumable from the temporary task, its status, and the approval commit under the `superintegrate` protocol; do not add another progress artifact or researcher gate.
 - Verify the workflow with realistic behavior-level coverage and update the user-facing and harness-facing descriptions that materially depend on the changed ordering.
 
 ### Constraints
@@ -30,6 +31,10 @@ Use the current `main` versions of [superintegrate](../../../skills/superintegra
 The recovery branch `backup/pruning-redesign-before-restart-20260725` contains a generic safety-checked `task remove` implementation. Re-evaluate it independently and reuse it only if the new workflow needs mechanical subtree deletion; do not restore the surrounding workflow or task files.
 
 Follow the instruction-authoring and generated-artifact rules in [CLAUDE.md](../../../CLAUDE.md). Prefer a small end-to-end workflow fixture over prose canaries or exhaustive protocol simulations.
+
+## Revision Notes
+
+The researcher replaced separate record verification and proposal derivation with one reviewer pass after maturation. That reviewer verifies the protected record, derives the pruning and consolidation actions, and writes the temporary refactoring task before the existing combined researcher gate. The temporary task plus git history must carry resumable state without another manifest or status field.
 
 ## Results
 
