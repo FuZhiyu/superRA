@@ -12,7 +12,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 |---|---|---|
 | `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
 | `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `superintegrate` | INTEGRATE | Choose results, permanent documentation, and protection; Sync with the current base; Mature & Consolidate the record and task tree; approve and execute one temporary refactoring task; then Finish. |
+| `superintegrate` | INTEGRATE | Choose results, permanent documentation, and protection; Sync; Mature & Consolidate the protected record; derive, approve, and execute one temporary refactoring task; then Finish. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline

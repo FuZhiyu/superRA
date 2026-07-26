@@ -11,8 +11,8 @@ Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified 
 Protect              -> choose results, permanent documentation, and protection
 Sync                 -> bring the branch onto the current base via semantic-merge
 Mature & Consolidate -> write the permanent record, mature the task tree, and
-                        prepare one temporary refactoring task for researcher review
-Integrate            -> execute the approved refactoring task, prune, and verify
+                        verify the protected record
+Integrate            -> derive, approve, execute, and verify one refactoring task
 Finish               -> final freshness check, PR or fast-forward, and cleanup
 
 Any step -> superplan §User Feedback and Changing the Task Tree
@@ -35,14 +35,13 @@ Load each step's reference on entry; each is self-contained for its step:
 
 ## Stop Points
 
-Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — each step's completion is recorded by its commit and the per-task `status` it leaves behind, so a resumed session reads progress from git and statuses, not from a tracker section. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
+Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier. INTEGRATE keeps no progress checkboxes — progress is recovered from commits and task statuses. When the researcher chooses documentation-only protection and Protect changes no files, carry that decision in the current workflow context; an interruption before maturation re-enters Protect because no intermediate record was requested. INTEGRATE is one multi-step phase, so its commit subjects carry the step name in the scope per `using-superra` §Commit Hygiene: `integrate(<step>): <summary>`, where `<step>` is one of `protect | sync | fit | mature | finish`.
 
 Legitimate stop points:
 
 - **Protect:** result, documentation, and protection choices before permanent documentation is written.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
-- **Mature & Consolidate:** the researcher reviews the completed permanent record, mature task tree, and temporary refactoring task together before refactoring begins.
-- **Integrate:** return to Mature & Consolidate when execution would materially change the protected outcome or the approved refactoring task.
+- **Integrate:** the researcher reviews the completed protected record and mechanically derived refactoring task together before execution; return to Mature & Consolidate when a requested or discovered change would alter the protected record.
 - **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
 ## Dispatch Convention
@@ -58,4 +57,4 @@ A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer a
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Permanent results documentation may be sufficient protection, and Integrate often collapses to an inline refactoring sweep plus a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect offers document build and outline stability as protection options, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** Standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, consolidation is reviewed with the finished permanent record and temporary refactoring task; see `references/mature-consolidate.md`.
+- **Task tree consolidation:** Standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, Mature & Consolidate folds the tree into the protected record before Integrate derives the temporary refactoring task.

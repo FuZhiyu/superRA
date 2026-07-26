@@ -1,6 +1,6 @@
 # Task Tree Consolidation
 
-Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches, or temporary update scaffolding — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via the `superintegrate` Mature & Consolidate stage, which applies the actions here while preparing the permanent record and temporary refactoring task.
+Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches, or temporary update scaffolding — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via the `superintegrate` Mature & Consolidate stage, which applies the actions here while preparing the protected record.
 
 Consolidation distils each task: it decides what of the task's work survives and where it lands in a durable owner. Most scaffolding and dev-log detail drops once the work is integrated — a simple update task may collapse to a single inline line in its parent. The actions below choose the surviving altitude rather than carry a task over wholesale.
 
@@ -70,7 +70,7 @@ For each identified issue, classify the action. Each action sets the altitude th
 
 ## User Approval Gate
 
-Consolidation changes the tree structure. In standalone use, author and approve the proposal before execution. During INTEGRATE, Protect already supplies the result and durable-home choices: Mature & Consolidate applies the structural fold in recoverable commits, then presents the completed permanent record, mature tree, and temporary refactoring task at its combined researcher gate. A requested change revises or undoes those commits and regenerates the review surface.
+Consolidation changes the tree structure. In standalone use, author and approve the proposal before execution. During INTEGRATE, Protect already supplies the result and durable-home choices, so Mature & Consolidate applies the structural fold in recoverable commits and verifies the protected record. Integrate later derives the temporary refactoring task and owns the combined researcher gate.
 
 **Proposal format:**
 
@@ -118,4 +118,4 @@ Execution applies the researcher’s choices. During INTEGRATE those choices com
 
 **Standalone:** The user asks to clean up the tree. The consolidator runs every step itself — survey, author the proposal, get approval, execute.
 
-**During integration:** `superintegrate/references/mature-consolidate.md` owns the choreography — after Sync it materializes the permanent documentation, applies the structural fold and `## Results` maturation together in recoverable commits, prepares the temporary refactoring task, and presents the finished record, tree, and proposal for one researcher review before Integrate executes the refactoring.
+**During integration:** `superintegrate/references/mature-consolidate.md` materializes and verifies the permanent documentation, structural fold, and `## Results` maturation after Sync. `superintegrate/references/integrate.md` then derives the temporary refactoring task, runs the combined researcher gate, and executes the approved work.

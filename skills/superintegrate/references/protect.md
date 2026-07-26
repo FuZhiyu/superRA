@@ -2,7 +2,7 @@
 
 Protect decides what the permanent record should contain and how each kept result should be guarded before agents write that record. Permanent results documentation is a valid protection mechanism. Add drift tests, document builds, outline checks, or other existing mechanisms only where the researcher selects them.
 
-Always run the existing protection suite on every integration pass. Creating new protection artifacts is scoped to the tasks this integration reopens or changes.
+Creating new protection artifacts is scoped to the tasks this integration reopens or changes.
 
 ## Steps
 
