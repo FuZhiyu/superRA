@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -44,3 +44,7 @@ Verification:
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
 - A fresh isolated Codex harness read the revised contract, removed calculation scratch, retained a hand-authored Markdown note and reproducible CSV under the task's `attachments/`, and promoted the runtime-consumed Python generator to the fixture project's `src/` path without a task-local duplicate. Independent checks confirmed the task directory contained only `task.md` and `attachments/`, all recorded files existed, and a fresh generator run reproduced the retained CSV byte-for-byte.
 - The Markdown checker reported both task-owned Markdown files clean, `superra task check` found no issues, and `git diff --check` passed.
+
+## Review Notes
+
+1. **MAJOR:** The revised contract correctly requires every retained task-local companion to live under `attachments/` ([task-companion-files.md:13-18](../../../../skills/using-superra/references/task-companion-files.md#L13-L18)), but the owning ancestor still states that Markdown, Python, Julia, R, and notebook companions may sit beside `task.md` and that dashboard discovery includes direct companions ([../task.md:41-47](../task.md#L41-L47)). Because `superra task read` injects ancestor context into every child dispatch, this stale current-state `## Results` directly contradicts the authoritative placement rule agents receive. Replace the ancestor's superseded direct-companion results with the attachment-only contract (and leave dashboard implementation claims to the reopened downstream tasks) before approving this contract revision.
