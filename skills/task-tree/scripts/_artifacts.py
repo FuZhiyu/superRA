@@ -9,6 +9,7 @@ import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import BinaryIO, Iterator
 from urllib.parse import quote
 
 from _task_io import ATTACHMENTS_DIRNAME, Task, collect_all_tasks
@@ -386,17 +387,51 @@ def describe_resolved(path: Path, relative: str, limits: ArtifactLimits | None =
     return item
 
 
-def read_artifact_bytes(path: Path, *, max_bytes: int) -> bytes:
-    """Read at most *max_bytes* without following a final-component symlink."""
+def open_artifact_file(path: Path) -> BinaryIO:
+    """Open one regular artifact without following its final path component."""
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
-    fd = os.open(path, flags)
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
     try:
-        with os.fdopen(fd, "rb", closefd=False) as handle:
-            raw = handle.read(max_bytes + 1)
-    finally:
+        fd = os.open(path, flags)
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        raise ArtifactSecurityError("Artifact could not be opened securely") from exc
+    try:
+        opened = os.fstat(fd)
+        current = path.lstat()
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or not stat.S_ISREG(current.st_mode)
+            or (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino)
+        ):
+            raise ArtifactSecurityError("Artifact identity changed before opening")
+        return os.fdopen(fd, "rb")
+    except BaseException:
         os.close(fd)
+        raise
+
+
+def iter_artifact_file(
+    handle: BinaryIO,
+    *,
+    chunk_size: int = 64 * 1024,
+) -> Iterator[bytes]:
+    """Stream an already-open artifact and close its stable descriptor."""
+    try:
+        while chunk := handle.read(chunk_size):
+            yield chunk
+    finally:
+        handle.close()
+
+
+def read_artifact_bytes(path: Path, *, max_bytes: int) -> bytes:
+    """Read at most *max_bytes* through a no-follow regular-file descriptor."""
+    with open_artifact_file(path) as handle:
+        raw = handle.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise ArtifactTooLargeError(f"Artifact exceeds {max_bytes} bytes")
     return raw

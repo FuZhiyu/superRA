@@ -1451,11 +1451,20 @@ async def artifact_content(
         )
         return Response(content=raw, media_type=item.mime, headers=headers)
 
-    return FileResponse(
-        str(resolved),
+    try:
+        handle = await asyncio.to_thread(artifacts.open_artifact_file, resolved)
+    except (
+        artifacts.ArtifactSecurityError,
+        FileNotFoundError,
+    ) as exc:
+        _raise_artifact_http_error(exc)
+        raise AssertionError("unreachable")
+    headers["Content-Disposition"] = (
+        f"attachment; filename*=UTF-8''{quote(item.name, safe='')}"
+    )
+    return StreamingResponse(
+        artifacts.iter_artifact_file(handle),
         media_type=item.mime,
-        filename=item.name,
-        content_disposition_type="attachment",
         headers=headers,
     )
 
