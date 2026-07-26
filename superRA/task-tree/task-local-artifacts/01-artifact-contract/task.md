@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: approved
+status: revise
 depends_on: []
 ---
 
@@ -39,3 +39,9 @@ Verification:
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
 - A fresh read-only Codex harness loaded `using-superra` and `econ-data-analysis`, kept a committed long-lived Python analysis script used only for one task under that task's `attachments/`, and promoted a shared runtime loader and promised reader-facing table to permanent project paths. It also removed unrecorded REPL scratch and required task-result links plus reproduction metadata.
 - The Markdown checker reported all three changed instruction files and this task clean; `superra task check` found no issues, and `git diff --check` passed.
+
+## Review Notes
+
+1. **MAJOR — `econ-data-analysis/SKILL.md` fails the contributor DRY gate this task's own Objective requires.** [The added bullet](../../../../skills/econ-data-analysis/SKILL.md#L128) restates the companion-file classify/promote rule almost verbatim ("Code retained solely to produce or support that task's recorded results is a task companion under `attachments/`... Promote it... when it becomes maintained, shared, runtime-consumed, or a promised deliverable") instead of pointing to the authoritative reference, and cites the wrong owner (`using-superra §Task Interface` rather than `references/task-companion-files.md`, where the promotion rule actually lives). Two copies of the same rule will drift. Replace with a one-line pointer, e.g. `[BLOCKING] Task-specific result-producing code follows using-superra/references/task-companion-files.md.`
+2. **MINOR — `using-superra/SKILL.md` partially restates its own reference.** [The added paragraph](../../../../skills/using-superra/SKILL.md#L66) re-derives the Classify definition nearly word-for-word from `task-companion-files.md` ("owned by one task solely to produce, reproduce, review, or interpret its recorded results"). Trim to the placement decision (scratch vs. `attachments/` vs. conventional path) and let the reference own the classification prose, per this task's own "state the placement decision itself... but keep one authoritative... reference" split.
+3. **MINOR — Ownership Boundaries table in the root contributor guide has no row for this concern.** The companion-file lifecycle is now referenced from eight files across five skills, but `CLAUDE.md`'s Ownership Boundaries table (which states its own purpose as "one source of truth per concern") does not list it. Add a row naming `using-superra/references/task-companion-files.md` as the owner, matching the pattern of the table's other entries.

@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: approved
+status: revise
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -97,3 +97,8 @@ disclosure directly to its owning task row. The installed-Chromium regression
 now verifies file → directory → Attachments → owner, then re-enters the
 collapsed disclosure and verifies `ArrowDown` exits to the following task;
 the test passed `1 passed`.
+
+## Review Notes
+
+1. **MEDIUM — Client generates an attachment link the server always rejects.** [`resolveArtifactRelativePath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L23-L44) accepts a single-segment companion reference that is not under `attachments/` (a documented placement tier — a companion file sitting directly beside `task.md`) and builds an `/api/artifact` open/preview link for it. But the server's [`_validated_parts`](../../../../skills/task-tree/scripts/_artifacts.py#L342) hard-requires `parts[0] == "attachments"` and at least two path segments, so that link 404s / raises `ArtifactPathError` every time it's followed. Not covered by `test_artifact_ui.py` or `tests/test_artifacts.py` — no test follows a same-directory, non-`attachments/` companion link. Either extend `_validated_parts` to permit single-segment task-root files (coordinate with task 02, which owns that contract), or drop the dead client branch and its comment.
+2. **MINOR — Silent failure on attachment-manifest fetch.** [`loadAttachmentBranches`](../../../../skills/task-tree/scripts/templates/dashboard.js#L568-L573) swallows a failed `/api/artifacts` fetch with an empty `.catch`, leaving the Attachments branch simply absent with no visible error — unlike `loadActiveArtifact`'s explicit error rendering elsewhere in the same file. A soft-fail may be the right call for a background sidebar decoration, but add a one-line comment saying so; as written it reads as an oversight next to the fully-handled error paths nearby.

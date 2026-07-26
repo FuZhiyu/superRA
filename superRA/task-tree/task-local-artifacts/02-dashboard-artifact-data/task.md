@@ -1,6 +1,6 @@
 ---
 title: "Build the Dashboard Companion-File Data Path"
-status: approved
+status: revise
 depends_on:
   - 01-artifact-contract
 ---
@@ -35,3 +35,9 @@ Watcher ownership is likewise attachment-only: [direct changes return no artifac
 Focused regressions cover direct-file exclusion and access rejection, removal of placement metadata, recursive attachment ownership, hidden/checkpoint and symlink exclusion, listing and byte budgets, MIME and download headers, worktree/custom-root/rootless isolation, attachment-only watcher events, a sixteen-level manifest/content/watcher/export round trip, scoped export, size fallback, figure reuse, [intermediate-directory symlink swaps for explicit and unsafe implicit downloads](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L448-L487), and [the equivalent standalone attachment-figure race](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L781-L819).
 
 Verification: `test_artifacts.py` passed 28 tests. Python compilation, Markdown integrity checks, and `git diff --check` passed. The full task-tree suite is intentionally deferred to the combined task 02/03 verification pass.
+
+## Review Notes
+
+1. **MAJOR — The non-attachment standalone-image branch keeps a check-then-act symlink race that the rest of this task closed everywhere else.** [`_build_standalone_images`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1918-L1944) has two branches: an `attachments/`-prefixed path that correctly routes through `artifacts.open_artifact_file` (the `O_DIRECTORY | O_NOFOLLOW` descriptor walk), and an `else` branch for existing non-attachment project figures that instead walks path components checking `current.is_symlink()` and then calls `img_path.read_bytes()` as a separate, later filesystem operation. A component swapped to a symlink between the check loop and the read (e.g. by a concurrent process racing a `dashboard`/`generate_dashboard` export) is not caught, so arbitrary local file bytes can be base64-embedded into the exported `dashboard.html`. This is the same bug class the [Results](#results) describes as closed via the shared descriptor walker, but this parallel branch was left on the old pattern. Route it through the same safe helper used for the attachment branch, or otherwise close the gap between the symlink check and the read (e.g. `os.open(..., O_NOFOLLOW)` and read from the returned descriptor).
+2. **MINOR — No regression exercises the race in finding 1.** [`test_standalone_figure_rejects_intermediate_component_symlink_swap`](../../../../skills/task-tree/scripts/tests/test_artifacts.py#L781-L820) proves the swap is rejected only for the `attachments/`-prefixed branch. `test_dashboard.py`'s non-attachment image-map tests (`test_image_map_keys_and_mime`, `test_image_map_skips_remote_and_absolute`, `test_image_map_handles_html_img_tag`) only cover static, non-adversarial inputs. Add an equivalent swap-mid-export test for the non-attachments branch once finding 1 is fixed, so both branches share the same protection.
+3. **MINOR — Dead computation in `build_standalone_artifacts`.** [`_artifacts.py:598`](../../../../skills/task-tree/scripts/_artifacts.py#L598) computes `resolved = resolve_artifact(...)` and never reads the result; `read_artifact_bytes` re-resolves and re-validates the same path independently. Harmless (redundant path-walk per exported file) but should be removed as dead code.
