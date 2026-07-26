@@ -387,31 +387,81 @@ def describe_resolved(path: Path, relative: str, limits: ArtifactLimits | None =
     return item
 
 
-def open_artifact_file(path: Path) -> BinaryIO:
-    """Open one regular artifact without following its final path component."""
-    flags = os.O_RDONLY
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    if hasattr(os, "O_NONBLOCK"):
-        flags |= os.O_NONBLOCK
+def _open_relative_component(parent_fd: int, name: str, flags: int) -> int:
     try:
-        fd = os.open(path, flags)
+        return os.open(name, flags, dir_fd=parent_fd)
     except FileNotFoundError:
         raise
     except OSError as exc:
         raise ArtifactSecurityError("Artifact could not be opened securely") from exc
+
+
+def open_artifact_file(
+    plan_root: Path,
+    task: Task,
+    requested_path: str,
+) -> BinaryIO:
+    """Open an artifact by walking from a stable task-root descriptor."""
+    if not _task_dir_is_secure(plan_root, task):
+        raise ArtifactSecurityError("Owning task is unavailable")
+    parts = _validated_parts(requested_path)
+    if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
+        raise ArtifactSecurityError("Secure artifact opening is unavailable")
     try:
-        opened = os.fstat(fd)
-        current = path.lstat()
-        if (
-            not stat.S_ISREG(opened.st_mode)
-            or not stat.S_ISREG(current.st_mode)
-            or (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino)
-        ):
-            raise ArtifactSecurityError("Artifact identity changed before opening")
-        return os.fdopen(fd, "rb")
+        task_parts = task.dir_path.absolute().relative_to(
+            plan_root.absolute()
+        ).parts
+        root_path = plan_root.resolve(strict=True)
+    except (OSError, ValueError) as exc:
+        raise ArtifactSecurityError("Owning task is unavailable") from exc
+
+    directory_flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        directory_flags |= os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        directory_flags |= os.O_NOFOLLOW
+    file_flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        file_flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        file_flags |= os.O_NONBLOCK
+
+    try:
+        directory_fd = os.open(root_path, directory_flags)
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        raise ArtifactSecurityError("Artifact could not be opened securely") from exc
+
+    try:
+        for part in (*task_parts, *parts[:-1]):
+            next_fd = _open_relative_component(
+                directory_fd,
+                part,
+                directory_flags,
+            )
+            try:
+                os.close(directory_fd)
+            except BaseException:
+                os.close(next_fd)
+                raise
+            directory_fd = next_fd
+        file_fd = _open_relative_component(
+            directory_fd,
+            parts[-1],
+            file_flags,
+        )
     except BaseException:
-        os.close(fd)
+        os.close(directory_fd)
+        raise
+    os.close(directory_fd)
+
+    try:
+        if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+            raise ArtifactSecurityError("Artifact is not a regular file")
+        return os.fdopen(file_fd, "rb")
+    except BaseException:
+        os.close(file_fd)
         raise
 
 
@@ -428,9 +478,15 @@ def iter_artifact_file(
         handle.close()
 
 
-def read_artifact_bytes(path: Path, *, max_bytes: int) -> bytes:
+def read_artifact_bytes(
+    plan_root: Path,
+    task: Task,
+    requested_path: str,
+    *,
+    max_bytes: int,
+) -> bytes:
     """Read at most *max_bytes* through a no-follow regular-file descriptor."""
-    with open_artifact_file(path) as handle:
+    with open_artifact_file(plan_root, task, requested_path) as handle:
         raw = handle.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise ArtifactTooLargeError(f"Artifact exceeds {max_bytes} bytes")
@@ -541,7 +597,9 @@ def build_standalone_artifacts(
             try:
                 resolved = resolve_artifact(plan_root, task, relative)
                 raw = read_artifact_bytes(
-                    resolved,
+                    plan_root,
+                    task,
+                    relative,
                     max_bytes=active_limits.max_export_file_bytes,
                 )
             except (

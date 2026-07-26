@@ -1434,7 +1434,9 @@ async def artifact_content(
         try:
             raw = await asyncio.to_thread(
                 artifacts.read_artifact_bytes,
-                resolved,
+                state.plan_root,
+                owner,
+                path,
                 max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
             )
         except artifacts.ArtifactTooLargeError as exc:
@@ -1446,13 +1448,24 @@ async def artifact_content(
                     "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
                 },
             ) from exc
+        except (
+            artifacts.ArtifactSecurityError,
+            FileNotFoundError,
+        ) as exc:
+            _raise_artifact_http_error(exc)
+            raise AssertionError("unreachable")
         headers["Content-Disposition"] = (
             f"inline; filename*=UTF-8''{quote(item.name, safe='')}"
         )
         return Response(content=raw, media_type=item.mime, headers=headers)
 
     try:
-        handle = await asyncio.to_thread(artifacts.open_artifact_file, resolved)
+        handle = await asyncio.to_thread(
+            artifacts.open_artifact_file,
+            state.plan_root,
+            owner,
+            path,
+        )
     except (
         artifacts.ArtifactSecurityError,
         FileNotFoundError,

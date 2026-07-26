@@ -452,23 +452,25 @@ class TestArtifactAPI:
             ("unsafe.html", False),
         ],
     )
-    def test_download_rejects_final_component_symlink_swap(
+    def test_download_rejects_intermediate_component_symlink_swap(
         self, tmp_path, monkeypatch, name, download
     ):
         root = _tree(tmp_path)
         attachments = root / "attachments"
-        attachments.mkdir()
-        candidate = attachments / name
+        nested = attachments / "nested"
+        nested.mkdir(parents=True)
+        candidate = nested / name
         candidate.write_bytes(b"safe")
-        outside = tmp_path / "outside-secret.txt"
+        outside = tmp_path / "outside"
+        outside.mkdir()
         secret = b"outside-secret"
-        outside.write_bytes(secret)
+        (outside / name).write_bytes(secret)
         original_describe = _artifacts.describe_resolved
 
         def swap_after_describe(path, relative, limits=None):
             item = original_describe(path, relative, limits)
-            path.unlink()
-            path.symlink_to(outside)
+            nested.rename(attachments / "nested-original")
+            nested.symlink_to(outside, target_is_directory=True)
             return item
 
         monkeypatch.setattr(_artifacts, "describe_resolved", swap_after_describe)
@@ -477,7 +479,7 @@ class TestArtifactAPI:
                 "/api/artifact",
                 params={
                     "task": "",
-                    "path": f"attachments/{name}",
+                    "path": f"attachments/nested/{name}",
                     "download": str(download).lower(),
                 },
             )
