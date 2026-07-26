@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -34,12 +34,13 @@ No generated outputs are expected because `agents/*` is out of scope. If that ch
 
 ## Results
 
-Added one authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify). It classifies scratch, task-local, and permanent files; defines direct versus `attachments/` placement and the asset-container exception; requires links and reproducibility metadata; promotes permanent artifacts without duplicate sources of truth; and carries retained companions through Mature & Consolidate without dropping protected-result support.
+The authoritative [task companion-file contract](../../../../skills/using-superra/references/task-companion-files.md#classify) classifies scratch, task-local, and permanent files and now gives retained task-local files one placement boundary: `attachments/`. Only `task.md` and child-task directories occupy the task directory itself; the `attachments/` asset-container exception still applies when a generated bundle contains a file named `task.md`.
 
-The contract is routed from the universal [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and the smallest planning, implementation, integration, maturation, task-tree, reporting, and [user-facing documentation](../../../../README.md#how-it-works) surfaces. Canonical role specs and generated role artifacts remain unchanged.
+The contract also requires links and reproducibility metadata, promotes permanent artifacts without duplicate sources of truth, and carries retained companions through Mature & Consolidate without dropping protected-result support. It remains routed from the universal [Task Interface](../../../../skills/using-superra/SKILL.md#task-interface) and the smallest planning, implementation, integration, maturation, task-tree, reporting, and [user-facing documentation](../../../../README.md#how-it-works) surfaces. Canonical role specs and generated role artifacts remain unchanged.
 
 Verification:
 
+- `uv run --with pyyaml python .../skill-creator/scripts/quick_validate.py skills/using-superra` reported `Skill is valid!`.
 - `bash tests/check-harness-compatibility.sh` passed, including five Codex agent-generation tests, generated-artifact freshness, and all skill-packaging invariants.
-- A fresh isolated Codex harness created and self-reviewed representative companions: it removed session scratch, retained a hand-authored note, generated CSV, and imported bundle under `attachments/`, and promoted a Python diagnostic to the fixture project's conventional `src/` path when a runtime consumer appeared. The rerun reproduced the CSV deterministically, all 13 recorded links resolved, and task validation reported zero errors (plus the fixture's expected synthetic-root rollup warning).
-- The Markdown checker reported all 13 changed Markdown files clean, and `git diff --check` passed on the final task-owned diff.
+- A fresh isolated Codex harness read the revised contract, removed calculation scratch, retained a hand-authored Markdown note and reproducible CSV under the task's `attachments/`, and promoted the runtime-consumed Python generator to the fixture project's `src/` path without a task-local duplicate. Independent checks confirmed the task directory contained only `task.md` and `attachments/`, all recorded files existed, and a fresh generator run reproduced the retained CSV byte-for-byte.
+- The Markdown checker reported both task-owned Markdown files clean, `superra task check` found no issues, and `git diff --check` passed.

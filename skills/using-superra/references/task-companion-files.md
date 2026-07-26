@@ -12,9 +12,8 @@ Classify each file before deciding where it belongs:
 
 ## Place
 
-- Put retained notes and source files ending in `.md`, `.py`, `.jl`, `.r` / `.R`, or `.ipynb` directly beside `task.md`.
-- Put generated outputs, supporting data, and every other retained task-local file in `attachments/`.
-- Treat immediate directories containing `task.md` as subtasks. Treat `attachments/` as an asset container even when a generated bundle inside it contains a file named `task.md`.
+- Put every retained task-local companion in `attachments/`; only `task.md` and child-task directories occupy the task directory itself.
+- Treat directories containing `task.md` as subtasks. Treat `attachments/` as an asset container even when a generated bundle inside it contains a file named `task.md`.
 
 Companion files are not task-tree, dependency, status-rollup, frontier, or Kanban nodes.
 
