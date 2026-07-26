@@ -1,6 +1,6 @@
 # Mature & Consolidate
 
-Run this stage after Sync and before Integrate. The researcher’s Protect choices determine which results survive, where the permanent documentation belongs, and which automated protection to add. This stage materializes and verifies that protected record; refactoring begins in Integrate.
+Run this stage after Sync and before Integrate. The researcher’s Protect choices determine which results survive, where the permanent documentation belongs, and which automated protection to add. One drafter materializes that protected record; one reviewer verifies it and derives the temporary refactoring task. Refactoring begins after the researcher gate in Integrate.
 
 Load `superplan/references/task-tree-design.md`, `superplan/references/consolidation.md`, and `task-tree/references/task-file-contract.md`.
 
@@ -10,7 +10,7 @@ Read the researcher’s confirmed Protect choices, any protection artifacts or c
 
 ## Step 2: Materialize the permanent record and mature the tree
 
-Dispatch `Stage: maturation` implementers per affected subtree. Create or revise the agreed user-facing documentation and result files first. Then consolidate the task structure and distil each affected task’s `## Results` against those permanent artifacts:
+Fill one `Stage: maturation` implementer seat for the affected tasks. Create or revise the agreed user-facing documentation and result files first. Then consolidate the task structure and distil each affected task’s `## Results` against those permanent artifacts:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
@@ -26,25 +26,31 @@ Agent(subagent_type: "superRA:implementer"):
 
 The task record points to a permanent document when that document is the source of truth; it does not duplicate it. Structural folds and result maturation still happen together so removed task content lands at its durable home.
 
-## Step 3: Verify the protected record
+## Step 3: Review the record and derive the temporary task
 
-Dispatch a fresh reviewer over the affected tasks, permanent artifacts, and proposed final tree:
+Fill one reviewer seat over the affected tasks, permanent artifacts, proposed final tree, and `BASE_HEAD_SHA..HEAD`:
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: maturation
   Tasks: <affected durable task paths>
-  Git range: <pre-maturation SHA>..HEAD
+  Git range: <BASE_HEAD_SHA>..HEAD
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
-  Additionally: verify that the permanent documentation and result files
-    implement the Protect choices; every kept result appears; every dropped
-    result is absent; the task tree and `## Results` are mature and navigable;
-    and any reproduction, validation, interpretation, or presentation path that
-    must survive later refactoring is explicit in the record.
+  Additionally: load `superRA:refactor-and-integrate`. Verify that the Protect
+    choices are fully and navigably represented and every support path that
+    must survive refactoring is explicit. Once the record passes, create one
+    temporary refactoring task under the lowest durable ancestor covering the
+    scope. Leave it `not-started`; link its `## Objective` to the protected
+    record; record `BASE_HEAD_SHA`; name every pruning or refactoring action by
+    artifact or tightly bounded family; and include the verification that must
+    pass.
 ```
 
-Iterate until the permanent record and tree pass review.
+Applying `refactor-and-integrate`, the reviewer places every unmatched in-scope change on the task’s pruning list and proposes consolidation, simplification, duplication removal, convention fit, and stale-documentation repair where warranted. The task does not copy result prose or create a parallel keep list.
+
+Iterate the same drafter and reviewer seats until the protected record passes review and the temporary task is complete. Mature & Consolidate is complete when that task exists at `not-started`; if the record exists but the task does not, resume at this step.
 
 ## Step 4: Enter Integrate
 
-The permanent documentation, result files, and mature task results now constitute the protected record. Enter Integrate to derive the temporary refactoring task from that record.
+Enter Integrate with the protected record and reviewer-authored temporary task.

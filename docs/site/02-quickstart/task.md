@@ -127,8 +127,8 @@ Superintegration consists of five stages, and each stage guards against a differ
 
 1. **Protect** — review the agent’s proposed permanent documentation, choose which provisional results to keep or drop, and decide whether documentation alone or an additional drift test should protect each kept result.
 2. **Sync** — when the base branch has moved (a coauthor pushed while you worked, say), fold those changes in **semantically**: superRA reads the intent behind each incoming change and reconciles it, rather than resolving conflicts line by line — never a bare `git merge`.
-3. **Mature & Consolidate** — create the user-facing documentation and result files, mature the task tree against them, and verify that these artifacts form the protected record.
-4. **Integrate** — automatically put every unmatched in-scope change on one temporary pruning-and-refactoring task, let you review that task with the finished record, then execute and verify it.
+3. **Mature & Consolidate** — one drafter creates the user-facing documentation and matures the task tree; one reviewer verifies that protected record and writes the temporary pruning-and-refactoring task.
+4. **Integrate** — let you review that task with the finished record, then execute and verify it.
 5. **Finish** — ship by PR or merge.
 
 The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).

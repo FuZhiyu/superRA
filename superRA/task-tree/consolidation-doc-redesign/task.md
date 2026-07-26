@@ -1,6 +1,6 @@
 ---
 title: "Protection-Led Integration"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -40,27 +40,30 @@ The researcher replaced separate record verification and proposal derivation wit
 
 ## Results
 
-Rebuilt INTEGRATE around a protected permanent record and one researcher-reviewed refactoring task:
+Rebuilt INTEGRATE around a protected permanent record, one maturation drafter, one reviewer seat, and one researcher-reviewed refactoring task:
 
 - [superintegrate](../../../skills/superintegrate/SKILL.md) now orders Protect → Sync → Mature & Consolidate → Integrate → Finish. [Protect](../../../skills/superintegrate/references/protect.md) asks the researcher which provisional results to keep or drop, where the permanent documentation belongs, and whether each kept result needs documentation alone or an additional automated check.
 - A documentation-only Protect decision proceeds directly to Sync and maturation without creating a protection task, dispatching a protection pair, or forcing a separate Protect commit. Protect commits only artifacts it actually creates.
-- [Mature & Consolidate](../../../skills/superintegrate/references/mature-consolidate.md) writes the agreed user-facing documentation and result files before maturing task results and structure, then verifies those artifacts as the protected record. It performs no refactoring assessment.
-- [Integrate](../../../skills/superintegrate/references/integrate.md) mechanically puts every unmatched in-scope change on one temporary task, adds other refactoring opportunities, presents that task with the protected record for the single later researcher review, then executes and independently reviews the approved work.
+- [Mature & Consolidate](../../../skills/superintegrate/references/mature-consolidate.md) fills one drafter seat to write the agreed user-facing documentation, result files, and mature tree. One reviewer seat then verifies that record, compares `BASE_HEAD_SHA..HEAD` against it under [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md), and writes the temporary refactoring task.
+- The temporary task stays `not-started`, links its protected record, records `BASE_HEAD_SHA`, names bounded pruning and refactoring actions, and carries the required verification. It does not duplicate result prose or create a keep manifest.
+- [Integrate](../../../skills/superintegrate/references/integrate.md) recovers from that task, its status, and the `integrate(mature)` approval commit: missing task returns to maturation review; an unapproved task reaches the researcher gate; `not-started`, `implemented`/`revise`, and `approved` resume at execution, review/fix, and closeout respectively.
+- The researcher still sees one combined review surface. After approval, the existing implementer/reviewer loop executes and verifies the task; a materially changed record or action returns to the corresponding maturation step and repeats the gate.
 - [result-protection](../../../skills/result-protection/SKILL.md), [refactor-and-integrate](../../../skills/refactor-and-integrate/SKILL.md), the task-file contract, sync references, runtime routing, and user-facing workflow documentation now share the same ordering and ownership boundaries. Standalone result protection and task-tree consolidation remain available.
 - The discarded redesign was not restored. Its independently useful subtree-removal implementation remains only on the recovery branch for future evaluation; this workflow does not require a special deletion command.
 - Review follow-up removed duplicate domain confirmation prompts, corrected theory protection routing, scoped proposal-before-execution to standalone consolidation, reduced repeated dispatch instructions, and made every later approval durable even when it changes no files.
 - The loaded refactoring discipline now uses the protected record as the sole workflow exemption from the automatic pruning list; its broader justification sources remain available only in standalone use.
+- [agents/reviewer.md](../../../agents/reviewer.md) carries the narrow maturation-only task-creation ownership exception, and the generated [.codex reviewer](../../../.codex/agents/superra_reviewer.toml) is current.
 
 Verification completed on the implementation diff:
 
-- `quick_validate.py` passed for `superintegrate`, `result-protection`, `refactor-and-integrate`, `semantic-merge`, `superplan`, and `using-superra`.
+- `quick_validate.py` passed for the changed `superintegrate` and `superplan` skills.
 - The Markdown checker passed for every changed Markdown file.
 - `./superRA/superra task check` passed.
 - `git diff --check` passed.
-- The instruction-following contract suite passed (`14 passed`).
-- Harness compatibility passed and confirmed generated agent files are current.
+- The focused instruction-following and generator contract suite passed (`17 passed`).
+- Harness compatibility passed, including canonical-to-generated reviewer synchronization.
 - The documentation site built successfully.
 - A repository-wide search over active workflow, documentation, and task surfaces found no use of the prohibited term.
-- Fix-round contract tests, harness compatibility, Markdown checks, task-tree checks, and the applicable package validators passed. The generic validator cannot validate the touched econ, theory, or task-tree packages because it rejects their pre-existing `user-invocable` frontmatter key; harness compatibility validates those packages successfully.
+- A five-state recovery walkthrough covered missing task, unapproved `not-started`, approved `not-started`, `implemented`/`revise`, and `approved` task states without another progress artifact.
 
-**Final diff self-check:** `git diff 329d6751..HEAD`; the surviving changes reorder existing workflow mechanisms, align their owning references, and update dependent user documentation. The obsolete parent task record was replaced by this task. No generated role artifact changed, no parallel result registry was introduced, and no unrelated implementation was restored from the recovery branch.
+**Final diff self-check:** `git diff 329d6751..HEAD`; the surviving changes establish the protection-led workflow, then fold temporary-task derivation into the maturation reviewer seat and make task-status/approval-commit recovery explicit. The reviewer role and generated Codex artifact carry only the ownership exception required to create that task. No parallel result registry, keep manifest, extra researcher gate, or unrelated recovery-branch implementation was introduced.

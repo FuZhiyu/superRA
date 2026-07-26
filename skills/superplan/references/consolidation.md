@@ -70,7 +70,7 @@ For each identified issue, classify the action. Each action sets the altitude th
 
 ## User Approval Gate
 
-Consolidation changes the tree structure. In standalone use, author and approve the proposal before execution. During INTEGRATE, Protect already supplies the result and durable-home choices, so Mature & Consolidate applies the structural fold in recoverable commits and verifies the protected record. Integrate later derives the temporary refactoring task and owns the combined researcher gate.
+Consolidation changes the tree structure. In standalone use, author and approve the proposal before execution. During INTEGRATE, Protect already supplies the result and durable-home choices, so Mature & Consolidate applies the structural fold in recoverable commits; its reviewer then derives the temporary refactoring task. Integrate owns the combined researcher gate.
 
 **Proposal format:**
 
@@ -118,4 +118,4 @@ Execution applies the researcher’s choices. During INTEGRATE those choices com
 
 **Standalone:** The user asks to clean up the tree. The consolidator runs every step itself — survey, author the proposal, get approval, execute.
 
-**During integration:** `superintegrate/references/mature-consolidate.md` materializes and verifies the permanent documentation, structural fold, and `## Results` maturation after Sync. `superintegrate/references/integrate.md` then derives the temporary refactoring task, runs the combined researcher gate, and executes the approved work.
+**During integration:** `superintegrate/references/mature-consolidate.md` materializes and reviews the permanent documentation, structural fold, and `## Results` maturation after Sync, then derives the temporary refactoring task. `superintegrate/references/integrate.md` runs the combined researcher gate and executes the approved work.

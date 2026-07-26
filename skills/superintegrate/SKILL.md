@@ -11,8 +11,8 @@ Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified 
 Protect              -> choose results, permanent documentation, and protection
 Sync                 -> bring the branch onto the current base via semantic-merge
 Mature & Consolidate -> write the permanent record, mature the task tree, and
-                        verify the protected record
-Integrate            -> derive, approve, execute, and verify one refactoring task
+                        review both into one temporary refactoring task
+Integrate            -> approve, execute, and verify that refactoring task
 Finish               -> final freshness check, PR or fast-forward, and cleanup
 
 Any step -> superplan §User Feedback and Changing the Task Tree
@@ -57,4 +57,4 @@ A non-trivial Sync uses `Stage: sync` with generic sync author / sync reviewer a
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Permanent results documentation may be sufficient protection, and Integrate often collapses to an inline refactoring sweep plus a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and add no `## Sync Impact` sections when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect offers document build and outline stability as protection options, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** Standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, Mature & Consolidate folds the tree into the protected record before Integrate derives the temporary refactoring task.
+- **Task tree consolidation:** Standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, the Mature & Consolidate reviewer derives the temporary refactoring task after the structural fold; Integrate owns the researcher gate.

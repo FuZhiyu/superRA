@@ -1,6 +1,6 @@
 # Integrate
 
-Integrate derives one temporary refactoring task from the protected record, obtains the researcher’s approval, then executes and independently reviews that task.
+Integrate obtains researcher approval for the protected record and reviewer-authored temporary refactoring task, then executes and reviews that task.
 
 **Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base (`PRE_SYNC_BASE_SHA`) for minimum-net-diff review after Sync.
 
@@ -8,15 +8,13 @@ Integrate derives one temporary refactoring task from the protected record, obta
 
 Run every existing protection check plus the mechanisms selected at Protect. A failing drift test or document check blocks Integrate until classified under its owning protection discipline.
 
-## Step 2: Derive the temporary refactoring task
+## Step 2: Recover the task state
 
-The permanent documentation, result files, and mature task results are the protected record. Walk every in-scope change and artifact in the governing diff:
+Read the temporary task created by Mature & Consolidate and inspect the git log for an `integrate(mature)` approval commit naming its reviewed SHA. If the task is missing, return to Mature & Consolidate Step 3. If the approval commit is missing, continue to the researcher gate. Otherwise resume from task status:
 
-1. A change or artifact is protected when it appears in that record or implements a reproduction, validation, interpretation, or presentation path explicitly documented there.
-2. Anything else automatically becomes a pruning item.
-3. Protected or supporting work that can better fit the host project becomes a non-removal refactoring item when consolidation, simplification, duplication removal, convention fit, or stale-documentation repair is warranted.
-
-Create one recognizably temporary task under the lowest durable task ancestor covering the scope, or at the task-tree root when no such ancestor exists. Leave it `not-started`. Link its `## Objective` to the protected record, name every proposed action by artifact or tightly bounded family, and include the verification that must pass. Do not copy result prose or create a parallel keep list.
+- `not-started` — execute the approved task;
+- `implemented` or `revise` — enter the review or fix loop;
+- `approved` — close Integrate.
 
 ## Step 3: Run the researcher gate
 
@@ -26,7 +24,7 @@ Present one review surface containing:
 2. the mature task tree and its durable `## Results`; and
 3. the temporary task, including automatic pruning items and other refactoring opportunities.
 
-Ask whether to approve the protected record and task. A requested change to the protected record returns to Mature & Consolidate; revise a task-only change here and present the surface again. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files.
+Ask whether to approve the protected record and task. A requested change to the protected record returns to Mature & Consolidate Step 2; a task-only change returns to its reviewer at Step 3. Present the surface again after either revision. On every approval, create an `integrate(mature): …` approval commit whose body records the reviewed SHA and decision; use an empty commit when approval changes no files.
 
 ## Step 4: Execute the approved task
 
@@ -43,9 +41,9 @@ The implementer writes the execution outcome and verification evidence to the te
 
 ## Step 5: Adjudicate implementation concerns
 
-Resolve concerns inside the approved task through an implementer fix. If execution reveals a materially different protected outcome or refactoring action, stop and repeat the appropriate record-maturation or task-proposal step and the researcher gate before applying the new work.
+Resolve concerns inside the approved task through an implementer fix. If execution reveals a materially different protected outcome, return to Mature & Consolidate Step 2; if it reveals a materially different refactoring action, return to its reviewer at Step 3. Repeat the researcher gate before applying the new work.
 
-## Step 6: Dispatch the independent reviewer
+## Step 6: Fill the reviewer seat
 
 ```text
 Agent(subagent_type: "superRA:reviewer"):
@@ -57,7 +55,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 ## Step 7: Refactor loop
 
-Adjudicate any REVISE findings through `agent-orchestration` and iterate implementer fixes plus narrow re-review until the temporary task is `approved` and the `refactor-and-integrate` checklist passes. A fix that expands or materially changes the approved task returns to Step 3; a change to the protected record returns to Mature & Consolidate.
+Adjudicate any REVISE findings through `agent-orchestration` and iterate implementer fixes plus narrow re-review until the temporary task is `approved` and the `refactor-and-integrate` checklist passes. A fix that expands or materially changes the approved task returns to Mature & Consolidate Step 3 and then the researcher gate; a change to the protected record returns to Mature & Consolidate Step 2.
 
 ## Step 8: Close Integrate
 

@@ -22,17 +22,15 @@ The **base branch** is the shared branch your work will eventually land on — u
 
 It does this **by intent, not by line**. A plain `git merge` resolves conflicts textually — it compares the two versions of each clashing region and you pick a side, with no understanding of why either side changed. Sync instead reads what the incoming changes *mean* and reconciles your work with that intent, so the merged result reflects both sides' purpose rather than whichever hunk happened to win the textual collision. If folding in the incoming intent would actually change the meaning of your work, it stops and asks rather than resolving silently.
 
-### Mature & Consolidate — write and verify the protected record
+### Mature & Consolidate — write the protected record and derive the refactoring task
 
-After Sync, agents create the agreed user-facing documentation and result files, then consolidate the task tree and mature its `## Results` against those artifacts. A task whose output is a document points to that document instead of duplicating it; finished update scaffolding folds into its durable owner.
+After Sync, one drafter creates the agreed user-facing documentation and result files, then consolidates the task tree and matures its `## Results` against those artifacts. A task whose output is a document points to that document instead of duplicating it; finished update scaffolding folds into its durable owner.
 
-Together, the permanent documentation, result files, and mature task results are the protected record. Any reproduction, validation, interpretation, or presentation path that must survive the next stage is made explicit there.
+Together, the permanent documentation, result files, and mature task results are the protected record. One reviewer verifies that record, compares every in-scope change against it, and writes one temporary task containing the automatic pruning list and other worthwhile consolidation or refactoring.
 
-### Integrate — derive, approve, and execute the refactoring task
+### Integrate — approve and execute the refactoring task
 
-Agents walk the in-scope changes against the protected record. Anything neither shown there nor implementing an explicitly documented support path automatically enters one temporary task as a pruning item. The same task records other opportunities—consolidation, simplification, duplication removal, convention fit, and stale-documentation cleanup.
-
-You review the completed record, mature task tree, and temporary task together once. After approval, agents execute it mechanically and a fresh reviewer checks the final diff. A materially different protected result returns to maturation; a materially different refactoring action returns to the proposal gate.
+You review the completed record, mature task tree, and temporary task together once. After approval, agents execute it mechanically and the reviewer checks the final diff. A materially different protected result returns to maturation; a materially different refactoring action returns to the proposal gate.
 
 ### Finish — re-check the base, then ship
 
