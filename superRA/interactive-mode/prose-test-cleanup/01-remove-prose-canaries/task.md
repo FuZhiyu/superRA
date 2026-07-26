@@ -1,6 +1,6 @@
 ---
 title: "Delete Rule-Recitation Canaries"
-status: revise
+status: implemented
 depends_on:  []
 ---
 
@@ -58,6 +58,12 @@ Revision:
   [load-testing-research.md:23](../../../../tests/harness-instruction-following/references/load-testing-research.md#L23)).
 - The scoped stale-claim search is clean; the focused revision tests passed
   `15/15`, and the full suite passed `899` tests with four expected warnings.
+- Final revision: corrected the stage-load test module's docstring to describe
+  only the surviving Claude evaluator, read-path matching, and Codex
+  schema/stage-identity fixture check
+  ([test_stage_loads_live.py:2](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L2)).
+  The scoped stage-canary search and Python compilation passed; the module's
+  test suite passed `24` tests in `0.05s`.
 
 ## Review Notes
 
@@ -75,3 +81,6 @@ Revision:
    behavioral-canary claims; documented only the remaining structural evidence
    ([README.md:98](../../../../tests/harness-instruction-following/README.md#L98),
    [load-testing-research.md:23](../../../../tests/harness-instruction-following/references/load-testing-research.md#L23)).
+   → implemented: removed the remaining synthetic Codex artifact-field canary
+   claim and documented the surviving evaluator and schema/identity check
+   ([test_stage_loads_live.py:2](../../../../tests/harness-instruction-following/test_stage_loads_live.py#L2)).

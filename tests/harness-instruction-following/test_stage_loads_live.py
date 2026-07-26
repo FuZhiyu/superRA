@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """CI-safe unit tests for the per-stage skill-load live coverage (task 11).
 
-Drives the stage evaluator and the per-stage Codex canaries on synthetic inputs —
-no model call, no ``claude_agent_sdk`` / codex-cli import:
+Drives the Claude stage evaluator on synthetic inputs and checks the committed
+Codex artifact schema/stage identity — no model call, no
+``claude_agent_sdk`` / codex-cli import:
 
 - **Claude per-stage evaluator** (:func:`stage_loads_live.evaluate_stage_load`):
   green for each non-empty stage (skill channel via the Skill hook, including the
@@ -11,9 +12,6 @@ no model call, no ``claude_agent_sdk`` / codex-cli import:
   reference is never read, and when a load lands after the first edit; and the
   negative stage (``implementation``) green when no stage skill loaded, red when
   one did (over-load).
-- **Codex per-stage canaries** (09's :func:`codex_load_evidence.evaluate_canary`):
-  green when the stage skill's skill-unique token is at the artifact field, red
-  when absent (skill body did not load).
 - **Read-path suffix matching** (:func:`sdk_load_evidence._read_path_matches`):
   an absolute/workspace-relative read path matches the manifest-relative
   reference path; an unrelated path does not.

@@ -1,6 +1,6 @@
 ---
 title: "Prune Prose-Specific Tests Conservatively"
-status: revise
+status: in-progress
 depends_on: []
 ---
 
@@ -47,4 +47,7 @@ Verification:
    [01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes).
    → implemented: reconciled the harness documentation and annotated the
    child-local finding
+   ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).
+   → implemented: removed the final stale stage-canary docstring claim and
+   annotated the child-local finding
    ([01-remove-prose-canaries/task.md](01-remove-prose-canaries/task.md#review-notes)).
