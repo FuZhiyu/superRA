@@ -1,6 +1,6 @@
 ---
 title: "Define the Task Companion-File Contract"
-status: approved
+status: revise
 depends_on: []
 ---
 
@@ -8,13 +8,17 @@ depends_on: []
 
 Teach every superRA execution mode one concise, authoritative lifecycle for task companion files.
 
-- Add a load-on-demand reference routed from `using-superra` §Task Interface. Classify files as ephemeral scratch, committed task-local companions, or permanent project artifacts.
+- Keep one authoritative load-on-demand reference for the full lifecycle, but state the placement decision itself in the always-loaded `using-superra` §Task Interface and the user-facing README: session-only working files go to scratch outside `superRA/`; temporary reporting or evidence owned by one task goes under that task's `attachments/`; maintained code, shared/runtime inputs, and promised durable outputs go to the project's conventional permanent path.
 - Define one placement rule: every retained task-local companion belongs under `attachments/`; only `task.md` and child-task directories occupy the task directory itself. Directories containing `task.md` are subtasks, but `attachments/` remains an asset container even if a generated bundle contains that filename.
 - Keep an artifact task-local only when one task owns it and a later agent needs it to reproduce, review, or interpret that task's results. Link every retained artifact from `## Results` and record the generating command, inputs, and provenance needed to reproduce it; do not retain artifacts generated only from unrecorded REPL state.
 - Promote an artifact before Integrate closes when another task or runtime path consumes it, it becomes a maintained pipeline/tool, or it is a promised reader-facing deliverable. Move to the project's existing convention and update the task pointer rather than preserving duplicate sources of truth.
 - Fold remaining companion-file disposition into Mature & Consolidate: retain with a surviving task, relocate with folded evidence, or drop superseded material. Files supporting protected key results cannot be dropped.
 - Route the rule from the smallest owning workflow and reporting surfaces. Do not add a skill, stage, manifest row, frontmatter field, or role-specific paraphrase; leave canonical role specs and generated role artifacts unchanged unless forward-testing proves the always-loaded route insufficient.
 - Apply `skill-creator` and the contributor guide's DRY and Necessity gates line by line, then run skill validation and a realistic harness session that creates, reviews, and promotes or retains representative companion files.
+
+## Revision Notes
+
+On 2026-07-25 the researcher reported that the existing bare pointers do not teach users or newly dispatched agents when to choose scratch, task-local `attachments/`, or a permanent project path. Preserve the detailed reference as the single lifecycle authority, but make the three-tier placement decision visible at the two surfaces where users and agents first need it.
 
 ## Planner Guidance
 
