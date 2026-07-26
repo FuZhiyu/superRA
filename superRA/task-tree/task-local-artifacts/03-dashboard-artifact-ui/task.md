@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: approved
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -28,10 +28,6 @@ Keep `activePath` as the owning task path and open a companion within that task'
 The existing Highlight.js common bundle already includes R, while the dashboard loads Julia from its existing separate language asset. R support therefore needs only extension/language mapping and regression coverage, not another package or vendored file.
 
 Companion search is optional for this scope: add it only if the existing index can accept owner-task file records without duplicating discovery or creating a second navigation model. The required discovery surface is the Files view on the owning task.
-
-## Revision Notes
-
-The Files canvas currently calls unexpected direct files “legacy placement,” and the required root `superra` wrapper is the only such file visible at the task-tree root. Remove that misleading user-facing distinction, reserve the wrapper as task-tree infrastructure, and add Markdown/Python companions here for visual inspection.
 
 ## Results
 
