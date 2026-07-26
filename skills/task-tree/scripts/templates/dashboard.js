@@ -1388,14 +1388,14 @@ function renderArtifactSidecar(taskPath, manifest, refreshPreview) {
   var groups = [
     { placement: 'direct', label: 'Companions', note: 'Markdown, source, and notebooks beside task.md' },
     { placement: 'attachment', label: 'Attachments', note: 'Generated outputs and supporting files' },
-    { placement: 'legacy', label: 'Other direct files', note: 'Legacy placement; reachable for download' },
+    { placement: 'other', label: 'Additional files' },
   ];
   groups.forEach(function(group) {
     var entries = files.filter(function(entry) { return entry.placement === group.placement; });
     if (!entries.length) return;
-    var section = document.createElement(group.placement === 'legacy' ? 'details' : 'section');
+    var section = document.createElement(group.placement === 'other' ? 'details' : 'section');
     section.className = 'artifact-group artifact-group-' + group.placement;
-    if (group.placement !== 'legacy') {
+    if (group.placement !== 'other') {
       var heading = document.createElement('h3');
       heading.textContent = group.label;
       section.appendChild(heading);
@@ -1404,10 +1404,12 @@ function renderArtifactSidecar(taskPath, manifest, refreshPreview) {
       summary.textContent = group.label + ' (' + entries.length + ')';
       section.appendChild(summary);
     }
-    var note = document.createElement('p');
-    note.className = 'artifact-group-note';
-    note.textContent = group.note;
-    section.appendChild(note);
+    if (group.note) {
+      var note = document.createElement('p');
+      note.className = 'artifact-group-note';
+      note.textContent = group.note;
+      section.appendChild(note);
+    }
     var rows = document.createElement('ul');
     rows.className = 'artifact-rows';
     entries.forEach(function(entry) {

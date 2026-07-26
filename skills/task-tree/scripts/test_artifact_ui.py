@@ -32,6 +32,8 @@ def _artifact_tree(tmp_path: Path, *, label: str = "A") -> Path:
     root.mkdir(parents=True)
     _write_task_md(root / "task.md", f"Artifact project {label}", "in-progress",
                    objective="Browse task-local files.")
+    (root / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+    (root / "unexpected.dat").write_bytes(b"\x00unexpected")
     task = root / "01-artifact"
     task.mkdir()
     _write_task_md(
@@ -65,7 +67,7 @@ def _artifact_tree(tmp_path: Path, *, label: str = "A") -> Path:
     (attachments / "paper.pdf").write_bytes(
         b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n"
     )
-    (task / "legacy.bin").write_bytes(b"\x00legacy")
+    (task / "unexpected.bin").write_bytes(b"\x00unexpected")
 
     notebook = {
         "nbformat": 4,
@@ -247,7 +249,13 @@ class TestArtifactCanvasServerRendering:
             placements = [entry["placement"] for entry in manifest["files"]]
             assert placements[:5] == ["direct"] * 5
             assert "attachment" in placements[5:-1]
-            assert placements[-1] == "legacy"
+            assert placements[-1] == "other"
+
+            root_manifest = client.get("/api/artifacts", params={"task": ""}).json()
+            assert [entry["path"] for entry in root_manifest["files"]] == [
+                "unexpected.dat"
+            ]
+            assert root_manifest["files"][0]["placement"] == "other"
 
         assets = plan_dashboard._build_standalone_assets()
         assert "0.8.3" in assets["notebook_js"]
@@ -301,7 +309,8 @@ class TestArtifactCanvasBrowser:
                 groups = page.inner_text("#artifact-list")
                 assert groups.index("Companions") < groups.index("Attachments")
                 assert "attachments/notes/report.md" in groups
-                assert "Other direct files (1)" in groups
+                assert "Additional files (1)" in groups
+                assert "legacy" not in groups.lower()
                 assert page.locator(".artifact-count-btn").count() == 1
 
                 report_row = page.locator(

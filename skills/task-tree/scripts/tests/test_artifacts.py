@@ -65,14 +65,15 @@ def _standalone_payload(html: str) -> dict:
 
 
 class TestArtifactDiscovery:
-    def test_direct_attachment_and_legacy_classification_preserves_task_ownership(
+    def test_direct_attachment_and_other_classification_preserves_task_ownership(
         self, tmp_path
     ):
         root = _tree(tmp_path)
         (root / "note.md").write_text("# note", encoding="utf-8")
         (root / "model.py").write_text("print('ok')\n", encoding="utf-8")
         (root / "analysis.R").write_text("summary(x)\n", encoding="utf-8")
-        (root / "legacy.bin").write_bytes(b"\x00\x01")
+        (root / "unexpected.bin").write_bytes(b"\x00\x01")
+        (root / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
         (root / "comments.yaml").write_text("comments: []\n", encoding="utf-8")
         (root / ".hidden.md").write_text("hidden", encoding="utf-8")
         (root / "child" / "child-note.md").write_text("child", encoding="utf-8")
@@ -94,10 +95,11 @@ class TestArtifactDiscovery:
         assert by_path["note.md"]["placement"] == "direct"
         assert by_path["model.py"]["kind"] == "python"
         assert by_path["analysis.R"]["kind"] == "r"
-        assert by_path["legacy.bin"]["placement"] == "legacy"
+        assert by_path["unexpected.bin"]["placement"] == "other"
         assert by_path["attachments/task.md"]["placement"] == "attachment"
         assert any(path.endswith("/result.csv") for path in by_path)
         assert "comments.yaml" not in by_path
+        assert "superra" not in by_path
         assert ".hidden.md" not in by_path
         assert "child/child-note.md" not in by_path
         assert not any(".ipynb_checkpoints" in path for path in by_path)
@@ -155,7 +157,7 @@ class TestArtifactDiscovery:
     def test_traversal_budget_bounds_wide_entries_and_empty_directory_work(self, tmp_path):
         root = _tree(tmp_path)
         for index in range(24):
-            (root / f"legacy-{index:02d}.bin").write_bytes(b"x")
+            (root / f"unexpected-{index:02d}.bin").write_bytes(b"x")
         direct = _artifacts.build_manifest(
             root,
             _task(root),

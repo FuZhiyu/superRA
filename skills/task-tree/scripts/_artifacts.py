@@ -16,6 +16,7 @@ from _task_io import ATTACHMENTS_DIRNAME, Task, collect_all_tasks
 
 DIRECT_SOURCE_SUFFIXES = {".md", ".py", ".jl", ".r", ".ipynb"}
 RESERVED_DIRECT_NAMES = {"task.md", "comments.yaml", ATTACHMENTS_DIRNAME}
+ROOT_INFRASTRUCTURE_NAMES = {"superra"}
 CACHE_NAMES = {
     "__pycache__",
     ".ipynb_checkpoints",
@@ -148,6 +149,10 @@ def _reserved_direct(name: str) -> bool:
     return name.lower() in RESERVED_DIRECT_NAMES
 
 
+def _root_infrastructure(name: str) -> bool:
+    return name.lower() in ROOT_INFRASTRUCTURE_NAMES
+
+
 def _classify(path: Path) -> tuple[str, str, bool]:
     suffix = path.suffix.lower()
     mime = _MIME_OVERRIDES.get(suffix)
@@ -278,7 +283,8 @@ def build_manifest(
     """Return the bounded companion-file manifest for one real task.
 
     Direct first-class sources are ordered first, recursive attachment contents
-    second, and unexpected direct legacy files last. Directories other than
+    second, and other unexpected direct files last. The task-tree root wrapper
+    is infrastructure rather than a companion. Directories other than
     ``attachments/`` are never traversed.
     """
     active_limits = limits or DEFAULT_ARTIFACT_LIMITS
@@ -297,25 +303,29 @@ def build_manifest(
         }
 
     direct: list[ArtifactFile] = []
-    legacy: list[ArtifactFile] = []
+    other: list[ArtifactFile] = []
     for entry in traversal.scan(task.dir_path):
         child = Path(entry.path)
-        if _hidden_or_cache(child.name) or _reserved_direct(child.name):
+        if (
+            _hidden_or_cache(child.name)
+            or _reserved_direct(child.name)
+            or (task.dir_path == plan_root and _root_infrastructure(child.name))
+        ):
             continue
         try:
             if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
                 continue
         except OSError:
             continue
-        placement = "direct" if child.suffix.lower() in DIRECT_SOURCE_SUFFIXES else "legacy"
+        placement = "direct" if child.suffix.lower() in DIRECT_SOURCE_SUFFIXES else "other"
         item = _artifact_file(child, child.name, placement, active_limits)
         if item is not None:
-            (direct if placement == "direct" else legacy).append(item)
+            (direct if placement == "direct" else other).append(item)
 
     ordered = itertools.chain(
         direct,
         _attachment_candidates(task.dir_path, active_limits, traversal),
-        legacy,
+        other,
     )
     files: list[dict[str, object]] = []
     manifest_bytes = 0
@@ -422,7 +432,7 @@ def describe_resolved(path: Path, relative: str, limits: ArtifactLimits | None =
     """Describe an already-secure artifact for response headers and limits."""
     active_limits = limits or DEFAULT_ARTIFACT_LIMITS
     placement = "attachment" if relative.startswith(f"{ATTACHMENTS_DIRNAME}/") else (
-        "direct" if path.suffix.lower() in DIRECT_SOURCE_SUFFIXES else "legacy"
+        "direct" if path.suffix.lower() in DIRECT_SOURCE_SUFFIXES else "other"
     )
     item = _artifact_file(path, relative, placement, active_limits)
     if item is None:
