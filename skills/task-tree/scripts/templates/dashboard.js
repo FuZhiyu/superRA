@@ -134,7 +134,8 @@ function artifactDirectory(path) {
 }
 
 /* Resolve a link from a companion's own directory while staying inside the
-   owning task's public artifact surface: one direct file or attachments/**. */
+   owning task's public artifact surface: attachments/** only, matching the
+   server's _validated_parts contract. */
 function resolveArtifactRelativePath(sourcePath, href) {
   if (!isRelativeResource(href) || href.charAt(0) === '#') return '';
   var clean = href.replace(/[?#].*$/, '');
@@ -152,9 +153,7 @@ function resolveArtifactRelativePath(sourcePath, href) {
       out.push(part);
     }
   }
-  if (!out.length) return '';
-  if (out.length > 1 && out[0] !== 'attachments') return '';
-  if (out[0].toLowerCase() === 'task.md' || out[0].toLowerCase() === 'comments.yaml') return '';
+  if (out.length < 2 || out[0] !== 'attachments') return '';
   return out.join('/');
 }
 
@@ -1453,7 +1452,11 @@ function loadAttachmentBranches(scope) {
       if (!manifest) return;
       _artifactManifests[owner] = manifest;
       renderAttachmentBranch(owner, manifest);
-    }).catch(function() {});
+    }).catch(function() {
+      /* Soft-fail: a missing manifest just leaves the Attachments branch absent
+         from this background sidebar decoration, not a user-initiated navigation
+         that needs an error state. */
+    });
   });
 }
 
