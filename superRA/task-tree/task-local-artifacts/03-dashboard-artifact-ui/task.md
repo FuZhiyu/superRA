@@ -1,6 +1,6 @@
 ---
 title: "Browse and Render Task Companion Files in the Dashboard"
-status: implemented
+status: approved
 depends_on:
   - 02-dashboard-artifact-data
 ---
@@ -118,9 +118,3 @@ skills/task-tree/scripts/test_dashboard.py -q` — `300 passed, 2 warnings`
 (non-failing `websockets.legacy` deprecation warnings); `node --check
 skills/task-tree/scripts/templates/dashboard.js` passed.
 
-## Review Notes
-
-1. **MEDIUM — Client generates an attachment link the server always rejects.** [`resolveArtifactRelativePath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L23-L44) accepts a single-segment companion reference that is not under `attachments/` (a documented placement tier — a companion file sitting directly beside `task.md`) and builds an `/api/artifact` open/preview link for it. But the server's [`_validated_parts`](../../../../skills/task-tree/scripts/_artifacts.py#L342) hard-requires `parts[0] == "attachments"` and at least two path segments, so that link 404s / raises `ArtifactPathError` every time it's followed. Not covered by `test_artifact_ui.py` or `tests/test_artifacts.py` — no test follows a same-directory, non-`attachments/` companion link. Either extend `_validated_parts` to permit single-segment task-root files (coordinate with task 02, which owns that contract), or drop the dead client branch and its comment.
-   → implemented: dropped the single-segment branch — `resolveArtifactRelativePath` now returns `''` unless `out.length >= 2 && out[0] === 'attachments'`, matching the server's `attachments/`-only contract; updated the function comment accordingly ([dashboard.js:136-158](../../../../skills/task-tree/scripts/templates/dashboard.js#L136-L158))
-2. **MINOR — Silent failure on attachment-manifest fetch.** [`loadAttachmentBranches`](../../../../skills/task-tree/scripts/templates/dashboard.js#L568-L573) swallows a failed `/api/artifacts` fetch with an empty `.catch`, leaving the Attachments branch simply absent with no visible error — unlike `loadActiveArtifact`'s explicit error rendering elsewhere in the same file. A soft-fail may be the right call for a background sidebar decoration, but add a one-line comment saying so; as written it reads as an oversight next to the fully-handled error paths nearby.
-   → implemented: added a comment on the empty `.catch` noting the soft-fail is intentional for this background sidebar decoration ([dashboard.js:1451-1459](../../../../skills/task-tree/scripts/templates/dashboard.js#L1451-L1459))
