@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "author": "Julie Zhiyu Fu",
+    "timestamp": "2026-08-01T18:22:00.408953",
+    "resolved": true,
+    "anchor": {
+      "section": "Objective",
+      "block_index": 1,
+      "text_preview": "\nDefault per-task path is implementer self-check only; defin"
+    },
+    "body": "I don't want... The review decision is made at the planning stage. The planners can make suggestions, but I think it's better for the orchestrator to decide on the fly, in the sense that if the result makes sense—if the result... Yeah, I think this should be the orchestrator's decision and the user's input."
+  },
+  {
+    "id": 2,
+    "author": "Julie Zhiyu Fu",
+    "timestamp": "2026-08-01T18:23:00.894671",
+    "resolved": true,
+    "anchor": {
+      "section": "Objective",
+      "block_index": 1,
+      "text_preview": "\nFlip the default in main-agent.md §Execution Modes, using-s"
+    },
+    "body": "So now, in this case, I will say “super implement” becomes synonymous with an autonomous workflow driven by agents. Otherwise, is there a reason for the main agent to load “super implement” to begin with? Probably not, right?"
+  }
+]
