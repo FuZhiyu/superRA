@@ -20,11 +20,12 @@ Establish one reporting contract covering everything agents write — task files
 
 ### Placement
 
-One instruction home, one enforcement hook; `report-in-markdown` retires:
+One always-loaded instruction home; `report-in-markdown` becomes an on-demand reference behind a hook safety net:
 
-- **Craft and boundary → `using-superra`.** The reporting principles (how to write, for files and conversation alike) and the boundary rules (which home owns which fact) both land in the framework skill every agent already loads, next to §Task Interface's existing files-vs-commit-vs-return rules. The few conventions a checker cannot judge (file citations as clickable line anchors, figures under `attachments/`) come along as a short subsection.
-- **Syntax → the hook.** Mechanical markdown rules (math renders, links resolve, figures exist, table syntax) move to the existing render-integrity hook — extend it where it falls short of what `report-in-markdown` teaches, keep it warn-only with error messages that carry the fix. Inventory each `report-in-markdown` rule as hook-checkable vs prose-worthy vs droppable; the always-loaded pair becomes a single always-loaded skill.
-- Known limitation to note where relevant: the hook fires on task-tree edits, so standalone reports outside `superRA/` lean on the `using-superra` conventions alone.
+- **Craft and boundary → `using-superra`.** The reporting principles (how to write, for files and conversation alike) and the boundary rules (which home owns which fact) land in the framework skill every agent already loads, next to §Task Interface's existing files-vs-commit-vs-return rules.
+- **House conventions → inline in `using-superra`.** The setup-specific rules agents hit on nearly every write — file citations as clickable line anchors, figures under `attachments/` — are stated up front (a few lines), because leaving them to post-hoc correction means agents write them wrong every time and churn on hook feedback.
+- **General mechanics → hook-backed, load-on-demand.** `report-in-markdown` survives as the reference for markdown mechanics (math renderer traps, tables, figure embedding, raw HTML) but drops out of the always-loaded set. The existing render-integrity hook is the safety net: when it fires, its warning tells the agent to load `report-in-markdown` for the proper form. Do not attempt to make the hook check everything the skill teaches — it catches what it catches; the skill is the authority the hook points to.
+- Net effect: the always-loaded pair becomes one skill; prevention is reserved for the conventions with per-write frequency, detection covers the rest.
 
 ## Planner Guidance
 
