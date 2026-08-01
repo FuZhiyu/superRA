@@ -3035,19 +3035,20 @@ class TestWorktreeRootFollowing:
 
 
 # ---------------------------------------------------------------------------
-# TestWorktreeOpenButton — the header "open worktree in VS Code" deep-link
-# button: opens the active worktree's checkout root (PROJECT_ROOT) as a folder
-# via the shared vscode://file mechanism, shown for a single worktree too.
+# TestWorktreeOpenButton — the header "VS Code" button: with the local-open route
+# it opens the ACTIVE task's file in the window already holding this worktree;
+# without it, the pre-route vscode:// deep link to the checkout root.  Shown for
+# a single worktree too.
 # ---------------------------------------------------------------------------
 
 
 class TestWorktreeOpenButton:
     def test_button_rendered_in_live_page(self, plan_root):
-        """A server-backed page renders the button (id + shared .vscode-btn class)
+        """A server-backed page renders the button (id + shared .open-btn class)
         as a sibling of the worktree selector, hidden until JS reveals it."""
         with _client_for(plan_root) as c:
             html = c.get("/").text
-        m = re.search(r'<a class="vscode-btn" id="worktree-open-btn"[^>]*>', html)
+        m = re.search(r'<a class="open-btn" id="worktree-open-btn"[^>]*>', html)
         assert m, "worktree-open button not rendered"
         tag = m.group(0)
         assert 'target="_blank"' in tag
@@ -3069,16 +3070,42 @@ class TestWorktreeOpenButton:
         assert fn and "worktree-open-btn" not in fn.group(0)
 
     def test_href_uses_project_root_via_shared_uri_builder(self):
-        """updateWorktreeOpenHref points the button at PROJECT_ROOT (the whole
-        worktree, not the superRA/ subdir) through the shared vscodeFileUri."""
+        """Without the local-open route the button keeps its pre-route deep link:
+        PROJECT_ROOT (the whole worktree, not the superRA/ subdir) through the
+        shared vscodeFileUri."""
         fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
                        BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
         assert "vscodeFileUri(PROJECT_ROOT)" in body
-        assert "RESOLVED_ROOT" not in body  # the folder link uses PROJECT_ROOT
         # GitHub-file mode has no local folder to open → hide the button.
         assert "if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }" in body
+
+    def test_local_open_targets_active_task_file_in_this_worktree(self):
+        """With the local-open route the button opens the ACTIVE task's file with
+        target 'editor', so the route can pass the worktree folder alongside it and
+        the file lands in the window holding this worktree."""
+        fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "if (window.LOCAL_OPEN) {" in body
+        assert "taskFileOpenPath(activePath)" in body
+        assert "'data-open-target', 'editor'" in body
+
+    def test_label_is_vs_code_not_workspace(self):
+        """`Workspace` is already the #btn-workspace view toggle in the same
+        header, so the button is labelled `VS Code`."""
+        fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn and "<span>VS Code</span>" in fn.group(0)
+        assert 'id="btn-workspace"' in BASE_HTML  # the colliding label still exists
+
+    def test_href_repoints_on_navigation(self):
+        """setActive re-points the button, so it follows the researcher through the
+        tree instead of freezing on the task that was active at page load."""
+        fn = re.search(r"function setActive\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn and "updateWorktreeOpenHref();" in fn.group(0)
 
     def test_href_refreshed_on_worktree_change(self):
         """The href re-points on the same paths that re-point PROJECT_ROOT: inside
@@ -3092,9 +3119,9 @@ class TestWorktreeOpenButton:
         )
 
     def test_doc_mode_hides_via_shared_rule(self):
-        """Doc-mode hides the button through the existing shared .vscode-btn rule
+        """Doc-mode hides the button through the existing shared .open-btn rule
         (the button carries that class), so no bespoke doc-mode CSS is needed."""
-        assert "html[data-doc-mode] .vscode-btn," in BASE_HTML
+        assert "html[data-doc-mode] .open-btn," in BASE_HTML
 
     def test_standalone_omits_button(self, plan_root):
         """Standalone export omits the button (no local worktree to open from a
@@ -3102,6 +3129,291 @@ class TestWorktreeOpenButton:
         selector."""
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
         assert 'id="worktree-open-btn"' not in html
+
+
+# ---------------------------------------------------------------------------
+# TestLocalOpen — POST /api/open hands a project-root-relative path to the
+# machine the server runs on (OS default application, or this worktree's editor
+# window), plus the render-time flag the page reads to choose between the route
+# and its vscode:// links.  The route starts processes, so its refusals (bind,
+# mode, content type, cross-site, path containment) are pinned as tightly as its
+# happy paths.
+# ---------------------------------------------------------------------------
+
+
+def _read_local_open_flag(html: str) -> str:
+    m = re.search(r"window\.LOCAL_OPEN = (\w+);", html)
+    assert m, "LOCAL_OPEN not injected"
+    return m.group(1)
+
+
+class TestLocalOpen:
+    # --- Render-time flag -------------------------------------------------
+
+    def test_flag_true_for_loopback_live_page(self, plan_root, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _client_for(plan_root) as c:
+            assert _read_local_open_flag(c.get("/").text) == "true"
+
+    def test_flag_false_off_loopback(self, plan_root, monkeypatch):
+        """An off-loopback --host may put the browser on another machine, so the
+        page keeps its vscode:// links and never calls the route."""
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _client_for(plan_root) as c:
+            assert _read_local_open_flag(c.get("/").text) == "false"
+
+    def test_flag_false_in_doc_mode(self, plan_root, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with _client_for(plan_root) as c:
+            assert _read_local_open_flag(c.get("/").text) == "false"
+
+    def test_flag_false_in_standalone_export(self, plan_root):
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert _read_local_open_flag(html) == "false"
+
+    def test_loopback_host_predicate(self):
+        for host in ("127.0.0.1", "127.0.0.53", "localhost", "::1", "[::1]"):
+            assert plan_dashboard._is_loopback_host(host), host
+        for host in ("0.0.0.0", "192.168.1.10", "100.64.0.1", "::", "", "example.com"):
+            assert not plan_dashboard._is_loopback_host(host), host
+
+    def test_serve_records_bound_host(self, monkeypatch):
+        """serve() is the single in-process serve path, so the host it is handed is
+        the one the route gates on."""
+        pytest.importorskip("uvicorn")
+        import uvicorn
+
+        seen = {}
+
+        class _FakeServer:
+            def __init__(self, config):
+                pass
+
+            def run(self):
+                seen["bound"] = plan_dashboard.BOUND_HOST
+
+        monkeypatch.setattr(uvicorn, "Server", _FakeServer)
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+        plan_dashboard.serve(12345, host="0.0.0.0")
+        assert seen["bound"] == "0.0.0.0"
+
+    # --- Opening ----------------------------------------------------------
+
+    def _spawns(self, monkeypatch):
+        """Capture every process the route would launch, without launching one."""
+        calls: list[list[str]] = []
+        monkeypatch.setattr(plan_dashboard, "_spawn", calls.append)
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        return calls
+
+    def test_native_open_hands_file_to_os(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
+        assert r.status_code == 200
+        assert r.json() == {"status": "opened", "target": "native"}
+        assert len(calls) == 1
+        argv = calls[0]
+        assert argv[0] in ("open", "xdg-open")  # the platform's default-app opener
+        assert argv[1] == str((plan_root / "01-first" / "task.md").resolve())
+
+    def test_editor_open_passes_worktree_folder_with_the_file(self, plan_root, monkeypatch):
+        """`code <folder> <file>` reuses the window already holding that folder, so
+        with several worktrees of one repo open the file lands in the right one."""
+        calls = self._spawns(monkeypatch)
+        monkeypatch.setattr(plan_dashboard, "_editor_executable", lambda: "/usr/local/bin/code")
+        with _client_for(plan_root) as c:
+            r = c.post(
+                "/api/open",
+                json={"path": "superRA/01-first/task.md", "target": "editor"},
+            )
+        assert r.status_code == 200
+        assert r.json() == {"status": "opened", "target": "editor"}
+        assert calls == [[
+            "/usr/local/bin/code",
+            str(plan_root.resolve().parent),
+            str((plan_root / "01-first" / "task.md").resolve()),
+        ]]
+
+    def test_editor_falls_back_to_vscode_uri_without_a_cli(self, plan_root, monkeypatch):
+        """No editor CLI on PATH → hand the vscode:// URI back to the page (the
+        pre-route behavior) rather than failing the click."""
+        calls = self._spawns(monkeypatch)
+        monkeypatch.setattr(plan_dashboard, "_editor_executable", lambda: None)
+        with _client_for(plan_root) as c:
+            r = c.post(
+                "/api/open",
+                json={"path": "superRA/01-first/task.md", "target": "editor"},
+            )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "fallback"
+        assert body["uri"] == f"vscode://file/{(plan_root / '01-first' / 'task.md').resolve()}"
+        assert calls == []
+
+    def test_editor_executable_is_env_overridable(self, monkeypatch):
+        """VS Code forks (cursor, code-insiders, codium) ship a differently-named
+        CLI, so the executable is an environment override."""
+        monkeypatch.setattr(plan_dashboard.shutil, "which", lambda name: "/bin/" + name)
+        monkeypatch.delenv(plan_dashboard.EDITOR_ENV_VAR, raising=False)
+        assert plan_dashboard._editor_executable() == "/bin/code"
+        monkeypatch.setenv(plan_dashboard.EDITOR_ENV_VAR, "cursor")
+        assert plan_dashboard._editor_executable() == "/bin/cursor"
+
+    def test_spawn_starts_no_shell(self, monkeypatch):
+        """The path reaches execvp as an argv element, never a command line."""
+        seen = {}
+
+        def _fake_popen(argv, **kw):
+            seen["argv"] = argv
+            seen["kw"] = kw
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
+        plan_dashboard._spawn(["open", "/tmp/a b; rm -rf /"])
+        assert seen["argv"] == ["open", "/tmp/a b; rm -rf /"]
+        assert not seen["kw"].get("shell", False)
+
+    # --- Refusals ---------------------------------------------------------
+
+    def test_refuses_off_loopback(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+        with _client_for(plan_root) as c:
+            r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
+        assert r.status_code == 403
+        assert calls == []
+
+    def test_refuses_in_doc_mode(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with _client_for(plan_root) as c:
+            r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
+        assert r.status_code == 403
+        assert calls == []
+
+    def test_refuses_non_json_content_type(self, plan_root, monkeypatch):
+        """Requiring application/json forces a preflight on any cross-origin fetch,
+        and no CORS middleware answers it."""
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            r = c.post(
+                "/api/open",
+                content=b'{"path": "superRA/01-first/task.md"}',
+                headers={"content-type": "application/x-www-form-urlencoded"},
+            )
+        assert r.status_code == 415
+        assert calls == []
+
+    def test_refuses_cross_site_request(self, plan_root, monkeypatch):
+        """Sec-Fetch-Site closes the simple-form-POST path that would skip the
+        preflight; same-origin and a direct navigation (`none`) stay allowed."""
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            body = {"path": "superRA/01-first/task.md"}
+            assert c.post(
+                "/api/open", json=body, headers={"sec-fetch-site": "cross-site"}
+            ).status_code == 403
+            assert calls == []
+            assert c.post(
+                "/api/open", json=body, headers={"sec-fetch-site": "same-origin"}
+            ).status_code == 200
+        assert len(calls) == 1
+
+    def test_refuses_path_outside_project_root(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            for escape in ("../../../../etc/hosts", "/etc/hosts"):
+                r = c.post("/api/open", json={"path": escape})
+                assert r.status_code == 403, escape
+        assert calls == []
+
+    def test_missing_file_is_404(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            r = c.post("/api/open", json={"path": "superRA/nope/task.md"})
+        assert r.status_code == 404
+        assert calls == []
+
+    def test_unknown_target_is_rejected(self, plan_root, monkeypatch):
+        calls = self._spawns(monkeypatch)
+        with _client_for(plan_root) as c:
+            r = c.post(
+                "/api/open",
+                json={"path": "superRA/01-first/task.md", "target": "browser"},
+            )
+        assert r.status_code == 400
+        assert calls == []
+
+    # --- Client wiring ----------------------------------------------------
+
+    def test_open_path_composition_matches_files_route(self):
+        """taskFileOpenPath composes the same project-root-relative address the
+        /files/ route is handed, so both agree for any --root."""
+        fn = re.search(r"function taskFileOpenPath\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn
+        assert "ROOT_PREFIX ? ROOT_PREFIX + '/' : ''" in fn.group(0)
+        assert "/superRA/" not in fn.group(0)  # no hardcoded root segment
+
+    def test_body_links_carry_open_path_beside_the_vscode_href(self):
+        """A body file link keeps its vscode:// href (modifier/middle click, and it
+        carries the line anchor) and gains the route address for a plain click."""
+        assert (
+            "if (window.LOCAL_OPEN) a.setAttribute('data-open-path', rootRel + filePath);"
+            in BASE_HTML
+        )
+
+    def test_plain_left_click_only(self):
+        """Modifier and middle clicks fall through to the href so the browser's own
+        open-elsewhere gestures survive."""
+        m = re.search(
+            r"document\.addEventListener\('click', function\(e\) \{.*?\n\}\);",
+            BASE_HTML, re.S,
+        )
+        assert m
+        handler = m.group(0)
+        assert "closest('[data-open-path]')" in handler
+        assert "e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey" in handler
+        assert "e.preventDefault();" in handler
+
+    def test_failed_open_is_surfaced_in_the_page(self):
+        """A refused or failed open reports in the page — otherwise the button just
+        looks dead, since a successful open's only result is on the desktop."""
+        fn = re.search(r"function openLocalPath\(path, target\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "showOpenError(" in body
+        # The no-editor-CLI answer is followed rather than reported as an error.
+        assert "data.status === 'fallback'" in body
+        assert "function showOpenError(msg)" in BASE_HTML
+        assert ".open-toast {" in BASE_HTML
+
+    def test_card_head_button_opens_in_default_application(self):
+        """The card-head button targets the OS default application (no editor named
+        in its label, icon, or title)."""
+        fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;" in body
+        assert "openNative ? 'Open' : 'VS Code'" in body
+        assert "openNative ? OPEN_ICON : VSCODE_ICON" in body
+        assert "taskFileOpenPath(path)" in body
+
+    def test_chrome_buttons_share_one_treatment(self):
+        """The card-head and header buttons carry the same class, and its hover uses
+        the palette accent like the neighbouring Share button — no VS Code blue."""
+        assert ".open-btn {" in BASE_HTML
+        m = re.search(r"\.open-btn:hover \{(.*?)\}", BASE_HTML, re.S)
+        assert m
+        hover = m.group(1)
+        assert "var(--accent-soft)" in hover and "var(--accent)" in hover
+        assert "#007acc" not in BASE_HTML  # the off-palette blue is gone
+        assert "height: var(--control-h);" in re.search(
+            r"\.open-btn \{(.*?)\}", BASE_HTML, re.S
+        ).group(1)
 
 
 # ---------------------------------------------------------------------------

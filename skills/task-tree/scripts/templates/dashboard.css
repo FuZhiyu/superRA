@@ -147,7 +147,7 @@ html[data-doc-mode] #btn-workspace { display: none !important; }
 html[data-doc-mode] #filter-status { display: none !important; }
 html[data-doc-mode] #search-trigger { display: none !important; }
 html[data-doc-mode] .worktree-selector { display: none !important; }
-html[data-doc-mode] .vscode-btn,
+html[data-doc-mode] .open-btn,
 html[data-doc-mode] .share-btn { display: none !important; }
 
 /* ── Doc-mode reading chrome ──
@@ -307,7 +307,7 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* The shared .vscode-btn uses margin-left:auto to pin the per-task button to the
+/* The shared .open-btn uses margin-left:auto to pin the per-task button to the
    right of its card head; in the header this button sits inline by the worktree
    selector, so drop the auto margin and let the header's flex gap space it. */
 #worktree-open-btn { margin-left: 0; }
@@ -898,7 +898,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
      real, intentional affordance instead. */
   .hc-btn, .hc-select, .theme-toggle, .nav-hamburger, .pin-toggle,
   .crumb, .task-row, .hc-search-trigger, .search-sheet-close,
-  .child-card, .kanban-card, .share-btn, .vscode-btn, .worktree-selector .hc-select {
+  .child-card, .kanban-card, .share-btn, .open-btn, .worktree-selector .hc-select {
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -1089,10 +1089,12 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   border-color: var(--accent);
   color: var(--accent);
 }
-/* Open-in-VS-Code control — jumps the active task's task.md into the editor.
-   Sits beside Share at the trailing edge (margin-left:auto claims the free
-   space; the header's gap spaces it from the Share button that follows). */
-.vscode-btn {
+/* Open-file control — hands the active task's task.md to the researcher's machine
+   (or, without the local-open route, deep-links it into VS Code / GitHub). Sits
+   beside Share at the trailing edge (margin-left:auto claims the free space; the
+   header's gap spaces it from the Share button that follows), and shares Share's
+   box and accent hover so the two read as one control family. */
+.open-btn {
   box-sizing: border-box;
   height: var(--control-h);
   margin-left: auto;
@@ -1112,12 +1114,36 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.vscode-btn svg { width: 14px; height: 14px; display: block; }
-.vscode-btn:hover {
-  background: rgba(0, 122, 204, 0.12);
-  border-color: #007acc;
-  color: #007acc;
+.open-btn svg { width: 14px; height: 14px; display: block; }
+.open-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
+
+/* Transient failure notice. A local open's only visible result is on the
+   researcher's desktop, so a refusal or failure has to be reported in the page —
+   otherwise the button just looks dead. */
+.open-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.open-toast.visible { opacity: 1; }
 /* The card body reuses the tree-body section/comment chrome, but it is always
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }

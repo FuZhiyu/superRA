@@ -1,6 +1,6 @@
 ---
 title: "Open Task Files on the Researcher's Machine"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -44,3 +44,58 @@ The loopback gate is sufficient but not complete, and the researcher accepted th
 The sibling `nonloopback-host-serve` task edits the same background-supervisor and host-handling region of `plan_dashboard.py`. Do not run the two in one worktree at the same time, and note that the loopback gate here is a deliberate restriction that task must not quietly lift.
 
 ## Results
+
+Every file the dashboard shows now opens on the machine the server runs on, through a `POST /api/open` route the page calls in place of firing a `vscode://` URI. Three surfaces use it: the active-task card head, the header `VS Code` button, and body file links.
+
+### The route
+
+[`POST /api/open`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1355-L1409) takes `{path, target}` where `path` is project-root-relative and `target` is `native` (the OS default application for the file type) or `editor`.
+
+- **Gate.** [`_local_open_enabled()`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1310-L1319) requires a loopback bind and non-doc-mode. [`serve()`](../../../../skills/task-tree/scripts/plan_dashboard.py#L2187-L2217) records the host it binds in [`BOUND_HOST`](../../../../skills/task-tree/scripts/plan_dashboard.py#L88) (default `127.0.0.1`, restored when the server exits, so nothing is left stale); [`_is_loopback_host`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1299-L1307) decides via `ipaddress`, so `127.0.0.53` and `::1` count and `0.0.0.0` does not.
+- **CSRF.** `application/json` is required (forcing a preflight no CORS middleware answers) and `Sec-Fetch-Site` must be absent, `same-origin`, or `none` (closing the simple-form-POST path that skips the preflight).
+- **Containment.** The path is joined under `state.project_root`, `resolve()`d, and checked with `is_relative_to` — the same shape [`/files/`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1274-L1288) uses. Traversal and filesystem-absolute paths both land outside and are refused; a missing file is 404.
+- **No shell.** [`_spawn`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1326-L1334) is the one launch point: argv list, `shell=False`, stdio to `DEVNULL`. Native open is `open` / `xdg-open` (`os.startfile` on Windows); editor open is `code <worktree-folder> <file>`, the folder first so the file lands in the window already holding that worktree. `SUPERRA_EDITOR` ([`EDITOR_ENV_VAR`](../../../../skills/task-tree/scripts/plan_dashboard.py#L92)) overrides the executable for a fork such as `cursor`. With no editor CLI on `PATH` the route answers `{"status": "fallback", "uri": "vscode://file/…"}` and the page follows it — the pre-route behavior. Both spawns and the `which` lookup run via `asyncio.to_thread`.
+
+### The page
+
+The index route injects [`local_open`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1076) and base.html emits [`window.LOCAL_OPEN`](../../../../skills/task-tree/scripts/templates/base.html#L233) beside `window.DOC_MODE`. The standalone export and doc-mode never pass it, so it renders `false` there and every control keeps its `vscode://` link. GitHub-file mode (`REPO_FILE_BASE`) is untouched.
+
+- [`taskFileOpenPath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L969-L971) composes the route address as `ROOT_PREFIX + '/' + taskPath + '/…'` — the same composition `/files/` is handed, so both agree for any `--root`, a nested tree, and a rootless forest.
+- Card head ([`loadActiveNode`](../../../../skills/task-tree/scripts/templates/dashboard.js#L1058-L1062)): label `Open`, a neutral open-file glyph, and `target: native`. Without the route it is the old `VS Code` button verbatim.
+- Header ([`updateWorktreeOpenHref`](../../../../skills/task-tree/scripts/templates/dashboard.js#L2550-L2565)): labelled `VS Code` (`Workspace` is the `#btn-workspace` view toggle), opens the **active task's** file with `target: editor`, and is re-pointed from [`setActive`](../../../../skills/task-tree/scripts/templates/dashboard.js#L855-L856) so it follows navigation. Without the route it keeps its deep link to the worktree root.
+- Body links ([`renderMarkdown`](../../../../skills/task-tree/scripts/templates/dashboard.js#L264-L271)) keep their `vscode://` href — which still carries the `#L123` line anchor — and gain `data-open-path`.
+- One [delegated click handler](../../../../skills/task-tree/scripts/templates/dashboard.js#L1015-L1022) serves all three: a plain left-click calls [`openLocalPath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L995-L1008); any modifier or non-primary button falls through to the href, so the browser's own open-elsewhere gestures survive.
+- A refusal or failure is reported by [`showOpenError`](../../../../skills/task-tree/scripts/templates/dashboard.js#L976-L989) in a transient [`.open-toast`](../../../../skills/task-tree/scripts/templates/dashboard.css#L1127-L1146) — a successful open's only visible result is on the desktop, so without this a refused click reads as a dead button.
+
+### Chrome
+
+`.vscode-btn` is renamed [`.open-btn`](../../../../skills/task-tree/scripts/templates/dashboard.css#L1097-L1122) (it now also styles a native-open control), and its off-palette `#007acc` hover is replaced by the `--accent-soft` / `--accent` pair the neighbouring `.share-btn` already uses, so the card-head and header buttons read as one family at the shared `--control-h`. The rename carries through the doc-mode hide rule, the `pointer: coarse` tap-highlight list, and the `#worktree-open-btn { margin-left: 0 }` override.
+
+`SUPERRA_EDITOR` and the open behavior are documented in [internals.md §Dashboard](../../../../skills/task-tree/references/internals.md#L232), beside the existing binding note.
+
+### Deviation from guidance
+
+The guidance suggested carrying a line number to `code --goto <file>:<line>`. No surface needs it: the card head and header open a `task.md` (no line), and body links open natively, where the OS opener cannot take a line. The line survives where it already worked — a modifier-click follows the `vscode://` href with its `#L123` anchor translated. So `{path, target}` is the whole route contract.
+
+### Verification
+
+Full suites, run fresh from this worktree: `726 passed` across `skills/task-tree/scripts` (299 of them in `test_dashboard.py`).
+
+New coverage in `TestLocalOpen` ([test_dashboard.py](../../../../skills/task-tree/scripts/test_dashboard.py#L3150-L3417)) pins the flag in all four render modes, the loopback predicate, the host record, both open paths' exact argv, the no-CLI fallback, the env override, `shell=False`, every refusal (off-loopback, doc-mode, wrong content type, cross-site, traversal, absolute path, missing file, unknown target), and the client wiring. `TestWorktreeOpenButton` is updated for the rename, the `VS Code` label, the active-task target, and the re-point on navigation.
+
+Live server on port 8995, restarted so the one-hour-cached CSS/JS were re-served (verified: served CSS carries `.open-btn` and no `#007acc`; served page carries `window.LOCAL_OPEN = true`):
+
+| Exercise | Result |
+|---|---|
+| Card head — `superRA/task-tree/dashboard/local-file-open/task.md`, native | `{"status":"opened","target":"native"}`, opened in the default markdown app |
+| Body link — a real task-relative memo href (`…/03-defaults-and-docs/../../../skills/worktree-data-sync/SKILL.md`), native | `200`, opened; the un-normalized `..` segments resolve inside the project root |
+| Header button — `target: editor`, launch worktree | `code` invoked as `<repo root> <repo root>/superRA/task-tree/dashboard/local-file-open/task.md` |
+| Header button — `target: editor`, `?wt=nonloopback-host-serve` | `code` invoked as `<that worktree> <that worktree>/superRA/task.md` — each worktree's file paired with its own folder |
+| Cross-site / form content type / traversal / absolute / missing / bad target | `403` / `415` / `403` / `403` / `404` / `400` |
+| Second server bound `--host 0.0.0.0` | page renders `window.LOCAL_OPEN = false`; route answers `403 Local open is disabled on this server` |
+
+The editor invocations were captured by pointing `SUPERRA_EDITOR` at a recording script on a scratch server, which also exercised the env override end-to-end. `node --check` parses `dashboard.js` clean.
+
+### Known gap (accepted at planning)
+
+An SSH port-forward is indistinguishable from a local request, so an open over a tunnel runs on the server's machine. No detection heuristic, per-browser setting, or Remote-SSH URI form was added.

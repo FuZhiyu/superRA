@@ -262,6 +262,12 @@ function renderMarkdown(text, sectionName, taskPath) {
             filePath = filePath.slice(0, lm.index);
           }
           a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + filePath + loc);
+          /* With the local-open route a plain click hands the file to the
+             application this machine uses for its type; the vscode:// href above
+             stays for modifier/middle clicks (and carries the line anchor, which
+             an OS-level open cannot). Same project-root-relative composition the
+             /files/ route is handed. */
+          if (window.LOCAL_OPEN) a.setAttribute('data-open-path', rootRel + filePath);
         }
         a.setAttribute('target', '_blank');
       }
@@ -846,6 +852,8 @@ function setActive(path) {
   if (currentView !== 'workspace') showView('workspace');
 
   updateBreadcrumb(path);
+  /* The header VS Code button opens the active task's file, so it follows nav. */
+  updateWorktreeOpenHref();
   _lastSidebarUpdate = updateSidebar(path);
   loadActiveNode(path);
   loadChildrenDag(path);
@@ -928,6 +936,14 @@ var VSCODE_ICON =
   + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
   + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
 
+/* Generic "open this file" glyph for the local-open control, which hands the file
+   to whatever application the machine uses for its type — no editor named. */
+var OPEN_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+  + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M14 3h7v7"></path><path d="M21 3 11 13"></path>'
+  + '<path d="M19 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"></path></svg>';
+
 /* vscode://file deep-link to an absolute local path (a file or a folder). The
    single place the `vscode://file/` scheme is composed, shared by the per-task
    task.md link and the header open-worktree link. */
@@ -946,6 +962,64 @@ function taskFileVscodeHref(path) {
   }
   return vscodeFileUri(RESOLVED_ROOT + '/' + rel);
 }
+
+/* A task's task.md as a project-root-relative path — the address /api/open takes.
+   Same composition the /files/ route is handed (ROOT_PREFIX + '/' + taskPath + …),
+   so both agree for any --root, a nested tree, and a rootless forest. */
+function taskFileOpenPath(path) {
+  return (ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + (path ? path + '/' : '') + 'task.md';
+}
+
+/* Report a failed or refused open. The only visible result of a successful open
+   is on the researcher's desktop, so without this a refusal reads as a dead
+   button. Transient, single-slot, dismisses itself. */
+function showOpenError(msg) {
+  var el = document.getElementById('open-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'open-toast';
+    el.className = 'open-toast';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(showOpenError._timer);
+  showOpenError._timer = setTimeout(function() { el.classList.remove('visible'); }, 6000);
+}
+
+/* Hand a project-root-relative path to the server for opening on its own host.
+   `target` is 'native' (the OS default application for the file type) or 'editor'
+   (this worktree's VS Code window). When no editor CLI is installed the route
+   answers with a vscode:// URI to follow instead — the pre-route behavior. */
+function openLocalPath(path, target) {
+  return fetch(wtUrl('/api/open'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path, target: target || 'native' })
+  }).then(function(resp) {
+    return resp.json().catch(function() { return {}; }).then(function(data) {
+      if (!resp.ok) throw new Error(data.detail || ('HTTP ' + resp.status));
+      if (data.status === 'fallback' && data.uri) window.location.href = data.uri;
+    });
+  }).catch(function(err) {
+    showOpenError('Could not open ' + path + (err && err.message ? ' — ' + err.message : ''));
+  });
+}
+
+/* One delegated handler for every local-open control: the card-head button, the
+   header VS Code button, and body file links all carry data-open-path. A plain
+   left-click opens on the server's host; a modifier or middle click falls through
+   to the element's vscode:// href, so the browser's own "open elsewhere" gestures
+   still work. */
+document.addEventListener('click', function(e) {
+  if (!window.LOCAL_OPEN) return;
+  var el = (e.target && e.target.closest) ? e.target.closest('[data-open-path]') : null;
+  if (!el) return;
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  openLocalPath(el.getAttribute('data-open-path'), el.getAttribute('data-open-target'));
+});
 
 async function loadActiveNode(path) {
   var region = document.getElementById('active-node');
@@ -979,16 +1053,21 @@ async function loadActiveNode(path) {
     }
     var title = pathTitles[path] || slug || rootTitle;
     var status = navRowStatus(path);
-    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub' : 'Open task.md in VS Code';
-    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'VS Code';
+    /* With the local-open route the button hands task.md to whatever application
+       this machine uses for markdown; without it, today's vscode:// deep link. */
+    var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;
+    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
+      : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
+    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : (openNative ? 'Open' : 'VS Code');
+    var fileButtonIcon = openNative ? OPEN_ICON : VSCODE_ICON;
 
     region.innerHTML =
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
-      + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
-      + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
+      + '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -1004,10 +1083,14 @@ async function loadActiveNode(path) {
     var titleEl = region.querySelector('.active-node-title');
     if (titleEl) titleEl.textContent = (slug && !window.DOC_MODE) ? (slug + ' · ' + title) : title;
 
-    /* Point the VS Code button at this task's task.md. Set the href as a
-       property (not an attribute string) so the path needs no escaping. */
-    var vsBtn = region.querySelector('.vscode-btn');
-    if (vsBtn) vsBtn.href = taskFileVscodeHref(path);
+    /* Point the file button at this task's task.md. Set the href as a property
+       (not an attribute string) so the path needs no escaping; it stays the
+       modifier-click target even when the plain click goes through /api/open. */
+    var vsBtn = region.querySelector('.open-btn');
+    if (vsBtn) {
+      vsBtn.href = taskFileVscodeHref(path);
+      if (openNative) vsBtn.setAttribute('data-open-path', taskFileOpenPath(path));
+    }
 
     /* Wire the Share button via a closure over `path` — an inline onclick can't
        carry the path safely (a quoted path breaks the double-quoted attribute). */
@@ -2455,17 +2538,29 @@ function populateWorktreeSelector(data) {
   selector.style.display = 'flex';
 }
 
-/* Point the header "open worktree" button at the active worktree's checkout root
-   (PROJECT_ROOT, re-pointed per ?wt= in fetchWorktrees), so subsequent per-task
-   clicks land in that now-focused window. Hidden in GitHub-file mode, which has
-   no local folder to open; doc-mode hides it via the shared .vscode-btn rule and
-   standalone omits it from the template. Idempotent: safe to call repeatedly. */
+/* The header VS Code button. With the local-open route it opens the ACTIVE task's
+   file in the VS Code window already holding this worktree (the route passes the
+   worktree folder alongside the file, so several worktrees of one repo each land
+   in their own window); setActive re-points it as the researcher navigates.
+   Without the route it keeps its vscode:// deep link to the worktree root
+   (PROJECT_ROOT, re-pointed per ?wt= in fetchWorktrees). Labelled "VS Code" —
+   "Workspace" is the #btn-workspace view toggle in the same header. Hidden in
+   GitHub-file mode, which has no local checkout; doc-mode hides it via the shared
+   .open-btn rule and standalone omits it from the template. Idempotent. */
 function updateWorktreeOpenHref() {
   var btn = document.getElementById('worktree-open-btn');
   if (!btn) return;
   if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
-  if (!btn.innerHTML) btn.innerHTML = VSCODE_ICON + '<span>Worktree</span>';
-  btn.href = vscodeFileUri(PROJECT_ROOT);
+  if (!btn.innerHTML) btn.innerHTML = VSCODE_ICON + '<span>VS Code</span>';
+  if (window.LOCAL_OPEN) {
+    btn.href = taskFileVscodeHref(activePath);
+    btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
+    btn.setAttribute('data-open-target', 'editor');
+    btn.title = "Open this task's file in this worktree's VS Code window";
+  } else {
+    btn.href = vscodeFileUri(PROJECT_ROOT);
+    btn.title = 'Open this worktree in VS Code';
+  }
   btn.style.display = '';
 }
 

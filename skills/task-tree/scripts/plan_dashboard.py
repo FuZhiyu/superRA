@@ -21,9 +21,11 @@ import asyncio
 import base64
 import hashlib
 import importlib.resources as resources
+import ipaddress
 import json
 import os
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -77,6 +79,18 @@ PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 # chrome suppressed).  Strictly opt-in via `serve --doc-mode`; default off so the
 # served dashboard is unchanged.  Read by the index route at render time.
 DOC_MODE: bool = False
+
+# The host the server bound, recorded by ``serve()`` (the single in-process serve
+# path).  ``/api/open`` acts only on a loopback bind: off loopback the browser may
+# be on another machine, so an open would put a window on a host nobody is at.
+# Defaults to ``serve()``'s own default so an in-process ASGI host sees the same
+# policy a plain ``serve()`` would.
+BOUND_HOST: str = "127.0.0.1"
+
+# Executable used for a ``target: "editor"`` open, overridable for a VS Code fork
+# (``cursor``, ``code-insiders``, ``codium``).
+EDITOR_ENV_VAR = "SUPERRA_EDITOR"
+DEFAULT_EDITOR = "code"
 
 # Repo identity: a stable hash of the repo's git common dir (or plan root when
 # there is no git), reported by /healthz so the launcher's reuse probe can tell
@@ -1059,6 +1073,7 @@ async def index(request: Request):
         root_prefix=Path(resolved_root).name,
         wt_id=wt_id,
         doc_mode=DOC_MODE,
+        local_open=_local_open_enabled(),
         search_index=_build_search_index(state.root_task, all_tasks),
     )
     return HTMLResponse(content=html)
@@ -1271,6 +1286,127 @@ async def serve_file(path: str, request: Request):
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(str(resolved))
+
+
+# --- Route: POST /api/open -------------------------------------------------
+#
+# Opening a file on the researcher's own machine is something the page cannot do:
+# a browser can only fire a `vscode://` URI, which names one editor and cannot say
+# "in this workspace".  The dashboard's server is by construction on the
+# researcher's machine, so it is the component that can hand a path to the OS.
+
+
+def _is_loopback_host(host: str) -> bool:
+    """True when *host* names the local machine only."""
+    h = (host or "").strip().strip("[]")
+    if h == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(h).is_loopback
+    except ValueError:
+        return False
+
+
+def _local_open_enabled() -> bool:
+    """True when this server may open files on its own host.
+
+    Loopback-bound only (see ``BOUND_HOST``) and never in doc-mode, where the page
+    is a published documentation site rather than a working tracker.  Also the
+    render-time flag the page reads to decide between the open route and its
+    ``vscode://`` links.
+    """
+    return _is_loopback_host(BOUND_HOST) and not DOC_MODE
+
+
+def _editor_executable() -> str | None:
+    """Resolve the editor CLI, or None when none is on PATH."""
+    return shutil.which(os.environ.get(EDITOR_ENV_VAR) or DEFAULT_EDITOR)
+
+
+def _spawn(argv: list[str]) -> None:
+    """Launch *argv* detached from this server's stdio.  No shell: the argument
+    vector goes straight to ``execvp``, so a path never reaches a command line."""
+    subprocess.Popen(  # noqa: S603 - argv form, shell=False
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _open_native_sync(path: Path) -> None:
+    """Hand *path* to the OS default application for its type."""
+    if sys.platform.startswith("win"):
+        os.startfile(str(path))  # type: ignore[attr-defined]  # noqa: S606 - no shell
+        return
+    _spawn(["open" if sys.platform == "darwin" else "xdg-open", str(path)])
+
+
+def _open_editor_sync(exe: str, folder: Path, path: Path) -> None:
+    """Open *path* in the editor window already holding *folder*.
+
+    Passing the folder first is what binds the file to that window; ``code <file>``
+    alone lands in whichever window was last focused, which with several worktrees
+    of one repo open is routinely the wrong one.
+    """
+    _spawn([exe, str(folder), str(path)])
+
+
+@app.post("/api/open")
+async def open_local_path(request: Request):
+    """Open a project-root-relative path on the server's host.
+
+    ``target`` is ``"native"`` (the OS default application for the file type) or
+    ``"editor"`` (this worktree's editor window).  With no editor CLI on PATH the
+    editor target answers ``{"status": "fallback", "uri": "vscode://file/…"}`` for
+    the page to follow, which is the pre-route behavior.
+
+    CSRF: the route starts processes, so it accepts only same-origin JSON.
+    Requiring ``application/json`` forces a preflight on any cross-origin
+    ``fetch`` — no CORS middleware is installed, so that preflight fails — and the
+    ``Sec-Fetch-Site`` check closes the simple-form-POST path that would otherwise
+    skip the preflight.  Neither check needs a token.
+    """
+    if not _local_open_enabled():
+        raise HTTPException(status_code=403, detail="Local open is disabled on this server")
+
+    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if content_type != "application/json":
+        raise HTTPException(status_code=415, detail="Expected application/json")
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request refused")
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object")
+
+    rel = str(body.get("path") or "")
+    target = str(body.get("target") or "native")
+    if not rel:
+        raise HTTPException(status_code=400, detail="Missing path")
+    if target not in ("native", "editor"):
+        raise HTTPException(status_code=400, detail=f"Unknown target: {target}")
+
+    state = await resolve_worktree(request)
+    project_resolved = Path(state.project_root).resolve()
+    resolved = (project_resolved / rel).resolve()
+    if not resolved.is_relative_to(project_resolved):
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not resolved.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if target == "editor":
+        exe = await asyncio.to_thread(_editor_executable)
+        if exe is None:
+            return {"status": "fallback", "uri": f"vscode://file/{resolved}"}
+        await asyncio.to_thread(_open_editor_sync, exe, project_resolved, resolved)
+    else:
+        await asyncio.to_thread(_open_native_sync, resolved)
+    return {"status": "opened", "target": target}
 
 
 # --- Comment routes --------------------------------------------------------
@@ -2056,7 +2192,8 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     full task tree (``/export``), and disk-writing comment routes; with
     background-by-default serving this is a long-lived ambient surface, so it
     must not be reachable off-host unless the operator deliberately opts in via
-    ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).
+    ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).  Records the
+    bound host in ``BOUND_HOST``, which gates ``/api/open``.
 
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
     ``_server.should_exit = True``.  This is the single in-process serve path:
@@ -2067,13 +2204,17 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     """
     import uvicorn
 
-    global _server
+    global _server, BOUND_HOST
+    BOUND_HOST = host
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:
         _server.run()
     finally:
+        # BOUND_HOST describes the host currently bound; nothing is bound once
+        # run() returns, so put it back to the unserved default.
         _server = None
+        BOUND_HOST = "127.0.0.1"
 
 
 # ---------------------------------------------------------------------------
