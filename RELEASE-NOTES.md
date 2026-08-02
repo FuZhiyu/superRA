@@ -4,9 +4,10 @@
 
 ### Changed
 
-- Dashboard file links, task attachments, the task card's `Open` button, and the
-  header `VS Code` button now open the file on the machine running the
-  dashboard, in whatever application that machine already uses for the file
+- Dashboard file links, task attachments (both their links and the reading
+  pane's `Open` button), the task card's `Open` button, and the header `VS Code`
+  button now open the file on the machine running the dashboard, in whatever
+  application that machine already uses for the file
   type; the header button opens the active task's file in the VS Code window
   already holding that worktree, and `SUPERRA_EDITOR` points it at a fork.
   Opening is served by a loopback-only route, so an off-loopback `--host` bind,

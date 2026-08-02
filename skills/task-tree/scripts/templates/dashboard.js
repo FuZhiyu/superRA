@@ -1095,11 +1095,17 @@ function taskFileVscodeHref(path) {
   return vscodeFileUri(RESOLVED_ROOT + '/' + rel);
 }
 
-/* A task's task.md as a project-root-relative path — the address /api/open takes.
-   Same composition the /files/ route is handed (ROOT_PREFIX + '/' + taskPath + …),
-   so both agree for any --root, a nested tree, and a rootless forest. */
+/* A file under a task's directory as a project-root-relative path — the address
+   /api/open takes. Same composition the /files/ route is handed (ROOT_PREFIX +
+   '/' + taskPath + …), so both agree for any --root, a nested tree, and a
+   rootless forest. `rel` is task.md for the task itself, or an attachment's
+   task-relative path. */
+function taskRelOpenPath(path, rel) {
+  return (ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + (path ? path + '/' : '') + rel;
+}
+
 function taskFileOpenPath(path) {
-  return (ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + (path ? path + '/' : '') + 'task.md';
+  return taskRelOpenPath(path, 'task.md');
 }
 
 /* Report a failed or refused open. The only visible result of a successful open
@@ -1388,14 +1394,22 @@ function buildArtifactPreviewHead(taskPath, entry) {
   head.appendChild(heading);
   var actions = document.createElement('div');
   actions.className = 'artifact-actions';
-  var rawHref = artifactOpenHref(taskPath, entry.path);
-  if (rawHref && rawHref !== '#') {
-    var raw = document.createElement('a');
-    raw.className = 'artifact-action';
-    raw.href = rawHref;
-    raw.target = '_blank';
-    raw.textContent = 'Open raw';
-    actions.appendChild(raw);
+  /* Open matches the card head's task.md button: on a local-open server a plain
+     click hands the attachment to this machine's default application, and the
+     /api/artifact href stays the modifier/middle-click target — the same pair
+     an attachment link in a task body already carries. */
+  var openHref = artifactOpenHref(taskPath, entry.path);
+  if (openHref && openHref !== '#') {
+    var open = document.createElement('a');
+    open.className = 'artifact-action';
+    open.href = openHref;
+    open.target = '_blank';
+    open.textContent = 'Open';
+    if (window.LOCAL_OPEN) {
+      open.title = 'Open in the default application';
+      open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));
+    }
+    actions.appendChild(open);
   }
   var downloadHref = artifactDownloadHref(taskPath, entry);
   if (downloadHref) {

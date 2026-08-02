@@ -3627,12 +3627,15 @@ class TestLocalOpen:
     # --- Client wiring ----------------------------------------------------
 
     def test_open_path_composition_matches_files_route(self):
-        """taskFileOpenPath composes the same project-root-relative address the
-        /files/ route is handed, so both agree for any --root."""
-        fn = re.search(r"function taskFileOpenPath\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        """taskRelOpenPath composes the same project-root-relative address the
+        /files/ route is handed, so both agree for any --root.  task.md and an
+        attachment share it, so the card head and the artifact pane cannot drift."""
+        fn = re.search(r"function taskRelOpenPath\(path, rel\)\s*\{.*?\n\}", BASE_HTML, re.S)
         assert fn
         assert "ROOT_PREFIX ? ROOT_PREFIX + '/' : ''" in fn.group(0)
         assert "/superRA/" not in fn.group(0)  # no hardcoded root segment
+        assert "return taskRelOpenPath(path, 'task.md');" in BASE_HTML
+        assert "taskRelOpenPath(taskPath, entry.path)" in BASE_HTML
 
     def test_body_links_carry_open_path_beside_the_vscode_href(self):
         """A body file link keeps its vscode:// href (modifier/middle click, and it
@@ -3651,6 +3654,30 @@ class TestLocalOpen:
         assert (
             "a.setAttribute('data-open-path', rootRel + taskDirRel + artifactTarget);"
             in BASE_HTML
+        )
+
+    def test_artifact_pane_open_matches_the_task_file_button(self):
+        """The artifact pane's Open carries the same pair the card head's task.md
+        button does — a route address for the plain click, the /api/artifact href
+        for modifier/middle clicks — so no surface offers a browser-only open the
+        task file itself does not."""
+        fn = re.search(
+            r"function buildArtifactPreviewHead\(taskPath, entry\)\s*\{.*?\n\}",
+            BASE_HTML,
+            re.S,
+        )
+        assert fn
+        body = fn.group(0)
+        assert "open.textContent = 'Open';" in body
+        assert "Open raw" not in BASE_HTML
+        assert "open.href = openHref;" in body
+        assert (
+            "open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));"
+            in body
+        )
+        # Gated: a doc-mode / standalone / off-loopback page keeps the href alone.
+        assert re.search(
+            r"if \(window\.LOCAL_OPEN\) \{[^}]*data-open-path[^}]*\}", body, re.S
         )
 
     def test_body_link_open_path_is_percent_decoded(self):
