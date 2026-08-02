@@ -838,6 +838,31 @@ var _lastSidebarUpdate = Promise.resolve();
    then the breadcrumb falls back to the path slug. */
 var pathTitles = {};
 
+/* ── Tab title ──
+   Dashboards of the same repo differ only by worktree, so the tab reads
+   "<active task> · <worktree>" — the task leads because tabs truncate from the
+   right. SITE_TITLE is the server-rendered <title>, i.e. the tree's own name:
+   the right name for the root node, and the whole title in doc-mode (a
+   published site has no worktree identity to show) and in standalone, where a
+   downloaded file keeps the title it shipped with. */
+var SITE_TITLE = document.title;
+var _tabTaskTitle = '';   /* display title of the task the main panel shows */
+
+/* Name the active task in the tab. */
+function setTabTitle(title) {
+  _tabTaskTitle = title || '';
+  refreshTabTitle();
+}
+
+/* Repaint from current state — also called when the worktree half lands
+   (fetchWorktrees resolves after the first render) or changes. */
+function refreshTabTitle() {
+  if (window.STANDALONE) return;
+  var name = _tabTaskTitle || SITE_TITLE;
+  var context = window.DOC_MODE ? SITE_TITLE : (_wtTabLabels[ACTIVE_WT || _launchWtId] || '');
+  document.title = (context && context !== name) ? (name + ' · ' + context) : name;
+}
+
 /* Read location.hash as `#/<task/path>` -> the path verbatim ('' for root). */
 function parseHash() {
   var h = location.hash || '';
@@ -1069,6 +1094,8 @@ async function loadActiveNode(path) {
       if (hdrEl && hdrEl.textContent.trim()) rootTitle = hdrEl.textContent.trim();
     }
     var title = pathTitles[path] || slug || rootTitle;
+    /* The tab names this task; at the root the tree's own name is that name. */
+    setTabTitle(path ? title : SITE_TITLE);
     var status = navRowStatus(path);
     /* With the local-open route the button hands task.md to whatever application
        this machine uses for markdown; without it, today's vscode:// deep link. */
@@ -1137,6 +1164,8 @@ async function loadActiveNode(path) {
        deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
        patch the badge once the row materializes (best-effort, single retry). */
     if (!status) patchCardBadgeWhenReady(path, token);
+    /* Same race for the title: the tab is on the path slug until that row lands. */
+    if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);
   } catch (e) {
     if (token !== loadActiveNode._token) return;
     region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
@@ -1209,6 +1238,16 @@ function patchCardBadgeWhenReady(path, token) {
       badge.textContent = status;
       head.appendChild(badge);
     }
+  });
+}
+
+/* Same deep-descent race for the tab: pathTitles is harvested from the sidebar
+   row, so a fresh descent names the tab after the path slug until the row lands.
+   Re-read the title once this tick's sidebar update settles. */
+function patchTabTitleWhenReady(path, token) {
+  _lastSidebarUpdate.then(function() {
+    if (token !== loadActiveNode._token) return;        /* navigated away */
+    if (pathTitles[path]) setTabTitle(pathTitles[path]);
   });
 }
 
@@ -2501,6 +2540,15 @@ var _wtProjectRoots = {};
 /* resolved task-root absolute path of each worktree by its wt_id, so
    RESOLVED_ROOT / ROOT_PREFIX (the file-link base) can follow the active ?wt=. */
 var _wtResolvedRoots = {};
+/* Human name of each worktree by its wt_id, for the tab title's worktree half. */
+var _wtTabLabels = {};
+
+/* What to call a worktree: its branch, or its directory name when it has none
+   (detached HEAD). The selector decorates this with the plan title and the
+   agent marker; the tab title uses it bare. */
+function worktreeLabel(wt) {
+  return wt.branch || wt.path.split('/').pop();
+}
 
 /* Signature of the last-rendered worktree option set (ids + labels + active
    id). Lets a refresh-on-open re-fetch skip the innerHTML rebuild when nothing
@@ -2543,7 +2591,7 @@ function populateWorktreeSelector(data) {
        navigates to a clean `/` (handled in switchWorktree). */
     var token = (wt.wt_id === data.launch_wt_id) ? '' : (wt.wt_id || '');
     opt.value = token;
-    var label = wt.branch || wt.path.split('/').pop();
+    var label = worktreeLabel(wt);
     if (wt.plan_title) label += ' — ' + wt.plan_title;
     if (wt.is_agent) label = '[agent] ' + label;
     opt.textContent = label;
@@ -2596,9 +2644,11 @@ function fetchWorktrees() {
          even a different basename). */
       _wtProjectRoots = {};
       _wtResolvedRoots = {};
+      _wtTabLabels = {};
       data.worktrees.forEach(function(wt) {
         _wtProjectRoots[wt.wt_id || ''] = wt.path;
         _wtResolvedRoots[wt.wt_id || ''] = wt.plan_root || '';
+        _wtTabLabels[wt.wt_id || ''] = worktreeLabel(wt);
       });
       /* Point PROJECT_ROOT / RESOLVED_ROOT at the URL's worktree so every
          vscode://file/ href resolves against the worktree this tab is bound to.
@@ -2614,6 +2664,9 @@ function fetchWorktrees() {
       }
       populateWorktreeSelector(data);
       updateWorktreeOpenHref();
+      /* This fetch lands after the first card render, and again on every
+         worktree switch — the tab's worktree half follows it. */
+      refreshTabTitle();
     })
     .catch(function() { /* graceful: hide selector */ });
 }

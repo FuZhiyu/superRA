@@ -3137,6 +3137,151 @@ class TestWorktreeOpenButton:
 
 
 # ---------------------------------------------------------------------------
+# TestTabTitle — the browser tab names the active task, then the worktree it
+# lives in, so several tabs of several worktrees of one repo are tellable apart.
+# The composition runs under node against the extracted functions; the call-site
+# wiring (which navigation paths repaint it) is pinned against the JS source.
+# ---------------------------------------------------------------------------
+
+
+def _tab_title(body: str, site_title: str = "superRA") -> str:
+    """Run the extracted tab-title functions under node against a stubbed
+    window/document.  *body* sets state and calls them; returns document.title."""
+    defs = _extract_js_defs(["worktreeLabel", "setTabTitle", "refreshTabTitle"])
+    script = (
+        "var window = {};\n"
+        "var document = { title: %s };\n"
+        "var SITE_TITLE = document.title;\n"
+        "var _tabTaskTitle = '';\n"
+        "var _wtTabLabels = {};\n"
+        "var ACTIVE_WT = '';\n"
+        "var _launchWtId = '';\n" % json.dumps(site_title)
+        + defs + "\n" + body + "\n"
+        "console.log(JSON.stringify(document.title));"
+    )
+    proc = subprocess.run([_NODE, "-e", script], capture_output=True, text=True, timeout=20)
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestTabTitle:
+    def test_task_leads_worktree_follows(self):
+        """Tabs truncate from the right, so the specific half (the task) leads."""
+        assert _tab_title(
+            "_launchWtId = 'wt1';"
+            "_wtTabLabels = { wt1: 'feature-branch' };"
+            "setTabTitle('Tab Title Names the Active Task');"
+        ) == "Tab Title Names the Active Task · feature-branch"
+
+    def test_worktree_half_is_the_branch(self):
+        """The worktree reads as its branch when it has one."""
+        assert _tab_title(
+            "_wtTabLabels = { '': worktreeLabel({ branch: 'main', path: '/repos/checkout' }) };"
+            "setTabTitle('T');"
+        ) == "T · main"
+
+    def test_detached_head_falls_back_to_directory_name(self):
+        """No branch (detached HEAD) → the worktree's directory name."""
+        assert _tab_title(
+            "_wtTabLabels = { '': worktreeLabel({ branch: '', path: '/repos/wt-detached' }) };"
+            "setTabTitle('T');"
+        ) == "T · wt-detached"
+
+    def test_worktree_switch_repaints(self):
+        """Switching ?wt= re-points the worktree half without a page reload."""
+        assert _tab_title(
+            "_launchWtId = 'wt1';"
+            "_wtTabLabels = { wt1: 'main', wt2: 'side-branch' };"
+            "setTabTitle('T');"
+            "ACTIVE_WT = 'wt2';"
+            "refreshTabTitle();"
+        ) == "T · side-branch"
+
+    def test_root_falls_back_to_the_server_rendered_title(self):
+        """The root node has no task title of its own — the tree's name is it."""
+        assert _tab_title(
+            "_wtTabLabels = { '': 'main' };"
+            "setTabTitle(SITE_TITLE);"
+        ) == "superRA · main"
+
+    def test_worktree_half_omitted_until_the_fetch_lands(self):
+        """First render happens before /api/worktrees resolves: the task name alone,
+        never a dangling separator."""
+        assert _tab_title("setTabTitle('T');") == "T"
+
+    def test_doc_mode_names_the_site_not_a_worktree(self):
+        """A published doc site has no worktree identity to show."""
+        assert _tab_title(
+            "window.DOC_MODE = true;"
+            "_wtTabLabels = { '': 'main' };"
+            "setTabTitle('Quickstart');",
+            site_title="superRA docs",
+        ) == "Quickstart · superRA docs"
+
+    def test_doc_mode_root_is_the_site_alone(self):
+        """At the doc-site root both halves are the site — do not repeat it."""
+        assert _tab_title(
+            "window.DOC_MODE = true;"
+            "setTabTitle(SITE_TITLE);",
+            site_title="superRA docs",
+        ) == "superRA docs"
+
+    def test_standalone_keeps_the_shipped_title(self):
+        """A downloaded file must keep a title that does not depend on a session."""
+        assert _tab_title(
+            "window.STANDALONE = true;"
+            "setTabTitle('T');",
+            site_title="Exported subtree",
+        ) == "Exported subtree"
+
+
+class TestTabTitleWiring:
+    def test_set_from_the_active_card_load(self):
+        """loadActiveNode resolves the display title for the card head; the tab
+        takes the same resolved value rather than the path slug."""
+        fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "setTabTitle(path ? title : SITE_TITLE);" in body
+        # Deep descent: the sidebar row carrying the real title may not be in yet.
+        assert "if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);" in body
+
+    def test_deep_descent_patch_awaits_the_sidebar_update(self):
+        """Same completion hook as the status badge — not a fixed-interval poll —
+        and it bails when the user has navigated on."""
+        fn = re.search(r"function patchTabTitleWhenReady\(path, token\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "_lastSidebarUpdate.then(" in body
+        assert "if (token !== loadActiveNode._token) return;" in body
+        assert "if (pathTitles[path]) setTabTitle(pathTitles[path]);" in body
+
+    def test_worktree_half_follows_the_worktree_fetch(self):
+        """fetchWorktrees indexes each worktree's label and repaints — it resolves
+        after the first card render and again on every ?wt= switch."""
+        fn = re.search(r"function fetchWorktrees\(\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "_wtTabLabels[wt.wt_id || ''] = worktreeLabel(wt);" in body
+        assert "refreshTabTitle();" in body
+
+    def test_selector_and_tab_share_one_worktree_name(self):
+        """The dropdown decorates the shared label; both start from branch-or-dir."""
+        fn = re.search(r"function populateWorktreeSelector\(data\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn and "var label = worktreeLabel(wt);" in fn.group(0)
+
+    def test_site_title_captured_from_the_server_rendered_head(self):
+        """The server already renders the tree's own name into <title>; capture it
+        once at load rather than re-deriving it."""
+        assert "var SITE_TITLE = document.title;" in BASE_HTML
+        assert "<title>{{ root_task.title or 'Plan Dashboard' }}</title>" in BASE_HTML
+
+
+# ---------------------------------------------------------------------------
 # TestLocalOpen — POST /api/open hands a project-root-relative path to the
 # machine the server runs on (OS default application, or this worktree's editor
 # window), plus the render-time flag the page reads to choose between the route
