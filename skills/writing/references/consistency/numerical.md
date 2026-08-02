@@ -1,8 +1,6 @@
 # Consistency: Numerical (numbers, figures, tables)
 
-> Load when Review or Polish mode targets **quantitative content** — numbers in text matching numbers in tables, figure/caption/text alignment, table caption accuracy, units and sign conventions. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
-
-Source dimensions harvested from `draft-reviewer:consistency-checker` (numerical consistency, table/figure verification) plus the folded figure/table/caption dimension.
+> Load when Review or Polish mode targets **quantitative content** — text numbers matching table numbers, figure/caption/text alignment, table caption accuracy, units and sign conventions. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 ## Scope
 
@@ -10,20 +8,20 @@ Covers **quantitative correctness** of reported numbers across text, tables, and
 
 Numerical failures come in six patterns:
 
-1. **Text number ≠ table number.** "The effect is 0.05" in §4 but Table 3 shows 0.047 (or 5.0%).
-2. **Inconsistent rounding.** Same number 0.0523 in text as 0.05 in one place, 0.052 in another.
-3. **Cross-table disagreement.** Sample size 1,247 in Table 1 but 1,243 in Table 3 without explanation.
-4. **Figure–caption–text misalignment.** The caption describes what the text said the figure shows; the figure itself shows something else.
-5. **Unit / scale errors.** Percentage vs decimal (5% vs 0.05); percentage-points vs percent (a 2pp increase on a 10% base is a 20% increase, not a 2% increase); basis points vs percentage; dollars vs millions.
-6. **Sign / direction.** "The effect doubled" when it actually grew 80%; "increased" when the number went down.
+1. **Text number ≠ table number.** "The effect is 0.05" in §4, Table 3 shows 0.047 (or 5.0%).
+2. **Inconsistent rounding.** 0.0523 rendered 0.05 in one place, 0.052 in another.
+3. **Cross-table disagreement.** Sample size 1,247 in Table 1, 1,243 in Table 3, unexplained.
+4. **Figure–caption–text misalignment.** The caption describes what the text says the figure shows; the figure shows something else.
+5. **Unit / scale errors.** Percent vs decimal (5% vs 0.05); percentage points vs percent (2pp on a 10% base is a 20% increase, not 2%); basis points vs percent; dollars vs millions.
+6. **Sign / direction.** "Doubled" for 80% growth; "increased" when the number fell.
 
 ## How-To
 
 ### Every number traces to a source
 
-For every quantitative claim in prose:
+Per quantitative claim in prose:
 
-- **Source identified.** Table / figure / explicit calculation / cited paper. If none of these, the number is floating and either needs a source or should be removed.
+- **Source identified.** Table / figure / explicit calculation / cited paper. None of these → the number is floating; source it or remove it.
 - **Value matches source exactly** (within stated rounding).
 - **Units and scale match.**
 
@@ -31,65 +29,65 @@ Build a small table while auditing: `text_claim | text_value | source_location |
 
 ### Rounding discipline
 
-Pick a rounding convention (e.g., 3 decimal places for coefficients, 2 for percentages) and apply consistently:
+Pick a convention (e.g., 3 decimal places for coefficients, 2 for percentages) and apply it consistently:
 
-- The same number should not appear as 0.05, 0.052, and 0.0523 in three different places unless the context demands different precision.
-- "5.2%" in text and "0.0523" in the table is fine if the text rounds to one decimal place consistently.
+- One number should not appear as 0.05, 0.052, and 0.0523 in three places unless the context demands different precision.
+- "5.2%" in text and "0.0523" in the table is fine when the text rounds to one decimal place throughout.
 
 ### Cross-table sample size
 
 - Same specification across tables → same N.
-- Different specifications (adding a control that drops observations; balanced panel subset) → different N is fine but should be explained in the notes or text.
+- Different specifications (a control that drops observations, a balanced-panel subset) → different N is fine, explained in the notes or text.
 
 ### Figure–caption–text triangle
 
-For each figure:
+Per figure:
 
-- **Caption says X.** What is X?
-- **Figure shows Y.** Read the axes, legend, and visual content.
-- **Text claims Z.** What does the prose say the figure demonstrates?
+- **Caption says X.**
+- **Figure shows Y** — read the axes, legend, and visual content.
+- **Text claims Z** — what the prose says the figure demonstrates.
 - Check X = Y = Z. Flag every mismatch.
 
 Common failures:
 
-- Caption describes pre-revision version of figure; figure has been updated.
-- Text claim ("the effect is monotonic in X") does not match figure shape.
-- Legend entries do not match the lines actually plotted (order swapped, colors mismapped).
+- Caption describes the pre-revision figure; the figure has been updated.
+- Text claim ("the effect is monotonic in X") does not match the figure's shape.
+- Legend entries do not match the plotted lines (order swapped, colors mismapped).
 
 ### Table caption accuracy
 
-For each table, caption should match:
+Per table, the caption matches:
 
 - Which variable is in rows vs columns.
 - What the cell values represent (coefficients? t-stats? standard errors?).
-- What significance stars mean (if any).
+- What significance stars mean, if any.
 - Sample definition and time period.
 
 ### Sign / direction / magnitude claims
 
-- "The effect is positive / negative / zero" — sign of coefficient matches.
-- "The effect is large / small / substantial" — loosely true given context (compare to SD of outcome, to published effects, to the other coefficients in the table).
-- "The effect doubled" / "grew by X%" — verify the arithmetic.
-- "Larger than" / "smaller than" comparisons — verify the ordering in the actual numbers.
+- "Positive / negative / zero" — coefficient sign matches.
+- "Large / small / substantial" — loosely true in context (against the outcome's SD, published effects, the table's other coefficients).
+- "Doubled" / "grew by X%" — verify the arithmetic.
+- "Larger than" / "smaller than" — verify the ordering in the actual numbers.
 
 ### Percentage-point vs percent — common silent bug
 
 - "The treatment group's share grew by 2 percentage points (pp), from 10% to 12%."
-- NOT: "The treatment group's share grew by 2%, from 10% to 12%." (2% of 10% is 0.2pp, not 2pp.)
+- NOT: "…grew by 2%, from 10% to 12%." (2% of 10% is 0.2pp, not 2pp.)
 
 Always distinguish `pp` and `%`.
 
 ### ± sign, CI, and standard errors
 
-- "Effect of 0.05 ± 0.01" ambiguous — is that one standard error, a 95% CI half-width, or a range? Disambiguate in caption or note.
-- Parentheses convention for SEs vs brackets for CIs — stable across tables.
+- "Effect of 0.05 ± 0.01" is ambiguous — one standard error, a 95% CI half-width, or a range? Disambiguate in the caption or note.
+- Parentheses for SEs vs brackets for CIs — stable across tables.
 
 ## Gated Checklist
 
 - `[BLOCKING]` **Every number in edited prose traces to a source** (table, figure, calculation, or citation).
 - `[BLOCKING]` **Text numbers match table numbers** at the stated precision; mismatches reported.
 - `[BLOCKING]` **Cross-table sample-size discrepancies explained or flagged.**
-- `[BLOCKING]` **Figure–caption–text alignment verified** — for each figure touched or referenced, caption describes what figure shows, text claims what figure supports.
+- `[BLOCKING]` **Figure–caption–text alignment verified** for every figure touched or referenced.
 - `[BLOCKING]` **Table caption accuracy verified** — rows/columns, cell meaning, significance stars, sample.
 - `[BLOCKING]` **Unit / scale consistency** — percent vs decimal, pp vs %, units named on every headline number.
 - `[BLOCKING]` **Sign / direction claims match the numbers.**

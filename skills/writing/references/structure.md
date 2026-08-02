@@ -10,89 +10,89 @@ Structural changes beyond the requested scope are *proposed*, not performed unil
 
 ### Pyramid Principle (Minto)
 
-**Governing idea first.** At every level of the document — the paper, the section, the paragraph — state the single governing idea *first*. The reader who reads only the first sentence should get the most important takeaway. The reader who reads the first two sentences should get the takeaway plus its scaffold. This is "descending structure" (Chaubey p. 24).
+**Governing idea first.** At every level — paper, section, paragraph — state the single governing idea *first*: first sentence gives the takeaway, first two give the takeaway plus its scaffold. "Descending structure" (Chaubey p. 24).
 
-**MECE (Mutually Exclusive, Collectively Exhaustive).** The supporting points under a governing idea must not overlap (mutually exclusive) and must together cover the territory (collectively exhaustive). Overlapping points confuse the reader about what distinguishes them; gaps invite the question "what about X?" that the paper then fails to answer.
+**MECE (Mutually Exclusive, Collectively Exhaustive).** Supporting points under a governing idea must not overlap and must together cover the territory. Overlap leaves the reader unsure what distinguishes the points; gaps invite an unanswered "what about X?".
 
-**Horizontal logic.** Sibling points at the same level of the pyramid must be parallel in *type* — all causes, all effects, all pieces of evidence, all counterarguments. Mixing types ("three reasons this works: first it's cheap; second, anecdote from 2019; third, our framework predicts it") is horizontal-logic failure.
+**Horizontal logic.** Sibling points at one level are parallel in *type* — all causes, all effects, all evidence, all counterarguments. Mixing types ("three reasons this works: first it's cheap; second, anecdote from 2019; third, our framework predicts it") is horizontal-logic failure.
 
-**Vertical logic.** Each level answers the question raised by the level above. If the top of the pyramid is "X causes Y", the supporting points must each answer "*why* should I believe X causes Y?" — not "*what* is X?" or "*what* is Y?", which belong at a lower level.
+**Vertical logic.** Each level answers the question raised above it. Top of the pyramid "X causes Y" → supporting points each answer "*why* believe X causes Y?", not "*what* is X?", which belongs a level down.
 
-**Test.** For any section, write the governing idea as a single sentence. Then write each supporting paragraph's first-sentence message. Check: do the supporting sentences collectively answer the question the governing sentence raises? Are they parallel in type? Is any one of them really a restatement of another?
+**Test.** Write the section's governing idea as one sentence, then each supporting paragraph's first-sentence message. Do the supporting sentences collectively answer the question the governing sentence raises? Are they parallel in type? Is any one a restatement of another?
 
 ### SCQ (Situation–Complication–Question) framing
 
-**Used for introductions and for motivating any sub-argument.** The structure is:
+**Used for introductions and for motivating any sub-argument.**
 
-- **Situation.** State the stable, agreed-upon context — what "everyone knows" about the domain. Reader nods.
-- **Complication.** State the instability, gap, or tension in the situation. Reader frowns — something is unresolved.
-- **Question.** State the question the complication poses. Reader leans in — they want the answer.
-- (**Answer.** In SCQA, this is the paper's thesis or the section's main finding, delivered next.)
+- **Situation.** The stable, agreed-upon context — what "everyone knows" about the domain. Reader nods.
+- **Complication.** The instability, gap, or tension in the situation. Reader frowns — something is unresolved.
+- **Question.** The question the complication poses. Reader leans in.
+- (**Answer.** In SCQA, the paper's thesis or the section's main finding, delivered next.)
 
-**Why it works.** SCQ positions the paper as the answer to a question the reader has just agreed is worth asking. Skipping S (launching straight into the gap) loses the reader who doesn't share the domain framing. Skipping C (situation → question with no tension) feels unmotivated.
+Skipping S (launching straight into the gap) loses the reader who doesn't share the domain framing. Skipping C (situation → question with no tension) feels unmotivated.
 
 ### RAP — Research question, Answer, Positioning (Chaubey)
 
-An economics paper's abstract and introduction should distill down to three letters (Chaubey p. 34):
+An economics paper's abstract and introduction distill to three letters (Chaubey p. 34):
 
-- **R — Research question.** The version of the question the reader would ask. Put the paper at a level the reader can recognize as relevant to *their* concerns.
-- **A — Answer.** The paper's main finding. High-level enough that it summarizes the detail below, specific enough that it is actually an answer.
-- **P — Positioning.** The space in the literature R and A occupy. Lets the reader infer (1) the current state of knowledge, (2) a worthwhile direction to advance, (3) how this paper moves in that direction. (Chaubey p. 41.)
+- **R — Research question.** The version of the question the reader would ask, at a level they recognize as relevant to *their* concerns.
+- **A — Answer.** The paper's main finding — high-level enough to summarize the detail below, specific enough to be an answer.
+- **P — Positioning.** The space in the literature R and A occupy, letting the reader infer (1) the current state of knowledge, (2) a worthwhile direction to advance, (3) how this paper moves in that direction. (Chaubey p. 41.)
 
 Most economics intros order it RAP or APR; Chaubey's default is RPA (p. 65). Choose for your audience.
 
 ### Two-part introduction (Chaubey p. 108)
 
-An introduction has two jobs, in order (Chaubey p. 108):
+Two jobs, in order:
 
-**Part 1 — Provoke curiosity.** Help the reader learn about the context — why this question matters in the field. Transition: "what other papers do" → "what your paper does".
+**Part 1 — Provoke curiosity.** Context: why this question matters in the field. Transition: "what other papers do" → "what your paper does".
 
-**Part 2 — Prepare the reader.** Help the reader visualize what is coming and provoke the right follow-up questions. Part 2 follows RAP and writes up paragraphs using section takeaways (Chaubey p. 126).
+**Part 2 — Prepare the reader.** Let them visualize what is coming and provoke the right follow-up questions. Follows RAP, writing up paragraphs from section takeaways (Chaubey p. 126).
 
 **Checks on Part 1:**
 
-- Takes only as much brain space as an impatient reader will give before wanting to get to the paper's business (Chaubey p. 116).
+- Takes only as much brain space as an impatient reader gives before wanting the paper's business (Chaubey p. 116).
 - Provokes curiosity; doesn't just list "the importance of this topic".
-- First sentence is not a grand contextual platitude that vaguely hints at importance (Chaubey p. 110) — the "world of X is important" opener.
+- First sentence is not a grand contextual platitude vaguely hinting at importance (Chaubey p. 110) — the "world of X is important" opener.
 
 **Checks on Part 2:**
 
-- Previews the paper's main finding explicitly. No "mystery novel" — the reader should not have to read §6 to find out what the paper shows.
-- Ends with a **table-of-contents paragraph** (or roadmap paragraph) telling the reader what the rest of the paper does, section by section.
+- Previews the main finding explicitly. No "mystery novel" — the reader should not read §6 to learn what the paper shows.
+- Ends with a **table-of-contents paragraph** (roadmap) telling the reader what the rest of the paper does, section by section.
 
 ### Title should state the finding
 
-A title that states a topic (`Returns and Trading Volume`) is weaker than a title that states a finding (`Trading Volume Predicts Future Returns Only in the Cross-Section`). The strongest titles carry the governing idea of the whole paper — the reader who reads only the title should already know the answer the paper delivers. Exceptions: survey papers, methodology papers where the method is the finding.
+A topic title (`Returns and Trading Volume`) is weaker than a finding title (`Trading Volume Predicts Future Returns Only in the Cross-Section`). The strongest titles carry the whole paper's governing idea — title-only readers already know the answer. Exceptions: survey papers, methodology papers where the method is the finding.
 
 ### Section-level anatomy
 
 **Introduction** (see above): Motivation → Gap → RAP (R → A → P or RPA) → Contribution → Roadmap.
 
-**Methods / Data:** Data sources named and cited → sample construction (filters, exclusions, time range) described in the order the reader would apply them → specification equation stated → identification strategy (for causal papers) stated as the question it answers ("why should you believe this estimate is causal?") → control variables listed with rationale → standard-error discipline stated (clustering level and why).
+**Methods / Data:** Sources named and cited → sample construction (filters, exclusions, time range) in the order the reader would apply them → specification equation → identification strategy (causal papers) stated as the question it answers ("why should you believe this estimate is causal?") → control variables with rationale → standard-error discipline (clustering level and why).
 
-**Results:** Main result first — the headline specification in the first table, with the coefficient of interest clearly labeled. Then robustness: sensitivity to sample, alternative specifications, alternative variable definitions. Each robustness check is introduced with the question it answers ("does this effect survive when we restrict to X?"). Do NOT bury the main finding behind five robustness tables.
+**Results:** Main result first — the headline specification in the first table, coefficient of interest clearly labeled. Then robustness: sensitivity to sample, alternative specifications, alternative variable definitions, each introduced with the question it answers ("does this effect survive when we restrict to X?"). Do NOT bury the main finding behind five robustness tables.
 
-**Conclusion:** Restate the research question and answer (not a new finding). State limitations honestly. Name the implication — for whom, and what follows next. Do NOT introduce new empirical findings in the conclusion (reviewers notice).
+**Conclusion:** Restate the research question and answer (not a new finding). State limitations honestly. Name the implication — for whom, and what follows next. Do NOT introduce new empirical findings (reviewers notice).
 
 **Abstract:** RAP in 150–200 words. R explicit. A with magnitude (not just sign). P in one sentence.
 
 ### "No mystery novel" — front-load
 
-Economics readers skim. The first sentence of each section should reveal what that section shows. The first sentence of the paper should reveal the finding. The abstract reveals the finding. The title reveals the finding where possible. Burying the point for dramatic effect is a readability failure, not a stylistic choice.
+Economics readers skim. The first sentence of each section reveals what that section shows; the paper's first sentence, the abstract, and where possible the title reveal the finding. Burying the point for dramatic effect is a readability failure, not a stylistic choice.
 
 ### Headings as reader-navigation
 
-Headings exist to help the reader find what they want (Chaubey p. 71), not to organize the writer's thoughts. Write headings + takeaways from the reader's perspective: "Firm size does not explain the return premium" (reader-facing takeaway) beats "Size controls" (writer-facing filing label).
+Headings help the reader find what they want (Chaubey p. 71), not organize the writer's thoughts. Write headings and takeaways from the reader's perspective: "Firm size does not explain the return premium" beats the filing label "Size controls".
 
-Subheadings should add *specifics* to the key words of the section heading (Chaubey p. 76) — not rename the same idea with different words. Key words are not key words if they are not used consistently across the paper (Chaubey p. 76).
+Subheadings add *specifics* to the section heading's key words (Chaubey p. 76) — not the same idea renamed. Key words are not key words unless used consistently across the paper.
 
 ### Chunking within sections
 
-Miller's 7±2 rule (Chaubey p. 20): a reader holds about 7 items in working memory at once. If a section has more than about 7 top-level points, chunk into subsections of ≤7 points each. "Flat lists of 15 things" invites the reader to remember none.
+Miller's 7±2 rule (Chaubey p. 20): a reader holds about 7 items in working memory. More than about 7 top-level points in a section → chunk into subsections of ≤7 each. Flat lists of 15 things invite the reader to remember none.
 
 ## Gated Checklist
 
-Walked top to bottom when the task drafts, restructures, or reviews structure. The rules are heuristics — apply them where they fix a real problem in the section being edited.
+Walked top to bottom when the task drafts, restructures, or reviews structure. Heuristics — apply where they fix a real problem in the section being edited.
 
 ### Governing idea + MECE
 

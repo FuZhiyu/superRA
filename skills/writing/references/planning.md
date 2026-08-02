@@ -2,15 +2,15 @@
 
 > Load at the PLAN phase when large writing work enters the superRA workflow: whole-section drafts, whole-paper revisions, R&R passes, or long-form / multi-lane review.
 
-Most writing work stays standalone. This reference only covers writing work large enough to need durable tasks, reviewer dispatch, or cross-session continuity.
+Covers writing work large enough to need durable tasks, reviewer dispatch, or cross-session continuity; most writing work stays standalone.
 
 ## Hard Gate
 
-Before task drafting, collect enough context to populate the writing header fields below. The gate passes when the researcher has approved the target, mode, review lanes or drafting scope, audience, build command, and disposition.
+Collect enough context before task drafting to populate the header fields below. The gate passes on researcher approval of target, mode, review lanes or drafting scope, audience, build command, and disposition.
 
 ## Writing Plan Header
 
-Add a writing-specific section to the `## Objective` of the governing ancestor task — the task whose subtree is the manuscript:
+Add to the `## Objective` of the governing ancestor task — the task whose subtree is the manuscript:
 
 ```markdown
 **Writing workflow:** <Review-only task tree | Draft / Polish workflow>
@@ -28,7 +28,7 @@ Add a writing-specific section to the `## Objective` of the governing ancestor t
 **Writing output:** <task-local ## Review Notes | edited manuscript | drafted section>
 ```
 
-Use only the rows that apply. For review-only trees, write this row exactly so downstream workflows can recognize the path:
+Use only the rows that apply. Review-only trees carry this row exactly, so downstream workflows recognize the path:
 
 ```markdown
 **Writing workflow:** Review-only task tree
@@ -40,10 +40,10 @@ Long-form review treats the user's existing draft as the artifact under review. 
 
 - one task per review lane or deep-review perspective;
 - each task points at the target file/section and loaded lane reference;
-- `status:` starts `not-started`, then reviewers set it to `revise` with task-local review notes or `approved`.
+- `status:` starts `not-started`; reviewers set `revise` with task-local review notes, or `approved`.
 
-This path uses superimplement for reviewer dispatch and status handling, not for implementer output production. It is a writing-owned exception: do not modify superimplement — enter with a task tree carrying the exact review-only row above, and treat task-local `## Review Notes` as the sole durable findings surface. Do not create a shared `review.md`, `RESULTS.md`, or equivalent findings file.
+This path uses superimplement for reviewer dispatch and status handling, not implementer output production — a writing-owned exception that does not modify superimplement. Enter with a task tree carrying the exact review-only row above, and treat task-local `## Review Notes` as the sole durable findings surface: no shared `review.md`, `RESULTS.md`, or equivalent findings file.
 
 ## Project Conventions
 
-Populate `## Project Conventions` with the writing-side conventions visible in the target, using the categories and acid tests in `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. Summarize durable project guidance here rather than duplicating it in task blocks.
+Populate `## Project Conventions` with the writing-side conventions visible in the target, per the categories and acid tests in `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. Summarize durable project guidance here rather than duplicating it in task blocks.

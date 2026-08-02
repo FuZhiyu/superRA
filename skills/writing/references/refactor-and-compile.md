@@ -2,23 +2,20 @@
 
 > Load when Polish, Draft, or Review mode performs (or verifies) a find-replace across a document, and for the post-edit build that ends every batch of edits. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
-This reference has two sections:
-
-- **§Refactor** — context-aware find-replace across a document (rename a variable, change a term of art, update a convention). Every refactor stays inside the requested scope and preserves substance and intent (`SKILL.md §Preserve substance, polish prose`).
-- **§Compile** — build commands per engine (LaTeX, Quarto, Pandoc, Markdown), warning triage heuristics, and error-escalation rules.
-
 ---
 
 ## §Refactor
 
-**Principle.** A find-replace across a document is cheap to run and expensive to get wrong. Naive substitution destroys text that looks similar to the target but means something different. The discipline is: **always preview, always confirm word-boundary, always check case and plural variants, always build after.**
+Context-aware find-replace across a document — rename a variable, change a term of art, update a convention — inside the requested scope, preserving substance and intent (`SKILL.md §Preserve substance, polish prose`).
+
+**Principle.** Find-replace is cheap to run and expensive to get wrong: naive substitution destroys text that looks like the target but means something else.
 
 ### The Four Always
 
-1. **Always preview matches first.** Before any substitution, run a read-only search (`grep -n`, editor find) and list every match. Review the list; mark each as *rename* or *leave*. Only after confirming the list do you run the substitution.
+1. **Always preview matches first.** Run a read-only search (`grep -n`, editor find), list every match, mark each *rename* or *leave*. Substitute only after confirming the list.
 2. **Always confirm word-boundary.** `estimate` matches inside `underestimate`, `estimates`, `estimator`, `estimation`. `Table` matches inside `acceptable`. Use `\b` (regex word boundary) or `-w` (grep whole-word) where the tool supports it.
 3. **Always check case variants.** `Treatment`, `treatment`, `TREATMENT` — the substitution may need all three, or exactly one. Decide explicitly.
-4. **Always check plural / inflection variants.** `treatment` vs `treatments`; `ran` vs `run` vs `running` — are they all in scope for the refactor? Often they are, but not always.
+4. **Always check plural / inflection variants.** `treatment` vs `treatments`; `ran` vs `run` vs `running` — often all in scope, not always.
 
 ### Worked examples of false-positive matches
 
@@ -35,33 +32,33 @@ This reference has two sections:
 
 ### Math-mode refactors
 
-Math-mode identifiers (`\beta`, `x_i`, `\mathbf{x}`) are especially trap-laden because:
+Math-mode identifiers (`\beta`, `x_i`, `\mathbf{x}`) are trap-laden:
 
-- The same letter in math mode and text mode are *different* (`\beta` in an equation vs `beta` in prose).
+- The same letter differs between math and text mode (`\beta` in an equation vs `beta` in prose).
 - Subscripts, superscripts, and decorators (`\hat`, `\tilde`, `\bar`) multiply the patterns.
-- A rename that changes `x` → `z` will match every `x` character in every equation — including equations where `x` is playing a different role.
+- Renaming `x` → `z` matches every `x` character in every equation — including equations where `x` plays a different role.
 
 Approach:
 
-1. Scope the refactor to math-mode only where possible (the tool may support `$...$` matching; if not, use explicit patterns).
+1. Scope to math-mode only where possible (the tool may support `$...$` matching; otherwise use explicit patterns).
 2. List every location first.
-3. Consider whether subscripted (`x_i`, `x_{i,t}`) and decorated (`\hat x`, `\bar x`) forms should all change. Usually yes.
+3. Decide whether subscripted (`x_i`, `x_{i,t}`) and decorated (`\hat x`, `\bar x`) forms all change. Usually yes.
 4. Build after.
 
 ### Terminology refactors (prose)
 
-When renaming a term of art (`treatment group` → `treated sample`):
+Renaming a term of art (`treatment group` → `treated sample`):
 
 - The new term must be a legitimate synonym *for this paper's audience*. Consult `writing/references/consistency/terminology.md`.
-- Check for plural, possessive, hyphenated, and capitalized variants.
-- Respect case and capitalization contextually — sentence-start capitalization vs mid-sentence.
-- If the old term appears in a direct quotation (block quote, citation), **do not substitute** — quotes are sacred.
+- Check plural, possessive, hyphenated, and capitalized variants.
+- Respect case contextually — sentence-start vs mid-sentence.
+- Old term inside a direct quotation (block quote, citation): **do not substitute** — quotes are sacred.
 
 ### After any refactor — verify
 
-- **Build the document.** See §Compile below. Errors introduced by the refactor block the refactor.
+- **Build the document** (§Compile). Errors introduced by the refactor block the refactor.
 - **Cross-reference check.** Any label, citation key, or bib key touched? See `writing/references/consistency/cross-references.md`.
-- **Diff review.** Read the git diff end-to-end. Every changed hunk should look intended.
+- **Diff review.** Read the git diff end-to-end; every hunk intended.
 
 ### Refactor Gated Checklist
 
@@ -75,7 +72,7 @@ When renaming a term of art (`treatment group` → `treated sample`):
 
 ## §Compile
 
-**Principle.** Every batch of edits ends with a build. Errors block completion; warnings are triaged. Errors that were not in the pre-edit build but appear in the post-edit build are the edit's responsibility.
+**Principle.** Every batch of edits ends with a build. Errors block completion; warnings are triaged. Errors absent from the pre-edit build but present after are the edit's responsibility.
 
 ### Build commands per engine
 
@@ -105,14 +102,14 @@ pandoc paper.md -o paper.pdf --filter pandoc-crossref --citeproc
 
 **Markdown (various)**
 
-For Markdown rendered via a static-site generator (MkDocs, Jekyll, Hugo, Zola), use the project's build command. There's no universal default.
+For Markdown rendered via a static-site generator (MkDocs, Jekyll, Hugo, Zola), use the project's build command. No universal default.
 
 ### Reading build output
 
 After any build, read the log:
 
-1. **Errors.** Halt the build. Must be fixed before completion.
-2. **Warnings.** Classified below. Triage each.
+1. **Errors.** Halt the build; fix before completion.
+2. **Warnings.** Triage each per the table below.
 3. **`??` in output.** Unresolved cross-references — treat as errors (see `writing/references/consistency/cross-references.md`).
 
 ### Warning triage heuristics
@@ -133,18 +130,18 @@ After any build, read the log:
 
 ### LaTeX-rendering hazards
 
-Failure modes the warning table above does not name explicitly:
+Failure modes the warning table does not name:
 
-- **Unescaped `%`, `&`, `#`, `_` in text mode.** A refactor that drops a literal `%` truncates the line at that point (LaTeX comment); literal `&`, `#`, `_` raise errors or shift alignment in tables. Escape as `\%`, `\&`, `\#`, `\_` outside math mode.
-- **Unclosed math-mode delimiters.** A missing `$`, `\)`, or `\]` cascades into many lines of misleading errors before LaTeX recovers. When the first error is "Missing $ inserted" or "Display math should end with $$", search for the unmatched delimiter near the cited line.
-- **Equation numbering gaps.** A `\label{eq:foo}` inside a starred environment (`equation*`, `align*`) or after `\nonumber` produces a `??` at every `\ref{eq:foo}` site — the label exists but has no number to print. Either remove the star/`\nonumber` or switch the reference to `\eqref` of a numbered sibling.
+- **Unescaped `%`, `&`, `#`, `_` in text mode.** A dropped literal `%` truncates the line from that point (LaTeX comment); literal `&`, `#`, `_` raise errors or shift table alignment. Escape as `\%`, `\&`, `\#`, `\_` outside math mode.
+- **Unclosed math-mode delimiters.** A missing `$`, `\)`, or `\]` cascades into many lines of misleading errors before LaTeX recovers. First error `Missing $ inserted` or `Display math should end with $$` → search for the unmatched delimiter near the cited line.
+- **Equation numbering gaps.** A `\label{eq:foo}` inside a starred environment (`equation*`, `align*`) or after `\nonumber` produces `??` at every `\ref{eq:foo}` site — the label exists with no number to print. Remove the star/`\nonumber`, or switch the reference to `\eqref` of a numbered sibling.
 
 ### Error-escalation rules
 
-- **Build errors introduced by the edit:** the edit is responsible. Fix before completion.
-- **Build errors already present before the edit (the document was already broken):** flag in the task or status return — this is usually an upstream issue (missing package, bad path); escalate to the researcher unless the edit should include the fix.
-- **Warnings newly introduced:** triage per table above. If `[BLOCKING]`-class, fix; otherwise report them in the task or status return.
-- **Warnings present before and after the edit:** note as pre-existing, do not touch unless the task scope includes build-hygiene.
+- **Errors introduced by the edit:** the edit is responsible. Fix before completion.
+- **Errors already present before the edit:** flag in the task or status return — usually upstream (missing package, bad path); escalate to the researcher unless the edit should include the fix.
+- **Warnings newly introduced:** triage per the table. `[BLOCKING]`-class, fix; otherwise report in the task or status return.
+- **Warnings present before and after:** note as pre-existing, leave alone unless task scope includes build hygiene.
 
 ### Build output record
 

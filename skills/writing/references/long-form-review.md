@@ -14,7 +14,7 @@ Review lanes are:
 
 ## Review Task Tree
 
-Long-form review treats the user's existing draft as the artifact under review. The orchestrator enters through the review-only task tree defined in `planning.md §Review Task Trees`, then dispatches reviewers through superimplement. One task per review lane or deep-review perspective; each task names the target file/section and the lane reference to load.
+Enter through the review-only task tree defined in `planning.md §Review Task Trees`, then dispatch reviewers through superimplement.
 
 ## Task Granularity
 
@@ -28,10 +28,10 @@ Long-form review treats the user's existing draft as the artifact under review. 
 
 Dispatch through `agent-orchestration`'s canonical reviewer template. Keep `Stage: implementation`; long-form review changes the artifact under review, not the superRA stage model.
 
-Reviewers write task-local review notes (not a shared findings section) and set `status: revise` or `approved`. Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format; language/style and structure reviewers use `review.md`'s finding format with `Fix:` per `review.md §Fix tiers`.
+Reviewers write task-local review notes and set `status: revise` or `approved`. Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format; language/style and structure reviewers use `review.md`'s finding format with `Fix:` per `review.md §Fix tiers`.
 
-Do not create a shared `review.md` or reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes on the manuscript-governing task.
+No shared `review.md`, no reviewer-of-reviewer pass over assembled findings. A needed summary is written by the orchestrator from current task-local review notes on the manuscript-governing task.
 
 ## Review-Time Indices
 
-Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section on the manuscript-governing task when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.
+`## Project Conventions` holds only durable convention choices covered by `SKILL.md §Project Conventions in the task tree / CLAUDE.md`. Review-time lookup aids go in a compact task-local note or a sibling section on the manuscript-governing task. Common indices: key terminology, figures and tables, cross-references, and notation pointers for the assigned lanes.
