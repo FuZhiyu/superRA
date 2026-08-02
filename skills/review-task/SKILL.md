@@ -29,7 +29,7 @@ Open `## Review Notes` with the tier and focuses you reviewed under, so the next
 
 **Verify from evidence.** Reproducing the work is often costly, so re-execute it only when something is off: a targeted spot check on a small subset when a specific value looks wrong, or a full rerun when the researcher approves one. When the committed evidence cannot support a claim, report an "evidence missing" finding — the implementer closes it by supplying evidence.
 
-For a bundle dispatch, run this protocol independently for each assigned task, writing `## Review Notes` and setting `status:` in each task file separately.
+For a bundle dispatch, run this protocol independently for each assigned task, writing `## Review Notes` and setting `status:` in each task file separately. Flag unclear task structure in your status return rather than inventing one.
 
 ## Findings
 
@@ -47,17 +47,6 @@ Two severities, and they are the same two the loaded skills' checklists use. Gra
 - **APPROVE** — no blocking findings. Set `status: approved`. Advisory items stay in `## Review Notes` for the orchestrator's deferred-fix pass; remove the section when it is empty, and remove `## Revision Notes` if present.
 - **REVISE** — one or more blocking findings. Set `status: revise`. Advisory findings alone never produce REVISE.
 
-## What You Own
-
-Within each assigned task's `task.md`:
-
-- **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`.
-- **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and at APPROVE remove the section once no advisory items remain.
-- **`## Revision Notes`** — remove the entire section at APPROVE. Its content is planner-owned; you only remove it.
-- **At `Stage: maturation` only** — when the dispatch requires the temporary refactoring task, create or revise that task, write its `## Objective`, and leave it `not-started`. In existing tasks, `## Objective` stays planner-owned even under this exception.
-
-Flag unclear task structure in your status return rather than inventing one.
-
 ## How You Write a Review
 
 **First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so on that item.
@@ -70,11 +59,11 @@ Flag unclear task structure in your status return rather than inventing one.
 
 ## Self-Check
 
-Before you commit: every material finding is written into `## Review Notes`; `## Review Notes` describes current issues only, blocking first; every file you edited is within §What You Own.
+Before you commit: every material finding is written into `## Review Notes`; `## Review Notes` describes current issues only, blocking first; you edited only the assigned task files, and only the `status:` field and sections this protocol names.
 
 ## Commit
 
-Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commit Hygiene:
+Stage assigned task files and, at `Stage: maturation`, the temporary refactoring task the dispatch requires, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format

@@ -92,7 +92,7 @@ Omit subsections that do not apply.
 
 ### Section Ownership
 
-Implementer and reviewer duties on `## Results` live in each role skill's §What You Own (`superRA:implement-task`, `superRA:review-task`); the orchestrator's parent-rollup and disposition duties live in `superimplement` and `superintegrate/references/mature-consolidate.md`. Beyond those: the planner creates `task.md` with an empty or placeholder `## Results`; a standalone author owns everything.
+Implementer and reviewer duties on `## Results` live in the role skills (`superRA:implement-task`, `superRA:review-task`); the orchestrator's parent-rollup and disposition duties live in `superimplement` and `superintegrate/references/mature-consolidate.md`. Beyond those: the planner creates `task.md` with an empty or placeholder `## Results`; a standalone author owns everything.
 
 Summaries riding higher than a leaf — monitoring rollups and the matured narrative — link down to leaf task files rather than copying every finding up the tree.
 
