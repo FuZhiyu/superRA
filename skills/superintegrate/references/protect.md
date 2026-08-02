@@ -1,6 +1,6 @@
 # Protect
 
-Protect decides what the permanent record contains and how each kept result is guarded, before agents write that record. Permanent results documentation is itself valid protection; add drift tests, document builds, or outline checks only where the researcher selects them. New protection artifacts are scoped to the tasks this integration reopens or changes.
+Protect decides what the permanent record contains and how each kept result is guarded, before agents write that record. Permanent results documentation is itself valid protection; add drift tests, document builds, outline checks, or other existing mechanisms only where the researcher selects them. New protection artifacts are scoped to the tasks this integration reopens or changes.
 
 Load `superplan/references/task-tree-design.md` and `superplan/references/consolidation.md` when forming the task-tree choices.
 
@@ -11,7 +11,7 @@ Load `superplan/references/task-tree-design.md` and `superplan/references/consol
    - which results to keep or drop;
    - the form and durable home of the final user-facing documentation and result files;
    - the durable task home and consolidation disposition per affected subtree;
-   - the protection mechanism per kept result: documentation alone, documentation plus a drift test, or another mechanism fitting the artifact.
+   - the protection mechanism per kept result: documentation alone, documentation plus a drift test, or another existing mechanism appropriate to the artifact.
 3. **Ask the researcher before permanent documentation is written**, with concrete options:
    ```text
    Proposed permanent record and protection:

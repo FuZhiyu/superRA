@@ -1,6 +1,6 @@
 # Sync
 
-Sync brings the branch onto the current base before permanent documentation and refactoring. A trivial sync (Step 3) lands inline as `integrate(sync): …` per `SKILL.md` §Stop Points; a non-trivial sync is serialized under its own `Stage: sync` — one generic sync author, then one generic sync reviewer, no parallelization.
+Sync brings the branch onto the current base before permanent documentation and refactoring. A trivial sync (Step 3) lands inline and commits as `integrate(sync): …` per `SKILL.md` §Stop Points; a non-trivial sync is dispatched under its own `Stage: sync`, commits under the `sync` stage verb, and is serialized — one generic sync author, then one generic sync reviewer, no parallelization.
 
 ## Step 1: Resolve the target base
 

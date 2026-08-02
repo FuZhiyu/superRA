@@ -13,7 +13,7 @@ Every dispatch costs a spawn — skill-load, context hydration, per-turn overhea
 
 ### Tier 1 — Small: main implementer seat
 
-The small-task structure in §Seat Assignment.
+Use the small-task structure in §Seat Assignment.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 
@@ -35,7 +35,14 @@ One agent owns one task. Use when the task needs deep context — cross-file gre
 
 ### Model Tier Selection
 
-Default to medium (Sonnet in Claude Code, medium thinking in Codex). Step up (Opus / deep thinking) when: the spec emerges mid-task rather than from the objective; silent-error risk is high (results-bearing code where a wrong output ships without obvious failure); the dispatch is a thorough-tier first-pass review (lower tiers over-comply — a narrow re-review of a cited fix stays medium); or heavy context synthesis reconciles many files/skills in one head. Fable is reserved for the most challenging, expensive tasks. Defaults, not rules — an explicit user preference wins.
+Default to medium — Sonnet in Claude Code, medium thinking in Codex. Step up to Opus / deep thinking when:
+
+- the spec emerges mid-task rather than from the objective;
+- silent-error risk is high — results-bearing code where a wrong output ships without obvious failure;
+- the dispatch is a thorough-tier first-pass review (lower tiers over-comply); a narrow re-review of a cited fix stays medium;
+- heavy context synthesis reconciles many files/skills in one head.
+
+Fable is reserved for the most challenging, expensive tasks. Defaults, not rules — an explicit user preference wins.
 
 ## Parallelization and Worktree Isolation
 
@@ -92,7 +99,7 @@ Main agent filling a seat: load that seat's role skill — `superRA:implement-ta
 
 ## Orchestrator Duties
 
-The orchestrator's alone, at every workflow stage:
+Done by the orchestrator alone, at every workflow stage:
 
 - **Task sequencing and dispatch inside the selected frontier.** The main agent picks the frontier; this skill sizes, bundles, and dispatches inside it.
 - **Adjudicate reviewer feedback in place** (§Handling Reviewer Feedback).
@@ -107,7 +114,7 @@ Adjudicate REVISE findings before forwarding them; read cited code or task conte
 - **Reject** false positives, removing them from `## Review Notes`.
 - **Escalate** findings that would materially change the direction of the task.
 
-**Schedule accepted fixes against the whole workflow.** The reviewer graded severity by effect on the task's result; you hold the workflow context, so you decide when each fix lands:
+**Schedule accepted fixes against the whole workflow** — the reviewer graded severity by effect on the task's result alone:
 
 - **Fix now** when the issue significantly affects downstream tasks. Redispatch implementer and reviewer, iterate to APPROVE before advancing the frontier. A tiny fix you can verify directly: apply or verify it and set `status: approved` inline. With warm agents and a small fix/re-review, steer the same agent rather than spawning fresh (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
 - **Defer** when the open items do not affect downstream work: findings stay in `## Review Notes`, the task stays at `revise`, move on. Tasks at `revise` are the deferral record — clear them in one bundled fix pass (§Workload Balancing Tier 2) and re-review to `approved` before the workflow's completion gate.
