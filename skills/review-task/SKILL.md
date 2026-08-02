@@ -17,8 +17,6 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 - **`Tier:`** — `quick` (default): what a careful read of the evidence surfaces. `thorough`: adds targeted verification — re-derive a number, open intermediate data, trace a value to its artifact.
 - **`Focus:`** — `correctness` (default). `scope-fidelity`: the objective's artifacts, neither narrowed nor widened. `results-writing`: `## Results` per `superRA:implement-task` §Reporting.
 
-Walk only the loaded gates that bear on your focuses and the operations the task performed.
-
 Open `## Review Notes` with tier and focuses, so the next reader knows what wasn't covered. A problem outside your focus that would invalidate the result is still a finding — report it, flag it as out of focus.
 
 ## Review Protocol
