@@ -15,7 +15,7 @@ Load only the reference for the protection mechanism in use:
 |---|---|
 | `references/drift-test-quality.md` | Writing, refreshing, or reviewing drift/regression tests for selected results. |
 
-Domain-specific drift-test references route through the active domain skill's stage-load table at the `protection` stage.
+Load any domain-specific drift-test reference per the active domain skill's stage-load table at the `protection` stage.
 
 ## Scope Gate
 

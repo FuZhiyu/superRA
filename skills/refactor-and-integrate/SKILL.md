@@ -113,7 +113,7 @@ The integration reviewer recomputes the same governing diff and compares it with
 
 **Handling inconsistencies:**
 
-- `[BLOCKING]` **Methodological questions escalated, not resolved.** Control variable sets, variable definitions, sample filters, equilibrium concepts, and normalization choices are research decisions.
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Diverging control variable sets, variable definitions, sample filters, equilibrium concepts, or normalization choices are research decisions.
 
 **Docs match the code:**
 

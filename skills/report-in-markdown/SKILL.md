@@ -79,7 +79,7 @@ The dashboard renders task markdown with `html: true` and sanitizes the result w
 - **`class` and `style` survive** — style inline with `style="..."`, or reach the dashboard CSS tokens (`var(--text)`, `var(--bg-alt)`, etc.) via `class`/`style` so a diagram themes with the page.
 - **Scripts, iframes, event handlers (`onclick=`, `onerror=`), and `javascript:` URLs are stripped.** Nothing interactive survives — build static layouts, not widgets.
 
-HTML-heavy content is **dashboard-first**: GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled there. Keep the meaning legible without the styling, or keep such content out of GitHub-read files.
+HTML-heavy content is **dashboard-first**: GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled on GitHub. Keep the meaning legible without the styling, or keep such content out of GitHub-read files.
 
 ## References
 

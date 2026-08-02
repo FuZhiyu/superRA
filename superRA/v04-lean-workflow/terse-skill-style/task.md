@@ -1,6 +1,6 @@
 ---
 title: "Terse Skill Style: Teachable Spec, Repo Sweep, Stage Coverage"
-status: revise
+status: in-progress
 depends_on: []
 ---
 
