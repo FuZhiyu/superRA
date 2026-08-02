@@ -17,7 +17,7 @@ Design contract for every subtask:
 - Interactive is the default execution mode; subagent mode runs on user request or agent recommendation — recommend with a one-line rationale, never silently switch.
 - Scope discipline: deliver what was asked at the scope intended unless the task is explicitly open-ended.
 - Task files are the primary documents and hold only what must be preserved; conversation carries deltas and pointers; possibly-relevant extras go to conversation first and enter the task file only if the researcher wants them.
-- Teach principles with an example or two, in the register they prescribe, placed where agents already are when the behavior applies — not enumerated rule catalogs.
+- Teach principles with an example or two, in the style they prescribe, placed where agents already are when the behavior applies — not enumerated rule catalogs.
 - Checklist recalibration collapses severities to blocking/advisory and deletes verification scaffolding; no "what not to flag" exclusion lists.
 - Out of scope for v0.4: rewriting the showcase/docs-site exemplars and hygiene cleanup of this repo's existing task files.
 

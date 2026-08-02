@@ -102,13 +102,13 @@ Three coherence layers, each with its own authority:
    - **Genuinely new** — names an object no prior surface has named; log a current-task ledger entry per Gate 1, candidate for promotion per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114).
    - **Local duplicate** — names an object an existing canonical or prior-task symbol already names → flag.
 2. **Prior-result pre-flight.** For each derived equation or named statement, search prior tasks for a name match (a prior lemma now re-derived under a different name) or a content match (a prior displayed equation algebraically equivalent under canonical notation) → flag if found.
-3. **Prose integration pass.** Re-read the section immediately preceding the new task's section and compare terminology, assumption phrasing, register, and notation usage. Style breaks at the join → flag.
+3. **Prose integration pass.** Re-read the section immediately preceding the new task's section and compare terminology, assumption phrasing, formality, and notation usage. Style breaks at the join → flag.
 
 ### Checklist
 
 - `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a Step 4 promotion candidate (per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114)). Local duplicates → REVISE — replace with the upstream symbol and document the rename if relevant.
 - `[BLOCKING]` **Prior-result pre-flight.** Equivalent equations and named statements established in prior tasks are cited and reused, not re-derived. Specializations of a prior result state the relationship explicitly ("Lemma 2.3 specialized to the symmetric case yields …").
-- `[BLOCKING]` **Prose-integration check.** Terminology, assumption phrasing, register, and notation conventions match the surrounding sections. Style breaks at section transitions are REVISE.
+- `[BLOCKING]` **Prose-integration check.** Terminology, assumption phrasing, formality, and notation conventions match the surrounding sections. Style breaks at section transitions are REVISE.
 - `[BLOCKING]` **Document-code consistency.** If the model feeds papers, slides, notes, or downstream artifacts in the repo, numerical and methodological inconsistencies between the refactored work and those artifacts are reconciled or flagged in the task's `## Results` when reconciliation is out of scope.
 
 ---

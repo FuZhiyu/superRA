@@ -141,6 +141,19 @@ Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contra
 - Add new skills only for distinct concerns. Prefer improving an owning skill when the concern already has an owner.
 - Update `skills/CATEGORIES.md`, `README.md`, and (for domain skills) the `using-superra` Skill-Load Manifest Domain table when adding, renaming, or removing skills.
 
+### Skill Prose Style
+
+Skill prose is terse. Writing or restyling a skill file is two passes, in order: the DRY/Necessity gate (§Teach the Protocol) deletes lines; then compress the survivors. The moves, from the accepted exemplars (`skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`):
+
+- **Bolded imperative + short elaboration.** The bold states the action; what follows sharpens it. No lead-in sentence before the imperative.
+- **Definition bullets over framing sentences.** Delete the sentence that announces a list ("Two dispatch fields set the pass:"); each bullet is `**term** — definition`, defaults inline: "`quick` (default): …".
+- **Condition as a noun phrase, colon, action fragments.** "Unclear task structure: flag in your return, don't invent one" — not "Flag unclear task structure in your return rather than inventing one."
+- **No rationale or derivation clauses.** State the action. Keep a purpose clause only when it changes what the agent produces ("…so the next reader knows what wasn't covered").
+- **Trust the earlier mention.** Second reference shortens: "keep the `→ implemented: ...` annotation" becomes "keep the annotation". Cut examples and parentheticals whose content an adjacent line already carries.
+- **Meaning survives verbatim.** Gates, enums, defaults, and ordering constraints keep their content exactly; compress only their wording.
+
+Measure the pass in words, not lines. Worked example: `daea6ae3..f525b63e` on `skills/review-task/SKILL.md` — the first commit restyled the surface and cut 12% of words; the accepted second pass cut another 18% by deleting whole clauses, with no protocol loss. A pass that barely moves the word count compressed connectives, not clauses — redo it.
+
 ## Codex and Harness Design
 
 - **Canonical instructions stay shared.** Workflow and role behavior both live in root `skills/`. Do not create Codex-only copies of shared behavior.

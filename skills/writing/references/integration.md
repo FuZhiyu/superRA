@@ -20,7 +20,7 @@ Quick extract:
 
 ### Gate 3 — Voice preserved across the full diff
 
-Sample three hunks at random from the cumulative branch diff. For each, read the edited prose against the original (`git diff`). Voice-drift signals: register shift (formal ↔ casual), diction substitution at scale, sentence-shape homogenization, hedging-style shift (`may` vs `might`), transition-word substitution. A consistent drift across the sampled hunks is blocking; isolated single-word drift is advisory.
+Sample three hunks at random from the cumulative branch diff. For each, read the edited prose against the original (`git diff`). Voice-drift signals: formality shift (formal ↔ casual), diction substitution at scale, sentence-shape homogenization, hedging-style shift (`may` vs `might`), transition-word substitution. A consistent drift across the sampled hunks is blocking; isolated single-word drift is advisory.
 
 ### Gate 4 — Scope respected
 

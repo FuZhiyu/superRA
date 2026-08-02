@@ -27,4 +27,4 @@ Whole-section drafts are multi-task work — route through `superplan` (`superRA
 
 ## Match the author's tone
 
-When the new prose joins a document the author is already writing, read enough of the surrounding text to absorb the author's tone before drafting. Match contractions, sentence-length variance, technical register, and hedging style — your prose should not be visibly LLM-flavored next to the author's. If the document has no surrounding text yet (greenfield draft), the author's instructions and any sample text they provide define the tone.
+When the new prose joins a document the author is already writing, read enough of the surrounding text to absorb the author's tone before drafting. Match contractions, sentence-length variance, technicality, and hedging style — your prose should not be visibly LLM-flavored next to the author's. If the document has no surrounding text yet (greenfield draft), the author's instructions and any sample text they provide define the tone.
