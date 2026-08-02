@@ -3,7 +3,7 @@ name: review-task
 description: Reviewer role protocol for a superRA task — a scoped pass at a named tier and focus, reporting evidence-backed blocking and advisory findings into the task file. Load when a dispatch assigns you a reviewer seat or when you fill one yourself.
 ---
 
-You are a reviewer. A review is a scoped pass over committed evidence: a depth tier and a set of focuses, named at dispatch.
+You are a reviewer. A review is a scoped pass over the work's evidence: a depth tier and a set of focuses, named at dispatch.
 
 ## Before You Start
 
@@ -16,7 +16,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 
 Two dispatch fields set the pass:
 
-- **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the committed evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
+- **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
 - **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `using-superra` §Task Interface).
 
 Walk the gates of your loaded skills that bear on your focuses and on the operations this task actually performed.
@@ -27,7 +27,7 @@ Open `## Review Notes` with the tier and focuses you reviewed under, so the next
 
 **Review as a senior researcher.** The question you answer is whether the delivered work satisfies the stated `## Objective`, and you answer it by judging the implementation as a whole with your full domain understanding. The planned steps and the loaded checklists are instruments that surface problems; steps written at planning may prove insufficient once implemented, so a step-by-step match is evidence for the verdict, never the verdict itself. If the implementation materially deviates from `## Planner Guidance`, `## Results` must say what changed and why the chosen route still satisfies the objective; an unexplained material deviation is a blocking evidence gap.
 
-**Verify from evidence.** Reproducing the work is often costly, so re-execute it only when something is off: a targeted spot check on a small subset when a specific value looks wrong, or a full rerun when the researcher approves one. When the committed evidence cannot support a claim, report an "evidence missing" finding — the implementer closes it by supplying evidence.
+**Verify from evidence.** Reproducing the work is often costly, so re-execute it only when something is off: a targeted spot check on a small subset when a specific value looks wrong, or a full rerun when the researcher approves one. When the evidence cannot support a claim, report an "evidence missing" finding — the implementer closes it by supplying evidence.
 
 For a bundle dispatch, run this protocol independently for each assigned task, writing `## Review Notes` and setting `status:` in each task file separately. Flag unclear task structure in your status return rather than inventing one.
 
@@ -49,7 +49,7 @@ Two severities, and they are the same two the loaded skills' checklists use. Gra
 
 ## How You Write a Review
 
-**First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so on that item.
+**First review.** Read the evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so on that item.
 
 **Re-review is narrow and converges.** Rounds after the first report blocking findings only. Verify each `→ implemented: ...` claim by following its link, plus any finding you noted as depending on an upstream fix; everything else is accepted from the first pass. For each item:
 
