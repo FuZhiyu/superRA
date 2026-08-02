@@ -3652,7 +3652,7 @@ class TestLocalOpen:
         """A link between attachments in a rendered companion also opens on the
         host; the raw /api/artifact href stays for modifier/middle clicks."""
         assert (
-            "a.setAttribute('data-open-path', rootRel + taskDirRel + artifactTarget);"
+            "a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));"
             in BASE_HTML
         )
 

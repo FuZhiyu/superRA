@@ -294,7 +294,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
                raw /api/artifact href stays for modifier/middle clicks. The
                resolver already decoded and normalized the target. */
             if (window.LOCAL_OPEN) {
-              a.setAttribute('data-open-path', rootRel + taskDirRel + artifactTarget);
+              a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
             }
           }
           return;
@@ -1146,10 +1146,11 @@ function openLocalPath(path, target) {
 }
 
 /* One delegated handler for every local-open control: the card-head button, the
-   header VS Code button, and body file links all carry data-open-path. A plain
-   left-click opens on the server's host; a modifier or middle click falls through
-   to the element's vscode:// href, so the browser's own "open elsewhere" gestures
-   still work. */
+   header VS Code button, body file links, attachment links, and the artifact
+   pane's Open button all carry data-open-path. A plain left-click opens on the
+   server's host; a modifier or middle click falls through to the element's own
+   vscode:// or /api/artifact href, so the browser's own "open elsewhere"
+   gestures still work. */
 document.addEventListener('click', function(e) {
   if (!window.LOCAL_OPEN) return;
   var el = (e.target && e.target.closest) ? e.target.closest('[data-open-path]') : null;
