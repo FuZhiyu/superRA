@@ -17,7 +17,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 Two dispatch fields set the pass:
 
 - **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the committed evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
-- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `using-superra` §Reporting).
+- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `superRA:implement-task` §Reporting in the Task File).
 
 Walk the gates of your loaded skills that bear on your focuses and on the operations this task actually performed — not every gate top to bottom.
 
@@ -81,7 +81,7 @@ Before you commit: every material finding is written into `## Review Notes`, not
 
 ## Commit
 
-Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commit Hygiene:
+Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commits:
 
 ```bash
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format

@@ -8,7 +8,7 @@ user-invocable: true
 
 Markdown mechanics for anything you write. Apply the rules below; load references only for figures or standalone-report IO.
 
-What to write and where each fact lives is the reporting contract in `superRA:using-superra` §Reporting.
+What to write and where each fact lives is the reporting contract in `superRA:implement-task` §Reporting in the Task File.
 
 ## File-reference rule
 

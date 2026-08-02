@@ -83,8 +83,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
-| Universal task read/edit interface — read a task with injected context, edit body sections, shared editing principles, ownership-boundary principle | `using-superra` (§Task Interface) |
-| Reporting contract — selection before writing, one home per fact, write-time point-over-copy, the conversation boundary, and the house citation/figure conventions | `using-superra` (§Reporting) |
+| Universal task read/edit interface — read a task with injected context, edit body sections, ownership-boundary principle | `using-superra` (§Task Interface); editing principles live in `implement-task` (§Reporting in the Task File) |
+| Reporting contract — pyramid structure, finding selection, one home per fact, and the house citation/figure conventions | `implement-task` (§Reporting in the Task File) |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
 | Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
@@ -108,7 +108,7 @@ What each agent loads in a session. This section documents the architecture for 
 | Load | When | Weight |
 |---|---|---|
 | `using-superra` + `references/main-agent.md` | session start (hook-reminded on any superRA mention) | Mandatory |
-| `report-in-markdown` | markdown mechanics beyond the house conventions in `using-superra` §Reporting; render-integrity hook feedback | On demand |
+| `report-in-markdown` | markdown mechanics beyond the house conventions in `implement-task` §Reporting in the Task File; render-integrity hook feedback | On demand |
 | Phase workflow skill (`superplan` / `superimplement` / `superintegrate`) | phase entry | Mandatory |
 | `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` is ungated — it instructs the load at its one dispatch point) | Mandatory when dispatching |
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |

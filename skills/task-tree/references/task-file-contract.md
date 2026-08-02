@@ -50,7 +50,7 @@ Results live in each task's `## Results` section. The same section matures throu
 
 ### Two-Stage Lifecycle
 
-- **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record, agent-facing. A line belongs in it only if a future reader needs it to use, reproduce, or trust the result — the inclusion test mirrors the objective's rejection test in `task-tree-design.md` §Writing Objectives and Planner Guidance. Everything else is omitted, and anything a linked artifact, commit, or upstream task already carries is pointed at rather than restated (`using-superra` §Reporting). Re-implementation replaces a task's results; it does not append history.
+- **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record, agent-facing. A line belongs in it only if a future reader needs it to use, reproduce, or trust the result — the inclusion test mirrors the objective's rejection test in `task-tree-design.md` §Writing Objectives and Planner Guidance. Detail that clears the test sits low in the pyramid or behind a link; detail that helps no reader is left out, and anything a linked artifact, commit, or upstream task already carries is pointed at rather than restated (`implement-task` §Reporting in the Task File). Re-implementation replaces a task's results; it does not append history.
 - **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects the results, documentation homes, consolidation dispositions, and protection mechanisms, create the user-facing documentation and result files first. Then distil each touched task's `## Results` to one of the dispositions below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. `superintegrate/references/mature-consolidate.md` owns the ordering and record verification.
 
 ### Maturation Disposition Menu
@@ -71,7 +71,7 @@ Most results are a few lines under `## Results` with no subsections at all. Add 
 
 | Subsection | Add when |
 |---|---|
-| `### Key Findings` | more than one finding — by the bar in `using-superra` §Reporting, a result the researcher would quote or act on — needs separating from the surrounding narrative |
+| `### Key Findings` | more than one finding — by the bar in `implement-task` §Reporting in the Task File, a result the researcher would quote or act on — needs separating from the surrounding narrative |
 | `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
 | `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
 | `### Notes` | a caveat, data quirk, or decision changes how the result is read |
