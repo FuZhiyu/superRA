@@ -13,7 +13,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from _task_io import LEGACY_TASK_ROOT_DIRNAME, TASK_ROOT_DIRNAME
+from _task_io import (
+    LEGACY_TASK_ROOT_DIRNAME,
+    TASK_ROOT_DIRNAME,
+    iter_child_task_dirs,
+)
 
 # Minimal frontmatter title extraction keeps discovery independent of full task
 # parsing.
@@ -154,16 +158,15 @@ def _parse_porcelain(output: str) -> list[dict[str, str]]:
 def _is_task_root(candidate: Path) -> bool:
     """True if *candidate* is a valid task root: it holds an umbrella ``task.md``
     (single tree) or at least one immediate child task dir (a rootless forest)."""
-    if (candidate / "task.md").is_file():
-        return True
-    try:
-        # Materialize inside the guard: `iterdir()` is lazy, so a missing/racing
-        # directory raises FileNotFoundError (an OSError) only on consumption,
-        # which would escape a bare `try` wrapping just the `iterdir()` call.
-        children = list(candidate.iterdir())
-    except OSError:
+    task_md = candidate / "task.md"
+    if candidate.is_symlink():
         return False
-    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+    if not task_md.is_symlink() and task_md.is_file():
+        return True
+    return any(
+        (child / "task.md").is_file()
+        for child in iter_child_task_dirs(candidate)
+    )
 
 
 def _find_plan_root(worktree_path: str, preferred_dirname: str) -> tuple[Path, str | None] | tuple[None, None]:

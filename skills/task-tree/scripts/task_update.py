@@ -13,6 +13,7 @@ from _task_io import (
     VALID_STATUSES,
     collect_all_tasks,
     compute_status,
+    iter_child_task_dirs,
     parse_task,
     propagate_parent_status,
     resolve_path,
@@ -95,10 +96,7 @@ def update_task(
     task = parse_task(task_md)
 
     # --- Cascade validation --------------------------------------------------
-    is_branch = any(
-        d.is_dir() and (d / "task.md").exists()
-        for d in task_dir.iterdir()
-    )
+    is_branch = bool(iter_child_task_dirs(task_dir))
 
     if cascade and status is None:
         print("Error: --cascade requires --status.", file=sys.stderr)

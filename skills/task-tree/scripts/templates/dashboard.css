@@ -1122,6 +1122,264 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }
 
+/* ── Task companion-file canvas ── */
+.artifact-event-sink { display: none; }
+
+/* Attachment navigation lives directly under its owning task row. It is
+   intentionally quieter than a task node: no status dot, badge, or task slug. */
+.attachment-branch {
+  margin: 2px 0 3px 24px;
+  border-left: 1px dashed var(--border);
+  padding-left: 8px;
+}
+.attachment-branch-toggle,
+.attachment-directory-row,
+.attachment-file-row {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.attachment-branch-toggle {
+  padding: 4px 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.attachment-branch-toggle:hover,
+.attachment-directory-row:hover,
+.attachment-file-row:hover { background: var(--bg-hover); }
+.attachment-branch-toggle:focus-visible,
+.attachment-directory-row:focus-visible,
+.attachment-file-row:focus-visible,
+.attachment-owner-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.attachment-branch-caret {
+  display: inline-block;
+  transition: transform 0.12s ease;
+}
+.attachment-branch.expanded .attachment-branch-caret { transform: rotate(90deg); }
+.attachment-branch-count {
+  margin-left: auto;
+  color: var(--text-mute);
+  font-weight: 400;
+}
+.attachment-tree-level {
+  margin: 0;
+  padding: 0 0 0 12px;
+  list-style: none;
+}
+.attachment-branch-children > .attachment-tree-level { padding-left: 2px; }
+.attachment-directory-label {
+  min-width: 0;
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+.attachment-directory-row {
+  padding: 3px 6px;
+}
+.attachment-directory-caret {
+  color: var(--text-mute);
+  transition: transform 0.12s ease;
+}
+.attachment-directory-row[aria-expanded="false"] .attachment-directory-caret {
+  transform: rotate(-90deg);
+}
+.attachment-file-row {
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+.attachment-file-row.nav-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.attachment-file-icon { color: var(--accent); }
+.attachment-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attachment-file-kind {
+  margin-left: auto;
+  color: var(--text-mute);
+  font-size: var(--fs-micro);
+  text-transform: lowercase;
+}
+.attachment-active-head .attachment-owner-action {
+  margin-left: auto;
+}
+.attachment-owner-action {
+  height: var(--control-h);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.attachment-owner-action:hover,
+.attachment-owner-action:focus { border-color: var(--accent); color: var(--accent); }
+.attachment-active-meta {
+  margin: 0 0 18px;
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+}
+.attachment-active-body {
+  min-height: 50vh;
+  font-size: var(--fs-body);
+}
+.attachment-active-body > pre {
+  padding: 18px 20px;
+  font-size: var(--fs-body);
+  line-height: 1.65;
+}
+.artifact-preview-body .hljs-keyword,
+.artifact-preview-body .hljs-literal,
+.artifact-preview-body .hljs-selector-tag { color: var(--hl-keyword); }
+.artifact-preview-body .hljs-string,
+.artifact-preview-body .hljs-regexp { color: var(--hl-string); }
+.artifact-preview-body .hljs-number { color: var(--hl-number); }
+.artifact-preview-body .hljs-comment,
+.artifact-preview-body .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.artifact-preview-body .hljs-function .hljs-title,
+.artifact-preview-body .hljs-title.function_ { color: var(--hl-function); }
+.artifact-preview-body .hljs-title,
+.artifact-preview-body .hljs-section { color: var(--hl-title); }
+.artifact-preview-body .hljs-type,
+.artifact-preview-body .hljs-title.class_ { color: var(--hl-type); }
+.artifact-preview-body .hljs-built_in,
+.artifact-preview-body .hljs-builtin-name { color: var(--hl-builtin); }
+.artifact-preview-body .hljs-meta { color: var(--hl-meta); }
+.artifact-preview-body .hljs-attr,
+.artifact-preview-body .hljs-attribute,
+.artifact-preview-body .hljs-property { color: var(--hl-attr); }
+.artifact-preview-body .hljs-symbol,
+.artifact-preview-body .hljs-variable,
+.artifact-preview-body .hljs-operator { color: var(--hl-symbol); }
+.artifact-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.artifact-action {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  padding: 3px 7px;
+  font: inherit;
+  font-size: var(--fs-micro);
+  text-decoration: none;
+  cursor: pointer;
+}
+.artifact-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.artifact-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.artifact-action-disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.artifact-state,
+.artifact-preview-prompt {
+  padding: 12px;
+  border-radius: 6px;
+  color: var(--text-mute);
+  background: var(--bg-alt);
+}
+.artifact-state-warning {
+  margin-top: 12px;
+  color: var(--st-impl-t);
+  background: var(--st-impl);
+}
+.artifact-state-unavailable { color: var(--st-rev-t); background: var(--st-rev); }
+.artifact-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.artifact-preview-head h3 {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: var(--fs-emph);
+  color: var(--text);
+}
+.artifact-preview-body { min-width: 0; }
+.artifact-preview-body > pre,
+.nb-input > pre,
+.nb-output > pre,
+.nb-raw-cell {
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--border-lt);
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 4;
+}
+.artifact-image-preview,
+.nb-image-output,
+.nb-svg-output svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+.artifact-pdf-preview {
+  width: 100%;
+  min-height: 65vh;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
+.artifact-markdown-preview { padding-top: 0; }
+.notebook-preview .nb-cell {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-lt);
+}
+.notebook-preview .nb-cell:first-child { border-top: 0; padding-top: 0; }
+.notebook-preview .nb-output { margin-top: 8px; }
+.nb-error-output { color: var(--st-rev-t) !important; }
+.nb-unsupported-output {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--st-impl-t);
+  background: var(--st-impl);
+  color: var(--st-impl-t);
+  font-size: var(--fs-meta);
+}
+.nb-raw-cell { white-space: pre-wrap; }
+
 /* ── Children subtask cards (flat grid + layered dependency flow) ── */
 .children-dag { margin-top: 26px; }
 .children-dag:empty { margin-top: 0; }

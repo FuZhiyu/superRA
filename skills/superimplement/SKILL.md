@@ -104,11 +104,12 @@ After every task is `approved`, verify the work end-to-end before presenting com
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding. Figure attachments in each task's `attachments/` directory are committed.
+2. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding.
 
 3. **Reproducibility verification.**
    - Multi-script pipeline runs end-to-end if the task tree declares one.
    - Outputs exist and were generated from committed code, not ad-hoc REPL state.
+   - Retained task companions are committed and pass `../using-superra/references/task-companion-files.md`.
 
 4. **Deferred MINORs resolved?** Check task `## Review Notes` sections for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in the relevant task's `## Results`.
 

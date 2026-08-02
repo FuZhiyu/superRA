@@ -9,7 +9,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, parse_frontmatter, serialize_frontmatter
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    iter_task_markdown_files,
+    parse_frontmatter,
+    serialize_frontmatter,
+)
 
 
 TASK_BLOCK_RE = re.compile(
@@ -398,7 +403,7 @@ def upgrade_v1_to_v2(plan_root: Path) -> list[Path]:
     """
     modified: list[Path] = []
 
-    for task_md in sorted(plan_root.rglob("task.md")):
+    for task_md in iter_task_markdown_files(plan_root):
         text = task_md.read_text(encoding="utf-8")
         fm, body = parse_frontmatter(text)
 
@@ -448,7 +453,7 @@ def upgrade_status(plan_root: Path, dry_run: bool = False) -> list[Path]:
     """
     modified: list[Path] = []
 
-    for task_md in sorted(plan_root.rglob("task.md")):
+    for task_md in iter_task_markdown_files(plan_root):
         text = task_md.read_text(encoding="utf-8")
         fm, body = parse_frontmatter(text)
 

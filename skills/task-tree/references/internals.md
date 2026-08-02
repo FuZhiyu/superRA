@@ -265,12 +265,15 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 
 **On-demand export.** A static `dashboard.html` is produced only by an explicit `superra dashboard export` (including the GitHub Actions workflow above) — neither the mutation scripts nor the PostToolUse hook write it. For interactive viewing, the live SSE server renders on demand without ever writing a file.
 
+**Attachment data path.** `_task_io.py` owns the structural rule that every task scan and task-path mutation treats `attachments/` as opaque and rejects symlinked task directories, `task.md` files, and task-path components before parsing or writing; migrations consume its structural task-file iterator instead of recursive globs. `_artifacts.py` owns task-scoped attachment discovery, containment, MIME/preview classification, watcher ownership, and standalone packing. Direct files beside `task.md` are neither listed nor readable through this API. Live clients list with `/api/artifacts?task=<path>` and read with `/api/artifact?task=<path>&path=attachments/<relative-path>`; `download=true` forces attachment disposition. Default ceilings are 512 returned files, 256 KiB of manifest metadata, and 4,096 visited directory entries per task, 2 MiB per live preview, 2 MiB per standalone file, and 20 MiB total raw standalone bytes. Manifests name truncation and export-omission reasons; exports include a commit-pinned repository URL when the caller supplies one.
+
 ## Script Inventory
 
 **Data layer (not invoked directly):**
 
 | Script | Purpose |
 |---|---|
+| `_artifacts.py` | Task-companion discovery, secure resolution, watcher ownership, MIME classification, and bounded standalone packing |
 | `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
 | `_task_validate.py` | Validation suite — one owner per validity rule, single message source |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
@@ -305,5 +308,6 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | `test_cli.py` | `cli.py` command surface — argument parsing, routing, end-to-end command flows |
 | `test_multi_worktree.py` | Multi-worktree forest detection and per-worktree task-root resolution |
 | `test_worktree_selector.py` | Worktree selector UI and live refresh |
+| `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

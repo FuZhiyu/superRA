@@ -26,6 +26,7 @@
 <script>{{ standalone_assets.hljs_js | safe }}</script>
 <script>{{ standalone_assets.hljs_julia_js | safe }}</script>
 <script>{{ standalone_assets.purify_js | safe }}</script>
+<script>{{ standalone_assets.notebook_js | safe }}</script>
 {% else %}
 {# Live mode: every render library is served from this process's own
    /static/{name} route (vendored under vendor/, see vendor/README.md) instead
@@ -41,6 +42,7 @@
 <script src="/static/highlight.min.js"></script>
 <script src="/static/languages/julia.min.js"></script>
 <script src="/static/purify.min.js"></script>
+<script src="/static/notebook.min.js"></script>
 {% endif %}
 {% if standalone %}
 <style>{{ standalone_assets.dashboard_css | safe }}</style>
@@ -219,6 +221,11 @@ var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
    file. The key matches the string the img[src] loop computes (taskPath + '/'
    + src, or bare src for the root body). #}
 var STANDALONE_IMAGES = {{ standalone_images | tojson }};
+{# Bounded attachment manifests and base64 payloads for the tree and reading pane. Each file
+   records whether bytes are embedded, reused from STANDALONE_IMAGES, or omitted
+   by a named budget; a commit-pinned repo fallback is included when the export
+   caller supplied REPO_FILE_BASE. #}
+var STANDALONE_ARTIFACTS = {{ standalone_artifacts | tojson }};
 {% endif %}
 {# Doc-mode: render this tree as documentation rather than a task tracker; this
    flag gates the one piece built in JS — the active-node head badge. Strictly

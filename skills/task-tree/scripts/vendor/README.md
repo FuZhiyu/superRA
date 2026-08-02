@@ -2,7 +2,7 @@
 
 These files are served locally in both dashboard modes, so no render library is fetched from a CDN. The live `serve` path exposes them at `GET /static/{name}` (`_VENDOR_ASSET_TYPES` in `plan_dashboard.py`); `plan_dashboard.py` also reads them at **export build time** and inlines them into the standalone single-file dashboard (`_build_standalone_assets`), so both a live session and a downloaded/offline export render markdown, math, and syntax-highlighted code with zero render-library network calls. Google Fonts stays CDN-loaded (`base.html` head) — the one permitted fetch; its absence only degrades typography (system-font fallback).
 
-The pinned versions match the CDN tags formerly in `templates/base.html`, now mirrored by the vendored file names (`markdown-it@14`, `katex@0.16`, `markdown-it-texmath@1`, `@highlightjs/cdn-assets@11`, `dompurify@3`, `htmx.org@2`, `htmx-ext-sse@2`). The markdown/math CDN tags resolved to the exact versions below on 2026-06-01; the highlight.js tag resolved on 2026-06-11; the dompurify tag resolved on 2026-06-15; the htmx/sse tags resolved on 2026-07-19.
+The pinned versions match the CDN tags formerly in `templates/base.html`, now mirrored by the vendored file names (`markdown-it@14`, `katex@0.16`, `markdown-it-texmath@1`, `@highlightjs/cdn-assets@11`, `dompurify@3`, `htmx.org@2`, `htmx-ext-sse@2`). `notebookjs@0.8.3` supplies the static notebook DOM model used by the task-file canvas. The markdown/math CDN tags resolved to the exact versions below on 2026-06-01; the highlight.js tag resolved on 2026-06-11; the dompurify tag resolved on 2026-06-15; the htmx/sse tags resolved on 2026-07-19; notebookjs resolved on 2026-07-25.
 
 ## Pinned versions and sources
 
@@ -14,6 +14,7 @@ The pinned versions match the CDN tags formerly in `templates/base.html`, now mi
 | `texmath.min.js` | markdown-it-texmath | 1.0.0 | `https://cdn.jsdelivr.net/npm/markdown-it-texmath@1.0.0/texmath.min.js` |
 | `highlight.min.js` | @highlightjs/cdn-assets | 11.11.1 | `https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/highlight.min.js` |
 | `languages/julia.min.js` | @highlightjs/cdn-assets | 11.11.1 | `https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/languages/julia.min.js` |
+| `notebook.min.js` | notebookjs | 0.8.3 | `https://cdn.jsdelivr.net/npm/notebookjs@0.8.3/notebook.min.js` |
 | `purify.min.js` | dompurify | 3.4.10 | `https://cdn.jsdelivr.net/npm/dompurify@3.4.10/dist/purify.min.js` |
 | `htmx.min.js` | htmx.org | 2.0.10 | `https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js` |
 | `sse.js` | htmx-ext-sse | 2.2.4 | `https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4/sse.js` |
@@ -25,6 +26,8 @@ The 20 `fonts/KaTeX_*.woff2` files are every font `katex.min.css` references via
 
 `highlight.min.js` is the highlight.js "common" bundle (36 languages, covering bash/shell, python, yaml, markdown, json among the doc/task content). It does **not** include Julia, so `languages/julia.min.js` is vendored alongside it; loaded after the bundle, that module registers Julia onto the global `hljs`. Highlight colors are theme-driven CSS (`--hl-*` tokens in `base.html`), so no highlight.js theme stylesheet is vendored. To extend language coverage, vendor more `languages/<lang>.min.js` modules from the same CDN path and load each after the bundle.
 
+`notebook.min.js` is notebookjs's browser build. Dashboard code keeps its `executeJavaScript` flag false and replaces its cell/output renderers with the existing markdown-it, KaTeX, Highlight.js, and DOMPurify boundary. The adapter supports the common static notebook subset and emits an explicit fallback for active or unknown MIME types.
+
 ## SHA-256 (top-level files)
 
 ```
@@ -34,6 +37,7 @@ a29d2961d3146de5949d78ac7c1a9d93ae54955bad22a6db4fbe836e88e8bf48  katex.min.js
 b01b706e6d23e8270a55228fdba35b557127b6f2af5b4c23ca22b15bdbd1c09d  texmath.min.js
 c4a399dd6f488bc97a3546e3476747b3e714c99c57b9473154c6fb8d259b9381  highlight.min.js
 03330298d96dc711b8f66fc8075ff4a1ab9f830a87c5c6c9ae0503733ba99da4  languages/julia.min.js
+673b1916c250d2093c8c8920e5503348a2283ef67d6ad429f0b0dc6c98f7c115  notebook.min.js
 9aca84b86a0c35926d47994f354b37116044aab0aac9874f35a44322a5c96565  purify.min.js
 71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de  htmx.min.js
 3b5992a541619babefc4c169505af474df5c3039da51e59b96ccf9241ecd61d2  sse.js
@@ -50,6 +54,7 @@ curl -sL "https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"            
 curl -sL "https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css"               -o "$DST/katex.min.css"
 curl -sL "https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"        -o "$DST/texmath.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js" -o "$DST/highlight.min.js"
+curl -sL "https://cdn.jsdelivr.net/npm/notebookjs@0.8.3/notebook.min.js"              -o "$DST/notebook.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"             -o "$DST/purify.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"                -o "$DST/htmx.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"                      -o "$DST/sse.js"

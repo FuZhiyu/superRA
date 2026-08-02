@@ -42,7 +42,17 @@ from urllib.parse import quote
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _task_io import TASK_ROOT_DIRNAME, Task, _walk_children, collect_all_tasks, parse_task, walk_plan
+import _artifacts as artifacts
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    Task,
+    _walk_children,
+    collect_all_tasks,
+    has_symlink_task_component,
+    is_opaque_task_path,
+    parse_task,
+    walk_plan,
+)
 from _worktree_discovery import (
     _parse_plan_title,
     discover_worktrees,
@@ -226,6 +236,11 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
     the caller to broadcast a full-reload instead of a single-task fragment.
     """
     task_dir = state.plan_root / task_path if task_path else state.plan_root
+    if (
+        is_opaque_task_path(task_dir, state.plan_root)
+        or has_symlink_task_component(task_dir, state.plan_root)
+    ):
+        return None, False
     task_md = task_dir / "task.md"
     if not task_md.exists():
         state.task_index.pop(task_path, None)
@@ -376,10 +391,18 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     # Paths of tasks whose parent needs re-rendering (structural changes)
     structural_parent_paths: set[str] = set()
     changed_paths: set[str] = set()
+    artifact_changed_paths: set[str] = set()
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
         name = fp.name
+
+        artifact_owner = artifacts.artifact_owner_for_change(
+            state.plan_root, state.task_index, fp
+        )
+        if artifact_owner is not None:
+            artifact_changed_paths.add(artifact_owner)
+            continue
 
         if name not in ("task.md", "comments.yaml"):
             continue
@@ -446,6 +469,22 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         if content_paths and state.root_task is not None:
             summary_html = _render_summary(state.root_task)
             await _broadcast("summary-updated", summary_html, state.wt_id)
+
+    # Companion changes never rebuild the task tree or active card. Emit one
+    # bounded, current manifest for each owner so a Files view can refresh only
+    # that task while hash/navigation/fold/scroll/worktree state stays untouched.
+    for task_path in sorted(artifact_changed_paths):
+        owner = _find_task(state, task_path)
+        if owner is None:
+            continue
+        manifest = await asyncio.to_thread(
+            artifacts.build_manifest, state.plan_root, owner
+        )
+        await _broadcast(
+            f"artifacts:{task_path}",
+            json.dumps(manifest, separators=(",", ":")),
+            state.wt_id,
+        )
 
 
 def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
@@ -1098,6 +1137,7 @@ _VENDOR_ASSET_TYPES = {
     "texmath.min.js": "text/javascript; charset=utf-8",
     "highlight.min.js": "text/javascript; charset=utf-8",
     "languages/julia.min.js": "text/javascript; charset=utf-8",
+    "notebook.min.js": "text/javascript; charset=utf-8",
     "purify.min.js": "text/javascript; charset=utf-8",
     **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
 }
@@ -1319,6 +1359,127 @@ async def search_index(request: Request):
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     all_tasks = collect_all_tasks(state.root_task)
     return _build_search_index(state.root_task, all_tasks)
+
+
+# --- Companion-file routes -------------------------------------------------
+# Query parameters keep the owning task and artifact path explicit instead of
+# adding another greedy catch-all route beside /nav/{path} and /node/{path}.
+
+def _raise_artifact_http_error(exc: Exception) -> None:
+    if isinstance(exc, artifacts.ArtifactSecurityError):
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    if isinstance(exc, artifacts.ArtifactPathError):
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if isinstance(exc, FileNotFoundError):
+        raise HTTPException(status_code=404, detail="Artifact not found") from exc
+    raise exc
+
+
+@app.get("/api/artifacts")
+async def artifact_manifest(request: Request, task: str = ""):
+    """Return the bounded companion manifest for one task in the selected worktree."""
+    state = await resolve_worktree(request)
+    owner = _find_task(state, task)
+    if owner is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {task}")
+    manifest = await asyncio.to_thread(
+        artifacts.build_manifest, state.plan_root, owner
+    )
+    if manifest.get("unavailable_reason"):
+        raise HTTPException(status_code=404, detail="Task has no artifact workspace")
+    return manifest
+
+
+@app.get("/api/artifact")
+async def artifact_content(
+    request: Request,
+    task: str = "",
+    path: str = "",
+    download: bool = False,
+):
+    """Preview or download one companion from its owning task and worktree."""
+    state = await resolve_worktree(request)
+    owner = _find_task(state, task)
+    if owner is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {task}")
+    try:
+        resolved = await asyncio.to_thread(
+            artifacts.resolve_artifact, state.plan_root, owner, path
+        )
+        item = artifacts.describe_resolved(resolved, path)
+    except (
+        artifacts.ArtifactPathError,
+        artifacts.ArtifactSecurityError,
+        FileNotFoundError,
+    ) as exc:
+        _raise_artifact_http_error(exc)
+        raise AssertionError("unreachable")
+
+    if not download and not item.download_only and not item.previewable:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "reason": "preview-byte-limit",
+                "size": item.size,
+                "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
+            },
+        )
+
+    as_download = download or item.download_only
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+    }
+    if not as_download:
+        try:
+            raw = await asyncio.to_thread(
+                artifacts.read_artifact_bytes,
+                state.plan_root,
+                owner,
+                path,
+                max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
+            )
+        except artifacts.ArtifactTooLargeError as exc:
+            raise HTTPException(
+                status_code=413,
+                detail={
+                    "reason": "preview-byte-limit",
+                    "size": item.size,
+                    "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
+                },
+            ) from exc
+        except (
+            artifacts.ArtifactSecurityError,
+            FileNotFoundError,
+        ) as exc:
+            _raise_artifact_http_error(exc)
+            raise AssertionError("unreachable")
+        headers["Content-Disposition"] = (
+            f"inline; filename*=UTF-8''{quote(item.name, safe='')}"
+        )
+        return Response(content=raw, media_type=item.mime, headers=headers)
+
+    try:
+        handle = await asyncio.to_thread(
+            artifacts.open_artifact_file,
+            state.plan_root,
+            owner,
+            path,
+        )
+    except (
+        artifacts.ArtifactSecurityError,
+        FileNotFoundError,
+    ) as exc:
+        _raise_artifact_http_error(exc)
+        raise AssertionError("unreachable")
+    headers["Content-Disposition"] = (
+        f"attachment; filename*=UTF-8''{quote(item.name, safe='')}"
+    )
+    return StreamingResponse(
+        artifacts.iter_artifact_file(handle),
+        media_type=item.mime,
+        headers=headers,
+    )
 
 
 @app.post("/api/task/{path:path}/comment")
@@ -1704,7 +1865,10 @@ def _is_embeddable_src(src: str) -> bool:
     )
 
 
-def _build_standalone_images(scoped_root: Task) -> dict[str, str]:
+def _build_standalone_images(
+    scoped_root: Task,
+    plan_root: Path | None = None,
+) -> dict[str, str]:
     """Build the ``{ client-key: data-URI }`` map the standalone ``img[src]`` loop
     consults before its relative-path fallback.
 
@@ -1729,18 +1893,93 @@ def _build_standalone_images(scoped_root: Task) -> dict[str, str]:
             key = f"{task.path}/{src}" if task.path else src
             if key in images:
                 continue
-            ext = Path(src.split("?", 1)[0].split("#", 1)[0]).suffix.lower()
+            clean = src.split("?", 1)[0].split("#", 1)[0]
+            ext = Path(clean).suffix.lower()
             mime = _IMG_MIME.get(ext)
             if mime is None:
                 continue
-            img_path = (task.dir_path / src).resolve()
-            try:
-                raw = img_path.read_bytes()
-            except OSError:
-                continue
+            parts = Path(clean).parts
+            if (
+                plan_root is not None
+                and parts
+                and parts[0] == "attachments"
+            ):
+                try:
+                    artifacts.resolve_artifact(plan_root, task, clean)
+                    with artifacts.open_artifact_file(
+                        plan_root,
+                        task,
+                        clean,
+                    ) as handle:
+                        raw = handle.read()
+                except (
+                    OSError,
+                    artifacts.ArtifactPathError,
+                    artifacts.ArtifactSecurityError,
+                ):
+                    continue
+            else:
+                raw_path = task.dir_path / clean
+                img_path = raw_path.resolve()
+                if plan_root is not None:
+                    project_root = plan_root.resolve().parent
+                    if not img_path.is_relative_to(project_root):
+                        continue
+                    try:
+                        rel_parts = raw_path.absolute().relative_to(project_root.absolute()).parts
+                    except ValueError:
+                        continue
+                    try:
+                        with artifacts.open_regular_file_nofollow(
+                            project_root, rel_parts
+                        ) as handle:
+                            raw = handle.read()
+                    except (OSError, artifacts.ArtifactSecurityError):
+                        continue
+                else:
+                    try:
+                        raw = img_path.read_bytes()
+                    except OSError:
+                        continue
             b64 = base64.b64encode(raw).decode("ascii")
             images[key] = f"data:{mime};base64,{b64}"
     return images
+
+
+def _standalone_image_artifact_keys(
+    plan_root: Path,
+    scoped_root: Task,
+    standalone_images: dict[str, str],
+) -> dict[tuple[str, str], str]:
+    """Map exported companion images to their existing ``STANDALONE_IMAGES`` key.
+
+    Reusing that data URI keeps a task-body figure and its Files-view entry from
+    embedding the same bytes twice. Non-companion project figures are left to
+    the existing image path unchanged.
+    """
+    keys: dict[tuple[str, str], str] = {}
+    for task in [scoped_root, *collect_all_tasks(scoped_root)]:
+        if not task.body:
+            continue
+        for src in _iter_body_image_srcs(task.body):
+            if not _is_embeddable_src(src):
+                continue
+            clean = src.split("?", 1)[0].split("#", 1)[0]
+            try:
+                resolved = artifacts.resolve_artifact(plan_root, task, clean)
+                relative = resolved.relative_to(task.dir_path.resolve()).as_posix()
+            except (
+                OSError,
+                ValueError,
+                artifacts.ArtifactPathError,
+                artifacts.ArtifactSecurityError,
+            ):
+                continue
+            client_key = f"{task.path}/{src}" if task.path else src
+            if client_key not in standalone_images:
+                continue
+            keys.setdefault((task.path, relative), client_key)
+    return keys
 
 
 # KaTeX @font-face blocks reference woff2 (and woff/ttf fallbacks) via url(...);
@@ -1784,8 +2023,8 @@ def _build_standalone_assets() -> dict[str, str]:
     serves them, standalone inlines them).
 
     Returns ``htmx_js`` / ``sse_js`` / ``markdown_it_js`` / ``katex_js`` /
-    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``purify_js`` /
-    ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
+    ``texmath_js`` / ``hljs_js`` / ``hljs_julia_js`` / ``notebook_js`` /
+    ``purify_js`` / ``dashboard_js`` (raw JS, emitted as inline ``<script>`` bodies) and
     ``katex_css`` / ``dashboard_css`` (raw CSS, emitted as inline ``<style>``
     bodies; ``katex_css`` additionally has every ``@font-face`` rewritten to a
     base64 woff2 ``data:`` URI).
@@ -1810,6 +2049,7 @@ def _build_standalone_assets() -> dict[str, str]:
         "texmath_js": _read_js(_VENDOR_DIR, "texmath.min.js"),
         "hljs_js": _read_js(_VENDOR_DIR, "highlight.min.js"),
         "hljs_julia_js": _read_js(_VENDOR_DIR, "languages/julia.min.js"),
+        "notebook_js": _read_js(_VENDOR_DIR, "notebook.min.js"),
         "purify_js": _read_js(_VENDOR_DIR, "purify.min.js"),
         "dashboard_js": _read_js(_TEMPLATES_DIR, "dashboard.js"),
         "katex_css": katex_css,
@@ -1930,7 +2170,20 @@ def render_standalone_html(
 
     # Figures: a { client-key -> data-URI } map the standalone img loop consults
     # before its relative-path fallback, so figures survive a moved/offline file.
-    standalone_images = _build_standalone_images(scoped_root)
+    standalone_images = _build_standalone_images(scoped_root, plan_root)
+    standalone_artifacts = artifacts.build_standalone_artifacts(
+        plan_root,
+        scoped_root,
+        repo_file_base=repo_file_base,
+        repo_root_prefix=repo_root_prefix.strip("/") or plan_root.resolve().name,
+        image_artifact_keys=_standalone_image_artifact_keys(
+            plan_root,
+            scoped_root,
+            standalone_images,
+        ),
+    )
+    for task_path, manifest in standalone_artifacts["manifests"].items():
+        fragments[f"/api/artifacts?task={task_path}"] = manifest
     # Render libraries: inlined JS/CSS read from the vendored files (font-inlined
     # KaTeX CSS), emitted in standalone mode instead of the CDN tags.
     standalone_assets = _build_standalone_assets()
@@ -1954,6 +2207,7 @@ def render_standalone_html(
         standalone_fragments=fragments,
         standalone_plan_dir=standalone_plan_dir,
         standalone_images=standalone_images,
+        standalone_artifacts=standalone_artifacts,
         standalone_assets=standalone_assets,
         repo_file_base=repo_file_base.rstrip("/"),
         repo_root_prefix=repo_root_prefix.strip("/"),

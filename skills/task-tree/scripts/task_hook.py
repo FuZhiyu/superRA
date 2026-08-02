@@ -225,7 +225,11 @@ def _command_mentions_task_root(command: str) -> bool:
 _MV_RE = re.compile(r"(?:^|[\s;&|(])(?:git\s+mv|mv)(\s+.*)$")
 
 
-def _detect_same_parent_rename(command: str, cwd: Path) -> tuple[Path, str, str] | None:
+def _detect_same_parent_rename(
+    command: str,
+    cwd: Path,
+    task_io,
+) -> tuple[Path, str, str] | None:
     """Return (parent_dir, old_slug, new_slug) for a same-parent task rename.
 
     Detects the lossless case `mv superRA/a/x superRA/a/y` (or `git mv`): a
@@ -270,6 +274,13 @@ def _detect_same_parent_rename(command: str, cwd: Path) -> tuple[Path, str, str]
     parts = parent.parts
     if not any(p in TASK_ROOT_DIRNAMES or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.")
                for p in parts):
+        return None
+    plan_root = task_io._find_plan_root(parent)
+    if (
+        plan_root is None
+        or task_io.is_opaque_task_path(parent, plan_root)
+        or task_io.has_symlink_task_component(parent, plan_root)
+    ):
         return None
     # The renamed directory must itself be a task (have a task.md post-move).
     if not (dst_abs / "task.md").exists():
@@ -338,7 +349,7 @@ def _handle_bash(data: dict) -> None:
     # moves, deletes, and merges are deliberately left to warn (handled below in
     # the generic reconcile) — those need a human decision, never a silent guess.
     rewire_feedback: list[str] = []
-    rename = _detect_same_parent_rename(command, cwd)
+    rename = _detect_same_parent_rename(command, cwd, task_io)
     if rename is not None:
         parent_dir, old_slug, new_slug = rename
         try:
@@ -366,8 +377,7 @@ def _handle_bash(data: dict) -> None:
                     parent_dir / new_slug,
                     moved_root=parent_dir / new_slug,
                 )
-                for path, content in link_rewrites.items():
-                    path.write_text(content, encoding="utf-8")
+                task_io.apply_move_link_rewrites(link_root, link_rewrites)
                 if link_rewrites:
                     rewire_feedback.append(
                         f"Auto-rewrote relative markdown links in "
@@ -440,7 +450,11 @@ def _handle_edit_write(data: dict) -> None:
         _ensure_scripts_on_path()
         import _task_io as task_io
         plan_root = task_io._find_plan_root(file_path.parent)
-        if plan_root is not None:
+        if (
+            plan_root is not None
+            and not task_io.is_opaque_task_path(file_path.parent, plan_root)
+            and not task_io.has_symlink_task_component(file_path.parent, plan_root)
+        ):
             task_path = str(file_path.parent.relative_to(plan_root))
             if task_path == ".":
                 task_path = ""
@@ -465,7 +479,11 @@ def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
     import _task_io as task_io
 
     plan_root = task_io._find_plan_root(file_path.parent)
-    if plan_root is None:
+    if (
+        plan_root is None
+        or task_io.is_opaque_task_path(file_path.parent, plan_root)
+        or task_io.has_symlink_task_component(file_path.parent, plan_root)
+    ):
         return None
 
     task_path = str(file_path.parent.relative_to(plan_root))

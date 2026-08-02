@@ -8,8 +8,9 @@ user-invocable: true
 
 ## Core Concepts
 
-- Every subdirectory under `./superRA` with a `task.md` file is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`.
+- Every immediate subdirectory of a task directory or rootless `./superRA` forest that contains `task.md` is a **task**, except `attachments/`, which is always an asset container. A leaf task has no child task directories.
 - The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
+- Files retained with a task are companions, not task nodes; their classification, placement, and lifecycle live in `../using-superra/references/task-companion-files.md`.
 - **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
 - **Parent task status rolls up** from children automatically — a parent is `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded from the rollup computation.
 - **DAG-derived ordering vs. display order.** The dependency DAG controls execution order. Numeric prefixes on directory names (e.g. `01-load`, `02-merge`) control display order only — these are independent.
@@ -74,6 +75,7 @@ Field-by-field anatomy and body-section ownership live in `references/task-file-
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Validate tree structure, fix status inconsistencies, diagnose orphaned `depends_on` entries | `references/commands.md §Diagnostics` |
 | Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
+| Task companion-file classification, placement, reproducibility, promotion, and maturation | `../using-superra/references/task-companion-files.md` |
 | Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | Dashboard server mechanics (idempotent ensure-running, task URLs, artifact export) | `references/internals.md §Dashboard` |

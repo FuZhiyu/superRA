@@ -121,6 +121,42 @@ function repoFileHref(path) {
   return '';
 }
 
+function isRelativeResource(value) {
+  return !!value
+    && value.charAt(0) !== '/'
+    && value.indexOf('//') !== 0
+    && !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value);
+}
+
+function artifactDirectory(path) {
+  var i = (path || '').lastIndexOf('/');
+  return i === -1 ? '' : path.slice(0, i);
+}
+
+/* Resolve a link from a companion's own directory while staying inside the
+   owning task's public artifact surface: attachments/** only, matching the
+   server's _validated_parts contract. */
+function resolveArtifactRelativePath(sourcePath, href) {
+  if (!isRelativeResource(href) || href.charAt(0) === '#') return '';
+  var clean = href.replace(/[?#].*$/, '');
+  try { clean = decodeURIComponent(clean); } catch (e) {}
+  var base = artifactDirectory(sourcePath);
+  var parts = (base ? base.split('/') : []).concat(clean.split('/'));
+  var out = [];
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (!part || part === '.') continue;
+    if (part === '..') {
+      if (!out.length) return '';
+      out.pop();
+    } else {
+      out.push(part);
+    }
+  }
+  if (out.length < 2 || out[0] !== 'attachments') return '';
+  return out.join('/');
+}
+
 /* Membership oracle for in-tree task references. Every task's tree path, as a
    set, so renderMarkdown can decide whether a relative body link points at a
    real task in this tree (-> internal navigation) or at a plain file (-> the
@@ -137,7 +173,7 @@ var TASK_PATHS = (function () {
    task's canonical tree path; otherwise null (caller keeps the vscode:// path).
    A target is an in-tree task when, after dropping a trailing `/task.md` or a
    bare trailing `/`, the normalized tree path is in TASK_PATHS. */
-function resolveInternalTaskPath(href, taskPath) {
+function resolveInternalTaskPath(href, taskPath, contentBaseDir) {
   /* Strip any #fragment / ?query — they don't affect which task is referenced. */
   var clean = href.replace(/[?#].*$/, '');
   if (!clean) return null;
@@ -160,7 +196,9 @@ function resolveInternalTaskPath(href, taskPath) {
   } else if (clean.charAt(0) === '/') {
     return null;  /* filesystem-absolute, not a tree path */
   } else {
-    segs = (taskPath ? taskPath.split('/') : []).concat(clean.split('/'));
+    segs = (taskPath ? taskPath.split('/') : [])
+      .concat(contentBaseDir ? contentBaseDir.split('/') : [])
+      .concat(clean.split('/'));
   }
 
   /* Normalize . / .. segments into a clean tree path. */
@@ -189,7 +227,7 @@ function resolveInternalTaskPath(href, taskPath) {
  * - Wrap each block-level element in a .commentable-block container
  *   with data-section and data-block attributes (when sectionName given)
  */
-function renderMarkdown(text, sectionName, taskPath) {
+function renderMarkdown(text, sectionName, taskPath, contentBase) {
   /* markdown-it runs with html:true so agent-authored HTML (layouts, diagrams,
      callouts) survives. Exports are published, so every render result is
      untrusted reader input — sanitize before it touches the DOM. DOMPurify's
@@ -206,14 +244,17 @@ function renderMarkdown(text, sectionName, taskPath) {
        prepended to RESOLVED_ROOT (absolute) for the local vscode://file link.
      - repoPathPrefix: the same path prefixed with the root's repo-relative name
        (ROOT_PREFIX), passed to repoFileHref for the GitHub branch. */
+  var artifactPath = contentBase && contentBase.artifactPath;
+  var contentBaseDir = artifactPath ? artifactDirectory(artifactPath) : '';
   var taskDirRel = taskPath ? taskPath + '/' : '';
+  var contentDirRel = taskDirRel + (contentBaseDir ? contentBaseDir + '/' : '');
   var rootRel = ROOT_PREFIX ? ROOT_PREFIX + '/' : '';
-  var repoPathPrefix = rootRel + taskDirRel;
+  var repoPathPrefix = rootRel + contentDirRel;
   /* The GitHub-branch prefix uses the repo-root-relative root path (so a tree
      below the repo root keeps its `docs/...` prefix); /files/ and vscode keep
      ROOT_PREFIX / RESOLVED_ROOT. */
   var repoRootRel = REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '';
-  var repoLinkPrefix = repoRootRel + taskDirRel;
+  var repoLinkPrefix = repoRootRel + contentDirRel;
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -221,8 +262,8 @@ function renderMarkdown(text, sectionName, taskPath) {
      figures, paths outside the tree) keeps the vscode://file rewrite. */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
-    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
-      var internal = resolveInternalTaskPath(href, taskPath);
+    if (href && isRelativeResource(href) && !href.startsWith('#')) {
+      var internal = resolveInternalTaskPath(href, taskPath, contentBaseDir);
       if (internal !== null) {
         a.setAttribute('href', '#/' + internal);
         a.removeAttribute('target');
@@ -231,6 +272,14 @@ function renderMarkdown(text, sectionName, taskPath) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
+        if (artifactPath) {
+          var artifactTarget = resolveArtifactRelativePath(artifactPath, href);
+          if (artifactTarget) {
+            a.setAttribute('href', artifactOpenHref(taskPath, artifactTarget));
+            a.setAttribute('target', '_blank');
+          }
+          return;
+        }
         if (window.DOC_MODE) {
           /* Doc pages cite repo files by repo-root-relative path (the authoring
              contract), so the href IS the repo path — resolve it against the repo
@@ -254,7 +303,7 @@ function renderMarkdown(text, sectionName, taskPath) {
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
         } else {
-          var filePath = taskDirRel + href;
+          var filePath = contentDirRel + href;
           var loc = '';
           var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
           if (lm) {
@@ -274,8 +323,14 @@ function renderMarkdown(text, sectionName, taskPath) {
      so figures load from a file:// open. */
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');
-    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
-      if (window.STANDALONE) {
+    if (src && isRelativeResource(src)) {
+      if (artifactPath) {
+        var artifactImage = resolveArtifactRelativePath(artifactPath, src);
+        var artifactImageUrl = artifactImage
+          ? artifactResourceUrl(taskPath, artifactImage)
+          : '';
+        if (artifactImageUrl) img.setAttribute('src', artifactImageUrl);
+      } else if (window.STANDALONE) {
         /* Prefer the base64 data URI embedded at build time (figure-portable in a
            moved/offline file). Key it exactly as the build helper does: taskPath +
            '/' + src for a task body, bare src for the root body. Fall back to the
@@ -804,7 +859,8 @@ async function renderKanbanView() {
    browser's own back/forward stack drives navigation via popstate.
    ════════════════════════════════════════════════════════════════════════ */
 
-var activePath = '';        /* '' = root */
+var activePath = '';        /* owning task; '' = root */
+var activeArtifactPath = ''; /* attachment selected in the normal reading pane */
 var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
 var _moveFocusOnLoad = false; /* set per user-nav so loadActiveNode lands focus on the new heading */
 /* The in-flight (or last-settled) updateSidebar() promise from the current
@@ -821,17 +877,29 @@ function parseHash() {
   var h = location.hash || '';
   if (h.charAt(0) === '#') h = h.slice(1);   /* strip leading # */
   if (h.charAt(0) === '/') h = h.slice(1);   /* strip leading / */
-  return h;
+  var query = h.indexOf('?');
+  return query === -1 ? h : h.slice(0, query);
+}
+
+function parseArtifactHash() {
+  var h = location.hash || '';
+  var query = h.indexOf('?');
+  if (query === -1) return '';
+  var params = new URLSearchParams(h.slice(query + 1));
+  return params.get('attachment') || '';
 }
 
 /* The one navigation entry point. Sets activePath, writes history (unless
    restoring), then refreshes every derived region. */
-function setActive(path) {
+function setActive(path, artifactPath) {
   path = path || '';
   activePath = path;
+  activeArtifactPath = artifactPath || '';
 
   if (!restoring) {
-    var hash = '#/' + path;
+    var hash = '#/' + path + (activeArtifactPath
+      ? '?attachment=' + encodeURIComponent(activeArtifactPath)
+      : '');
     /* Relative '#/...' keeps location.search (the ?wt=) intact, so a task-path
        navigation never drops the active worktree from the URL. */
     if (location.hash !== hash) history.pushState({ path: path, wt: ACTIVE_WT }, '', hash);
@@ -845,10 +913,16 @@ function setActive(path) {
   /* A node click always means "show me the workspace." */
   if (currentView !== 'workspace') showView('workspace');
 
-  updateBreadcrumb(path);
+  updateBreadcrumb(path, activeArtifactPath);
   _lastSidebarUpdate = updateSidebar(path);
-  loadActiveNode(path);
-  loadChildrenDag(path);
+  if (activeArtifactPath) {
+    loadActiveArtifact(path, activeArtifactPath);
+    var children = document.getElementById('children-dag');
+    if (children) children.innerHTML = '';
+  } else {
+    loadActiveNode(path);
+    loadChildrenDag(path);
+  }
 
   /* Chrome: a selection means "done navigating" — auto-hide the unpinned
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
@@ -859,7 +933,7 @@ function setActive(path) {
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
    Each non-active crumb is a button that ascends by setting that ancestor
    active; the active crumb is inert. */
-function updateBreadcrumb(path) {
+function updateBreadcrumb(path, artifactPath) {
   var crumbs = document.getElementById('crumbs');
   if (!crumbs) return;
   crumbs.innerHTML = '';
@@ -894,7 +968,7 @@ function updateBreadcrumb(path) {
     var hdr = document.getElementById('header-title');
     if (hdr && hdr.textContent.trim()) rootLabel = hdr.textContent.trim();
   }
-  addCrumb(rootLabel, '', segs.length === 0);
+  addCrumb(rootLabel, '', segs.length === 0 && !artifactPath);
 
   var accumulated = '';
   for (var i = 0; i < segs.length; i++) {
@@ -902,7 +976,11 @@ function updateBreadcrumb(path) {
     addSep();
     /* Prefer the real title once the sidebar supplies it; fall back to slug. */
     var label = pathTitles[accumulated] || segs[i];
-    addCrumb(label, accumulated, i === segs.length - 1);
+    addCrumb(label, accumulated, i === segs.length - 1 && !artifactPath);
+  }
+  if (artifactPath) {
+    addSep();
+    addCrumb(artifactPath.replace(/^attachments\//, ''), path, true);
   }
 }
 
@@ -997,7 +1075,8 @@ async function loadActiveNode(path) {
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
-      + '<div class="task-node active-node-body" data-path="' + path + '">' + body + '</div>';
+      + '<div class="task-node active-node-body" data-path="' + escapeAttr(path) + '">' + body + '</div>'
+      + '';
 
     /* Set the title via textContent (avoids HTML injection from titles). In
        doc-mode the slug is task anatomy — show the title alone. */
@@ -1057,6 +1136,723 @@ function shareSubtree(path) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+/* Attachment data and full-pane rendering helpers. */
+var _artifactPreviewToken = 0;
+var _artifactManifests = {};
+var _attachmentExpanded = {};
+
+function artifactApiUrl(taskPath, artifactPath, download) {
+  var url = '/api/artifact?task=' + encodeURIComponent(taskPath || '')
+    + '&path=' + encodeURIComponent(artifactPath || '');
+  if (download) url += '&download=true';
+  return wtUrl(url);
+}
+
+function artifactManifestEntry(taskPath, artifactPath) {
+  var manifest = _artifactManifests[taskPath];
+  if (!manifest && window.STANDALONE && window.STANDALONE_ARTIFACTS) {
+    manifest = STANDALONE_ARTIFACTS.manifests[taskPath];
+  }
+  var files = manifest && manifest.files ? manifest.files : [];
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].path === artifactPath) return files[i];
+  }
+  return null;
+}
+
+function standaloneArtifactDataUrl(taskPath, entry) {
+  if (!window.STANDALONE || !entry || !window.STANDALONE_ARTIFACTS) return '';
+  var exported = entry.export || {};
+  if (exported.status === 'figure' && exported.image_key
+      && window.STANDALONE_IMAGES
+      && STANDALONE_IMAGES.hasOwnProperty(exported.image_key)) {
+    return STANDALONE_IMAGES[exported.image_key];
+  }
+  var taskContents = STANDALONE_ARTIFACTS.contents[taskPath] || {};
+  var payload = taskContents[entry.path];
+  if (!payload || payload.encoding !== 'base64') return '';
+  return 'data:' + (payload.mime || entry.mime || 'application/octet-stream')
+    + ';base64,' + payload.data;
+}
+
+function artifactResourceUrl(taskPath, artifactPath) {
+  if (!window.STANDALONE) return artifactApiUrl(taskPath, artifactPath, false);
+  var entry = artifactManifestEntry(taskPath, artifactPath);
+  return standaloneArtifactDataUrl(taskPath, entry) || (entry && entry.repo_url) || '';
+}
+
+function artifactOpenHref(taskPath, artifactPath) {
+  return artifactResourceUrl(taskPath, artifactPath) || '#';
+}
+
+function artifactDownloadHref(taskPath, entry) {
+  if (!entry) return '';
+  if (!window.STANDALONE) return artifactApiUrl(taskPath, entry.path, true);
+  return standaloneArtifactDataUrl(taskPath, entry) || entry.repo_url || '';
+}
+
+function standaloneArtifactText(taskPath, entry) {
+  var taskContents = window.STANDALONE_ARTIFACTS
+    && STANDALONE_ARTIFACTS.contents[taskPath];
+  var payload = taskContents && taskContents[entry.path];
+  if (!payload || payload.encoding !== 'base64') {
+    return Promise.reject(new Error('This file was not embedded in the export.'));
+  }
+  try {
+    var binary = atob(payload.data);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return Promise.resolve(new TextDecoder('utf-8').decode(bytes));
+  } catch (e) {
+    return Promise.reject(new Error('The embedded file could not be decoded.'));
+  }
+}
+
+function readArtifactText(taskPath, entry) {
+  if (window.STANDALONE) return standaloneArtifactText(taskPath, entry);
+  return fetch(artifactApiUrl(taskPath, entry.path, false)).then(function(resp) {
+    if (!resp.ok) {
+      if (resp.status === 413) throw new Error('Preview unavailable: file exceeds the preview limit.');
+      throw new Error('Preview unavailable (' + resp.status + ').');
+    }
+    return resp.text();
+  });
+}
+
+function formatArtifactBytes(value) {
+  var size = Number(value) || 0;
+  if (size < 1024) return size + ' B';
+  if (size < 1024 * 1024) return (size / 1024).toFixed(size < 10 * 1024 ? 1 : 0) + ' KiB';
+  return (size / (1024 * 1024)).toFixed(1) + ' MiB';
+}
+
+function artifactUnavailableReason(entry) {
+  if (entry.previewable) return '';
+  if (!entry.download_only) return 'Preview unavailable — file exceeds the preview limit.';
+  return 'Download only — active or unsupported content is never rendered.';
+}
+
+function buildArtifactPreviewHead(taskPath, entry) {
+  var head = document.createElement('header');
+  head.className = 'artifact-preview-head';
+  var heading = document.createElement('h3');
+  heading.textContent = entry.path;
+  head.appendChild(heading);
+  var actions = document.createElement('div');
+  actions.className = 'artifact-actions';
+  var rawHref = artifactOpenHref(taskPath, entry.path);
+  if (rawHref && rawHref !== '#') {
+    var raw = document.createElement('a');
+    raw.className = 'artifact-action';
+    raw.href = rawHref;
+    raw.target = '_blank';
+    raw.textContent = 'Open raw';
+    actions.appendChild(raw);
+  }
+  var downloadHref = artifactDownloadHref(taskPath, entry);
+  if (downloadHref) {
+    var download = document.createElement('a');
+    download.className = 'artifact-action';
+    download.href = downloadHref;
+    download.textContent = 'Download';
+    if (downloadHref.indexOf('data:') === 0) download.download = entry.name;
+    else download.target = '_blank';
+    actions.appendChild(download);
+  }
+  head.appendChild(actions);
+  return head;
+}
+
+function renderArtifactCode(text, language) {
+  var pre = document.createElement('pre');
+  var code = document.createElement('code');
+  if (language && window.hljs && hljs.getLanguage(language)) {
+    try {
+      code.className = 'hljs language-' + language;
+      code.innerHTML = hljs.highlight(text, {
+        language: language,
+        ignoreIllegals: true,
+      }).value;
+    } catch (e) {
+      code.textContent = text;
+    }
+  } else {
+    code.textContent = text;
+  }
+  pre.appendChild(code);
+  return pre;
+}
+
+/* Attachments share the task tree and the normal reading pane. They are
+   navigation-only pseudo-nodes: the owning task remains activePath, while the
+   attachment path is the optional second part of the URL state. */
+function attachmentManifest(taskPath) {
+  return _artifactManifests[taskPath]
+    || (window.STANDALONE && window.STANDALONE_ARTIFACTS
+      && STANDALONE_ARTIFACTS.manifests[taskPath])
+    || null;
+}
+
+function fetchAttachmentManifest(taskPath) {
+  var embedded = attachmentManifest(taskPath);
+  if (embedded) return Promise.resolve(embedded);
+  if (window.STANDALONE) return Promise.resolve(null);
+  return fetch(wtUrl('/api/artifacts?task=' + encodeURIComponent(taskPath || '')))
+    .then(function(resp) { return resp.ok ? resp.json() : null; });
+}
+
+function attachmentTree(entries) {
+  var root = { directories: {}, files: [] };
+  (entries || []).forEach(function(entry) {
+    var parts = entry.path.replace(/^attachments\//, '').split('/');
+    var cursor = root;
+    for (var i = 0; i < parts.length - 1; i++) {
+      cursor.directories[parts[i]] = cursor.directories[parts[i]]
+        || { directories: {}, files: [] };
+      cursor = cursor.directories[parts[i]];
+    }
+    cursor.files.push({ name: parts[parts.length - 1], entry: entry });
+  });
+  return root;
+}
+
+function renderAttachmentLevel(owner, tree, level, taskLevel) {
+  var list = document.createElement('ul');
+  list.className = 'attachment-tree-level';
+  list.setAttribute('role', 'group');
+  Object.keys(tree.directories).sort().forEach(function(name) {
+    var item = document.createElement('li');
+    item.className = 'attachment-directory';
+    item.setAttribute('role', 'none');
+    var directory = document.createElement('button');
+    directory.type = 'button';
+    directory.className = 'attachment-directory-row';
+    directory.setAttribute('role', 'treeitem');
+    directory.setAttribute('aria-level', String(taskLevel + level + 2));
+    directory.setAttribute('aria-expanded', 'true');
+    directory.tabIndex = -1;
+    directory.innerHTML =
+      '<span class="attachment-directory-caret" aria-hidden="true">▾</span>';
+    var label = document.createElement('span');
+    label.className = 'attachment-directory-label';
+    label.textContent = name;
+    directory.appendChild(label);
+    var nested = renderAttachmentLevel(
+      owner, tree.directories[name], level + 1, taskLevel
+    );
+    directory.onclick = function(event) {
+      event.stopPropagation();
+      var expanded = directory.getAttribute('aria-expanded') === 'true';
+      directory.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      nested.hidden = expanded;
+    };
+    item.appendChild(directory);
+    item.appendChild(nested);
+    list.appendChild(item);
+  });
+  tree.files.sort(function(a, b) { return a.name.localeCompare(b.name); })
+    .forEach(function(file) {
+      var item = document.createElement('li');
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'attachment-file-row';
+      button.setAttribute('role', 'treeitem');
+      button.setAttribute('aria-level', String(taskLevel + level + 2));
+      button.tabIndex = -1;
+      button.dataset.artifactOwner = owner;
+      button.dataset.artifactPath = file.entry.path;
+      button.setAttribute('aria-label', 'Open attachment ' + file.entry.path);
+      button.innerHTML = '<span class="attachment-file-icon" aria-hidden="true">◇</span>';
+      var name = document.createElement('span');
+      name.className = 'attachment-file-name';
+      name.textContent = file.name;
+      button.appendChild(name);
+      var kind = document.createElement('span');
+      kind.className = 'attachment-file-kind';
+      kind.textContent = file.entry.kind;
+      button.appendChild(kind);
+      button.classList.toggle(
+        'nav-active',
+        owner === activePath && file.entry.path === activeArtifactPath
+      );
+      button.onclick = function(event) {
+        event.stopPropagation();
+        setActive(owner, file.entry.path);
+      };
+      item.appendChild(button);
+      list.appendChild(item);
+    });
+  return list;
+}
+
+function renderAttachmentBranch(taskPath, manifest) {
+  var node = document.getElementById(navNodeId(taskPath));
+  if (!node) return;
+  var old = node.querySelector(':scope > .attachment-branch');
+  var wasExpanded = old
+    ? old.classList.contains('expanded')
+    : !!_attachmentExpanded[taskPath];
+  if (old) old.remove();
+  var files = manifest && manifest.files ? manifest.files : [];
+  if (!files.length) return;
+
+  var branch = document.createElement('div');
+  branch.className = 'attachment-branch' + (wasExpanded ? ' expanded' : '');
+  branch.dataset.owner = taskPath;
+  var toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'attachment-branch-toggle';
+  toggle.tabIndex = -1;
+  toggle.setAttribute('role', 'treeitem');
+  var taskRow = node.querySelector(':scope > .task-row');
+  var taskLevel = Number(taskRow && taskRow.getAttribute('aria-level')) || 1;
+  toggle.setAttribute('aria-level', String(taskLevel + 1));
+  toggle.setAttribute('aria-expanded', wasExpanded ? 'true' : 'false');
+  toggle.innerHTML = '<span class="attachment-branch-caret" aria-hidden="true">▸</span>'
+    + '<span>Attachments</span><span class="attachment-branch-count">'
+    + files.length + '</span>';
+  var children = document.createElement('div');
+  children.className = 'attachment-branch-children';
+  children.setAttribute('role', 'group');
+  children.hidden = !wasExpanded;
+  children.appendChild(
+    renderAttachmentLevel(taskPath, attachmentTree(files), 0, taskLevel)
+  );
+  toggle.onclick = function(event) {
+    event.stopPropagation();
+    var expanded = !branch.classList.contains('expanded');
+    _attachmentExpanded[taskPath] = expanded;
+    branch.classList.toggle('expanded', expanded);
+    children.hidden = !expanded;
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  };
+  branch.appendChild(toggle);
+  branch.appendChild(children);
+  if (!window.STANDALONE) {
+    var sink = document.createElement('span');
+    sink.className = 'artifact-event-sink';
+    sink.dataset.artifactOwner = taskPath;
+    sink.setAttribute('sse-swap', 'artifacts:' + taskPath);
+    sink.setAttribute('hx-swap', 'none');
+    branch.appendChild(sink);
+  }
+  var childrenContainer = node.querySelector(':scope > .task-children');
+  node.insertBefore(branch, childrenContainer || null);
+  if (window.htmx) htmx.process(branch);
+  refreshRovingTabindex();
+}
+
+function loadAttachmentBranches(scope) {
+  var nodes = (scope || document).querySelectorAll('.task-node[data-path]');
+  nodes.forEach(function(node) {
+    var owner = node.dataset.path || '';
+    fetchAttachmentManifest(owner).then(function(manifest) {
+      if (!manifest) return;
+      _artifactManifests[owner] = manifest;
+      renderAttachmentBranch(owner, manifest);
+    }).catch(function() {
+      /* Soft-fail: a missing manifest just leaves the Attachments branch absent
+         from this background sidebar decoration, not a user-initiated navigation
+         that needs an error state. */
+    });
+  });
+}
+
+function renderActiveArtifactBody(taskPath, entry, body, token) {
+  if (!entry.previewable) {
+    var unavailable = document.createElement('p');
+    unavailable.className = 'artifact-state artifact-state-unavailable';
+    unavailable.textContent = artifactUnavailableReason(entry);
+    body.appendChild(unavailable);
+    return;
+  }
+  if (entry.kind === 'image') {
+    var image = document.createElement('img');
+    image.className = 'artifact-image-preview';
+    image.src = artifactResourceUrl(taskPath, entry.path);
+    image.alt = entry.name;
+    body.appendChild(image);
+    return;
+  }
+  if (entry.kind === 'pdf') {
+    var frame = document.createElement('iframe');
+    frame.className = 'artifact-pdf-preview';
+    frame.setAttribute('sandbox', '');
+    frame.title = 'PDF preview: ' + entry.name;
+    frame.src = artifactResourceUrl(taskPath, entry.path);
+    body.appendChild(frame);
+    return;
+  }
+  body.textContent = 'Loading preview…';
+  readArtifactText(taskPath, entry).then(function(text) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || entry.path !== activeArtifactPath) return;
+    body.innerHTML = '';
+    if (entry.kind === 'markdown') {
+      var markdown = document.createElement('div');
+      markdown.className = 'rendered-md artifact-markdown-preview';
+      markdown.innerHTML = renderMarkdown(
+        text, null, taskPath, { artifactPath: entry.path }
+      );
+      body.appendChild(markdown);
+    } else if (entry.kind === 'notebook') {
+      body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
+    } else {
+      var languages = { python: 'python', julia: 'julia', r: 'r' };
+      body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
+    }
+  }).catch(function(error) {
+    if (token !== _artifactPreviewToken) return;
+    body.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+    body.firstChild.textContent = error.message;
+  });
+}
+
+function loadActiveArtifact(taskPath, artifactPath) {
+  var region = document.getElementById('active-node');
+  if (!region) return;
+  var token = ++_artifactPreviewToken;
+  region.innerHTML = '<p class="artifact-state">Loading attachment…</p>';
+  fetchAttachmentManifest(taskPath).then(function(manifest) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || artifactPath !== activeArtifactPath) return;
+    _artifactManifests[taskPath] = manifest;
+    renderAttachmentBranch(taskPath, manifest);
+    var entry = artifactManifestEntry(taskPath, artifactPath);
+    if (!entry) throw new Error('This attachment is unavailable.');
+    region.innerHTML = '';
+    var head = document.createElement('header');
+    head.className = 'active-node-head attachment-active-head';
+    var heading = document.createElement('h2');
+    heading.className = 'active-node-title';
+    heading.tabIndex = -1;
+    heading.textContent = entry.name;
+    head.appendChild(heading);
+    var owner = document.createElement('button');
+    owner.type = 'button';
+    owner.className = 'attachment-owner-action';
+    owner.textContent = 'Back to task';
+    owner.onclick = function() { setActive(taskPath); };
+    head.appendChild(owner);
+    var actions = buildArtifactPreviewHead(taskPath, entry)
+      .querySelector('.artifact-actions');
+    if (actions) head.appendChild(actions);
+    region.appendChild(head);
+    var meta = document.createElement('p');
+    meta.className = 'attachment-active-meta';
+    meta.textContent = entry.path + ' · ' + entry.kind + ' · '
+      + formatArtifactBytes(entry.size);
+    region.appendChild(meta);
+    var body = document.createElement('div');
+    body.className = 'artifact-preview-body attachment-active-body';
+    region.appendChild(body);
+    renderActiveArtifactBody(taskPath, entry, body, token);
+    document.querySelectorAll('.attachment-file-row').forEach(function(row) {
+      row.classList.toggle('nav-active',
+        row.dataset.artifactOwner === taskPath
+        && row.dataset.artifactPath === artifactPath);
+    });
+    if (_moveFocusOnLoad) {
+      _moveFocusOnLoad = false;
+      heading.focus({ preventScroll: true });
+    }
+  }).catch(function(error) {
+    if (token !== _artifactPreviewToken) return;
+    region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+    region.firstChild.textContent = error.message;
+  });
+}
+
+function refreshAttachmentManifest(taskPath, manifest) {
+  _artifactManifests[taskPath] = manifest;
+  renderAttachmentBranch(taskPath, manifest);
+  if (taskPath === activePath && activeArtifactPath) {
+    loadActiveArtifact(taskPath, activeArtifactPath);
+  }
+}
+
+/* notebookjs supplies the notebook/worksheet/cell model. Its permissive default
+   renderers are replaced once with this dashboard's existing safe stack. */
+var _notebookRenderContext = null;
+
+function notebookJoin(value) {
+  if (Array.isArray(value)) return value.map(notebookJoin).join('');
+  return value == null ? '' : String(value);
+}
+
+function notebookUnsupported(label) {
+  var fallback = document.createElement('div');
+  fallback.className = 'nb-unsupported-output';
+  fallback.setAttribute('role', 'note');
+  fallback.textContent = 'Unsupported notebook content: ' + label;
+  return fallback;
+}
+
+function notebookLanguage(cell) {
+  var ctx = _notebookRenderContext || {};
+  var notebook = ctx.notebook || {};
+  var metadata = notebook.metadata || {};
+  var value = (cell.raw && cell.raw.language)
+    || metadata.language
+    || (metadata.kernelspec && metadata.kernelspec.language)
+    || (metadata.language_info && metadata.language_info.name)
+    || '';
+  return String(value).toLowerCase() === 'r' ? 'r' : String(value).toLowerCase();
+}
+
+function utf8ToBase64(value) {
+  var bytes = new TextEncoder().encode(value);
+  var binary = '';
+  for (var i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function notebookAttachmentDataUrl(bundle) {
+  if (!bundle || typeof bundle !== 'object') return '';
+  if (bundle['image/png']) {
+    return 'data:image/png;base64,' + notebookJoin(bundle['image/png']).replace(/\s/g, '');
+  }
+  if (bundle['image/jpeg']) {
+    return 'data:image/jpeg;base64,' + notebookJoin(bundle['image/jpeg']).replace(/\s/g, '');
+  }
+  if (bundle['image/svg+xml']) {
+    var safeSvg = DOMPurify.sanitize(notebookJoin(bundle['image/svg+xml']), {
+      USE_PROFILES: { svg: true, svgFilters: true },
+    });
+    return 'data:image/svg+xml;base64,' + utf8ToBase64(safeSvg);
+  }
+  return '';
+}
+
+function materializeNotebookAttachments(markdown, attachments) {
+  var warnings = [];
+  var text = markdown.replace(/attachment:([^\s)"'<>]+)/g, function(match, encodedName) {
+    var name = encodedName;
+    try { name = decodeURIComponent(encodedName); } catch (e) {}
+    var value = notebookAttachmentDataUrl(attachments && attachments[name]);
+    if (!value) {
+      if (warnings.indexOf(name) === -1) warnings.push(name);
+      return match;
+    }
+    return value;
+  });
+  return { text: text, warnings: warnings };
+}
+
+function renderNotebookHtml(value) {
+  var ctx = _notebookRenderContext || {};
+  var holder = document.createElement('div');
+  holder.className = 'nb-html-output rendered-md';
+  holder.innerHTML = renderMarkdown(
+    notebookJoin(value),
+    null,
+    ctx.taskPath || '',
+    { artifactPath: ctx.artifactPath || '' }
+  );
+  return holder;
+}
+
+function renderNotebookLatex(value) {
+  var holder = document.createElement('div');
+  holder.className = 'nb-latex-output rendered-md';
+  try {
+    holder.innerHTML = DOMPurify.sanitize(katex.renderToString(
+      notebookJoin(value),
+      { displayMode: true, throwOnError: false, trust: false }
+    ), { ADD_ATTR: ['style', 'class'] });
+  } catch (e) {
+    holder.textContent = notebookJoin(value);
+  }
+  return holder;
+}
+
+function renderNotebookSvg(value) {
+  var holder = document.createElement('div');
+  holder.className = 'nb-svg-output';
+  holder.innerHTML = DOMPurify.sanitize(notebookJoin(value), {
+    USE_PROFILES: { svg: true, svgFilters: true },
+  });
+  return holder;
+}
+
+function renderNotebookOutput(raw) {
+  raw = raw || {};
+  if (raw.output_type === 'stream') {
+    var stream = renderArtifactCode(notebookJoin(raw.text), '');
+    stream.classList.add('nb-stream-output');
+    return stream;
+  }
+  if (raw.output_type === 'error' || raw.output_type === 'pyerr') {
+    var traceback = raw.traceback
+      ? notebookJoin(Array.isArray(raw.traceback) ? raw.traceback.join('\n') : raw.traceback)
+      : [raw.ename, raw.evalue].filter(Boolean).join(': ');
+    var error = renderArtifactCode(traceback, '');
+    error.classList.add('nb-error-output');
+    return error;
+  }
+
+  var bundle = raw.data || raw;
+  var safeFormats = [
+    'image/png', 'png', 'image/jpeg', 'jpeg',
+    'image/svg+xml', 'text/svg+xml', 'svg',
+    'text/html', 'html', 'text/markdown',
+    'text/latex', 'latex', 'text/plain', 'text',
+  ];
+  var format = safeFormats.find(function(name) {
+    return bundle[name] !== undefined && bundle[name] !== null;
+  });
+  if (!format) {
+    var formats = Object.keys(bundle).filter(function(name) {
+      return name.indexOf('/') !== -1 || name === 'javascript';
+    });
+    return notebookUnsupported(formats.length ? formats.join(', ') : (raw.output_type || 'unknown output'));
+  }
+  var value = bundle[format];
+  if (format === 'image/png' || format === 'png'
+      || format === 'image/jpeg' || format === 'jpeg') {
+    var image = document.createElement('img');
+    image.className = 'nb-image-output';
+    var subtype = (format === 'image/jpeg' || format === 'jpeg') ? 'jpeg' : 'png';
+    image.src = 'data:image/' + subtype + ';base64,' + notebookJoin(value).replace(/\s/g, '');
+    image.alt = 'Notebook output';
+    return image;
+  }
+  if (format === 'image/svg+xml' || format === 'text/svg+xml' || format === 'svg') {
+    return renderNotebookSvg(value);
+  }
+  if (format === 'text/html' || format === 'html' || format === 'text/markdown') {
+    return renderNotebookHtml(value);
+  }
+  if (format === 'text/latex' || format === 'latex') {
+    return renderNotebookLatex(value);
+  }
+  return renderArtifactCode(notebookJoin(value), '');
+}
+
+function installNotebookAdapter() {
+  if (!window.nb || nb._superraAdapterInstalled) return !!window.nb;
+  nb._superraAdapterInstalled = true;
+  nb.executeJavaScript = false;
+  nb.sanitizer = function(value) {
+    return DOMPurify.sanitize(value, { ADD_ATTR: ['style', 'class'] });
+  };
+  nb.markdown = function(value) {
+    var ctx = _notebookRenderContext || {};
+    return renderMarkdown(
+      notebookJoin(value),
+      null,
+      ctx.taskPath || '',
+      { artifactPath: ctx.artifactPath || '' }
+    );
+  };
+  nb.highlighter = function(value, pre, code, language) {
+    if (!language || !window.hljs || !hljs.getLanguage(language)) return value;
+    try {
+      return hljs.highlight(value, {
+        language: language,
+        ignoreIllegals: true,
+      }).value;
+    } catch (e) {
+      return value;
+    }
+  };
+
+  nb.Output.prototype.render = function() {
+    var outer = document.createElement('div');
+    outer.className = 'nb-output';
+    outer.appendChild(renderNotebookOutput(this.raw));
+    this.el = outer;
+    return outer;
+  };
+  nb.Cell.prototype.render = function() {
+    var cell = document.createElement('section');
+    cell.className = 'nb-cell nb-' + (this.type || 'unknown') + '-cell';
+    if (this.type === 'markdown') {
+      var attached = materializeNotebookAttachments(
+        notebookJoin(this.raw.source),
+        this.raw.attachments || {}
+      );
+      var markdown = document.createElement('div');
+      markdown.className = 'rendered-md';
+      var ctx = _notebookRenderContext || {};
+      markdown.innerHTML = renderMarkdown(
+        attached.text,
+        null,
+        ctx.taskPath || '',
+        { artifactPath: ctx.artifactPath || '' }
+      );
+      cell.appendChild(markdown);
+      attached.warnings.forEach(function(name) {
+        cell.appendChild(notebookUnsupported('cell attachment ' + name));
+      });
+    } else if (this.type === 'raw') {
+      var raw = document.createElement('pre');
+      raw.className = 'nb-raw-cell';
+      raw.textContent = notebookJoin(this.raw.source);
+      cell.appendChild(raw);
+    } else if (this.type === 'code') {
+      var source = this.input ? notebookJoin(this.input.raw) : notebookJoin(this.raw.source || this.raw.input);
+      if (source) {
+        var input = document.createElement('div');
+        input.className = 'nb-input';
+        input.appendChild(renderArtifactCode(source, notebookLanguage(this)));
+        cell.appendChild(input);
+      }
+      (this.outputs || []).forEach(function(output) {
+        cell.appendChild(output.render());
+      });
+    } else {
+      cell.appendChild(notebookUnsupported('cell type ' + (this.type || 'unknown')));
+    }
+    this.el = cell;
+    return cell;
+  };
+  return true;
+}
+
+function renderNotebookPreview(rawText, taskPath, artifactPath) {
+  var outer = document.createElement('div');
+  outer.className = 'notebook-preview';
+  if (!installNotebookAdapter()) {
+    outer.appendChild(notebookUnsupported('notebook renderer unavailable'));
+    return outer;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (e) {
+    outer.appendChild(notebookUnsupported('invalid notebook JSON'));
+    return outer;
+  }
+  if (!parsed || typeof parsed !== 'object'
+      || (!Array.isArray(parsed.cells)
+          && !(Array.isArray(parsed.worksheets) && parsed.worksheets.length))) {
+    outer.appendChild(notebookUnsupported('missing cells'));
+    return outer;
+  }
+  _notebookRenderContext = {
+    taskPath: taskPath,
+    artifactPath: artifactPath,
+    notebook: parsed,
+  };
+  try {
+    var rendered = nb.parse(parsed).render();
+    var staging = document.createElement('div');
+    staging.appendChild(rendered);
+    outer.innerHTML = DOMPurify.sanitize(staging.innerHTML, {
+      ADD_ATTR: ['style', 'class', 'data-prompt-number', 'data-language'],
+    });
+  } catch (e) {
+    outer.innerHTML = '';
+    outer.appendChild(notebookUnsupported('malformed notebook structure'));
+  } finally {
+    _notebookRenderContext = null;
+  }
+  return outer;
 }
 
 /* Open one section in the active-node card: mirror toggleSection's expand
@@ -1333,11 +2129,11 @@ function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 window.addEventListener('popstate', function() {
   var urlWt = readActiveWt();
   if (urlWt !== ACTIVE_WT) {
-    applyWorktree(urlWt, parseHash());
+    applyWorktree(urlWt, parseHash(), parseArtifactHash());
     return;
   }
   restoring = true;
-  setActive(parseHash());
+  setActive(parseHash(), parseArtifactHash());
   restoring = false;
 });
 
@@ -1346,9 +2142,9 @@ window.addEventListener('popstate', function() {
    re-fires this event, so no-op when the hash already matches activePath;
    otherwise apply it in restoring mode (no extra pushState/history entry). */
 window.addEventListener('hashchange', function() {
-  if (parseHash() === activePath) return;
+  if (parseHash() === activePath && parseArtifactHash() === activeArtifactPath) return;
   restoring = true;
-  setActive(parseHash());
+  setActive(parseHash(), parseArtifactHash());
   restoring = false;
 });
 
@@ -1356,9 +2152,16 @@ window.addEventListener('hashchange', function() {
    replaceState so reload/back land cleanly, then activate it. */
 function initRouter() {
   var path = parseHash();
+  var artifactPath = parseArtifactHash();
   restoring = true;
-  history.replaceState({ path: path, wt: ACTIVE_WT }, '', '#/' + path);
-  setActive(path);
+  history.replaceState(
+    { path: path, attachment: artifactPath, wt: ACTIVE_WT },
+    '',
+    '#/' + path + (artifactPath
+      ? '?attachment=' + encodeURIComponent(artifactPath)
+      : '')
+  );
+  setActive(path, artifactPath);
   restoring = false;
 }
 
@@ -1386,6 +2189,7 @@ async function loadNavTree() {
     markLazyNodes();
     indexNavTitles(container);
     applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
+    loadAttachmentBranches(container);
     /* Bind the freshly-injected rows' declarative sse-swap="task:<path>" to the
        live EventSource. htmx only wires sse-swap elements it has processed, and
        innerHTML injection bypasses that — so process the new subtree explicitly.
@@ -1491,6 +2295,7 @@ async function loadNavChildren(node) {
     markLazyNodes();
     indexNavTitles(children);
     applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
+    loadAttachmentBranches(children);
     /* Wire the lazily-loaded rows' sse-swap to the EventSource (see loadNavTree). */
     if (window.htmx) htmx.process(children);
     return true;
@@ -2111,9 +2916,13 @@ function nodeDepth(node) {
 function refreshRovingTabindex() {
   var root = document.getElementById('nav-tree');
   if (!root) return;
-  var rows = root.querySelectorAll('.task-row');
+  var rows = root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  );
   rows.forEach(function(r) { r.setAttribute('tabindex', '-1'); });
-  var active = root.querySelector('.task-row.nav-active');
+  var active = root.querySelector('.attachment-file-row.nav-active')
+    || root.querySelector('.task-row.nav-active');
   var target = (active && isRowVisible(active)) ? active : firstVisibleRow();
   if (target) target.setAttribute('tabindex', '0');
 }
@@ -2124,6 +2933,7 @@ function isRowVisible(row) {
   var el = row;
   while (el && el.id !== 'nav-tree') {
     if (el.nodeType === 1) {
+      if (el.hidden) return false;
       var cs = el.style && el.style.display === 'none';
       if (cs || (el.classList && el.classList.contains('hidden'))) return false;
     }
@@ -2135,7 +2945,10 @@ function isRowVisible(row) {
 function firstVisibleRow() {
   var root = document.getElementById('nav-tree');
   if (!root) return null;
-  var rows = root.querySelectorAll('.task-row');
+  var rows = root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  );
   for (var i = 0; i < rows.length; i++) {
     if (isRowVisible(rows[i])) return rows[i];
   }
@@ -2147,14 +2960,20 @@ function visibleRows() {
   var root = document.getElementById('nav-tree');
   if (!root) return [];
   return Array.prototype.filter.call(
-    root.querySelectorAll('.task-row'), isRowVisible);
+    root.querySelectorAll(
+      '.task-row, .attachment-branch-toggle, '
+      + '.attachment-directory-row, .attachment-file-row'
+    ), isRowVisible);
 }
 
 /* Move roving focus to a row: make it the only tabbable row and focus it. */
 function focusRow(row) {
   if (!row) return;
   var root = document.getElementById('nav-tree');
-  if (root) root.querySelectorAll('.task-row').forEach(function(r) {
+  if (root) root.querySelectorAll(
+    '.task-row, .attachment-branch-toggle, '
+    + '.attachment-directory-row, .attachment-file-row'
+  ).forEach(function(r) {
     r.setAttribute('tabindex', '-1');
   });
   row.setAttribute('tabindex', '0');
@@ -2169,12 +2988,21 @@ function initTreeKeyboard() {
   var root = document.getElementById('nav-tree');
   if (!root) return;
   root.addEventListener('keydown', function(ev) {
-    var row = ev.target.closest ? ev.target.closest('.task-row') : null;
+    var row = ev.target.closest ? ev.target.closest(
+      '.task-row, .attachment-branch-toggle, '
+      + '.attachment-directory-row, .attachment-file-row'
+    ) : null;
     if (!row || !root.contains(row)) return;
-    var node = row.closest('.task-node');
-    var toggle = row.querySelector(':scope > .task-toggle');
-    var isParent = toggle && !toggle.classList.contains('leaf');
-    var expanded = isParent && toggle.classList.contains('expanded');
+    var isTask = row.classList.contains('task-row');
+    var node = isTask ? row.closest('.task-node') : null;
+    var toggle = isTask ? row.querySelector(':scope > .task-toggle') : null;
+    var isAttachmentParent = row.classList.contains('attachment-branch-toggle')
+      || row.classList.contains('attachment-directory-row');
+    var isParent = isAttachmentParent
+      || (toggle && !toggle.classList.contains('leaf'));
+    var expanded = isAttachmentParent
+      ? row.getAttribute('aria-expanded') === 'true'
+      : (isParent && toggle.classList.contains('expanded'));
     var rows = visibleRows();
     var idx = rows.indexOf(row);
 
@@ -2189,21 +3017,44 @@ function initTreeKeyboard() {
         break;
       case 'ArrowRight':
         ev.preventDefault();
-        if (isParent && !expanded) {
-          /* Expand (may lazy-load); focus stays on the row. */
-          toggleNavCaret(node).then(function() {
-            applyTreeAria();
-          });
-        } else if (isParent && expanded) {
-          /* Already open: move into the first visible child. */
-          var after = visibleRows();
-          var ai = after.indexOf(row);
-          if (ai >= 0 && ai < after.length - 1) focusRow(after[ai + 1]);
+        if (isTask) {
+          var attachmentChild = node.querySelector(
+            ':scope > .attachment-branch > .attachment-branch-toggle'
+          );
+          if (attachmentChild) {
+            focusRow(attachmentChild);
+          } else if (isParent && !expanded) {
+            toggleNavCaret(node).then(function() { applyTreeAria(); });
+          } else if (isParent && expanded && idx < rows.length - 1) {
+            focusRow(rows[idx + 1]);
+          }
+        } else if (isParent && !expanded) {
+          row.click();
+        } else if (isParent && expanded && idx < rows.length - 1) {
+          focusRow(rows[idx + 1]);
         }
         break;
       case 'ArrowLeft':
         ev.preventDefault();
-        if (isParent && expanded) {
+        if (!isTask && isParent && expanded) {
+          row.click();
+        } else if (!isTask) {
+          if (row.classList.contains('attachment-branch-toggle')) {
+            var ownerRow = row.closest('.task-node')
+              .querySelector(':scope > .task-row');
+            if (ownerRow) focusRow(ownerRow);
+            break;
+          }
+          var parentGroup = row.parentElement
+            ? row.parentElement.parentElement : null;
+          var parentDirectory = parentGroup
+            ? parentGroup.closest('.attachment-directory') : null;
+          var parentControl = parentDirectory
+            ? parentDirectory.querySelector(':scope > .attachment-directory-row')
+            : row.closest('.attachment-branch')
+              .querySelector(':scope > .attachment-branch-toggle');
+          if (parentControl) focusRow(parentControl);
+        } else if (isParent && expanded) {
           toggleNavCaret(node);                 /* collapse */
           applyTreeAria();
         } else {
@@ -2217,8 +3068,10 @@ function initTreeKeyboard() {
         break;
       case 'Enter':
       case ' ':
-        ev.preventDefault();
-        if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        if (isTask) {
+          ev.preventDefault();
+          if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        }
         break;
       case 'Home':
         ev.preventDefault();
@@ -2273,13 +3126,11 @@ function parentPath(path) {
        server fetch — starting it before the reindex would bake the pre-edit
        title into a freshly (mis-)cached render. */
 function onTaskUpdate(path) {
-  if (path === activePath) {
-    loadActiveNode(path);
-    /* Run after htmx's outerHTML row swap detaches the current row, so the
-       highlight lands on the freshly-swapped (unhighlighted) replacement row.
-       Track the promise too, so a patchCardBadgeWhenReady queued by the
-       loadActiveNode() call just above awaits this update, not a stale one. */
-    setTimeout(function() { if (path === activePath) _lastSidebarUpdate = updateSidebar(path); }, 0);
+  var oldNode = document.getElementById(navNodeId(path));
+  var oldBranch = oldNode
+    && oldNode.querySelector(':scope > .attachment-branch');
+  if (oldBranch) {
+    _attachmentExpanded[path] = oldBranch.classList.contains('expanded');
   }
   /* Re-harvest pathTitles from the freshly-swapped row (deferred past the
      swap, same as the highlight re-assert above) so a title edit propagates
@@ -2287,7 +3138,14 @@ function onTaskUpdate(path) {
      without a structural full-reload. */
   setTimeout(function() {
     indexNavTitles();
-    updateBreadcrumb(activePath);
+    var manifest = attachmentManifest(path);
+    if (manifest) renderAttachmentBranch(path, manifest);
+    updateBreadcrumb(activePath, activeArtifactPath);
+    if (path === activePath) {
+      if (activeArtifactPath) loadActiveArtifact(path, activeArtifactPath);
+      else loadActiveNode(path);
+      _lastSidebarUpdate = updateSidebar(path);
+    }
     if (path !== activePath && parentPath(path) === activePath) {
       loadChildrenDag(activePath);
     }
@@ -2325,7 +3183,7 @@ async function onFullReload() {
     /* Relative '#/...' preserves the ?wt= in location.search. */
     history.replaceState({ path: target, wt: ACTIVE_WT }, '', '#/' + target);
   }
-  setActive(target);
+  setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
 }
 
@@ -2369,6 +3227,28 @@ function withinCommentEditWindow(taskPath) {
   return !!(ts && (Date.now() - ts) < 3000);
 }
 document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  var artifactOwner = event.target && event.target.dataset
+    ? event.target.dataset.artifactOwner
+    : undefined;
+  if (artifactOwner !== undefined) {
+    event.preventDefault();
+    try {
+      var artifactData = event.detail && event.detail.data !== undefined
+        ? event.detail.data
+        : event.data;
+      refreshAttachmentManifest(artifactOwner, JSON.parse(artifactData));
+    } catch (e) {
+      if (artifactOwner === activePath && activeArtifactPath) {
+        var activeRegion = document.getElementById('active-node');
+        if (activeRegion) {
+          activeRegion.innerHTML =
+            '<p class="artifact-state artifact-state-unavailable">'
+            + 'The updated attachment list could not be read.</p>';
+        }
+      }
+    }
+    return;
+  }
   var taskPath = event.target && event.target.dataset ? event.target.dataset.path : undefined;
   if (taskPath === undefined) return;  /* not a sidebar row (summary bar / full-reload) */
   if (withinCommentEditWindow(taskPath)) {
@@ -2516,8 +3396,12 @@ function switchWorktree(token) {
   if (token === ACTIVE_WT) return;
   var hash = location.hash || '';
   var search = token ? ('?wt=' + encodeURIComponent(token)) : '';
-  history.pushState({ path: parseHash(), wt: token }, '', location.pathname + search + hash);
-  applyWorktree(token, parseHash());
+  history.pushState(
+    { path: parseHash(), attachment: parseArtifactHash(), wt: token },
+    '',
+    location.pathname + search + hash
+  );
+  applyWorktree(token, parseHash(), parseArtifactHash());
 }
 
 /* Re-point the whole tab at worktree *wtId* (the ?wt= token) without a full page
@@ -2525,11 +3409,13 @@ function switchWorktree(token) {
    worktree, refresh PROJECT_ROOT + the selector, then rebuild the sidebar and
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
-async function applyWorktree(wtId, path) {
+async function applyWorktree(wtId, path, artifactPath) {
   ACTIVE_WT = wtId || '';
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */
   _childrenDagCache = {};
+  _artifactManifests = {};
+  _attachmentExpanded = {};
   reconnectSse();
   await loadNavTree();
   await refreshSearchIndex();
@@ -2539,7 +3425,7 @@ async function applyWorktree(wtId, path) {
   if (target !== (path || '')) {
     history.replaceState({ path: target, wt: ACTIVE_WT }, '', location.pathname + location.search + '#/' + target);
   }
-  setActive(target);
+  setActive(target, target === (path || '') ? (artifactPath || '') : '');
   restoring = false;
 }
 

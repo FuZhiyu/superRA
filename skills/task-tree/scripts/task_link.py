@@ -9,7 +9,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
+    ATTACHMENTS_DIRNAME,
     TASK_ROOT_DIRNAME,
+    iter_child_task_dirs,
     parse_task,
     resolve_path,
     resolve_plan_root_arg,
@@ -20,7 +22,12 @@ from _task_io import (
 
 def _is_sibling_slug(slug: str) -> bool:
     """True if *slug* names a sibling (a bare directory name), not a path or escape."""
-    return bool(slug) and slug not in {".", ".."} and "/" not in slug and "\\" not in slug
+    return (
+        bool(slug)
+        and slug not in {".", "..", ATTACHMENTS_DIRNAME}
+        and "/" not in slug
+        and "\\" not in slug
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -42,6 +49,10 @@ def _has_transitive_dep(parent_dir: Path, from_slug: str, to_slug: str) -> bool:
     Returns True when adding ``to_slug -> from_slug`` would create a cycle
     (i.e. *to_slug* already reaches *from_slug*).
     """
+    task_dirs = {
+        directory.name: directory
+        for directory in iter_child_task_dirs(parent_dir)
+    }
     visited: set[str] = set()
     stack = [from_slug]
     while stack:
@@ -49,9 +60,10 @@ def _has_transitive_dep(parent_dir: Path, from_slug: str, to_slug: str) -> bool:
         if current in visited:
             continue
         visited.add(current)
-        task_md = parent_dir / current / "task.md"
-        if not task_md.exists():
+        task_dir = task_dirs.get(current)
+        if task_dir is None:
             continue
+        task_md = task_dir / "task.md"
         task = parse_task(task_md)
         for dep in task.depends_on:
             if dep == to_slug:
@@ -94,8 +106,13 @@ def link_task(
         print(f"Removed dependency {depends_on} from {task_path}")
     else:
         parent_dir = task_dir.parent
-        dep_dir = parent_dir / depends_on
-        if not dep_dir.exists() or not (dep_dir / "task.md").exists():
+        sibling_dirs = {
+            directory.name: directory
+            for directory in iter_child_task_dirs(parent_dir)
+        }
+        dep_dir = sibling_dirs.get(depends_on)
+        if dep_dir is None:
+            dep_dir = parent_dir / depends_on
             print(f"Error: sibling dependency not found: {dep_dir}/task.md", file=sys.stderr)
             sys.exit(1)
 

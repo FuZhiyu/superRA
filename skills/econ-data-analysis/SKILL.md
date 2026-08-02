@@ -125,6 +125,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 ### Documentation and handoff
 
 - `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
+- `[BLOCKING]` When this skill is used for a superRA task, task-specific result-producing code follows `using-superra/references/task-companion-files.md`.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
 - `[BLOCKING]` **Headline findings presented visually.** Show each headline result as a figure — a distribution, a relationship, or a time path — unless a figure would not clarify it (a lone scalar, or a small table that already reads clearly).
 - `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
