@@ -49,7 +49,7 @@ Key properties:
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
 | `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Task Anatomy`. |
-| `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is not-started/in-progress and all sibling deps are approved. |
+| `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is actionable (not-started/in-progress/implemented/revise) and every sibling dep's work product exists (approved/archived/implemented/revise). |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 
 ### Validation suite: `_task_validate.py`

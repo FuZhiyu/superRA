@@ -833,9 +833,10 @@ def compute_frontier(root: Task) -> list[Task]:
     1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
        implement), 'implemented' (ready to review), or 'revise' (ready to fix).
        Each entry carries its status, so a caller reads the next action from it.
-    2. All sibling dependencies have effective_status 'approved' (or 'archived').
-       Note this is approved-only: a dependency that is merely 'implemented' or
-       'revise' is not satisfied, so dependents of unreviewed work stay blocked.
+    2. All sibling dependencies have effective_status 'approved', 'archived',
+       'implemented', or 'revise' — i.e. the dependency's work product exists,
+       even if review or a fix round is still open. Only 'not-started',
+       'in-progress', and 'postponed' dependencies block dependents.
     3. All ancestor tasks' sibling dependencies are met (recursively)
     """
     frontier: list[Task] = []
@@ -878,11 +879,13 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
                 )
                 deps_met = False
                 break
-            # Archived dependencies are treated as satisfied; postponed ones
-            # are NOT — postponing a task deliberately blocks its dependents
-            # until it is resumed and approved.
+            # A dependency is satisfied once its work product exists —
+            # 'implemented' and 'revise' count, so dependents can proceed while
+            # review or a deferred fix round is open. Postponed dependencies
+            # are NOT satisfied — postponing a task deliberately blocks its
+            # dependents until it is resumed.
             dep_status = dep_task.effective_status()
-            if dep_status not in ("approved", "archived"):
+            if dep_status not in ("approved", "archived", "implemented", "revise"):
                 deps_met = False
                 break
 

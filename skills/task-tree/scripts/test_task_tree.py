@@ -434,8 +434,8 @@ class TestComputeFrontier:
     def test_revise_and_implemented_on_frontier(self, plan_root):
         """'revise' (ready to fix) and 'implemented' (ready to review) are
         actionable, so they appear on the frontier; the per-task status tells
-        the caller the next action. A dependency in either state is still NOT
-        satisfied, so its dependents stay blocked.
+        the caller the next action. A dependency in either state is satisfied
+        (its work product exists), so its dependents unlock alongside it.
         """
         root = _task_io.walk_plan(plan_root)
         # 02-second depends on 01-first (approved), so deps are met.
@@ -446,9 +446,11 @@ class TestComputeFrontier:
             assert "02-second" in paths, (
                 f"'{state}' tasks are actionable and should be on the frontier"
             )
-            # 03-third depends on 02-second which is not 'approved',
-            # so 03-third stays blocked.
-            assert "03-third" not in paths
+            # 03-third depends on 02-second, whose work product exists,
+            # so 03-third is dispatchable too.
+            assert "03-third" in paths, (
+                f"a '{state}' dependency is satisfied; dependents unlock"
+            )
 
     def test_diamond_dependency(self, tmp_path):
         """Diamond DAG: D(approved) -> B, D -> C, B -> A, C -> A.
