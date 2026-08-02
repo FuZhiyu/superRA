@@ -1,6 +1,6 @@
 ---
 title: "Tab Title Names the Active Task and Worktree"
-status: implemented
+status: approved
 depends_on: 
   - local-file-open
 
