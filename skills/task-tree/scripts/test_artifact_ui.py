@@ -483,6 +483,61 @@ class TestAttachmentSurfaceBrowser:
         finally:
             _stop_server(server, thread)
 
+    def test_artifact_pane_open_hands_the_file_to_the_host(self, tmp_path, monkeypatch):
+        """The pane's Open button behaves like the card head's task.md button: a
+        plain click runs /api/open on the server's host and the page stays put,
+        while the /api/artifact href remains for a modifier click.  Driven in a
+        real browser — the delegated handler, the hit area, and the fetch are all
+        seam behavior a source assertion cannot reach."""
+        from playwright.sync_api import sync_playwright
+
+        root = _attachment_tree(tmp_path)
+        spawned: list[list[str]] = []
+        monkeypatch.setattr(plan_dashboard, "_spawn", spawned.append)
+        port, server, loop, thread = _start_server(root)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                page = browser.new_page(viewport={"width": 1200, "height": 800})
+                page.goto(
+                    f"http://127.0.0.1:{port}/#/01-reader",
+                    wait_until="domcontentloaded",
+                )
+                branch = page.locator(
+                    '.task-node[data-path="01-reader"] > .attachment-branch'
+                )
+                branch.wait_for()
+                branch.locator(".attachment-branch-toggle").click()
+                branch.locator(
+                    '.attachment-file-row[data-artifact-path="attachments/readme.txt"]'
+                ).click()
+                page.wait_for_selector("#active-node .attachment-active-body pre")
+                open_btn = page.locator(
+                    "#active-node .artifact-action", has_text="Open"
+                )
+                assert open_btn.count() == 1
+                assert open_btn.get_attribute("data-open-path") == (
+                    "superRA/01-reader/attachments/readme.txt"
+                )
+                assert "/api/artifact" in open_btn.get_attribute("href")
+                open_btn.click()
+                for _ in range(100):
+                    if spawned:
+                        break
+                    time.sleep(0.05)
+                # Plain click ran the route, not a navigation: the pane still
+                # holds the same attachment.
+                assert page.evaluate("location.hash") == (
+                    "#/01-reader?attachment=attachments%2Freadme.txt"
+                )
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+        assert len(spawned) == 1
+        assert spawned[0][-1] == str(
+            (root / "01-reader" / "attachments" / "readme.txt").resolve()
+        )
+
     def test_standalone_attachment_tree_and_download(self, tmp_path):
         from playwright.sync_api import sync_playwright
 

@@ -20,7 +20,7 @@ superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or 
 
 You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard.
 
-If you use VS Code, the dashboard doubles as a launcher: clicking a task opens its `task.md`, and a header button opens the active worktree in a VS Code window. Convenient, but not required.
+The dashboard doubles as a launcher into your own machine: a task's `Open` button and any file link in a task body open in whatever application you already use for that file type, and a header button opens the task's file in the VS Code window already holding that worktree. Convenient, but not required.
 
 ### Install + set up a project
 

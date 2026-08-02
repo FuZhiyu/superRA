@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-08-02
+
+### Changed
+
+- Dashboard file links, task attachments (both their links and the reading
+  pane's `Open` button), the task card's `Open` button, and the header `VS Code`
+  button now open the file on the machine running the dashboard, in whatever
+  application that machine already uses for the file type; the header button
+  opens the active task's file in the VS Code window already holding that
+  worktree, and `SUPERRA_EDITOR` points it at a fork. Opening is served by a
+  loopback-only route, so an off-loopback `--host` bind, doc-mode, and
+  standalone exports keep the previous `vscode://` links, as do modifier and
+  middle clicks anywhere.
+- The browser tab now names the page it is showing — the active task, or the
+  attachment being read — followed by the worktree branch it lives in, so tabs
+  of several worktrees of one repo are no longer identical. Doc-mode and
+  standalone exports name the site or export in place of a worktree, which gives
+  the published documentation site per-page titles.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.6` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.3.5] - 2026-07-26
 
 ### Changed

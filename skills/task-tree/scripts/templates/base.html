@@ -63,11 +63,12 @@
     <select class="hc-select" id="worktree-select" onchange="switchWorktree(this.value)">
     </select>
   </div>
-  {#- Open the active worktree's checkout root in VS Code. Shown for a single
-      worktree too (unlike the selector), so it sits outside #worktree-selector.
-      Icon/label/href are filled by updateWorktreeOpenHref; hidden until then. -#}
-  <a class="vscode-btn" id="worktree-open-btn" target="_blank"
-     style="display:none" title="Open this worktree in VS Code"></a>
+  {#- Open the active task's file in this worktree's VS Code window. Shown for a
+      single worktree too (unlike the selector), so it sits outside
+      #worktree-selector. Icon/label/href/title are filled by
+      updateWorktreeOpenHref; hidden until then. -#}
+  <a class="open-btn" id="worktree-open-btn" target="_blank"
+     style="display:none"></a>
   {%- endif %}
   <div class="header-stats" id="summary-bar"
        sse-swap="summary-updated"
@@ -231,6 +232,12 @@ var STANDALONE_ARTIFACTS = {{ standalone_artifacts | tojson }};
    flag gates the one piece built in JS — the active-node head badge. Strictly
    opt-in (default false), so a normal dashboard is byte-for-byte unchanged. #}
 window.DOC_MODE = {{ 'true' if doc_mode else 'false' }};
+{# Local file opening: this server can hand a file to the machine the researcher
+   is sitting at (POST /api/open). True only for a loopback-bound, non-doc-mode
+   live server; false for a standalone export, doc-mode, and an off-loopback
+   --host, where the viewer may not be at the server's machine and the page keeps
+   its vscode:// links instead. #}
+window.LOCAL_OPEN = {{ 'true' if local_open else 'false' }};
 {# Absolute path of the resolved task root (the dir the CLI/dashboard resolved
    via --root / auto-detect), and its basename. Every task-path -> file href is
    built from these instead of a hardcoded `superRA/` under PROJECT_ROOT, so

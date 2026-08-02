@@ -121,6 +121,18 @@ function repoFileHref(path) {
   return '';
 }
 
+/* Undo markdown-it's percent-encoding of a link href, which turns `my file.md`
+   into `my%20file.md` and `résumé.pdf` into `r%C3%A9sum%C3%A9.pdf`. /api/open
+   takes a real filesystem path in a JSON body, so the encoding has to come off
+   here. A malformed sequence (a literal `%` in a filename) keeps the raw text. */
+function decodePathHref(path) {
+  try {
+    return decodeURIComponent(path);
+  } catch (e) {
+    return path;
+  }
+}
+
 function isRelativeResource(value) {
   return !!value
     && value.charAt(0) !== '/'
@@ -277,6 +289,13 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
           if (artifactTarget) {
             a.setAttribute('href', artifactOpenHref(taskPath, artifactTarget));
             a.setAttribute('target', '_blank');
+            /* An attachment sits on disk under its task, so a local-open server
+               hands it to the right application like any other file link; the
+               raw /api/artifact href stays for modifier/middle clicks. The
+               resolver already decoded and normalized the target. */
+            if (window.LOCAL_OPEN) {
+              a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
+            }
           }
           return;
         }
@@ -303,14 +322,24 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
         } else {
-          var filePath = contentDirRel + href;
+          var relHref = href;
           var loc = '';
-          var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
+          var lm = relHref.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
           if (lm) {
             loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
-            filePath = filePath.slice(0, lm.index);
+            relHref = relHref.slice(0, lm.index);
           }
-          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + filePath + loc);
+          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref + loc);
+          /* With the local-open route a plain click hands the file to the
+             application this machine uses for its type; the vscode:// href above
+             stays for modifier/middle clicks (and carries the line anchor, which
+             an OS-level open cannot). Same project-root-relative composition the
+             /files/ route is handed — but decoded: /files/ rides a URL path that
+             the server decodes, while /api/open takes the path in a JSON body,
+             which nothing decodes. */
+          if (window.LOCAL_OPEN) {
+            a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
+          }
         }
         a.setAttribute('target', '_blank');
       }
@@ -872,6 +901,36 @@ var _lastSidebarUpdate = Promise.resolve();
    then the breadcrumb falls back to the path slug. */
 var pathTitles = {};
 
+/* ── Tab title ──
+   Dashboards of the same repo differ only by worktree, so the tab reads
+   "<active page> · <where it lives>" — the page leads because tabs truncate
+   from the right. SITE_TITLE is the server-rendered <title>, i.e. the tree's
+   own name: the right name for the root node, and the second half wherever
+   there is no worktree to name. The page half tracks navigation in every mode;
+   only the second half is mode-dependent. */
+var SITE_TITLE = document.title;
+var _tabTaskTitle = '';   /* display title of the task the main panel shows */
+
+/* Name the active task in the tab. */
+function setTabTitle(title) {
+  _tabTaskTitle = title || '';
+  refreshTabTitle();
+}
+
+/* Repaint from current state — also called when the worktree half lands
+   (fetchWorktrees resolves after the first render) or changes. */
+function refreshTabTitle() {
+  var name = _tabTaskTitle || SITE_TITLE;
+  /* A doc site and a downloaded export have no worktree — and must not name one
+     that does not exist where the file ends up — so they carry their own name as
+     the second half. Live, that half is the worktree, absent until its fetch
+     lands. */
+  var context = (window.DOC_MODE || window.STANDALONE)
+    ? SITE_TITLE
+    : (_wtTabLabels[ACTIVE_WT || _launchWtId] || '');
+  document.title = (context && context !== name) ? (name + ' · ' + context) : name;
+}
+
 /* Read location.hash as `#/<task/path>` -> the path verbatim ('' for root). */
 function parseHash() {
   var h = location.hash || '';
@@ -914,6 +973,8 @@ function setActive(path, artifactPath) {
   if (currentView !== 'workspace') showView('workspace');
 
   updateBreadcrumb(path, activeArtifactPath);
+  /* The header VS Code button opens the active task's file, so it follows nav. */
+  updateWorktreeOpenHref();
   _lastSidebarUpdate = updateSidebar(path);
   if (activeArtifactPath) {
     loadActiveArtifact(path, activeArtifactPath);
@@ -996,15 +1057,24 @@ function updateBreadcrumb(path, artifactPath) {
    tree body — every one of those walks up to `.task-node[data-path]`. The
    breadcrumb already shows the path, so the card header is just title + status.
    Sections default to EXPANDED here (this is the detail view, not a tree row). */
-/* VS Code wordmark, inline so it inherits the button's currentColor (mid-grey
-   at rest, VS Code blue on hover). */
-var VSCODE_ICON =
-  '<svg viewBox="0 0 24 24" aria-hidden="true">'
-  + '<path fill="currentColor" d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29'
-  + 'l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74'
-  + 'L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057'
-  + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
-  + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
+/* Chrome-button glyphs. Both are 2px-stroke outlines on the same 24-unit grid,
+   inheriting the button's currentColor, so the card-head and header controls read
+   as one family — a solid brand mark beside an outline glyph is exactly the "looks
+   off" this chrome pass exists to fix, and the button's label already says which
+   editor it opens.
+   EDITOR_ICON: code brackets, for the control that opens a file in the editor. */
+var EDITOR_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+  + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="m16 18 6-6-6-6"></path><path d="m8 6-6 6 6 6"></path></svg>';
+
+/* OPEN_ICON: file leaving its box, for the control that hands the file to
+   whatever application the machine uses for its type — no editor named. */
+var OPEN_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+  + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="M14 3h7v7"></path><path d="M21 3 11 13"></path>'
+  + '<path d="M19 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"></path></svg>';
 
 /* vscode://file deep-link to an absolute local path (a file or a folder). The
    single place the `vscode://file/` scheme is composed, shared by the per-task
@@ -1025,6 +1095,71 @@ function taskFileVscodeHref(path) {
   return vscodeFileUri(RESOLVED_ROOT + '/' + rel);
 }
 
+/* A file under a task's directory as a project-root-relative path — the address
+   /api/open takes. Same composition the /files/ route is handed (ROOT_PREFIX +
+   '/' + taskPath + …), so both agree for any --root, a nested tree, and a
+   rootless forest. `rel` is task.md for the task itself, or an attachment's
+   task-relative path. */
+function taskRelOpenPath(path, rel) {
+  return (ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + (path ? path + '/' : '') + rel;
+}
+
+function taskFileOpenPath(path) {
+  return taskRelOpenPath(path, 'task.md');
+}
+
+/* Report a failed or refused open. The only visible result of a successful open
+   is on the researcher's desktop, so without this a refusal reads as a dead
+   button. Transient, single-slot, dismisses itself. */
+function showOpenError(msg) {
+  var el = document.getElementById('open-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'open-toast';
+    el.className = 'open-toast';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(showOpenError._timer);
+  showOpenError._timer = setTimeout(function() { el.classList.remove('visible'); }, 6000);
+}
+
+/* Hand a project-root-relative path to the server for opening on its own host.
+   `target` is 'native' (the OS default application for the file type) or 'editor'
+   (this worktree's VS Code window). When no editor CLI is installed the route
+   answers with a vscode:// URI to follow instead — the pre-route behavior. */
+function openLocalPath(path, target) {
+  return fetch(wtUrl('/api/open'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path, target: target || 'native' })
+  }).then(function(resp) {
+    return resp.json().catch(function() { return {}; }).then(function(data) {
+      if (!resp.ok) throw new Error(data.detail || ('HTTP ' + resp.status));
+      if (data.status === 'fallback' && data.uri) window.location.href = data.uri;
+    });
+  }).catch(function(err) {
+    showOpenError('Could not open ' + path + (err && err.message ? ' — ' + err.message : ''));
+  });
+}
+
+/* One delegated handler for every local-open control: the card-head button, the
+   header VS Code button, body file links, attachment links, and the artifact
+   pane's Open button all carry data-open-path. A plain left-click opens on the
+   server's host; a modifier or middle click falls through to the element's own
+   vscode:// or /api/artifact href, so the browser's own "open elsewhere"
+   gestures still work. */
+document.addEventListener('click', function(e) {
+  if (!window.LOCAL_OPEN) return;
+  var el = (e.target && e.target.closest) ? e.target.closest('[data-open-path]') : null;
+  if (!el) return;
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  openLocalPath(el.getAttribute('data-open-path'), el.getAttribute('data-open-target'));
+});
+
 async function loadActiveNode(path) {
   var region = document.getElementById('active-node');
   if (!region) return;
@@ -1039,6 +1174,10 @@ async function loadActiveNode(path) {
     if (token !== loadActiveNode._token) return;  /* superseded */
     if (!resp.ok) {
       region.innerHTML = '<p style="color:var(--text-mute)">Could not load this task.</p>';
+      /* The card names no task now, so neither may the tab — leaving the
+         previously shown task there would describe a page that is gone. Falls
+         back to the tree's own name, exactly as a cold load of a bad link. */
+      setTabTitle('');
       return;
     }
     var body = await resp.text();
@@ -1056,17 +1195,24 @@ async function loadActiveNode(path) {
       if (hdrEl && hdrEl.textContent.trim()) rootTitle = hdrEl.textContent.trim();
     }
     var title = pathTitles[path] || slug || rootTitle;
+    /* The tab names this task; at the root the tree's own name is that name. */
+    setTabTitle(path ? title : SITE_TITLE);
     var status = navRowStatus(path);
-    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub' : 'Open task.md in VS Code';
-    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'VS Code';
+    /* With the local-open route the button hands task.md to whatever application
+       this machine uses for markdown; without it, today's vscode:// deep link. */
+    var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;
+    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
+      : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
+    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : (openNative ? 'Open' : 'VS Code');
+    var fileButtonIcon = openNative ? OPEN_ICON : EDITOR_ICON;
 
     region.innerHTML =
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
-      + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
-      + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
+      + '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -1083,10 +1229,14 @@ async function loadActiveNode(path) {
     var titleEl = region.querySelector('.active-node-title');
     if (titleEl) titleEl.textContent = (slug && !window.DOC_MODE) ? (slug + ' · ' + title) : title;
 
-    /* Point the VS Code button at this task's task.md. Set the href as a
-       property (not an attribute string) so the path needs no escaping. */
-    var vsBtn = region.querySelector('.vscode-btn');
-    if (vsBtn) vsBtn.href = taskFileVscodeHref(path);
+    /* Point the file button at this task's task.md. Set the href as a property
+       (not an attribute string) so the path needs no escaping; it stays the
+       modifier-click target even when the plain click goes through /api/open. */
+    var vsBtn = region.querySelector('.open-btn');
+    if (vsBtn) {
+      vsBtn.href = taskFileVscodeHref(path);
+      if (openNative) vsBtn.setAttribute('data-open-path', taskFileOpenPath(path));
+    }
 
     /* Wire the Share button via a closure over `path` — an inline onclick can't
        carry the path safely (a quoted path breaks the double-quoted attribute). */
@@ -1116,9 +1266,12 @@ async function loadActiveNode(path) {
        deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
        patch the badge once the row materializes (best-effort, single retry). */
     if (!status) patchCardBadgeWhenReady(path, token);
+    /* Same race for the title: the tab is on the path slug until that row lands. */
+    if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);
   } catch (e) {
     if (token !== loadActiveNode._token) return;
     region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+    setTabTitle('');   /* same card/tab agreement as the not-ok branch above */
   }
 }
 
@@ -1242,14 +1395,22 @@ function buildArtifactPreviewHead(taskPath, entry) {
   head.appendChild(heading);
   var actions = document.createElement('div');
   actions.className = 'artifact-actions';
-  var rawHref = artifactOpenHref(taskPath, entry.path);
-  if (rawHref && rawHref !== '#') {
-    var raw = document.createElement('a');
-    raw.className = 'artifact-action';
-    raw.href = rawHref;
-    raw.target = '_blank';
-    raw.textContent = 'Open raw';
-    actions.appendChild(raw);
+  /* Open matches the card head's task.md button: on a local-open server a plain
+     click hands the attachment to this machine's default application, and the
+     /api/artifact href stays the modifier/middle-click target — the same pair
+     an attachment link in a task body already carries. */
+  var openHref = artifactOpenHref(taskPath, entry.path);
+  if (openHref && openHref !== '#') {
+    var open = document.createElement('a');
+    open.className = 'artifact-action';
+    open.href = openHref;
+    open.target = '_blank';
+    open.textContent = 'Open';
+    if (window.LOCAL_OPEN) {
+      open.title = 'Open in the default application';
+      open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));
+    }
+    actions.appendChild(open);
   }
   var downloadHref = artifactDownloadHref(taskPath, entry);
   if (downloadHref) {
@@ -1529,6 +1690,8 @@ function loadActiveArtifact(taskPath, artifactPath) {
     heading.className = 'active-node-title';
     heading.tabIndex = -1;
     heading.textContent = entry.name;
+    /* An attachment is a page in its own right, so the tab names it too. */
+    setTabTitle(entry.name);
     head.appendChild(heading);
     var owner = document.createElement('button');
     owner.type = 'button';
@@ -1562,6 +1725,8 @@ function loadActiveArtifact(taskPath, artifactPath) {
     if (token !== _artifactPreviewToken) return;
     region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
     region.firstChild.textContent = error.message;
+    /* The pane names no attachment now, so neither may the tab. */
+    setTabTitle('');
   });
 }
 
@@ -1905,6 +2070,16 @@ function patchCardBadgeWhenReady(path, token) {
       badge.textContent = status;
       head.appendChild(badge);
     }
+  });
+}
+
+/* Same deep-descent race for the tab: pathTitles is harvested from the sidebar
+   row, so a fresh descent names the tab after the path slug until the row lands.
+   Re-read the title once this tick's sidebar update settles. */
+function patchTabTitleWhenReady(path, token) {
+  _lastSidebarUpdate.then(function() {
+    if (token !== loadActiveNode._token) return;        /* navigated away */
+    if (pathTitles[path]) setTabTitle(pathTitles[path]);
   });
 }
 
@@ -3281,6 +3456,15 @@ var _wtProjectRoots = {};
 /* resolved task-root absolute path of each worktree by its wt_id, so
    RESOLVED_ROOT / ROOT_PREFIX (the file-link base) can follow the active ?wt=. */
 var _wtResolvedRoots = {};
+/* Human name of each worktree by its wt_id, for the tab title's worktree half. */
+var _wtTabLabels = {};
+
+/* What to call a worktree: its branch, or its directory name when it has none
+   (detached HEAD). The selector decorates this with the plan title and the
+   agent marker; the tab title uses it bare. */
+function worktreeLabel(wt) {
+  return wt.branch || wt.path.split('/').pop();
+}
 
 /* Signature of the last-rendered worktree option set (ids + labels + active
    id). Lets a refresh-on-open re-fetch skip the innerHTML rebuild when nothing
@@ -3323,7 +3507,7 @@ function populateWorktreeSelector(data) {
        navigates to a clean `/` (handled in switchWorktree). */
     var token = (wt.wt_id === data.launch_wt_id) ? '' : (wt.wt_id || '');
     opt.value = token;
-    var label = wt.branch || wt.path.split('/').pop();
+    var label = worktreeLabel(wt);
     if (wt.plan_title) label += ' — ' + wt.plan_title;
     if (wt.is_agent) label = '[agent] ' + label;
     opt.textContent = label;
@@ -3335,17 +3519,29 @@ function populateWorktreeSelector(data) {
   selector.style.display = 'flex';
 }
 
-/* Point the header "open worktree" button at the active worktree's checkout root
-   (PROJECT_ROOT, re-pointed per ?wt= in fetchWorktrees), so subsequent per-task
-   clicks land in that now-focused window. Hidden in GitHub-file mode, which has
-   no local folder to open; doc-mode hides it via the shared .vscode-btn rule and
-   standalone omits it from the template. Idempotent: safe to call repeatedly. */
+/* The header VS Code button. With the local-open route it opens the ACTIVE task's
+   file in the VS Code window already holding this worktree (the route passes the
+   worktree folder alongside the file, so several worktrees of one repo each land
+   in their own window); setActive re-points it as the researcher navigates.
+   Without the route it keeps its vscode:// deep link to the worktree root
+   (PROJECT_ROOT, re-pointed per ?wt= in fetchWorktrees). Labelled "VS Code" —
+   "Workspace" is the #btn-workspace view toggle in the same header. Hidden in
+   GitHub-file mode, which has no local checkout; doc-mode hides it via the shared
+   .open-btn rule and standalone omits it from the template. Idempotent. */
 function updateWorktreeOpenHref() {
   var btn = document.getElementById('worktree-open-btn');
   if (!btn) return;
   if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
-  if (!btn.innerHTML) btn.innerHTML = VSCODE_ICON + '<span>Worktree</span>';
-  btn.href = vscodeFileUri(PROJECT_ROOT);
+  if (!btn.innerHTML) btn.innerHTML = EDITOR_ICON + '<span>VS Code</span>';
+  if (window.LOCAL_OPEN) {
+    btn.href = taskFileVscodeHref(activePath);
+    btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
+    btn.setAttribute('data-open-target', 'editor');
+    btn.title = "Open this task's file in this worktree's VS Code window";
+  } else {
+    btn.href = vscodeFileUri(PROJECT_ROOT);
+    btn.title = 'Open this worktree in VS Code';
+  }
   btn.style.display = '';
 }
 
@@ -3364,9 +3560,11 @@ function fetchWorktrees() {
          even a different basename). */
       _wtProjectRoots = {};
       _wtResolvedRoots = {};
+      _wtTabLabels = {};
       data.worktrees.forEach(function(wt) {
         _wtProjectRoots[wt.wt_id || ''] = wt.path;
         _wtResolvedRoots[wt.wt_id || ''] = wt.plan_root || '';
+        _wtTabLabels[wt.wt_id || ''] = worktreeLabel(wt);
       });
       /* Point PROJECT_ROOT / RESOLVED_ROOT at the URL's worktree so every
          vscode://file/ href resolves against the worktree this tab is bound to.
@@ -3382,6 +3580,9 @@ function fetchWorktrees() {
       }
       populateWorktreeSelector(data);
       updateWorktreeOpenHref();
+      /* This fetch lands after the first card render, and again on every
+         worktree switch — the tab's worktree half follows it. */
+      refreshTabTitle();
     })
     .catch(function() { /* graceful: hide selector */ });
 }
