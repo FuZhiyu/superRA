@@ -93,7 +93,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 ## Architectural Patterns
 
-- **Roles are skills.** Dispatches go to a general-purpose agent whose prompt names the role skill (`implement-task` / `review-task`); that skill carries the role protocol and pulls the stage/domain loads. The Skill-Load Manifest in `using-superra` is the authoritative map from role, `Stage:` value, and task domain to required skills.
+- **Roles are skills.** A dispatch prompt names the role skill (`implement-task` / `review-task`); that skill carries the role protocol and pulls the stage/domain loads. The Skill-Load Manifest in `using-superra` is the authoritative map from role, `Stage:` value, and task domain to required skills.
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md` and `README.md`, not in nested directories.
 - **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
@@ -120,7 +120,7 @@ What each agent loads in a session. This section documents the architecture for 
 
 | Load | How | Weight |
 |---|---|---|
-| Role skill (`implement-task` / `review-task`) | load instruction on the dispatch prompt's first line | Mandatory |
+| Role skill (`implement-task` / `review-task`) | dispatch-prompt load line | Mandatory |
 | `using-superra` + `report-in-markdown` | role-skill §Before You Start load instruction | Mandatory |
 | Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
 | Domain skill(s) per the manifest | manifest | Typical |
@@ -142,7 +142,7 @@ Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contra
 
 - **Canonical instructions stay shared.** Workflow and role behavior both live in root `skills/`. Do not create Codex-only copies of shared behavior.
 - **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superra/references/`, such as `codex-instructions.md`.
-- **One dispatch mechanism, both harnesses.** Claude and Codex both spawn a general-purpose agent and let the dispatch prompt name the role skill. There are no named custom agents to generate or install; `.codex/agents/` is not a superRA surface.
+- **One dispatch mechanism, both harnesses.** Both spawn the harness's default agent and let the dispatch prompt name the role skill. There are no named custom agents to generate or install; `.codex/agents/` is not a superRA surface.
 - **Surface generated artifacts in the task tree.** When a task touches a generated file, list it and its generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through the generator rather than being hand-edited. No agent-facing files are generated today.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 

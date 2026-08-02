@@ -22,39 +22,11 @@ For a bundle dispatch, run this protocol independently for each assigned task. W
 
 Follow the discipline of the stage and domain skills you loaded. Bad results are worse than no results — stop and report under §Escalation if the data does not look right.
 
-## Self-Check
+## Writing Results
 
-Walk this gate in order before you commit. If you find issues, fix them now.
+Edit the assigned task files directly, per `superRA:using-superra` §Task Interface. Never edit another task's file; flag unclear task structure in your status return rather than inventing one.
 
-**1. Evidence before claims.** Before asserting any task, test, build, or output succeeded, run the verification command in this session and read the output:
-
-1. **IDENTIFY** the command that proves the claim.
-2. **RUN** the full command, fresh.
-3. **READ** full output, check exit code, count failures.
-4. **VERIFY** output confirms the claim — if not, state actual status with evidence.
-5. **ONLY THEN** make the claim.
-
-Skipping any step is lying, not verifying. **Run the command, read the output, then claim the result.**
-
-**2. Completeness.**
-- Did I implement everything in the task spec, with outputs saved where specified?
-- Does `## Results` carry the major outcomes, numbers, caveats, and verification evidence, as the self-contained account `using-superra` §Task Interface requires?
-- If I materially deviated from `## Planner Guidance`, did I explain the deviation and objective fit in `## Results`?
-- Does any artifact follow the domain/project format convention, with relative paths, reproducible by re-running?
-
-**3. Stale-content cleanup.** The task reads as a single current-state description, per `using-superra` §Task Interface editing principles.
-
-**4. Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
-
-**5. Editing hygiene.**
-- [ ] Every task-file edit is inside an assigned task's `task.md`.
-- [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations (at `Stage: integration`, plus any new `## Review Notes` items the combined first pass authors per §What You Own).
-- [ ] Figures are embedded with `![caption](attachments/...)` and the image files are committed to the task's `attachments/` directory.
-- [ ] Every material finding I am about to report is already written into the task's `task.md`, not only in my status return.
-
-## Handoff
-
-You hand off by updating assigned task files directly, following `superRA:using-superra` §Task Interface editing principles. Never edit another task's file; flag unclear task structure in your status return rather than inventing one.
+`## Results` is what the reviewer and every later reader work from: the outcomes and numbers, the caveats, and the evidence behind any claim that something ran, passed, or reproduced.
 
 ### What You Own
 
@@ -76,7 +48,7 @@ For each item in the review notes:
 3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text, on its own line, preserving the reviewer's original prose.
 4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status return and let the orchestrator adjudicate on the next pass.
 
-After annotating all items you're expected to address, set `status: implemented` in frontmatter and commit. You leave the review notes for the reviewer to re-review — do not remove items, mark them resolved, or strike through. 
+After annotating all items you're expected to address, set `status: implemented` in frontmatter and commit. You leave the review notes for the reviewer to re-review — do not remove items, mark them resolved, or strike through.
 
 **Example of review notes after your pass:**
 
@@ -91,7 +63,14 @@ After annotating all items you're expected to address, set `status: implemented`
 >    → orchestrator: rejected — methodology specifies arithmetic returns per the ancestor objective's §Conventions
 ```
 
-### Commit
+## Self-Check
+
+Before you commit:
+
+1. **Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass; a blocking failure is fix-first, not a handoff. Flag any `[ADVISORY]` item you did not address in your status return.
+2. **Editing hygiene.** Every task-file edit is inside an assigned task's `task.md`; reviewer prose and review items are untouched apart from your `→ implemented:` annotations; figures are embedded with `![caption](attachments/...)` and their files committed under the task's `attachments/`; every material finding is in the task file, not only in your status return.
+
+## Commit
 
 Stage code + assigned task.md files in a **single atomic commit**, following `superRA:using-superra` §Commit Hygiene:
 

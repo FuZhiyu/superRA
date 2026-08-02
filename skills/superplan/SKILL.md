@@ -75,8 +75,8 @@ At thorough depth, dispatch `Stage: planning-review` before presenting the tree 
 
 **Planning reviewer:**
 ```
-Agent(general-purpose):
-  Load `superRA:review-task` and follow it.
+Agent:
+  Load `superRA:review-task` skill.
 
   Stage: planning-review
   Task: <task path or root>

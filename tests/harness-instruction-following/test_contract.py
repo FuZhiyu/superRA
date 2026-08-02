@@ -265,7 +265,7 @@ def test_codex_tool_map_matches_contract():
 
     assert mappings["AskUserQuestion"] == ("request_user_input",)
     assert mappings["TodoWrite"] == ("update_plan",)
-    assert mappings["Agent(general-purpose)"] == (
+    assert mappings["Agent"] == (
         'spawn_agent(agent_type="default")',
     )
     assert mappings["SendMessage"] == ("send_input",)

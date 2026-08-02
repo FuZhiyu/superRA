@@ -74,7 +74,7 @@ def test_claude_agent_dispatch_events_are_structural():
                 "name": "Agent",
                 "input": {
                     "subagent_type": "general-purpose",
-                    "prompt": "Load `superRA:implement-task` and follow it.",
+                    "prompt": "Load `superRA:implement-task` skill.",
                 },
             }),
             json.dumps({
@@ -82,7 +82,7 @@ def test_claude_agent_dispatch_events_are_structural():
                 "name": "Agent",
                 "input": {
                     "subagent_type": "general-purpose",
-                    "prompt": "Load `superRA:review-task` and follow it.",
+                    "prompt": "Load `superRA:review-task` skill.",
                 },
             }),
         ])
@@ -143,7 +143,7 @@ def test_interactive_canvas_evaluator_rejects_wrong_event_order():
                 "name": "Agent",
                 "input": {
                     "subagent_type": "general-purpose",
-                    "prompt": "Load `superRA:review-task` and follow it.",
+                    "prompt": "Load `superRA:review-task` skill.",
                 },
             }),
         ])
@@ -178,7 +178,7 @@ def test_interactive_canvas_evaluator_requires_structured_opt_in():
                 "name": "Agent",
                 "input": {
                     "subagent_type": "general-purpose",
-                    "prompt": "Load `superRA:review-task` and follow it.",
+                    "prompt": "Load `superRA:review-task` skill.",
                 },
             }),
         ])

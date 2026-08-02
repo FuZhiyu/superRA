@@ -236,7 +236,7 @@ async def _run_session_async(
     dispatch_prompt = (
         f"Dispatch a {agent_type} agent (via the Task/Agent tool) with this "
         f"instruction, then stop:\n\n"
-        f"Load `{role_skill}` and follow it.\n\n{prompt}"
+        f"Load `{role_skill}` skill.\n\n{prompt}"
     )
 
     async for _ in query(prompt=dispatch_prompt, options=options):

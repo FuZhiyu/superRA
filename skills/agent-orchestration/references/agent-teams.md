@@ -113,16 +113,16 @@ Do not hand-roll worktree setup or data-copy scripts.
 3. **Dispatch in parallel using the canonical template.** Every dispatch follows the `Stage:` / `Task:` / `Additionally:` shape defined in `SKILL.md` §Dispatch Templates. The agent reads its standard protocol and the manifest; the `Additionally:` tail carries task-specific steering only.
 
    ```
-   Agent(general-purpose):
-     Load `superRA:implement-task` and follow it.
+   Agent:
+     Load `superRA:implement-task` skill.
 
      Stage: <stage-name>
      Task: <task pointer>
 
      Additionally: <focus: one independent domain>
 
-   Agent(general-purpose):
-     Load `superRA:implement-task` and follow it.
+   Agent:
+     Load `superRA:implement-task` skill.
 
      Stage: <stage-name>
      Task: <task pointer>

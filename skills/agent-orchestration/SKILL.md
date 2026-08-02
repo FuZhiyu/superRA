@@ -49,18 +49,12 @@ Before dispatching agents in parallel or isolating an agent in its own worktree,
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches a task-scoped implementer or reviewer uses the canonical template shape defined here. Every dispatch goes to a general-purpose agent; the first line names the role skill it must load, which in turn pulls the always-loaded pair and the manifest's stage and domain skills. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches load `semantic-merge` mode references instead of a role skill.
-
-Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or task content. Never include `Work from:` — cwd is implicit.
-
-Use a bundle only for same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent. Keep dependent siblings out of the same implementation bundle unless the upstream task is already `approved`; `depends_on` sequences tasks whose outputs or findings are prerequisites.
-
-At the dispatch boundary, parent objectives are inherited shared context; sibling results are not injected. When a downstream task consumes an upstream result, dispatch steering or the downstream objective names the approved dependency `## Results` to read.
+Every workflow skill that dispatches a task-scoped implementer or reviewer uses the shape below; the stage-specific body lives in that workflow skill. The load line is the whole role contract — the role skill pulls the always-loaded pair and the manifest's stage and domain skills. `Stage: sync` is the exception: it names `semantic-merge` mode references instead of a role skill.
 
 **Implementer:**
 ```
-Agent(general-purpose):
-  Load `superRA:implement-task` and follow it.
+Agent:
+  Load `superRA:implement-task` skill.
 
   Stage: <stage-name>
   Task(s): <task path — e.g., "data-preparation/merge">
@@ -69,11 +63,10 @@ Agent(general-purpose):
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
-
 **Reviewer:**
 ```
-Agent(general-purpose):
-  Load `superRA:review-task` and follow it.
+Agent:
+  Load `superRA:review-task` skill.
 
   Stage: <stage-name>
   Task: <task path — e.g., "data-preparation/merge">
@@ -82,6 +75,12 @@ Agent(general-purpose):
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
+
+`Additionally:` is steering only. Omit it when there is none, and never use it to restate role protocol, manifest loads, or task content. Never add `Work from:` — cwd is implicit.
+
+Bundle only same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent; keep dependent siblings out unless the upstream task is already `approved`.
+
+Parent objectives are inherited shared context at the dispatch boundary; sibling results are not. When a downstream task consumes an upstream result, the steering or the downstream objective names the approved dependency `## Results` to read.
 
 
 ## Seat Assignment

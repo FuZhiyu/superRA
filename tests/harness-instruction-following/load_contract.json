@@ -14,8 +14,8 @@
       "area": "manifest-always-loaded",
       "source_paths": [
         "skills/using-superra/SKILL.md#L59-L67",
-        "skills/implement-task/SKILL.md#L11-L16",
-        "skills/review-task/SKILL.md#L13-L18"
+        "skills/implement-task/SKILL.md#L10-L13",
+        "skills/review-task/SKILL.md#L15-L18"
       ],
       "trigger": "Any superRA role dispatch.",
       "expected_evidence": [
@@ -131,8 +131,8 @@
       "id": "LC005",
       "area": "role-task-read-contract",
       "source_paths": [
-        "skills/implement-task/SKILL.md#L15-L16",
-        "skills/review-task/SKILL.md#L17-L18"
+        "skills/implement-task/SKILL.md#L13",
+        "skills/review-task/SKILL.md#L18"
       ],
       "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch.",
       "expected_evidence": [
@@ -700,7 +700,7 @@
       ],
       "trigger": "Codex main agent dispatches a role-carrying agent in a superRA workflow.",
       "expected_evidence": [
-        "structured table parse confirms Agent(general-purpose) maps to spawn_agent(agent_type=\"default\")",
+        "structured table parse confirms Agent maps to spawn_agent(agent_type=\"default\")",
         "manual Codex transcript shows two spawn_agent dispatches of agent_type default"
       ],
       "classification": [

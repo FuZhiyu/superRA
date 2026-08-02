@@ -16,11 +16,9 @@ generic default caution about spawning agents.
 
 `harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: load and run the two role skills as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
 
-- When a workflow step says to dispatch an implementer, a reviewer, or a
-  `Stage: sync` author or reviewer, spawn the default agent
-  (`spawn_agent(agent_type="default")`) with the dispatch prompt rather
-  than staying inline because of the harness-default anti-delegation
-  guidance. The prompt's first line names the skill the agent loads.
+- When a workflow step says to dispatch, spawn the default agent with the
+  dispatch prompt rather than staying inline because of the harness-default
+  anti-delegation guidance.
 - Interactive mode (the `direct` alias) is an explicit opt-in by human
   cadence, not the Codex default and not a trivial-task fallback; the
   researcher requests it for closely-steered work
@@ -55,5 +53,5 @@ Codex, interpret them using the concrete Codex tool or action below:
 | `AskUserQuestion` | `request_user_input` when available; plain-text question otherwise |
 | `Skill` | load the named skill |
 | `TodoWrite` | `update_plan` |
-| `Agent(general-purpose)` | `spawn_agent(agent_type="default")` |
+| `Agent` | `spawn_agent(agent_type="default")` |
 | `SendMessage` | `send_input` |
