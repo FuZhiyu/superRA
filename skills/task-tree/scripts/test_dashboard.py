@@ -3137,10 +3137,11 @@ class TestWorktreeOpenButton:
 
 
 # ---------------------------------------------------------------------------
-# TestTabTitle — the browser tab names the active task, then the worktree it
-# lives in, so several tabs of several worktrees of one repo are tellable apart.
-# The composition runs under node against the extracted functions; the call-site
-# wiring (which navigation paths repaint it) is pinned against the JS source.
+# TestTabTitle — the browser tab names the active page, then where it lives (the
+# worktree live, the site's own name in a doc site or export), so several tabs of
+# several worktrees of one repo are tellable apart.  The composition runs under
+# node against the extracted functions; the call-site wiring (which navigation
+# paths repaint it) is pinned against the JS source.
 # ---------------------------------------------------------------------------
 
 
@@ -3227,13 +3228,33 @@ class TestTabTitle:
             site_title="superRA docs",
         ) == "superRA docs"
 
-    def test_standalone_keeps_the_shipped_title(self):
-        """A downloaded file must keep a title that does not depend on a session."""
+    def test_standalone_tracks_the_page_under_the_export_name(self):
+        """An export tracks the page like every other mode; with no worktree to
+        name — and none to misname once the file moves — the export's own name is
+        the second half.  This is the published docs site's own path."""
         assert _tab_title(
             "window.STANDALONE = true;"
-            "setTabTitle('T');",
-            site_title="Exported subtree",
-        ) == "Exported subtree"
+            "_wtTabLabels = { '': 'main' };"   # never populated offline; ignored anyway
+            "setTabTitle('Domain Skills');",
+            site_title="superRA Documentation",
+        ) == "Domain Skills · superRA Documentation"
+
+    def test_standalone_root_is_the_export_name_alone(self):
+        """At an export's root both halves are the export — do not repeat it."""
+        assert _tab_title(
+            "window.STANDALONE = true;"
+            "setTabTitle(SITE_TITLE);",
+            site_title="superRA Documentation",
+        ) == "superRA Documentation"
+
+    def test_failed_card_load_drops_the_stale_task_name(self):
+        """The error path clears the task half, so the tab reads as the tree alone
+        rather than naming a task the card is no longer showing."""
+        assert _tab_title(
+            "_wtTabLabels = { '': 'main' };"
+            "setTabTitle('Previously Shown Task');"
+            "setTabTitle('');"
+        ) == "superRA · main"
 
 
 class TestTabTitleWiring:
@@ -3247,6 +3268,18 @@ class TestTabTitleWiring:
         assert "setTabTitle(path ? title : SITE_TITLE);" in body
         # Deep descent: the sidebar row carrying the real title may not be in yet.
         assert "if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);" in body
+
+    def test_card_and_tab_agree_on_the_error_paths(self):
+        """A /node fetch that fails after a successful navigation replaces the card
+        with an error; the tab must stop naming the task it was showing."""
+        fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        not_ok = re.search(r"if \(!resp\.ok\) \{.*?\n    \}", body, re.S)
+        assert not_ok and "setTabTitle('');" in not_ok.group(0)
+        catch = re.search(r"\} catch \(e\) \{.*?\n  \}", body, re.S)
+        assert catch and "setTabTitle('');" in catch.group(0)
 
     def test_deep_descent_patch_awaits_the_sidebar_update(self):
         """Same completion hook as the status badge — not a fixed-interval poll —

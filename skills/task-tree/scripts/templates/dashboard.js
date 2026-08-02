@@ -840,11 +840,11 @@ var pathTitles = {};
 
 /* ── Tab title ──
    Dashboards of the same repo differ only by worktree, so the tab reads
-   "<active task> · <worktree>" — the task leads because tabs truncate from the
-   right. SITE_TITLE is the server-rendered <title>, i.e. the tree's own name:
-   the right name for the root node, and the whole title in doc-mode (a
-   published site has no worktree identity to show) and in standalone, where a
-   downloaded file keeps the title it shipped with. */
+   "<active page> · <where it lives>" — the page leads because tabs truncate
+   from the right. SITE_TITLE is the server-rendered <title>, i.e. the tree's
+   own name: the right name for the root node, and the second half wherever
+   there is no worktree to name. The page half tracks navigation in every mode;
+   only the second half is mode-dependent. */
 var SITE_TITLE = document.title;
 var _tabTaskTitle = '';   /* display title of the task the main panel shows */
 
@@ -857,9 +857,14 @@ function setTabTitle(title) {
 /* Repaint from current state — also called when the worktree half lands
    (fetchWorktrees resolves after the first render) or changes. */
 function refreshTabTitle() {
-  if (window.STANDALONE) return;
   var name = _tabTaskTitle || SITE_TITLE;
-  var context = window.DOC_MODE ? SITE_TITLE : (_wtTabLabels[ACTIVE_WT || _launchWtId] || '');
+  /* A doc site and a downloaded export have no worktree — and must not name one
+     that does not exist where the file ends up — so they carry their own name as
+     the second half. Live, that half is the worktree, absent until its fetch
+     lands. */
+  var context = (window.DOC_MODE || window.STANDALONE)
+    ? SITE_TITLE
+    : (_wtTabLabels[ACTIVE_WT || _launchWtId] || '');
   document.title = (context && context !== name) ? (name + ' · ' + context) : name;
 }
 
@@ -1077,6 +1082,10 @@ async function loadActiveNode(path) {
     if (token !== loadActiveNode._token) return;  /* superseded */
     if (!resp.ok) {
       region.innerHTML = '<p style="color:var(--text-mute)">Could not load this task.</p>';
+      /* The card names no task now, so neither may the tab — leaving the
+         previously shown task there would describe a page that is gone. Falls
+         back to the tree's own name, exactly as a cold load of a bad link. */
+      setTabTitle('');
       return;
     }
     var body = await resp.text();
@@ -1169,6 +1178,7 @@ async function loadActiveNode(path) {
   } catch (e) {
     if (token !== loadActiveNode._token) return;
     region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+    setTabTitle('');   /* same card/tab agreement as the not-ok branch above */
   }
 }
 

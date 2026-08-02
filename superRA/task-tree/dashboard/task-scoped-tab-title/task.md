@@ -1,6 +1,6 @@
 ---
 title: "Tab Title Names the Active Task and Worktree"
-status: revise
+status: implemented
 depends_on: 
   - local-file-open
 
@@ -30,30 +30,30 @@ Capture the server-rendered `<title>` once at load: it is the tree's own name an
 
 ## Results
 
-The tab now reads `<active task> · <worktree>` — e.g. `Tab Title Names the Active Task and Worktree · dashboard-local-file-open` — so tabs of different worktrees of one repo, and different tasks within one worktree, are tellable apart at a glance.
+The tab now reads `<active page> · <where it lives>` — `Tab Title Names the Active Task and Worktree · dashboard-local-file-open` in a live dashboard, `Domain Skills · superRA Documentation` on the published docs site — so tabs of different worktrees of one repo, and different tasks within one worktree, are tellable apart at a glance.
 
 ### How it composes
 
 [`refreshTabTitle`](../../../../skills/task-tree/scripts/templates/dashboard.js#L859) is the single writer of `document.title`. It joins two halves:
 
-- **Task half** — [`setTabTitle`](../../../../skills/task-tree/scripts/templates/dashboard.js#L852) records the display title [`loadActiveNode` already resolved for the card head](../../../../skills/task-tree/scripts/templates/dashboard.js#L1098), so the tab and the card never disagree. At the root there is no task title; the half falls back to `SITE_TITLE`, the server-rendered `<title>` [captured once at load](../../../../skills/task-tree/scripts/templates/dashboard.js#L848).
-- **Worktree half** — the branch, or the worktree's directory name on a detached HEAD, via [`worktreeLabel`](../../../../skills/task-tree/scripts/templates/dashboard.js#L2549), which the worktree dropdown now shares (it decorates the same base label with the plan title and the agent marker). [`fetchWorktrees` indexes it per `?wt=` token](../../../../skills/task-tree/scripts/templates/dashboard.js#L2651) alongside the project/resolved roots it already indexes, and repaints when that fetch resolves — it lands after the first card render and again on every worktree switch. Until then the tab shows the task half alone, never a dangling separator.
+- **Page half** — [`setTabTitle`](../../../../skills/task-tree/scripts/templates/dashboard.js#L852) records the display title [`loadActiveNode` already resolved for the card head](../../../../skills/task-tree/scripts/templates/dashboard.js#L1107), so the tab and the card never disagree. At the root there is no task title; the half falls back to `SITE_TITLE`, the server-rendered `<title>` [captured once at load](../../../../skills/task-tree/scripts/templates/dashboard.js#L848). This half tracks navigation in every mode — live, doc-mode, and inside a downloaded export.
+- **Second half** — the worktree in a live dashboard: its branch, or its directory name on a detached HEAD, via [`worktreeLabel`](../../../../skills/task-tree/scripts/templates/dashboard.js#L2559), which the worktree dropdown now shares (it decorates the same base label with the plan title and the agent marker). [`fetchWorktrees` indexes it per `?wt=` token](../../../../skills/task-tree/scripts/templates/dashboard.js#L2661) alongside the project/resolved roots it already indexes, and repaints when that fetch resolves — it lands after the first card render and again on every worktree switch. Until then the tab shows the page half alone, never a dangling separator. A doc site and a downloaded export have no worktree, and must not name one that will not exist wherever the file ends up, so they carry `SITE_TITLE` here instead.
 
-The halves are joined only when they differ, so a task titled the same as its branch does not read `main · main`.
+Mode-dependence is confined to that second half; whether the title moves at all is not mode-dependent.
+
+The halves are joined only when they differ, so a task titled the same as its branch does not read `main · main`, and an export's root reads as the export name alone rather than doubled.
 
 Navigation coverage falls out of the call site: `setActive` (task clicks, breadcrumbs, popstate, SSE structural reloads) and `applyWorktree` (selector, back/forward across a `?wt=` boundary) both route through `loadActiveNode`.
 
-**Deep descent.** `pathTitles` is harvested from sidebar rows, so a fresh deep link can render the card before the row carrying the real title lands, leaving the tab on the path slug. [`patchTabTitleWhenReady`](../../../../skills/task-tree/scripts/templates/dashboard.js#L1247) re-reads the title once that tick's sidebar update settles, using the same `_lastSidebarUpdate` completion hook and navigation-token guard as the existing status-badge patch.
+**Deep descent.** `pathTitles` is harvested from sidebar rows, so a fresh deep link can render the card before the row carrying the real title lands, leaving the tab on the path slug. [`patchTabTitleWhenReady`](../../../../skills/task-tree/scripts/templates/dashboard.js#L1257) re-reads the title once that tick's sidebar update settles, using the same `_lastSidebarUpdate` completion hook and navigation-token guard as the existing status-badge patch.
 
-**Doc-mode and standalone.** Doc-mode has no worktree, so the second half is the site name (`Domain Skills · superRA Documentation`). Standalone leaves `document.title` exactly as exported, so a downloaded file keeps a stable title.
-
-Caveat worth knowing: the published docs site is built as a standalone export ([docs/build_site.sh](../../../../docs/build_site.sh)), so the standalone rule wins there and its per-page titles stay frozen at the site name. The doc-mode branch is live in `superra dashboard --doc-mode` serving (verified below), which is how the site is previewed. Making published doc pages carry per-page titles is a behavior change to the standalone rule, not a bug in this one — left as the objective specifies.
+**Failed card load.** When `/node/<path>` fails after a successful navigation, the card is replaced with "Could not load this task." Both error branches — [the not-ok response](../../../../skills/task-tree/scripts/templates/dashboard.js#L1088) and [the thrown-error catch](../../../../skills/task-tree/scripts/templates/dashboard.js#L1181) — clear the page half, so the tab falls back to the tree's own name rather than keeping the name of a task the card is no longer showing. That matches what a cold load of a bad deep link already did.
 
 ### Verification
 
-Full task-tree script suite: **747 passed** (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`), including 14 new tests — [`TestTabTitle`](../../../../skills/task-tree/scripts/test_dashboard.py#L3168) runs the extracted functions under node through the existing `_extract_js_defs` harness (composition, branch vs directory-name fallback, worktree switch, root fallback, pre-fetch state, both doc-mode cases, standalone), and [`TestTabTitleWiring`](../../../../skills/task-tree/scripts/test_dashboard.py#L3239) pins the call sites.
+Full task-tree script suite: **750 passed** (`uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`), including 17 new tests — [`TestTabTitle`](../../../../skills/task-tree/scripts/test_dashboard.py#L3169) runs the extracted functions under node through the existing `_extract_js_defs` harness (composition, branch vs directory-name fallback, worktree switch, root fallback, pre-fetch state, doc-mode page and root, export page and root, cleared page half), and [`TestTabTitleWiring`](../../../../skills/task-tree/scripts/test_dashboard.py#L3260) pins the call sites including both error branches.
 
-Live checks in a real Chromium against this repo's dashboard on `http://localhost:8995` (restarted first so the one-hour-cached JS was re-fetched):
+Live checks in a real Chromium against this repo's dashboard on `http://localhost:8995` (restarted first so the one-hour-cached JS was re-fetched), driven by real row clicks and browser back/forward:
 
 | Step | `document.title` |
 |---|---|
@@ -69,4 +69,23 @@ Sampling the title every 400 ms through a cold deep-link load showed the intende
 
 The deep-descent patch was exercised directly in the live page — clearing `pathTitles[path]` and holding `_lastSidebarUpdate` open gave `task-scoped-tab-title · dashboard-local-file-open` (slug) during the race and `Tab Title Names the Active Task and Worktree · dashboard-local-file-open` once the sidebar update settled.
 
-Mode checks: live `superra dashboard --doc-mode --root docs/site` gave `Domain Skills · superRA Documentation` on a page and `superRA Documentation` at the root; a standalone export of the `task-tree/dashboard` subtree stayed `HTML Dashboard` at the root and on a deep link.
+**Offline modes**, checked by clicking rows inside the built files themselves. A standalone export of the `task-tree/dashboard` subtree (`superra dashboard export --subtree task-tree/dashboard`) opened from `file://`:
+
+| Step | `document.title` |
+|---|---|
+| Export root | `HTML Dashboard` |
+| Click `local-file-open` | `Open Task Files on the Researcher's Machine · HTML Dashboard` |
+| Click `task-scoped-tab-title` | `Tab Title Names the Active Task and Worktree · HTML Dashboard` |
+| Browser Back | `Open Task Files on the Researcher's Machine · HTML Dashboard` |
+
+The published docs site, from a real [docs/build_site.sh](../../../../docs/build_site.sh) build opened at `file://…/index.html` — the case the revision was about:
+
+| Step | `document.title` |
+|---|---|
+| Site root | `superRA Documentation` |
+| Click `03-domain-skills` | `Domain Skills · superRA Documentation` |
+| Click `02-quickstart` | `Quickstart: Your First Workflow · superRA Documentation` |
+
+Live `superra dashboard --doc-mode --root docs/site` gives the same shape (`Domain Skills · superRA Documentation` on a page, `superRA Documentation` at the root), so previewing the site and publishing it now agree.
+
+**Failed card load**, forced in the live page by failing every `/node` request with a 500 after a successful navigation: the card read "Could not load this task." and the tab moved from `Tab Title Names the Active Task and Worktree · dashboard-local-file-open` to `superRA · dashboard-local-file-open`, so it no longer names a task the card is not showing.
