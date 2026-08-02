@@ -80,7 +80,38 @@ Two DRY deletions rather than compressions: [refactor-and-integrate/SKILL.md §T
 
 Caveats:
 
-- The lowest-Δ files are the density floor, not a shallow pass: `rich-content.md` (−2%) is 181 prose words around four code blocks; `drift-test-quality.md` (−4%) is ~200 words of how-to plus a gated checklist that must survive verbatim; `worktree-data-sync/SKILL.md` (−4%) and `internals.md` (−9%) are CLI/flag reference whose prose is per-flag semantics with no rationale clauses left to cut. `refactor-and-integrate` and `semantic-merge` each took three passes to reach −12% / −10%.
+- The lowest-Δ files are the density floor, not a shallow pass: `rich-content.md` (−2%) is 181 prose words around four code blocks; `drift-test-quality.md` (−4%) is ~200 words of how-to plus a gated checklist that must survive verbatim; `worktree-data-sync/SKILL.md` (−4%) and `internals.md` (−9%) are CLI/flag reference whose prose is per-flag semantics with no rationale clauses left to cut. `refactor-and-integrate` and `semantic-merge` each took three passes to reach −11% / −10%.
 - [handoff-doc/SKILL.md](../../../../skills/handoff-doc/SKILL.md) was skipped as the dispatch allows: it is a deprecated redirect whose whole body is a six-row ownership list plus one instruction line, already at the style.
 
-Remaining for later groups: domain skills, and the remaining `using-superra`/`superintegrate` references not listed above.
+### Group 3 — domain skills (econ-data-analysis, theory-modeling)
+
+13 files restyled, prose-only counts as in Groups 1–2.
+
+| File | Before | After | Δ |
+|---|---:|---:|---:|
+| [econ-data-analysis/SKILL.md](../../../../skills/econ-data-analysis/SKILL.md) | 1961 | 1680 | −14% |
+| [econ-data-analysis/references/planning.md](../../../../skills/econ-data-analysis/references/planning.md) | 634 | 519 | −18% |
+| [econ-data-analysis/references/integration.md](../../../../skills/econ-data-analysis/references/integration.md) | 616 | 529 | −14% |
+| [econ-data-analysis/references/integrate-drift-tests.md](../../../../skills/econ-data-analysis/references/integrate-drift-tests.md) | 590 | 485 | −18% |
+| [econ-data-analysis/references/data-robustness-checklist.md](../../../../skills/econ-data-analysis/references/data-robustness-checklist.md) | 330 | 263 | −20% |
+| [econ-data-analysis/references/jupytext-guide.md](../../../../skills/econ-data-analysis/references/jupytext-guide.md) | 649 | 536 | −17% |
+| [econ-data-analysis/references/julia-quarto-guide.md](../../../../skills/econ-data-analysis/references/julia-quarto-guide.md) | 410 | 331 | −19% |
+| [econ-data-analysis/references/notebook-format.md](../../../../skills/econ-data-analysis/references/notebook-format.md) | 604 | 482 | −20% |
+| [theory-modeling/SKILL.md](../../../../skills/theory-modeling/SKILL.md) | 2541 | 2169 | −15% |
+| [theory-modeling/references/planning.md](../../../../skills/theory-modeling/references/planning.md) | 985 | 812 | −18% |
+| [theory-modeling/references/integration.md](../../../../skills/theory-modeling/references/integration.md) | 2295 | 2054 | −11% |
+| [theory-modeling/references/integrate-drift-tests.md](../../../../skills/theory-modeling/references/integrate-drift-tests.md) | 430 | 381 | −11% |
+| [theory-modeling/references/objective-first.md](../../../../skills/theory-modeling/references/objective-first.md) | 696 | 633 | −9% |
+
+Domain discipline preserved: every `[BLOCKING]` / `[ADVISORY]` item survives with its severity and content — the econ Iron Law, Describe/Analyze/Validate items, all nine §Pitfalls operation subsections, and the theory Iron Law, four gates, both falsification tests with their worked examples, and both hard gates (Data Inventory, Model Inventory / Assumption Map) including their `<HARD-GATE>` blocks. Diagnostic thresholds (p1/p99, 1-5% / 5-10% / `1e-8`–`1e-6` tolerances, the half-page mask window), slot templates, the Model Inventory markdown skeleton, and every code block and table are unchanged in content. `tests/harness-instruction-following` passes 126/126 (verified before and after).
+
+Three DRY deletions rather than compressions: [econ-data-analysis/SKILL.md](../../../../skills/econ-data-analysis/SKILL.md) §Key References dropped its `notebook-format.md` and `data-robustness-checklist.md` rows (§Stage-Scoped References is the load map) and its opening body-contents line; [econ integration.md](../../../../skills/econ-data-analysis/references/integration.md) dropped §Reviewer verdict protocol, whose one line restated the header's "load both skills at the `integration` stage"; [notebook-format.md](../../../../skills/econ-data-analysis/references/notebook-format.md) dropped the paragraph arguing why the major/minor decision split is load-bearing, folding its operative content into the two bullets it explained. [jupytext-guide.md](../../../../skills/econ-data-analysis/references/jupytext-guide.md) §Why percent format was deleted as pure rationale; its two behavior-bearing claims (same syntax both languages, file runs as script and converts to notebook) moved to the opening line.
+
+Two headings renamed away from "cross-cutting" (a retired phrasing): `Cross-Cutting Integrity Rules` → `Generic Integrity Rules` in econ `integrate-drift-tests.md`, and `Cross-cutting integrity Red Flags` → `Generic integrity Red Flags` in theory `integrate-drift-tests.md`. Both point at `drift-test-quality.md` §Cross-cutting Red Flags, whose own title is unchanged; no live cross-reference targets either renamed heading (only a historical entry in [docs/plans/2026-04-23-improve-design-principle-results.md](../../../../docs/plans/2026-04-23-improve-design-principle-results.md) mentions the old econ name).
+
+Caveats:
+
+- The three lowest-Δ files are at their density floor. [theory-modeling/references/integration.md](../../../../skills/theory-modeling/references/integration.md) (−11%, two passes) is four principle → identification-protocol → checklist blocks where the protocol and checklist deliberately state the same rule at detection and pass/fail granularity; collapsing that overlap would delete `[BLOCKING]` items, so the pass compressed within the items instead. [theory-modeling/references/integrate-drift-tests.md](../../../../skills/theory-modeling/references/integrate-drift-tests.md) (−11%) is a five-row tolerance table plus two candidate lists. [objective-first.md](../../../../skills/theory-modeling/references/objective-first.md) (−9%) is ~190 words of quoted exhibit material (the goal-statement example and the two held-out drill snippets) that must survive verbatim to be drillable; against the ~505 non-exhibit words the cut is ~12%.
+- [load_contract.json](../../../../tests/harness-instruction-following/load_contract.json) carries four line-anchored `source_paths` into group-3 files, and this pass shifted all four by the two lines the deleted body-contents / "Domain skill for…" openers occupied: `econ-data-analysis/SKILL.md#L11-L22` and `#L130-L133`, `theory-modeling/SKILL.md#L11-L22` and `#L17-L19`. Each still lands on the Stage-Scoped References table or the merges/joins bullets it was cut from, and no test asserts them. Left untouched, consistent with Group 1 — re-anchoring `load_contract.json` whole-file is its own concern.
+
+Remaining for later groups: the `using-superra`/`superintegrate` references not listed in Groups 1–3.
