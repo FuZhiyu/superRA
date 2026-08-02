@@ -34,14 +34,12 @@ Transformed data without describing it first? Undo the transformation and descri
 
 Three disciplines underpin rigorous data work. They are **concurrent, not sequential** — every analysis step exercises all three. Documentation runs continuously alongside them, not as a fourth phase.
 
-Shared checklist walked by implementer (before DONE) and reviewer (as verification). Items apply to every analysis task; operation-conditional items live in §Pitfalls, walked only when the task performs the operation. Walk this section top to bottom, plus any §Pitfalls subsections matching operations performed.
+Shared checklist for the implementer (before DONE) and the reviewer (within its focus). Items apply to every analysis task; operation-conditional items live in §Pitfalls, walked only when the task performs the operation.
 
 - `[BLOCKING]` — must fix to earn APPROVE.
-- `[ADVISORY]` — best-practice; reviewer MAY flag as MINOR; does not block APPROVE.
+- `[ADVISORY]` — recorded; never blocks APPROVE.
 
-The APPROVE/REVISE verdict mechanics, the one-comprehensive-pass rule, and re-review handling are owned by the reviewer role skill (`superRA:review-task`).
-
-**Targeted verification effort.** The committed diagnostics, row-count logs, and output files are the primary evidence in data work — assess them first. Re-execute a step to resolve a *suspected discrepancy*: an implausible magnitude, a missing row-count log, or a number that disagrees with `## Results`. When iterating or fixing, re-run only the changed step and its downstream dependents; unaffected upstream outputs stand as committed.
+**The committed diagnostics, row-count logs, and output files are the evidence in data work.** A missing diagnostic is a finding, not a prompt to generate it yourself. When fixing, re-run the changed step and its downstream dependents; unaffected upstream outputs stand as committed.
 
 ### Describe
 
@@ -66,14 +64,11 @@ When data was already imported and validated upstream, read existing diagnostics
 
 **After every major transformation (re-describe):**
 
-- `[BLOCKING]` Descriptive statistics re-run on affected variables after merges, filters, variable construction, aggregations, reshaping, deduplication. Output fed into §Validate §Sanity checks (distribution-shift check).
-- `[BLOCKING]` Variables not used downstream until their post-transformation distribution is understood. If something looks unexpected, investigated before proceeding.
+- `[BLOCKING]` Descriptive statistics re-run on affected variables after merges, filters, variable construction, aggregations, reshaping, deduplication, and compared against the pre-transformation values. An unexplained distribution shift is silent corruption; nothing downstream uses the variable until the shift is understood.
 
 **Visualization for key variables:**
 
-- `[ADVISORY]` **Distributions**: histograms for continuous variables — reveal skew, modes, outliers that summary stats miss. Use for any variable about to be transformed, winsorized, or filtered on.
-- `[ADVISORY]` **Relationships**: scatter plots for variable pairs — show nonlinearity, clusters, influential observations that correlations hide.
-- `[ADVISORY]` **Temporal patterns**: line plots of variable vs time — detect structural breaks, trends, seasonality. Essential for any time-series variable.
+- `[ADVISORY]` Plot what summary statistics hide: histograms before transforming, winsorizing, or filtering on a continuous variable; scatter plots for a pair whose correlation you are about to rely on; a line plot against time for any time-series variable, where structural breaks and seasonality live.
 
 ### Analyze
 
@@ -88,47 +83,37 @@ Numbers must make economic sense. Sanity-check against priors, literature, cross
 
 **Sanity checks** (run after every Analyze step; minimum bar before proceeding):
 
-- `[BLOCKING]` **Row count matches expectation.** Left join: row count matches left table (if right side is m:1). Inner join: expect fewer rows — how many dropped? Filter: how many rows removed? Drop rate reasonable?
-- `[BLOCKING]` **Distribution shift vs pre-transformation values.** Re-run describe on affected variables (Describe applied a second time) and compare. Unexpected shifts flag silent corruption.
-- `[BLOCKING]` **Economic sense.** Magnitudes plausible (GDP growth of 300% is wrong); signs correct; correlations match known stylized facts.
-- `[BLOCKING]` **Spot-check a few observations by hand** — especially for constructed variables and growth rates.
+- `[BLOCKING]` **Row count matches a stated expectation**, not just logged: left join matches the left table when the right side is m:1; inner join and filter drop counts are explained and the drop rate is defensible.
+- `[BLOCKING]` **Economic sense.** Magnitudes plausible (GDP growth of 300% is wrong); signs correct; correlations match known stylized facts. Constructed variables and growth rates spot-checked by hand on a few observations.
 - `[BLOCKING]` **Task objective expectations comparison.** When the task objective states Expected Results or Hypotheses, findings compared explicitly and divergences flagged before moving on.
 
 If something looks unexpected, STOP and investigate before proceeding.
 
 **Multi-source validation** (for key variables and headline numbers, go beyond sanity checks):
 
-- `[BLOCKING]` **Scale check.** Magnitude matches economic intuition and published benchmarks (IMF WEO, World Bank, central-bank data, prior literature).
-- `[BLOCKING]` **Property check.** Variable behavior consistent with priors or literature. For constructed variables, spot-check observations by hand; for growth rates, verify against published figures for well-known cases.
-- `[BLOCKING]` **Relationship check.** Correlations between new variables and known related measures are meaningful (e.g., two proxies for financial conditions should be meaningfully correlated); signs and magnitudes consistent with stylized facts (e.g., GDP growth positively correlated with employment growth); conditional means across subgroups (developed vs emerging, pre/post crisis) behave as expected.
-- `[BLOCKING]` **Reference verification.** For key variables, at least one external reference found. A surprising relationship is a signal to investigate, not to explain away.
+- `[BLOCKING]` Every key variable and headline number checked against **at least one external reference** — a published benchmark (IMF WEO, World Bank, central-bank data), prior literature, or a known related measure — for scale, sign, and relationship. Two proxies for the same construct should correlate; conditional means across obvious subgroups (developed vs emerging, pre/post crisis) should behave as expected. A surprising relationship is a signal to investigate, not to explain away.
 
 **Missing-data as signal** (missingness is data; interrogate before handling — operational how-to in §Pitfalls §Missing data handling):
 
 - `[BLOCKING]` **Systematic missingness** (concentrated in time, geography, or correlated with other variables) investigated — true absence vs construction error.
 - `[BLOCKING]` **"Missing" meaning disambiguated.** No position (→ zero) vs didn't report (→ truly missing). Missing returns treated as zero is almost always wrong.
-- `[BLOCKING]` Missingness passed through the pipeline where possible; fill/coalesce only with explicit justification.
 
 **Sensitivity analysis** (planning-side design in `references/planning.md`; menu of checks in `references/data-robustness-checklist.md`):
 
-- `[ADVISORY]` Sensitivity checks run on robustness-sensitive tasks — rerun the headline analysis under one alternative specification at a time (different sample cutoff, alternative variable definition, different winsorization, leave-one-out). One variation per check; bundling makes divergence untraceable.
-- `[ADVISORY]` "Robust enough" judged by economic reasoning, not mechanical pass/fail. A coefficient that moves 5% under a sensible alternative is usually fine; one that flips sign or loses significance is not. Relevant question: "would the researcher tell the same story under this alternative?"
+- `[ADVISORY]` Sensitivity checks run on robustness-sensitive tasks — one alternative specification at a time (sample cutoff, variable definition, winsorization, leave-one-out), since bundling makes divergence untraceable. "Robust enough" is an economic judgment: a coefficient that moves 5% is usually fine, one that flips sign is not. The question is whether the researcher would tell the same story under the alternative.
 - `[BLOCKING]` **Divergence escalated.** If a sensitivity check produces a meaningfully different result (sign flip, lost significance on a headline coefficient, magnitude change large enough to change the interpretation), STOP and `AskUserQuestion`. Divergence is a methodology question, not an RA decision.
 
 ### Implementation standards
 
-- `[BLOCKING]` Each step implements what the task objective specifies; deviations are rewritten into the step text, not layered on top.
 - `[BLOCKING]` Analysis scripts follow the notebook-compatible format per `references/notebook-format.md`.
 - `[BLOCKING]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
 - `[BLOCKING]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.
 
 ### Documentation and handoff
 
-- `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
 - `[BLOCKING]` **Headline findings presented visually.** Show each headline result as a figure — a distribution, a relationship, or a time path — unless a figure would not clarify it (a lone scalar, or a small table that already reads clearly).
 - `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
-- `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings shipped.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
@@ -137,21 +122,19 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 ## Pitfalls
 
-Operation-conditional checklist — walk a subsection only when the task performs that operation (merge, time-series shift, reshape, aggregation, dedupe, filter, variable construction, missing-data handling). Severity markers match the main checklist.
+Operation-conditional checklist — walk a subsection only when the task performs that operation. Severity markers match the main checklist.
 
 ### Merges and joins
 
 - `[BLOCKING]` **Before — describe both sides.** Check row counts and unique join-key values in both tables; verify key overlap and type compatibility. A merge without join-key inspection on both sides is an Iron Law violation.
-- `[BLOCKING]` **Join type declared.** Decide 1:1, m:1, or 1:m before writing the merge. Many-to-many is almost always a bug — it creates a Cartesian product that silently inflates row counts.
-- `[BLOCKING]` **After — row count matches expectation.** Left join: row count matches left table (unless right has dupes on the join key — the many-to-many trap). Inner join: expect fewer rows; log how many dropped.
+- `[BLOCKING]` **Join type declared.** Decide 1:1, m:1, or 1:m before writing the merge, and confirm the post-merge row count against it. Many-to-many is almost always a bug — a Cartesian product that silently inflates row counts, and the reason a left join can come back longer than its left table.
 - `[BLOCKING]` **Unmatched rows logged.** How many rows from each side did not match; assess whether non-matching is random or systematic.
 
 ### Time-series operations (lag, lead, diff, cumsum, fill)
 
 - `[BLOCKING]` **Sort first.** Sort by panel ID + time before any lag, lead, diff, or cumsum. Joins destroy sort order — always re-sort after any merge.
-- `[BLOCKING]` **Check for gaps** before applying lags/leads/diffs. If unit `i` is missing period `t`, a naive `shift(1)` treats period `t+1`'s lag as `t-1`'s value — silently wrong. Diagnose gaps per unit before proceeding.
+- `[BLOCKING]` **Check for gaps** before applying lags/leads/diffs. If unit `i` is missing period `t`, a naive `shift(1)` treats period `t+1`'s lag as `t-1`'s value — silently wrong. Diagnose gaps per unit first, then spot-check a few units after the shift, especially near panel entry and exit.
 - `[BLOCKING]` **Use time-aware operators when available.** In Julia, `PanelShift.jl` handles gaps correctly; in Python, merge on lagged time index or `reindex` to a full time grid before shifting. If the framework only supports positional shift, verify there are no gaps first, or fill gaps explicitly (with NaN, not interpolation) so shifts are correct.
-- `[BLOCKING]` **After — spot-check a few units** to confirm the lag/lead aligns with the correct time period, especially near panel entry/exit.
 
 ### Reshaping
 
@@ -174,8 +157,7 @@ Operation-conditional checklist — walk a subsection only when the task perform
 
 - `[BLOCKING]` Log rows dropped — count, reason, before/after.
 - `[BLOCKING]` **Check non-randomness of drops.** Are drops concentrated in certain countries, periods, or variable ranges? Sample selection bias risk.
-- `[BLOCKING]` **Verify boolean logic.** `&` vs `|` errors are a common silent bug.
-- `[ADVISORY]` Watch chained filters for unintended cumulative effects.
+- `[BLOCKING]` **Verify boolean logic.** `&` vs `|` errors are a common silent bug; chained filters compound.
 
 ### Variable construction
 
@@ -188,9 +170,8 @@ Operation-conditional checklist — walk a subsection only when the task perform
 
 Operational how-to for *handling* missingness (for *interpretation* of missingness, see §Validate §Missing-data as signal):
 
-- `[BLOCKING]` **Explicit handling** (`.fillna(0)`, `.dropna()`, filters) is visible and auditable.
-- `[BLOCKING]` **Implicit handling audited** (package defaults silently ignoring NaN in aggregations) — check alignment with analytical objective.
-- `[BLOCKING]` **Prefer passing missing through the pipeline** over filling silently; use fill/coalesce only with explicit justification.
+- `[BLOCKING]` **Handling is visible and auditable** — `.fillna(0)`, `.dropna()`, and filters are explicit, and package defaults that silently ignore NaN in aggregations are checked against the analytical objective.
+- `[BLOCKING]` **Prefer passing missing through the pipeline** over filling silently; fill or coalesce only with explicit justification.
 
 ## Common Rationalizations
 

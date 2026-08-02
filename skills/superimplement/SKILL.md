@@ -73,8 +73,8 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 1. Select the per-task seat structure through `superRA:agent-orchestration`.
 2. Execute the implementer seat. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
 3. **If NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
-4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat for one comprehensive task-local pass per assigned task. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
-5. **Once APPROVE:** a generic APPROVE with no file/line citations is a red flag — rerun the reviewer seat to cite the code paths it examined. In a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
+4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+5. **Once APPROVE:** in a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
 
 #### Seat execution
 
@@ -96,7 +96,7 @@ See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Dis
 
 ### Step 3: Verify Pipeline and Reproducibility
 
-After every task is `approved`, verify the work end-to-end before presenting completion options. Walk all four checks against actual command output, not recollection; do not proceed if any fails.
+After every task is `approved`, verify the work end-to-end before presenting completion options. Walk all three checks against actual command output, not recollection; do not proceed if any fails.
 
 1. **All code committed?**
    ```bash
@@ -110,11 +110,9 @@ After every task is `approved`, verify the work end-to-end before presenting com
    - Multi-script pipeline runs end-to-end if the task tree declares one.
    - Outputs exist and were generated from committed code, not ad-hoc REPL state.
 
-4. **Deferred MINORs resolved?** Check task `## Review Notes` sections for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in the relevant task's `## Results`.
-
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
-**Once all four checks pass:** proceed to the Step 4 completion menu.
+**Once all three checks pass:** proceed to the Step 4 completion menu.
 
 ### Step 4: Present Completion Options
 
@@ -154,7 +152,7 @@ The autonomy contract is in `superRA:using-superra/references/main-agent.md` (ma
 
 - **Step 4 completion menu.** Pre-set workflow gate — pause class 2 (see Step 4 above for the four options).
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class 1 in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`. Pause class 1 in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, a blocking finding the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`. Pause class 1 in the autonomy contract.
 
 Blocking reviewer findings are not a stop point — adjudicate and fix through the REVISE loop without asking the user.
 

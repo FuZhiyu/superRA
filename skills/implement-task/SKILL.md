@@ -55,11 +55,11 @@ After annotating all items you're expected to address, set `status: implemented`
 ```markdown
 ## Review Notes
 
-> 1. [MAJOR] Step 2 uses inner join; should be left join. ([Code/03.py:42](Code/03.py#L42))
+> 1. [BLOCKING] Step 2 uses inner join; should be left join. ([Code/03.py:42](Code/03.py#L42))
 >    → implemented: switched to left join, row count preserved ([Code/03.py:42](Code/03.py#L42))
-> 2. [MINOR] Missing row-count log after merge. ([Code/03.py:45](Code/03.py#L45))
+> 2. [ADVISORY] Missing row-count log after merge. ([Code/03.py:45](Code/03.py#L45))
 >    → implemented: added `print(f"Rows: {n_before} → {len(df)}")` ([Code/03.py:47](Code/03.py#L47))
-> 3. [MAJOR] Use log returns, not arithmetic.
+> 3. [BLOCKING] Use log returns, not arithmetic.
 >    → orchestrator: rejected — methodology specifies arithmetic returns per the ancestor objective's §Conventions
 ```
 

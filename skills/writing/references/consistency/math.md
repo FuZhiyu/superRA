@@ -1,6 +1,6 @@
 # Consistency: Math (derivations, proofs, statistical specifications)
 
-> Load when Review or Polish mode targets **mathematical correctness** — derivation steps, proof integrity, statistical/econometric model specification, notation stability across sections. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Mathematical issues are almost always `MAJOR` or `CRITICAL` — a sign error in a main identifying equation is APPROVE-blocking; a notation drift in an appendix lemma may be `MINOR`.
+> Load when Review or Polish mode targets **mathematical correctness** — derivation steps, proof integrity, statistical/econometric model specification, notation stability across sections. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks. A sign error in a main identifying equation is blocking; notation drift in an appendix lemma is usually advisory.
 
 Source dimensions harvested from `draft-reviewer:mathematical-reviewer` (derivations and proofs, notation consistency, statistical specifications, common errors catalog).
 

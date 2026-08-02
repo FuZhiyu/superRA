@@ -61,7 +61,7 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 - Used fuzzy date matching for quarterly vs monthly frequency mismatch
 
 ## Review Notes
-> [MAJOR] Inner join used instead of left join
+> [BLOCKING] Inner join used instead of left join
 ```
 
 Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Task Anatomy.

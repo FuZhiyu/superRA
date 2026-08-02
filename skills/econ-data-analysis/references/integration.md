@@ -17,12 +17,9 @@ Generic cross-cutting code-integration concerns (naming, utility reuse, PR-frien
 
 **Refactored code must be re-validated, not just carried forward.** Refactoring can silently change data flow, merge order, floating-point accumulation, or sample composition — the same safeguards that the original code needed, the refactored code needs again.
 
-- `[BLOCKING]` **Describe steps survive the refactor.** Panel-structure diagnostics, variable diagnostics, and missing-value patterns described before the first transformation still run on the refactored code, not just copied over from the original. Never silently dropped.
-- `[BLOCKING]` **Row-count prints at every sample-changing operation survive.** Every merge, filter, drop, deduplication, or sample restriction prints `before → after` counts in the refactored code, and the logged counts match the pre-refactor counts (or any change is explained).
-- `[BLOCKING]` **Validation checks survive.** Sanity checks, distribution-shift comparisons, and economic-sense checks from §Validate are present in the refactored code and were re-executed successfully after refactoring.
+- `[BLOCKING]` **Every data-discipline artifact survives and still runs on the refactored code** — describe steps (panel structure, variable diagnostics, missing-value patterns), `before → after` row-count prints at every sample-changing operation, and the §Validate sanity, distribution-shift, and economic-sense checks. Logged counts match the pre-refactor counts or the change is explained. Copying the output forward is not survival; reorganize freely, delete nothing.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored code; failures are adjudicated per `references/integrate-drift-tests.md`, never silently re-expected.
 - `[BLOCKING]` **Jupytext/markdown documentation cells describe what the refactored code actually does** — not what the pre-refactor code did.
-- `[BLOCKING]` **No data discipline artifact** (description, row count log, validation check, markdown justification) has been deleted during refactoring. Reorganize freely; delete nothing.
 
 ## Utility reuse and documented deviations
 

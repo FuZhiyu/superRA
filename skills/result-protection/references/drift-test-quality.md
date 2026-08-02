@@ -43,7 +43,7 @@ These rules apply wherever drift tests protect key results: Protect, Sync, Integ
 
 ## Gated Checklist
 
-Walk every item. `[BLOCKING]` items must pass for approval; `[ADVISORY]` items may be reported as minor findings.
+`[BLOCKING]` items must pass for approval; `[ADVISORY]` items are recorded and do not block.
 
 **Coverage:**
 

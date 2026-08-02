@@ -37,7 +37,7 @@ One agent owns one task. Use when the task needs deep context (cross-file grep, 
 
 ### Model Tier Selection
 
-Default to the medium tier (Sonnet in Claude Code, medium thinking in Codex). Step up (Opus / deep thinking) when any of these apply: the spec emerges mid-task rather than from the objective; silent-error risk is high (results-bearing code where a wrong output ships without obvious failure); the dispatch is an adversarial first-pass review (lower-tier agents over-comply; narrow re-review of a cited fix stays medium); or heavy context synthesis reconciles many files/skills in one head. Fable is reserved for the most challenging, expensive tasks. These are defaults, not rules — honor any explicit user preference.
+Default to the medium tier (Sonnet in Claude Code, medium thinking in Codex). Step up (Opus / deep thinking) when any of these apply: the spec emerges mid-task rather than from the objective; silent-error risk is high (results-bearing code where a wrong output ships without obvious failure); the dispatch is a thorough-tier first-pass review (lower-tier agents over-comply; a narrow re-review of a cited fix stays medium); or heavy context synthesis reconciles many files/skills in one head. Fable is reserved for the most challenging, expensive tasks. These are defaults, not rules — honor any explicit user preference.
 
 ---
 
@@ -71,6 +71,8 @@ Agent:
   Stage: <stage-name>
   Task: <task path — e.g., "data-preparation/merge">
   Git range: <BASE_SHA>..<HEAD_SHA>
+  Tier: quick | thorough      # optional — defaults to quick
+  Focus: <dimensions>         # optional — defaults to correctness
   Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
@@ -90,7 +92,7 @@ Each task has an implementer seat and a reviewer seat; each is independently fil
 | Implementer | Reviewer | Choose when |
 |---|---|---|
 | subagent | subagent | Default for large or routine work. |
-| subagent | main | Small or high-stakes work where the main context should carry adversarial review. |
+| subagent | main | Small or high-stakes work where the main context should carry the review. |
 | main | subagent | Small or context-heavy implementation that still needs independent review. |
 
 When the main agent fills a seat, load that seat's role skill — `superRA:implement-task` or `superRA:review-task` — plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer.
@@ -102,7 +104,7 @@ Done by the orchestrator alone, at every workflow stage:
 - **Task sequencing and dispatch inside the selected frontier.** The main agent selects which frontier to work; this skill sizes, bundles, and dispatches the work inside it.
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** Re-dispatch when context is missing; escalate researcher-owned blockers through the active workflow's pause rules.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, research-related decision, CRITICAL override. Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, research-related decision, override of a blocking finding. Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious.
 
 ## Handling Reviewer Feedback
 

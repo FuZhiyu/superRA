@@ -1,6 +1,6 @@
 # Consistency: Argument Logic
 
-> Load when Review or Polish mode targets **logical structure and evidence support** — claim-evidence mapping, causal-inference validity, alternative-explanations coverage, overclaiming / underclaiming, hedging calibration. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Issues touching **main causal claims** are `CRITICAL` / `MAJOR`; issues on supporting or secondary claims may be `MINOR`.
+> Load when Review or Polish mode targets **logical structure and evidence support** — claim-evidence mapping, causal-inference validity, alternative-explanations coverage, overclaiming / underclaiming, hedging calibration. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks. Issues touching **main causal claims** are blocking; issues on supporting or secondary claims are usually advisory.
 
 Source dimensions harvested from `draft-reviewer:argument-logic-reviewer` (logical flow, claim-evidence, causal-inference, alternative explanations, overclaiming / underclaiming, post-hoc reasoning).
 

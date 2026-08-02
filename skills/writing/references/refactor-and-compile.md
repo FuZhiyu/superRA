@@ -1,6 +1,6 @@
 # Refactor-and-Compile — Safe find-replace + build gate
 
-> Load when Polish, Draft, or Review mode performs (or verifies) a find-replace across a document, and for the post-edit build that ends every batch of edits. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` flaggable as MINOR.
+> Load when Polish, Draft, or Review mode performs (or verifies) a find-replace across a document, and for the post-edit build that ends every batch of edits. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 This reference has two sections:
 
@@ -65,9 +65,7 @@ When renaming a term of art (`treatment group` → `treated sample`):
 
 ### Refactor Gated Checklist
 
-- `[BLOCKING]` Every substitution was previewed before being applied.
-- `[BLOCKING]` Word-boundary correctness confirmed — no false-positive matches remain in the diff.
-- `[BLOCKING]` Case and plural/inflection variants considered explicitly.
+- `[BLOCKING]` Every substitution previewed before it was applied, covering case and plural/inflection variants; no false-positive or word-boundary match survives in the diff.
 - `[BLOCKING]` Direct quotations and block quotes not touched (quotes are sacred).
 - `[BLOCKING]` Document builds after the refactor (§Compile).
 - `[BLOCKING]` Git diff read end-to-end; every hunk intentional.
@@ -160,7 +158,5 @@ For non-trivial edits, record:
 ### Compile Gated Checklist
 
 - `[BLOCKING]` Build command used is recorded.
-- `[BLOCKING]` Build runs to completion with no errors (no unresolved `??` references, no undefined citations, no `File not found`).
-- `[BLOCKING]` No new `File not found` errors introduced by the edit (missing figure / `\input` / package).
+- `[BLOCKING]` Build runs to completion with no errors — no unresolved `??` references, no undefined citations, and no `File not found` for a figure, `\input`, or package the edit touched.
 - `[ADVISORY]` Build warnings enumerated (new vs pre-existing).
-- `[ADVISORY]` Each new warning has a ≤1-line triage rationale.

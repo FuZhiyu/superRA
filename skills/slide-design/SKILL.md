@@ -70,7 +70,7 @@ The hard part is judging what the audience knows at each moment. Run an audience
 
 ## Quick Checklist
 
-Shared checklist walked by the implementer (before DONE) and by the reviewer (as verification). `[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items may be reported as MINOR.
+Shared checklist walked by the implementer (before DONE) and by the reviewer (as verification). `[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items are recorded and do not block.
 
 - `[BLOCKING]` Audience context is established before major claims, unusual notation, nonstandard samples, or field-specific terms. When the work runs inside a superRA task tree, verify against the audience-context inventory recorded at planning time (`references/planning.md §Audience-Context Inventory`); when no inventory exists (standalone invocation), state the assumed representative audience member in the review notes and judge against that.
 - `[BLOCKING]` Each main-path slide has a clear communication role: setup, takeaway, evidence, mechanism, transition, or recovery/roadmap.

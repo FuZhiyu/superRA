@@ -43,7 +43,7 @@ If a symbol appears without a stated meaning, an assumption is written only as a
 
 Four gates underpin trustworthy modeling work, ordered by the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering** (a reader cannot evaluate an assumption that uses an undefined symbol, a derivation without the active assumption set, or a verification claim without an auditable derivation). Each gate has an **artifact** the implementer produces and a **checklist** walked while producing it. The gates are **concurrent** — every modeling step exercises all four; documentation is built into the artifact, not a separate phase.
 
-`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items may be flagged as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
+`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items are recorded and do not block. Verdict mechanics live in `superRA:review-task`.
 
 ### Falsification tests (per ledger entry in Gates 1 and 2)
 
@@ -114,8 +114,7 @@ The Proof-deletion test in §Falsification tests is the diagnostic move for whet
 - `[BLOCKING]` Reuse-sites slot cites every additional appearance with line or equation refs, or states "none." Claims of reuse without refs are REVISE.
 - `[BLOCKING]` Inline-alternative slot shows the actual substituted expression, not a description of it ("would be unwieldy" is not an inline alternative).
 - `[BLOCKING]` One-site symbols (Reuse sites: none) must justify via concrete content in "What the name carries" — sign meaning, structural role, named scalar cited elsewhere. One-time abbreviation fails regardless of length.
-- `[BLOCKING]` Every new non-standard symbol in the shipped output clears the bar — standard notation, or meaning that inlining would lose per `What the name carries`. Symbols that clear neither are inlined or mapped to an existing symbol; a symbol kept without clearing the bar is REVISE.
-- `[BLOCKING]` "Nearest existing symbol considered: none in scope" is a falsifiable claim. If the reviewer finds a candidate in the canonical Notation Conventions table, the active lemma, or an upstream derivation, REVISE.
+- `[BLOCKING]` Every new non-standard symbol in the shipped output clears the bar — standard notation, or meaning that inlining would lose. A symbol clearing neither is inlined or mapped to an existing one. "Nearest existing symbol considered: none in scope" is falsifiable: a candidate found in the canonical Notation Conventions table, the active lemma, or an upstream derivation is REVISE.
 - `[BLOCKING]` One entry per object. Indexed families ($x_k$ for $k=1,\dots,K$) count as one; bundling multiple distinct objects under a shared justification is REVISE.
 - `[BLOCKING]` Domains, units, and sign restrictions are stated whenever they matter for the algebra, comparative statics, or numerical checks.
 - `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
@@ -171,8 +170,7 @@ Derivations must be auditable. A correct result that cannot be checked is not an
 - `[BLOCKING]` Top-level proof goal stated in one sentence before the first displayed equation. Derivations whose first move is algebra without a stated target are REVISE. (Full reader-facing recursive signposting — sub-arguments at every level, transition prose — lives in `references/integration.md` Section A as ex-post rewriting discipline.)
 - `[BLOCKING]` When a derivation step depends on a previously established equation, lemma, or proposition, the dependency is cited by name or equation number. Asserted equations with no path to a named source are REVISE. (Cite-with-operative-form-recall for distant sources is owned by `references/integration.md` Section B. Prose-level precision — math symbol vs. English description, equation reference vs. positional pointer — is also owned by Section B as a readability rule.)
 - `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore". (Section B's half-page mask test is the integration-stage detection layer.)
-- `[BLOCKING]` Each non-obvious step states the rule being used: substitute a constraint, differentiate with respect to a variable, apply the envelope theorem, impose market clearing, linearize around a point, or similar.
-- `[BLOCKING]` Each non-trivial step carries both the technical rule (envelope theorem, market clearing, ...) and a one-sentence reason for invoking it; mechanical rule-labels without a reason are REVISE.
+- `[BLOCKING]` Each non-obvious step names the rule it invokes — substitute a constraint, differentiate, apply the envelope theorem, impose market clearing, linearize — **and** a one-sentence reason for invoking it. A mechanical rule-label without a reason is REVISE.
 - `[BLOCKING]` When a result depends on case splits or domains (interior vs corner, positive vs negative branch, existence/uniqueness conditions), the active case is stated and excluded cases are either checked or explicitly deferred.
 - `[BLOCKING]` Comparative statics state what is held fixed, which object moves, and what sign or ranking is being claimed.
 - `[BLOCKING]` Reused symbols keep the same meaning throughout the task. If notation changes, old and new notation are mapped explicitly.
@@ -189,15 +187,13 @@ Symbolic work still needs verification. A derivation is not complete until it ha
 
 - `[BLOCKING]` Every headline symbolic result is checked against at least one independent verification mode: substitute back into the original conditions, test a limiting or special case, or evaluate a simple numerical example.
 - `[BLOCKING]` Numerical verification uses explicit parameter values and states what is being checked: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence.
-- `[BLOCKING]` Special cases and limiting cases are compared against intuition and any stated hypotheses in the task objective; divergences are flagged before proceeding.
-- `[BLOCKING]` Special and limiting cases are interpreted economically, not just numerically confirmed (e.g., "at $\beta \to 0$ the policy reduces to the myopic rule, which matches the one-period benchmark").
+- `[BLOCKING]` Special and limiting cases are interpreted economically, not just numerically confirmed (e.g., "at $\beta \to 0$ the policy reduces to the myopic rule, which matches the one-period benchmark"), and compared against intuition and any stated hypotheses in the task objective; divergences are flagged before proceeding.
 - `[BLOCKING]` Results are checked back against the assumption map. If a step quietly needs a stronger sign, domain, or regularity restriction than the current map states, update the assumption map before using the result.
 - `[BLOCKING]` When code, CAS output, or a solver is used, the human-readable result matches the computed object exactly. No manual transcription drift.
 - `[ADVISORY]` For numerically delicate objects, verify more than one parameter set or a small perturbation around the baseline.
 
 ### Implementation standards
 
-- `[BLOCKING]` Each task satisfies the current task objective and scope. When steps are present, they stay in sync with the current route rather than drifting away from the work.
 - `[BLOCKING]` If the evidence shows that an extra lemma, case split, derivation step, or verification pass is required to trust the result, add it inside the current task and rewrite the step text to match.
 - `[BLOCKING]` Solver scripts, symbolic code, and model notes are organized so a reviewer can trace the chain from primitives and assumptions to the reported result.
 - `[BLOCKING]` Major modeling decisions (normalization, timing, equilibrium selection, parameter baseline, approximation point) carry a markdown explanation or nearby comment.
@@ -206,12 +202,10 @@ Symbolic work still needs verification. A derivation is not complete until it ha
 
 Cross-cutting documentation rules beyond the per-symbol / per-assumption ledgers:
 
-- `[BLOCKING]` Task `## Results` is updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` The canonical Notation Conventions table is **user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the task-level ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
 - `[BLOCKING]` Route human-readable equations, tables, and figures through `superRA:report-in-markdown`.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
-- `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings ship.
 
 ## Common Rationalizations
 

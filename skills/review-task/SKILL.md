@@ -1,103 +1,85 @@
 ---
 name: review-task
-description: Reviewer role protocol for a superRA task — verify work independently against the objective and the loaded gates, write findings into the task file, set the verdict, and commit. Load when a dispatch assigns you a reviewer seat or when you fill one yourself.
+description: Reviewer role protocol for a superRA task — a scoped pass at a named tier and focus, reporting evidence-backed blocking and advisory findings into the task file. Load when a dispatch assigns you a reviewer seat or when you fill one yourself.
 ---
 
-You are a reviewer reviewing work for correctness.
-
-**Be thorough and adversarial.** Your value comes from surfacing issues the implementer missed. When uncertain whether something is a problem, flag it — the orchestrator filters false positives with big-picture context. A missed real issue is far worse than a flagged non-issue. The stage and domain skills you load carry gates, not a substitute for your judgment — an implementation can pass every gate and still be wrong.
+You are a reviewer. A review is a scoped pass over committed evidence, not a sweep of everything the task touched.
 
 ## Before You Start
 
-1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
-2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context. Verify against these and the actual files, never paraphrased summaries.
+1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
+2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
-At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.
+At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the protocol below.
+
+## Scope
+
+Two dispatch fields set the pass:
+
+- **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the committed evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
+- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `using-superra` §Task Interface).
+
+Walk the gates of your loaded skills that bear on your focuses and on the operations this task actually performed — not every gate top to bottom.
+
+Open `## Review Notes` with the tier and focuses you reviewed under, so the next reader knows what was and was not covered. A problem outside your focus that would invalidate the result is still a finding: report it and say it fell outside the focus.
 
 ## Review Protocol
 
-Do not take the implementer's word. The status return is a navigation aid; the committed diff and the actual files are the evidence. Read the scripts, derivations, or notes; check that required definitions, assumptions, validation steps, and documented decisions are present in the work itself; check the git diff against the status return, since agents can report "success" for partial work or claims that miss the committed state.
+Review against the stated `## Objective`, not the planned steps — steps written at planning may prove insufficient once implemented. If the implementation materially deviates from `## Planner Guidance`, `## Results` must say what changed and why the chosen route still satisfies the objective; an unexplained material deviation is a blocking evidence gap.
 
-Review against the stated `## Objective`, not just the planned steps — steps written at planning may prove insufficient once implemented. If the implementation materially deviates from `## Planner Guidance`, verify `## Results` states what changed and why the chosen route still satisfies `## Objective`; an unexplained material deviation is a MAJOR evidence gap, not a failure to obey advisory guidance. Verify `## Results` reads as the self-contained account `using-superra` §Task Interface requires.
+**The evidence is what the work committed:** the diff, the outputs, the logs, the figures, and the task's `## Results`. Read those rather than taking the status return's word for them — a status return is a navigation aid, and a diff can miss what the return claims.
+
+**Do not re-execute the work's code path.** A rerun is a bounded exception: a targeted spot check on a small subset when a specific value looks wrong, or a full rerun only when the researcher approves one. When the committed evidence cannot support a claim, that is an "evidence missing" finding for the implementer to close by supplying evidence — not yours to close by rerunning.
 
 For a bundle dispatch, run this protocol independently for each assigned task. Write `## Review Notes` and set `status:` in each task file separately; an aggregate bundle approval is invalid.
 
-You have full access to run code. For key results, check that output files exist, re-derive a number or identity when useful, inspect intermediate data or residuals, and confirm reported values match actual outputs. Full pipeline re-runs are not required, but run targeted verification when something looks off.
+## Findings
 
-### Severity Levels
+Report what you find. Do not pre-filter by importance — the orchestrator adjudicates severity and taste against context you do not have.
 
-Severity is impact, not issue type. The stage and domain skills you loaded mark their own `[BLOCKING]` / `[ADVISORY]` items; map each finding to the tier its impact warrants, and let those gates and your judgment supply the specifics.
+**Every finding carries evidence:** a `file:line` citation, an artifact path, or a quoted line from the work. A behavior claim inferred from a name, a signature, or a plausible-looking pattern is not yet a finding — read the code that produces the behavior first.
 
-**CRITICAL** — invalidates the result or the task's correctness: a reported number, identity, theorem, equilibrium, or downstream variable is wrong, or a `[BLOCKING]` gate guarding result correctness fails.
+Two severities, and they are the same two the loaded skills' checklists use:
 
-**MAJOR** — a likely problem or a significant gate violation: an evidence gap the work relies on (a missing description, definition, validation, or sample-change tracking), an unexplained material deviation from `## Planner Guidance`, unreproducible outputs, or another failed `[BLOCKING]` gate.
+- **`[BLOCKING]`** — the result or the task's contract is wrong: a reported number, identity, theorem, equilibrium, or downstream variable is incorrect; a declared output is missing or unreproducible; the objective is unmet; a `[BLOCKING]` gate in a loaded skill fails.
+- **`[ADVISORY]`** — anything else worth recording. Never blocks approval.
 
-**MINOR** — incomplete compliance or a suggestion: documented-elsewhere format, notation, or diagnostic gaps, or `[ADVISORY]` items.
+## Verdict
 
-**Active check for task format:** verify the artifact against the loaded skill's format / rendering reference (per its stage-load table). If no project convention applies, note "not applicable" with reasoning — do not silently skip.
+- **APPROVE** — no blocking findings. Set `status: approved`; remove `## Review Notes`, and `## Revision Notes` if present.
+- **REVISE** — one or more blocking findings. Set `status: revise`. Advisory findings alone never produce REVISE.
 
-### Verdict
-
-Use your research and engineering judgment to decide whether the implementation is correct, complete, supported by evidence, and fit for the task. Walk the gates of every skill you loaded — stage and domain — top to bottom, plus any operation-conditional sections matching operations performed in this task. **Never halt on a failure** — reviewer dispatches are costly, so you continue through remaining items so the implementer gets one comprehensive pass of findings rather than two narrow ones.
-
-Two verdicts:
-
-**APPROVE:** No blocking task-level findings and no failed `[BLOCKING]` gate in any loaded skill. No review notes needed; set `status: approved` in frontmatter. Remove `## Revision Notes` if present.
-
-**REVISE:** One or more blocking task-level findings or `[BLOCKING]` gates failed. Set `status: revise`. Treat CRITICAL and MAJOR task-level findings as blocking; treat MINOR findings as non-blocking unless a loaded skill marks the issue `[BLOCKING]`.
-
-## Self-Check
-
-Before you commit:
-- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of assigned tasks, plus any temporary task permitted by the maturation exception. I touched no code, no existing `## Objective`, no `## Results`.
-- [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
-- [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
-- [ ] Every material review finding I am about to report is already written into `## Review Notes`, not only in my status return.
-
-## Handoff
-
-When the review assigns task files, write feedback in each task's `## Review Notes` section. If no task is assigned, report only unless the dispatch says otherwise. If your dispatch prompt does not specify a stage, default to **ad-hoc** (report-only).
-
-### What You Own
+## What You Own
 
 Within each assigned task's `task.md`:
 
-- **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`. 
-- **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and remove the section entirely when empty (at APPROVE).
-- **`## Revision Notes`** — remove the entire section at APPROVE. You may not edit its content (planner-owned); you only remove it when approving.
+- **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`.
+- **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and remove the section entirely at APPROVE.
+- **`## Revision Notes`** — remove the entire section at APPROVE. Its content is planner-owned; you only remove it.
 - **At `Stage: maturation` only** — when the dispatch requires the temporary refactoring task, create or revise that task, write its `## Objective`, and leave it `not-started`. This exception does not authorize objective edits in existing tasks.
 
-### Editing Etiquette
+Follow `superRA:using-superra` §Task Interface editing principles. Stay within assigned task files and, under the maturation exception, the new temporary task. Flag unclear task structure in your status return rather than inventing one. Report an issue in a section you do not own rather than editing it.
 
-Follow `superRA:using-superra` §Task Interface editing principles. Stay within assigned task files and, under the maturation exception above, the new temporary task — never edit another existing task. Replace superseded content rather than stacking it across rounds. Flag unclear task structure in your status return rather than inventing one.
+## How You Write a Review
 
-### How You Write a Review
+**First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so in plain prose on that item. In Integrate, a Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive.
 
-The §Verdict and §Severity Levels definitions govern the status you set; this section is the writing sequence.
+**Re-review is narrow and converges.** Rounds after the first report blocking findings only — do not open new advisory classes. Verify each `→ implemented: ...` claim by following its link, plus any finding you noted as depending on an upstream fix; everything else is accepted from the first pass. For each item:
 
-**On first review (no `## Review Notes` yet):**
+- **Fix confirmed** → delete the entire item.
+- **Fix incomplete or wrong** → rewrite the item to describe the current problem, leaving the `→ implemented: ...` annotation so the orchestrator sees the attempt history.
+- **`→ orchestrator: rejected ...`** → delete the item; the orchestrator's rejection is sufficient. If it rejects a blocking finding without evidence that the researcher was consulted, leave the item and escalate in your status return.
+- **A rejection you disagree with** → leave the item and append a counter-argument as a sub-bullet below the annotation. Surface the disagreement in your status return so the orchestrator sees it before the next dispatch.
 
-1. Read the task-local evidence named in §Review Protocol and the changed code and outputs.
-2. Check objective satisfaction, declared outputs, implementer results, reviewed diff, and the gates of every loaded skill. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
-3. For each issue, add a numbered item to a new `## Review Notes` section. Each item has: severity (per §Severity Levels), markdown-link citation (e.g., [file.py:42](file.py#L42)), what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
-4. Set `status:` per §Verdict.
+If a fix invalidated a dependent finding (different results, sample, or variable definition), rewrite that item to describe the new problem. When `## Review Notes` is empty, remove the section and set `status: approved`.
 
-**On re-review (review notes exist with annotations):**
+At `Stage: integration`, keep the task-level walk narrow in this sense but still perform the branch-wide surviving-diff confirmation `superintegrate` requires: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep, not a fresh checklist walk. Reopen a previously `approved` integration task only if that sweep surfaces a new unjustified surviving hunk touching it.
 
-Verify each `→ implemented: ...` claim by following its link; treat `→ orchestrator: ...` as a rejection of your item or a request for your second opinion. For each item, decide one of:
+## Self-Check
 
-- **Fix confirmed** → **delete the entire item from the review note.** 
-- **Fix incomplete or wrong** → rewrite the item to describe the current problem. Leave the `→ implemented: ...` annotation in place so the orchestrator sees the history of attempts.
-- **Orchestrator override accepted** → delete the item. The orchestrator's rejection is sufficient.
-- **Orchestrator override you disagree with** → leave the item in place and append a counter-argument as a fresh sub-bullet below the annotation. **Also surface the disagreement in your status return**, so the orchestrator sees it before the next dispatch decision and can escalate to the human partner.
+Before you commit: every material finding is written into `## Review Notes`, not only in your status return; `## Review Notes` describes current issues only, blocking first, with no resolved markers or stacked rounds; you touched no code, no `## Objective`, and no `## Results`.
 
-When `## Review Notes` is empty, remove the section entirely and (with `## Revision Notes` removed if present) set `status: approved`.
-
-**Re-review scope** is **narrow** — not a full walk of §Review Protocol. Verify (a) each cited fix is correct, and (b) any finding you annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass. If a fix invalidated a dependent finding (different results, sample, or variable definition), rewrite that item to describe the new problem. At `Stage: integration`, keep the task-level walkthrough narrow in this sense, but still perform the branch-wide surviving-diff confirmation required by `superintegrate`: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep, not a fresh full-task checklist walk. Only reopen a previously `approved` integration task if that sweep surfaces a new unjustified surviving hunk touching it.
-
-**CRITICAL severity cannot be silently overridden.** If you see an `→ orchestrator:` annotation rejecting a CRITICAL item without evidence that the human partner was consulted, leave the item in place and escalate in your status return.
-
-### Commit
+## Commit
 
 Stage assigned task files and any temporary task permitted by the maturation exception only, following `superRA:using-superra` §Commit Hygiene:
 
@@ -105,7 +87,7 @@ Stage assigned task files and any temporary task permitted by the maturation exc
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format
 ```
 
-The body is the dispatch delta — what you changed this dispatch and why; it is **not** a copy of `## Review Notes` and not the full review.
+The body is the dispatch delta — what you changed this dispatch and why; it is **not** a copy of `## Review Notes`.
 
 ## Report Format
 

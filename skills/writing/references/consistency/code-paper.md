@@ -1,6 +1,6 @@
 # Consistency: Code–Paper Alignment
 
-> Load when Review or Polish mode targets a paper that wraps an empirical code project — methodology described in the paper must match the code that produced the results. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Main-specification mismatches are `CRITICAL`; variable-definition drift is usually `MAJOR`; secondary-spec differences are typically `MINOR`.
+> Load when Review or Polish mode targets a paper that wraps an empirical code project — methodology described in the paper must match the code that produced the results. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks. A main-specification mismatch or variable-definition drift is blocking; a secondary-spec difference is usually advisory.
 
 Source dimensions harvested from `draft-reviewer:code-paper-consistency` (methodology match, variable definitions, sample construction, results reproducibility).
 
@@ -27,7 +27,7 @@ Before auditing, assemble the mapping:
 - For each figure, same.
 - For each summary-statistic value in the text, same.
 
-If the mapping is missing (no file comments, no README, no pipeline file), that is itself a `MAJOR` flag — the paper is not reproducibly linked to its code.
+If the mapping is missing (no file comments, no README, no pipeline file), that is itself blocking — the paper is not reproducibly linked to its code.
 
 ### Methodology match
 
@@ -79,7 +79,7 @@ Where possible:
 
 ## Gated Checklist
 
-- `[BLOCKING]` **Table → code mapping assembled** (at least for edited / reviewed sections). Missing mappings flagged as `MAJOR`.
+- `[BLOCKING]` **Table → code mapping assembled** (at least for edited / reviewed sections). Missing mappings are blocking.
 - `[BLOCKING]` **Main specification matches** — regression form, controls, fixed effects, SE clustering, sample, weights.
 - `[BLOCKING]` **Variable definitions match** for every key variable (dependent, main independent, key controls).
 - `[BLOCKING]` **Sample construction filters match** — paper and code list the same filters in the same order.

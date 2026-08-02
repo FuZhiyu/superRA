@@ -98,7 +98,7 @@ The integration reviewer recomputes the same governing diff and compares it with
 
 ## Checklist
 
-Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` items may be flagged as MINOR. The method lives in the sections above; these items are the pass/fail points, not a restatement.
+`[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` items are recorded and do not block. The method lives in the sections above; these items are the pass/fail points, not a restatement.
 
 **Code integration:**
 
@@ -108,20 +108,12 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Triage performed hunk by hunk** per §Triage every hunk: protected-record survivors trace only to the record or an explicit support path, every unmatched hunk entered the approved pruning actions, and no hunk was silently deleted.
 - `[BLOCKING]` **Base-current deletions / relocations honor the active boundary:** protected-record workflows use only the record or an explicit support path; standalone work uses its justification sources.
 - `[BLOCKING]` **Host-project fit** per §Fit the host project: names, utility reuse, and patterns match the host; deviations carry a reason.
-- `[BLOCKING]` **No debug artifacts:** no leftover debug prints, commented-out experiments, or temporary variables.
 - `[ADVISORY]` **Consolidation** per §Consolidate for maintainability, where the task or codebase-coherence review demanded the touch.
 - `[ADVISORY]` **PR-friendly diffs:** avoid unnecessary reformatting that obscures substantive changes.
 
 **Handling inconsistencies:**
 
 - `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, variable definitions, sample filters, equilibrium concepts, or normalization choices are research decisions.
-- `[ADVISORY]` **Clear convention exists:** follow it. **Ambiguous or conflicting conventions:** use judgment and document the choice.
-
-**PR quality:**
-
-- `[BLOCKING]` **Focused diff:** changes are limited to task scope.
-- `[BLOCKING]` **Self-contained:** the work can be understood from the code and documentation.
-- `[ADVISORY]` **Clean commits:** commit history is logical and messages are descriptive.
 
 **Docs match the code:**
 

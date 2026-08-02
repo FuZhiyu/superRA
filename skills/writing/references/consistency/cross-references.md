@@ -1,6 +1,6 @@
 # Consistency: Cross-References
 
-> Load when Review or Polish mode targets **cross-references** — `\ref`, `\eqref`, `\cite`, `\label`, figure/table/section numbering, "see above" and "as shown below". One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
+> Load when Review or Polish mode targets **cross-references** — `\ref`, `\eqref`, `\cite`, `\label`, figure/table/section numbering, "see above" and "as shown below". One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 Source dimensions harvested from `draft-reviewer:consistency-checker` (cross-reference section) and `draft-reviewer:proofreader` (LaTeX-specific issues).
 

@@ -103,7 +103,7 @@ Run targeted checks for touched subsystems where cheap and relevant. Fix stale r
 
 ## Semantic Coherence Checklist
 
-Shared gated checklist. All modes walk it: the implementer as pre-handoff self-check, the reviewer as verification. It defines when semantic-merge is done — the merge's meaning is fully represented in the tree. Walk every item. A merge scoped trivial per §Scope the merge first satisfies the intent-preservation and resolution items by construction — there is no overlapping cluster to classify or synthesize — so confirm the verification items and move on; the stale-reference sweep is what validates the trivial scoping. `[BLOCKING]` items must be satisfied for the sync to be accepted; `[ADVISORY]` items may be flagged without blocking.
+Shared gated checklist defining when semantic-merge is done — the merge's meaning is fully represented in the tree. The implementer walks it as a pre-handoff self-check; the reviewer walks what its focus covers. A merge scoped trivial per §Scope the merge first satisfies the intent-preservation and resolution items by construction — there is no overlapping cluster to classify or synthesize — so confirm the verification items and move on; the stale-reference sweep is what validates the trivial scoping. `[BLOCKING]` items must be satisfied for the sync to be accepted; `[ADVISORY]` items are recorded and do not block.
 
 **Intent preservation:**
 
@@ -112,7 +112,6 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 - `[BLOCKING]` Each overlapping cluster classified by role (behavior/API, data/schema, docs/narrative, generated outputs, tests, config/build) before resolution.
 - `[BLOCKING]` No silent losses from either side; dropped hunks have a documented rationale.
 - `[BLOCKING]` No silent restorations of base-current deletions or relocations in workflow Sync.
-- `[ADVISORY]` Synthesized changes are coherent and minimal.
 
 **Scope boundary (semantic coherence stopping rule):**
 
@@ -136,9 +135,8 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 **Verification:**
 
-- `[BLOCKING]` No conflict markers remain.
-- `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
-- `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
+- `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just the absence of conflict markers.
+- `[BLOCKING]` Targeted checks were run, or the sync record says why none applied.
 - `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.
 
 ## Exception

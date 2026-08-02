@@ -1,6 +1,6 @@
 # Consistency: Terminology
 
-> Load when Review or Polish mode targets **terminology** — the words used to name concepts, variables, groups, and defined terms. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
+> Load when Review or Polish mode targets **terminology** — the words used to name concepts, variables, groups, and defined terms. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 Source dimensions harvested from `draft-reviewer:writing-clarity-reviewer` (terminology index) and Chaubey p. 76, p. 157 (consistent key words; don't use interchangeable terms for the same identity).
 

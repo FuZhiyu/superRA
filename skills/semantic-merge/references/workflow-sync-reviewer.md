@@ -20,7 +20,7 @@ Required inputs:
 2. Read incoming commits and diffs. Independently summarize incoming intent.
 3. Read the `superRA/` task tree and independently summarize current-branch intent.
 4. Inspect the sync commits (merge commit plus any propagation commits) and their combined diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Shared Steps` step 2.
-5. Walk `SKILL.md §Semantic Coherence Checklist` top to bottom.
+5. Walk `SKILL.md §Semantic Coherence Checklist`.
 6. Confirm the branch-level thesis is carried by the sync commit messages (the git log), not buried in task-local sections.
 7. Check each affected task carries a `## Sync Impact` section when maturation or Integrate needs task-specific context to understand the post-sync diff.
 8. Confirm the scope boundary. Generated outputs within the merge's semantic reach should be regenerated (or escalated per `SKILL.md §Shared Steps` step 4 and recorded) — flag if the author skipped regeneration or silently re-expected drift-test results. Flag any codebase-coherence work performed in the sync commit chain, and any `## Sync Impact` note that presents unresolved semantic work as an Integrate target.

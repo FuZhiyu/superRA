@@ -1,6 +1,6 @@
 # Consistency: Notation
 
-> Load when Review or Polish mode targets **mathematical notation** — symbols, subscripts, superscripts, typographic conventions. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
+> Load when Review or Polish mode targets **mathematical notation** — symbols, subscripts, superscripts, typographic conventions. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 Source dimensions harvested from `draft-reviewer:mathematical-reviewer` (notation consistency section) and LRS / Chaubey conventions on symbol discipline.
 

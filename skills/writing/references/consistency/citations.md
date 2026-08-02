@@ -1,6 +1,6 @@
 # Consistency: Citations
 
-> Load when Review or Polish mode targets **citations** — completeness, reference-bibliography matching, format consistency, citation quality. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
+> Load when Review or Polish mode targets **citations** — completeness, reference-bibliography matching, format consistency, citation quality. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
 Source dimensions harvested from `draft-reviewer:citation-checker` (completeness, orphan-citation scan, format consistency, quality).
 
@@ -30,7 +30,7 @@ Scan the paper for claim sentences that need citations:
 - **Theoretical frameworks used** — Hansen-Sargent, Sims, Campbell-Shiller, whatever.
 - **Empirical findings used as motivation** — each one cites the paper that found it.
 
-**Foundational references check.** For the paper's methodology, are the seminal papers cited? Diff-in-diff → Card-Krueger or similar; RDD → Hahn-Todd-van der Klaauw; GMM → Hansen. Missing foundational cites are `MAJOR`.
+**Foundational references check.** For the paper's methodology, are the seminal papers cited? Diff-in-diff → Card-Krueger or similar; RDD → Hahn-Todd-van der Klaauw; GMM → Hansen. Missing foundational cites are blocking.
 
 ### Orphan-citation and orphan-reference scan
 
