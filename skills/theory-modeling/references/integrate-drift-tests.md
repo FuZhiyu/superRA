@@ -15,7 +15,7 @@ Drift tests protect **headline findings**, not every line of scratch algebra. Ex
 - residual checks that a reported solution satisfies first-order conditions, feasibility constraints, or equilibrium conditions
 - any result the researcher would read aloud when presenting the model
 
-**Weak candidates** (skip):
+**Weak candidates** (usually skip):
 - intermediate algebraic rewrites — stepping stones to a final identity
 - notation-only rewrites leaving the underlying object unchanged
 - exploratory parameter sweeps outside the reported findings
@@ -49,10 +49,10 @@ Four common causes when a drift test fails after a refactor or merge:
 
 4. **Verification-case drift.** The parameter baseline or special case for the numerical check moved off the documented example. Fix: keep the documented parameter set under version control and call it from the test instead of retyping it.
 
-A failure matching one of these: the test is right, the refactor is the cause. A failure matching none: escalate to the researcher — possibly a real model change, not a tolerance issue.
+A failure matching one of these is usually the refactor, not the result — confirm before updating anything. A failure matching none: escalate to the researcher — possibly a real model change, not a tolerance issue.
 
 ---
 
-## Generic integrity Red Flags
+## Generic Integrity Red Flags
 
 See `result-protection/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity.

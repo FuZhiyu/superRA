@@ -59,9 +59,9 @@ Reviewer diagnostics run against a slot suspected of not pulling its weight — 
 
 Pin down the objects and their names before manipulating them.
 
-At write-up, review the notation you reasoned with and replace each shorthand rather than justify keeping it — substitute its expression inline, or map it to an existing symbol. Shorthand left standing in the output is a defect, counted against the work like an algebra error.
+At write-up, review the notation you reasoned with and replace each shorthand rather than justify keeping it — substitute its expression inline, or map it to an existing symbol. Shorthand left standing in the output is a defect.
 
-A new symbol earns its place two ways: standard notation an economist writes without prompting ($r$, $w$, $\beta$), defined at first use; or writing its expression out each time would lose real meaning — the one-site test in the ledger's `What the name carries` slot, applied to every new output symbol. A symbol meeting neither is inlined.
+A new symbol earns its place two ways: standard notation an economist writes without prompting ($r$, $w$, $\beta$), defined at first use; or writing its expression out each time would lose real meaning — the one-site test in the ledger's `What the name carries` slot, applied to every new output symbol. A symbol meeting neither is inlined — introducing notation that fails this bar counts against the work like an algebra error.
 
 **Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling is a format violation, not a judgment call. Tasks introducing no new symbols record "None."
 
@@ -179,7 +179,7 @@ Derivations must be auditable — a correct result that cannot be checked is not
 
 A derivation is complete only after surviving at least one independent check and reading cleanly for a human audience.
 
-**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used, and the pass condition. The rendered output is the human-readable markdown / LaTeX shipping in the task's `## Results`.
+**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used if any, and the pass condition. The rendered output is the human-readable markdown / LaTeX shipping in the task's `## Results`.
 
 **Checklist:**
 

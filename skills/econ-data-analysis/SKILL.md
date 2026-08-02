@@ -46,7 +46,7 @@ Describe before and after every transformation. The post-transformation describe
 **After loading any dataset:**
 
 - `[BLOCKING]` Every input described before the first transformation on it.
-- `[BLOCKING]` **Panel structure** (panel/longitudinal data — the common case): panel ID (firm, fund, country) and time ID (year, quarter, month) identified; unique IDs and unique time periods counted and verified against expectations; date range (min, max) noted; balancedness characterized — periods-per-unit distribution (mean, median, min, max) and balanced ratio (actual rows / N_ids × T_periods). If unbalanced, pattern characterized (entry/exit, mid-panel gaps, expanding coverage). Pure cross-section: note it, skip panel diagnostics.
+- `[BLOCKING]` **Panel structure** (first priority for panel/longitudinal data — the common case): panel ID (firm, fund, country, individual) and time ID (year, quarter, month, day) identified; unique IDs and unique time periods counted and verified against expectations; date range (min, max) noted; balancedness characterized — periods-per-unit distribution (mean, median, min, max) and balanced ratio (actual rows / N_ids × T_periods). If unbalanced, pattern characterized (entry/exit, mid-panel gaps, expanding coverage). Pure cross-section: note it, skip panel diagnostics.
 - `[BLOCKING]` **Variable diagnostics** on key variables — do NOT blanket-`describe()` all columns:
   - Continuous (returns, prices, GDP, weights): mean, median, std, min, max, tail percentiles (p1, p5, p95, p99).
   - Categorical/binary (sector codes, indicators, country): value counts and shares; check unexpected categories or near-zero frequencies.

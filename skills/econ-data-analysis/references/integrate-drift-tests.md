@@ -14,7 +14,7 @@ Drift tests protect **headline findings**, not every number. Extract candidates 
 - Sample statistics defining the study's scope (N observations, N unique units, date range) — they anchor every other number
 - Any number the researcher would read aloud when presenting
 
-**Weak candidates** (skip):
+**Weak candidates** (usually skip):
 - Intermediate merge row counts — covered by the describe-analyze-validate audit trail in task files
 - Descriptive statistics on raw inputs — upstream, not load-bearing for conclusions
 - Sensitivity-analysis numbers — already robustness themselves
@@ -50,7 +50,7 @@ Three common causes when a drift test fails after a refactor or merge:
 
 3. **Missing-value drift.** `.fillna()` / `coalesce` changes, or a switch from implicit to explicit NA handling, shift means, counts, and correlations with no code looking wrong. Fix: make NA handling explicit at every aggregation (SKILL.md §Pitfalls, Missing data handling).
 
-A failure matching one of these: the test is right, the refactor is the cause. A failure matching none: escalate to the researcher — possibly a real result change warranting a research conversation, not a silent tolerance bump.
+A failure matching one of these is usually the refactor, not the result — confirm before updating anything. A failure matching none: escalate to the researcher — possibly a real result change warranting a research conversation, not a silent tolerance bump.
 
 ---
 

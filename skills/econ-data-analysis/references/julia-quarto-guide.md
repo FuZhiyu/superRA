@@ -1,6 +1,6 @@
 # Julia Notebook Rendering with QuartoNotebookRunner
 
-## Not Jupytext
+## Why Not Jupytext
 
 Jupytext renders Julia through a Jupyter kernel where `@__DIR__` resolves to `pwd()`, breaking two patterns:
 
