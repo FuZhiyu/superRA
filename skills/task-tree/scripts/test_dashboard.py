@@ -3083,6 +3083,13 @@ class TestWorktreeOpenButton:
         assert fn
         body = fn.group(0)
         assert "vscodeFileUri(PROJECT_ROOT)" in body
+        # Scoped to the pre-route branch, because the local-open branch above
+        # deliberately targets a task file under RESOLVED_ROOT.  Both the direct
+        # name and taskFileVscodeHref, which reaches it indirectly, stay out.
+        pre_route = re.search(r"\}\s*else\s*\{(.*?)\n  \}", body, re.S)
+        assert pre_route
+        assert "RESOLVED_ROOT" not in pre_route.group(1)
+        assert "taskFileVscodeHref" not in pre_route.group(1)
         # GitHub-file mode has no local folder to open → hide the button.
         assert "if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }" in body
 
