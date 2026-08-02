@@ -1,16 +1,16 @@
 # Mature & Consolidate
 
-Runs after Sync, before Integrate. The `integrate(protect)` decision commit fixes which results survive, where permanent documentation and mature task results live, how the task tree consolidates, and which automated protection to add. One drafter materializes that record; one reviewer verifies it and derives the temporary refactoring task. Refactoring starts after the researcher gate in Integrate.
+Runs after Sync, before Integrate. Input: the `integrate(protect)` decision commit — surviving results, durable homes, consolidation dispositions, automated protection. One drafter materializes that record; one reviewer verifies it and derives the temporary refactoring task.
 
 Load `superplan/references/task-tree-design.md`, `superplan/references/consolidation.md`, and `task-tree/references/task-file-contract.md`.
 
 ## Step 1: Assemble the maturation input
 
-Locate the latest applicable `integrate(protect)` decision commit; read its body, any recorded protection artifacts, affected-task `## Results`, and the post-Sync governing diff. Missing commit, or a Sync outcome that stales a recorded durable home or consolidation disposition → re-enter Protect. Survey every affected task and subtree against the decision: results selected to keep appear in the permanent record; results selected to drop are not preserved indirectly as standalone findings.
+Read the latest applicable `integrate(protect)` commit body, its recorded protection artifacts, affected-task `## Results`, and the post-Sync governing diff. Missing commit, or a Sync outcome that stales a recorded durable home or disposition → re-enter Protect. Invariant: results selected to keep appear in the permanent record; results selected to drop are not preserved indirectly as standalone findings.
 
 ## Step 2: Materialize the permanent record and mature the tree
 
-Assign the single drafter — the `Stage: maturation` implementer seat — per `agent-orchestration` §Seat Assignment. Documentation and result files first, then the structural fold and per-task distillation:
+Assign the single drafter — the `Stage: maturation` implementer seat — per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent:
@@ -29,11 +29,11 @@ Agent:
     Land recoverable commits per affected subtree.
 ```
 
-The task record points to a permanent document when that document is the source of truth; it does not duplicate it. Structural folds and result maturation happen together so removed task content lands at its durable home.
+Structural folds and result maturation happen together, so removed task content lands at its durable home.
 
 ## Step 3: Review the record and derive the temporary task
 
-Assign the single reviewer seat per `agent-orchestration` §Seat Assignment over the affected tasks, permanent artifacts, proposed final tree, and `BASE_HEAD_SHA..HEAD`:
+Assign the single reviewer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
 Agent:
@@ -57,8 +57,4 @@ Agent:
     include the verification that must pass.
 ```
 
-Iterate the same drafter and reviewer seats until the protected record passes review and the temporary task is complete. Mature & Consolidate is complete when that task is `not-started` and satisfies the dispatch contract above; otherwise resume at this step.
-
-## Step 4: Enter Integrate
-
-Enter Integrate with the protected record and reviewer-authored temporary task.
+Iterate both seats until the record passes review and the temporary task satisfies the dispatch contract at `not-started`; then enter Integrate with the protected record and that task.
