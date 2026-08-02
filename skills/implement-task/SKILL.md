@@ -68,7 +68,7 @@ After annotating all items you're expected to address, set `status: implemented`
 Before you commit:
 
 1. **Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass; a blocking failure is fix-first, not a handoff. Flag any `[ADVISORY]` item you did not address in your status return.
-2. **Results economy.** Every line in `## Results` is one a future reader needs to use, reproduce, or trust the result, and nothing there restates an artifact, a diff, or another task file that the section could point at instead (`superRA:using-superra` §Reporting).
+2. **Results economy.** Every line in `## Results` is one a future reader needs to use, reproduce, or trust the result, anything called a finding clears the finding bar, and nothing there restates an artifact, a diff, or another task file that the section could point at instead (`superRA:using-superra` §Reporting).
 3. **Editing hygiene.** Every task-file edit is inside an assigned task's `task.md`; reviewer prose and review items are untouched apart from your `→ implemented:` annotations; figures are embedded with `![caption](attachments/...)` and their files committed under the task's `attachments/`; every material finding is in the task file, not only in your status return.
 
 ## Commit

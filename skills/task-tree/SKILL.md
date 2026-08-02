@@ -54,11 +54,8 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 
 ## Results
 
-### Key Findings
-- Merge preserved all 4.7M rows
-
-### Notes
-- Used fuzzy date matching for quarterly vs monthly frequency mismatch
+Left join preserved all 4.7M holdings rows.
+Quarterly characteristics were matched to monthly holdings by nearest prior date.
 
 ## Review Notes
 > [BLOCKING] Inner join used instead of left join

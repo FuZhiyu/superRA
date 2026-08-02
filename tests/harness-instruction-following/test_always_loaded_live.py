@@ -13,7 +13,7 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from always_loaded_live import (  # noqa: E402
-    CODEX_ALWAYS_LOADED_CANARIES,
+    CODEX_SKILL_LOAD_CANARIES,
     CODEX_REPORT_IN_MARKDOWN_CANARY,
     CODEX_USING_SUPERRA_CANARY,
     EXPECTED_ARTIFACT,
@@ -34,7 +34,7 @@ def test_green_codex_both_canaries_from_commands():
     report = CanaryReport()
     evaluate_canaries(
         report,
-        CODEX_ALWAYS_LOADED_CANARIES,
+        CODEX_SKILL_LOAD_CANARIES,
         command_strings=[
             "python3 skills/report-in-markdown/scripts/check_markdown.py task.md",
             "./superRA/superra task read always-loaded-task",
@@ -65,7 +65,7 @@ def test_red_codex_using_superra_canary_absent():
 
 def test_red_codex_both_canaries_absent_collected_together():
     report = CanaryReport()
-    evaluate_canaries(report, CODEX_ALWAYS_LOADED_CANARIES, command_strings=[])
+    evaluate_canaries(report, CODEX_SKILL_LOAD_CANARIES, command_strings=[])
     assert not report.ok
 
 

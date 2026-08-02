@@ -75,7 +75,9 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 One contract covers everything you write: task files, documents, and conversation.
 
-**Decide before you write.** Name the reader — a future agent with no session context, a researcher skimming — what they will do next, and the few facts that change it. Everything else is omitted, not summarized.
+**Reporting is half the task.** Work is done when the next reader can act on the result, not when the last command runs. Plan the report with a real share of the task's thinking: who reads this — a future agent with no session context, a researcher skimming — what will they do next, which few facts change that. Everything else is omitted, not summarized.
+
+**Selecting findings is analysis.** A finding is a result the researcher would quote or act on: an estimate, a confirmed or broken assumption, a pattern that changes the next step. That a step ran, a merge kept rows, or a file exists is mechanics — it stays in code and commits, surfacing only as a caveat that changes how the result is read. Most tasks produce no finding at all; their results are two plain lines.
 
 **One home per fact.** A fact's home is fixed when the output is produced. When the deliverable is itself an artifact — a document, a code change, a commit — that artifact is the record: `## Results` points to it and adds at most a high-level summary, never a restatement of its content or its diff. Facts already carried by git history, an objective, or another task file are cited by path or SHA.
 
@@ -85,17 +87,18 @@ One contract covers everything you write: task files, documents, and conversatio
 
 **Budget by structure, not word count:** one takeaway per section, one line per finding, one example where several show the same pattern. A section with no takeaway does not exist.
 
-Padded:
+A merge task, padded:
 
 > ### Key Findings
-> - We ran the merge step and it completed successfully. The merge was performed on fund_id and date.
-> - Notably, the resulting sample is quite large, with a substantial number of observations retained.
-> - Overall the data preparation stage went well and the outputs are now available for downstream use.
+> - We ran the merge step and it completed successfully on `fund_id` and `date`.
+> - Left join kept 252,341 of 254,004 fund-months; the 1,663 dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
+> - Overall the data preparation went well and the outputs are ready for downstream use.
 
 Selected:
 
-> ### Key Findings
-> - Left join on `fund_id` × `date` kept 252,341 of 254,004 fund-months; the 1,663 dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
+> Panel ready for the alpha regressions: 252,341 fund-months, 1994–2023 ([Data/panel.parquet](Data/panel.parquet)). The 0.7% dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
+
+The middle bullet was accurate and tight — and still wrong: a merge count is not a key finding. The heading goes, the count becomes the sample line, and the drop survives as the one caveat.
 
 **Conversation carries deltas and pointers.** Say what changed at a high level and point at the task file or its dashboard URL; do not reproduce content you just recorded there. A fact you chose not to record goes to conversation with an offer to add it to `## Results` if the researcher wants it.
 

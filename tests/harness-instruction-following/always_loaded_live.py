@@ -31,7 +31,7 @@ CODEX_USING_SUPERRA_CANARY = CanarySpec(
     skill="superRA:using-superra",
     token="superra task read",
 )
-CODEX_ALWAYS_LOADED_CANARIES = (
+CODEX_SKILL_LOAD_CANARIES = (
     CODEX_REPORT_IN_MARKDOWN_CANARY,
     CODEX_USING_SUPERRA_CANARY,
 )

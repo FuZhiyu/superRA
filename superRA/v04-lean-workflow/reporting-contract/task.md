@@ -1,6 +1,6 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: revise
+status: implemented
 depends_on: [role-skills]
 ---
 
@@ -35,7 +35,7 @@ One always-loaded instruction home; `report-in-markdown` becomes an on-demand re
 
 ## Results
 
-The contract lives in one new section, [`using-superra/SKILL.md` §Reporting](../../../skills/using-superra/SKILL.md) — six principles, a padded/selected example pair, the conversation boundary, and the two house conventions — and `report-in-markdown` is now load-on-demand behind the render-integrity hook. Every other file changed only to point at that section or to stop contradicting it.
+The contract lives in one new section, [`using-superra/SKILL.md` §Reporting](../../../skills/using-superra/SKILL.md) — seven principles, a padded/selected example pair, the conversation boundary, and the two house conventions — and `report-in-markdown` is now load-on-demand behind the render-integrity hook. Every other file changed only to point at that section or to stop contradicting it. The two researcher-decided principles lead the section: reporting is half the task (a real share of the task's thinking goes to planning the report), and selecting findings is analysis (a finding is a result the researcher would quote or act on — the example pair now demotes an accurate merge-count bullet on exactly this bar, and `task-file-contract.md`'s `### Key Findings` menu row cites it).
 
 Where the surrounding rules landed:
 
@@ -56,15 +56,22 @@ Not swept: this repo's own task files still carry `**Final diff self-check:**` t
 ## Review Notes
 
 1. **[MAJOR]** The canonical task-file example in [`task-tree/SKILL.md:55-61`](../../../skills/task-tree/SKILL.md#L55-L61) still models the shape this task demoted: a `### Key Findings` heading over a single bullet plus a `### Notes` heading over a single bullet. The new menu in [`task-file-contract.md:74`](../../../skills/task-tree/references/task-file-contract.md#L74) says to add `### Key Findings` only when more than one finding needs separating, and to omit every entry by default. This is an instruction surface (not a docs-site exemplar), it is the most-read illustration of a `task.md` in the repo, and planners scaffolding from it will keep producing the scaffolded shape — so the two skill files now teach opposite defaults. Rewrite the example's `## Results` as the two plain lines the menu implies, or state in the example that the subsections are shown for format illustration only.
+   → implemented: example `## Results` rewritten to two plain lines, headings removed ([task-tree/SKILL.md](../../../skills/task-tree/SKILL.md))
 
 2. **[MINOR]** [`task_add_result.py:74`](../../../skills/task-tree/scripts/task_add_result.py#L74) unconditionally creates a `### Key Findings` subsection when `superra task add-result --finding` writes to a task with no results yet, so the tooling emits the omit-by-default subsection on the first finding. Either make the subsection conditional on a second finding arriving or record why the CLI keeps a fixed anchor despite the new default. Deciding this may be out of the task's intended scope — raise it rather than absorb it if so.
+   → implemented: kept the fixed anchor; rationale recorded under the subsection menu ([task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md))
 
 3. **[MINOR]** Deleting the whole provenance line from [`consistency/numerical.md`](../../../skills/writing/references/consistency/numerical.md) removed more than the dated decision the objective's sweep targeted. The seven sibling dimension files all still carry a `Source dimensions harvested from …` line at line 5 (e.g. [`citations.md:5`](../../../skills/writing/references/consistency/citations.md#L5)); numerical.md is now the only one without one. Restore the provenance sentence with the `(per user decision 2026-04-19 …)` clause dropped.
+   → implemented: provenance sentence restored with the dated clause dropped
 
 4. **[MINOR]** [`refactor-and-integrate/SKILL.md:91`](../../../skills/refactor-and-integrate/SKILL.md#L91) keeps a "with no commit, put the same line in the status return" fallback, while [line 96](../../../skills/refactor-and-integrate/SKILL.md#L96) now has the integration reviewer look for the trail only "in the integrate commits under that range" and marks a missing trail `[BLOCKING]`. In the no-commit case the reviewer cannot see the trail and the blocking gate fires on a compliant implementer. Name where the reviewer looks when no commit exists, or drop the fallback.
+   → implemented: fallback replaced — a no-change pass carries the trail on an empty commit so the reviewer finds it under the range
 
 5. **[MINOR]** [`docs/site/04-utility-skills/task.md:21`](../../../docs/site/04-utility-skills/task.md#L21) still bills `report-in-markdown` as "the one style guide every agent follows," which reads as the always-loaded framing the child page and `CLAUDE.md` both dropped in this change. The parent constraint requires updating `docs/site` statements this task invalidates.
+   → implemented: reworded to "the house style guide"
 
 6. **[MINOR]** `CODEX_ALWAYS_LOADED_CANARIES` in [`always_loaded_live.py:33-36`](../../../tests/harness-instruction-following/always_loaded_live.py#L33-L36) now bundles one always-loaded canary and one on-demand canary; the docstring above it was updated but the constant name still asserts the retired grouping. Rename it to match what it now covers.
+   → implemented: renamed to `CODEX_SKILL_LOAD_CANARIES` (all three files)
 
 7. **[MINOR]** Pre-existing, surfaced while checking the adjacent test edits: `test_red_static_backbone_missing_skill` in [`test_always_loaded_live.py:76-90`](../../../tests/harness-instruction-following/test_always_loaded_live.py#L76-L90) still writes `agents/implementer.md` and `agents/reviewer.md` fixtures, but `check_claude_always_loaded_static` reads `skills/*/SKILL.md`. The test passes only because the role-skill files are absent from `tmp_path`, so it no longer exercises the missing-skill path it claims. Belongs to whichever task owns the retired `agents/` surface, not necessarily this one.
+   → implemented: fixture now writes role-skill `SKILL.md` files whose §Before You Start omits the load line, exercising the missing-skill path; separate maintenance commit

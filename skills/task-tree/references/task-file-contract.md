@@ -71,11 +71,13 @@ Most results are a few lines under `## Results` with no subsections at all. Add 
 
 | Subsection | Add when |
 |---|---|
-| `### Key Findings` | more than one finding needs separating from the surrounding narrative |
+| `### Key Findings` | more than one finding — by the bar in `using-superra` §Reporting, a result the researcher would quote or act on — needs separating from the surrounding narrative |
 | `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
 | `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
 | `### Notes` | a caveat, data quirk, or decision changes how the result is read |
 | `### Notation & Assumptions Ledger` | theory-modeling tasks — required by `theory-modeling/SKILL.md`; tasks introducing nothing record "None." |
+
+`superra task result add --finding` is the exception: it appends under a `### Key Findings` heading it creates when absent, because it needs a fixed insertion anchor to append to without parsing and rewriting prose an agent wrote by hand. Results assembled by direct edit — the usual path — follow the menu.
 
 ### Section Ownership
 
