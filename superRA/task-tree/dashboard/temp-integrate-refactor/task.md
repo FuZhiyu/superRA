@@ -1,6 +1,6 @@
 ---
 title: "TEMPORARY — Integrate Refactoring Pass: Local Open and Tab Title"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -56,4 +56,52 @@ Runtime verification was waived for the maturation pass alone. This refactor run
 - `git diff --check` clean, and the recomputed governing diff matches the survivor set with the self-check trail recorded.
 
 ## Results
+
+The pass changed no code. The governing diff, recomputed at `9cd918b2` rather than trusted from the maturation triage, matches the survivor set hunk for hunk; the surviving work was already host-consistent; and the two consolidations the objective warned against are correctly *not* consolidations. The only edits are the one the objective directed at the parent record, plus one truth repair the lifted verification waiver forced.
+
+### Triage of the recomputed diff
+
+`git diff 68a09aa431f5dfdbb101d91ef03d59f0d519e961..HEAD` — 17 files, +1193/−85. `68a09aa4` is `origin/main` and is the merge base with `HEAD`, so the two-dot range the objective names and the three-dot branch diff are the same set. Three commits landed after the `f52f270a` triage; they added only this task file and its approval, so the survivor set is unchanged.
+
+Every hunk traces to the protected record:
+
+| Class | Files | Traces to |
+|---|---|---|
+| Local-open route and its gate | [plan_dashboard.py:1331-1483](../../../../skills/task-tree/scripts/plan_dashboard.py#L1331-L1483), [serve() record/restore](../../../../skills/task-tree/scripts/plan_dashboard.py#L2489-L2502), the `local_open=` render kwarg | parent §Opening files, and naming the tab; [internals.md:232](../../../../skills/task-tree/references/internals.md#L232) |
+| Page flag and chrome element | [base.html:66-70](../../../../skills/task-tree/scripts/templates/base.html#L66-L70), [base.html:235-240](../../../../skills/task-tree/scripts/templates/base.html#L235-L240) | same |
+| `.vscode-btn` → `.open-btn` rename, its three in-file ripples, the accent hover, `.open-toast` | [dashboard.css:1097-1146](../../../../skills/task-tree/scripts/templates/dashboard.css#L1097-L1146) | same |
+| Open plumbing and tab title | [dashboard.js:1098-1145](../../../../skills/task-tree/scripts/templates/dashboard.js#L1098-L1145), [refreshTabTitle](../../../../skills/task-tree/scripts/templates/dashboard.js#L904-L932), [updateWorktreeOpenHref](../../../../skills/task-tree/scripts/templates/dashboard.js#L3507-L3532) | same |
+| Selected protection | [test_dashboard.py:3140-3723](../../../../skills/task-tree/scripts/test_dashboard.py#L3140-L3723) — `TestLocalOpen`, `TestTabTitle`, `TestTabTitleWiring`, plus the `_client_for(base_url=…)` parameter and the `TestWorktreeOpenButton` / `TestFileLinkConsistency` updates | the Protect decision |
+| User- and contributor-facing documentation | [RELEASE-NOTES.md](../../../../RELEASE-NOTES.md), [docs/site/02-quickstart/task.md:23](../../../../docs/site/02-quickstart/task.md#L23), [internals.md:232](../../../../skills/task-tree/references/internals.md#L232) | the record's own documentation clause |
+| Line-anchor re-cuts in seven already-integrated task records | `worktree-scoped-launch-url`, both `task-local-artifacts` children, `interactive-mode` and its two descendants, `econ-data-efficiency` | approved at `802b078b`, repaired at `a64c0418` |
+
+No unmatched hunk, so no pruning action ran and nothing was deleted. I re-resolved the `#L` anchors those records cite — every one lands on the construct its sentence names, including the three the sweep called pre-existing misses (`test_contract.py:259` is `test_superplan_routed_references_exist`, which is exactly what its bullet claims to have restored).
+
+### Host-project fit
+
+Nothing needed changing. The new code already follows the file's conventions: `_open_native_sync` / `_open_editor_sync` carry the `_sync` suffix the module uses for blocking work handed to `asyncio.to_thread` (`_comments_summary_sync`, `_list_worktrees_sync`); `BOUND_HOST` / `EDITOR_ENV_VAR` / `DEFAULT_EDITOR` sit with `DOC_MODE` and `PLAN_ROOT` as module-level configuration; `taskFileOpenPath` sits beside `taskFileVscodeHref` and `repoFileHref` and composes the same way; and `.open-btn`'s hover moved onto the `--accent-soft` / `--accent` pair `.share-btn` already uses, which is what makes the two read as one family rather than a branded outlier.
+
+The two traps the objective named are confirmed non-consolidations. [`_is_loopback_host`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1338-L1346) is the file's only loopback *predicate* — every other `127.0.0.1` / `localhost` occurrence is a bind default (`serve()`, the argparse default), a probe target (`_port_in_use`, the `/healthz` reuse probe), or a URL being printed, none of which is the same question. And `POST /api/open`'s containment deliberately mirrors [`GET /files/{path}`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1314-L1328) — join under `project_root`, `resolve()`, `is_relative_to`, `is_file()` — which is reuse of the pattern, not a duplication to collapse; the two routes differ in what they do after the check, and folding them would put a process spawn behind a `GET`. No renamed identifier survives anywhere: `vscode-btn`, `VSCODE_ICON`, and the old `filePath` local have zero references left outside the test asserting their absence.
+
+Considered and deliberately not changed: [`onTaskUpdate`](../../../../skills/task-tree/scripts/templates/dashboard.js#L3288-L3305) re-harvests `pathTitles` and repaints the breadcrumb after a live task edit but does not repaint the tab, so renaming the active task in place leaves the old name in the tab until the next navigation. Adding the call is a behavior change, not a refactor, and the record claims only that the tab tracks *navigation*.
+
+### Project Doc Audit
+
+The walk-up from every diffed file's directory to the repo root finds no module-level `CLAUDE.md` / `AGENTS.md` / `README.md` under `skills/task-tree/`, `docs/site/`, or `superRA/` — the only nearer README is [vendor/README.md](../../../../skills/task-tree/scripts/vendor/README.md), which the diff does not touch and which the objective puts out of scope. The set is therefore the repo-root [README.md](../../../../README.md) and [CLAUDE.md](../../../../CLAUDE.md) with its `AGENTS.md` / `AGENT.md` symlinks.
+
+Both are current. The README's dashboard material ([README.md:11](../../../../README.md#L11), [README.md:48](../../../../README.md#L48)) describes the tree/DAG/kanban views and defers the launcher story to the Quickstart without asserting any open behavior, so this branch's Quickstart rewrite leaves it true rather than stale. `CLAUDE.md` §Codex and Harness Design lists `.codex/agents/superra_implementer.toml` and `superra_reviewer.toml` as the generated artifacts; the diff touches nothing under `agents/` or `.codex/`, and `internals.md` is a reference body rather than a generated one, so `sync_codex_agents.py` is not implicated. §Local Task-Tree CLI Development's suite invocation is the command this pass ran, unchanged. The one new pattern the diff introduces — the local-open route with its bind/mode gate and `SUPERRA_EDITOR` — is documented at the nearest appropriate level, [internals.md §Dashboard](../../../../skills/task-tree/references/internals.md#L232), rather than lifted to the root.
+
+### Edits made
+
+1. Removed `## Sync Impact` from [the parent task](../task.md) per the objective. Both of its consequences live in §Opening files, and naming the tab; nothing in it was a lasting assumption, so it was dropped rather than folded.
+2. Repaired the parent's verification prose, which the lifted waiver made false. `**Runtime verification was skipped for this integration…**` claimed no suite had been run against the merged tree — true when maturation wrote it, false the moment this pass ran one. It now reads `**What the green suite still does not reach.**`, and the count sentence carries the merged-tree number (795) in place of the pre-merge 750. The residual caveats are preserved and re-checked rather than dropped: the attachment open path and the artifact pane's tab title really are pinned by source assertion against `dashboard.js` (`test_attachment_links_carry_open_path` and `test_attachment_pane_names_the_tab` both match source text rather than execute), and the in-browser click path is still undriven.
+
+### Verification
+
+- Full task-tree script suite: **795 passed, 4 warnings, 93.67s** — `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`. Identical to the `9cd918b2` baseline; no movement to investigate. The five named classes ran green as a focused selection too: `68 passed, 281 deselected`.
+- No hunk in `dashboard.js`, `dashboard.css`, or `base.html` moved, so the hand-driven loopback check and the before/after export byte comparison were not triggered. The in-browser click path stays unexercised, recorded as such in the parent record.
+- `./superRA/superra task check`: 0 errors — the `sync-impact` warning is gone.
+- `git diff --check` clean.
+
+**Final diff self-check:** `git diff 68a09aa431f5dfdbb101d91ef03d59f0d519e961..HEAD` (= the three-dot branch diff; `68a09aa4` is the merge base); protected record = the parent dashboard task's `## Results`, the `Unreleased` release notes, `internals.md` §Dashboard, the Quickstart launcher sentence, and the five `test_dashboard.py` classes. Removed: `## Sync Impact` from the parent task, and the parent's now-false runtime-verification-skipped claim. Surviving classes: the local-open route and gate, the page flag and chrome element, the `.open-btn` rename with its ripples and toast, the open/tab-title JS, the selected protection tests, the four documentation artifacts, and the approved anchor re-cuts in seven integrated records — each traced above. Suspicious hunks: three, all justified. (a) `test_dashboard.py`'s `test_href_uses_project_root_via_shared_uri_builder` drops `assert "RESOLVED_ROOT" not in body` — not an expectation relaxed to fit a regression, but a pre-existing assertion the local-open branch of `updateWorktreeOpenHref` makes false by design, replaced by the three new assertions in `test_local_open_targets_active_task_file_in_this_worktree`. (b) `_client_for` gains a `base_url` parameter, a fixture widening the `Host`-authority check requires because the default `http://testserver` origin cannot exercise a foreign authority; it is optional and every existing caller is unchanged. (c) The seven task-record anchor re-cuts touch `status: approved` tasks, which the objective pre-approves and I re-verified anchor by anchor. No `skills/*` or `agents/*` instruction body is edited: the only `skills/` prose in the diff is `internals.md`, a reference describing behavior, so the repo's DRY/Necessity instruction gate does not apply. No debug artifacts, no reformatting hunks.
 
