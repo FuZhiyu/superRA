@@ -9,7 +9,7 @@ Implement the task to achieve its `## Objective` with your own judgment. The sta
 
 ## Before You Start
 
-1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names.
+1. **Load `superRA:using-superra`** — always loaded for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
 ## Execution Protocol
@@ -68,7 +68,8 @@ After annotating all items you're expected to address, set `status: implemented`
 Before you commit:
 
 1. **Gate walk.** Walk the gates of every skill you loaded — stage and domain — including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass; a blocking failure is fix-first, not a handoff. Flag any `[ADVISORY]` item you did not address in your status return.
-2. **Editing hygiene.** Every task-file edit is inside an assigned task's `task.md`; reviewer prose and review items are untouched apart from your `→ implemented:` annotations; figures are embedded with `![caption](attachments/...)` and their files committed under the task's `attachments/`; every material finding is in the task file, not only in your status return.
+2. **Results economy.** Every line in `## Results` is one a future reader needs to use, reproduce, or trust the result, and nothing there restates an artifact, a diff, or another task file that the section could point at instead (`superRA:using-superra` §Reporting).
+3. **Editing hygiene.** Every task-file edit is inside an assigned task's `task.md`; reviewer prose and review items are untouched apart from your `→ implemented:` annotations; figures are embedded with `![caption](attachments/...)` and their files committed under the task's `attachments/`; every material finding is in the task file, not only in your status return.
 
 ## Commit
 

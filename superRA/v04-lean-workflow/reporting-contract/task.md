@@ -1,6 +1,6 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: not-started
+status: implemented
 depends_on: [role-skills]
 ---
 
@@ -34,3 +34,21 @@ One always-loaded instruction home; `report-in-markdown` becomes an on-demand re
 - Showcase/docs exemplar rewrite is out of v0.4 scope; touch `docs/site` only where statements are invalidated.
 
 ## Results
+
+The contract lives in one new section, [`using-superra/SKILL.md` §Reporting](../../../skills/using-superra/SKILL.md) — six principles, a padded/selected example pair, the conversation boundary, and the two house conventions — and `report-in-markdown` is now load-on-demand behind the render-integrity hook. Every other file changed only to point at that section or to stop contradicting it.
+
+Where the surrounding rules landed:
+
+- Inclusion test, subsection menu (the five-slot template is now an omit-by-default table), dated-decision-ledger stale class, and the generalized link-don't-copy rollup rule: [`task-file-contract.md` §Results Shape](../../../skills/task-tree/references/task-file-contract.md).
+- Two-directional results gate and the completion-menu line that replaced `<summarize the results>`: [`superimplement/SKILL.md`](../../../skills/superimplement/SKILL.md).
+- Final-diff self-check trail moved from `## Results` to the commit body: [`refactor-and-integrate/SKILL.md`](../../../skills/refactor-and-integrate/SKILL.md). Protect decisions stay in the protect commit: [`protect.md`](../../../skills/superintegrate/references/protect.md).
+- Objective-rewrite trim counterpart: [`task-tree-design.md`](../../../skills/superplan/references/task-tree-design.md). Duplication symptom for consolidation: [`consolidation.md`](../../../skills/superplan/references/consolidation.md).
+- One-line results-economy self-check in [`implement-task`](../../../skills/implement-task/SKILL.md); the reviewer's `results-writing` focus repointed to §Reporting.
+
+The hook is the detection half of the design: when `md_integrity` finds an issue on an edited task-tree `.md`, [`task_hook.py`](../../../skills/task-tree/scripts/task_hook.py) now appends a line telling the agent to load `report-in-markdown`. Verified by calling `_markdown_integrity_feedback` on a file with a swallowed `$$` block and a `\Var` macro — three feedback lines, the last one the skill pointer — and on a clean file, which returns nothing.
+
+Dropping `report-in-markdown` from the always-loaded set changed the loading contract, so `ALWAYS_LOADED_SKILLS` is now a one-element tuple and the Codex canary fixture names the skill explicitly, making it evidence for the on-demand path instead of the always-loaded one. `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following -q` → 125 passed; the task-tree suite → 695 passed, 4 skipped.
+
+Deliberate duplication: the citation and figure conventions now appear both in §Reporting and in `report-in-markdown` / `task-file-contract.md` §Figure Embedding. §Placement calls for this — they are hit on nearly every write, so prevention beats post-hoc correction — with `report-in-markdown` remaining the authority on the full form.
+
+Not swept: this repo's own task files still carry `**Final diff self-check:**` trails and duplicated results, and `docs/site` still shows a one-finding `### Key Findings` example. Both fall under the parent's out-of-scope note on exemplar rewriting and task-file hygiene.

@@ -92,11 +92,17 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
         issues = md_integrity.check(text)
     except Exception:
         return []
-    return [
+    if not issues:
+        return []
+    feedback = [
         f"Markdown render-integrity issue in {file_path}:{it.line} "
         f"[{it.rule}] {it.message}"
         for it in issues
     ]
+    feedback.append(
+        "Load the `superRA:report-in-markdown` skill for the correct form before fixing these."
+    )
+    return feedback
 
 
 def _feedback_json(feedback: list[str]) -> str:

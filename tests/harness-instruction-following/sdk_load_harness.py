@@ -31,9 +31,9 @@ There is **no ``InstructionsLoaded`` hook**: it is not a registrable
 ``claude_agent_sdk`` ``HookEvent`` (the union is ``PreToolUse``, ``PostToolUse``,
 ``PostToolUseFailure``, ``UserPromptSubmit``, ``Stop``, ``SubagentStop``,
 ``PreCompact``, ``Notification``, ``SubagentStart``, ``PermissionRequest``), so
-registering it is a silent no-op. Always-loaded skills (``using-superra``,
-``report-in-markdown``) reach the agent through the role skill's §Before You Start
-load instruction and are covered by the static load-instruction contract in
+registering it is a silent no-op. The always-loaded skill (``using-superra``)
+reaches the agent through the role skill's §Before You Start
+load instruction and is covered by the static load-instruction contract in
 :mod:`sdk_load_evidence`, not by this hook.
 
 This module is the *only* place ``claude_agent_sdk`` is imported, and the import

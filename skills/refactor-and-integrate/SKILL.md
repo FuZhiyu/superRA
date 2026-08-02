@@ -88,13 +88,13 @@ In standalone use, a task-local `## Sync Impact` section can justify an existing
 Implementers run this immediately before every return or commit, including no-change cases:
 
 1. **Recompute the governing diff** using the range from §Establish the baseline first.
-2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <protected record or standalone objective>; <removed and surviving change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
+2. **Leave a compact trail in the commit body** — `Final diff self-check: <command/range>; <protected record or standalone objective>; <removed and surviving change classes>; <suspicious hunk justifications or none>`. It is per-commit process evidence, so it belongs in the history, not in the task's `## Results`. With no commit, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `status: approved`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Triage** per §Triage every hunk: with a protected record, every survivor traces to that record or an explicit support path and every unmatched hunk appears in the approved pruning actions; standalone work records kept, reverted, and raised classes.
 6. **Respect the dispatch scope.** Refactor implementer and integration reviewer act on the reopened or changed tasks in the dispatch, plus any `approved` task the branch-wide surviving-diff sweep reopens when it surfaces an unjustified hunk touching that task.
 
-The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
+The integration reviewer recomputes the same governing diff and compares it with the self-check trail in the integrate commits under that range. A missing or stale trail is `[BLOCKING]`, including when no code changed.
 
 ## Checklist
 

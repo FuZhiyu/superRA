@@ -2,8 +2,6 @@
 
 > Load when Review or Polish mode targets **quantitative content** — numbers in text matching numbers in tables, figure/caption/text alignment, table caption accuracy, units and sign conventions. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
-Source dimensions harvested from `draft-reviewer:consistency-checker` (numerical consistency, table/figure verification) plus the folded figure/table/caption dimension (per user decision 2026-04-19 — no separate `figure-table-checklist.md`).
-
 ## Scope
 
 Covers **quantitative correctness** of reported numbers across text, tables, and figures. Out of scope: argument logic or whether the number supports the claim (`consistency/argument-logic.md`), notation (`consistency/notation.md`).

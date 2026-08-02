@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Opt-in Codex always-loaded command-event smoke.
 #
-# Codex has no skill autoload, so the always-loaded skills (`superRA:using-superra`
-# and `superRA:report-in-markdown`) reach context only if the agent follows the
-# role-spec body-load instruction. This smoke drives a real Codex agent through
-# the `always-loaded-canary` fixture and asserts each always-loaded skill emitted
-# the existing markdown-check and `superra task read` command events. The output
-# artifact is checked separately for its exact schema.
+# Codex has no skill autoload, so the always-loaded skill (`superRA:using-superra`)
+# reaches context only if the agent follows the role-skill body-load instruction,
+# and an on-demand skill (`superRA:report-in-markdown`) only if the agent loads it
+# when the task calls for it. This smoke drives a real Codex agent through the
+# `always-loaded-canary` fixture and asserts both emitted their command events —
+# `superra task read` and the markdown check. The output artifact is checked
+# separately for its exact schema.
 #
 # Manual-only. Gated behind RUN_LIVE_HARNESS=1; a bare invocation in CI is a
 # documented no-op. Requires a logged-in `codex` CLI and a model turn budget.

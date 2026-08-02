@@ -16,7 +16,8 @@ not edit source code, install anything, or run a test suite.
 
 Do exactly this, in order:
 
-1. Run the report-in-markdown markdown self-diagnose CLI on this task file.
+1. Load `superRA:report-in-markdown` and run its markdown self-diagnose CLI on
+   this task file.
 2. Write `always-loaded-evidence.json` at the workspace root with exactly:
 
 ```json

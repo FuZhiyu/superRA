@@ -62,8 +62,8 @@ def main() -> int:
     for msg in report.missing:
         print(f"  - {msg}", file=sys.stderr)
     print(
-        "  An absent canary is a real always-loaded loading-contract finding "
-        "(role-spec body-load path) to escalate, not a test to relax.",
+        "  An absent canary is a real loading-contract finding "
+        "(role-skill body-load path) to escalate, not a test to relax.",
         file=sys.stderr,
     )
     return 1

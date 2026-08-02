@@ -69,7 +69,37 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 - Keep the task at latest state, not a log — edit in place and delete superseded content; no "Update:" / "Previously…" blocks or strikethroughs.
 - Doc before report — findings, caveats, and evidence land in the task body before any status return.
-- Write the body sections you own (`## Results`, `## Review Notes`) as a self-contained account a reader can follow standalone, with links and embedded figures (see `report-in-markdown`). The change summary belongs in the commit, not the body.
+- Write the body sections you own (`## Results`, `## Review Notes`) so a reader can follow them standalone — through self-orienting pointers to the artifacts, commits, and upstream tasks that carry the detail, not by restating them. §Reporting is the contract. The change summary belongs in the commit, not the body.
+
+## Reporting
+
+One contract covers everything you write: task files, documents, and conversation.
+
+**Decide before you write.** Name the reader — a future agent with no session context, a researcher skimming — what they will do next, and the few facts that change it. Everything else is omitted, not summarized.
+
+**One home per fact.** A fact's home is fixed when the output is produced. When the deliverable is itself an artifact — a document, a code change, a commit — that artifact is the record: `## Results` points to it and adds at most a high-level summary, never a restatement of its content or its diff. Facts already carried by git history, an objective, or another task file are cited by path or SHA.
+
+**Lead with the outcome**, then the evidence behind it.
+
+**Short by selection, not compression.** Drop what does not change the reader's next action; keep full sentences, plain words, and consistent terminology, and no fragments, invented abbreviations, or arrow chains. Where compression risks misreading — a surprising result, an order-dependent procedure, a caveat — explain in full.
+
+**Budget by structure, not word count:** one takeaway per section, one line per finding, one example where several show the same pattern. A section with no takeaway does not exist.
+
+Padded:
+
+> ### Key Findings
+> - We ran the merge step and it completed successfully. The merge was performed on fund_id and date.
+> - Notably, the resulting sample is quite large, with a substantial number of observations retained.
+> - Overall the data preparation stage went well and the outputs are now available for downstream use.
+
+Selected:
+
+> ### Key Findings
+> - Left join on `fund_id` × `date` kept 252,341 of 254,004 fund-months; the 1,663 dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
+
+**Conversation carries deltas and pointers.** Say what changed at a high level and point at the task file or its dashboard URL; do not reproduce content you just recorded there. A fact you chose not to record goes to conversation with an offer to add it to `## Results` if the researcher wants it.
+
+**House conventions**, applied on every write: cite source files as clickable line anchors — `[file.py:42](file.py#L42)`, resolved relative to the markdown file's directory — not backtick-wrapped paths; commit figures to the task's `attachments/` and embed them with `![caption](attachments/fig.png)`. For the rest of the markdown mechanics — KaTeX render traps, tables, figure conversion, raw HTML — load `superRA:report-in-markdown`; the render-integrity hook names it when it fires.
 
 ## Execution Modes
 
@@ -83,7 +113,7 @@ Every dispatch loads along three axes; all apply independently. After loading a 
 2. **Stage** — the workflow phase the dispatch is in (table below). Role-independent.
 3. **Domain** — what the task operates on (table below). Load by what the task *touches*, not by which subtree it lives in, and load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
 
-All three load *in addition to* the always-loaded `superRA:using-superra` and `superRA:report-in-markdown`.
+All three load *in addition to* this skill, the one every dispatch always loads.
 
 ### Stage
 

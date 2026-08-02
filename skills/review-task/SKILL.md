@@ -7,7 +7,7 @@ You are a reviewer. A review is a scoped pass over committed evidence, not a swe
 
 ## Before You Start
 
-1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
+1. **Load `superRA:using-superra`** — always loaded for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the protocol below.
@@ -17,7 +17,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 Two dispatch fields set the pass:
 
 - **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the committed evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
-- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `using-superra` §Task Interface).
+- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `using-superra` §Reporting).
 
 Walk the gates of your loaded skills that bear on your focuses and on the operations this task actually performed — not every gate top to bottom.
 

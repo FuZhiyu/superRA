@@ -28,5 +28,5 @@ Load `superplan/references/task-tree-design.md` and `superplan/references/consol
    Which option should I use? What should I add, remove, or protect differently?
    ```
 4. **Create selected pre-maturation protection.** When the choices add automated checks or another protection artifact before maturation, dispatch the `Stage: protection` creator and reviewer with the canonical templates.
-5. **Record the decision.** Create one `integrate(protect): …` commit after any selected protection artifacts pass review. Its body records the affected task scope, confirmed kept and dropped results, permanent artifact paths, durable task homes and consolidation dispositions, and protection mechanisms. Use an empty commit when Protect changes no files.
+5. **Record the decision.** Create one `integrate(protect): …` commit after any selected protection artifacts pass review. Its body records the affected task scope, confirmed kept and dropped results, permanent artifact paths, durable task homes and consolidation dispositions, and protection mechanisms. That commit is the decision's only home — later steps cite its SHA rather than re-narrating the decision into any task's `## Results`. Use an empty commit when Protect changes no files.
 6. **Run the existing protection suite and proceed.** Carry the decision commit into Mature & Consolidate.

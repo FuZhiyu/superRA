@@ -6,7 +6,9 @@ user-invocable: true
 
 # Report in Markdown
 
-Apply the rules below to any markdown you write. Load references only for figures or standalone-report IO.
+Markdown mechanics for anything you write. Apply the rules below; load references only for figures or standalone-report IO.
+
+What to write and where each fact lives is the reporting contract in `superRA:using-superra` §Reporting.
 
 ## File-reference rule
 

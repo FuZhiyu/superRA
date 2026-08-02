@@ -18,8 +18,8 @@ Two separate channels, kept distinct (see load-testing-research.md):
 - **On-demand skills** (stage/domain loads from the Skill-Load Manifest) load
   through the ``Skill`` tool, so the ``Skill`` PreToolUse hook records them by
   name. That is what :class:`SkillLoadEvidence` carries.
-- **Always-loaded skills** (``using-superra``, ``report-in-markdown``) are pulled
-  in by the role skill's §Before You Start load instruction. Whether the harness
+- **Always-loaded skills** (``using-superra``) are pulled in by the role skill's
+  §Before You Start load instruction. Whether the harness
   surfaces those loads as ``Skill`` events depends on how the agent batches them,
   so the durable observable is the instruction itself, checked statically by
   :func:`check_always_loaded_load_instruction`.
@@ -306,7 +306,7 @@ def evidence_from_hook_records(
 
 
 # The skills every role skill must pull in before acting.
-ALWAYS_LOADED_SKILLS = ("superRA:using-superra", "superRA:report-in-markdown")
+ALWAYS_LOADED_SKILLS = ("superRA:using-superra",)
 
 # Role skills that carry the always-loaded contract as a body load instruction.
 ROLE_SKILL_FILES = ("skills/implement-task/SKILL.md", "skills/review-task/SKILL.md")
@@ -350,7 +350,7 @@ def check_always_loaded_load_instruction(
     CI-safe and static: reads each role skill's ``heading`` section and records a
     failure for any missing file, missing section, or missing always-loaded skill
     name. Dispatch reaches the role skill by name and the role skill reaches the
-    always-loaded pair by this instruction — dropping it regresses the loading
+    always-loaded skills by this instruction — dropping it regresses the loading
     contract for every dispatched agent on every harness.
     """
 

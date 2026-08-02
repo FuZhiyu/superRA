@@ -18,6 +18,7 @@ Consolidation is warranted when the tree has grown through ad-hoc additions, sco
 - Tasks too large (should split) or too small (should merge with a sibling)
 - A parent with a single child where the parent adds no meaningful context
 - Tasks disconnected from the dependency graph when they should be connected
+- The same finding, number, or figure caption written into more than one task's `## Results`, or a `## Results` restating a document, diff, or commit body it could point at
 - Temporary update tasks whose validated result now belongs in the durable task they modified
 - Action-verb parents whose shipped result is now a durable concern, e.g. a "status-consolidation" parent that should merge into or become the status-model owner
 

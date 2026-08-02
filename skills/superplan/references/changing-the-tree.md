@@ -8,7 +8,7 @@ Load when the task tree changes after initial authoring — whether an in-flight
 
 Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a task's approach adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits to the task's body sections per `using-superra` §Task Interface editing principles; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing the Task Tree below.
 
-**Results:** Each task's `## Results` section is the live findings record. See `task-tree/references/task-file-contract.md` §Results Shape for the template and two-stage lifecycle.
+**Results:** Each task's `## Results` section is the live findings record. See `task-tree/references/task-file-contract.md` §Results Shape for the inclusion test, subsection menu, and two-stage lifecycle.
 
 ### `superRA/` Is the Task Tracker
 
