@@ -1,9 +1,7 @@
 ---
 title: "Stage Coverage: Register Respected at Every Workflow Stage"
-status: not-started
-depends_on: 
-  - style-spec
-
+status: implemented
+depends_on: []
 ---
 
 ## Objective
@@ -16,3 +14,6 @@ Maturation's manifest row loads task-tree, superplan, and writing but nothing cu
 
 ## Results
 
+The binding lives in [mature-consolidate.md](../../../../skills/superintegrate/references/mature-consolidate.md): the Step 2 drafter dispatch names rewriting surviving task files down to terse as part of the job, with `implement-task` §Reporting as the bar for every touched section; the Step 3 reviewer dispatch gains `Focus: correctness, results-writing`, so the maturation review checks the rewrite against the same contract. The reference itself was restyled to the register in the same commit.
+
+Planning side: no change needed — `using-superra` §Communication (terse by default in chat, returns, and documents) loads for every agent including planners, and objective/guidance economy is owned by `task-tree-design.md` §Writing Objectives.
