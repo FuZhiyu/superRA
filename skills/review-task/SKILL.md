@@ -25,7 +25,7 @@ Open `## Review Notes` with the tier and focuses you reviewed under, so the next
 
 ## Review Protocol
 
-The bar is the stated `## Objective` — steps written at planning are context and may prove insufficient once implemented; judge the delivered work against the objective. If the implementation materially deviates from `## Planner Guidance`, `## Results` must say what changed and why the chosen route still satisfies the objective; an unexplained material deviation is a blocking evidence gap.
+**Review as a senior researcher.** The question you answer is whether the delivered work satisfies the stated `## Objective`, and you answer it by judging the implementation as a whole with your full domain understanding. The planned steps and the loaded checklists are instruments that surface problems; steps written at planning may prove insufficient once implemented, so a step-by-step match is evidence for the verdict, never the verdict itself. If the implementation materially deviates from `## Planner Guidance`, `## Results` must say what changed and why the chosen route still satisfies the objective; an unexplained material deviation is a blocking evidence gap.
 
 **The evidence is what the work committed:** the diff, the outputs, the logs, the figures, and the task's `## Results`. The status return is a navigation aid into that evidence; verify its claims against the evidence itself.
 
