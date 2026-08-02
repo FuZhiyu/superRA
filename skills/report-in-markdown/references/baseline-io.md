@@ -1,12 +1,12 @@
 # Baseline IO: frontmatter, filename, paths, metadata
 
-Load when producing a **permanent standalone** Markdown artifact outside a task directory. Stage 1 task `## Results` sections do not need this; task-local Markdown companions follow `skills/using-superra/references/task-companion-files.md`.
+Load when producing a **permanent standalone** Markdown artifact outside a task directory. Stage 1 task `## Results` do not need it; task-local Markdown companions follow `skills/using-superra/references/task-companion-files.md`.
 
 ## Resolve output path
 
-1. Use a documentation or report path from project guidance (`CLAUDE.md`, `AGENTS.md`, project `README.md`, `.claude/` docs) if one is specified.
-2. Else use a location the invoking skill (e.g., `superintegrate`) specifies.
-3. Else fall back to `./scratch/` (create if needed) — transient output only.
+1. A documentation or report path from project guidance (`CLAUDE.md`, `AGENTS.md`, project `README.md`, `.claude/` docs), when specified.
+2. Else a location the invoking skill (e.g. `superintegrate`) specifies.
+3. Else `./scratch/` (create if needed) — transient output only.
 
 Define:
 - `REPORT_DIR` = resolved directory
@@ -49,16 +49,16 @@ permalink: "[project-relative path without extension]"
 
 Field notes:
 
-- `author`: wiki-link format `[[Name]]` if the project uses wiki links (e.g., Obsidian-style notes). Otherwise a plain name.
+- `author`: wiki-link `[[Name]]` when the project uses wiki links (Obsidian-style notes); otherwise a plain name.
 - `tags`: caller can add more (e.g., `"results"`, `"integration"`, `"30-minute"`).
 - `project`: include if known from context or project guidance.
-- `git_message`: HEAD commit subject — pairs with `git_commit` for identification without a separate lookup.
-- `git_dirty`: record honestly; it is for auditability, not gating. `false` is expected at commit time, `true` while drafting.
+- `git_message`: HEAD commit subject.
+- `git_dirty`: record honestly — auditability, not gating. `false` at commit time, `true` while drafting.
 - `permalink`: project-relative path with no extension. Example: `analyses/bop/RESULTS` or `notes/2026-03-07-report-analysis`.
 
 ## Write the file
 
-Write the caller's content verbatim after the frontmatter. **No content modifications.** If the content violates `rich-content.md` rules, that is the caller's responsibility — report back but do not silently edit.
+Write the caller's content verbatim after the frontmatter. **No content modifications.** Content violating `rich-content.md` is the caller's responsibility — report back, never silently edit.
 
 ## Return a clickable link
 
@@ -68,4 +68,4 @@ After writing, print:
 Report saved: [REPORT_DIR/FILENAME.md](REPORT_DIR/FILENAME.md)
 ```
 
-Use the path relative to the current working directory so the link resolves in the terminal.
+Path relative to the current working directory, so the link resolves in the terminal.

@@ -52,4 +52,35 @@ Caveats:
 - [agent-teams.md](../../../../skills/agent-orchestration/references/agent-teams.md) is marked ARCHIVED and instructs agents not to load or cite it, so its restyle changes no agent behavior. Deleting the file is the cheaper end state — flagged, not acted on, since the sweep's contract is restyle-only.
 - `tests/harness-instruction-following/load_contract.json` documents `source_paths` with line ranges that no test asserts; several were already stale before this pass (it cites `agent-orchestration/SKILL.md#L203-L219` in a 123-line file and `codex-instructions.md#L64-L77` in a 58-line file). This pass shifted two more (`agent-orchestration/SKILL.md#L50-L85`, `codex-instructions.md#L64-L77`). Left untouched — a whole-file re-anchoring pass is its own concern.
 
-Remaining for later groups: domain and utility skills, `task-tree`, `semantic-merge`, `result-protection`, `refactor-and-integrate`, and the remaining `using-superra`/`superintegrate` references not listed above.
+### Group 2 — task-tree and utility skills
+
+15 files restyled, prose-only counts as in Group 1.
+
+| File | Before | After | Δ |
+|---|---:|---:|---:|
+| [task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) | 380 | 344 | −9% |
+| [task-tree/references/commands.md](../../../../skills/task-tree/references/commands.md) | 592 | 493 | −17% |
+| [task-tree/references/task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) | 1528 | 1368 | −10% |
+| [task-tree/references/internals.md](../../../../skills/task-tree/references/internals.md) | 2276 | 2076 | −9% |
+| [report-in-markdown/SKILL.md](../../../../skills/report-in-markdown/SKILL.md) | 635 | 557 | −12% |
+| [report-in-markdown/references/baseline-io.md](../../../../skills/report-in-markdown/references/baseline-io.md) | 262 | 230 | −12% |
+| [report-in-markdown/references/rich-content.md](../../../../skills/report-in-markdown/references/rich-content.md) | 184 | 181 | −2% |
+| [result-protection/SKILL.md](../../../../skills/result-protection/SKILL.md) | 141 | 131 | −7% |
+| [result-protection/references/drift-test-quality.md](../../../../skills/result-protection/references/drift-test-quality.md) | 445 | 427 | −4% |
+| [semantic-merge/SKILL.md](../../../../skills/semantic-merge/SKILL.md) | 1596 | 1443 | −10% |
+| [semantic-merge/references/workflow-sync-author.md](../../../../skills/semantic-merge/references/workflow-sync-author.md) | 562 | 488 | −13% |
+| [semantic-merge/references/workflow-sync-reviewer.md](../../../../skills/semantic-merge/references/workflow-sync-reviewer.md) | 379 | 350 | −8% |
+| [semantic-merge/references/standalone-merge.md](../../../../skills/semantic-merge/references/standalone-merge.md) | 328 | 286 | −13% |
+| [refactor-and-integrate/SKILL.md](../../../../skills/refactor-and-integrate/SKILL.md) | 1632 | 1444 | −12% |
+| [worktree-data-sync/SKILL.md](../../../../skills/worktree-data-sync/SKILL.md) | 766 | 737 | −4% |
+
+Protocol preserved: the status enum and its ownership/transition rules, `depends_on` sibling-only semantics and the move/rename cascade rules, the maturation disposition menu and subsection menu, the semantic-coherence and drift-test gated checklists, the refactor triage boundaries and Final Diff Self-Check steps, every KaTeX render trap, and all CLI surfaces, flags, code blocks, and tables survive with content intact. `tests/harness-instruction-following` passes 126/126 (verified before and after); `load_contract.json` carries no line-anchored citation into any group-2 file, so nothing re-anchored.
+
+Two DRY deletions rather than compressions: [refactor-and-integrate/SKILL.md §Triage](../../../../skills/refactor-and-integrate/SKILL.md) dropped its "after approval, return to the researcher gate" sentence (§Apply the reviewed refactoring task already states the action boundary), and its checklist items on triage and base-current deletions now point at §Triage every hunk instead of restating it — the checklist's own intro says these are pass/fail points, not a restatement.
+
+Caveats:
+
+- The lowest-Δ files are the density floor, not a shallow pass: `rich-content.md` (−2%) is 181 prose words around four code blocks; `drift-test-quality.md` (−4%) is ~200 words of how-to plus a gated checklist that must survive verbatim; `worktree-data-sync/SKILL.md` (−4%) and `internals.md` (−9%) are CLI/flag reference whose prose is per-flag semantics with no rationale clauses left to cut. `refactor-and-integrate` and `semantic-merge` each took three passes to reach −12% / −10%.
+- [handoff-doc/SKILL.md](../../../../skills/handoff-doc/SKILL.md) was skipped as the dispatch allows: it is a deprecated redirect whose whole body is a six-row ownership list plus one instruction line, already at the style.
+
+Remaining for later groups: domain skills, and the remaining `using-superra`/`superintegrate` references not listed above.

@@ -4,7 +4,7 @@ Load when writing markdown that contains figures. Rules apply at every stage.
 
 ## The attachments directory (`ATTACH_DIR`)
 
-The caller supplies the target `attachments/` directory; substitute the actual path when embedding. If the caller specifies none, default to `attachments/` next to the output file:
+The caller supplies the target `attachments/` directory — substitute the actual path when embedding. No caller value: default to `attachments/` next to the output file:
 
 - Stage 1 task `## Results` → next to the task's `task.md` (see `task-tree/references/task-file-contract.md` §Figure Embedding).
 - Matured task results → next to the task's `task.md`.
@@ -44,7 +44,7 @@ cp path/to/figure.png "${ATTACH_DIR}/description.png"
 Source: [Original](relative/path/to/original/figure.pdf)
 ```
 
-Use a **descriptive caption** — not "Figure 1" — since it is the figure's documentation for readers who skim.
+Use a **descriptive caption**, not "Figure 1" — it is the figure's documentation for skimmers.
 
-Cite the **original source path** (the file the analysis script produced, not the copy in `ATTACH_DIR`) beneath the embed so a future reader can regenerate the figure.
+Cite the **original source path** beneath the embed — the file the analysis script produced, not the copy in `ATTACH_DIR` — so a future reader can regenerate the figure.
 
