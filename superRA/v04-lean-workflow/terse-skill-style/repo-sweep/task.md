@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-Every instruction file under skills/ matches the register at implement-task / review-task density. Behavior-preserving restyle only: protocol content, gates, and ordering constraints survive verbatim in meaning. Done so far: implement-task and using-superra (2e1fbdaa), review-task (f525b63e). Remaining: workflow skills, stage references, domain and utility skills.
+Every instruction file under skills/ matches the register at implement-task / review-task density. Behavior-preserving restyle only: protocol content, gates, and ordering constraints survive verbatim in meaning. Done so far: implement-task and using-superra (2e1fbdaa), review-task (f525b63e), superintegrate mature-consolidate.md (35832fe7), using-superra task-companion-files.md (f46265a5). Remaining: workflow skills, stage references, domain and utility skills.
 
 ## Planner Guidance
 
