@@ -62,18 +62,15 @@ Follow `superRA:using-superra` §Task Interface editing principles. Stay within 
 
 ## How You Write a Review
 
-**First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so in plain prose on that item. In Integrate, a Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive.
+**First review.** Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so on that item. In Integrate, a Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive.
 
 **Re-review is narrow and converges.** Rounds after the first report blocking findings only. Verify each `→ implemented: ...` claim by following its link, plus any finding you noted as depending on an upstream fix; everything else is accepted from the first pass. For each item:
 
-- **Fix confirmed** → delete the entire item.
-- **Fix incomplete or wrong** → rewrite the item to describe the current problem, leaving the `→ implemented: ...` annotation so the orchestrator sees the attempt history.
-- **`→ orchestrator: rejected ...`** → delete the item; the orchestrator's rejection is sufficient. If it rejects a blocking finding without evidence that the researcher was consulted, leave the item and escalate in your status return.
-- **A rejection you disagree with** → leave the item and append a counter-argument as a sub-bullet below the annotation. Surface the disagreement in your status return so the orchestrator sees it before the next dispatch.
+- **Fix confirmed** → delete the entire item; if the fix invalidated a dependent finding (different results, sample, or variable definition), rewrite that item to describe the new problem.
+- **Fix incomplete or wrong** → rewrite the item to describe the current problem, keeping the `→ implemented: ...` annotation.
+- **`→ orchestrator: rejected ...`** → delete the item. If you disagree, or a blocking finding was rejected without evidence the researcher was consulted, leave it, append your counter-argument as a sub-bullet, and surface the disagreement in your status return.
 
-If a fix invalidated a dependent finding (different results, sample, or variable definition), rewrite that item to describe the new problem. When `## Review Notes` is empty, remove the section and set `status: approved`.
-
-At `Stage: integration`, keep the task-level walk narrow in this sense but still perform the branch-wide surviving-diff confirmation `superintegrate` requires: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep over surviving hunks. Reopen a previously `approved` integration task only if that sweep surfaces a new unjustified surviving hunk touching it.
+At `Stage: integration`, also perform the branch-wide surviving-diff confirmation `superintegrate` requires: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep over surviving hunks, reopening a previously `approved` integration task only when the sweep surfaces a new unjustified hunk touching it.
 
 ## Self-Check
 
