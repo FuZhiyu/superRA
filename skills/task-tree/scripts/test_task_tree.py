@@ -3500,13 +3500,13 @@ class TestFixStatusConsistency:
         _write_task_md(child2 / "task.md", "Child B", "implemented")
 
         # Parent status is "not-started" but children are approved/implemented
-        # Rolled-up status should be "in-progress"
+        # Rolled-up status should be "implemented" (all work product exists)
         fixed = task_update.fix_status_consistency(root_dir)
         assert fixed >= 1
 
         # Re-read the parent task
         parent_task = _task_io.parse_task(parent / "task.md")
-        assert parent_task.status == "in-progress"
+        assert parent_task.status == "implemented"
 
     def test_fix_mode_no_change_for_leaf(self, tmp_path):
         """--fix should NOT change leaf task status (only branches)."""
@@ -3585,19 +3585,19 @@ class TestPropagateParentStatus:
         updated = _task_io.propagate_parent_status(root_dir, "parent/child")
         assert updated >= 1
 
-        # Parent should be in-progress (child is implemented, not approved)
+        # Parent should be implemented (its only child is implemented)
         parent_task = _task_io.parse_task(parent / "task.md")
-        assert parent_task.status == "in-progress"
+        assert parent_task.status == "implemented"
 
-        # Root should also be in-progress
+        # Root should also be implemented
         root_task = _task_io.parse_task(root_dir / "task.md")
-        assert root_task.status == "in-progress"
+        assert root_task.status == "implemented"
 
     def test_no_update_when_already_correct(self, tmp_path):
         """No writes happen if parent already has the correct status."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "in-progress")
+        _write_task_md(root_dir / "task.md", "Root", "implemented")
         child = root_dir / "child"
         child.mkdir()
         _write_task_md(child / "task.md", "Child", "implemented")

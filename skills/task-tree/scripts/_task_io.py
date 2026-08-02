@@ -758,9 +758,11 @@ def compute_status(task: Task) -> str:
        postponed, else archived (a deferred child dominates an abandoned one)
     2. All children approved -> approved
     3. Any child revise -> revise
-    4. Any child in-progress or implemented -> in-progress
-    5. Any child approved (but not all) -> in-progress
-    6. Otherwise -> not-started
+    4. All children implemented or approved -> implemented (the subtree's
+       work product exists; review is still open)
+    5. Any child in-progress or implemented -> in-progress
+    6. Any child approved (but not all) -> in-progress
+    7. Otherwise -> not-started
     """
     if task.is_leaf:
         return task.status
@@ -775,6 +777,8 @@ def compute_status(task: Task) -> str:
         return "approved"
     if any(s == "revise" for s in child_statuses):
         return "revise"
+    if all(s in ("implemented", "approved") for s in child_statuses):
+        return "implemented"
     if any(s in ("in-progress", "implemented") for s in child_statuses):
         return "in-progress"
     if any(s == "approved" for s in child_statuses):
