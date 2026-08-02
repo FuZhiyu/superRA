@@ -76,16 +76,13 @@ def test_green_static_backbone_real_role_specs():
 
 
 def test_red_static_backbone_missing_skill(tmp_path):
-    (tmp_path / "agents").mkdir()
-    (tmp_path / "agents" / "implementer.md").write_text(
-        "---\nname: implementer\nskills: [superRA:using-superra]\n---\nbody\n",
-        encoding="utf-8",
-    )
-    (tmp_path / "agents" / "reviewer.md").write_text(
-        "---\nname: reviewer\n"
-        "skills: [superRA:using-superra, superRA:report-in-markdown]\n---\nbody\n",
-        encoding="utf-8",
-    )
+    for rel in ("skills/implement-task/SKILL.md", "skills/review-task/SKILL.md"):
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "# Role\n\n## Before You Start\n\n1. Load superRA:report-in-markdown.\n",
+            encoding="utf-8",
+        )
     report = SkillLoadReport()
     check_claude_always_loaded_static(report, tmp_path)
     assert not report.ok
