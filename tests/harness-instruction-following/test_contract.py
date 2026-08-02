@@ -270,6 +270,25 @@ def test_superplan_routed_references_exist():
     )
 
 
+def test_task_companion_contract_has_one_canonical_route():
+    canonical = (
+        REPO_ROOT
+        / "skills"
+        / "using-superra"
+        / "references"
+        / "task-companion-files.md"
+    )
+    assert list((REPO_ROOT / "skills").rglob("task-companion-files.md")) == [
+        canonical
+    ]
+    assert "references/task-companion-files.md" in read_text(
+        "skills/using-superra/SKILL.md"
+    )
+    assert "../using-superra/references/task-companion-files.md" in read_text(
+        "skills/report-in-markdown/SKILL.md"
+    )
+
+
 def test_codex_tool_map_matches_contract():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     rows = markdown_table_rows(codex, "## Codex Tool Map")

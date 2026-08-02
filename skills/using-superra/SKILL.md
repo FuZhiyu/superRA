@@ -63,6 +63,8 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 **Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
+**Place files by lifespan and owner:** Keep disposable session work in scratch folder. Retained files—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results are task companions; put them under that task's `attachments/`. Put maintained code, shared or runtime-consumed files, and promised durable deliverables in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a task companion.
+
 **Editing principles:**
 
 - Keep the task at latest state, not a log — edit in place and delete superseded content; no "Update:" / "Previously…" blocks or strikethroughs.

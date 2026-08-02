@@ -10,6 +10,7 @@ from __future__ import annotations
 import heapq
 import os
 import re
+import stat
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +23,79 @@ VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approv
 TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
+ATTACHMENTS_DIRNAME = "attachments"
+
+
+def is_opaque_task_path(path: Path, plan_root: Path) -> bool:
+    """Return whether *path* lexically or canonically enters ``attachments/``."""
+    try:
+        lexical_relative = path.absolute().relative_to(plan_root.absolute())
+    except ValueError:
+        return False
+    if ATTACHMENTS_DIRNAME in lexical_relative.parts:
+        return True
+    try:
+        canonical_relative = path.resolve().relative_to(plan_root.resolve())
+    except (OSError, ValueError):
+        return False
+    return ATTACHMENTS_DIRNAME in canonical_relative.parts
+
+
+def has_symlink_task_component(path: Path, plan_root: Path) -> bool:
+    """Return whether a task-root-relative component of *path* is a symlink."""
+    try:
+        relative = path.absolute().relative_to(plan_root.absolute())
+    except ValueError:
+        return False
+    current = plan_root.absolute()
+    for part in relative.parts:
+        current /= part
+        try:
+            if current.is_symlink():
+                return True
+        except OSError:
+            return True
+    return False
+
+
+def iter_child_task_dirs(directory: Path) -> list[Path]:
+    """Return immediate structural child task directories in stable order."""
+    try:
+        if directory.is_symlink():
+            return []
+        children = directory.iterdir()
+        return sorted(
+            (
+                child
+                for child in children
+                if (
+                    child.name != ATTACHMENTS_DIRNAME
+                    and not child.is_symlink()
+                    and child.is_dir()
+                    and not (child / "task.md").is_symlink()
+                    and (child / "task.md").exists()
+                )
+            ),
+            key=lambda child: child.name,
+        )
+    except OSError:
+        return []
+
+
+def iter_task_markdown_files(plan_root: Path) -> list[Path]:
+    """Return structural ``task.md`` files without entering ancillary directories."""
+    if plan_root.is_symlink():
+        return []
+    task_files: list[Path] = []
+    pending = [plan_root]
+    while pending:
+        directory = pending.pop()
+        task_md = directory / "task.md"
+        if not task_md.is_symlink() and task_md.is_file():
+            task_files.append(task_md)
+        children = iter_child_task_dirs(directory)
+        pending.extend(reversed(children))
+    return task_files
 
 
 def default_plan_root() -> Path:
@@ -30,14 +104,10 @@ def default_plan_root() -> Path:
 
 def _has_child_task_dir(directory: Path) -> bool:
     """True if *directory* holds at least one immediate subdir with a ``task.md``."""
-    try:
-        # Materialize inside the guard: `iterdir()` is lazy, so a missing/racing
-        # directory raises FileNotFoundError (an OSError) only on consumption,
-        # which would escape a bare `try` wrapping just the `iterdir()` call.
-        children = list(directory.iterdir())
-    except OSError:
-        return False
-    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+    return any(
+        (child / "task.md").is_file()
+        for child in iter_child_task_dirs(directory)
+    )
 
 
 def _is_task_root_dir(directory: Path) -> bool:
@@ -46,7 +116,14 @@ def _is_task_root_dir(directory: Path) -> bool:
     task dir (a rootless forest). A forest needs no umbrella ``task.md``."""
     if directory.name not in TASK_ROOT_DIRNAMES:
         return False
-    return (directory / "task.md").is_file() or _has_child_task_dir(directory)
+    task_md = directory / "task.md"
+    return (
+        not directory.is_symlink()
+        and (
+            (not task_md.is_symlink() and task_md.is_file())
+            or _has_child_task_dir(directory)
+        )
+    )
 
 
 def autodetect_plan_root(start: Path | None = None) -> Path | None:
@@ -344,13 +421,15 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
     parse), it is inferred via ``_find_plan_root``, which returns the nearest
     task-root directory so a standalone parse agrees with a known-root walk.
     """
-    text = task_md_path.read_text(encoding="utf-8")
-    fm, body = parse_frontmatter(text)
-
     task_dir = task_md_path.parent
     root = plan_root if plan_root is not None else _find_plan_root(task_dir)
     path = ""
     if root is not None:
+        if task_md_path.is_symlink() or has_symlink_task_component(task_dir, root):
+            raise ValueError(
+                f"Task path {task_md_path} contains a symlink; "
+                "refusing to parse external task content"
+            )
         try:
             rel = task_dir.resolve().relative_to(root.resolve())
         except ValueError:
@@ -358,7 +437,15 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
                 f"Task dir {task_dir} is outside the supplied plan root {root}; "
                 f"refusing to parse it as the root task"
             ) from None
+        if ATTACHMENTS_DIRNAME in rel.parts:
+            raise ValueError(
+                f"Task dir {task_dir} is inside reserved {ATTACHMENTS_DIRNAME}/; "
+                "refusing to parse asset content as a task"
+            )
         path = str(rel) if str(rel) != "." else ""
+
+    text = task_md_path.read_text(encoding="utf-8")
+    fm, body = parse_frontmatter(text)
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -434,8 +521,9 @@ def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) ->
     """
     updated: list[str] = []
     siblings = [
-        d for d in parent_dir.iterdir()
-        if d.is_dir() and (d / "task.md").exists() and d.name != new_slug
+        directory
+        for directory in iter_child_task_dirs(parent_dir)
+        if directory.name != new_slug
     ]
     for sibling_dir in siblings:
         task = parse_task(sibling_dir / "task.md")
@@ -527,6 +615,168 @@ def _rewrite_relative_links(
     return "".join(rewritten_lines)
 
 
+def _contained_regular_relative(path: Path, plan_root: Path) -> Path:
+    """Return a safe root-relative path or raise without following symlinks."""
+    root = plan_root.resolve(strict=True)
+    candidate = path.absolute()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError:
+        raise ValueError(f"Markdown rewrite target escapes task root: {path}") from None
+    if not relative.parts:
+        raise ValueError(f"Markdown rewrite target is not a file: {path}")
+
+    current = root
+    for index, part in enumerate(relative.parts):
+        current /= part
+        try:
+            info = current.lstat()
+        except OSError as exc:
+            raise ValueError(f"Markdown rewrite target is unavailable: {path}") from exc
+        if stat.S_ISLNK(info.st_mode):
+            raise ValueError(
+                f"Markdown rewrite target contains a symlink component: {path}"
+            )
+        if index < len(relative.parts) - 1 and not stat.S_ISDIR(info.st_mode):
+            raise ValueError(
+                f"Markdown rewrite target has a non-directory component: {path}"
+            )
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+    return relative
+
+
+def _open_contained_regular(
+    path: Path, plan_root: Path, flags: int
+) -> int:
+    """Open a contained regular file without following any path symlink."""
+    root = plan_root.resolve(strict=True)
+    relative = _contained_regular_relative(path, root)
+    if (
+        flags & os.O_ACCMODE
+        and not path.lstat().st_mode
+        & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
+    ):
+        raise PermissionError(f"Markdown rewrite target is read-only: {path}")
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    directory_fd = os.open(root, directory_flags | no_follow)
+    try:
+        for part in relative.parts[:-1]:
+            child_fd = os.open(
+                part,
+                directory_flags | no_follow,
+                dir_fd=directory_fd,
+            )
+            os.close(directory_fd)
+            directory_fd = child_fd
+        file_fd = os.open(
+            relative.parts[-1],
+            flags | no_follow,
+            dir_fd=directory_fd,
+        )
+    finally:
+        os.close(directory_fd)
+
+    if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+        os.close(file_fd)
+        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+    return file_fd
+
+
+def _read_contained_bytes(path: Path, plan_root: Path) -> bytes:
+    fd = _open_contained_regular(path, plan_root, os.O_RDONLY)
+    with os.fdopen(fd, "rb") as handle:
+        return handle.read()
+
+
+def _read_contained_markdown(path: Path, plan_root: Path) -> str:
+    return _read_contained_bytes(path, plan_root).decode("utf-8")
+
+
+def _write_fd_bytes(fd: int, payload: bytes) -> None:
+    """Replace an opened regular file's bytes, retaining its descriptor."""
+    os.lseek(fd, 0, os.SEEK_SET)
+    os.ftruncate(fd, 0)
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(fd, remaining)
+        if written <= 0:
+            raise OSError("short write while applying Markdown rewrite")
+        remaining = remaining[written:]
+
+
+def _close_rewrite_fd(fd: int) -> None:
+    """Close one rewrite descriptor (seamed for failure-order testing)."""
+    os.close(fd)
+
+
+def _close_rewrite_fds(fds: list[int]) -> list[tuple[int, Exception]]:
+    """Attempt every close in order and return failures without short-circuiting."""
+    failures: list[tuple[int, Exception]] = []
+    for fd in fds:
+        try:
+            _close_rewrite_fd(fd)
+        except Exception as exc:
+            failures.append((fd, exc))
+    return failures
+
+
+def _restore_rewrite_paths(
+    plan_root: Path, prepared: list[tuple[Path, bytes, bytes]]
+) -> list[str]:
+    """Best-effort restoration through fresh descriptors after finalization fails."""
+    restore_fds: list[tuple[int, Path, bytes]] = []
+    errors: list[str] = []
+    for path, _new_bytes, original_bytes in prepared:
+        try:
+            fd = _open_contained_regular(path, plan_root, os.O_WRONLY)
+        except Exception as exc:
+            errors.append(f"reopen {path}: {exc}")
+            continue
+        restore_fds.append((fd, path, original_bytes))
+
+    for fd, path, original_bytes in restore_fds:
+        try:
+            _write_fd_bytes(fd, original_bytes)
+        except Exception as exc:
+            errors.append(f"restore {path}: {exc}")
+
+    close_failures = _close_rewrite_fds([fd for fd, _path, _bytes in restore_fds])
+    if close_failures:
+        retry_failures = _close_rewrite_fds([fd for fd, _exc in close_failures])
+        errors.extend(f"close restored fd {fd}: {exc}" for fd, exc in close_failures)
+        errors.extend(f"retry restored fd {fd}: {exc}" for fd, exc in retry_failures)
+    return errors
+
+
+def _iter_contained_markdown(root: Path, plan_root: Path):
+    """Yield regular Markdown files without entering symlinked directories."""
+    task_root = plan_root.resolve(strict=True)
+    scan_root = root.absolute()
+    try:
+        scan_root.relative_to(task_root)
+    except ValueError:
+        return
+    if has_symlink_task_component(scan_root, task_root) or not scan_root.is_dir():
+        return
+
+    for directory, dirnames, filenames in os.walk(scan_root, followlinks=False):
+        current = Path(directory)
+        dirnames[:] = sorted(
+            name for name in dirnames if not (current / name).is_symlink()
+        )
+        for name in sorted(filenames):
+            candidate = current / name
+            if candidate.suffix.lower() != ".md":
+                continue
+            try:
+                _contained_regular_relative(candidate, task_root)
+            except ValueError:
+                continue
+            yield candidate
+
+
 def compute_move_link_rewrites(
     plan_root: Path, from_dir: Path, to_dir: Path, *, moved_root: Path
 ) -> dict[Path, str]:
@@ -541,20 +791,21 @@ def compute_move_link_rewrites(
     every other file in ``plan_root`` whose links point into the moved subtree
     (keyed by their unchanged paths). Files whose links are unaffected are omitted.
     """
+    plan_root = plan_root.resolve(strict=True)
     rewrites: dict[Path, str] = {}
     from_dir_resolved = from_dir.resolve()
     to_dir_resolved = to_dir.resolve()
 
-    for src_md in moved_root.rglob("*.md"):
+    for src_md in _iter_contained_markdown(moved_root, plan_root):
         rel = src_md.relative_to(moved_root)
-        original = src_md.read_text(encoding="utf-8")
+        original = _read_contained_markdown(src_md, plan_root)
         rewritten = _rewrite_relative_links(
             original, from_dir / rel, to_dir / rel, from_dir, to_dir
         )
         if rewritten != original:
             rewrites[to_dir / rel] = rewritten
 
-    for md in plan_root.rglob("*.md"):
+    for md in _iter_contained_markdown(plan_root, plan_root):
         md_resolved = md.resolve()
         in_subtree = False
         for boundary in (from_dir_resolved, to_dir_resolved):
@@ -566,13 +817,67 @@ def compute_move_link_rewrites(
             break
         if in_subtree:
             continue  # part of the moved subtree (pre- or post-move) — handled above
-        original = md.read_text(encoding="utf-8")
+        original = _read_contained_markdown(md, plan_root)
         rewritten = _rewrite_relative_links(
             original, md, md, from_dir, to_dir, only_into_subtree=True
         )
         if rewritten != original:
             rewrites[md] = rewritten
     return rewrites
+
+
+def apply_move_link_rewrites(
+    plan_root: Path, rewrites: dict[Path, str]
+) -> None:
+    """Apply a rewrite queue transactionally through contained regular files."""
+    ordered = sorted(rewrites.items(), key=lambda item: str(item[0]))
+    prepared: list[tuple[Path, bytes, bytes]] = []
+    for path, content in ordered:
+        _contained_regular_relative(path, plan_root)
+        prepared.append(
+            (path, content.encode("utf-8"), _read_contained_bytes(path, plan_root))
+        )
+
+    write_fds: list[int] = []
+    touched: list[tuple[int, Path, bytes]] = []
+    primary_error: Exception | None = None
+    rollback_errors: list[str] = []
+
+    try:
+        # Open every destination before changing bytes. Permission/path failures
+        # therefore leave the whole queue untouched.
+        for path, _new_bytes, _original_bytes in prepared:
+            write_fds.append(_open_contained_regular(path, plan_root, os.O_WRONLY))
+        for fd, (path, new_bytes, original_bytes) in zip(write_fds, prepared):
+            touched.append((fd, path, original_bytes))
+            _write_fd_bytes(fd, new_bytes)
+    except Exception as exc:
+        primary_error = exc
+        for fd, path, original_bytes in reversed(touched):
+            try:
+                _write_fd_bytes(fd, original_bytes)
+            except Exception as rollback_exc:
+                rollback_errors.append(f"restore {path}: {rollback_exc}")
+
+    close_failures = _close_rewrite_fds(write_fds)
+    if close_failures and touched:
+        # A close error means the new bytes were never fully committed. Some
+        # original descriptors may already be closed, so restore every path
+        # through a fresh no-follow descriptor before reporting the failure.
+        rollback_errors.extend(_restore_rewrite_paths(plan_root, prepared))
+
+    # A failed close may have left its descriptor open. Retry only after byte
+    # restoration, while still attempting every failed descriptor in order.
+    retry_failures = _close_rewrite_fds([fd for fd, _exc in close_failures])
+
+    if primary_error is not None or close_failures or rollback_errors:
+        details: list[str] = []
+        if primary_error is not None:
+            details.append(str(primary_error))
+        details.extend(f"close fd {fd}: {exc}" for fd, exc in close_failures)
+        details.extend(rollback_errors)
+        details.extend(f"retry close fd {fd}: {exc}" for fd, exc in retry_failures)
+        raise OSError("Markdown rewrite transaction failed: " + "; ".join(details))
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:
@@ -623,7 +928,7 @@ def walk_plan(plan_root: Path) -> Task:
     ``SYNTHETIC_ROOT_TITLE``.
     """
     root_task_md = plan_root / "task.md"
-    if root_task_md.exists():
+    if not root_task_md.is_symlink() and root_task_md.exists():
         root = parse_task(root_task_md, plan_root)
     else:
         root = Task(path="", dir_path=plan_root, title=SYNTHETIC_ROOT_TITLE)
@@ -684,10 +989,7 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     whole walk for all readers (dashboard, ``task query``, ``task read``).
     Mirrors the leniency design used for unknown status values.
     """
-    subdirs = sorted(
-        [d for d in directory.iterdir() if d.is_dir() and (d / "task.md").exists()],
-        key=lambda d: d.name,
-    )
+    subdirs = iter_child_task_dirs(directory)
     parsed: list[Task] = []
     for subdir in subdirs:
         try:
@@ -740,11 +1042,30 @@ def resolve_path(plan_root: Path, task_path: str) -> Path:
     if not task_path:
         return plan_root
     task_path = strip_root_prefix(plan_root, task_path)
-    resolved = (plan_root / task_path).resolve()
-    root_resolved = plan_root.resolve()
-    if not resolved.is_relative_to(root_resolved):
+    requested = Path(task_path)
+    if requested.is_absolute() or ".." in requested.parts:
         raise ValueError(
             f"Task path {task_path!r} escapes plan root {plan_root}"
+        )
+    if ATTACHMENTS_DIRNAME in requested.parts:
+        raise ValueError(
+            f"Task path {task_path!r} enters reserved {ATTACHMENTS_DIRNAME}/"
+        )
+    candidate = plan_root / requested
+    if has_symlink_task_component(candidate, plan_root):
+        raise ValueError(f"Task path {task_path!r} contains a symlink component")
+    resolved = candidate.resolve()
+    root_resolved = plan_root.resolve()
+    try:
+        canonical_relative = resolved.relative_to(root_resolved)
+    except ValueError:
+        raise ValueError(
+            f"Task path {task_path!r} escapes plan root {plan_root}"
+        ) from None
+    if ATTACHMENTS_DIRNAME in canonical_relative.parts:
+        raise ValueError(
+            f"Task path {task_path!r} resolves inside reserved "
+            f"{ATTACHMENTS_DIRNAME}/"
         )
     return resolved
 

@@ -10,8 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
     TASK_ROOT_DIRNAME,
+    apply_move_link_rewrites,
     cascade_depends_on_rename,
     compute_move_link_rewrites,
+    iter_child_task_dirs,
     parse_task,
     propagate_parent_status,
     resolve_path,
@@ -39,8 +41,9 @@ def _die(message: str) -> None:
 
 def _task_sibling_dirs(parent_dir: Path, *, skip: Path | None = None) -> list[Path]:
     return [
-        d for d in parent_dir.iterdir()
-        if d != skip and d.is_dir() and (d / "task.md").exists()
+        directory
+        for directory in iter_child_task_dirs(parent_dir)
+        if directory != skip
     ]
 
 
@@ -50,6 +53,31 @@ def _precheck_same_parent_rename(from_dir: Path) -> None:
             parse_task(sibling_dir / "task.md")
         except Exception as exc:
             _die(f"cannot parse sibling {sibling_dir / 'task.md'}: {exc}")
+
+
+def _precheck_status_ancestors(
+    plan_root: Path, start_dir: Path, *, side: str
+) -> None:
+    """Validate each structural ancestor that status propagation will parse."""
+    root = plan_root.resolve()
+    current = start_dir
+    while True:
+        task_md = current / "task.md"
+        if task_md.is_symlink():
+            _die(f"{side} ancestor task.md is a symlink: {task_md}")
+        if not task_md.exists():
+            if current == root:  # rootless forests have no structural root task
+                return
+            _die(f"{side} ancestor is not a task directory: {current}")
+        if not task_md.is_file():
+            _die(f"{side} ancestor task.md is not a regular file: {task_md}")
+        try:
+            parse_task(task_md, root)
+        except Exception as exc:
+            _die(f"cannot parse {side} ancestor {task_md}: {exc}")
+        if current == root:
+            return
+        current = current.parent
 
 
 def _collect_cross_parent_dep_drops(
@@ -116,15 +144,21 @@ def _apply_dep_drops(
 
 
 def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
-    from_dir = resolve_path(plan_root, from_path)
-    to_dir = resolve_path(plan_root, to_path)
+    try:
+        from_dir = resolve_path(plan_root, from_path)
+        to_dir = resolve_path(plan_root, to_path)
+    except ValueError as exc:
+        _die(str(exc))
     plan_root_resolved = plan_root.resolve()
     from_status_path = from_dir.relative_to(plan_root_resolved).as_posix()
     to_status_path = to_dir.relative_to(plan_root_resolved).as_posix()
 
     if not from_dir.exists():
         _die(f"source not found: {from_dir}")
-    if not (from_dir / "task.md").exists():
+    source_task_md = from_dir / "task.md"
+    if source_task_md.is_symlink():
+        _die(f"source task.md is a symlink: {source_task_md}")
+    if not source_task_md.is_file():
         _die(f"source is not a task directory: {from_dir}")
     if to_dir.exists():
         _die(f"destination already exists: {to_dir}")
@@ -150,6 +184,10 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     if from_parent == to_parent:
         _precheck_same_parent_rename(from_dir)
     else:
+        _precheck_status_ancestors(plan_root_resolved, from_parent, side="source")
+        _precheck_status_ancestors(
+            plan_root_resolved, to_parent, side="destination"
+        )
         try:
             sibling_drops, moved_drops = _collect_cross_parent_dep_drops(from_dir, to_dir)
         except Exception as exc:
@@ -158,8 +196,17 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     # Computed before the rename, while the moved subtree is readable at from_dir.
     link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)
     from_dir.rename(to_dir)
-    for path, content in link_rewrites.items():
-        path.write_text(content, encoding="utf-8")
+    try:
+        apply_move_link_rewrites(plan_root, link_rewrites)
+    except (OSError, ValueError) as exc:
+        try:
+            to_dir.rename(from_dir)
+        except OSError as rollback_exc:
+            _die(
+                f"unsafe Markdown rewrite after move ({exc}); "
+                f"rollback also failed: {rollback_exc}"
+            )
+        _die(f"unsafe Markdown rewrite after move; move rolled back: {exc}")
     print(f"Moved {from_dir} -> {to_dir}")
 
     if from_parent == to_parent:

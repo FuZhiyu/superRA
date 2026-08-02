@@ -6,7 +6,7 @@ Load `superplan/references/task-tree-design.md`, `superplan/references/consolida
 
 ## Step 1: Assemble the maturation input
 
-Locate the latest applicable `integrate(protect)` decision commit and read its body, any protection artifacts it records, affected-task working `## Results`, and the post-Sync governing diff. Re-enter Protect when the commit is missing or the Sync outcome makes a recorded durable home or consolidation disposition stale. Survey every affected task and subtree against that decision. Results selected to keep must appear in the permanent record; results selected to drop must not be preserved indirectly as standalone findings.
+Locate the latest applicable `integrate(protect)` decision commit and read its body, any protection artifacts it records, affected-task working `## Results`, and the post-Sync governing diff. Re-enter Protect when the commit is missing or the Sync outcome makes a recorded durable home or consolidation disposition stale. Survey every affected task and subtree against that decision, including retained `attachments/` under `skills/using-superra/references/task-companion-files.md` §Mature and Consolidate. Results selected to keep must appear in the permanent record; results selected to drop must not be preserved indirectly as standalone findings.
 
 ## Step 2: Materialize the permanent record and mature the tree
 

@@ -15,6 +15,7 @@ from _task_io import (
     VALID_STATUSES,
     Task,
     _has_nonempty_section,
+    iter_child_task_dirs,
     parse_task,
 )
 
@@ -132,10 +133,7 @@ def validate_plan(plan_root: Path) -> list[str]:
     warnings_out: list[str] = []
 
     def _validate_level(directory: Path) -> None:
-        subdirs = [
-            d for d in directory.iterdir()
-            if d.is_dir() and (d / "task.md").exists()
-        ]
+        subdirs = iter_child_task_dirs(directory)
 
         tasks_at_level: list[Task] = []
         for subdir in subdirs:

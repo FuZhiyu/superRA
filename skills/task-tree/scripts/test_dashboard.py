@@ -2632,7 +2632,7 @@ var DOMPurify = { sanitize: function (html) { return html; } };
 def _render_markdown_image_src(
     root_prefix, task_path, src, active_wt="", repo_file_base=""
 ):
-    defs = _extract_js_defs(["wtUrl", "renderMarkdown"])
+    defs = _extract_js_defs(["wtUrl", "isRelativeResource", "renderMarkdown"])
     harness = (
         _RENDER_MD_SHIM
         + "var ACTIVE_WT = " + json.dumps(active_wt) + ";\n"
@@ -2898,8 +2898,8 @@ class TestFileLinkConsistency:
         assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
         # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
-        assert "vscode://file/' + RESOLVED_ROOT + '/' + taskDirRel + relHref" in BASE_HTML
-        assert "var repoPathPrefix = rootRel + taskDirRel;" in BASE_HTML
+        assert "vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref" in BASE_HTML
+        assert "var repoPathPrefix = rootRel + contentDirRel;" in BASE_HTML
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
         assert "pathPrefix = taskPath ? 'superRA/'" not in BASE_HTML
@@ -2948,7 +2948,7 @@ class TestFileLinkConsistency:
         # setActive('') — the entry point that returns to the container. The
         # label is 'root' in tracker mode and the site title in doc-mode, so the
         # assertion pins the empty-path ascent, not the literal label.
-        assert "addCrumb(rootLabel, '', segs.length === 0)" in BASE_HTML
+        assert "addCrumb(rootLabel, '', segs.length === 0 && !artifactPath)" in BASE_HTML
 
     # --- Subtree export resolved-root basis -------------------------------
 
@@ -3109,7 +3109,8 @@ class TestWorktreeOpenButton:
     def test_href_repoints_on_navigation(self):
         """setActive re-points the button, so it follows the researcher through the
         tree instead of freezing on the task that was active at page load."""
-        fn = re.search(r"function setActive\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        fn = re.search(r"function setActive\(path, artifactPath\)\s*\{.*?\n\}",
+                       BASE_HTML, re.S)
         assert fn and "updateWorktreeOpenHref();" in fn.group(0)
 
     def test_href_refreshed_on_worktree_change(self):
@@ -3279,6 +3280,19 @@ class TestTabTitleWiring:
         not_ok = re.search(r"if \(!resp\.ok\) \{.*?\n    \}", body, re.S)
         assert not_ok and "setTabTitle('');" in not_ok.group(0)
         catch = re.search(r"\} catch \(e\) \{.*?\n  \}", body, re.S)
+        assert catch and "setTabTitle('');" in catch.group(0)
+
+    def test_attachment_pane_names_the_tab(self):
+        """An attachment takes over the same reading pane, so it is the page the
+        tab names; a manifest/entry failure clears it like the card error paths."""
+        fn = re.search(
+            r"function loadActiveArtifact\(taskPath, artifactPath\)\s*\{.*?\n\}",
+            BASE_HTML, re.S,
+        )
+        assert fn
+        body = fn.group(0)
+        assert "setTabTitle(entry.name);" in body
+        catch = re.search(r"\}\)\.catch\(function\(error\) \{.*?\n  \}\);", body, re.S)
         assert catch and "setTabTitle('');" in catch.group(0)
 
     def test_deep_descent_patch_awaits_the_sidebar_update(self):
@@ -3615,9 +3629,19 @@ class TestLocalOpen:
 
     def test_body_links_carry_open_path_beside_the_vscode_href(self):
         """A body file link keeps its vscode:// href (modifier/middle click, and it
-        carries the line anchor) and gains the route address for a plain click."""
+        carries the line anchor) and gains the route address for a plain click.
+        The address rides `contentDirRel`, the same base the vscode:// href uses,
+        so a link inside a rendered attachment resolves from its own directory."""
         assert (
-            "a.setAttribute('data-open-path', rootRel + taskDirRel + decodePathHref(relHref));"
+            "a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));"
+            in BASE_HTML
+        )
+
+    def test_attachment_links_carry_open_path(self):
+        """A link between attachments in a rendered companion also opens on the
+        host; the raw /api/artifact href stays for modifier/middle clicks."""
+        assert (
+            "a.setAttribute('data-open-path', rootRel + taskDirRel + artifactTarget);"
             in BASE_HTML
         )
 
@@ -4002,9 +4026,11 @@ class TestDashboard:
     def test_whole_tree_export_unchanged_by_root_param(self, plan_root):
         """generate_dashboard(root=None) is byte-identical to the bare call —
         adding the subtree-scoping branch did not perturb the whole-tree path."""
-        a = plan_dashboard.generate_dashboard(plan_root, plan_root / "a.html")
+        output_dir = plan_root.parent / "exports"
+        output_dir.mkdir()
+        a = plan_dashboard.generate_dashboard(plan_root, output_dir / "a.html")
         b = plan_dashboard.generate_dashboard(
-            plan_root, plan_root / "b.html", root=None
+            plan_root, output_dir / "b.html", root=None
         )
         assert a.read_text("utf-8") == b.read_text("utf-8")
 
@@ -4503,8 +4529,13 @@ class TestDocMode:
         a repo-relative authority link resolves repo-root-relative against the
         blob base (not against the doc node dir), a sibling-export link stays a
         plain relative href, and with doc-mode off the link is task-relative."""
-        defs = _extract_js_defs(["encodeRepoPath", "repoFileHref",
-                                 "resolveInternalTaskPath", "renderMarkdown"])
+        defs = _extract_js_defs([
+            "encodeRepoPath",
+            "repoFileHref",
+            "isRelativeResource",
+            "resolveInternalTaskPath",
+            "renderMarkdown",
+        ])
         shim = r"""
 var md = { render: function (text) {
   var out = text;

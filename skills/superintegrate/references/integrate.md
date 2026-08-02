@@ -45,6 +45,8 @@ Resolve concerns inside the approved task through an implementer fix. If executi
 
 ## Step 6: Assign the reviewer seat
 
+Before review, load `skills/using-superra/references/task-companion-files.md` for every affected task that retains companion files and complete its promotion step.
+
 Assign it per `agent-orchestration` §Seat Assignment:
 
 ```text
