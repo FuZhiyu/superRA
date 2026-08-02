@@ -5,13 +5,13 @@ description: "Implement a superRA task tree. Requires superRA:using-superra. Use
 
 # superimplement — the IMPLEMENT phase
 
-Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
+Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
 
 **Announce at start:** "I'm using the superimplement skill to implement the task tree."
 
 ## Execution Modes
 
-Default to subagent-driven execution on a built tree unless the researcher explicitly requests interactive; interactive can also be requested mid-flight. The mode definitions are in `using-superra/references/main-agent.md §Execution Modes`.
+Default to subagent-driven execution on a built tree; interactive on explicit researcher request, including mid-flight. Definitions: `using-superra/references/main-agent.md §Execution Modes`.
 
 ## The Process
 
@@ -24,24 +24,24 @@ Default to subagent-driven execution on a built tree unless the researcher expli
 
 ### Step 0: Branch Check
 
-Before any task-tree check, dispatch, or commit, check if on a default branch:
+Before any task-tree check, dispatch, or commit:
 
 ```bash
 git branch --show-current
 ```
 
-If on `main` or `master`:
+On `main` or `master`:
 ```
 You're on main. I recommend creating a branch for this work:
   git checkout -b <topic>
 Want me to create one?
 ```
 
-If the user declines, proceed — they've given explicit consent to work on the default branch.
+User declines: proceed — that is explicit consent to work on the default branch.
 
 ### Step 0b: Task Tree Existence Check
 
-After the branch check, confirm the `superRA/` directory exists with at least one task, is tracked, and has no uncommitted modifications:
+Confirm `superRA/` exists with at least one task, is tracked, and has no uncommitted modifications:
 
 ```bash
 [ -d superRA ] \
@@ -51,18 +51,18 @@ After the branch check, confirm the `superRA/` directory exists with at least on
   && git diff --quiet --cached -- superRA/
 ```
 
-All conjuncts must succeed. The first two confirm a valid tree exists (an umbrella `task.md`, top-level task dirs, or both); the rest confirm tracking and a clean worktree.
+All conjuncts must succeed — the first two confirm a valid tree (an umbrella `task.md`, top-level task dirs, or both), the rest tracking and a clean worktree.
 
-**If the check fails, the task tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases, which end by resuming on the affected frontier.
+**Check fails: the tree is outside this workflow's valid entry conditions. Invoke `superRA:superplan` to bootstrap or repair**, proceeding through its full phases, which end by resuming on the affected frontier.
 
 Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
 ### Step 1: Load
 
-1. Run `superra task tree` to see the full task tree with statuses.
-2. **Confirm there is implementation work.** Continue here when the frontier has tasks to implement, review, or fix, or when reproducibility or the Step 4 disposition is still pending. If all tasks are already `approved`, skip dispatch and start at Step 3 so approved work is verified and disposition-logged before integration.
-3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the active task or its ancestor chain.
-4. **Repair missing context:** when a task the frontier will touch lacks the inherited convention context an agent needs, distill it into the objective of the lowest governing task (`superplan/references/task-tree-design.md` §Context Distillation) and commit before dispatching.
+1. Run `superra task tree` for the full tree with statuses.
+2. **Confirm there is implementation work.** Continue here when the frontier has tasks to implement, review, or fix, or reproducibility or the Step 4 disposition is pending. All tasks already `approved`: skip dispatch, start at Step 3.
+3. **Load the active domain skill(s) following the manifest**, plus any task-specific helper skills named in the active task or its ancestor chain.
+4. **Repair missing context:** a frontier task lacking the inherited convention context an agent needs — distill it into the objective of the lowest governing task (`superplan/references/task-tree-design.md` §Context Distillation) and commit before dispatching.
 
 ### Step 2: Execute Tasks
 
@@ -71,10 +71,10 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 #### Task Execution Steps
 
 1. Select the per-task seat structure through `superRA:agent-orchestration`.
-2. Execute the implementer seat. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
-3. **If NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
-4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback below — fix now and iterate to APPROVE, or defer and advance.
-5. **Once APPROVE:** in a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, add a one-line entry to the immediate parent's `## Results` that links to the child instead of restating its numbers. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
+2. Execute the implementer seat. `Task:` carries one task path (e.g. `Task: data-preparation/merge`); `Tasks:` lists a bundle.
+3. **NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
+4. **DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback — fix now and iterate to APPROVE, or defer and advance.
+5. **APPROVE:** in a bundle, verify every assigned task has its own `status: approved` — an aggregate approval is invalid. A child major result worth surfacing: one-line entry in the immediate parent's `## Results` linking to the child, not restating its numbers. Findings that change upcoming tasks: update those objectives and commit. Re-compute the frontier.
 
 #### Seat execution
 
@@ -85,10 +85,9 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 `role-skill` means load the selected seat's role skill and run it in this session; `dispatch` uses the template — both defined by `agent-orchestration` §Seat Assignment.
 
-When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
+A downstream task about to inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task: dispatch `Stage: integration` against that single task before advancing.
 
 **In interactive mode:** follow `superplan/references/interactive-mode.md`.
-
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -96,28 +95,26 @@ See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Dis
 
 ### Step 3: Verify Pipeline and Reproducibility
 
-After every task is `approved`, verify the work end-to-end before presenting completion options. Walk all three checks against actual command output, not recollection; do not proceed if any fails.
+After every task is `approved`, walk all three checks against actual command output, not recollection. Any failure blocks Step 4.
 
 1. **All code committed?**
    ```bash
    git status
    ```
-   If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
+   Uncommitted changes: investigate (probably a missed inline edit), commit, or ask the user.
 
-2. **Results recorded?** Read the completed task files. The gate fails in either direction, against `implement-task` §Reporting: missing, thin, or status-report-only results for a task with substantive work; and results that restate an artifact, a diff, a commit body, or a child task instead of pointing at it.
+2. **Results recorded?** Read the completed task files. Fails in either direction against `implement-task` §Reporting: missing, thin, or status-report-only results for substantive work; results that restate an artifact, diff, commit body, or child task instead of pointing at it.
 
 3. **Reproducibility verification.**
-   - Multi-script pipeline runs end-to-end if the task tree declares one.
-   - Outputs exist and were generated from committed code, not ad-hoc REPL state.
+   - Multi-script pipeline runs end-to-end if the tree declares one.
+   - Outputs exist and came from committed code, not ad-hoc REPL state.
    - Retained task companions are committed and pass `../using-superra/references/task-companion-files.md`.
 
-If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
-
-**Once all three checks pass:** proceed to the Step 4 completion menu.
+Fix any failure before proceeding. Never present completion options for unreproducible work.
 
 ### Step 4: Present Completion Options
 
-**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the canonical Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Scan each task's `## Results` Notation & Assumptions Ledger for entries whose symbol or assumption is not yet in the canonical Notation Conventions table. Surface any candidates via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay; remove deletes both the ledger entry and any in-text use (re-dispatch the implementer for code changes). Skip when the domain is not theory-modeling or every ledger says "None." Necessity gate, ledger schema, and canonical-vs-ledger split: `theory-modeling/SKILL.md` §Documentation and handoff.
 
 **Present the 4 completion options via `AskUserQuestion`.**
 
@@ -132,28 +129,28 @@ What would you like to do?
 4. Discard this work
 ```
 
-The folded-in answer (per the autonomy contract) is included in the first commit of whatever workflow the option dispatches to.
+The folded-in answer (per the autonomy contract) goes in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
-- **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`.
-- **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; it ends by resuming on the affected frontier.
-- **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <work-branch>`, and — if the work was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 1 (Proceed with integration):** invoke `superRA:superintegrate`.
+- **Option 2 (Change the task tree):** re-enter `superRA:superplan §User Feedback and Changing the Task Tree` with the researcher's scope change as the trigger; it ends by resuming on the affected frontier.
+- **Option 3 (Keep as-is):** report the branch name and worktree path, then stop. No cleanup.
+- **Option 4 (Discard):** confirm by typed input — the user types `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then tear down: `git checkout <base-branch>`, `git branch -D <work-branch>`, remove the worktree if the work was in one. Report what was deleted and stop.
 
 ## Orchestrator Discipline
 
-Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
+Cross-stage orchestrator behavior: `superRA:agent-orchestration`.
 
-**Workflow-specific review scope at interim checkpoints:** Task-local correctness under `superRA:review-task` §Review Protocol. Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
+**Review scope at interim checkpoints:** task-local correctness under `superRA:review-task` §Review Protocol. Codebase integration review defers to `superintegrate` (Step 4, Option 1).
 
 ## Autonomy and Stop Points
 
-The autonomy contract is in `superRA:using-superra/references/main-agent.md` (main-agent only). This section lists the **superimplement-specific stop points** that plug into its pause classes.
+The autonomy contract is in `superRA:using-superra/references/main-agent.md` (main-agent only). The superimplement-specific stop points that plug into its pause classes:
 
-- **Step 4 completion menu.** Pre-set workflow gate — pause class 2 (see Step 4 above for the four options).
-- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class 1 in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, a blocking finding the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`. Pause class 1 in the autonomy contract.
+- **Step 4 completion menu.** Pre-set workflow gate — pause class 2.
+- **Hard blockers from domain signals** — pause class 1. Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable.
+- **Methodology / authority boundary decisions** — pause class 1. Methodology disagreement with a reviewer, a blocking finding the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. A **researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — routes through `superplan §User Feedback and Changing the Task Tree`.
 
 Blocking reviewer findings are not a stop point — adjudicate and fix through the REVISE loop without asking the user.
 
