@@ -39,12 +39,12 @@ Report everything you find; the orchestrator adjudicates severity and taste.
 
 Two severities, and they are the same two the loaded skills' checklists use. Grade by effect on this task's result:
 
-- **`[BLOCKING]`** — materially affects the main result: a reported number, identity, theorem, equilibrium, or derived variable is incorrect; a declared output is missing or unreproducible; the objective is unmet; a `[BLOCKING]` gate in a loaded skill fails.
-- **`[ADVISORY]`** — worth recording while the main result stands. Never blocks approval.
+- **`[BLOCKING]`** — materially affects the main result; a `[BLOCKING]` gate in a loaded skill fails.
+- **`[ADVISORY]`** — worth recording while the main result stands.
 
 ## Verdict
 
-- **APPROVE** — no blocking findings. Set `status: approved`. Advisory items stay in `## Review Notes` for the orchestrator's deferred-fix pass; remove the section when it is empty, and remove `## Revision Notes` if present.
+- **APPROVE** — no blocking findings. Set `status: approved`; remove `## Review Notes`, and `## Revision Notes` if present — an approved task carries no review notes.
 - **REVISE** — one or more blocking findings. Set `status: revise`. Advisory findings alone never produce REVISE.
 
 ## How You Write a Review
@@ -63,7 +63,7 @@ Before you commit: every material finding is written into `## Review Notes`; `##
 
 ## Commit
 
-Stage assigned task files and, at `Stage: maturation`, the temporary refactoring task the dispatch requires, following `superRA:using-superra` §Commit Hygiene:
+Stage task files and following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | REVISE — per §Report Format

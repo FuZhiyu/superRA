@@ -66,7 +66,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle. When the frontier is exhausted, clear any deferred `[ADVISORY]` items in one bundled fix pass (`agent-orchestration` §Handling Reviewer Feedback) before Step 3.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. A task the orchestrator deferred — left at `revise` per `agent-orchestration` §Handling Reviewer Feedback — also satisfies its dependents: dispatch them directly even though the frontier command omits them. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle. When the frontier is exhausted, clear deferred findings in one bundled fix pass and re-review to `approved` (`agent-orchestration` §Handling Reviewer Feedback) before Step 3.
 
 #### Task Execution Steps
 

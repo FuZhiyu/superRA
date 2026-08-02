@@ -22,7 +22,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Planner Guidance`** — planner-owned, optional; the planner's information handoff — findings from planning plus suggested route. Advisory: implementers may deviate from it when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
 - **`## Revision Notes`** — temporary, planner-owned delta signal when a task is updated: what changed, why, and how significant (trivial/mechanical vs. substantive). Removed at approval (the reviewer's duty, per `superRA:review-task`); `validate_plan` warns when an `approved` task still carries a non-empty one.
-- **`## Review Notes`** — reviewer-owned; blocking items are resolved before approval, advisory items may persist past approval until the orchestrator's deferred-fix pass clears them; the section is removed when empty.
+- **`## Review Notes`** — reviewer-owned; present only while open items remain, removed at approval — an `approved` task carries no review notes. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
 ## Context Inheritance

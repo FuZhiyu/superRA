@@ -80,7 +80,7 @@ Agent:
 
 `Additionally:` is steering only. Omit it when there is none, and never use it to restate role protocol, manifest loads, or task content. Never add `Work from:` — cwd is implicit.
 
-Bundle only same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent; keep dependent siblings out unless the upstream task is already `approved`.
+Bundle only same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent; keep dependent siblings out unless the upstream task is already `approved` or deferred (§Handling Reviewer Feedback).
 
 Parent objectives are inherited shared context at the dispatch boundary; sibling results are not. When a downstream task consumes an upstream result, the steering or the downstream objective names the approved dependency `## Results` to read.
 
@@ -118,5 +118,5 @@ For each finding:
 
 **Schedule accepted fixes against the whole workflow.** The reviewer graded severity by effect on the task's result; you hold the workflow context, so you decide when each fix lands:
 
-- **Fix now** when downstream tasks consume what the finding touches — a number, dataset, derivation, or interface they build on. Redispatch implementer and reviewer for another round and iterate to APPROVE before advancing the frontier. For a tiny fix you can verify directly, apply or verify it and set `status: approved` inline. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent (in Claude Code, `SendMessage` to the agent's id/name; a new `Agent` call always starts cold).
-- **Defer** when the main result stands and nothing downstream reads the affected piece: re-grade the item `[ADVISORY]`, leave it in `## Review Notes`, set `status: approved`, and advance the frontier. Track deferred items as you go; when the active frontier's implementations are done, clear them all in one bundled fix pass (§Workload Balancing Tier 2) that fixes each item and removes the emptied `## Review Notes` sections.
+- **Fix now** when the issue significantly affects downstream tasks. Redispatch implementer and reviewer for another round and iterate to APPROVE before advancing the frontier. For a tiny fix you can verify directly, apply or verify it and set `status: approved` inline. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent (in Claude Code, `SendMessage` to the agent's id/name; a new `Agent` call always starts cold).
+- **Defer** when the main result stands and the open items do not affect downstream work: leave the findings in `## Review Notes`, leave `status: revise`, and proceed to the dependent tasks — a task may stay in revision while downstream work advances. `superra task frontier` lists only dependents of `approved` tasks, so dispatch the dependents of a deferred task yourself. Track deferred items as you go; when the active frontier's implementations are done, clear them all in one bundled fix pass (§Workload Balancing Tier 2) and re-review to `approved`.
