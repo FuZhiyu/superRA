@@ -1,6 +1,6 @@
 ---
 title: "Tab Title Names the Active Task and Worktree"
-status: approved
+status: revise
 depends_on: 
   - local-file-open
 
@@ -13,8 +13,12 @@ Make the browser tab title identify what the tab is showing. It is currently the
 - The title carries the active task's title first, then the worktree it lives in — tabs truncate from the right, so the more specific part leads.
 - It follows navigation: every task change and every worktree switch updates it, and it resolves the real task title on a deep descent where the sidebar row has not landed yet.
 - The worktree part is the branch, falling back to the worktree directory name when there is no branch.
-- Doc-mode has no worktree identity to show and names the site instead; the standalone export keeps a title that is stable in a downloaded file.
-- Verification: the dashboard and full task-tree script suites pass, plus a live check that the title tracks a deep-linked task, a worktree switch, and a back/forward navigation.
+- The title tracks the active page in every mode, including the standalone export and the published docs site that is built from it. Doc-mode and standalone have no worktree to name, so the second half is the site or export's own name; only the worktree half is mode-dependent, never whether the title moves at all.
+- Verification: the dashboard and full task-tree script suites pass, plus a live check that the title tracks a deep-linked task, a worktree switch, and a back/forward navigation, and that a standalone export's title follows in-file navigation.
+
+## Revision Notes
+
+The standalone clause originally read "keeps a title that is stable in a downloaded file," which the implementer correctly read as freezing the title. That froze the published docs site too, since `docs/build_site.sh` builds it as a standalone export — so every page on the published site carried the site name alone. The intent behind "stable" was only that an offline file must not name a worktree that does not exist there, not that the title should stop tracking the page. Researcher chose per-page titles on the published site, so the clause is rewritten to scope mode-dependence to the second half alone.
 
 ## Planner Guidance
 
