@@ -48,9 +48,9 @@ The server fails loudly and keeps its connection bookkeeping truthful. A `task.m
 
 ### Shutdown lifecycle protection
 
-Watcher teardown is bounded under repeated caller cancellation: it gets a cooperative grace period, then a bounded forced-cancellation phase, and finally a process watchdog for a cancellation-suppressing watcher. The watchdog is restricted to a standalone `plan_dashboard.py` process running as `__main__` on its main thread, and late watcher completion disarms it ([plan_dashboard.py:638-747](../../../skills/task-tree/scripts/plan_dashboard.py#L638-L747)).
+Watcher teardown is bounded under repeated caller cancellation: it gets a cooperative grace period, then a bounded forced-cancellation phase, and finally a process watchdog for a cancellation-suppressing watcher. The watchdog is restricted to a standalone `plan_dashboard.py` process running as `__main__` on its main thread, and late watcher completion disarms it ([plan_dashboard.py:615-745](../../../skills/task-tree/scripts/plan_dashboard.py#L615-L745)).
 
-Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets; each process cycle verifies the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1162-1518](../../../skills/task-tree/scripts/test_dashboard.py#L1162-L1518), [test_dashboard.py:5414](../../../skills/task-tree/scripts/test_dashboard.py#L5414)).
+Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets; each process cycle verifies the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1314-1485](../../../skills/task-tree/scripts/test_dashboard.py#L1314-L1485), [test_dashboard.py:5415](../../../skills/task-tree/scripts/test_dashboard.py#L5415)).
 
 ### Reconnect freshness
 
@@ -60,12 +60,12 @@ changes, then sends a worktree-scoped `full-reload` to the reconnecting SSE
 client. Because the client queue is registered before watcher startup, edits
 made while the watcher was stopped are visible immediately on reconnect; an
 ensure call against an already-live watcher emits no duplicate refresh
-([plan_dashboard.py:579-637](../../../skills/task-tree/scripts/plan_dashboard.py#L579-L637)).
+([plan_dashboard.py:579-599](../../../skills/task-tree/scripts/plan_dashboard.py#L579-L599)).
 
 Permanent regressions cover the offline edit, refreshed cache, reconnect-stream
 notification, duplicate suppression, and cross-worktree broadcast isolation
-([test_dashboard.py:1177-1193](../../../skills/task-tree/scripts/test_dashboard.py#L1177-L1193),
-[test_dashboard.py:1240-1327](../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
+([test_dashboard.py:1162-1180](../../../skills/task-tree/scripts/test_dashboard.py#L1162-L1180),
+[test_dashboard.py:1225-1312](../../../skills/task-tree/scripts/test_dashboard.py#L1225-L1312)).
 
 ### Opening files, and naming the tab
 

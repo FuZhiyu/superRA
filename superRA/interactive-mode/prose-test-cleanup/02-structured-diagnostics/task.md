@@ -64,8 +64,8 @@ Revision:
   workflow schema, permission, branch-trigger, configured-path, and
   cleanup-before-upload ordering coverage without checking labels or diagnostic
   prose
-  ([test_contract.py:231](../../../../tests/harness-instruction-following/test_contract.py#L231),
-  [test_dashboard.py:3442](../../../../skills/task-tree/scripts/test_dashboard.py#L3442)).
+  ([test_contract.py:259](../../../../tests/harness-instruction-following/test_contract.py#L259),
+  [test_dashboard.py:4058](../../../../skills/task-tree/scripts/test_dashboard.py#L4058)).
 - Revision verification: `15 passed` focused Python tests; `15/15` Codex hook
   cases; `18/18` Zotero cases; full suite `899 passed`, `0 failed`, with four
   expected warnings in `84.58s`.

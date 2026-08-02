@@ -27,7 +27,7 @@ Two stale lines in `superimplement/SKILL.md` were replaced to match the new exec
 
    Follow-up: dropped the `(or manual)` clause when the `manual` preset was retired (interactive-mode branch review).
 
-2. **Step 2 mode note ([SKILL.md:83](../../../skills/superimplement/SKILL.md#L83))** — the prior line named `direct mode` as the primary term and asserted the retired auto-dispatch full-gate default ("Steps 3–4 still dispatch reviewer subagents unless the user overrides"). Replaced with the interactive-mode behavior, pointing to the loop's owner for mechanics:
+2. **Step 2 mode note ([SKILL.md:90](../../../skills/superimplement/SKILL.md#L90))** — the prior line named `direct mode` as the primary term and asserted the retired auto-dispatch full-gate default ("Steps 3–4 still dispatch reviewer subagents unless the user overrides"). Replaced with the interactive-mode behavior, pointing to the loop's owner for mechanics:
 
    > **In interactive mode:** the main agent executes the task directly and runs the canvas loop — self-review always, independent review elective — per `superplan/references/interactive-mode.md`.
 

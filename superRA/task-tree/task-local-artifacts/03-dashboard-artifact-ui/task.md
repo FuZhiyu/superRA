@@ -99,7 +99,7 @@ collapsed disclosure and verifies `ArrowDown` exits to the following task;
 the test passed `1 passed`.
 
 This round dropped the dead client-side branch in
-[`resolveArtifactRelativePath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L136-L158)
+[`resolveArtifactRelativePath`](../../../../skills/task-tree/scripts/templates/dashboard.js#L148-L170)
 that generated an open/preview link for a same-directory, non-`attachments/`
 companion — a link the server's `attachments/`-only contract always 404s.
 The function now returns `''` unless the resolved path has at least two
@@ -109,7 +109,7 @@ exactly, and no in-scope objective or contract calls for opening a
 same-directory non-`attachments/` companion through this link, so no server
 expansion was made. It also documented the intentional soft-fail on the
 attachment-manifest fetch in
-[`loadAttachmentBranches`](../../../../skills/task-tree/scripts/templates/dashboard.js#L1451-L1459).
+[`loadAttachmentBranches`](../../../../skills/task-tree/scripts/templates/dashboard.js#L1593-L1607).
 
 Verification: `uv run --with pytest --with pyyaml --with fastapi --with jinja2
 --with 'uvicorn[standard]' --with watchfiles --with httpx --with playwright
