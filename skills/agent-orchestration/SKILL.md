@@ -112,10 +112,11 @@ Adjudicate REVISE findings before forwarding them. Read cited code or task conte
 
 For each finding:
 
-- **Accept** real issues. 
-- **Reject** false positives by remove it from the `Review Notes`.
-- **Escalate** issues that will materially change the direction of the task
+- **Accept** real issues.
+- **Reject** false positives, removing them from `## Review Notes`.
+- **Escalate** findings that would materially change the direction of the task.
 
-If there are active `Review Notes`, redispatch implementers and reviewers for another round. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent for token efficiency (in Claude Code, `SendMessage` to the agent's id/name; a new `Agent` call always starts cold).
+**Schedule accepted fixes against the whole workflow.** The reviewer graded severity by effect on the task's result; you hold the workflow context, so you decide when each fix lands:
 
-For a tiny fix you can verify directly, set `status: approved` inline instead.
+- **Fix now** when downstream tasks consume what the finding touches — a number, dataset, derivation, or interface they build on. Redispatch implementer and reviewer for another round and iterate to APPROVE before advancing the frontier. For a tiny fix you can verify directly, apply or verify it and set `status: approved` inline. When the harness keeps agents warm and the fix/re-review is small, steer the same implementer or reviewer instead of spawning a fresh agent (in Claude Code, `SendMessage` to the agent's id/name; a new `Agent` call always starts cold).
+- **Defer** when the main result stands and nothing downstream reads the affected piece: re-grade the item `[ADVISORY]`, leave it in `## Review Notes`, set `status: approved`, and advance the frontier. Track deferred items as you go; when the active frontier's implementations are done, clear them all in one bundled fix pass (§Workload Balancing Tier 2) that fixes each item and removes the emptied `## Review Notes` sections.

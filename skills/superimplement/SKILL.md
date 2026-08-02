@@ -66,14 +66,14 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle. When the frontier is exhausted, clear any deferred `[ADVISORY]` items in one bundled fix pass (`agent-orchestration` §Handling Reviewer Feedback) before Step 3.
 
 #### Task Execution Steps
 
 1. Select the per-task seat structure through `superRA:agent-orchestration`.
 2. Execute the implementer seat. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
 3. **If NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
-4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback below — fix now and iterate to APPROVE, or defer and advance.
 5. **Once APPROVE:** in a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
 
 #### Seat execution

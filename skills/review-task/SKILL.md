@@ -39,14 +39,14 @@ Report everything you find; the orchestrator adjudicates severity and taste agai
 
 **Every finding carries evidence:** a `file:line` citation, an artifact path, or a quoted line from the work. For a behavior claim, read the code that produces the behavior and cite it — a name, a signature, or a plausible-looking pattern is a lead to verify.
 
-Two severities, and they are the same two the loaded skills' checklists use:
+Two severities, and they are the same two the loaded skills' checklists use. Grade by effect on this task's result; whether a finding holds up downstream tasks is the orchestrator's call, made with workflow context you do not have:
 
-- **`[BLOCKING]`** — the result or the task's contract is wrong: a reported number, identity, theorem, equilibrium, or downstream variable is incorrect; a declared output is missing or unreproducible; the objective is unmet; a `[BLOCKING]` gate in a loaded skill fails.
-- **`[ADVISORY]`** — anything else worth recording. Never blocks approval.
+- **`[BLOCKING]`** — materially affects the main result: a reported number, identity, theorem, equilibrium, or derived variable is incorrect; a declared output is missing or unreproducible; the objective is unmet; a `[BLOCKING]` gate in a loaded skill fails.
+- **`[ADVISORY]`** — worth recording while the main result stands. Never blocks approval.
 
 ## Verdict
 
-- **APPROVE** — no blocking findings. Set `status: approved`; remove `## Review Notes`, and `## Revision Notes` if present.
+- **APPROVE** — no blocking findings. Set `status: approved`. Advisory items stay in `## Review Notes` for the orchestrator's deferred-fix pass; remove the section when it is empty, and remove `## Revision Notes` if present.
 - **REVISE** — one or more blocking findings. Set `status: revise`. Advisory findings alone never produce REVISE.
 
 ## What You Own
@@ -54,7 +54,7 @@ Two severities, and they are the same two the loaded skills' checklists use:
 Within each assigned task's `task.md`:
 
 - **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`.
-- **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and remove the section entirely at APPROVE.
+- **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and at APPROVE remove the section once no advisory items remain.
 - **`## Revision Notes`** — remove the entire section at APPROVE. Its content is planner-owned; you only remove it.
 - **At `Stage: maturation` only** — when the dispatch requires the temporary refactoring task, create or revise that task, write its `## Objective`, and leave it `not-started`. In existing tasks, `## Objective` stays planner-owned even under this exception.
 
