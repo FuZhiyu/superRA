@@ -2837,15 +2837,20 @@ def forest_root(tmp_path):
     return root
 
 
-def _client_for(plan_root):
-    """Build a TestClient pointed at *plan_root* (any basename), launch worktree."""
+def _client_for(plan_root, base_url: str | None = None):
+    """Build a TestClient pointed at *plan_root* (any basename), launch worktree.
+
+    *base_url* overrides the default ``http://testserver`` origin, which matters
+    only for routes that check the ``Host`` authority (``/api/open``).
+    """
     from starlette.testclient import TestClient
 
     plan_dashboard.PLAN_ROOT = plan_root
     plan_dashboard._jinja_env = None
     plan_dashboard._worktree_cache.clear()
     plan_dashboard.rebuild_tree()
-    return TestClient(plan_dashboard.app, raise_server_exceptions=True)
+    kwargs = {"base_url": base_url} if base_url else {}
+    return TestClient(plan_dashboard.app, raise_server_exceptions=True, **kwargs)
 
 
 class TestFileLinkConsistency:
@@ -2893,7 +2898,7 @@ class TestFileLinkConsistency:
         assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
         # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
-        assert "vscode://file/' + RESOLVED_ROOT + '/' + filePath" in BASE_HTML
+        assert "vscode://file/' + RESOLVED_ROOT + '/' + taskDirRel + relHref" in BASE_HTML
         assert "var repoPathPrefix = rootRel + taskDirRel;" in BASE_HTML
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
@@ -3210,9 +3215,14 @@ class TestLocalOpen:
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
         return calls
 
+    def _client(self, plan_root):
+        """A client whose default ``Host`` authority is loopback — what a browser on
+        the researcher's own machine sends, and what the route requires."""
+        return _client_for(plan_root, base_url="http://127.0.0.1:8995")
+
     def test_native_open_hands_file_to_os(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
         assert r.status_code == 200
         assert r.json() == {"status": "opened", "target": "native"}
@@ -3226,7 +3236,7 @@ class TestLocalOpen:
         with several worktrees of one repo open the file lands in the right one."""
         calls = self._spawns(monkeypatch)
         monkeypatch.setattr(plan_dashboard, "_editor_executable", lambda: "/usr/local/bin/code")
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post(
                 "/api/open",
                 json={"path": "superRA/01-first/task.md", "target": "editor"},
@@ -3244,7 +3254,7 @@ class TestLocalOpen:
         pre-route behavior) rather than failing the click."""
         calls = self._spawns(monkeypatch)
         monkeypatch.setattr(plan_dashboard, "_editor_executable", lambda: None)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post(
                 "/api/open",
                 json={"path": "superRA/01-first/task.md", "target": "editor"},
@@ -3282,7 +3292,7 @@ class TestLocalOpen:
     def test_refuses_off_loopback(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
         monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
         assert r.status_code == 403
         assert calls == []
@@ -3290,7 +3300,7 @@ class TestLocalOpen:
     def test_refuses_in_doc_mode(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
         assert r.status_code == 403
         assert calls == []
@@ -3299,7 +3309,7 @@ class TestLocalOpen:
         """Requiring application/json forces a preflight on any cross-origin fetch,
         and no CORS middleware answers it."""
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post(
                 "/api/open",
                 content=b'{"path": "superRA/01-first/task.md"}',
@@ -3312,7 +3322,7 @@ class TestLocalOpen:
         """Sec-Fetch-Site closes the simple-form-POST path that would skip the
         preflight; same-origin and a direct navigation (`none`) stay allowed."""
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             body = {"path": "superRA/01-first/task.md"}
             assert c.post(
                 "/api/open", json=body, headers={"sec-fetch-site": "cross-site"}
@@ -3325,7 +3335,7 @@ class TestLocalOpen:
 
     def test_refuses_path_outside_project_root(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             for escape in ("../../../../etc/hosts", "/etc/hosts"):
                 r = c.post("/api/open", json={"path": escape})
                 assert r.status_code == 403, escape
@@ -3333,20 +3343,87 @@ class TestLocalOpen:
 
     def test_missing_file_is_404(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post("/api/open", json={"path": "superRA/nope/task.md"})
         assert r.status_code == 404
         assert calls == []
 
     def test_unknown_target_is_rejected(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        with _client_for(plan_root) as c:
+        with self._client(plan_root) as c:
             r = c.post(
                 "/api/open",
                 json={"path": "superRA/01-first/task.md", "target": "browser"},
             )
         assert r.status_code == 400
         assert calls == []
+
+    def test_refuses_foreign_host_authority(self, plan_root, monkeypatch):
+        """DNS rebinding defeats both origin checks: a page on evil.example.com that
+        rebinds the name to 127.0.0.1 is same-origin to the browser, so it needs no
+        preflight and sends `Sec-Fetch-Site: same-origin` freely.  What it cannot
+        change is the authority it puts in `Host`, so the route requires a loopback
+        one.  The deterministic 8100–8999 port makes the precondition cheap to meet,
+        and the route starts processes."""
+        calls = self._spawns(monkeypatch)
+        with self._client(plan_root) as c:
+            r = c.post(
+                "/api/open",
+                json={"path": "superRA/01-first/task.md", "target": "editor"},
+                headers={
+                    "host": "evil.example.com:8995",
+                    "origin": "http://evil.example.com:8995",
+                    "sec-fetch-site": "same-origin",
+                },
+            )
+        assert r.status_code == 403
+        assert r.json()["detail"] == "Untrusted Host header"
+        assert calls == []
+
+    def test_loopback_authority_predicate(self):
+        """The Host check strips the port and IPv6 brackets, then applies the same
+        loopback test as the bind check."""
+        for authority in ("127.0.0.1", "127.0.0.1:8995", "localhost:8995", "[::1]:8995", "[::1]"):
+            assert plan_dashboard._is_loopback_authority(authority), authority
+        for authority in ("evil.example.com:8995", "192.168.1.10:8995", "", "0.0.0.0:8995"):
+            assert not plan_dashboard._is_loopback_authority(authority), authority
+
+    def test_refuses_a_directory(self, plan_root, monkeypatch):
+        """Files only, matching /files/.  No surface sends a directory, and on macOS
+        an .app bundle is a directory that `open` would execute."""
+        calls = self._spawns(monkeypatch)
+        with self._client(plan_root) as c:
+            r = c.post("/api/open", json={"path": "superRA/01-first", "target": "editor"})
+        assert r.status_code == 404
+        assert calls == []
+
+    def test_non_string_path_is_rejected(self, plan_root, monkeypatch):
+        """A malformed body is a 400, not a coerced `"['a']"` that 404s."""
+        calls = self._spawns(monkeypatch)
+        with self._client(plan_root) as c:
+            for bad in (["a"], 7, {"a": 1}, None, ""):
+                r = c.post("/api/open", json={"path": bad})
+                assert r.status_code == 400, bad
+        assert calls == []
+
+    def test_route_takes_a_decoded_path(self, plan_root, monkeypatch):
+        """The route's `path` is a real filesystem path.  A JSON body passes through
+        no decoding layer the way a URL path does, so a percent-encoded value names
+        no file — which is why the client decodes markdown-it's encoding first."""
+        calls = self._spawns(monkeypatch)
+        spaced = plan_root / "01-first" / "my memo.md"
+        spaced.write_text("memo\n", encoding="utf-8")
+        with self._client(plan_root) as c:
+            assert c.post(
+                "/api/open", json={"path": "superRA/01-first/my memo.md"}
+            ).status_code == 200
+            assert c.post(
+                "/api/open", json={"path": "superRA/01-first/my%20memo.md"}
+            ).status_code == 404
+            # The /files/ route reads the same file fine — it rides a URL path,
+            # which Starlette decodes.  Same composition, different decoding.
+            assert c.get("/files/superRA/01-first/my%20memo.md").status_code == 200
+        assert len(calls) == 1
 
     # --- Client wiring ----------------------------------------------------
 
@@ -3362,9 +3439,19 @@ class TestLocalOpen:
         """A body file link keeps its vscode:// href (modifier/middle click, and it
         carries the line anchor) and gains the route address for a plain click."""
         assert (
-            "if (window.LOCAL_OPEN) a.setAttribute('data-open-path', rootRel + filePath);"
+            "a.setAttribute('data-open-path', rootRel + taskDirRel + decodePathHref(relHref));"
             in BASE_HTML
         )
+
+    def test_body_link_open_path_is_percent_decoded(self):
+        """markdown-it encodes a link href (`my file.md` -> `my%20file.md`), and the
+        route takes a real filesystem path, so the client decodes before sending.
+        The vscode:// href keeps the encoded form — VS Code decodes the URI."""
+        fn = re.search(r"function decodePathHref\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert fn
+        body = fn.group(0)
+        assert "decodeURIComponent(path)" in body
+        assert "catch (e)" in body and "return path;" in body  # malformed % survives
 
     def test_plain_left_click_only(self):
         """Modifier and middle clicks fall through to the href so the browser's own
@@ -3399,8 +3486,20 @@ class TestLocalOpen:
         body = fn.group(0)
         assert "var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;" in body
         assert "openNative ? 'Open' : 'VS Code'" in body
-        assert "openNative ? OPEN_ICON : VSCODE_ICON" in body
+        assert "openNative ? OPEN_ICON : EDITOR_ICON" in body
         assert "taskFileOpenPath(path)" in body
+
+    def test_chrome_icons_are_one_outline_family(self):
+        """Both glyphs are 2px-stroke outlines on the same grid — a solid brand mark
+        beside an outline glyph is the "reads as foreign" this chrome pass fixes."""
+        for name in ("EDITOR_ICON", "OPEN_ICON"):
+            m = re.search(rf"var {name} =\n(.*?);\n", BASE_HTML, re.S)
+            assert m, name
+            svg = m.group(1)
+            assert "stroke-width=\"2\"" in svg, name
+            assert "fill=\"none\"" in svg, name
+            assert "fill=\"currentColor\"" not in svg, name
+        assert "VSCODE_ICON" not in BASE_HTML  # the solid brand mark is gone
 
     def test_chrome_buttons_share_one_treatment(self):
         """The card-head and header buttons carry the same class, and its hover uses

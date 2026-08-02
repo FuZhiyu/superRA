@@ -121,6 +121,18 @@ function repoFileHref(path) {
   return '';
 }
 
+/* Undo markdown-it's percent-encoding of a link href, which turns `my file.md`
+   into `my%20file.md` and `résumé.pdf` into `r%C3%A9sum%C3%A9.pdf`. /api/open
+   takes a real filesystem path in a JSON body, so the encoding has to come off
+   here. A malformed sequence (a literal `%` in a filename) keeps the raw text. */
+function decodePathHref(path) {
+  try {
+    return decodeURIComponent(path);
+  } catch (e) {
+    return path;
+  }
+}
+
 /* Membership oracle for in-tree task references. Every task's tree path, as a
    set, so renderMarkdown can decide whether a relative body link points at a
    real task in this tree (-> internal navigation) or at a plain file (-> the
@@ -254,20 +266,24 @@ function renderMarkdown(text, sectionName, taskPath) {
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
         } else {
-          var filePath = taskDirRel + href;
+          var relHref = href;
           var loc = '';
-          var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
+          var lm = relHref.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
           if (lm) {
             loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
-            filePath = filePath.slice(0, lm.index);
+            relHref = relHref.slice(0, lm.index);
           }
-          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + filePath + loc);
+          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + taskDirRel + relHref + loc);
           /* With the local-open route a plain click hands the file to the
              application this machine uses for its type; the vscode:// href above
              stays for modifier/middle clicks (and carries the line anchor, which
              an OS-level open cannot). Same project-root-relative composition the
-             /files/ route is handed. */
-          if (window.LOCAL_OPEN) a.setAttribute('data-open-path', rootRel + filePath);
+             /files/ route is handed — but decoded: /files/ rides a URL path that
+             the server decodes, while /api/open takes the path in a JSON body,
+             which nothing decodes. */
+          if (window.LOCAL_OPEN) {
+            a.setAttribute('data-open-path', rootRel + taskDirRel + decodePathHref(relHref));
+          }
         }
         a.setAttribute('target', '_blank');
       }
@@ -926,18 +942,19 @@ function updateBreadcrumb(path) {
    tree body — every one of those walks up to `.task-node[data-path]`. The
    breadcrumb already shows the path, so the card header is just title + status.
    Sections default to EXPANDED here (this is the detail view, not a tree row). */
-/* VS Code wordmark, inline so it inherits the button's currentColor (mid-grey
-   at rest, VS Code blue on hover). */
-var VSCODE_ICON =
-  '<svg viewBox="0 0 24 24" aria-hidden="true">'
-  + '<path fill="currentColor" d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29'
-  + 'l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74'
-  + 'L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057'
-  + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
-  + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
+/* Chrome-button glyphs. Both are 2px-stroke outlines on the same 24-unit grid,
+   inheriting the button's currentColor, so the card-head and header controls read
+   as one family — a solid brand mark beside an outline glyph is exactly the "looks
+   off" this chrome pass exists to fix, and the button's label already says which
+   editor it opens.
+   EDITOR_ICON: code brackets, for the control that opens a file in the editor. */
+var EDITOR_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+  + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<path d="m16 18 6-6-6-6"></path><path d="m8 6-6 6 6 6"></path></svg>';
 
-/* Generic "open this file" glyph for the local-open control, which hands the file
-   to whatever application the machine uses for its type — no editor named. */
+/* OPEN_ICON: file leaving its box, for the control that hands the file to
+   whatever application the machine uses for its type — no editor named. */
 var OPEN_ICON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
   + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -1059,7 +1076,7 @@ async function loadActiveNode(path) {
     var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
       : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
     var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : (openNative ? 'Open' : 'VS Code');
-    var fileButtonIcon = openNative ? OPEN_ICON : VSCODE_ICON;
+    var fileButtonIcon = openNative ? OPEN_ICON : EDITOR_ICON;
 
     region.innerHTML =
       '<header class="active-node-head">'
@@ -2551,7 +2568,7 @@ function updateWorktreeOpenHref() {
   var btn = document.getElementById('worktree-open-btn');
   if (!btn) return;
   if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
-  if (!btn.innerHTML) btn.innerHTML = VSCODE_ICON + '<span>VS Code</span>';
+  if (!btn.innerHTML) btn.innerHTML = EDITOR_ICON + '<span>VS Code</span>';
   if (window.LOCAL_OPEN) {
     btn.href = taskFileVscodeHref(activePath);
     btn.setAttribute('data-open-path', taskFileOpenPath(activePath));

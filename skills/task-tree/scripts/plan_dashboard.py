@@ -1307,6 +1307,24 @@ def _is_loopback_host(host: str) -> bool:
         return False
 
 
+def _is_loopback_authority(authority: str) -> bool:
+    """True when a ``Host`` header names the local machine.
+
+    Strips the port and an IPv6 literal's brackets, then applies the same loopback
+    test as the bind check.  A loopback-bound route requiring a loopback authority
+    is what closes DNS rebinding: an attacker page on ``evil.example.com`` that
+    rebinds the name to 127.0.0.1 is same-origin to the browser (so the content-type
+    and ``Sec-Fetch-Site`` checks both pass), but it still sends its own name in
+    ``Host``.
+    """
+    host = (authority or "").strip()
+    if host.startswith("["):
+        host = host.partition("]")[0].lstrip("[")
+    elif host.count(":") == 1:
+        host = host.rpartition(":")[0]
+    return _is_loopback_host(host)
+
+
 def _local_open_enabled() -> bool:
     """True when this server may open files on its own host.
 
@@ -1361,15 +1379,26 @@ async def open_local_path(request: Request):
     editor target answers ``{"status": "fallback", "uri": "vscode://file/…"}`` for
     the page to follow, which is the pre-route behavior.
 
-    CSRF: the route starts processes, so it accepts only same-origin JSON.
-    Requiring ``application/json`` forces a preflight on any cross-origin
-    ``fetch`` — no CORS middleware is installed, so that preflight fails — and the
-    ``Sec-Fetch-Site`` check closes the simple-form-POST path that would otherwise
-    skip the preflight.  Neither check needs a token.
+    *path* is a real filesystem path, not a URL component: the caller decodes any
+    percent-encoding (a markdown href arrives encoded) before sending it, since a
+    JSON body passes through no decoding layer the way a URL path does.
+
+    CSRF: the route starts processes, so it accepts only same-origin JSON from a
+    loopback authority.  Requiring ``application/json`` forces a preflight on any
+    cross-origin ``fetch`` — no CORS middleware is installed, so that preflight
+    fails — the ``Sec-Fetch-Site`` check closes the simple-form-POST path that
+    would otherwise skip the preflight, and the ``Host`` check closes DNS
+    rebinding, which defeats both of those by making the attacker page genuinely
+    same-origin.  No check needs a token.  The gate is scoped to this route rather
+    than app-wide because a legitimate off-loopback ``--host`` bind must keep
+    serving the read and comment routes, and this route is already off in that
+    case.
     """
     if not _local_open_enabled():
         raise HTTPException(status_code=403, detail="Local open is disabled on this server")
 
+    if not _is_loopback_authority(request.headers.get("host", "")):
+        raise HTTPException(status_code=403, detail="Untrusted Host header")
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "application/json":
         raise HTTPException(status_code=415, detail="Expected application/json")
@@ -1384,10 +1413,10 @@ async def open_local_path(request: Request):
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Expected a JSON object")
 
-    rel = str(body.get("path") or "")
-    target = str(body.get("target") or "native")
-    if not rel:
-        raise HTTPException(status_code=400, detail="Missing path")
+    rel = body.get("path")
+    target = body.get("target") or "native"
+    if not isinstance(rel, str) or not rel:
+        raise HTTPException(status_code=400, detail="Missing or invalid path")
     if target not in ("native", "editor"):
         raise HTTPException(status_code=400, detail=f"Unknown target: {target}")
 
@@ -1396,7 +1425,9 @@ async def open_local_path(request: Request):
     resolved = (project_resolved / rel).resolve()
     if not resolved.is_relative_to(project_resolved):
         raise HTTPException(status_code=403, detail="Access denied")
-    if not resolved.exists():
+    # Files only, matching /files/.  A directory is not a surface the page sends,
+    # and on macOS an .app bundle is a directory that `open` would execute.
+    if not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
     if target == "editor":
