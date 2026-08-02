@@ -35,11 +35,11 @@ For a bundle dispatch, run this protocol independently for each assigned task, w
 
 ## Findings
 
-Report everything you find; the orchestrator adjudicates severity and taste against context you do not have.
+Report everything you find; the orchestrator adjudicates severity and taste.
 
 **Every finding carries evidence:** a `file:line` citation, an artifact path, or a quoted line from the work. For a behavior claim, read the code that produces the behavior and cite it — a name, a signature, or a plausible-looking pattern is a lead to verify.
 
-Two severities, and they are the same two the loaded skills' checklists use. Grade by effect on this task's result; whether a finding holds up downstream tasks is the orchestrator's call, made with workflow context you do not have:
+Two severities, and they are the same two the loaded skills' checklists use. Grade by effect on this task's result:
 
 - **`[BLOCKING]`** — materially affects the main result: a reported number, identity, theorem, equilibrium, or derived variable is incorrect; a declared output is missing or unreproducible; the objective is unmet; a `[BLOCKING]` gate in a loaded skill fails.
 - **`[ADVISORY]`** — worth recording while the main result stands. Never blocks approval.
