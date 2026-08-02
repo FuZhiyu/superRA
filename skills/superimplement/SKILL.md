@@ -74,7 +74,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 2. Execute the implementer seat. The `Task:` field uses one task path (e.g., `Task: data-preparation/merge`); `Tasks:` lists a bundle.
 3. **If NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
 4. **Once DONE or DONE_WITH_CONCERNS:** execute the reviewer seat per assigned task, naming the tier and focuses the work warrants. On REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback below — fix now and iterate to APPROVE, or defer and advance.
-5. **Once APPROVE:** in a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, roll it up selectively into the immediate parent's `## Results` with a link to the child. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
+5. **Once APPROVE:** in a bundle, verify every assigned task has its own `status: approved`; an aggregate approval is invalid. If a child produced a major result worth surfacing, add a one-line entry to the immediate parent's `## Results` that links to the child instead of restating its numbers. If findings change upcoming tasks, update those task objectives and commit. Re-compute the frontier.
 
 #### Seat execution
 
@@ -104,7 +104,7 @@ After every task is `approved`, verify the work end-to-end before presenting com
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding. Figure attachments in each task's `attachments/` directory are committed.
+2. **Results recorded?** Read the completed task files. The gate fails in either direction, against `implement-task` §Reporting: missing, thin, or status-report-only results for a task with substantive work; and results that restate an artifact, a diff, a commit body, or a child task instead of pointing at it. Figure attachments in each task's `attachments/` directory are committed.
 
 3. **Reproducibility verification.**
    - Multi-script pipeline runs end-to-end if the task tree declares one.
@@ -121,8 +121,8 @@ If any check fails: fix it before proceeding. Do not present completion options 
 **Present the 4 completion options via `AskUserQuestion`.**
 
 ```
-Work complete and verified. Here are the results summary:
-<summarize the results>
+Work complete and verified. <one line naming what the tree delivered>
+Results: <dashboard URL for the affected task>
 What would you like to do?
 
 1. Proceed with integration

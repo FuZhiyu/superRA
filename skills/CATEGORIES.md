@@ -17,7 +17,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 ## Role — what a dispatched seat does
 
-Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same skill. Both pull the always-loaded pair plus the manifest's stage and domain skills.
+Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same skill. Both pull the always-loaded `using-superra` plus the manifest's stage and domain skills.
 
 | Skill | Seat | Role |
 |---|---|---|
@@ -50,7 +50,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and role skills
 |---|---|
 | `result-protection` | Tools for choosing permanent documentation, drift tests, or artifact-appropriate checks to protect key results. Loaded by Protect / `Stage: protection` agents. |
 | `refactor-and-integrate` | Tools for **codebase coherence** — executing a reviewed refactoring task against the protected record, convention fit, utility reuse, consolidation, PR-friendly diffs, Project Doc Audit, and minimum net diff. Loaded by integration-phase agents. |
-| `report-in-markdown` | Markdown style guide for any agent writing markdown, with inline rules for source-file citations, LaTeX math, and tables, plus progressive-reveal references for figures and standalone-report IO. |
+| `report-in-markdown` | Markdown mechanics for any agent writing markdown — source-file citations, KaTeX-safe math, tables, raw HTML — plus progressive-reveal references for figures and standalone-report IO. Load-on-demand; the render-integrity hook names it when a task-tree markdown edit trips a render trap. What to write and where each fact lives is `implement-task` §Reporting. |
 | `semantic-merge` | Tools for **semantic coherence** in branch integration. Provides mode references for workflow sync authoring, workflow sync review, and standalone merge; resolves conflicts by intent, escalates intent-changing decisions to the user, detects and resolves stale references within the merge's reach, lands a merge commit plus propagation commits as needed to reach semantic coherence (every commit leaves existing protection passing), and records the approved post-sync diff in the git log (commit messages) plus a temporary task-local `## Sync Impact` section on each affected task. Loaded by Sync / `Stage: sync` agents. |
 | `task-tree` | Directory-tree task tooling — filesystem hierarchy as task hierarchy, `task.md` per task (objective + results), sibling-only dependencies, status rollup, frontier computation, DAG rendering, legacy migration from `PLAN.md` / `RESULTS.md`, live dashboard server, and static HTML export. Load-on-demand: SKILL.md is the tree-tooling layer for orchestrators/planners/contributors, with `references/commands.md` for the mutation command surface, `references/task-file-contract.md` for task-file mechanics, and `references/internals.md` for contributor-facing internals. Tree-design policy lives in `superplan/references/task-tree-design.md`. The executing-agent read/edit interface lives in `using-superra §Task Interface`, not here. |
 | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle is in `agent-orchestration/references/worktree-harness-fallback.md`. |
@@ -61,7 +61,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and role skills
 
 | Skill | Purpose |
 |---|---|
-| `using-superra` | Master skill every agent reads. Carries the work defaults, the Runtime Workflow Map, commit hygiene, the Task Interface, the three-axis Skill-Load Manifest (Role + Stage + Domain), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract) live in `references/main-agent.md`. |
+| `using-superra` | Master skill every agent reads. Carries the communication defaults, the commit rules, the Task Interface, and the three-axis Skill-Load Manifest (Role + Stage + Domain). Main-agent loads (workflow map, Execution Modes, cross-session detection, autonomy contract) live in `references/main-agent.md`. |
 
 ## Adding a Skill
 

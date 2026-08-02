@@ -226,7 +226,7 @@ def _write_role_skill(root, rel, skills):
 
 
 def test_green_always_loaded_load_instruction_real_role_skills():
-    # Both real role skills must instruct loading both always-loaded skills —
+    # Both real role skills must instruct loading every always-loaded skill —
     # this is what replaces the retired agent-frontmatter autoload.
     report = SkillLoadReport()
     check_always_loaded_load_instruction(report, REPO_ROOT)
@@ -234,8 +234,9 @@ def test_green_always_loaded_load_instruction_real_role_skills():
 
 
 def test_red_always_loaded_load_instruction_missing_skill(tmp_path):
-    # A role skill that names only using-superra regressed the contract.
-    _write_role_skill(tmp_path, ROLE_SKILL_FILES[0], ["superRA:using-superra"])
+    # A role skill whose load instruction drops an always-loaded skill regressed
+    # the contract.
+    _write_role_skill(tmp_path, ROLE_SKILL_FILES[0], ["superRA:econ-data-analysis"])
     _write_role_skill(tmp_path, ROLE_SKILL_FILES[1], ALWAYS_LOADED_SKILLS)
     report = SkillLoadReport()
     check_always_loaded_load_instruction(report, tmp_path)
@@ -251,10 +252,7 @@ def test_red_always_loaded_load_instruction_missing_file(tmp_path):
 
 def test_always_loaded_skills_constant_is_qualified():
     # The contract checks the plugin-qualified names the load instruction names.
-    assert ALWAYS_LOADED_SKILLS == (
-        "superRA:using-superra",
-        "superRA:report-in-markdown",
-    )
+    assert ALWAYS_LOADED_SKILLS == ("superRA:using-superra",)
 
 
 # --------------------------------------------------------------------------- #

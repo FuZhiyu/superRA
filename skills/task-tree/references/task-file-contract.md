@@ -42,6 +42,7 @@ Common stale content to replace in place (never strike through or append "Update
 - Review items confirmed fixed on re-review.
 - Sibling task objectives that assume an earlier approach which has since changed.
 - Task `## Objective` or `## Results` descriptions superseded by a later task; rewrite them in place to reflect the latest shape, and add a revision note if the change is non-obvious.
+- Dated decision ledgers — a "Decisions" section, or a "per user decision `<date>`" note attached to a rule. A researcher decision enters a task file by rewriting the owning objective or constraint to its current state; the date and the deliberation stay in git.
 
 ## Results Shape
 
@@ -49,7 +50,7 @@ Results live in each task's `## Results` section. The same section matures throu
 
 ### Two-Stage Lifecycle
 
-- **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. Re-implementation replaces a task's results; it does not append history.
+- **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record, agent-facing. A line belongs in it only if a future reader needs it to use, reproduce, or trust the result — the inclusion test mirrors the objective's rejection test in `task-tree-design.md` §Writing Objectives and Planner Guidance. Detail that clears the test sits low in the pyramid or behind a link; detail that helps no reader is left out, and anything a linked artifact, commit, or upstream task already carries is pointed at rather than restated (`implement-task` §Reporting). Re-implementation replaces a task's results; it does not append history.
 - **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects the results, documentation homes, consolidation dispositions, and protection mechanisms, create the user-facing documentation and result files first. Then distil each touched task's `## Results` to one of the dispositions below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. `superintegrate/references/mature-consolidate.md` owns the ordering and record verification.
 
 ### Maturation Disposition Menu
@@ -64,37 +65,25 @@ When the consolidation fold removes a task's directory (Merge or Flatten), its d
 
 **Guardrail:** results selected to keep at Protect are never dropped. The permanent documentation, result files, and mature task results together form the protected record; any selected automated checks supplement that record.
 
-### Per-task results template
+### Subsection menu
 
-```markdown
-## Results
+Most results are a few lines under `## Results` with no subsections at all. Add one only when it carries a takeaway the inclusion test keeps; the default for every entry below is to omit it.
 
-### Key Findings
-- [primary result, with number]
-- [secondary result]
+| Subsection | Add when |
+|---|---|
+| `### Key Findings` | more than one finding — by the bar in `implement-task` §Reporting, a result the researcher would quote or act on — needs separating from the surrounding narrative |
+| `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
+| `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
+| `### Notes` | a caveat, data quirk, or decision changes how the result is read |
+| `### Notation & Assumptions Ledger` | theory-modeling tasks — required by `theory-modeling/SKILL.md`; tasks introducing nothing record "None." |
 
-### Row Counts / Sample
-- Input: N rows
-- After [operation]: N rows (delta: +/- N)
-- Final sample: N rows
-
-### Figures and Tables
-![Descriptive caption for fig A](attachments/fig_taskN_a.png)
-
-### Notes
-- [any caveat, data quirk, or decision the reader needs to interpret the results]
-
-### Notation & Assumptions Ledger
-*(theory-modeling tasks only — required by `theory-modeling/SKILL.md`. Tasks introducing nothing record "None.")*
-```
-
-Omit subsections that do not apply.
+`superra task result add --finding` is the exception: it appends under a `### Key Findings` heading it creates when absent, because it needs a fixed insertion anchor to append to without parsing and rewriting prose an agent wrote by hand. Results assembled by direct edit — the usual path — follow the menu.
 
 ### Section Ownership
 
 Implementer and reviewer duties on `## Results` live in the role skills (`superRA:implement-task`, `superRA:review-task`); the orchestrator's parent-rollup and disposition duties live in `superimplement` and `superintegrate/references/mature-consolidate.md`. Beyond those: the planner creates `task.md` with an empty or placeholder `## Results`; a standalone author owns everything.
 
-Summaries riding higher than a leaf — monitoring rollups and the matured narrative — link down to leaf task files rather than copying every finding up the tree.
+Any `## Results` riding higher than the task that produced a finding — a parent rollup, a monitoring summary, the matured narrative — links down to the owning task rather than copying the finding up the tree. A rollup is strictly shorter than the children it covers.
 
 ### Figure Embedding
 

@@ -13,7 +13,7 @@ This matrix maps **every** load-contract entry LC001–LC023 from [load_contract
 
 | LC | Area | Static CI | Fixture | Live-claude | Live-codex | Coverage strength |
 |---|---|---|---|---|---|---|
-| **LC001** | always-loaded skills (`using-superra` + `report-in-markdown`) | [test_always_loaded_live.py](test_always_loaded_live.py) (role-skill load-instruction contract) | [test_always_loaded_live.py](test_always_loaded_live.py) (command checks + artifact schema) | — | [always-loaded-codex-smoke.sh](always-loaded-codex-smoke.sh) | Static load-instruction coverage; Codex command-event smoke built, live-pending. |
+| **LC001** | always-loaded skill (`using-superra`) | [test_always_loaded_live.py](test_always_loaded_live.py) (role-skill load-instruction contract) | [test_always_loaded_live.py](test_always_loaded_live.py) (command checks + artifact schema) | — | [always-loaded-codex-smoke.sh](always-loaded-codex-smoke.sh) | Static load-instruction coverage; Codex command-event smoke built, live-pending. |
 | **LC002** | per-stage manifest loads (rollup) | [test_contract.py::…manifest_tables_match_contract](test_contract.py#L164) | [test_stage_loads_live.py](test_stage_loads_live.py) (schema + stage IDs) | [stage_loads_live.py](stage_loads_live.py) | unavailable by name | **All 4 non-empty stages Claude live-verified** (see LC007–LC010). |
 | **LC003** | per-domain manifest loads (rollup) | [test_contract.py::…manifest_tables_match_contract](test_contract.py#L164) | [test_domain_loads_live.py](test_domain_loads_live.py) (schema + domain IDs) | [domain_loads_live.py](domain_loads_live.py) | unavailable by name | **All 4 domains + the multi-domain every-match rule Claude live-verified** (see LC011–LC014). |
 | **LC004** | harness-adapter routing (Codex tool map) | [test_contract.py::…codex_tool_map_matches_contract](test_contract.py#L189) | — | — (Codex-only contract) | [codex-live-smoke.sh](codex-live-smoke.sh) (built) | Structured CI coverage parses the tool map. **Codex-only live row; built, live-pending.** |
@@ -63,7 +63,7 @@ This matrix maps **every** load-contract entry LC001–LC023 from [load_contract
 
 Claude's `claude -p` stream does not give skill-load-by-name evidence the shared parser can tie to the manifest, and filesystem `PreToolUse` hooks do not fire under `claude -p` (issue #40506). So on-demand skill loading is verified through the Python `claude-agent-sdk`: the harness **dispatches a general-purpose agent whose prompt names the role skill** (`superRA:implement-task` / `superRA:review-task`) so the manifest-driven loads actually fire, and a `PreToolUse(matcher="Skill")` in-process hook records each on-demand skill by name and event index (including loads inside the dispatched subagent). There is no `InstructionsLoaded` hook; always-loaded skills are covered by the role-skill load-instruction contract.
 
-- [sdk_load_evidence.py](sdk_load_evidence.py) — CI-safe evidence model + assertions. `SkillLoadEvidence` + `check_skills_loaded_before_first_edit` cover on-demand (`Skill`-tool) loads; `check_always_loaded_load_instruction` asserts both role skills instruct loading both always-loaded skills. Never imports `claude-agent-sdk`; never makes a model call.
+- [sdk_load_evidence.py](sdk_load_evidence.py) — CI-safe evidence model + assertions. `SkillLoadEvidence` + `check_skills_loaded_before_first_edit` cover on-demand (`Skill`-tool) loads; `check_always_loaded_load_instruction` asserts both role skills instruct loading every always-loaded skill. Never imports `claude-agent-sdk`; never makes a model call.
 - [sdk_load_harness.py](sdk_load_harness.py) — the live runner. The **only** module that imports `claude-agent-sdk`, and the import is deferred into `run_skill_load_session`, so the default `pytest` path never touches it. Dispatches the real role agent, gated on `RUN_LIVE_HARNESS=1`, default `CLAUDE_MODEL=haiku`. Supply the SDK on the live path with `uv run --with claude-agent-sdk`.
 - [test_sdk_load_evidence.py](test_sdk_load_evidence.py) — CI-safe unit tests for event capture, ordering, and the frontmatter contract.
 
@@ -71,9 +71,9 @@ The per-stage and per-domain live smokes call `run_skill_load_session` and asser
 
 ### Always-loaded skill live coverage (LC001, manual)
 
-Both always-loaded skills (`using-superra`, `report-in-markdown`) are declared in each role's frontmatter. The deterministic test parses those declarations. Codex has no skill-load event, so its opt-in smoke retains the existing task-read and markdown-check command events plus the exact schema-only artifact.
+Each role skill's §Before You Start instructs loading `using-superra`, the one skill every dispatch always loads. The deterministic test parses that instruction. Codex has no skill-load event, so its opt-in smoke retains the task-read command event for that skill, plus the markdown-check event for the on-demand `report-in-markdown` load the fixture task calls for, plus the exact schema-only artifact.
 
-[test_always_loaded_live.py](test_always_loaded_live.py) covers the frontmatter declarations, command evidence, and artifact schema. Run the Codex smoke:
+[test_always_loaded_live.py](test_always_loaded_live.py) covers the load instruction, command evidence, and artifact schema. Run the Codex smoke:
 
 ```bash
 RUN_LIVE_HARNESS=1 bash tests/harness-instruction-following/always-loaded-codex-smoke.sh

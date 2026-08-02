@@ -89,6 +89,8 @@ If the current node is a **leaf** (a node with no children):
 
 When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.
 
+The rewrite trims as well as adds. Re-run the rejection test over every carried-forward line and delete the ones the widened concern no longer makes rejectable, together with any line the new scope has made redundant. A researcher decision folded in during the rewrite is stated as the current contract, never as a dated "per user decision" note — git carries the date.
+
 For simple changes, reopen the existing owning task or affected tasks and rewrite objectives with revision notes. Flip a directly widened `approved` task to `revise` so it re-enters the frontier for rework; reset transitive downstream dependents whose inputs or assumptions shift to `not-started` by orchestrator judgment. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
 
 ### Parent and sibling context

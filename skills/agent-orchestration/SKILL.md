@@ -49,7 +49,7 @@ Before dispatching agents in parallel or isolating an agent in its own worktree,
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches a task-scoped implementer or reviewer uses the shape below; the stage-specific body lives in that workflow skill. The load line is the whole role contract — the role skill pulls the always-loaded pair and the manifest's stage and domain skills. `Stage: sync` is the exception: it names `semantic-merge` mode references instead of a role skill.
+Every workflow skill that dispatches a task-scoped implementer or reviewer uses the shape below; the stage-specific body lives in that workflow skill. The load line is the whole role contract — the role skill pulls `using-superra` and the manifest's stage and domain skills. `Stage: sync` is the exception: it names `semantic-merge` mode references instead of a role skill.
 
 **Implementer:**
 ```

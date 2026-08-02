@@ -9,6 +9,16 @@ Before your first substantive response:
 - Ensure the live dashboard is up for this repo without opening a browser: run `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached) and retain its emitted scoped URL.
 - If `PLAN.md` exists without a `superRA/` directory, the project predates the `superRA/` task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer migration via `superra task migrate from-plan`, and point them to the superRA docs at http://fuzhiyu.me/superRA/ for details.
 
+## Workflow Map
+
+SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
+
+1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
+2. `superimplement` executes tasks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
+3. `superintegrate` selects how key results will be documented and protected, syncs against the integration base, matures the permanent record and task tree, derives and obtains approval for a temporary refactoring task, executes that refactoring, and performs the final merge / PR / cleanup action.
+
+The map is ordered, but re-entry is normal — see §Resuming Work.
+
 ## Resuming Work
 
 There is no durable workflow-stage to look up. The frontmatter field set is closed and INTEGRATE keeps no stage marker, so task `status` plus the git log *are* the state — "which phase are we in" (implemented-or-not, integrated-or-not) is read from statuses and commits, never from a file field. Resuming is therefore status-driven, and mixed state is normal:
