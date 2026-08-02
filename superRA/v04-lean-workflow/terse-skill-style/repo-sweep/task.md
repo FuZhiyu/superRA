@@ -1,6 +1,6 @@
 ---
 title: "Repo Sweep: Restyle Remaining Skill Prose to the Terse Style"
-status: in-progress
+status: revise
 depends_on: []
 ---
 
@@ -84,3 +84,17 @@ Caveats:
 - [handoff-doc/SKILL.md](../../../../skills/handoff-doc/SKILL.md) was skipped as the dispatch allows: it is a deprecated redirect whose whole body is a six-row ownership list plus one instruction line, already at the style.
 
 Remaining for later groups: domain skills, and the remaining `using-superra`/`superintegrate` references not listed above.
+
+## Review Notes
+
+Scoped to group 2 (`556b4c49..956cefb0`); group 1 and earlier groups are not re-opened.
+
+1. **MAJOR** — [task.md](task.md) §Results, group-2 paragraph: "`load_contract.json` carries no line-anchored citation into any group-2 file, so nothing re-anchored" is false. [load_contract.json](../../../../tests/harness-instruction-following/load_contract.json) carries ten line-anchored `source_paths` into five group-2 files: `refactor-and-integrate/SKILL.md#L16-L17` and `#L47-L58`, `result-protection/SKILL.md#L10-L23` and `#L16-L18`, `semantic-merge/SKILL.md#L12-L20`, `internals.md#L93-L95`, `#L113-L115`, `#L93-L115`, `task-file-contract.md#L23-L35` and `#L31-L35`. I checked each range against `556b4c49`: every one still covers the same subject matter, because the two files that lost lines (`semantic-merge/SKILL.md` −2, `internals.md` −2) lost them below every cited range. So the conclusion ("nothing re-anchored") holds — but on a reason the note does not state, and the note as written would tell a later re-anchoring pass that these files carry no anchors. Rewrite the sentence to state the anchors exist and why they still resolve.
+
+2. **MINOR** — [skills/report-in-markdown/SKILL.md:82](../../../../skills/report-in-markdown/SKILL.md#L82): "GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled there." The pre-restyle text said "renders unstyled on GitHub"; the compressed "there" now sits closer to "in the dashboard" than to "GitHub" and inverts on a fast read. Name the target explicitly.
+
+3. **MINOR** — [skills/result-protection/SKILL.md:18](../../../../skills/result-protection/SKILL.md#L18): "Domain-specific drift-test references route through the active domain skill's stage-load table at the `protection` stage." The pre-restyle line ended "load it per that table" — the compression dropped the imperative and left a description, against §Skill Prose Style's "State the action." (The load instruction survives in [drift-test-quality.md:9](../../../../skills/result-protection/references/drift-test-quality.md#L9), so no agent is left without it; this is style, not behavior.)
+
+4. **MINOR** — [skills/refactor-and-integrate/SKILL.md:117](../../../../skills/refactor-and-integrate/SKILL.md#L117): the `[BLOCKING]` item dropped the leading "Different" — "Control variable sets, variable definitions, sample filters, equilibrium concepts, and normalization choices are research decisions." The gate's trigger was a *divergence* between sides; the surviving sentence reads as a blanket claim and leans only on the `**Handling inconsistencies:**` group heading to restore it. Restore the divergence sense in the sentence.
+
+Verified and not findings: all 15 prose word counts reproduce exactly with a fence- and table-excluding count; `tests/harness-instruction-following` 126/126 (uv needs sandbox escalation to run); no heading changed in any group-2 file, and every `§` anchor cited into these files from elsewhere in `skills/` still resolves; the two claimed DRY deletions in `refactor-and-integrate/SKILL.md` are sound — §Apply the reviewed refactoring task carries "return to the owning workflow gate before that work runs", and §Triage every hunk carries both the protected-record tracing rule and "The same mode-specific boundary gates base-current deletions and relocations"; the four low-Δ files are the floor, not a shallow pass (`worktree-data-sync/SKILL.md`'s residual prose is per-flag semantics plus the denylist enumeration; its §When to Use bullet list is the only remaining DRY candidate, and it is optional); `handoff-doc/SKILL.md` is correctly skipped; the three semantic-merge mode references keep their author/reviewer step sequences, the nine reviewer steps, the `## Sync Impact` format and lifecycle, and the `APPROVE`/`REVISE` vocabulary intact.
