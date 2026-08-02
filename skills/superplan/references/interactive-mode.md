@@ -13,7 +13,7 @@ One task file carries the whole range of plan/execute interleaving:
 
 ## The loop
 
-You do not load the implementer or reviewer role specs here — this loop is your protocol for handling the task file.
+You do not load the implementer or reviewer role skills here — this loop is your protocol for handling the task file.
 
 1. **Co-edit** the target and objective into the task file through the `using-superra` §Task Interface.
 2. **Self-review always.** Compare the changed artifacts and recorded results with the objective; inspect the diff and outputs for correctness, completeness, and unintended scope; and run fresh verification for each completion claim. Apply every `[BLOCKING]` item from active domain skills in addition.

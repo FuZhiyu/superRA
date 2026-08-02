@@ -75,7 +75,9 @@ At thorough depth, dispatch `Stage: planning-review` before presenting the tree 
 
 **Planning reviewer:**
 ```
-Agent(subagent_type: "superRA:reviewer"):
+Agent(general-purpose):
+  Load `superRA:review-task` and follow it.
+
   Stage: planning-review
   Task: <task path or root>
   Review mode: handoff-readiness | design-review

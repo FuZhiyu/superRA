@@ -80,10 +80,10 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 
 | Filler | Execute |
 |---|---|
-| `main` | `canonical-role` |
+| `main` | `role-skill` |
 | `subagent` | `dispatch` |
 
-`canonical-role` means resolve and run the selected seat's canonical role spec as defined by `agent-orchestration` §Seat Assignment. `dispatch` uses that skill's dispatch template.
+`role-skill` means load the selected seat's role skill and run it in this session; `dispatch` uses the template — both defined by `agent-orchestration` §Seat Assignment.
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, dispatch `Stage: integration` against that single task before advancing.
 
@@ -146,7 +146,7 @@ The folded-in answer (per the autonomy contract) is included in the first commit
 
 Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
 
-**Workflow-specific review scope at interim checkpoints:** Task-local correctness under `agents/reviewer.md` §Review Protocol. Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
+**Workflow-specific review scope at interim checkpoints:** Task-local correctness under `superRA:review-task` §Review Protocol. Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
 
 ## Autonomy and Stop Points
 

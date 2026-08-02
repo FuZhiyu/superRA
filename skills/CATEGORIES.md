@@ -1,6 +1,6 @@
 # Skill Categories
 
-superRA skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index — when adding a skill, place it in the right category here and in the `README.md` skill tables.
+superRA skills split into five categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index — when adding a skill, place it in the right category here and in the `README.md` skill tables.
 
 For the runtime-facing master map (universal principles and the Stage/Domain skill-load tables agents actually load), see `superRA:using-superra` §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superra` is the agent-facing authority.
 
@@ -14,6 +14,15 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
 | `superintegrate` | INTEGRATE | Choose results, permanent documentation, and protection; Sync; Mature & Consolidate the protected record; derive, approve, and execute one temporary refactoring task; then Finish. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
+
+## Role — what a dispatched seat does
+
+Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same skill. Both pull the always-loaded pair plus the manifest's stage and domain skills.
+
+| Skill | Seat | Role |
+|---|---|---|
+| `implement-task` | Implementer | Execute the objective, self-check, own `## Results` and status up to `implemented`, commit atomically, return status + SHA. |
+| `review-task` | Reviewer | Verify independently against the objective and the loaded gates, own `## Review Notes` and the APPROVE / REVISE verdict, commit, return assessment + SHA. |
 
 ## Domain — vertical-specific discipline
 
@@ -35,7 +44,7 @@ Each future vertical plugs into the same workflow scaffolding — implementation
 
 ## Utility — reusable, domain-neutral tools
 
-Agent-facing and standalone-invokable. Called by workflow skills and agent files as needed. Domain-agnostic; reusable across verticals.
+Agent-facing and standalone-invokable. Called by workflow skills and role skills as needed. Domain-agnostic; reusable across verticals.
 
 | Skill | What it provides |
 |---|---|
@@ -52,11 +61,11 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | Purpose |
 |---|---|
-| `using-superra` | Master skill every agent reads. Carries the code-change defaults, the Runtime Workflow Map, commit hygiene, the Task Interface, the two-axis Skill-Load Manifest (Stage + Domain), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract) live in `references/main-agent.md`. |
+| `using-superra` | Master skill every agent reads. Carries the work defaults, the Runtime Workflow Map, commit hygiene, the Task Interface, the three-axis Skill-Load Manifest (Role + Stage + Domain), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract) live in `references/main-agent.md`. |
 
 ## Adding a Skill
 
-1. Decide the category above. If it doesn't fit cleanly, it may belong in two places — default to the category that matches its primary caller (workflow-skills are called by orchestrators; domain-skills are called by workflow-skills; utility-skills are called by agent files and by other skills).
+1. Decide the category above. If it doesn't fit cleanly, it may belong in two places — default to the category that matches its primary caller (workflow-skills are called by orchestrators; domain-skills are called by workflow-skills; utility-skills are called by role skills and by other skills).
 2. Create `skills/<name>/SKILL.md` (flat layout — no nested folders).
 3. Add a row to the table above and to the matching table in `README.md`.
 4. If it's a domain skill, design its `references/` folder around workflow phases so agents can load the right chunk per stage.

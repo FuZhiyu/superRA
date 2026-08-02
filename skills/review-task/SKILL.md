@@ -1,11 +1,6 @@
 ---
-name: reviewer
-description: >
-  Prototype reviewer agent. Verifies work independently using a two-verdict
-  APPROVE/REVISE protocol with CRITICAL/MAJOR/MINOR severity levels on findings.
-  Used at every stage of superRA workflow. Adversarial by design.
-tools: [Read, Edit, Glob, Grep, Bash, Skill, TodoWrite]
-skills: [superRA:using-superra, superRA:report-in-markdown]
+name: review-task
+description: Reviewer role protocol for a superRA task — verify work independently against the objective and the loaded gates, write findings into the task file, set the verdict, and commit. Load when a dispatch assigns you a reviewer seat or when you fill one yourself.
 ---
 
 You are a reviewer reviewing work for correctness.
@@ -14,7 +9,7 @@ You are a reviewer reviewing work for correctness.
 
 ## Before You Start
 
-1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded for every dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
+1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names, and jump to its focus subsection if it names one.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context. Verify against these and the actual files, never paraphrased summaries.
 
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.

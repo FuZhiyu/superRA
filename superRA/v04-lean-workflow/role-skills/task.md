@@ -1,6 +1,6 @@
 ---
 title: "Role Skills: Retire the Prototype Agents"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -24,3 +24,25 @@ Convert the implementer and reviewer role specs into role skills loaded by dispa
 - Frontmatter `skills:` autoload was the one Claude-specific benefit of agent files; the replacement is an explicit load line in the dispatch template — verify with a load canary, not hook observation (frontmatter loads are invisible to the Skill hook).
 
 ## Results
+
+Roles are now skills. `skills/implement-task/SKILL.md` and `skills/review-task/SKILL.md` carry the protocol formerly in `agents/implementer.md` / `agents/reviewer.md`; the review protocol is a faithful port for the `review-skill` sibling to rewrite. Both open with a §Before You Start load instruction naming `superRA:using-superra` and `superRA:report-in-markdown` — that instruction is what replaces the Claude-only frontmatter `skills:` autoload, and it is the same mechanism on Codex.
+
+Every dispatch template now reads `Agent(general-purpose):` with `Load \`superRA:<role>-task\` and follow it.` as its first line ([agent-orchestration/SKILL.md](../../../skills/agent-orchestration/SKILL.md), plus the four `superintegrate` dispatches and the `superplan` planning-review dispatch). The Skill-Load Manifest gained a Role axis, so it is now three axes (Role + Stage + Domain). Seat assignment tells a main-filled seat to load the same skill; `superimplement`'s seat-execution table routes `main` to `role-skill` instead of `canonical-role`.
+
+The scope contract landed in `using-superra` §Work Defaults as item 4 (the section was renamed from §Code-Change Defaults, which no longer covered its content). Placement differs from the objective's suggestion of the implement skill: `using-superra` is loaded by every agent including the interactive main agent, which will not load a role skill once the `workflow-defaults` sibling makes interactive the default. Researcher chose this placement. The planner-side counterpart is in `task-tree-design.md` §Writing Objectives — mark deliberately open-ended tasks, otherwise the named artifacts are the scope.
+
+Retired: `agents/`, `.codex/agents/*.toml`, `skills/codex-superra-setup/`, `skills/using-superra/scripts/` (`resolve_role.py` + test), `references/canonical-role.md`, and the named-agent warning in `agent-orchestration`. Also retired `references/claude-instructions.md` and its `main-agent.md` pointer — its entire content was canonical-role routing, so it had nothing left. `.agents/skills/` symlinks and `RELEASE-NOTES.md` (with the `rm -f ~/.codex/agents/superra_*.toml` cleanup line for existing Codex users) were updated to match.
+
+Consumer surfaces updated: `using-superra` §Task Interface, `task-file-contract.md` (status and section ownership), `codex-instructions.md` (availability routing collapses to agent-tool present/absent; tool map maps `Agent(general-purpose)` → `spawn_agent(agent_type="default")`; §Named Agent Setup and §Related Codex Skill deleted), `handoff-doc` redirect, `changing-the-tree.md`, `interactive-mode.md`, `econ-data-analysis`, `theory-modeling/CLAUDE.md`, `CLAUDE.md` (ownership table, Agent Load Surface, Codex and Harness Design, the `skills/*`-or-`agents/*` gate line, the retired generated-artifacts bullet), `CATEGORIES.md` (new Role category, five categories), `.codex-plugin/plugin.json`, `docs/README.codex.md`, and both `docs/site` pages. `sync.md` now says `Agent(general-purpose):` so the Codex tool map covers it.
+
+### Test suite
+
+`125 passed` for `tests/harness-instruction-following`, and `tests/check-harness-compatibility.sh` is clean (its Codex-agent-generation section became a role-skills-packaged check).
+
+The always-loaded contract changed mechanism, so `check_always_loaded_frontmatter` / `parse_frontmatter_skills` became `check_always_loaded_load_instruction` / `parse_section`, asserting each role skill's §Before You Start names both skills. Dispatch detection moved from agent type to prompt content: `TranscriptEvent.is_role_dispatch(role_skill)` replaces `is_dispatch_of` at the role call sites, and the committed sample transcripts were rewritten to the new dispatch shape. LC001, LC005, LC006, LC007, LC020, LC022 in `load_contract.json` and their README matrix rows were repointed; LC006 changed from generated-agent drift to role-skill surface (both role skills exist and reach every seat; no named-agent surface survives).
+
+**Coverage regression, Codex only.** Both seats now spawn `default`, and the `SubagentStart` payload carries the agent type but not the prompt, so the Codex orchestrator smoke can no longer tell the implementer dispatch from the reviewer dispatch. `evaluate_dispatch_log` gained `minimum_dispatches` and the smoke asserts two `default` dispatches instead of two distinct named types. The Claude path is unaffected — its `Task`/`Agent` event carries the prompt.
+
+### Not done
+
+The validation's live-dispatch leg is unrun: no general-purpose agent has been dispatched to load a role skill and complete a task turn. The static half is covered (`test_seat_fillers_reach_the_role_skills_by_name`, the load-instruction contract, packaging checks), but the load-canary the objective asks for needs a real dispatch, which this session's standing instruction reserves for an explicit researcher request. `always-loaded-codex-smoke.sh` and the SDK harness are updated and ready for it.

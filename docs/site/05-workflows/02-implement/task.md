@@ -16,7 +16,7 @@ superimplement @superRA/showcase-analysis/01-data.
 
 By default, every task runs through implementer and reviewer seats. The implementer does the work, writes what it found into the task's `## Results`, and hands off. A **reviewer** then inspects the committed result adversarially (the actual files and diff, not the implementer's summary) and returns one of two verdicts: **APPROVE** advances the task to `approved`; **REVISE** sends numbered, specific findings back for a fix pass. Work does not advance past a REVISE.
 
-The reviewer is adversarial: its job is to find what the implementer missed. An agent reviewing its own work shares its own blind spots, so a fresh reviewer with a different prompt and a mandate to hunt for failure catches the silent bad merge, the wrong aggregation, the unreproducible output. As each task is approved, the next ready one is picked up, and you watch the order unfold on the dashboard. The role behavior is owned by the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs and orchestrated by [superimplement](skills/superimplement/SKILL.md).
+The reviewer is adversarial: its job is to find what the implementer missed. An agent reviewing its own work shares its own blind spots, so a fresh reviewer with a different prompt and a mandate to hunt for failure catches the silent bad merge, the wrong aggregation, the unreproducible output. As each task is approved, the next ready one is picked up, and you watch the order unfold on the dashboard. The role behavior is owned by the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills and orchestrated by [superimplement](skills/superimplement/SKILL.md).
 
 ### Execution modes and seat assignment
 

@@ -87,7 +87,7 @@ EOF
 chmod +x "$WORKSPACE/superRA/superra"
 
 OUT="$TMPROOT/codex.jsonl"
-PROMPT="You are an implementer assigned the superRA task always-loaded-task in this workspace. Run \`./superRA/superra task read always-loaded-task\` and follow its objective exactly, loading the skills your role spec tells you to load before acting. Do only what that task says; do not edit source code, install anything, or run a test suite."
+PROMPT="Load \`superRA:implement-task\` and follow it. You are assigned the superRA task always-loaded-task in this workspace. Run \`./superRA/superra task read always-loaded-task\` and follow its objective exactly. Do only what that task says; do not edit source code, install anything, or run a test suite."
 
 MODEL_ARGS=()
 if [ -n "${CODEX_MODEL:-}" ]; then

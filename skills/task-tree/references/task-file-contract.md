@@ -21,7 +21,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Objective`** — planner-owned: the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. Implementers read it but do not rewrite it.
 - **`## Planner Guidance`** — planner-owned, optional; the planner's information handoff — findings from planning plus suggested route. Advisory: implementers may deviate from it when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
-- **`## Revision Notes`** — temporary, planner-owned delta signal when a task is updated: what changed, why, and how significant (trivial/mechanical vs. substantive). Removed at approval (the reviewer's duty, per its role spec); `validate_plan` warns when an `approved` task still carries a non-empty one.
+- **`## Revision Notes`** — temporary, planner-owned delta signal when a task is updated: what changed, why, and how significant (trivial/mechanical vs. substantive). Removed at approval (the reviewer's duty, per `superRA:review-task`); `validate_plan` warns when an `approved` task still carries a non-empty one.
 - **`## Review Notes`** — reviewer-owned; present only when there are active items; removed entirely at approval.
 - **`## Sync Impact`** — conditional, integration-phase-only, temporary. Added by the sync author during `superintegrate` Sync only to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
@@ -92,7 +92,7 @@ Omit subsections that do not apply.
 
 ### Section Ownership
 
-Implementer and reviewer duties on `## Results` live in each role spec's §What You Own; the orchestrator's parent-rollup and disposition duties live in `superimplement` and `superintegrate/references/mature-consolidate.md`. Beyond those: the planner creates `task.md` with an empty or placeholder `## Results`; a standalone author owns everything.
+Implementer and reviewer duties on `## Results` live in each role skill's §What You Own (`superRA:implement-task`, `superRA:review-task`); the orchestrator's parent-rollup and disposition duties live in `superimplement` and `superintegrate/references/mature-consolidate.md`. Beyond those: the planner creates `task.md` with an empty or placeholder `## Results`; a standalone author owns everything.
 
 Summaries riding higher than a leaf — monitoring rollups and the matured narrative — link down to leaf task files rather than copying every finding up the tree.
 

@@ -7,15 +7,17 @@ Loaded by all agents at dispatch time.
 
 SuperRA skills deliberately override default harness/system-prompt behavior where they conflict; the user's explicit instructions outrank both.
 
-## Code-Change Defaults
+## Work Defaults
 
-These apply whenever you write, review, or refactor code.
+These apply whenever you take on assigned work — writing, reviewing, or refactoring code.
 
 1. **Surface assumptions and ambiguity early.** Do not silently choose between materially different interpretations. State the assumption you are making, name meaningful tradeoffs, and point out a simpler path when one exists. Ask only when the ambiguity changes correctness, scope, or a decision that belongs to the researcher.
 
 2. **Prefer the minimum code that solves the task.** No speculative features, abstractions, configurability, or defensive branches that were not requested. If a straightforward implementation works, use it.
 
 3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
+
+4. **Deliver what was asked, at the scope intended.** The artifacts a task objective names define its scope unless the objective says the task is deliberately open-ended. If the request seems mistaken or a better approach exists, say so in a sentence and continue as asked rather than quietly narrowing, widening, or transforming the work.
 
 ## Runtime Workflow Map
 
@@ -61,7 +63,7 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 **Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
-**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
+**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role skill's §What You Own (`superRA:implement-task`, `superRA:review-task`). Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
 **Editing principles:**
 
@@ -75,12 +77,13 @@ Subagent mode — dispatching implementers and reviewers — is the default all 
 
 ## Skill-Load Manifest
 
-Every dispatch loads along two axes; both apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
+Every dispatch loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
-1. **Stage** — the workflow phase the dispatch is in (table below). Role-independent; `subagent_type` (implementer vs reviewer) encodes role.
-2. **Domain** — what the task operates on (table below). Load by what the task *touches*, not by which subtree it lives in, and load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
+1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
+2. **Stage** — the workflow phase the dispatch is in (table below). Role-independent.
+3. **Domain** — what the task operates on (table below). Load by what the task *touches*, not by which subtree it lives in, and load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
 
-Both axes load *in addition to* the always-loaded `superRA:using-superra` and `superRA:report-in-markdown`.
+All three load *in addition to* the always-loaded `superRA:using-superra` and `superRA:report-in-markdown`.
 
 ### Stage
 
@@ -103,6 +106,6 @@ Both axes load *in addition to* the always-loaded `superRA:using-superra` and `s
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
 
 
-**Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the adapter reference for the current harness under `references/`.
+**Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.
 
 **Main agents:** continue to `references/main-agent.md`.

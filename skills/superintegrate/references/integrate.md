@@ -31,7 +31,9 @@ Ask whether to approve the protected record and task. A requested change to the 
 Assign the `Stage: integration` implementer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent(subagent_type: "superRA:implementer"):
+Agent(general-purpose):
+  Load `superRA:implement-task` and follow it.
+
   Stage: integration
   Task: <temporary refactoring task>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
@@ -48,7 +50,9 @@ Resolve concerns inside the approved task through an implementer fix. If executi
 Assign it per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent(subagent_type: "superRA:reviewer"):
+Agent(general-purpose):
+  Load `superRA:review-task` and follow it.
+
   Stage: integration
   Task: <temporary refactoring task>
   Git range: <BASE_HEAD_SHA>..HEAD

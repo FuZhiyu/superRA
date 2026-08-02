@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Implementer and reviewer are now **skills**, not dedicated agents. Every dispatch spawns a general-purpose agent whose prompt's first line names `superRA:implement-task` or `superRA:review-task`; that skill pulls in `using-superra`, `report-in-markdown`, and the manifest's stage and domain skills. A seat the main agent fills itself loads the same skill. One dispatch mechanism now serves Claude Code and Codex.
+- Agents also carry a scope contract (`using-superra` §Work Defaults): deliver what was asked at the scope intended, and when the request seems mistaken, say so in a sentence and continue as asked rather than quietly narrowing or widening the work. Planners mark deliberately open-ended tasks in the objective; otherwise the artifacts the objective names are the scope.
+
+### Removed
+
+- The prototype agent files (`agents/implementer.md`, `agents/reviewer.md`), the generated Codex named agents (`.codex/agents/superra_*.toml`), the `codex-superra-setup` skill and its generator, and the canonical-role resolver (`using-superra/scripts/resolve_role.py`, `references/canonical-role.md`, `references/claude-instructions.md`).
+- **Codex users who installed the named agents globally:** delete the now-stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml`. Nothing replaces them; the skills bundle carries the roles.
+
 ## [0.3.4] - 2026-07-23
 
 ### Changed

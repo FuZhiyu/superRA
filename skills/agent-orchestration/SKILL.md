@@ -49,11 +49,9 @@ Before dispatching agents in parallel or isolating an agent in its own worktree,
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references.
+Every workflow skill that dispatches a task-scoped implementer or reviewer uses the canonical template shape defined here. Every dispatch goes to a general-purpose agent; the first line names the role skill it must load, which in turn pulls the always-loaded pair and the manifest's stage and domain skills. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches load `semantic-merge` mode references instead of a role skill.
 
 Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or task content. Never include `Work from:` — cwd is implicit.
-
-Claude Code: dispatch role agents fire-and-return — never assign a `name:` to a `superRA:implementer` / `superRA:reviewer`. A named `Agent` call silently drops the `subagent_type` role spec, so the agent comes up generic.
 
 Use a bundle only for same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent. Keep dependent siblings out of the same implementation bundle unless the upstream task is already `approved`; `depends_on` sequences tasks whose outputs or findings are prerequisites.
 
@@ -61,7 +59,9 @@ At the dispatch boundary, parent objectives are inherited shared context; siblin
 
 **Implementer:**
 ```
-Agent(subagent_type: "superRA:implementer"):
+Agent(general-purpose):
+  Load `superRA:implement-task` and follow it.
+
   Stage: <stage-name>
   Task(s): <task path — e.g., "data-preparation/merge">
   Worktree: <absolute path>   # optional — parallel-dispatch only
@@ -72,7 +72,9 @@ Agent(subagent_type: "superRA:implementer"):
 
 **Reviewer:**
 ```
-Agent(subagent_type: "superRA:reviewer"):
+Agent(general-purpose):
+  Load `superRA:review-task` and follow it.
+
   Stage: <stage-name>
   Task: <task path — e.g., "data-preparation/merge">
   Git range: <BASE_SHA>..<HEAD_SHA>
@@ -92,7 +94,7 @@ Each task has an implementer seat and a reviewer seat; each is independently fil
 | subagent | main | Small or high-stakes work where the main context should carry adversarial review. |
 | main | subagent | Small or context-heavy implementation that still needs independent review. |
 
-When the main agent fills a seat, resolve and load the canonical role spec for that seat, plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer. The active harness adapter routes canonical-role path resolution.
+When the main agent fills a seat, load that seat's role skill — `superRA:implement-task` or `superRA:review-task` — plus its stage and domain loads, and execute it directly. A main reviewer receives the same `Git range:` a dispatched reviewer would; a main implementer hands its commits to the dispatched reviewer.
 
 ## Orchestrator Duties
 

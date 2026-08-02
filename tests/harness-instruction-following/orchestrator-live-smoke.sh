@@ -25,9 +25,10 @@
 # smoke keys off Task/Agent dispatch tool events, not the hook events.
 #
 # Harness-evidence limitation: dispatch evidence is structural, never prose
-# claims. Claude exposes subagent dispatch as Task/Agent tool events carrying a
-# subagent_type; Codex exposes it through the SubagentStart dispatch log. The
-# shared check_orchestrator_dispatches keys off those event shapes.
+# claims. Claude exposes subagent dispatch as Task/Agent tool events whose prompt
+# names the role skill; Codex exposes it through the SubagentStart dispatch log,
+# which carries the agent type only — so the Codex path counts two default-agent
+# dispatches rather than telling the seats apart.
 
 set -uo pipefail
 
@@ -121,7 +122,7 @@ with open(out, "w", encoding="utf-8") as f:
     f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
     # One SubagentStart hook per agent type (matcher = agent type). The hook
     # disambiguates by the agent-type payload field, not session_id.
-    for agent_type in ("superra_implementer", "superra_reviewer"):
+    for agent_type in ("default",):
         f.write("[[hooks.SubagentStart]]\n")
         f.write(f'matcher = "{agent_type}"\n')
         f.write("[[hooks.SubagentStart.hooks]]\n")

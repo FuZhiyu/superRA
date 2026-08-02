@@ -39,7 +39,7 @@ Shared checklist walked by implementer (before DONE) and reviewer (as verificati
 - `[BLOCKING]` — must fix to earn APPROVE.
 - `[ADVISORY]` — best-practice; reviewer MAY flag as MINOR; does not block APPROVE.
 
-The APPROVE/REVISE verdict mechanics, the one-comprehensive-pass rule, and re-review handling are owned by the active reviewer role spec (`agents/reviewer.md`).
+The APPROVE/REVISE verdict mechanics, the one-comprehensive-pass rule, and re-review handling are owned by the reviewer role skill (`superRA:review-task`).
 
 **Targeted verification effort.** The committed diagnostics, row-count logs, and output files are the primary evidence in data work — assess them first. Re-execute a step to resolve a *suspected discrepancy*: an implausible magnitude, a missing row-count log, or a number that disagrees with `## Results`. When iterating or fixing, re-run only the changed step and its downstream dependents; unaffected upstream outputs stand as committed.
 

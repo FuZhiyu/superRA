@@ -13,14 +13,14 @@
       "id": "LC001",
       "area": "manifest-always-loaded",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L58-L66",
-        "agents/implementer.md#L1-L9",
-        "agents/reviewer.md#L1-L10"
+        "skills/using-superra/SKILL.md#L59-L67",
+        "skills/implement-task/SKILL.md#L11-L16",
+        "skills/review-task/SKILL.md#L13-L18"
       ],
       "trigger": "Any superRA role dispatch.",
       "expected_evidence": [
         "source manifest names superRA:using-superra and superRA:report-in-markdown as always loaded",
-        "role frontmatter lists those skills",
+        "each role skill's Before You Start instructs loading those skills",
         "Codex transcript contains the task-read and markdown-check command events",
         "live artifact matches the exact schema"
       ],
@@ -31,15 +31,15 @@
       "covered_by": {
         "ci_safe_static": [
           "test_always_loaded_live.py::test_green_static_backbone_real_role_specs",
-          "sdk_load_evidence.py::check_always_loaded_frontmatter"
+          "sdk_load_evidence.py::check_always_loaded_load_instruction"
         ],
         "fixture_unit": [
-          "test_always_loaded_live.py (frontmatter, command-event, and schema checks)"
+          "test_always_loaded_live.py (load-instruction, command-event, and schema checks)"
         ],
         "manual_live_codex": [
           "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (task-read and markdown-check commands; built/CI-tested, live-pending)"
         ],
-        "notes": "Role-frontmatter declarations are deterministic. Codex live not yet run."
+        "notes": "Role-skill load instructions are deterministic. Codex live not yet run."
       }
     },
     {
@@ -131,10 +131,8 @@
       "id": "LC005",
       "area": "role-task-read-contract",
       "source_paths": [
-        "agents/implementer.md#L13-L17",
-        "agents/reviewer.md#L14-L18",
-        ".codex/agents/superra_implementer.toml#L17-L20",
-        ".codex/agents/superra_reviewer.toml#L17-L23"
+        "skills/implement-task/SKILL.md#L15-L16",
+        "skills/review-task/SKILL.md#L17-L18"
       ],
       "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch.",
       "expected_evidence": [
@@ -160,25 +158,24 @@
     },
     {
       "id": "LC006",
-      "area": "generated-agent-drift",
+      "area": "role-skill-surface",
       "source_paths": [
-        "agents/implementer.md",
-        "agents/reviewer.md",
-        ".codex/agents/superra_implementer.toml#L1-L8",
-        ".codex/agents/superra_reviewer.toml#L1-L8",
-        "skills/codex-superra-setup/scripts/sync_codex_agents.py"
+        "skills/implement-task/SKILL.md",
+        "skills/review-task/SKILL.md",
+        "skills/agent-orchestration/SKILL.md#L50-L85"
       ],
-      "trigger": "Canonical role specs change, or generated role surfaces are checked.",
+      "trigger": "Role behavior changes, or the dispatch surface is checked.",
       "expected_evidence": [
-        "static drift check regenerates the .codex agent TOML into a temp tree and compares bytes",
-        "generated headers retain source and regeneration notice"
+        "both role skills exist and are named by the manifest, the orchestration templates, and main-agent seat routing",
+        "no named-agent surface survives: no agents/, no .codex/agents/, no generator or role resolver"
       ],
       "classification": [
         "ci_safe_static"
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_generated_agent_drift_check_is_ci_safe (runs sync_codex_agents.py --check)"
+          "test_contract.py::test_seat_fillers_reach_the_role_skills_by_name",
+          "test_contract.py::test_no_named_agent_surface_survives"
         ],
         "notes": "Fully CI-covered; no live row by design."
       }
@@ -187,9 +184,9 @@
       "id": "LC007",
       "area": "stage-planning-review",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L71-L71",
+        "skills/using-superra/SKILL.md#L72-L72",
         "skills/superplan/references/planning-review.md#L1-L24",
-        "agents/reviewer.md#L19-L20"
+        "skills/review-task/SKILL.md#L20-L20"
       ],
       "trigger": "Reviewer dispatch has Stage: planning-review.",
       "expected_evidence": [
@@ -626,23 +623,20 @@
         "skills/superimplement/SKILL.md#L12-L27",
         "skills/superimplement/SKILL.md#L77-L91",
         "skills/superimplement/SKILL.md#L163-L166",
-        "skills/using-superra/references/main-agent.md#L43-L53",
-        "skills/using-superra/references/claude-instructions.md",
+        "skills/using-superra/references/main-agent.md#L41-L53",
         "skills/using-superra/references/codex-instructions.md#L7-L22",
-        "skills/using-superra/references/canonical-role.md",
-        "skills/using-superra/scripts/resolve_role.py",
+        "skills/implement-task/SKILL.md",
+        "skills/review-task/SKILL.md",
         "skills/superplan/references/interactive-mode.md#L1-L43",
-        "skills/agent-orchestration/SKILL.md#L85-L95",
-        "skills/codex-superra-setup/scripts/sync_codex_agents.py"
+        "skills/agent-orchestration/SKILL.md#L85-L95"
       ],
       "trigger": "User invokes superimplement or implementation workflow over a task tree.",
       "expected_evidence": [
-        "structured Codex availability table distinguishes missing named agents from an unavailable agent tool",
-        "structured superimplement seat-execution table routes main fillers through canonical roles and subagent fillers through dispatch",
-        "both harness adapters route canonical-role through the shared packaged-role resolver",
-        "the packaged resolver discovers both role specs from a foreign project directory",
+        "structured Codex availability table routes dispatch when the agent tool is present and harness-forced-inline when it is not",
+        "structured superimplement seat-execution table routes main fillers through the role skill and subagent fillers through dispatch",
+        "the manifest, orchestration templates, and main-agent seat routing all name both role skills",
         "interactive fixture records implemented status and non-empty Results before a question-tool event, which precedes reviewer dispatch",
-        "seat fixtures show each main-seat route resolving and reading its canonical role file before dispatching the opposite seat",
+        "seat fixtures show each main-seat route loading its role skill before dispatching the opposite seat",
         "fixture parser requires structural implementer and reviewer dispatches for the default superimplement smoke",
         "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the default path"
       ],
@@ -653,10 +647,10 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_availability_routes_distinguish_tool_and_agent_absence; test_contract.py::test_interactive_review_dispositions_route_lifecycle; test_contract.py::test_seat_assignment_table_has_three_supported_structures; test_contract.py::test_superimplement_executes_each_selected_seat_filler; test_contract.py::test_harness_adapters_route_to_shared_canonical_role_resolver"
+          "test_contract.py::test_codex_availability_routes_key_off_agent_tool_presence; test_contract.py::test_interactive_review_dispositions_route_lifecycle; test_contract.py::test_seat_assignment_table_has_three_supported_structures; test_contract.py::test_superimplement_executes_each_selected_seat_filler; test_contract.py::test_seat_fillers_reach_the_role_skills_by_name"
         ],
         "fixture_unit": [
-          "skills/using-superra/scripts/test_resolve_role.py (packaged-layout discovery from a foreign project); test_transcript_assertions.py (interactive ordering and both main-seat canonical-role-resolution/role-load/opposite-dispatch fixtures); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
+          "test_transcript_assertions.py (interactive ordering and both main-seat role-skill-load/opposite-dispatch fixtures); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
         ],
         "manual_live_claude": [
           "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events) — built/CI-tested; live run not part of the 08-12 expansion"
@@ -702,12 +696,12 @@
       "area": "codex-orchestration-adapter",
       "source_paths": [
         "skills/using-superra/references/codex-instructions.md#L9-L31",
-        "skills/using-superra/references/codex-instructions.md#L52-L83"
+        "skills/using-superra/references/codex-instructions.md#L52-L64"
       ],
-      "trigger": "Codex main agent dispatches role agents in a superRA workflow.",
+      "trigger": "Codex main agent dispatches a role-carrying agent in a superRA workflow.",
       "expected_evidence": [
-        "structured table parse confirms the named implementer and reviewer agent mappings",
-        "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer"
+        "structured table parse confirms Agent(general-purpose) maps to spawn_agent(agent_type=\"default\")",
+        "manual Codex transcript shows two spawn_agent dispatches of agent_type default"
       ],
       "classification": [
         "ci_safe_static",
@@ -715,7 +709,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_tool_map_matches_contract (Codex named-agent mappings)"
+          "test_contract.py::test_codex_tool_map_matches_contract (generic-agent mapping)"
         ],
         "manual_live_codex": [
           "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"

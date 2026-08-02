@@ -264,7 +264,7 @@ def run_claude_domain_canary(
 ) -> DomainLoadReport:
     """Run the live Claude per-domain skill-load canary (manual-only).
 
-    Dispatches the real ``superRA:implementer`` via 08's
+    Dispatches a general-purpose agent carrying ``superRA:implement-task`` via 08's
     :func:`sdk_load_harness.run_skill_load_session`, then asserts every skill in
     ``skills_expected`` loaded before the first edit (a one-element tuple for a
     single-domain row, the full matching set for the multi-domain case). Because

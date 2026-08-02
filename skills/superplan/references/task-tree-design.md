@@ -12,6 +12,8 @@ A line belongs in the objective only if the reviewer should reject work that vio
 - Constraints — what to avoid and what to keep intact.
 - Validation criteria — what must be checked for the task to be complete.
 
+The artifacts the goal names are the task's scope. When a task is deliberately open-ended — explore the space, propose options, find whatever is there — say so in the objective, because the implementer treats an unmarked objective as closed and delivers exactly what it names.
+
 Binding conventions that live elsewhere enter as pointers, not prose — see §Context Distillation. When an objective outgrows a short paragraph plus its must-bullets, either the task needs splitting (§Splitting Tasks) or the excess is information, which belongs in `## Planner Guidance`.
 
 The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (the project-level ones plus any nested in a directory the agent reads), manifest-loaded skills, the assigned task plus its ancestor chain via `superra task read`, and on-demand directory walking when a touched file needs a convention the chain does not cover. The objective's job is to make that assembled set *sufficient* — point into it so the right standing context and the right files are reachable — not to reproduce context that already lives there. See §Context Distillation for the point-vs-distill choice.

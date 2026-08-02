@@ -11,7 +11,7 @@ created: 2026-06-19
 ## Objective
 
 Read this task with `./superRA/superra task read always-loaded-task`. You are an
-implementer; load the skills your role spec tells you to load before acting. Do
+implementer; load the skills your role skill tells you to load before acting. Do
 not edit source code, install anything, or run a test suite.
 
 Do exactly this, in order:

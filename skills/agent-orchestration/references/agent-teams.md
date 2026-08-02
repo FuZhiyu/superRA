@@ -11,7 +11,7 @@ This reference carries the technical how-to for Agent Teams and parallel-dispatc
 **Pointers — do not duplicate here:**
 
 - **For skill-loads per stage, see `superRA:using-superra` §Skill-Load Manifest.** Every agent (main, subagent, team teammate) reads the manifest; this file does not repeat per-stage skill/reference lists.
-- **Team composition: spawn one teammate per stage the workflow runs.** Role is encoded by `subagent_type` — `superRA:implementer` for implementer-role stages, `superRA:reviewer` for reviewer-role stages. The teammate then loads what the manifest lists for its Stage. No per-workflow team recipe is needed.
+- **Team composition: spawn one teammate per stage the workflow runs.** Role is carried by the skill the teammate's prompt names — `superRA:implement-task` for implementer-role stages, `superRA:review-task` for reviewer-role stages. The teammate then loads what the manifest lists for its Stage. No per-workflow team recipe is needed.
 
 ---
 
@@ -51,13 +51,13 @@ Sequential teams with cleanup. The lead cleans up each team before spawning the 
 
 ## Spawning a Team
 
-Team composition is derived from the manifest — the lead spawns one teammate per stage the workflow runs, using `subagent_type: superRA:implementer` for implementer-role stages and `superRA:reviewer` for reviewer-role stages; the teammate loads what `superRA:using-superra` §Skill-Load Manifest lists for its Stage. There is no per-workflow recipe beyond this; the composition is read from the workflow skill (which stages it runs) and the manifest (what each stage loads).
+Team composition is derived from the manifest — the lead spawns one teammate per stage the workflow runs, naming `superRA:implement-task` for implementer-role stages and `superRA:review-task` for reviewer-role stages; the teammate loads what `superRA:using-superra` §Skill-Load Manifest lists for its Stage. There is no per-workflow recipe beyond this; the composition is read from the workflow skill (which stages it runs) and the manifest (what each stage loads).
 
 **Generic spawn template:**
 
 ```
 Create an agent team for <workflow-name>:
-- <teammate-name>: subagent_type <superRA:implementer | superRA:reviewer>; Stage: <stage-name from manifest>
+- <teammate-name>: role skill <superRA:implement-task | superRA:review-task>; Stage: <stage-name from manifest>
 - <teammate-name>: ...
 ```
 
@@ -113,13 +113,17 @@ Do not hand-roll worktree setup or data-copy scripts.
 3. **Dispatch in parallel using the canonical template.** Every dispatch follows the `Stage:` / `Task:` / `Additionally:` shape defined in `SKILL.md` §Dispatch Templates. The agent reads its standard protocol and the manifest; the `Additionally:` tail carries task-specific steering only.
 
    ```
-   Agent(subagent_type: "superRA:implementer"):
+   Agent(general-purpose):
+     Load `superRA:implement-task` and follow it.
+
      Stage: <stage-name>
      Task: <task pointer>
 
      Additionally: <focus: one independent domain>
 
-   Agent(subagent_type: "superRA:implementer"):
+   Agent(general-purpose):
+     Load `superRA:implement-task` and follow it.
+
      Stage: <stage-name>
      Task: <task pointer>
 

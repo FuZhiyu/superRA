@@ -52,7 +52,7 @@ Otherwise size the sync against `semantic-merge §Scope the merge first`. When i
 When the sync is non-trivial, dispatch one generic sync author:
 
 ```text
-Agent(generic):
+Agent(general-purpose):
   Stage: sync
   Role: sync author
   References:
@@ -81,7 +81,7 @@ If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision 
 Before Mature & Consolidate begins, dispatch one generic sync reviewer:
 
 ```text
-Agent(generic):
+Agent(general-purpose):
   Stage: sync
   Role: sync reviewer
   References:

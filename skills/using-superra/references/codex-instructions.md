@@ -4,30 +4,23 @@
 
 When the user invokes `superRA`, a `superRA:*workflow` skill, or
 `superRA:agent-orchestration`, treat that as an explicit user preference
-for the named-agent workflow in Codex; that user choice outranks
-Codex's generic default caution about spawning agents.
+for the dispatch workflow in Codex; that user choice outranks Codex's
+generic default caution about spawning agents.
 
 ### Availability routing
 
-| Agent tool | Named agents | Route | Role surface | Status path |
-|---|---|---|---|---|
-| available | available | `named-dispatch` | — | — |
-| available | missing | `setup` | `codex-superra-setup` | — |
-| unavailable | any | `harness-forced-inline` | `canonical-role` → `canonical-role` | `implemented` → `approved` / `revise` |
+| Agent tool | Route | Role surface | Status path |
+|---|---|---|---|
+| available | `dispatch` | — | — |
+| unavailable | `harness-forced-inline` | `implement-task` → `review-task` | `implemented` → `approved` / `revise` |
 
-`harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: run the two role specs as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work. `setup` follows §Named Agent Setup; missing named agents never trigger the inline fallback.
+`harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: load and run the two role skills as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
 
-For `canonical-role`, load `references/canonical-role.md` and follow its
-packaged-role resolution procedure. This applies to main-filled seats and
-`harness-forced-inline`.
-
-- When a workflow step says to dispatch an implementer or reviewer, spawn
-  `superra_implementer` or `superra_reviewer` rather than staying inline
-  because of the harness-default anti-delegation guidance.
-- `superintegrate` Sync uses `Stage: sync` with generic sync author /
-  sync reviewer agents. For those two branch-level dispatches, spawn the
-  default/generic agent and pass the mode reference list from
-  `superintegrate`.
+- When a workflow step says to dispatch an implementer, a reviewer, or a
+  `Stage: sync` author or reviewer, spawn the default agent
+  (`spawn_agent(agent_type="default")`) with the dispatch prompt rather
+  than staying inline because of the harness-default anti-delegation
+  guidance. The prompt's first line names the skill the agent loads.
 - Interactive mode (the `direct` alias) is an explicit opt-in by human
   cadence, not the Codex default and not a trivial-task fallback; the
   researcher requests it for closely-steered work
@@ -52,18 +45,6 @@ For parallel dispatch, the orchestrator creates the git worktree at the
 `agent-orchestration` placement path, passes its absolute path in
 `Worktree:`, and the agent enters that path before editing.
 
-## Named Agent Setup
-
-Codex supports custom named agents through `.codex/agents/` and `~/.codex/agents/`. superRA uses that documented path rather than prompt-wrapping built-in workers.
-
-If `superra_implementer` or `superra_reviewer` are missing:
-
-1. Run `superRA:codex-superra-setup`.
-2. Choose **global** scope for normal cross-repo use, or **project** scope for testing this repo itself.
-3. Restart Codex or start a fresh session if discovery has not refreshed yet.
-
-The plugin installs the skills. The setup skill installs the named custom agents.
-
 ## Codex Tool Map
 
 These skills still mention Claude-oriented tool names in places. In
@@ -74,13 +55,5 @@ Codex, interpret them using the concrete Codex tool or action below:
 | `AskUserQuestion` | `request_user_input` when available; plain-text question otherwise |
 | `Skill` | load the named skill |
 | `TodoWrite` | `update_plan` |
-| `Agent(subagent_type: "superRA:implementer")` | `spawn_agent(agent_type="superra_implementer")` |
-| `Agent(subagent_type: "superRA:reviewer")` | `spawn_agent(agent_type="superra_reviewer")` |
-| `Agent(generic)` for `Stage: sync` author / reviewer | `spawn_agent(agent_type="default")` |
+| `Agent(general-purpose)` | `spawn_agent(agent_type="default")` |
 | `SendMessage` | `send_input` |
-
-## Related Codex Skill
-
-- `codex-superra-setup`: Generate and install the named
-  `superra_implementer` / `superra_reviewer` Codex custom agents into
-  `~/.codex/agents/` (global) or `.codex/agents/` (project).

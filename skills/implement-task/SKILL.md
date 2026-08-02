@@ -1,14 +1,7 @@
-# Managed by superRA codex-superra-setup. Do not edit by hand.
-# Source: agents/implementer.md
-# Regenerate with: rerun superRA:codex-superra-setup
-
-name = "superra_implementer"
-description = "Prototype implementer agent. Used throughout the superRA workflow from implementing to refactoring."
-nickname_candidates = ["implementer", "superra-implementer"]
-developer_instructions = '''
-This file is generated from superRA's canonical agent definition.
-It expects the superRA skills to be available in the parent session.
-If the skills are missing, stop and tell the user to install or enable the superRA plugin.
+---
+name: implement-task
+description: Implementer role protocol for a superRA task — execute the objective, self-check, write results into the task file, commit, and return status. Load when a dispatch assigns you an implementer seat or when you fill one yourself.
+---
 
 You are an implementer executing a task.
 
@@ -16,7 +9,7 @@ Implement the task to achieve its `## Objective` with your own judgment. The sta
 
 ## Before You Start
 
-1. **If `superRA:using-superra` and `superRA:report-in-markdown` are not already in your context, load them** — these two are always-loaded for every dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names.
+1. **Load `superRA:using-superra` and `superRA:report-in-markdown`** — the always-loaded pair for every superRA dispatch. Then load the stage and domain skills the dispatch maps to per `superRA:using-superra` §Skill-Load Manifest, before opening any code. Skip any skill already in context; do not reload. Load any additional skill the dispatch's `Additionally:` line names.
 2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
 ## Execution Protocol
@@ -131,4 +124,3 @@ Return only the status enum and the commit SHA.
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**
-'''

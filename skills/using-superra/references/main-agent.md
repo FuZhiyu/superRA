@@ -48,9 +48,7 @@ Two dials set how a task runs. Selection is by autonomy and human cadence.
 
 The two modes:
 
-- **subagent** (default) — autonomous execution, the mode all workflows assume. Axis B picks the seat structure; when the main agent fills a seat it runs that seat's role spec (`agents/implementer.md` or `agents/reviewer.md`) and dispatches the other seat. Everything routes through `superRA:agent-orchestration`.
+- **subagent** (default) — autonomous execution, the mode all workflows assume. Axis B picks the seat structure; when the main agent fills a seat it loads and runs that seat's role skill (`superRA:implement-task` or `superRA:review-task`) and dispatches the other seat. Everything routes through `superRA:agent-orchestration`.
 - **interactive** (or `direct`) — the main agent executes the task itself at high human cadence: the fused light-plan → execute-yourself → record canvas loop in `superplan/references/interactive-mode.md`. On finishing a unit of work it **asks the researcher** whether to dispatch a reviewer rather than dispatching on its own.
-
-**Claude Code agents:** load `references/claude-instructions.md` immediately.
 
 **Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.

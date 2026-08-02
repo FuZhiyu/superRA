@@ -308,7 +308,7 @@ def run_claude_stage_canary(
 ) -> StageLoadReport:
     """Run the live Claude per-stage skill-load canary for one stage (manual-only).
 
-    Dispatches the real ``superRA:implementer`` via 08's
+    Dispatches a general-purpose agent carrying ``superRA:implement-task`` via 08's
     :func:`sdk_load_harness.run_skill_load_session` with ``capture_reads=True``
     (so the ``planning-review`` reference read is observed), then evaluates the
     stage row. Because the live SDK dispatch is nondeterministic, it runs up to

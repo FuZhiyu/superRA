@@ -13,7 +13,9 @@ Locate the latest applicable `integrate(protect)` decision commit and read its b
 Assign the single drafter—the `Stage: maturation` implementer seat—for the affected tasks per `agent-orchestration` §Seat Assignment. Create or revise the agreed user-facing documentation and result files first. Then consolidate the task structure and distil each affected task’s `## Results` against those permanent artifacts:
 
 ```text
-Agent(subagent_type: "superRA:implementer"):
+Agent(general-purpose):
+  Load `superRA:implement-task` and follow it.
+
   Stage: maturation
   Tasks: <affected task paths>
   Protect decision: <integrate(protect) commit SHA>
@@ -32,7 +34,9 @@ The task record points to a permanent document when that document is the source 
 Assign the single reviewer seat per `agent-orchestration` §Seat Assignment over the affected tasks, permanent artifacts, proposed final tree, and `BASE_HEAD_SHA..HEAD`:
 
 ```text
-Agent(subagent_type: "superRA:reviewer"):
+Agent(general-purpose):
+  Load `superRA:review-task` and follow it.
+
   Stage: maturation
   Tasks: <affected durable task paths>
   Git range: <BASE_HEAD_SHA>..HEAD
