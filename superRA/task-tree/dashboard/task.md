@@ -48,9 +48,9 @@ The server fails loudly and keeps its connection bookkeeping truthful. A `task.m
 
 ### Shutdown lifecycle protection
 
-Watcher teardown is bounded under repeated caller cancellation: it gets a cooperative grace period, then a bounded forced-cancellation phase, and finally a process watchdog for a cancellation-suppressing watcher. The watchdog is restricted to a standalone `plan_dashboard.py` process running as `__main__` on its main thread, and late watcher completion disarms it ([plan_dashboard.py:557-672](../../../skills/task-tree/scripts/plan_dashboard.py#L557-L672)).
+Watcher teardown is bounded under repeated caller cancellation: it gets a cooperative grace period, then a bounded forced-cancellation phase, and finally a process watchdog for a cancellation-suppressing watcher. The watchdog is restricted to a standalone `plan_dashboard.py` process running as `__main__` on its main thread, and late watcher completion disarms it ([plan_dashboard.py:638-747](../../../skills/task-tree/scripts/plan_dashboard.py#L638-L747)).
 
-Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets; each process cycle verifies the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1162-1518](../../../skills/task-tree/scripts/test_dashboard.py#L1162-L1518), [test_dashboard.py:4850](../../../skills/task-tree/scripts/test_dashboard.py#L4850)).
+Permanent regressions cover both the focused cancellation bounds and two real detached-process cycles with eight concurrent abrupt SSE resets; each process cycle verifies the native watcher returns, the child exits, and its port closes before relaunch ([test_dashboard.py:1162-1518](../../../skills/task-tree/scripts/test_dashboard.py#L1162-L1518), [test_dashboard.py:5414](../../../skills/task-tree/scripts/test_dashboard.py#L5414)).
 
 ### Reconnect freshness
 
@@ -60,7 +60,7 @@ changes, then sends a worktree-scoped `full-reload` to the reconnecting SSE
 client. Because the client queue is registered before watcher startup, edits
 made while the watcher was stopped are visible immediately on reconnect; an
 ensure call against an already-live watcher emits no duplicate refresh
-([plan_dashboard.py:505-546](../../../skills/task-tree/scripts/plan_dashboard.py#L505-L546)).
+([plan_dashboard.py:579-637](../../../skills/task-tree/scripts/plan_dashboard.py#L579-L637)).
 
 Permanent regressions cover the offline edit, refreshed cache, reconnect-stream
 notification, duplicate suppression, and cross-worktree broadcast isolation
@@ -78,7 +78,7 @@ The browser tab reads `<active page> · <where it lives>` — the worktree branc
 ### Release 0.3.3
 
 The dashboard hardening and worktree image/reconnect fixes are documented in
-the dated [0.3.3 release notes](../../../RELEASE-NOTES.md#L5). All maintained
+the dated [0.3.3 release notes](../../../RELEASE-NOTES.md#L56). All maintained
 Claude, marketplace, and Codex manifests agree at `0.3.3`, and the release
 workflow runs `scripts/bump-version.sh --check` before reading or using the
 release version. It also requires exactly one non-empty `0.3.3` section directly
@@ -97,9 +97,7 @@ creation after merge
 
 The merge with `origin/main` landed the companion-file/attachment subsystem (PR #52) into the same dashboard surfaces this subtree owns, and both sides were synthesized rather than one picked. Two consequences a maturation or Integrate reader needs: an attachment link is now a local-open surface — `renderMarkdown`'s attachment branch carries `data-open-path` alongside its `/api/artifact` href, so the three surfaces named in §Opening files are four in practice; and `loadActiveArtifact` sets and clears the tab title on the same terms as the task card, because an attachment pane is a page in its own right.
 
-The line anchors in this task's `## Results` — the `plan_dashboard.py` watcher-teardown and reconnect-freshness ranges and every `test_dashboard.py` range — drifted with the merge and were left for the maturation rewrite rather than re-anchored during Sync, since folding the two open/title children rewrites those sections anyway. Re-anchor them against the post-merge files: watcher teardown now spans `_stop_watcher` and its watchdog, reconnect freshness spans `_ensure_watcher`, and the test file grew on both sides.
-
-Verification was skipped at the researcher's instruction: no test suites and no live-server pass were run against the merged tree. Sync commits: `049def56`.
+Verification was skipped at the researcher's instruction: no test suites and no live-server pass were run against the merged tree, so the merged behavior is argued from reading rather than execution. Sync commits: `049def56`.
 
 ## Review Notes
 
