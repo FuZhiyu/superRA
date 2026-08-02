@@ -9,6 +9,20 @@ SuperRA skills deliberately override default harness/system-prompt behavior wher
 
 This skill provides the essential protocols shared by all agents.  
 
+## Communication
+
+Terse by default — in chat, returns, and documents.
+
+- Lead with the answer. No preamble, no restating the request, no recap of what you just did, no closing offers.
+- One sentence when one is enough. Prefer a bare list over prose.
+- Cut filler ("just", "basically", "it's worth noting") and pleasantries. Keep articles and full sentences.
+- Plain words, short sentences, active voice: "use" not "utilize", "to" not "in order to". If a clause deletes cleanly, delete it.
+- No unexplained jargon; define terms at first use. One name per concept.
+- Write for a cold reader: assume no session context; each point uses only what came before it.
+- Cut words, not information. Code, commands, paths, numbers, and error strings stay verbatim.
+- Expand only where the short version is likely to be misread: surprising results, order-dependent steps, material caveats, and irreversible-action warnings get full sentences.
+- The style holds all session; do not drift back to full prose.
+
 ## Commits
 
 Stage only the files you edited this turn, by exact path — never `git add -A`, `git add .`, or `git add -u`: a shared worktree carries other agents' in-flight edits and scratch files. If unfamiliar uncommitted changes appear, ask the orchestrator (as a subagent) or the user (as the main agent) rather than committing or discarding them.
@@ -20,6 +34,8 @@ Every commit subject follows `<stage>(<scope>): <STATE> — <summary>`, so `git 
 Tasks are managed task trees in the `superRA/` directory. For basic I/O, this section is sufficient. For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
 
 **Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — the CLI tool inject more relevant context than a bare `Read` of the file. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
+
+**Markdown conventions:** cite file paths as markdown links, relative to the citing file — `[file.py:42](file.py#L42)` — never as plain or backtick-wrapped paths. Commit figures under the task's `attachments/`, embed as `![caption](attachments/fig.png)`. Other mechanics: load `superRA:report-in-markdown`.
 
 **Edit** the `task.md` directly with Read/Edit. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 

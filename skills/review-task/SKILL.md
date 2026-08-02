@@ -17,7 +17,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 Two dispatch fields set the pass:
 
 - **`Tier:`** — `quick` (the default when the field is absent) or `thorough`. Quick reports what a careful read of the committed evidence surfaces. Thorough adds targeted verification: re-derive a number, open the intermediate data, trace a reported value back to the artifact that produced it.
-- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `superRA:implement-task` §Reporting in the Task File).
+- **`Focus:`** — the dimensions to review; `correctness` when the field is absent. Others the dispatch may name: `scope-fidelity` (the work delivers the objective's artifacts, neither narrowed nor widened), `results-writing` (`## Results` economy, duplication, and readability, per `superRA:implement-task` §Reporting).
 
 Walk the gates of your loaded skills that bear on your focuses and on the operations this task actually performed — not every gate top to bottom.
 
@@ -62,7 +62,7 @@ Follow `superRA:using-superra` §Task Interface editing principles. Stay within 
 
 ## How You Write a Review
 
-**First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding: severity, a markdown-link citation (e.g. [file.py:42](file.py#L42)), what is wrong, what to fix. When a finding's assessment depends on an earlier blocking fix, say so in plain prose on that item. In Integrate, a Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive.
+**First review.** Read the committed evidence, check the objective and declared outputs against it, and walk the gates in scope. Open `## Review Notes` with your tier and focuses, then number each finding — one line: severity, markdown-link citation, problem, fix. `[BLOCKING] [Code/03.py:42](Code/03.py#L42): inner join drops unmatched funds. Use left join.` Do not restate what the cited line does — the reader can open it; add the why only when the fix isn't obvious. When a finding's assessment depends on an earlier blocking fix, say so in plain prose on that item. In Integrate, a Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive.
 
 **Re-review is narrow and converges.** Rounds after the first report blocking findings only — do not open new advisory classes. Verify each `→ implemented: ...` claim by following its link, plus any finding you noted as depending on an upstream fix; everything else is accepted from the first pass. For each item:
 
