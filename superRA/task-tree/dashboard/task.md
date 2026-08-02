@@ -67,6 +67,14 @@ notification, duplicate suppression, and cross-worktree broadcast isolation
 ([test_dashboard.py:1177-1193](../../../skills/task-tree/scripts/test_dashboard.py#L1177-L1193),
 [test_dashboard.py:1240-1327](../../../skills/task-tree/scripts/test_dashboard.py#L1240-L1327)).
 
+### Opening files, and naming the tab
+
+The dashboard hands files to the machine it runs on instead of only firing a `vscode://` URI, which names one editor and cannot express a workspace. A loopback-gated `POST /api/open` backs three surfaces: the card-head **Open** button (the OS default application for the type), the header **VS Code** button (the active task inside the window holding *its* worktree), and body file links. The gate is the whole remote story — an off-loopback `--host` bind refuses the route and the page falls back to the links it emitted before ([local-file-open](local-file-open/task.md)).
+
+The route required a `Host`-authority check to be worth anything: same-origin and content-type checks alone fall to DNS rebinding, which a review pass demonstrated live against a running server before the fix. Restricted to loopback authorities and to `is_file()`, so a repo-contained `.app` bundle is not openable.
+
+The browser tab reads `<active page> · <where it lives>` — the worktree branch in a live dashboard, the site or export name in doc-mode and standalone — so tabs of different worktrees, and of different tasks in one worktree, are tellable apart. Mode decides only the second half, never whether the title tracks the page, which is what gives the published docs site per-page titles ([task-scoped-tab-title](task-scoped-tab-title/task.md)).
+
 ### Release 0.3.3
 
 The dashboard hardening and worktree image/reconnect fixes are documented in
