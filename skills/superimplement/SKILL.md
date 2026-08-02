@@ -104,11 +104,12 @@ After every task is `approved`, verify the work end-to-end before presenting com
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **Results recorded?** Read the completed task files. The gate fails in either direction, against `implement-task` §Reporting: missing, thin, or status-report-only results for a task with substantive work; and results that restate an artifact, a diff, a commit body, or a child task instead of pointing at it. Figure attachments in each task's `attachments/` directory are committed.
+2. **Results recorded?** Read the completed task files. The gate fails in either direction, against `implement-task` §Reporting: missing, thin, or status-report-only results for a task with substantive work; and results that restate an artifact, a diff, a commit body, or a child task instead of pointing at it.
 
 3. **Reproducibility verification.**
    - Multi-script pipeline runs end-to-end if the task tree declares one.
    - Outputs exist and were generated from committed code, not ad-hoc REPL state.
+   - Retained task companions are committed and pass `../using-superra/references/task-companion-files.md`.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 

@@ -71,7 +71,7 @@ autonomous review from interactive self-review and elective independent review.
 The trivial Sync and integration-pruning paths are described as inline paths,
 not automatic switches into interactive mode
 ([sync.md:1-50](../../skills/superintegrate/references/sync.md#L1-L50)).
-[RELEASE-NOTES.md:9-33](../../RELEASE-NOTES.md#L9-L33) names the interactive
+[RELEASE-NOTES.md:41-65](../../RELEASE-NOTES.md#L41-L65) names the interactive
 contract, generated-role cleanup, retained econ-data rules, and conservative
 prose-test cleanup as the three PR concerns. Historical plan and release records
 remain untouched.

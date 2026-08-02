@@ -55,7 +55,7 @@ and Handoff with its judgment escape. Neither rule introduces a structured
 runtime surface suitable for a sentence oracle, so the approved design/reviewer
 protection remains the minimum consistent choice.
 
-[RELEASE-NOTES.md:25-33](../../RELEASE-NOTES.md#L25-L33) now includes both
+[RELEASE-NOTES.md:57-65](../../RELEASE-NOTES.md#L57-L65) now includes both
 econ-data rules alongside the interactive contract and conservative prose-test
 cleanup, preserving this task as independent PR and release scope. The generic
 role specs and generated Codex agents remain unchanged.

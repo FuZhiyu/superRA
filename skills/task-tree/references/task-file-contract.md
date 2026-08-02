@@ -10,6 +10,8 @@ Tree-design judgment — objective writing, splitting, placement, durable homes,
 
 "Top-level task" describes position only (no parent), not required scope: a top-level task may be a leaf or a branch, narrow or broad, the same as any nested task.
 
+Files retained in a task directory are not task nodes. `skills/using-superra/references/task-companion-files.md` defines their placement and the `attachments/` task-discovery exception.
+
 ## Task Anatomy
 
 Every `task.md` — top-level, branch, or leaf — uses the same frontmatter and body sections. The tree is recursive: a task frames its own subtree; an umbrella task, when one exists, frames the whole project only because its subtree is everything.

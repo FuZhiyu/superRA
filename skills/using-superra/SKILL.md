@@ -39,6 +39,8 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 **Edit** the `task.md` directly with Read/Edit. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
+**Place files by lifespan and owner.** Session scratch stays outside `superRA/`, uncommitted. A retained file — code included — owned by one task solely to produce, reproduce, review, or interpret its recorded results is a **task companion**: commit it under that task's `attachments/`. Maintained code, shared or runtime-consumed files, and promised deliverables go in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a companion.
+
 ## Skill-Load Manifest
 
 Every dispatch loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.

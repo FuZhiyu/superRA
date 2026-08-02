@@ -513,9 +513,11 @@ class TestWatcherDecisionLogic:
         # Verify rebuild_tree() was triggered (the child should now be indexed)
         assert "03-third/sub-dynamic" in _launch_state(plan_dashboard).task_index
 
-    def test_non_task_file_changes_ignored(self, plan_root):
-        """Changes to non-task.md files (e.g. .py, .txt) produce no broadcasts."""
-        random_file = plan_root / "01-first" / "notes.txt"
+    def test_ancillary_directory_changes_ignored(self, plan_root):
+        """Files outside direct companion placement and attachments are ignored."""
+        ancillary = plan_root / "01-first" / "scratch"
+        ancillary.mkdir()
+        random_file = ancillary / "notes.txt"
         random_file.write_text("some notes")
 
         broadcasts = self._run_watcher_logic(plan_root, [

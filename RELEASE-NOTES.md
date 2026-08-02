@@ -5,14 +5,54 @@
 ### Changed
 
 - Implementer and reviewer are now **skills**, not dedicated agents. A dispatch prompt names `superRA:implement-task` or `superRA:review-task`; that skill pulls in `using-superra` and the manifest's stage and domain skills. A seat the main agent fills itself loads the same skill. One dispatch mechanism now serves Claude Code and Codex.
-- One **reporting contract** now governs everything agents write (`using-superra` §Reporting): select before writing, lead with the outcome, keep one home per fact, and point at the artifact, commit, or upstream task that already carries a detail rather than restating it. `## Results` records only what a future reader needs to use, reproduce, or trust the result; conversation carries deltas and pointers instead of reproducing what was just recorded. Researcher decisions enter a task by rewriting the owning objective, never as a dated decision ledger.
-- `report-in-markdown` is now **load-on-demand** rather than always loaded. The citation and figure conventions agents hit on nearly every write moved inline into `using-superra` §Reporting; the skill remains the authority on markdown mechanics, and the task-tree render-integrity hook names it when an edit trips a render trap.
+- One **reporting contract** now governs everything agents write (`implement-task` §Reporting): select before writing, lead with the outcome, keep one home per fact, and point at the artifact, commit, or upstream task that already carries a detail rather than restating it. `## Results` records only what a future reader needs to use, reproduce, or trust the result; conversation carries deltas and pointers instead of reproducing what was just recorded. Researcher decisions enter a task by rewriting the owning objective, never as a dated decision ledger.
+- `report-in-markdown` is now **load-on-demand** rather than always loaded. The citation and figure conventions agents hit on nearly every write moved inline into `using-superra` §Task Interface; the skill remains the authority on markdown mechanics, and the task-tree render-integrity hook names it when an edit trips a render trap.
 - Agents also carry a scope contract (`using-superra` §Work Defaults): deliver what was asked at the scope intended, and when the request seems mistaken, say so in a sentence and continue as asked rather than quietly narrowing or widening the work. Planners mark deliberately open-ended tasks in the objective; otherwise the artifacts the objective names are the scope.
 
 ### Removed
 
 - The prototype agent files (`agents/implementer.md`, `agents/reviewer.md`), the generated Codex named agents (`.codex/agents/superra_*.toml`), the `codex-superra-setup` skill and its generator, and the canonical-role resolver (`using-superra/scripts/resolve_role.py`, `references/canonical-role.md`, `references/claude-instructions.md`).
 - **Codex users who installed the named agents globally:** delete the now-stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml`. Nothing replaces them; the skills bundle carries the roles.
+
+## [0.3.6] - 2026-08-02
+
+### Changed
+
+- Dashboard file links, task attachments (both their links and the reading
+  pane's `Open` button), the task card's `Open` button, and the header `VS Code`
+  button now open the file on the machine running the dashboard, in whatever
+  application that machine already uses for the file type; the header button
+  opens the active task's file in the VS Code window already holding that
+  worktree, and `SUPERRA_EDITOR` points it at a fork. Opening is served by a
+  loopback-only route, so an off-loopback `--host` bind, doc-mode, and
+  standalone exports keep the previous `vscode://` links, as do modifier and
+  middle clicks anywhere.
+- The browser tab now names the page it is showing — the active task, or the
+  attachment being read — followed by the worktree branch it lives in, so tabs
+  of several worktrees of one repo are no longer identical. Doc-mode and
+  standalone exports name the site or export in place of a worktree, which gives
+  the published documentation site per-page titles.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.6` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
+## [0.3.5] - 2026-07-26
+
+### Changed
+
+- Tasks now keep retained task-local companion files in `attachments/`, with a
+  documented lifecycle for reproduction, promotion, maturation, and
+  consolidation.
+- Live and standalone task-tree dashboards expose those attachments as a
+  navigable, full-width reading surface for supported text, code, notebook,
+  image, and PDF files.
+
+### Release Prep
+
+- Version manifests bumped to `0.3.5` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
 
 ## [0.3.4] - 2026-07-23
 

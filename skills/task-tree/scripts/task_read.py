@@ -13,6 +13,7 @@ from _comments import LegacyCommentFormatError, anchored_block, load_comments
 from _task_io import (
     Task,
     autodetect_plan_root,
+    iter_child_task_dirs,
     parse_body_sections,
     parse_frontmatter,
     parse_task,
@@ -88,11 +89,10 @@ def _sibling_map(plan_root: Path, target_task: Task) -> dict[str, Task]:
     parent_path = target_task.path.rsplit("/", 1)[0] if "/" in target_task.path else ""
     parent_dir = plan_root / parent_path if parent_path else plan_root
     siblings: dict[str, Task] = {}
-    for subdir in sorted(parent_dir.iterdir()):
-        if subdir.is_dir() and (subdir / "task.md").exists():
-            slug = subdir.name
-            if slug != target_task.slug:
-                siblings[slug] = parse_task(subdir / "task.md", plan_root)
+    for subdir in iter_child_task_dirs(parent_dir):
+        slug = subdir.name
+        if slug != target_task.slug:
+            siblings[slug] = parse_task(subdir / "task.md", plan_root)
     return siblings
 
 

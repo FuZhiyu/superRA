@@ -85,6 +85,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Universal task read/edit interface — read a task with injected context, edit body sections, ownership-boundary principle | `using-superra` (§Task Interface); editing principles live in `implement-task` (§Reporting) |
 | Reporting contract — pyramid structure, finding selection, one home per fact, and the house citation/figure conventions | `implement-task` (§Reporting) |
+| Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
 | Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
