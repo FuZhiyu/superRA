@@ -1,6 +1,6 @@
 ---
 title: "Role Skills: Retire the Prototype Agents"
-status: implemented
+status: approved
 depends_on: []
 ---
 
