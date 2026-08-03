@@ -2,17 +2,35 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-03
+
+The lean-workflow release. Roles become skills, review becomes a decision rather
+than a schedule, interactive execution becomes the default, and everything
+agents write is governed by one reporting contract.
+
 ### Changed
 
+- **Interactive execution is now the default mode.** On a built tree the main agent works the frontier itself through the canvas loop — no `superimplement` load, no dispatch (`using-superra/references/interactive-mode.md`, `main-agent.md` §Execution Modes). `superimplement` is re-scoped as the explicitly-entered **autonomous** mode, loaded on researcher request or an accepted one-line recommendation; the agent recommends it when the frontier is broad, parallelizable, or context-heavy, and never switches silently.
+- **Independent review is triggered, not scheduled.** Whoever orchestrates decides after a task completes, from the result's stakes and plausibility (`main-agent.md` §Deciding on Review): review on a researcher request, a planner high-stakes mark, an implementer concern, or a load-bearing result the evidence cannot settle; recommend-and-ask when the researcher is present. With no review, the orchestrating agent verifies the work itself and sets `approved`. `implemented` now means "approval decision still open," not "waiting for a reviewer." One thorough review of accumulated work at the INTEGRATE boundary remains the safety net. A commit landing `status: approved` records the tier and focuses the task was reviewed under, or that no independent pass ran.
 - Implementer and reviewer are now **skills**, not dedicated agents. A dispatch prompt names `superRA:implement-task` or `superRA:review-task`; that skill pulls in `using-superra` and the manifest's stage and domain skills. A seat the main agent fills itself loads the same skill. One dispatch mechanism now serves Claude Code and Codex.
+- **A review is an explicitly scoped pass.** Dispatch names a `Tier:` (`quick`, the default, or `thorough`) and a `Focus:` (`correctness` by default, plus `scope-fidelity` and `results-writing`); the reviewer records both. Verification is evidence-first — the committed diff, outputs, logs, and figures — and re-executing the work's code path is a bounded exception, not routine. Every finding carries a `file:line`, artifact path, or quoted line; findings are reported rather than pre-filtered, with severity adjudicated downstream. Re-review rounds report blocking findings only.
+- **One severity vocabulary repo-wide.** CRITICAL/MAJOR/MINOR is retired in favor of `[BLOCKING]` / `[ADVISORY]` across task findings, every gated checklist, and planning review. The checklists were recalibrated in the same pass (294 → 259 blocking, 76 → 68 advisory), cutting duplication and verification scaffolding while keeping the domain-substantive gates — merge validation, look-ahead bias, proof verification — intact.
 - One **reporting contract** now governs everything agents write (`implement-task` §Reporting): select before writing, lead with the outcome, keep one home per fact, and point at the artifact, commit, or upstream task that already carries a detail rather than restating it. `## Results` records only what a future reader needs to use, reproduce, or trust the result; conversation carries deltas and pointers instead of reproducing what was just recorded. Researcher decisions enter a task by rewriting the owning objective, never as a dated decision ledger.
 - `report-in-markdown` is now **load-on-demand** rather than always loaded. The citation and figure conventions agents hit on nearly every write moved inline into `using-superra` §Task Interface; the skill remains the authority on markdown mechanics, and the task-tree render-integrity hook names it when an edit trips a render trap.
 - Agents also carry a scope contract (`implement-task` §Work Defaults): deliver what was asked at the scope intended, and when the request seems mistaken, say so in a sentence and continue as asked rather than quietly narrowing or widening the work. Planners mark deliberately open-ended tasks in the objective; otherwise the artifacts the objective names are the scope.
+- **Planners cut tasks by edit surface.** Children editing the same files or reloading the same context are one task, however many concerns it serves; the granularity self-review item now prescribes merging as well as splitting, and a shared edit surface is a merge finding rather than a `depends_on` finding. A task's fixed cost is its contract, results record, verdict, and researcher reading time — paid in every execution mode, not just when it is dispatched. Three or more tasks modifying one critical file is a re-cut signal. No numeric task-count caps.
+- **The frontier no longer stalls behind deferred work.** A dependency counts as satisfied once its work product exists — `approved`, `archived`, `implemented`, or `revise`; only `not-started`, `in-progress`, and `postponed` block. A subtree whose children are all implemented or approved rolls up as `implemented`, so a branch dependency unlocks its dependents like a leaf does. Open `revise` tasks in the tree are the durable deferral record.
+- **Skill prose is terse across the repo.** Every skill and reference was restyled to the register of the role skills — bolded imperative plus short elaboration, definition bullets, no rationale clauses — and `CLAUDE.md` now carries the style spec and the "Teach the Protocol, Don't Prescribe Each Action" gate that keeps new instruction lines from re-inflating it.
 
 ### Removed
 
 - The prototype agent files (`agents/implementer.md`, `agents/reviewer.md`), the generated Codex named agents (`.codex/agents/superra_*.toml`), the `codex-superra-setup` skill and its generator, and the canonical-role resolver (`using-superra/scripts/resolve_role.py`, `references/canonical-role.md`, `references/claude-instructions.md`).
 - **Codex users who installed the named agents globally:** delete the now-stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml`. Nothing replaces them; the skills bundle carries the roles.
+
+### Release Prep
+
+- Version manifests bumped to `0.4.0` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
 
 ## [0.3.6] - 2026-08-02
 
