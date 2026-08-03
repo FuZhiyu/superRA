@@ -27,7 +27,7 @@ Assess three dimensions before exploration or task design — creating a tree an
 - **Depth tier.** Choose from §Depth Tiers.
 - **Routing path.** Forward planning (default), or **retroactive documentation** — code/results without task coverage need a `superRA/` record; same phases, per `task-tree-design.md` §Retroactive Task-Tree Creation. Structural cleanup of an existing tree is neither — that is the separate `references/consolidation.md` pass, entered on structural debt, not on new work needing placement.
 
-Interactive canvas cadence (the default, and where light planning and execution move together): load `superRA:using-superra/references/interactive-mode.md`.
+Interactive canvas cadence (the default, and where light planning and execution move together): load `using-superra/references/interactive-mode.md`.
 
 **Ask when unclear.** Placement or depth ambiguous: present the concrete options — candidate placements from the descent, standard vs. thorough — with a one-line rationale each. Don't guess.
 

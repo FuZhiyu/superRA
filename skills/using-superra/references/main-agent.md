@@ -59,7 +59,7 @@ Resolve what you can from code and data first.
 
 Independent review is an execution-time call, not a schedule. When a task lands, judge from the result's stakes and plausibility whether a separate pass is worth it, and at which tier and focuses (`superRA:review-task` §Scope). Review when the researcher asks, when `## Planner Guidance` marks the task high-stakes, when the implementer returns a concern or uncertainty, or when a load-bearing result is one you cannot verify from the evidence in front of you. A planner suggestion is advice, not a binding schedule.
 
-**Researcher present: recommend and ask** — tier, focuses, one-line rationale — rather than dispatching on your own read.
+**Interactive cadence: recommend and ask** — tier, focuses, one-line rationale — rather than dispatching on your own read. Autonomous runs decide without asking (§Proceeding and Pausing).
 
 **No review runs:** verify the work yourself and set `status: approved`.
 

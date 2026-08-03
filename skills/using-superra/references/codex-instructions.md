@@ -9,9 +9,9 @@ The user invoking `superRA:superimplement`, `superRA:superintegrate`, or `superR
 | Agent tool | Route | Role surface | Status path |
 |---|---|---|---|
 | available | `dispatch` | — | — |
-| unavailable | `harness-forced-inline` | `implement-task` → `review-task` | `implemented` → `approved` / `revise` |
+| unavailable | `harness-forced-inline` | `implement-task`, then `review-task` when a review is triggered | `implemented` → `approved` / `revise` |
 
-`harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: load and run the two role skills as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
+`harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: run each seat's role skill as its own in-session pass — the reviewer one only when `main-agent.md` §Deciding on Review calls for it — and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
 
 - A workflow step that says dispatch: spawn the default agent with the dispatch prompt, not an inline pass under the harness-default anti-delegation guidance.
 - Interactive mode (the `direct` alias) is the default cadence, not a trivial-task fallback (`main-agent.md` §Execution Modes). It runs the work in-session by its own loop — that is not the `harness-forced-inline` route above.

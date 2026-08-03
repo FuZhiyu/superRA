@@ -127,7 +127,7 @@ superRA's design centers on a few ideas:
 
 - **The repo reflects the latest state of every task.** Each task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. So you can always start a fresh agent and continue the work without losing the context.
 - **Review where it earns its cost.** Every task is self-reviewed against its objective; an independent reviewer runs when you ask for one, when the plan flagged the task, or when the agent is uncertain — and once over the accumulated work before anything ships. A review advances the task only on `APPROVE`.
-- **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
+- **Forward by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
 - **Composable and adaptive.** superRA hands the agent composable mechanisms rather than a fixed pipeline. The workflow is domain-neutral, so you can drop in your own domain skill (say, model simulation) without forking it.
 
 ## Start here

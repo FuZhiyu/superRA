@@ -117,5 +117,5 @@ Creating `superRA/` from existing work:
 1. Read the existing code and results.
 2. Place each logical unit by the §Placing Work in the Existing Tree descent, mirroring the logical structure of the work, not the file layout.
 3. `approved` for work complete and verified.
-4. `implemented` for work done but not yet reviewed.
+4. `implemented` for work done with the approval decision still open.
 5. Populate `## Results` from existing findings.

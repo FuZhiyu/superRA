@@ -75,7 +75,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 | Concern | Owner |
 | --- | --- |
-| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
+| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate`; default IMPLEMENT choreography in `using-superra/references/interactive-mode.md` |
 | Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
 | Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
 | Skill-Load Manifest | `using-superra` |

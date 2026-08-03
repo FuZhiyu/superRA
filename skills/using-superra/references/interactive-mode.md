@@ -11,7 +11,7 @@ One task file carries the whole range of plan/execute interleaving:
 
 ## The loop
 
-You do not load the implementer or reviewer role skills here — this loop is your protocol for the task file.
+You fill no seat and run no role protocol here — this loop is your protocol for the task file.
 
 1. **Co-edit** the target and objective into the task file through the `using-superra` §Task Interface.
 2. **Self-review always.** Changed artifacts and recorded results against the objective; the diff and outputs for correctness, completeness, unintended scope; fresh verification per completion claim. Apply every `[BLOCKING]` item from active domain skills.
@@ -20,7 +20,7 @@ You do not load the implementer or reviewer role skills here — this loop is yo
 5. **Ask before review, with a tool — required.** `AskUserQuestion` (plain text only if the harness lacks it): review now / defer / skip, carrying the recommendation `main-agent.md` §Deciding on Review calls for. Never dispatch a reviewer on your own read.
    - **Now** — load `superRA:agent-orchestration` and dispatch a reviewer subagent at the tier and focuses you named; APPROVE lands the task at `approved`.
    - **Defer** — leave the task at `implemented`; the review is still owed.
-   - **Skip** — verify the work against the objective yourself, then set `status: approved`.
+   - **Skip** — §Deciding on Review's no-review branch.
 6. **Continue**, pausing frequently for feedback before the next unit of work.
 7. **Frontier empty** — close IMPLEMENT through `../../superimplement/references/completion.md`.
 

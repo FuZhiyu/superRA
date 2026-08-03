@@ -72,7 +72,7 @@ Step 0b runs after Step 0 so bootstrap commits cannot silently land on `main` / 
 1. Select the per-task seat structure through `superRA:agent-orchestration`.
 2. Execute the implementer seat. `Task:` carries one task path (e.g. `Task: data-preparation/merge`); `Tasks:` lists a bundle.
 3. **NEEDS_CONTEXT or BLOCKED:** provide context and rerun the implementer seat (`agent-orchestration` §Orchestrator Duties).
-4. **DONE or DONE_WITH_CONCERNS:** decide per assigned task whether an independent pass runs, per `using-superra/references/main-agent.md` §Deciding on Review. Review runs: execute the reviewer seat, naming the tier and focuses; on REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback — fix now and iterate to APPROVE, or defer and advance. No review: verify the work against the objective yourself and set `status: approved`.
+4. **DONE or DONE_WITH_CONCERNS:** decide per assigned task whether an independent pass runs, per `using-superra/references/main-agent.md` §Deciding on Review. Review runs: execute the reviewer seat, naming the tier and focuses; on REVISE, adjudicate and schedule fixes per §Handling Reviewer Feedback — fix now and iterate to APPROVE, or defer and advance. No review: that section's no-review branch.
 5. **Approved:** in a bundle, verify every assigned task has its own `status: approved` — an aggregate approval is invalid. A child major result worth surfacing: one-line entry in the immediate parent's `## Results` linking to the child, not restating its numbers. Findings that change upcoming tasks: update those objectives and commit. Re-compute the frontier.
 
 #### Seat execution
