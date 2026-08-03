@@ -43,7 +43,7 @@ Scoped context lives on the lowest ancestor whose subtree it governs. The tree i
 3. **Scattered across files or not reliably discoverable.** Distill a behavior-stating summary into the scoped subsection with a source pointer — the behavior to follow, not a verbatim excerpt. Stamp the walk date.
 4. **Task-specific, living nowhere else.** State it inline.
 
-A **self-orienting line states the convention's substance** — what it requires and how it bears on this task — so the reviewer grasps it without opening the link; the link carries full detail. A bare "see X" naming only a location is not self-orienting. Reserve inline reproduction of rule *text* for context that is task-specific or is itself under review.
+A **self-orienting line states the convention's substance** — what it requires and how it bears on this task — so the reviewer grasps it without opening the link; the link carries full detail. A bare "see X" naming only a location is not self-orienting. Tier 4 already covers when to state text inline; the one addition here is content under review itself.
 
 Walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) to tier each relevant convention. No relevant convention for the subtree: say so explicitly and name the out-of-scope paths.
 

@@ -8,8 +8,6 @@ user-invocable: true
 
 Markdown mechanics for anything you write. Apply the rules below; load references only for figures, task companion files, or standalone-report IO.
 
-What to write and where each fact lives is the reporting contract in `superRA:implement-task` §Reporting.
-
 ## File-reference rule
 
 **Always** cite source files as **markdown links with line anchors**, not backtick-wrapped paths.
