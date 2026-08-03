@@ -126,7 +126,7 @@ Research is rarely this linear, though: unanticipated issues surface mid-impleme
 superRA's design centers on a few ideas:
 
 - **The repo reflects the latest state of every task.** Each task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. So you can always start a fresh agent and continue the work without losing the context.
-- **Review discipline at every step.** Autonomous subagent mode requires an adversarial reviewer to `APPROVE` each task; interactive mode always self-reviews and asks you whether to run independent review now, defer it, or skip it.
+- **Review discipline at every step.** Autonomous subagent mode requires an independent reviewer to `APPROVE` each task; interactive mode always self-reviews and asks you whether to run independent review now, defer it, or skip it.
 - **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
 - **Composable and adaptive.** superRA hands the agent composable mechanisms rather than a fixed pipeline. The workflow is domain-neutral, so you can drop in your own domain skill (say, model simulation) without forking it.
 

@@ -70,7 +70,7 @@ Run an audience-context pass before optimizing wording or visual style:
 
 ## Quick Checklist
 
-Walked by the implementer (before DONE) and the reviewer (as verification). `[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items are recorded and do not block.
+The implementer walks it before DONE; the reviewer walks what its focus covers. `[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items are recorded and do not block.
 
 - `[BLOCKING]` Audience context established before major claims, unusual notation, nonstandard samples, or field-specific terms. Inside a superRA task tree, verify against the audience-context inventory recorded at planning time (`references/planning.md §Audience-Context Inventory`); standalone, state the assumed representative audience member in the review notes and judge against that.
 - `[BLOCKING]` Each main-path slide has a clear communication role: setup, takeaway, evidence, mechanism, transition, or recovery/roadmap.

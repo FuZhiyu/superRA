@@ -97,7 +97,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 - **Roles are skills.** A dispatch prompt names the role skill (`implement-task` / `review-task`); that skill carries the role protocol and pulls the stage/domain loads. The Skill-Load Manifest in `using-superra` is the authoritative map from role, `Stage:` value, and task domain to required skills.
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md` and `README.md`, not in nested directories.
-- **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
+- **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items are recorded and never block.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
 ## Agent Load Surface

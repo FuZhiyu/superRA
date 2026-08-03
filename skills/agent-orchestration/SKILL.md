@@ -108,6 +108,8 @@ Done by the orchestrator alone, at every workflow stage:
 
 ## Handling Reviewer Feedback
 
+An APPROVE return carries any advisory findings — adjudicate them like the rest, and act on them yourself: the task file no longer holds them.
+
 Adjudicate REVISE findings before forwarding them; read cited code or task context only when needed to decide. Per finding:
 
 - **Accept** real issues.

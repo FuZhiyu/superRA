@@ -1,6 +1,6 @@
 # Drift Test Quality Standards
 
-Drift-test creation and review. Implementer and reviewer both walk the gated checklist below.
+Drift-test creation and review. The implementer walks the gated checklist below; the reviewer walks what its focus covers.
 
 ## How-To
 
