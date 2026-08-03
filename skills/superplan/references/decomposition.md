@@ -34,7 +34,7 @@ Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree
 
 `depends_on:` frontmatter lists sibling directory names; semantics in `task-tree/references/task-file-contract.md` §Task Anatomy and `task-tree-design.md` §Parent and sibling context.
 
-Mark independent branches for parallel dispatch, same-surface work for bundling (`agent-orchestration` §Workload Balancing).
+Mark independent branches for parallel dispatch (`agent-orchestration` §Workload Balancing). Siblings sharing an edit surface are not a dependency case — merge them (`task-tree-design.md` §Splitting Tasks).
 
 ## Task Anatomy
 

@@ -14,7 +14,7 @@ A line belongs in the objective only if the reviewer should reject work that vio
 
 The artifacts the goal names are the task's scope. **Mark a deliberately open-ended task as open-ended** — explore the space, propose options, find whatever is there — the implementer treats an unmarked objective as closed and delivers exactly what it names.
 
-Binding conventions that live elsewhere enter as pointers, not prose (§Context Distillation). An objective outgrowing a short paragraph plus its must-bullets: either the task needs splitting (§Splitting Tasks), or the excess is information and belongs in `## Planner Guidance`.
+Binding conventions that live elsewhere enter as pointers, not prose (§Context Distillation). An objective outgrowing a short paragraph plus its must-bullets: either the task needs splitting (§Splitting Tasks), or the excess is information and belongs in `## Planner Guidance`. Still-rejectable bullets are neither — a one-edit-surface task carries a binding bullet per concern it serves.
 
 The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (project-level plus any nested in a directory it reads), manifest-loaded skills, the assigned task and its ancestor chain via `superra task read`, and on-demand directory walking. The objective makes that set *sufficient* — pointing into it so the right standing context and files are reachable — rather than reproducing it.
 

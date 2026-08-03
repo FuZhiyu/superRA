@@ -13,7 +13,7 @@ Structure-level cleanup, distinct from:
 
 Standalone bar: at least two symptoms below, after ad-hoc additions, scope pivots, or multi-session interactive work. Integration bar: one surviving update task or action-verb parent — an approved update task is already in the state to be folded (`task-tree-design.md` §Update-Task Lifecycle). Default is folding scaffolding into its durable owner; justify *keeping* a piece, not folding it.
 
-- Two tasks with substantially overlapping objectives or outputs
+- Two tasks with substantially overlapping objectives, outputs, or edit surfaces
 - Tasks that read another task's output without declaring `depends_on`
 - Objectives superseded by another task's results or a scope change
 - Tasks too large (should split) or too small (should merge with a sibling)
@@ -38,13 +38,13 @@ Each action sets the altitude the affected task lands at in the durable owner �
 
 | Issue | Action | What it means |
 |---|---|---|
-| Two or more tasks with overlapping objectives or outputs | **Merge** | Combine into one task; or, when several tasks cluster on one concern with distinct deliverables, fold them into a single parent concern with the survivors as children (N-way merge into a subtree). |
+| Two or more tasks with overlapping objectives, outputs, or edit surfaces | **Merge** | Combine into one task; or, when several tasks cluster on one concern with distinct deliverables, fold them into a single parent concern with the survivors as children (N-way merge into a subtree). |
 | An update task that improves an existing task or artifact | **Merge** | Fold the surviving result into the task it modifies and remove the update-task directory (create-then-merge lifecycle). |
 | An action-verb task whose validated result is now the stable owner of a concern | **Mature/Rename** | Rewrite it as the durable concern it now owns and optionally rename the directory to the stable concern name. |
 | Task A reads task B's output but no `depends_on` declared | **Link** | Add the missing dependency. |
 | Objective superseded by another task's results or a scope change | **Prune** | Delete the stale task directory, or rewrite the durable owner when the scope belongs there. |
 | Task too large for independent execution and review | **Split** | Create subtasks under the current task. |
-| Task too small to justify its own contract, results record, and verdict; or sharing an edit surface with a sibling | **Merge** | Absorb into a sibling or parent. |
+| Task too small to justify its own contract, results record, and verdict | **Merge** | Absorb into a sibling or parent. |
 | Parent with a single child where the parent adds no context | **Flatten** | Absorb the child's content into the parent directory. |
 | Task at the wrong level or under the wrong parent | **Restructure** | Move task to a better location in the tree. |
 | A task's durable scope widened during the work | **Scope Expansion Rewrite** | Rewrite the objective and scope-defining fields as the current-state contract, invalidate affected downstream statuses, and remove stale delta prose. |
