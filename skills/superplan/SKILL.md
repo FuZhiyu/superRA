@@ -43,13 +43,13 @@ A spectrum, not rigid modes — escalate mid-planning when complexity warrants. 
 
 ## Phase 1: Exploration
 
-Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md`, and git history for relevant prior work, scaled to the tier (table above). Domain hard-gate data gathering (data inventory, model primitives survey, manuscript assessment) begins here.
+Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md`, and git history for relevant prior work, scaled to the tier (table above). Domain planning-survey gathering (data inventory, model primitives survey, manuscript assessment) begins here.
 
 Exploration shifts placement or depth: revisit the entry assessment.
 
 ## Phase 2: Domain Setup & Scope
 
-**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 3.** The researcher must approve the domain skill's planning-stage inventory artifact before any task structure is drafted.
+**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy any planning hard gate it defines before returning to Phase 3.** Where the domain skill gates on a planning-stage inventory artifact, the researcher approves it before any task structure is drafted.
 
 No implemented domain skill for the work: proceed to Phase 3, flag the gap to the researcher.
 

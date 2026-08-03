@@ -2,24 +2,22 @@
 
 Load at the **PLAN phase** when the analysis involves data work.
 
-- **Data Inventory** — hard gate; blocks task drafting until available data is inventoried and gaps surfaced.
+- **Data Inventory** — what data exists, what's missing, where to find it.
 - **Sensitivity Analysis Design** — which robustness checks matter for this study.
 
-Both happen once, then live as scoped subsections on the `## Objective` of the governing ancestor task — the task whose subtree the data governs.
+Both happen once, during planning.
 
 ---
 
-## Data Inventory (Hard Gate)
+## Data Inventory
 
-Data logistics — what exists, what's missing, where to find it. Not research design.
+Data logistics, not research design. Planning guidance: it informs what tasks to write and is presented to the researcher before drafting them.
 
-<HARD-GATE>
-Do NOT write task structure, invoke an implementation skill, or take any planning action beyond this gate until you have presented a data inventory and the researcher has approved it. Applies to EVERY data analysis regardless of perceived simplicity.
-</HARD-GATE>
+**Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Planner Guidance` of the governing task — advisory, per `task-tree/references/task-file-contract.md` §Task Anatomy.
 
 ### Checklist
 
-Create a task for each of these items and complete them in order:
+In order:
 
 1. **Understand the analysis goal** — ask what they need to analyze and what data they expect to use. One question at a time.
 
@@ -44,14 +42,13 @@ Create a task for each of these items and complete them in order:
 
    WRDS or Refinitiv data skills available: note them as download tools.
 
-6. **Present the inventory and get researcher approval.** Data Inventory format: `task-tree/references/task-file-contract.md` §Task Anatomy. Confirm before task drafting.
+6. **Present the inventory to the researcher** — in chat, before task drafting, so gaps surface while the structure is still open.
 
-### Gate loopholes to close
+### Discipline
 
-Sequential, and applies to every analysis however simple — simple analyses hide the same data-shape surprises.
+Applies to every analysis however simple — simple analyses hide the same data-shape surprises.
 
 - Explore the file system before asking "what data do you have?"
-- The inventory is written into the governing task's objective in `superRA/`, never just verbally agreed.
 - No speculative task structure while data availability is uncertain; no "I'll assume we have X, check later."
 - No "pending data availability" or "TBD sources" in task steps — every source grounded in a verified file or table.
 

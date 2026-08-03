@@ -49,7 +49,7 @@ Canonical structure and field-by-field notes: `task-tree/references/task-file-co
 
 After writing the complete task tree:
 
-1. **Domain inventory coverage.** Planning hard-gate domains: every inventory item has task coverage.
+1. **Domain inventory coverage.** Domain skill produced a planning inventory: every inventory item has task coverage.
 2. **Placeholder scan.** Vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria — fixed.
 3. **Pipeline consistency.** Artifact names in the pipeline file match each task's artifacts, in dependency order.
 4. **Validation coverage.** Every transformative task has a validation criterion in its objective.
