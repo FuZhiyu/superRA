@@ -13,6 +13,7 @@ Diagnose and close the path by which an agent session running with its cwd outsi
 - Mechanism is undiagnosed. The task-tree CLI auto-detects its root (`--root` defaults to auto-detect preferring `superRA`), and the scratch repo had its own tree, so wrapper root-resolution is a hypothesis rather than a finding — reproduce before fixing.
 - Deliverable: the reproduction, the identified path, and the fix or guard that prevents a session from mutating a checkout it was not pointed at. A guard that makes the escape loud (refuse, or warn on a task root outside cwd's repo) is acceptable if the root cause sits outside this repo's control.
 - Until this closes, live agent-SDK traces against a fixture are unsafe to run from a dirty working tree of this repo.
+- Once the guard is in place, run the two v0.4 traces the escape blocked: `workflow-defaults` trace 2 (a broad frontier produces a subagent-mode recommendation) and trace 3 (a completed high-stakes task produces a review recommendation naming tier and focuses). They are that task's acceptance bar, recorded there as validation debt; this task carries them because it owns the blocker.
 
 ## Planner Guidance
 
