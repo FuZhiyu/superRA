@@ -1,6 +1,6 @@
 ---
 title: "Planning Sizing: Stop Over-Granular Trees"
-status: implemented
+status: approved
 depends_on: [review-skill]
 ---
 
