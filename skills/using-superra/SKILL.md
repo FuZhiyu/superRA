@@ -27,7 +27,7 @@ Terse by default — in chat, returns, and documents.
 
 Stage only the files you edited this turn, by exact path — never `git add -A`, `git add .`, or `git add -u`: a shared worktree carries other agents' in-flight edits and scratch files. If unfamiliar uncommitted changes appear, ask the orchestrator (as a subagent) or the user (as the main agent) rather than committing or discarding them.
 
-Every commit subject follows `<stage>(<scope>): <STATE> — <summary>`, so `git log` reads as the workflow trace. `<stage>` is the workflow verb (`plan`, `implement`, `review`, `integrate`, `sync`) or a maintenance type (`fix`/`feat`/`refactor`/`docs`/`test`/`chore`/`ci`); `<scope>` is the task path (e.g. `data-preparation/merge`) or the component; `<STATE>` is the verdict from your role's report format. The body says what changed this turn and why — it is not a copy of `## Results`.
+Every commit subject follows `<stage>(<scope>): <STATE> — <summary>`, so `git log` reads as the workflow trace. `<stage>` is the workflow verb (`plan`, `implement`, `review`, `integrate`, `sync`) or a maintenance type (`fix`/`feat`/`refactor`/`docs`/`test`/`chore`/`ci`); `<scope>` is the task path (e.g. `data-preparation/merge`) or the component; `<STATE>` is the verdict from your role's report format, omitted on maintenance commits. The body says what changed this turn and why — it is not a copy of `## Results`.
 
 ## Task Interface
 

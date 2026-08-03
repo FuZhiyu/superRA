@@ -40,9 +40,10 @@ Writing it is half the task, use a significant share of the thinking budget on 
 
 `## Results` is the deliverable; its readers never saw your session. Write it for a cold reader: assume no session context.
 
-- **Pyramid.** Main result in plain language first, then findings, then evidence and caveats, then mechanics. One takeaway per section; a section with no takeaway doesn't exist. 
+- **Pyramid.** Main result in plain language first, then findings, then evidence and caveats, then mechanics. One takeaway per section; a section with no takeaway doesn't exist. Full treatment: `superRA:writing` `references/structure.md`.
 - **Findings bar.** A finding is what the researcher would quote or act on. That a step ran or a merge kept rows is mechanics — a sample line or caveat at most. Most tasks produce no finding.
-- **Each fact once.** A fact lives where it is produced — the code, the document, the commit, the producing task's `## Results`. An artifact deliverable: point to it, never restate its content. DON'T REPEAT YOURSELF.
+- **Each fact once.** A fact lives where it is produced — the code, the document, the commit, the producing task's `## Results`. An artifact deliverable: point to it, never restate its content. A number copied into a second file survives wrong in every copy once the result changes.
+- **Extras wait to be asked for.** A possibly-relevant detail you chose not to record: name it in your return as a delta. It enters `## Results` only if the researcher or orchestrator says so.
 - **Concise by selection, not compression.** Cut lines the reader doesn't need, not words the reader does. Speak per `superRA:using-superra` §Communication.
 - **Current, not a log.** Edit in place; delete superseded content. No "Update:" blocks or strikethroughs. Findings land in the task body before any status return; the return points at the file. Change summary goes in the commit body.
 
