@@ -1156,7 +1156,8 @@ def compute_frontier(root: Task) -> list[Task]:
 
     A leaf task is on the frontier when:
     1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
-       implement), 'implemented' (ready to review), or 'revise' (ready to fix).
+       implement), 'implemented' (approval decision open), or 'revise' (ready
+       to fix).
        Each entry carries its status, so a caller reads the next action from it.
     2. All sibling dependencies have effective_status 'approved', 'archived',
        'implemented', or 'revise' — i.e. the dependency's work product exists,

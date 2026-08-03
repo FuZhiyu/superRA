@@ -101,7 +101,7 @@ Re-running superRA/showcase-analysis/run_all.sh reproduces every output.
 
 During implementation, agents commit atomically by default, so every step is tracked in git. Because that produces many small commits, it is recommended to work on a separate branch rather than directly on your default branch.
 
-The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written and waiting on review:
+The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) with its approval decision still open, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written:
 
 [Open the study mid-implement →](showcase-mid-implement.html)
 

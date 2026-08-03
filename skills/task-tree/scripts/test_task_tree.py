@@ -432,7 +432,7 @@ class TestComputeFrontier:
         assert _task_io.compute_frontier(root) == []
 
     def test_revise_and_implemented_on_frontier(self, plan_root):
-        """'revise' (ready to fix) and 'implemented' (ready to review) are
+        """'revise' (ready to fix) and 'implemented' (approval decision open) are
         actionable, so they appear on the frontier; the per-task status tells
         the caller the next action. A dependency in either state is satisfied
         (its work product exists), so its dependents unlock alongside it.
