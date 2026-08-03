@@ -167,3 +167,13 @@ Caveats:
 - `skills/writing/CLAUDE.md` was out of scope per the dispatch (contributor doc). Its Reference-ownership list still matches the restyled files' section ownership, so no follow-up is pending there.
 
 Remaining for later groups: the `using-superra`/`superintegrate` references not listed in Groups 1–4.
+
+## Review Notes
+
+Group 4 (`d0eced7e..bfe37070`) is APPROVED; the task stays `in-progress` for group 5. The items below are MINOR and non-blocking — fold them into the group-5 commit.
+
+1. MINOR — [slide-design/SKILL.md:82](../../../../skills/slide-design/SKILL.md#L82). The `[ADVISORY]` title item lost the word "only": base read "rather than **only** naming the topic", now "rather than naming the topic". The base allows a title that names the topic *and* states the takeaway; the new wording reads as opposing the two. Restore "only".
+2. MINOR — [consistency/notation.md:3](../../../../skills/writing/references/consistency/notation.md#L3). The deleted provenance line carried a live attribution alongside the dangling `draft-reviewer:*` one — "LRS / Chaubey conventions on symbol discipline" — and it did not survive anywhere in the file. `terminology.md` kept its Chaubey p. 76 / p. 157 citation standalone; either give `notation.md` the same treatment or record the drop as intentional in `## Results`.
+3. MINOR — `## Results` group-4 accuracy, two counts. (a) "The nine `Source dimensions harvested from …` provenance lines" — there are eight, one per `consistency/*.md` file (grep at `d0eced7e` returns 8). (b) The `load_contract.json` caveat says `writing/SKILL.md#L58-L86` "now opens inside §Before you start item 2"; it opens on item 1 ([writing/SKILL.md:58](../../../../skills/writing/SKILL.md#L58)).
+
+Verified this pass, no action needed: all fenced code blocks and markdown tables across the 24 files are byte-identical to base except one wording-only table cell in `writing/SKILL.md`; `[BLOCKING]`/`[ADVISORY]` counts are unchanged in every file; the `\resizebox` prohibition, the four audience marker families with their full token lists, the audience-model discipline in `SKILL.md`/`style.md`, and the sequence/set/force worked examples all survive in meaning; the integration.md "no numerical drift tests" clause genuinely lands in §Data-analysis-touching writing tasks; the `draft-reviewer:*` specs exist nowhere in the repo and the deleted parallel-dispatch clause is owned by `review.md §Multi-lane reviews`; the prose-only word counts in the group-4 table reproduce exactly; the two group-3 `## Results` corrections (theory `planning.md` anchor `L47-L49`, the `w`-gloss caveat) are accurate; `tests/harness-instruction-following` passes 126/126.
