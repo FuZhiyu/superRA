@@ -86,7 +86,7 @@ Quick and standard depth: skip this step unless the user asks for a handoff revi
 
 ### User Review
 
-Present the tree (`superra task tree`) and surface open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way — as options, not assertions. No genuine questions: the presentation itself is the review.
+Present the tree (`superra task tree`) with the dashboard link and surface open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way — as options, not assertions. No genuine questions: the presentation itself is the review.
 
 Per newly created task (especially top-level): state the existing concern you considered and why it does not cover the work.
 
