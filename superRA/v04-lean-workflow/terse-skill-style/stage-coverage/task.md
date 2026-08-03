@@ -1,6 +1,6 @@
 ---
 title: "Stage Coverage: Terse Style Respected at Every Workflow Stage"
-status: implemented
+status: approved
 depends_on: []
 ---
 
