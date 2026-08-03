@@ -2919,12 +2919,19 @@ class TestValidateRevisionNotes:
         )
         assert _task_validate.validate_revision_notes(t) == []
 
-    def test_implemented_with_revnote_no_warn(self):
+    def test_implemented_with_revnote_warns(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="implemented",
             body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
         )
-        assert _task_validate.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t)
+
+    def test_revise_with_revnote_warns(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="revise",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
+        )
+        assert _task_validate.validate_revision_notes(t)
 
     def test_not_started_with_revnote_no_warn(self):
         t = _task_io.Task(
@@ -2970,7 +2977,7 @@ class TestValidatePlanRevisionNotes:
         warnings = _task_validate.validate_plan(root)
         assert warnings
 
-    def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
+    def test_validate_plan_warns_on_implemented_revnote(self, tmp_path):
         root = tmp_path / "superRA"
         root.mkdir()
         self._write(root / "task.md", _task_md_text("Root", "not-started"))
@@ -2978,6 +2985,17 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "implemented", revnote="rework"))
+        warnings = _task_validate.validate_plan(root)
+        assert warnings
+
+    def test_validate_plan_silent_on_in_progress_revnote(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
+        d = root / "01-task"
+        d.mkdir()
+        self._write(d / "task.md",
+                    _task_md_text("Task", "in-progress", revnote="wip"))
         warnings = _task_validate.validate_plan(root)
         assert warnings == []
 

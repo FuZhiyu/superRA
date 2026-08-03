@@ -26,6 +26,8 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 `## Objective` is the contract. `## Planner Guidance` is advisory — deviate when a better route satisfies the objective; list material deviations in `## Results`: what you skipped, what you did, why the objective still holds.
 
+`## Revision Notes`, if present, is the delta since you last touched this task — read it before executing, then remove the section once incorporated. It does not survive past `status: implemented`, whether or not review follows.
+
 Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Results`, independent `status:`, task-local evidence.
 
 **REVISE round.** Fix each `## Review Notes` item at its cited `file:line`; append under it, preserving the reviewer's prose: `→ implemented: <markdown-link citation + one-line fix>`. Never remove, resolve, or strike an item — the reviewer re-reviews them. `→ orchestrator: rejected` items are decided — skip. `→ orchestrator: <second opinion requested>` is for the reviewer — leave the item untouched, note it in your return. An item you think is wrong or already handled: don't annotate; flag it in your return.
@@ -66,7 +68,7 @@ Before commit:
 
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
 2. **Results.** `## Results` holds to §Reporting. Per paragraph: "what's new here?" — no new fact, claim, or decision → cut.
-3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
+3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
 
 ## Commit
 

@@ -23,8 +23,8 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Objective`** — planner-owned: the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. Implementers read it but do not rewrite it.
 - **`## Planner Guidance`** — planner-owned, optional: planning findings plus a suggested route. Advisory — implementers may deviate when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
-- **`## Revision Notes`** — temporary, planner-owned update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Removed at approval by the reviewer (`superRA:review-task`); `validate_plan` warns when an `approved` task still carries one.
-- **`## Review Notes`** — reviewer-owned, present only while open items remain; an `approved` task carries none. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
+- **`## Revision Notes`** — temporary update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Planner- or orchestrator-authored on an objective rewrite (`task-tree-design.md` §Objective rewrites on scope expansion); the implementer removes it once incorporated, in the same commit that sets `status: implemented` (`implement-task` §Execution) — whether or not review follows.
+- **`## Review Notes`** — reviewer-owned. Present while any item remains: open `[BLOCKING]` findings at `revise`, or the tier/focus header and any un-actioned `[ADVISORY]` items at `approved`. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — temporary, integration-phase-only. Added by the sync author during `superintegrate` Sync to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
 ## Context Inheritance
@@ -43,7 +43,7 @@ Common stale content to replace in place (never strike through or append "Update
 - Results sections now incorporated into the current approach.
 - Review items confirmed fixed on re-review.
 - Sibling task objectives that assume an earlier approach which has since changed.
-- Task `## Objective` or `## Results` descriptions superseded by a later task — rewrite in place to the latest shape, adding a revision note when the change is non-obvious.
+- Task `## Objective` or `## Results` descriptions superseded by a later task — rewrite in place to the latest shape; see `## Revision Notes` above for when to add one.
 - Dated decision ledgers — a "Decisions" section, or a "per user decision `<date>`" note on a rule. A researcher decision enters a task file by rewriting the owning objective or constraint to its current state; date and deliberation stay in git.
 
 ## Results Shape

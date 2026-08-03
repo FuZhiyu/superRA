@@ -45,21 +45,21 @@ def validate_frontmatter(task: Task) -> list[str]:
 
 
 def validate_revision_notes(task: Task) -> list[str]:
-    """Warn when an ``approved`` task still carries a ``## Revision Notes`` section.
+    """Warn when a task past ``implemented`` still carries a ``## Revision Notes`` section.
 
-    The reviewer owns revision-note removal at approval, so an approved task
-    holding a non-empty note is a stale leak. Only ``approved`` warns:
-    ``implemented`` + a note is a legitimate mid-state (a reopened, reworked
-    task awaiting re-review), and earlier states never carry one. Detection is
-    fence-aware so a header quoted inside a code block does not trigger it.
+    The implementer consumes and removes the note in the same commit that sets
+    ``status: implemented`` (see ``implement-task`` SKILL.md Execution), whether
+    or not review follows. A note is legitimate only before that point —
+    ``not-started`` or ``in-progress``. Detection is fence-aware so a header
+    quoted inside a code block does not trigger it.
     """
-    if task.status != "approved":
+    if task.status in ("not-started", "in-progress"):
         return []
     if not _has_nonempty_section(task.body, "Revision Notes"):
         return []
     return [
-        "approved task still carries a ## Revision Notes section; "
-        "the reviewer should remove it at approval"
+        f"{task.status} task still carries a ## Revision Notes section; "
+        "the implementer should have removed it once implemented"
     ]
 
 
