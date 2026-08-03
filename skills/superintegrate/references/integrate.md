@@ -47,6 +47,8 @@ Resolve concerns inside the approved task through an implementer fix. Execution 
 
 ## Step 6: Assign the reviewer seat
 
+This pass always runs: it is the one independent review of the accumulated work, whatever review individual tasks got.
+
 First complete `skills/using-superra/references/task-companion-files.md` §Promote for each affected task retaining companions. Then assign per `agent-orchestration` §Seat Assignment:
 
 ```text
@@ -57,6 +59,7 @@ Agent:
   Task: <temporary refactoring task>
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
+  Tier: thorough
 ```
 
 ## Step 7: Refactor loop

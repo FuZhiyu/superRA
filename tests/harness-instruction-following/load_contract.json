@@ -620,25 +620,25 @@
       "id": "LC020",
       "area": "workflow-superimplement-orchestration",
       "source_paths": [
-        "skills/superimplement/SKILL.md#L12-L27",
-        "skills/superimplement/SKILL.md#L77-L91",
-        "skills/superimplement/SKILL.md#L163-L166",
-        "skills/using-superra/references/main-agent.md#L41-L53",
+        "skills/superimplement/SKILL.md#L12-L22",
+        "skills/superimplement/SKILL.md#L78-L91",
+        "skills/superimplement/references/completion.md",
+        "skills/using-superra/references/main-agent.md#L40-L66",
         "skills/using-superra/references/codex-instructions.md#L7-L22",
         "skills/implement-task/SKILL.md",
         "skills/review-task/SKILL.md",
-        "skills/superplan/references/interactive-mode.md#L1-L43",
-        "skills/agent-orchestration/SKILL.md#L85-L95"
+        "skills/using-superra/references/interactive-mode.md#L1-L36",
+        "skills/agent-orchestration/SKILL.md#L88-L98"
       ],
-      "trigger": "User invokes superimplement or implementation workflow over a task tree.",
+      "trigger": "User invokes superimplement or otherwise executes a task tree.",
       "expected_evidence": [
         "structured Codex availability table routes dispatch when the agent tool is present and harness-forced-inline when it is not",
         "structured superimplement seat-execution table routes main fillers through the role skill and subagent fillers through dispatch",
         "the manifest, orchestration templates, and main-agent seat routing all name both role skills",
         "interactive fixture records implemented status and non-empty Results before a question-tool event, which precedes reviewer dispatch",
         "seat fixtures show each main-seat route loading its role skill before dispatching the opposite seat",
-        "fixture parser requires structural implementer and reviewer dispatches for the default superimplement smoke",
-        "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the default path"
+        "fixture parser requires structural implementer and reviewer dispatches for the superimplement smoke",
+        "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the autonomous path"
       ],
       "classification": [
         "ci_safe_static",

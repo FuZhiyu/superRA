@@ -2,7 +2,7 @@
 
 ## Delegation Priority in Codex
 
-The user invoking `superRA`, a `superRA:*workflow` skill, or `superRA:agent-orchestration` is an explicit preference for the dispatch workflow; that choice outranks Codex's generic default caution about spawning agents.
+The user invoking `superRA:superimplement`, `superRA:superintegrate`, or `superRA:agent-orchestration` is an explicit preference for the dispatch workflow; that choice outranks Codex's generic default caution about spawning agents.
 
 ### Availability routing
 
@@ -14,7 +14,7 @@ The user invoking `superRA`, a `superRA:*workflow` skill, or `superRA:agent-orch
 `harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: load and run the two role skills as separate in-session passes and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
 
 - A workflow step that says dispatch: spawn the default agent with the dispatch prompt, not an inline pass under the harness-default anti-delegation guidance.
-- Interactive mode (the `direct` alias) is an explicit opt-in by human cadence, not the Codex default and not a trivial-task fallback — the researcher requests it for closely-steered work (`main-agent.md §Execution Modes`).
+- Interactive mode (the `direct` alias) is the default cadence, not a trivial-task fallback (`main-agent.md` §Execution Modes). It runs the work in-session by its own loop — that is not the `harness-forced-inline` route above.
 
 ## Warm Agent Lifecycle in Codex
 

@@ -32,7 +32,7 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 - **Mechanisms over contingency trees.** Prefer reusable mechanisms such as plan revision, stage-scoped references, dispatch templates, and gated checklists over long branches of "if this happens, then do that" workflow prose.
 - **Re-entry is normal.** A phase, mechanism, or utility should be enterable from different stages, re-enterable after discoveries, and skippable when the user intentionally invokes only part of the workflow.
 - **Keep choreography simple.** Workflow skills should state the sequence and stop points needed for safety, then delegate domain discipline, dispatch mechanics, and document mechanics to their owning skills.
-- **Gates are local discipline.** Adaptability does not mean optional quality control. Once a workflow/task is entered, its review gates, status transitions, and blocking checklist items are enforced.
+- **Gates are local discipline.** Adaptability does not mean optional quality control. Once a workflow/task is entered, its status transitions and blocking checklist items are enforced, and a review that runs enforces its gates. Whether an independent review runs at all is an execution-time call — see the triggers in `using-superra/references/main-agent.md` §Deciding on Review.
 - **Domain and utility skills stand alone.** They may mention workflow artifacts such as `PLAN.md`, `RESULTS.md`, implementers, or reviewers as optional context, but their main instructions should work when loaded directly by a researcher or another orchestrator.
 - **Compose at the workflow edge.** A workflow step is assembled from the workflow skill, `agent-orchestration`, the role skill, the active domain skill, and any needed utility skills. Do not restate those pieces inside each other.
 
@@ -79,7 +79,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
 | Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
 | Skill-Load Manifest | `using-superra` |
-| Execution modes | `using-superra/references/main-agent.md` (§Execution Modes) |
+| Execution modes, the review trigger, and the interactive canvas loop | `using-superra/references/main-agent.md` (§Execution Modes, §Deciding on Review) and `references/interactive-mode.md` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
@@ -111,8 +111,10 @@ What each agent loads in a session. This section documents the architecture for 
 |---|---|---|
 | `using-superra` + `references/main-agent.md` | session start (hook-reminded on any superRA mention) | Mandatory |
 | `report-in-markdown` | markdown mechanics beyond the house conventions in `using-superra` §Task Interface; render-integrity hook feedback | On demand |
-| Phase workflow skill (`superplan` / `superimplement` / `superintegrate`) | phase entry | Mandatory |
-| `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` is ungated — it instructs the load at its one dispatch point) | Mandatory when dispatching |
+| Phase workflow skill (`superplan` / `superintegrate`) | phase entry | Mandatory |
+| `using-superra/references/interactive-mode.md` | executing a task in the default interactive mode | Typical |
+| `superimplement` | autonomous execution, on researcher request or an accepted recommendation | On demand |
+| `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` and the interactive loop are ungated — each instructs the load at its own dispatch point) | Mandatory when dispatching |
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
 | `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |
 | Domain skill(s) per the manifest | when the work touches that domain | Typical |

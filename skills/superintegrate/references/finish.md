@@ -1,6 +1,6 @@
 # Finish
 
-Finish executes the user's completion choice from `superimplement`. `superRA/` is committed as-is — part of the permanent branch record; any closeout commit lands as `integrate(finish): …` per `SKILL.md` §Stop Points.
+Finish executes the user's choice from the IMPLEMENT completion menu. `superRA/` is committed as-is — part of the permanent branch record; any closeout commit lands as `integrate(finish): …` per `SKILL.md` §Stop Points.
 
 ## Step 1: Freshness check
 

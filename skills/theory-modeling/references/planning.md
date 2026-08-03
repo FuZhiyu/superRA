@@ -118,4 +118,4 @@ Every theory/modeling plan includes explicit verification tasks.
 
 ## Handoff to Implementation
 
-Inventory approved, verification plan agreed, tasks drafted: `superplan` commits and hands off to `superimplement`. Implementation-step discipline is the `theory-modeling` SKILL.md body (Iron Law and the four gates).
+Inventory approved, verification plan agreed, tasks drafted: `superplan` commits and hands off to execution. Implementation-step discipline is the `theory-modeling` SKILL.md body (Iron Law and the four gates).

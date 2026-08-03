@@ -11,7 +11,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | Skill | Phase | Role |
 |---|---|---|
 | `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `superimplement` | IMPLEMENT + VALIDATE | Autonomous execution mode: per-task dispatch, triggered review loop (APPROVE / REVISE), and the phase-exit gate — reproducibility verification plus the 4-option completion menu. |
 | `superintegrate` | INTEGRATE | Choose results, permanent documentation, and protection; Sync; Mature & Consolidate the protected record; derive, approve, and execute one temporary refactoring task; then Finish. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 

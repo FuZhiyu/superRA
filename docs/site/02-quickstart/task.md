@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-This tutorial walks you through installing superRA, pointing it at a project, and pushing one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, and integrate the result.
+This tutorial walks you through installing superRA, pointing it at a project, and pushing one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task and review it, watch progress and read results in the dashboard, and integrate the result.
 
 ### Prerequisite
 
@@ -68,19 +68,19 @@ Here is this study right after planning — three tasks under one root, every on
 
 [Open the freshly-planned tree →](showcase-after-planning.html)
 
-#### Superimplement
+#### Implement
 
-Now run a task. Ask Claude to `superimplement`:
+Now run a task. Ask Claude to work it:
 
 ```text
-superimplement @superRA/showcase-analysis.
+Work @superRA/showcase-analysis.
 ```
 
-By default, the main agent runs tasks autonomously through implementer and reviewer seats, usually dispatching both to subagents. This keeps the main agent's context window clean, so it stays sharp and can run far longer without degrading. For closely steered work, explicitly ask for **interactive mode** (`direct` remains an alias): the main agent co-edits and executes with you, self-reviews, and asks whether to run independent review now, defer it, or skip it.
+By default the main agent does the work itself, with you: it executes the task, records results in the task file, commits, and pauses often for your feedback. When a task lands it asks whether to run an independent review — now, deferred, or skipped — and recommends a depth and focus. For a broad, parallelizable, or context-heavy frontier, ask for `superimplement` (or accept the agent's recommendation of it) and the run goes **autonomous**: the main agent dispatches implementer and reviewer seats to subagents, which keeps its own context window clean so it stays sharp far longer.
 
-In this default autonomous mode, every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*.
+Either way, the work — here, downloading the Ken French data and building the monthly panel — is recorded in the task's `## Results` section, and an independent review is a *separate* agent reading the committed result.
 
-The reviewer is independent by design. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer reads the committed evidence — the files, the diff, the outputs — at a depth and focus named in the dispatch, and reports what it finds rather than filtering to what it judges serious. That is what catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances in this mode has passed a second, independent read at every step. The full role behavior is in the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills.
+That independence is the point. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer reads the committed evidence — the files, the diff, the outputs — at a depth and focus named in the dispatch, and reports what it finds rather than filtering to what it judges serious. That is what catches the silent bad merge, the wrong aggregation, the unreproducible output. Review runs where it earns its cost: on a result you want a second read of, on work the planner flagged as high-stakes, or whenever the implementer comes back uncertain. The full role behavior is in the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills.
 
 The implementer writes its findings straight into the task file, so the panel task's `## Results` reads like this:
 
@@ -107,7 +107,7 @@ The dashboard shows the loop in flight. Open this study mid-run — the panel ta
 
 #### Watch progress and read results
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task has survived its review, the whole tree is `approved` (green) — the state INTEGRATE picks up:
+The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task is approved, the whole tree is `approved` (green) — the state INTEGRATE picks up:
 
 [Open the finished study →](showcase-analysis-tree.html)
 

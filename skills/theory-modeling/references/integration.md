@@ -99,14 +99,14 @@ Three coherence layers, each with its own authority:
 1. **Notation pre-flight against the canonical Notation Conventions table and prior task ledgers.** Classify each symbol in the current task:
    - **Canonical** — in the canonical Notation Conventions table; reuse.
    - **Prior-task-promoted** — in a prior task's ledger for the same object; reuse and cite.
-   - **Genuinely new** — no prior surface names the object; log a current-task ledger entry per Gate 1, promotion candidate per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114).
+   - **Genuinely new** — no prior surface names the object; log a current-task ledger entry per Gate 1, promotion candidate per [superimplement/references/completion.md](../../superimplement/references/completion.md).
    - **Local duplicate** — an existing canonical or prior-task symbol already names the object → flag.
 2. **Prior-result pre-flight.** Per derived equation or named statement, search prior tasks for a name match (a prior lemma re-derived under a different name) or a content match (a prior displayed equation algebraically equivalent under canonical notation) → flag.
 3. **Prose integration pass.** Re-read the section immediately preceding the new one; compare terminology, assumption phrasing, formality, notation usage. Style breaks at the join → flag.
 
 ### Checklist
 
-- `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a Step 4 promotion candidate (per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114)). Local duplicates → REVISE: replace with the upstream symbol, document the rename where relevant.
+- `[BLOCKING]` **Notation pre-flight.** Every symbol is canonical, prior-task-promoted, or logged as a completion-menu promotion candidate (per [superimplement/references/completion.md](../../superimplement/references/completion.md)). Local duplicates → REVISE: replace with the upstream symbol, document the rename where relevant.
 - `[BLOCKING]` **Prior-result pre-flight.** Equivalent equations and named statements from prior tasks are cited and reused, not re-derived. Specializations state the relationship explicitly ("Lemma 2.3 specialized to the symmetric case yields …").
 - `[BLOCKING]` **Prose-integration check.** Terminology, assumption phrasing, formality, and notation conventions match the surrounding sections. Style breaks at section transitions are REVISE.
 - `[BLOCKING]` **Document-code consistency.** Model feeding papers, slides, notes, or downstream artifacts in the repo: numerical and methodological inconsistencies between the refactored work and those artifacts are reconciled, or flagged in the task's `## Results` when reconciliation is out of scope.
@@ -128,7 +128,7 @@ Diff pre- and post-refactor versions of every modified artifact. Per `[BLOCKING]
 - `[BLOCKING]` **Every four-gate artifact the original work carried survives the refactor**, in a form and place a reader can use: symbol intuitions and mnemonics (Gate 1), plain-language assumption interpretations (Gate 2), the technical rule *and* the one-sentence reason on each non-trivial step (Gate 3), the per-task Notation & Assumptions Ledger in `## Results` (Gates 1–2), and the substitution checks, limiting cases, and numerical examples (Gate 4) — Gate-4 checks are rerun successfully on the refactored work, not carried forward. Reorganize freely; collapsing one into opaque prose, a bare code comment, or a math restriction without its economic reading is deletion.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored work; failures are adjudicated per `references/integrate-drift-tests.md`.
 - `[BLOCKING]` **Rendered markdown/LaTeX matches the refactored code.** Equation blocks, symbols, and case labels match the live derivation and numerical outputs.
-- `[BLOCKING]` **The canonical Notation Conventions table contains only user-confirmed promotions** (per [skills/superimplement/SKILL.md:114](../../superimplement/SKILL.md#L114)). Orphan entries — added without a logged user confirmation — are REVISE.
+- `[BLOCKING]` **The canonical Notation Conventions table contains only user-confirmed promotions** (per [superimplement/references/completion.md](../../superimplement/references/completion.md)). Orphan entries — added without a logged user confirmation — are REVISE.
 
 ### Utility reuse and documented deviations
 

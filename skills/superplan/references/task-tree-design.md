@@ -20,6 +20,8 @@ The implementer's working context is the assembled set of: auto-loaded `CLAUDE.m
 
 `## Planner Guidance` is the planner's information handoff: what planning discovered that the implementer would otherwise re-derive — candidate files and their roles, data locations and quirks, the suggested route and why, known dead ends. Advisory in force; any route satisfying `## Objective` is acceptable.
 
+Work whose result is high-stakes or hard to verify from its own output: say so here, with the review tier and focuses you would want. Whoever executes decides on the day (`using-superra/references/main-agent.md` §Deciding on Review) — never schedule review by writing it into the tree as a task.
+
 A line belongs in guidance only if it is task-specific and was learned during planning. Holds for any task in this domain, or already in the implementer's standing context: delete. Nothing qualifies: omit the section.
 
 **Steps vs. subtasks vs. suggestions:**

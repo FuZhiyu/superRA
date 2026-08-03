@@ -127,9 +127,10 @@ dispatchable frontier is the two leaf tasks under agent-loading-bundle
 (02-primary-loading-task and 03-secondary-loading-task); they are a same-parent
 bundle and each is a shallow sentinel-collection task that writes loading-evidence.json.
 
-Follow the documented default dispatch path: dispatch an implementer subagent for
-the frontier (a subagent told to load `superRA:implement-task`), then dispatch a
-reviewer subagent the same way with `superRA:review-task`. Do
-not switch to interactive mode: this prompt does not opt into it.
+This prompt opts into autonomous subagent execution, so stay in it: dispatch an
+implementer subagent for the frontier (a subagent told to load
+`superRA:implement-task`), then dispatch a reviewer subagent the same way with
+`superRA:review-task` — an independent review is requested on both tasks. Do not
+fall back to the interactive canvas loop.
 EOF
 }

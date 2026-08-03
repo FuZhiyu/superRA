@@ -11,7 +11,7 @@ description: "Proactively plan or update superRA work. Requires superRA:using-su
 
 ## Overview
 
-Output: a `superRA/` task tree for `superimplement` to consume.
+Output: a `superRA/` task tree to execute.
 
 Task-tree design judgment — objective/guidance writing, placement, splitting, context distillation, update-task lifecycle, retroactive creation — lives in `references/task-tree-design.md`.
 
@@ -27,7 +27,7 @@ Assess three dimensions before exploration or task design — creating a tree an
 - **Depth tier.** Choose from §Depth Tiers.
 - **Routing path.** Forward planning (default), or **retroactive documentation** — code/results without task coverage need a `superRA/` record; same phases, per `task-tree-design.md` §Retroactive Task-Tree Creation. Structural cleanup of an existing tree is neither — that is the separate `references/consolidation.md` pass, entered on structural debt, not on new work needing placement.
 
-Interactive canvas cadence (researcher opt-in): load `references/interactive-mode.md`.
+Interactive canvas cadence (the default, and where light planning and execution move together): load `superRA:using-superra/references/interactive-mode.md`.
 
 **Ask when unclear.** Placement or depth ambiguous: present the concrete options — candidate placements from the descent, standard vs. thorough — with a one-line rationale each. Don't guess.
 
@@ -92,7 +92,7 @@ Per newly created task (especially top-level): state the existing concern you co
 
 ### Execution Handoff
 
-Commit `superRA/` atomically (`plan(add): <summary>` for initial authoring; full sub-step set in §User Feedback and Changing the Task Tree). Hand off to `superRA:superimplement`.
+Commit `superRA/` atomically (`plan(add): <summary>` for initial authoring; full sub-step set in §User Feedback and Changing the Task Tree). Then execute the frontier in the current execution mode (`superRA:using-superra/references/main-agent.md` §Execution Modes).
 
 ## Substantive Questions
 
