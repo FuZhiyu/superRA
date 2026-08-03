@@ -1,6 +1,6 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: revise
+status: approved
 depends_on: [role-skills]
 ---
 
@@ -36,7 +36,7 @@ The contract targets task-file reporting and lives where the writer is; `using-s
 
 ## Results
 
-The contract is [`implement-task/SKILL.md` §Reporting](../../../skills/implement-task/SKILL.md#L37-L60): reporting is half the task and gets a real share of the thinking budget; pyramid structure, pointing at its owner [`writing/references/structure.md`](../../../skills/writing/references/structure.md); the finding bar; each-fact-once, with the cross-file failure mode named (a number copied into a second file survives wrong in every copy once the result changes); extras wait to be asked for; concise-by-selection as the anti-compression guardrail; current-not-a-log editing; and a before/after merge-task example. `review-task` `results-writing` focus, [`interactive-mode.md`](../../../skills/superplan/references/interactive-mode.md), `superimplement` Step 4, `report-in-markdown`, and `changing-the-tree.md` all point here.
+The contract is [`implement-task/SKILL.md` §Reporting](../../../skills/implement-task/SKILL.md#L37-L60): reporting is half the task and gets a real share of the thinking budget; pyramid structure, pointing at its owner [`writing/references/structure.md`](../../../skills/writing/references/structure.md); the finding bar; each-fact-once, with the cross-file failure mode named (a number copied into a second file survives wrong in every copy once the result changes); extras wait to be asked for; concise-by-selection as the anti-compression guardrail; current-not-a-log editing; and a before/after merge-task example. `review-task` `results-writing` focus, [`interactive-mode.md`](../../../skills/superplan/references/interactive-mode.md), `superimplement` Step 3, `report-in-markdown`, and `changing-the-tree.md` all point here.
 
 `using-superra` slims to the all-agent survival kit — [§Communication, §Commits, §Task Interface, §Skill-Load Manifest](../../../skills/using-superra/SKILL.md). Work Defaults moved into [`implement-task`](../../../skills/implement-task/SKILL.md#L10); the workflow map and Execution Modes moved to [`main-agent.md`](../../../skills/using-superra/references/main-agent.md); `report-in-markdown` is load-on-demand, with the render-integrity hook in [`task_hook.py`](../../../skills/task-tree/scripts/task_hook.py) naming it when it fires (verified on a seeded bad file and a clean file).
 
@@ -49,11 +49,3 @@ The extras rule keeps the §Communication "no closing offers" line intact: the a
 Tests: harness suite 126 passed; task-tree suite 797 passed, 0 skipped.
 
 Not swept: this repo's own task files and the `docs/site` exemplars, out of v0.4 scope per the parent.
-
-## Review Notes
-
-Tier: thorough (re-review, narrow). Findings 1, 2, 5, and 6 verified fixed and deleted; the Agent Load Surface repoint at [CLAUDE.md:113](../../../CLAUDE.md#L113) is correct, and a sweep of every `§`-qualified home reference in `skills/`, `CLAUDE.md`, and `RELEASE-NOTES.md` found no other surface naming a home the content left. Two items remain.
-
-3. **[MAJOR]** The extras rule landed correctly as a statement and left §Communication intact, but `implement-task` contradicts it three lines later. [`implement-task/SKILL.md:46`](../../../skills/implement-task/SKILL.md#L46) tells the implementer to name the omitted extra in the return; [`implement-task/SKILL.md:82`](../../../skills/implement-task/SKILL.md#L82) opens §Report Format with "Status enum + commit SHA. Nothing else." An implementer reading its own report format will drop the extra — the suppression failure mode from the original finding, moved from §Communication into the role skill. Widen line 82 to admit the two things the skill already asks the return to carry: the omitted-extras delta, and the unaddressed `[ADVISORY]` items §Self-Check item 1 already requires there. (The advisory half is pre-existing, so the orchestrator may prefer to scope that clause elsewhere; the extras half is this task's to close.)
-
-4. **[MINOR]** [`## Results`](task.md) is accurate end to end except one locator: the `superimplement` pointer at §Reporting is in **Step 3** ("Verify Pipeline and Reproducibility", [superimplement/SKILL.md:106](../../../skills/superimplement/SKILL.md#L106)), not Step 4 ("Present Completion Options"). The other four pointers in that sentence, the `using-superra` section list, the house-conventions home, and the test counts (126 / 797 / 0, re-run and confirmed) all check out. Fix the step number.

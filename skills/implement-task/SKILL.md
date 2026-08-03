@@ -79,7 +79,7 @@ git commit -m "implement(<task-path>): <STATE> — <delta>"   # STATE = DONE | C
 
 ## Report Format
 
-Status enum + commit SHA. Nothing else.
+Status enum + commit SHA, plus the deltas §Reporting and §Self-Check send here — extras you left out, unaddressed `[ADVISORY]` items. Nothing restated from the task file.
 
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Commit SHA:** `<sha>` — BLOCKED / NEEDS_CONTEXT have no commit; carry the blocker or missing context instead.
