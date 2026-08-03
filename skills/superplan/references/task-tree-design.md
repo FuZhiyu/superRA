@@ -47,22 +47,23 @@ Walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and dat
 
 ## Splitting Tasks
 
-Size each task for independent dispatch and review.
+Size each task for independent execution and review.
 
 **Split when:**
 - Each child has a meaningful objective, evidence trail, and review verdict.
-- Different concerns, data sources, artifact families, or domain skills apply.
+- Different concerns land in different artifacts, or different data sources or domain skills apply.
 - Independent branches could run in parallel or be reviewed by different standards.
 - Serial work has peer review units where downstream correctness depends on a completed upstream output or finding.
 
 **Do not split when:**
 - Steps are trivially sequential with no independent review value.
-- The unit is too small to justify dispatch cost.
+- The unit is too small to justify its own contract, results record, verdict, and researcher reading time — a fixed cost paid in every execution mode.
 - The split artificially decomposes one logical operation.
+- The children would edit the same files or reload the same context — one edit surface is one task, however many concerns it serves.
 
 `depends_on` records prerequisite order among sibling review units; it does not justify a split. Choose the split for review value, then add dependencies for execution order. A branch may be serial, parallel, or mixed.
 
-**Right-sizing test:** success criteria in one sentence — right size. Review would be trivial — too small. Description needs three paragraphs — may need splitting.
+**Right-sizing test:** success criteria in one sentence — right size. Review would be trivial — too small. Description needs three paragraphs — may need splitting. Two siblings whose success criteria read naturally as one sentence together — one task.
 
 Name tasks by goal: "Merge holdings with characteristics," not "Run merge script."
 

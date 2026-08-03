@@ -78,7 +78,7 @@ Agent:
   Context: <exploration synthesis, inline or path>
 ```
 
-Review modes: `references/planning-review.md` §Review Mode.
+Review modes: `references/planning-review.md` §Review Mode — design-review for a newly authored tree, handoff-readiness once the design is settled.
 
 Fix REVISE findings before User Review.
 

@@ -28,13 +28,13 @@ uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/super
 
 Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree/references/commands.md`), or create directories and write `task.md` files directly (`task-tree/SKILL.md` §Task File Format).
 
-**No checkboxes** (`- [ ]` / `- [x]`). A step needing independent tracking and review becomes a subtask.
+**No checkboxes** (`- [ ]` / `- [x]`). A step needing independent tracking and review becomes a subtask; otherwise it is a bullet in the objective.
 
 ## Task Dependencies
 
 `depends_on:` frontmatter lists sibling directory names; semantics in `task-tree/references/task-file-contract.md` §Task Anatomy and `task-tree-design.md` §Parent and sibling context.
 
-Mark independent branches for parallel dispatch (`agent-orchestration` §Workload Balancing).
+Mark independent branches for parallel dispatch, same-surface work for bundling (`agent-orchestration` §Workload Balancing).
 
 ## Task Anatomy
 
@@ -57,6 +57,6 @@ After writing the complete task tree:
 6. **Handoff test.** A new agent reading any leaf's ancestor chain could continue from here.
 7. **Verification coverage.** The tree covers the active domain skill's verification / robustness requirements.
 8. **Dependency sanity.** Every task declares `depends_on:`; no cycles, no nonexistent siblings; terminal task(s) produce the top-line results.
-9. **Subtask coverage.** No task hides sub-steps that should be subtasks.
+9. **Granularity, both directions.** No task hides sub-steps that should be subtasks; no two siblings share an edit surface or would be written by one agent in one pass — merge those.
 
 Fix issues inline and move on; no re-review.

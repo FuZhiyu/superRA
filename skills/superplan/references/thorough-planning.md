@@ -25,7 +25,7 @@ Read-only, so compatible with plan mode where the harness allows subagent dispat
 
 ## Exploration Synthesis
 
-Synthesize after all agents return, before Phase 2 or 3. Not delegated — its output is the project understanding that feeds task design.
+Synthesize after all agents return, before Phase 2 or 3. Not delegated — its output is the project understanding that feeds task design. The exploration split is an evidence partition, not a task partition: cut tasks by edit surface, not by which agent or report section a finding came from.
 
 1. **Consolidate findings.** Overlaps, contradictions, gaps across the reports.
 2. **Map to the work.** Per finding: directly relevant, changes the approach, surprising and needs investigation, or background only.
@@ -66,7 +66,7 @@ After Phase 3, identify 3-5 files central enough that implementation agents shou
 
 **Qualifies as critical:**
 
-- Read or modified by multiple tasks.
+- Read or modified by multiple tasks. Three or more tasks modifying one file: re-cut by edit surface (`task-tree-design.md` §Splitting Tasks) before listing it.
 - Central configuration or convention files shaping how all tasks execute.
 - Existing code the new work must integrate with or extend.
 - Data files or schemas defining structure downstream tasks depend on.
