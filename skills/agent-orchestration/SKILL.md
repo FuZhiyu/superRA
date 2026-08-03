@@ -50,12 +50,10 @@ Fable is reserved for the most challenging, expensive tasks. Defaults, not rules
 
 ## Dispatch Templates
 
-Every task-scoped implementer or reviewer dispatch uses the shape below; the stage-specific body lives in the dispatching workflow skill. The load line is the whole role contract — the role skill pulls `using-superra` and the manifest's stage and domain skills. `Stage: sync` is the exception: it names `semantic-merge` mode references instead of a role skill.
-
 **Implementer:**
 ```
 Agent:
-  Load `superRA:implement-task` skill.
+  Load `using-superra` and `implement-task` skill.
 
   Stage: <stage-name>
   Task(s): <task path — e.g., "data-preparation/merge">
@@ -67,7 +65,7 @@ Agent:
 **Reviewer:**
 ```
 Agent:
-  Load `superRA:review-task` skill.
+  Load `using-superra` and `superRA:review-task` skill.
 
   Stage: <stage-name>
   Task: <task path — e.g., "data-preparation/merge">
@@ -79,7 +77,7 @@ Agent:
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
-`Additionally:` is steering only — omit it when there is none, never restate role protocol, manifest loads, or task content. Never add `Work from:`; cwd is implicit.
+`Additionally:` is steering only — omit it when there is none, never restate role protocol, manifest loads, or task content.
 
 Bundle only same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent. Keep dependent siblings out unless the upstream task is already `approved` or deferred (§Handling Reviewer Feedback).
 
@@ -116,7 +114,7 @@ Adjudicate REVISE findings before forwarding them; read cited code or task conte
 - **Reject** false positives, removing them from `## Review Notes`.
 - **Escalate** findings that would materially change the direction of the task.
 
-**Schedule accepted fixes against the whole workflow** — the reviewer graded severity by effect on the task's result alone:
+**Schedule accepted fixes against the whole workflow**
 
 - **Fix now** when the issue significantly affects downstream tasks. Redispatch implementer and reviewer, iterate to APPROVE before advancing the frontier. A tiny fix you can verify directly: apply or verify it and set `status: approved` inline. With warm agents and a small fix/re-review, steer the same agent rather than spawning fresh (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
 - **Defer** when the open items do not affect downstream work: findings stay in `## Review Notes`, the task stays at `revise`, move on. Tasks at `revise` are the deferral record — clear them in one bundled fix pass (§Workload Balancing Tier 2) and re-review to `approved` before the workflow's completion gate.
