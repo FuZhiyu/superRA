@@ -85,7 +85,7 @@ Parent objectives are inherited shared context at the dispatch boundary; sibling
 
 ## Seat Assignment
 
-In **subagent** mode (`using-superra/references/main-agent.md` §Execution Modes) each task has an implementer seat, and a reviewer seat when a review is triggered; each is filled by the main agent or a dispatched subagent:
+In **autonomous** mode (`using-superra/references/main-agent.md` §Execution Modes) each task has an implementer seat, and a reviewer seat when a review is triggered; each is filled by the main agent or a dispatched subagent:
 
 | Implementer | Reviewer | Choose when |
 |---|---|---|

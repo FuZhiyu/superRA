@@ -1,6 +1,6 @@
 # Interactive Canvas Mode
 
-A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You do the work yourself and pause often for feedback. This is the default execution mode, in PLAN and IMPLEMENT alike; autonomous subagent execution (`superRA:superimplement`) is the opt-in (`main-agent.md` §Execution Modes).
+A fused **light-plan → execute-yourself → record** loop the main agent runs *with* the researcher, co-editing the task file as a live canvas. You do the work yourself and pause often for feedback. This is the default execution mode, in PLAN and IMPLEMENT alike; autonomous mode (`superRA:superimplement`) is the opt-in (`main-agent.md` §Execution Modes).
 
 ## The spectrum
 

@@ -11,7 +11,7 @@ Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipli
 
 ## Execution Modes
 
-Entering this skill *is* subagent mode. Interactive main-agent execution is the default on a built tree — you are here because the researcher asked for autonomous execution or accepted your recommendation of it (`using-superra/references/main-agent.md` §Execution Modes). Researcher asks to steer closely mid-flight: hand the frontier back to `using-superra/references/interactive-mode.md`.
+Entering this skill *is* autonomous mode. Interactive main-agent execution is the default on a built tree — you are here because the researcher asked for autonomous execution or accepted your recommendation of it (`using-superra/references/main-agent.md` §Execution Modes). Researcher asks to steer closely mid-flight: hand the frontier back to `using-superra/references/interactive-mode.md`.
 
 ## The Process
 
