@@ -79,7 +79,7 @@ Walked by the implementer (before DONE) and the reviewer (as verification). `[BL
 - `[BLOCKING]` No `\resizebox` on text or equations (see Core Principle).
 - `[BLOCKING]` Beamer/PDF output builds when the task edits source, with no ignored overflow or missing-asset warnings.
 - `[ADVISORY]` Main-slide bullets mostly one line; wrapped bullets retained only when the extra words materially help communication.
-- `[ADVISORY]` Titles and first lines state the takeaway or slide purpose rather than naming the topic.
+- `[ADVISORY]` Titles and first lines state the takeaway or slide purpose rather than only naming the topic.
 - `[ADVISORY]` Navigation aids, slide numbers, and backup-slide numbering orient the audience without drawing attention from content.
 - `[ADVISORY]` New visual styling stays inside the deck's existing color and command vocabulary — no ad-hoc colors or one-off styling.
 

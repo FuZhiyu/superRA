@@ -6,18 +6,11 @@ user-invocable: true
 
 # Mistral PDF to Markdown Converter
 
-Convert PDF documents to Markdown format using Mistral's OCR API. Automatically extracts text, formatting, and images.
-
-## When to Use
-
-- Converting research papers or documents to Markdown
-- Extracting text from scanned PDFs (OCR capability)
-- Preserving document structure with headers and formatting
-- Extracting embedded images from PDFs
+Convert PDF documents to Markdown via Mistral's OCR API, preserving headers and structure and extracting embedded images. OCR makes it work on scanned, image-based PDFs.
 
 ## Quick Start
 
-Run the conversion script from this skill's directory. In the commands below, `<skill-dir>` is the directory containing this `SKILL.md` — substitute the real path so the invocation works regardless of which harness loaded the skill or where it is installed.
+`<skill-dir>` in the commands below is the directory containing this `SKILL.md` — substitute the real path.
 
 ```bash
 # Convert entire PDF
@@ -30,7 +23,7 @@ uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py input.pdf output.
 
 ## Output Structure
 
-Each conversion is written as a self-contained folder. Passing `Output/PDFConversions/paper_alpha.md` creates `Output/PDFConversions/paper_alpha/paper_alpha.md`, with extracted images beside it under `images/`:
+Each conversion is a self-contained folder. Passing `Output/PDFConversions/paper_alpha.md` creates `Output/PDFConversions/paper_alpha/paper_alpha.md`, with extracted images beside it under `images/` as JPEGs, referenced relatively:
 
 ```
 Output/PDFConversions/
@@ -46,7 +39,7 @@ Output/PDFConversions/
         └── ...
 ```
 
-Passing an existing foldered markdown path such as `Output/PDFConversions/paper_alpha/paper_alpha.md` keeps that path. Passing a directory creates `<directory>/<input-pdf-stem>.md`.
+An existing foldered markdown path such as `Output/PDFConversions/paper_alpha/paper_alpha.md` is kept as given. A directory creates `<directory>/<input-pdf-stem>.md`.
 
 ## Usage in Code
 
@@ -66,56 +59,19 @@ result = subprocess.run([
 print(result.stdout)
 ```
 
-## Key Features
-
-- **Markdown formatting**: Preserves headers, lists, and structure
-- **Image extraction**: Saves images to a conversion-local `images/` folder automatically
-- **Page selection**: Extract specific pages or ranges
-- **Scanned PDF support**: True OCR capability for image-based PDFs
-- **Relative paths**: Image references use `![...](images/img-X.jpeg)`
-
 ## Requirements
 
-The script requires:
-- Mistral API key (see API Key Setup below)
-- Python packages: `mistralai`, `python-dotenv`, `pypdf`, `pyyaml` (declared inline in the script's PEP 723 header)
+A Mistral API key (below), plus `mistralai`, `python-dotenv`, `pypdf`, and `pyyaml` — declared inline in the script's PEP 723 header.
 
 ## API Key Setup
 
 The script checks these locations in order (first match wins):
 
-1. **Environment variable** `MISTRAL_API_KEY` — recommended for personal use (e.g., add `export MISTRAL_API_KEY=your-key` to `secrets.sh`)
+1. **Environment variable** `MISTRAL_API_KEY` — recommended for personal use (e.g. `export MISTRAL_API_KEY=your-key` in `secrets.sh`)
 2. **Shared config** — `.claude/agent-contract.yaml` or `~/.config/agent-contract/config.yaml` under `paper-reader.mistral_api_key`
-3. **`Notes/.env`** — add `MISTRAL_API_KEY=your-key`. This file is gitignored but Dropbox-synced, making it convenient for teams sharing a project folder
+3. **`Notes/.env`** — add `MISTRAL_API_KEY=your-key`; gitignored but Dropbox-synced, so it travels with a shared project folder
 
 > **Never commit API keys to git.** Use environment variables or Dropbox-synced `Notes/.env` instead.
-
-## Common Use Cases
-
-### Convert Research Paper
-```bash
-uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
-  "Data/papers/research.pdf" \
-  "Notes/Paper Markdown/research.md"
-```
-
-### Extract Specific Sections
-```bash
-# Extract pages 10-20 (introduction and methods)
-uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
-  "paper.pdf" \
-  "Notes/Paper Markdown/intro_methods.md" \
-  --pages "10-20"
-```
-
-### Extract Figures Only
-```bash
-# Extract pages with figures
-uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
-  "paper.pdf" \
-  "Notes/Paper Markdown/figures.md" \
-  --pages "25,27,30,35"
-```
 
 ## Error Handling
 
@@ -123,26 +79,19 @@ uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
 ```
 Error: Mistral API key not found
 ```
-→ See **API Key Setup** above for three ways to configure it
+→ Configure it per **API Key Setup** above
 
 **Page Out of Range:**
 ```
 Warning: Page 100 out of range, skipping
 ```
-→ Check PDF page count and adjust page selection
+→ Check the PDF page count and adjust the page selection
 
 **API Rate Limit:**
-→ Wait a moment and retry, or reduce page count per request
+→ Retry after a moment, or reduce the page count per request
 
 ## Notes
 
-- Images are saved as JPEG files in the conversion folder's `images/` subfolder
-- Markdown image references are automatically updated to `images/img-X.jpeg`
-- Large PDFs may take longer to process due to API limits
-- For simple text extraction without OCR, consider using the `pdf` skill instead
-- Scanned PDFs benefit most from this skill's OCR capability
-
-## See Also
-
-- `pdf` skill - For local PDF manipulation without API calls
-- `references/reference.md` - Additional details about the Mistral OCR API
+- Large PDFs take longer — API limits apply. Narrow with `--pages`.
+- Use the `pdf` skill instead for local manipulation and plain text extraction with no OCR or API calls.
+- Load [`references/reference.md`](references/reference.md) for the OCR API surface, programmatic and batch usage, cost, and troubleshooting.

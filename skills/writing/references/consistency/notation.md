@@ -2,6 +2,8 @@
 
 > Load when Review or Polish mode targets **mathematical notation** — symbols, subscripts, superscripts, typographic conventions. One of eight `consistency/*.md` dimensions. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
 
+Source: LRS / Chaubey conventions on symbol discipline.
+
 ## Scope
 
 Covers **typographic and symbolic consistency** of math notation. Out of scope: derivation correctness (`consistency/math.md`), named terms in prose (`consistency/terminology.md`), equation labels and cross-refs (`consistency/cross-references.md`).

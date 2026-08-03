@@ -1,12 +1,12 @@
 # Skill Categories
 
-superRA skills split into five categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index — when adding a skill, place it in the right category here and in the `README.md` skill tables.
+superRA skills split into five categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index.
 
-For the runtime-facing master map (universal principles and the Stage/Domain skill-load tables agents actually load), see `superRA:using-superra` §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superra` is the agent-facing authority.
+For the runtime map agents actually load — universal principles plus the Stage/Domain skill-load tables — see `superRA:using-superra` §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superra` is the agent-facing authority.
 
 ## Workflow — domain-agnostic choreography
 
-Own the procedural shape of each phase: what agent to dispatch, in what sequence, with what handoff rules. Every workflow skill is domain-neutral — when a task matches an implemented vertical such as data analysis or theory/modeling, the workflow skill instructs the agent to load the matching domain skill. Adding a new vertical means adding a domain skill, not forking these.
+Own the procedural shape of each phase: what agent to dispatch, in what sequence, with what handoff rules. Every workflow skill is domain-neutral — a task matching an implemented vertical such as data analysis or theory/modeling gets the matching domain skill loaded. Adding a new vertical means adding a domain skill, not forking these.
 
 | Skill | Phase | Role |
 |---|---|---|
@@ -17,7 +17,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 ## Role — what a dispatched seat does
 
-Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same skill. Both pull the always-loaded `using-superra` plus the manifest's stage and domain skills.
+Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same one. Both pull the always-loaded `using-superra` plus the manifest's stage and domain skills.
 
 | Skill | Seat | Role |
 |---|---|---|
@@ -26,7 +26,7 @@ Carry the protocol for one seat on a task. A dispatch prompt's first line names 
 
 ## Domain — vertical-specific discipline
 
-Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. Currently implemented: data analysis, theory/modeling, writing, and slide design. The architecture is designed to grow by adding more verticals without forking the workflow skills.
+Carry the domain-specific knowledge workflow skills invoke when a task touches that domain. Reference files split by stage so the right chunk loads at the right phase. Currently implemented: data analysis, theory/modeling, writing, and slide design.
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
@@ -40,11 +40,11 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 - **Literature review** — citation integrity, claim-evidence mapping
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
 
-Each future vertical plugs into the same workflow scaffolding — implementation and review discipline, task-tree handoff, autonomous-with-human-in-loop, semantic merges.
+Each plugs into the same workflow scaffolding — implementation and review discipline, task-tree handoff, autonomous-with-human-in-loop, semantic merges.
 
 ## Utility — reusable, domain-neutral tools
 
-Agent-facing and standalone-invokable. Called by workflow skills and role skills as needed. Domain-agnostic; reusable across verticals.
+Agent-facing and standalone-invokable; called by workflow skills and role skills as needed.
 
 | Skill | What it provides |
 |---|---|
@@ -66,6 +66,6 @@ Agent-facing and standalone-invokable. Called by workflow skills and role skills
 ## Adding a Skill
 
 1. Decide the category above. If it doesn't fit cleanly, it may belong in two places — default to the category that matches its primary caller (workflow-skills are called by orchestrators; domain-skills are called by workflow-skills; utility-skills are called by role skills and by other skills).
-2. Create `skills/<name>/SKILL.md` (flat layout — no nested folders).
+2. Create `skills/<name>/SKILL.md` — no nested folders.
 3. Add a row to the table above and to the matching table in `README.md`.
-4. If it's a domain skill, design its `references/` folder around workflow phases so agents can load the right chunk per stage.
+4. For a domain skill, design its `references/` folder around workflow phases.
