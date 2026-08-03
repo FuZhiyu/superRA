@@ -85,7 +85,7 @@ Editing / gate:
 2. Short contracts beat catalogs on frontier models; over-prescriptive skills degrade output.
 3. Positive framing + motivation ("task files are re-read by cold-context agents; every extra paragraph is paid on every future read").
 4. Paired bad/good examples are the highest-leverage single device — one before/after of a padded vs dense results section.
-5. Prompt style is contagious: write the skill itself in the target register.
+5. Prompt style is contagious: write the skill itself in the target style.
 6. Structural budgets over word counts.
 7. Pre-writing selection step framed as "decide," executed silently — no written per-item justification.
 8. One self-audit revision pass converges; a third pass rarely finds more.

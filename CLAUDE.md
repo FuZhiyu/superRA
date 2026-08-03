@@ -150,7 +150,7 @@ Skill prose is terse. Writing or restyling a skill file is two passes, in order:
 - **Condition as a noun phrase, colon, action fragments.** "Unclear task structure: flag in your return, don't invent one" — not "Flag unclear task structure in your return rather than inventing one."
 - **No rationale or derivation clauses.** State the action. Keep a purpose clause only when it changes what the agent produces ("…so the next reader knows what wasn't covered").
 - **Trust the earlier mention.** Second reference shortens: "keep the `→ implemented: ...` annotation" becomes "keep the annotation". Cut examples and parentheticals whose content an adjacent line already carries.
-- **Meaning survives verbatim.** Gates, enums, defaults, and ordering constraints keep their content exactly; compress only their wording.
+- **Meaning survives verbatim.** Gates, enums, defaults, and ordering constraints keep their content exactly; so do decision-carrying hedges and qualifiers ("usually", "only", "existing", "if any") — a hedge that carries a decision branch is protocol content, not filler. Compress wording only, and keep the imperative verb: a cut that leaves a section body with no instruction went too far.
 
 Measure the pass in words, not lines. Worked example: `daea6ae3..f525b63e` on `skills/review-task/SKILL.md` — the first commit restyled the surface and cut 12% of words; the accepted second pass cut another 18% by deleting whole clauses, with no protocol loss. A pass that barely moves the word count compressed connectives, not clauses — redo it.
 
