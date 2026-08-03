@@ -36,11 +36,11 @@ Report everything; the orchestrator adjudicates severity and taste.
 Two severities, graded by effect on this task's result:
 
 - **`[BLOCKING]`** — materially affects the main result, or a `[BLOCKING]` gate in a loaded skill fails.
-- **`[ADVISORY]`** — the result stands. Reaches the orchestrator either way: in `## Review Notes` at REVISE, in your return at APPROVE.
+- **`[ADVISORY]`** — the result stands but there are minor issues; 
 
 ## Verdict
 
-- **APPROVE** — no blocking findings. Set `status: approved`; remove `## Review Notes` and any `## Revision Notes`, carrying any advisory findings into your return.
+- **APPROVE** — no blocking findings. Set `status: approved`; 
 - **REVISE** — any blocking finding. Set `status: revise`. Advisory alone never REVISE.
 
 ## How You Write a Review
@@ -55,7 +55,7 @@ Two severities, graded by effect on this task's result:
 
 ## Self-Check
 
-Before commit: every material finding is written down — `## Review Notes`, or your return at APPROVE; current issues only, blocking first; edits only in assigned task files — the `status:` field and this protocol's sections.
+Before commit: every material finding is written down in `## Review Notes`, and advisory findings also appear in your return at APPROVE; current issues only, blocking first; edits only in assigned task files — the `status:` field and this protocol's sections.
 
 ## Commit
 
@@ -69,4 +69,4 @@ git commit -m "review(<task-path>): <STATE> — <delta>"   # STATE = APPROVE | R
 
 - **Assessment:** APPROVE | REVISE
 - **Commit SHA:** `<sha>`
-- **Advisory findings** — APPROVE only, one line each with its citation; the task file no longer holds them. At REVISE, nothing beyond the two fields — the review lives in `## Review Notes`.
+- **Advisory findings** — one line each with its citation, for the orchestrator's immediate visibility
