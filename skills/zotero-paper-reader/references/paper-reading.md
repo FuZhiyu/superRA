@@ -2,7 +2,7 @@
 
 Step-by-step reference for reading and analyzing academic papers from a Zotero library.
 
-Commands below are in full form — `uv run --script <skill-dir>/scripts/zotero_tool.py <subcommand>`, where `<skill-dir>` is the directory containing the skill's `SKILL.md` (substitute the real path) — where the SKILL.md quick-reference table shows only the `<subcommand>` part.
+Commands below are in full form — `uv run --script <skill-dir>/scripts/zotero_tool.py <subcommand>`, where `<skill-dir>` is the directory containing the skill's `SKILL.md` (substitute the real path); the SKILL.md quick-reference table shows only the `<subcommand>` part.
 
 ---
 
@@ -198,7 +198,7 @@ Examples:
 - `Jones_Lee_2019_Another_Paper_Title.md`
 - `AuthorA_et_al_2020_Truncated_Long_Title.md`
 
-It places extracted images in an `images/` subfolder next to the markdown file. A project-local `Notes/PaperInMarkdown/` convention overrides this default.
+The conversion places extracted images in an `images/` subfolder next to the markdown file. A project-local `Notes/PaperInMarkdown/` convention overrides this default.
 
 ---
 
