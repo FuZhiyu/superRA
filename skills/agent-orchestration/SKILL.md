@@ -106,9 +106,7 @@ Done by the orchestrator alone, at every workflow stage:
 
 ## Handling Reviewer Feedback
 
-An APPROVE return carries any advisory findings — adjudicate them like the rest, and act on them yourself: the task file no longer holds them.
-
-Adjudicate REVISE findings before forwarding them; read cited code or task context only when needed to decide. Per finding:
+Adjudicate every finding — REVISE (`[BLOCKING]`) or APPROVE (`[ADVISORY]`) — before moving on; read cited code or task context only when needed to decide. Per finding:
 
 - **Accept** real issues.
 - **Reject** false positives, removing them from `## Review Notes`.
@@ -116,5 +114,5 @@ Adjudicate REVISE findings before forwarding them; read cited code or task conte
 
 **Schedule accepted fixes against the whole workflow**
 
-- **Fix now** when the issue significantly affects downstream tasks. Redispatch implementer and reviewer, iterate to APPROVE before advancing the frontier. A tiny fix you can verify directly: apply or verify it and set `status: approved` inline. With warm agents and a small fix/re-review, steer the same agent rather than spawning fresh (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
-- **Defer** when the open items do not affect downstream work: findings stay in `## Review Notes`, the task stays at `revise`, move on. Tasks at `revise` are the deferral record — clear them in one bundled fix pass (§Workload Balancing Tier 2) and re-review to `approved` before the workflow's completion gate.
+- **Fix now** when the issue significantly affects downstream tasks. For a REVISE task, redispatch implementer and reviewer, iterate to APPROVE before advancing the frontier. A tiny fix you can verify directly: apply or verify it, clear it from `## Review Notes`, and (REVISE) set `status: approved` inline. With warm agents and a small fix/re-review, steer the same agent rather than spawning fresh (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
+- **Defer** when the open items do not affect downstream work, defer the fix and proceed for now. Clear them later in bundles (see §Workload Balancing) and re-review to close them out before the workflow's completion gate.
