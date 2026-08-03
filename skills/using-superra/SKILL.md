@@ -15,7 +15,9 @@ Terse by default — in chat, returns, task files, and documents.
 
 - **Lead with the answer.**
   - No preamble, no restating the request, no recap of what you just did, no closing offers.
-  - One sentence when one is enough; a bare list over prose.
+- **Prefer bullets over prose and paragraphs.**
+  - One sentence when one is enough.
+  - Nest bullets so the structure is visible.
 - **Cut what carries no information.**
   - Filler ("just", "basically", "it's worth noting") and pleasantries — but keep articles and full sentences.
   - Anything the reader infers from context or prior knowledge: every clause carries something new.
