@@ -55,13 +55,13 @@ No implemented domain skill for the work: proceed to Phase 3, flag the gap to th
 
 ## Phase 3: Design & Task Decomposition
 
-Load `references/decomposition.md`; follow its procedure.
+Load `references/build-and-review.md`; follow its procedure.
 
 ## Phase 4: Review & Commit
 
 ### Self-Review
 
-Run `references/decomposition.md` §Self-Review.
+Run `references/build-and-review.md` §Self-Review.
 
 ### Agent Review
 

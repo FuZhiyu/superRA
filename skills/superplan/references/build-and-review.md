@@ -1,6 +1,6 @@
-# Task Decomposition & Self-Review
+# Build the Task Tree & Self-Review
 
-Load when entering **Phase 3** (design & task decomposition) and for the **Phase 4** self-review. Design judgment — placement, splitting, context distillation, objective/guidance writing — lives in `task-tree-design.md`; the canonical `task.md` contract in `task-tree/references/task-file-contract.md`.
+Load when entering **Phase 3** (design & task decomposition) and for the **Phase 4** self-review. This file is construction mechanics and the review gate; design judgment — placement, splitting, context distillation, objective/guidance writing — lives in `task-tree-design.md`; the canonical `task.md` contract in `task-tree/references/task-file-contract.md`.
 
 ## Artifact Pipeline
 
