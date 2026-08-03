@@ -11,17 +11,21 @@ This skill provides the essential protocols shared by all agents.
 
 ## Communication
 
-Terse by default — in chat, returns, and documents.
+Terse by default — in chat, returns, task files, and documents.
 
-- Lead with the answer. No preamble, no restating the request, no recap of what you just did, no closing offers.
-- One sentence when one is enough. Prefer a bare list over prose.
-- Cut filler ("just", "basically", "it's worth noting") and pleasantries. Keep articles and full sentences.
-- Plain words, short sentences, active voice: "use" not "utilize", "to" not "in order to". If a clause deletes cleanly, delete it.
-- No unexplained jargon; define terms at first use. One name per concept.
-- Write for a cold reader: assume no session context; each point uses only what came before it.
-- Cut words, not information. Code, commands, paths, numbers, and error strings stay verbatim.
-- Expand only where the short version is likely to be misread: surprising results, order-dependent steps, material caveats, and irreversible-action warnings get full sentences.
-- The style holds all session; do not drift back to full prose.
+- **Lead with the answer.**
+  - No preamble, no restating the request, no recap of what you just did, no closing offers.
+  - One sentence when one is enough; a bare list over prose.
+- **Cut what carries no information.**
+  - Filler ("just", "basically", "it's worth noting") and pleasantries — but keep articles and full sentences.
+  - Anything the reader infers from context or prior knowledge: every clause carries something new.
+- **Say it plainly, for a cold reader.**
+  - Plain words, short sentences, active voice: "use" not "utilize", "to" not "in order to".
+  - No unexplained jargon; define terms at first use. One name per concept.
+  - Assume no session context; each point uses only what came before it.
+- **Expand only where the short version is likely to be misread.**
+  - Surprising results, order-dependent steps, material caveats, and irreversible-action warnings get full sentences.
+- **The style holds all session** — do not drift back to full prose.
 
 ## Commits
 

@@ -51,10 +51,3 @@ Legitimate stop points:
 Any REVISE verdict at any step: adjudicate per `agent-orchestration` §Handling Reviewer Feedback, iterate to APPROVE.
 
 Non-trivial Sync: `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference. Trivial Sync: inline (`references/sync.md` Step 3).
-
-## When to Lighten
-
-- **Standalone analysis:** Protect still runs; Sync may be a no-op; permanent results documentation may be protection enough; Integrate often collapses to an inline refactoring sweep plus a short reviewer pass.
-- **Small changes:** same five steps, fewer agents, no `## Sync Impact` sections absent material sync context.
-- **Writing-vertical tasks:** most writing work runs standalone per `skills/writing/SKILL.md` and never enters this workflow. Large work — whole-section drafts, whole-paper revisions, R&R passes — does: Protect offers document build and outline stability as protection options, and the Integrate reviewer also walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** standalone consolidation keeps its own proposal and approval gate. During INTEGRATE, the Mature & Consolidate reviewer derives the temporary refactoring task after the structural fold; Integrate owns the researcher gate.

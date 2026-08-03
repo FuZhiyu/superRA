@@ -45,14 +45,15 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 
 ### Teach the Protocol, Don't Prescribe Each Action
 
-**This is a gate.** Every implementer editing any file under `skills/*` self-applies both tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
+**This is a gate.** Every implementer editing any file under `skills/*` self-applies all three tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails any test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
 Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
-Two tests, applied in order:
+Three tests, applied in order — each asks "what's actually new here?" against a different source of already-known:
 
-1. **DRY.** If the information is already carried by another skill, reference, dispatch field, or handoff doc the agent reads, do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
-2. **Necessity.** If the instruction only tells the agent to do what it would already do with the content in front of it, delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
+1. **DRY.** Already carried by another skill, reference, dispatch field, or handoff doc the agent reads: do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
+2. **Same-file restatement.** Already said earlier in this file, in any phrasing — a bullet re-deriving a test the file states elsewhere, two sentences giving the same inclusion rule once as a definition and again as a rejection test: merge into whichever form the section already uses, or point to the earlier line. A restatement in new words is exactly as cuttable as a verbatim repeat; compressing its wording without cutting it doesn't pass this test. Find candidates by testing pairs: two lines that could swap positions without any fact reading as missing are one fact stated twice.
+3. **Necessity.** The agent would already do this unprompted, with no upstream line to point at — just default competence: delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
 
 **Anti-patterns to watch for:**
 
@@ -146,7 +147,7 @@ Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contra
 
 ### Skill Prose Style
 
-Skill prose is terse. Writing or restyling a skill file is two passes, in order: the DRY/Necessity gate (§Teach the Protocol) deletes lines; then compress the survivors. The moves, from the accepted exemplars (`skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`):
+Skill prose is terse. Writing or restyling a skill file is two passes, in order: the §Teach the Protocol gate deletes lines; then compress the survivors. The moves, from the accepted exemplars (`skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`):
 
 - **Bolded imperative + short elaboration.** The bold states the action; what follows sharpens it. No lead-in sentence before the imperative.
 - **Definition bullets over framing sentences.** Delete the sentence that announces a list ("Two dispatch fields set the pass:"); each bullet is `**term** — definition`, defaults inline: "`quick` (default): …".

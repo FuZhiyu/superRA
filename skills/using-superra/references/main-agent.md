@@ -8,6 +8,7 @@ Before your first substantive response:
 - Run `./superRA/superra task tree` for the full status summary.
 - Bring up the live dashboard without opening a browser: `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached). Retain its emitted scoped URL.
 - `PLAN.md` without a `superRA/` directory: the project predates the task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer `superra task migrate from-plan`, and point to the superRA docs at http://fuzhiyu.me/superRA/.
+- **Branch check.** `git branch --show-current`; on `main`/`master`, recommend a topic branch before the first commit — the researcher declining is consent to proceed on the default branch.
 
 ## Workflow Map
 
@@ -25,7 +26,7 @@ There is no durable workflow-stage to look up. The frontmatter field set is clos
 
 - **Tree not all-approved** → implementation work remains. Resume on the frontier in the current execution mode: `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` awaiting an approval decision (§Deciding on Review), `revise` to fix.
 
-On a replan, a directly widened `approved` task flips to `revise` and its `depends_on` dependents reset to `not-started` (`superplan/references/task-tree-design.md` §Objective rewrites on scope expansion owns the rule); unrelated approved tasks stay approved. The reset tasks reappear on `task frontier`. `superRA/` missing, untracked, or contradicted by a material user decision not yet in the task objectives: enter `superplan` first. Durable facts disagreeing in a way you cannot repair mechanically: stop under §Proceeding and Pausing.
+On a replan, a directly widened `approved` task flips to `revise` and its `depends_on` dependents reset to `not-started` (`superplan/references/task-tree-design.md` §Objective rewrites on scope expansion owns the rule); unrelated approved tasks stay approved. The reset tasks reappear on `task frontier`.
 
 ## Changes of the Task Tree
 
@@ -37,9 +38,16 @@ After any action that changes what the tree shows the researcher — a structura
 
 Append `#/<task-path>` to the scoped URL retained in §Session Start Actions; do not reconstruct its selector. `<task-path>` is the `superra task read` locator (no `superRA/` prefix, empty for the tree root).
 
-## Proceeding and Pausing
+## Execution Modes
 
-**Default to proceeding.** Within a stage, drive the workflow forward on your own power: dispatch the next task once it is approved, re-dispatch after adjudicating reviewer feedback, advance when an internal verification passes, settle minor in-scope choices yourself. The test is whether anything since the last approved state needs the researcher *before* the next step. Never manufacture a check-in ("Should I proceed?", "Ready for the next task?").
+- **interactive** (default; `direct` is an alias) — you execute the task yourself at high human cadence, through the light-plan → execute-yourself → record canvas loop in `references/interactive-mode.md`. No `superimplement` load, no dispatch, no seat.
+- **autonomous** — dispatched implementer and reviewer seats, run by `superRA:superimplement` and orchestrated per `superRA:agent-orchestration` §Seat Assignment. Enter it on researcher request or a recommendation the researcher accepts; never switch silently. Recommend it with a one-line rationale when the frontier is broad, parallelizable, or context-heavy. Doesn't always mean dispatching a subagent — a seat you fill yourself still runs its role skill (`superRA:implement-task`, `superRA:review-task`) in this session; dispatch is the usual choice for larger work.
+
+**Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
+
+## Proceeding and Pausing in the Autonomous Mode
+
+**Default to proceeding.** Within a stage, drive the workflow forward on your own power. The test is whether anything since the last approved state needs the researcher *before* the next step. Never manufacture a check-in ("Should I proceed?", "Ready for the next task?").
 
 Pause — `AskUserQuestion` (plain text if the harness lacks it), folding the answer into the relevant task objective before you act — in two situations:
 
@@ -48,18 +56,14 @@ Pause — `AskUserQuestion` (plain text if the harness lacks it), folding the an
 
 Resolve what you can from code and data first.
 
-## Execution Modes
-
-- **interactive** (default; `direct` is an alias) — you execute the task yourself at high human cadence, through the light-plan → execute-yourself → record canvas loop in `references/interactive-mode.md`. No `superimplement` load, no dispatch.
-- **subagent** — autonomous execution through dispatched implementer and reviewer seats, run by `superRA:superimplement`. Enter it on researcher request or a recommendation the researcher accepts; never switch silently. Recommend it with a one-line rationale when the frontier is broad, parallelizable, or context-heavy. Seat structures: `superRA:agent-orchestration` §Seat Assignment — a seat you fill yourself runs its role skill (`superRA:implement-task`, `superRA:review-task`) in this session.
-
-**Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
-
 ## Deciding on Review
 
-Independent review is an execution-time call, not a schedule. When a task lands, judge from the result's stakes and plausibility whether a separate pass is worth it, and at which tier and focuses (`superRA:review-task` §Scope). Review when the researcher asks, when `## Planner Guidance` marks the task high-stakes, when the implementer returns a concern or uncertainty, or when a load-bearing result is one you cannot verify from the evidence in front of you. A planner suggestion is advice, not a binding schedule.
+Judge from the result's stakes and plausibility whether a separate pass is worth it, and at which tier and focuses (`superRA:review-task` §Scope). Review when the researcher asks, when `## Planner Guidance` marks the task high-stakes, when the implementer returns a concern or uncertainty, or when a load-bearing result is one you cannot verify from the evidence in front of you. A planner suggestion is advice, not a binding schedule.
 
-**Interactive cadence: recommend and ask** — tier, focuses, one-line rationale — rather than dispatching on your own read. Autonomous runs decide without asking (§Proceeding and Pausing).
+The action once you've judged differs by mode:
+
+- **Interactive — recommend and ask.** Name the tier, focuses, and a one-line rationale, then ask (`interactive-mode.md` step 5 owns the ask/now/defer/skip mechanics). Never dispatch a reviewer on your own read.
+- **Autonomous — decide and act**, without asking (§Proceeding and Pausing).
 
 **No review runs:** verify the work yourself and set `status: approved`.
 
