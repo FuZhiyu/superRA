@@ -1,6 +1,6 @@
 ---
 title: "Review Skill and Checklist Recalibration"
-status: implemented
+status: revise
 depends_on: [role-skills]
 ---
 
@@ -50,3 +50,23 @@ What came out: items duplicating another skill (`## Results` updated in place, d
 ### Validation
 
 `125 passed` for `tests/harness-instruction-following`; `tests/check-harness-compatibility.sh` clean. `grep` for the retired stances — flag-on-uncertainty, comprehensive-pass, walk-top-to-bottom, "note 'not applicable' with reasoning" — returns nothing across `skills/`.
+
+## Review Notes
+
+Tier: thorough. Focus: correctness, scope-fidelity.
+
+1. **[BLOCKING]** `[ADVISORY]` findings have no destination when the verdict is APPROVE. [review-task/SKILL.md:39](../../../skills/review-task/SKILL.md#L39) calls an advisory finding "worth recording"; [:43](../../../skills/review-task/SKILL.md#L43) then tells the reviewer to `remove ## Review Notes` at APPROVE, and [:70](../../../skills/review-task/SKILL.md#L70) limits the return to assessment + SHA. A pass yielding only advisory findings therefore APPROVEs and deletes them — the reviewer pre-filters exactly the way the objective's find-then-filter bullet forbids, and the orchestrator never adjudicates them. The `Defer` path in [agent-orchestration/SKILL.md:122](../../../skills/agent-orchestration/SKILL.md#L122) does not close this: it keys on `status: revise`, which only a blocking finding produces. Name where an advisory finding lands when the verdict is APPROVE (carry it in the commit body, keep the section, or state that advisory-only reviews approve and drop the items), and make §Findings, §Verdict, and §Report Format agree.
+
+2. **[BLOCKING]** The post-refactor re-execution requirement for Gate-4 verification was lost in the five-into-one collapse at [theory-modeling/references/integration.md:128](../../../skills/theory-modeling/references/integration.md#L128). The deleted item read "Verification checks survive … are present in the refactored code or notes **and were rerun successfully**"; the merged item requires only that substitution checks, limiting cases, and numerical examples still be present "in the same form and place a reader can use." A refactor can now keep a stale numerical check verbatim and pass the gate. The econ counterpart kept the equivalent ("still runs on the refactored code", "logged counts match", [econ-data-analysis/references/integration.md:20](../../../skills/econ-data-analysis/references/integration.md#L20)) — restore the rerun clause here.
+
+3. **[BLOCKING]** The contributor doc still teaches the retired vocabulary: [CLAUDE.md:100](../../../CLAUDE.md#L100) — "`[ADVISORY]` items may be reported as minor findings without blocking." The parent task's Constraints require the task that invalidates a `CLAUDE.md` statement to update it in the same change, and `## Results` claims one severity vocabulary repo-wide. Rewrite to the new semantics (recorded, never blocks).
+
+4. **[BLOCKING]** The `### Validation` claim does not reproduce. `## Results` states the grep for walk-top-to-bottom "returns nothing across `skills/`", but two survive: [writing/references/structure.md:95](../../../skills/writing/references/structure.md#L95) and [writing/references/style.md:162](../../../skills/writing/references/style.md#L162), both "Walked top to bottom …". They are heuristic lists rather than reviewer gate-walks, so keeping them may well be right — but then narrow the claim to what was actually swept. Also unverified by this review: `125 passed` for `tests/harness-instruction-following` could not be re-run here (no pytest available offline); leave the number only if it was observed at the current state.
+
+5. **[ADVISORY]** The reviewer's `Stage: integration` specializations dropped in `683451c4` are only half re-homed. The branch-wide surviving-diff sweep is carried by [refactor-and-integrate/SKILL.md:95](../../../skills/refactor-and-integrate/SKILL.md#L95), but the Sync-impact review-item field list (sync cluster, incoming intent, required propagation, minimal allowed branch delta, stale branch-side content) has no other home — [refactor-and-integrate §Sync Impact Context](../../../skills/refactor-and-integrate/SKILL.md#L82-L84) only says Sync Impact can justify a hunk. Either point at a home or record the intentional deletion; `## Results` currently does not mention that these two Integrate specializations came out at all.
+
+6. **[ADVISORY]** The focus-scoped checklist preamble was applied unevenly. `econ-data-analysis` and `semantic-merge` now read "the reviewer walks what its focus covers", while [slide-design/SKILL.md:73](../../../skills/slide-design/SKILL.md#L73) still says "the reviewer (as verification)" and [drift-test-quality.md:3](../../../skills/result-protection/references/drift-test-quality.md#L3) still says "Implementer and reviewer both walk the gated checklist below." Same sweep, two files missed.
+
+7. **[ADVISORY]** Consumers outside `skills/` still teach the retired adversarial stance this task removed from `review-task` and `agent-orchestration`: [docs/site/02-quickstart/task.md:83](../../../docs/site/02-quickstart/task.md#L83), [docs/site/05-workflows/02-implement/task.md:17,19](../../../docs/site/05-workflows/02-implement/task.md#L17-L19), [docs/site/task.md:129](../../../docs/site/task.md#L129); and [interactive-mode.md:23](../../../skills/superplan/references/interactive-mode.md#L23) still dispatches "a full gated pass," which is the shape §Scope retired. Some of this may fall to the `workflow-defaults` sibling — say which is deferred rather than leaving it unmarked.
+
+8. **[ADVISORY]** The filter merge at [econ-data-analysis/SKILL.md:160](../../../skills/econ-data-analysis/SKILL.md#L160) promoted an advisory to blocking: "`[ADVISORY]` Watch chained filters for unintended cumulative effects" was folded into the `[BLOCKING]` boolean-logic item as "chained filters compound." Confirm the promotion is intended, or split it back out.
