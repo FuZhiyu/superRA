@@ -12,7 +12,7 @@ Load per stage, not all at once.
 
 | Reference | Load when |
 |---|---|
-| `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map hard gate** and the **Verification Plan**. Loaded by `superplan` when the work is theory/modeling. |
+| `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map** and the **Verification Plan**. Loaded by `superplan` when the work is theory/modeling. |
 | `references/integrate-drift-tests.md` | `protection` stage when a drift test was selected - modeling-result candidates, symbolic and numerical tolerance conventions, and theory-modeling failure modes. |
 | `references/integration.md` | `integration` stage - readability layer for reader-ready output: ex-post structural rewriting (objective-first), per-step local obviousness, cross-document coherence, prose-to-math precision, rendering legibility, and refactor-survival of correctness artifacts. |
 | `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
@@ -63,7 +63,7 @@ At write-up, review the notation you reasoned with and replace each shorthand ra
 
 A new symbol earns its place two ways: standard notation an economist writes without prompting ($r$, $w$, $\beta$), defined at first use; or writing its expression out each time would lose real meaning — the one-site test in the ledger's `What the name carries` slot, applied to every new output symbol. A symbol meeting neither is inlined — introducing notation that fails this bar counts against the work like an algebra error.
 
-**Artifact: per-symbol ledger entry in the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling is a format violation, not a judgment call. Tasks introducing no new symbols record "None."
+**Artifact: per-symbol ledger entry at the end of the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling is a format violation, not a judgment call. Tasks introducing no new symbols record "None."
 
 Symbols already in the tree's canonical Notation Conventions table (on the governing ancestor task) are reused with the canonical meaning, not redefined locally, and need no new ledger entry.
 
@@ -121,7 +121,7 @@ The Proof-deletion test diagnoses whether the slot satisfies this recipe.
 
 Assumptions carry the economic content. Each is attached to a primitive object, readable as economics, and no weaker than it needs to be — one interpretable primitive over a scattering of weak technical restrictions.
 
-**Artifact: per-assumption ledger entry in the task's `## Results`.** One entry per assumption. Tasks introducing no new assumptions record "None."
+**Artifact: per-assumption ledger entry at the end of the task's `## Results`.** One entry per assumption. Tasks introducing no new assumptions record "None."
 
 **Slot template:**
 

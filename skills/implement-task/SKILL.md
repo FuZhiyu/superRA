@@ -32,21 +32,17 @@ Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Results`
 
 **REVISE round.** Fix each `## Review Notes` item at its cited `file:line`; append under it, preserving the reviewer's prose: `→ implemented: <markdown-link citation + one-line fix>`. Never remove, resolve, or strike an item — the reviewer re-reviews them. `→ orchestrator: rejected` items are decided — skip. `→ orchestrator: <second opinion requested>` is for the reviewer — leave the item untouched, note it in your return. An item you think is wrong or already handled: don't annotate; flag it in your return.
 
-**`Stage: integration` first pass.** After fitting the diff to the host project, self-review the governing diff; record each retained hunk you could not adjudicate — scope-ambiguous yet plausibly load-bearing — as a `## Review Notes` item: `file:line`, why kept, which source it fails to match (see the loaded `refactor-and-integrate`). Return `DONE_WITH_CONCERNS`. The one case where you author review notes; other review items and reviewer prose stay untouched.
-
-Bad results are worse than no results — if the data looks wrong, stop and report (§Escalation).
-
 ## Reporting
 
 Writing it is half the task, use a significant share of the thinking budget on reporting.
 
 `## Results` is the deliverable; its readers never saw your session. Write it for a cold reader: assume no session context.
 
-- **Pyramid.** Main result in plain language first, then findings, then evidence and caveats, then mechanics. One takeaway per section; a section with no takeaway doesn't exist. Full treatment: `superRA:writing` `references/structure.md`.
+- **Pyramid.** Main result in plain language first, then findings, then evidence and caveats, then mechanics. One takeaway per section; a section with no takeaway doesn't exist.
 - **Findings bar.** A finding is what the researcher would quote or act on. That a step ran or a merge kept rows is mechanics — a sample line or caveat at most. Most tasks produce no finding.
 - **Each fact once.** A fact lives where it is produced — the code, the document, the commit, the producing task's `## Results`. An artifact deliverable: point to it, never restate its content. A number copied into a second file survives wrong in every copy once the result changes.
 - **Extras wait to be asked for.** A possibly-relevant detail you chose not to record: name it in your return as a delta. It enters `## Results` only if the researcher or orchestrator says so.
-- **Concise by selection, not compression.** Cut lines the reader doesn't need, not words the reader does. Speak per `superRA:using-superra` §Communication.
+- **Concise by selection, not compression.** Cut lines the reader doesn't need, not words the reader does. Short nested bullets over prose — speak per `superRA:using-superra` §Communication.
 - **Current, not a log.** Edit in place; delete superseded content. No "Update:" blocks or strikethroughs. Findings land in the task body before any status return; the return points at the file. Change summary goes in the commit body.
 
 Over-written merge results:
@@ -67,7 +63,7 @@ A merge count is not a key finding: heading gone, count becomes the sample line,
 Before commit:
 
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
-2. **Results.** `## Results` holds to §Reporting. Per paragraph: "what's new here?" — no new fact, claim, or decision → cut.
+2. **Results.** `## Results` holds to §Reporting.
 3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
 
 ## Commit
@@ -87,7 +83,7 @@ Status enum + commit SHA, plus the deltas §Reporting and §Self-Check send here
 - **Commit SHA:** `<sha>` — BLOCKED / NEEDS_CONTEXT have no commit; carry the blocker or missing context instead.
 - **Worktree return** (only when dispatched with a `Worktree:` field): branch name (`<current-branch>-agent/parallel/<slug>`) + HEAD SHA.
 
-`DONE_WITH_CONCERNS`: the concern lives in `## Results`, the commit body, and/or the integration-pass review notes; the enum tells the orchestrator to read.
+`DONE_WITH_CONCERNS`: the concern lives in `## Results` and the commit body; the enum tells the orchestrator to read.
 
 ## Escalation
 

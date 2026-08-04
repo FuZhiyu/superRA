@@ -4,13 +4,9 @@ Load at the **PLAN phase** when the work involves mathematical modeling. `superp
 
 ---
 
-## Model Inventory / Assumption Map (Hard Gate)
+## Model Inventory / Assumption Map
 
 Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model. The inventory is project-wide: it becomes a `### Model Inventory / Assumption Map` subsection of the `## Objective` on the governing ancestor task — the task whose subtree is the whole model.
-
-<HARD-GATE>
-Do NOT write task structure, invoke an implementation skill, or take any planning action beyond this gate until you have written the Model Inventory / Assumption Map and the researcher has approved it. Applies to EVERY theory/modeling project regardless of perceived simplicity.
-</HARD-GATE>
 
 ### Checklist
 
