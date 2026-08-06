@@ -10,16 +10,6 @@
 4. **Self-check** against `style.md` §Gated Checklist (sentence-level) and `structure.md` §Gated Checklist (section anatomy) — a real walk; fix non-compliant prose before completion.
 5. **Build.** Compile the document; resolve cross-reference breaks before completion (`refactor-and-compile.md` §Compile).
 
-## Intent comments
-
-Each drafted paragraph ships with an intent comment on the line above it (`% intent: …` in `.tex`, `<!-- intent: … -->` in `.md`/`.qmd`). Write the intent first as the drafting brief distilled from the user's request, then prose that fulfills it. It ships with the draft, not as scaffolding.
-
-Example (LaTeX):
-
-```
-% intent: establish that the puzzle survives the standard risk-based explanation.
-Standard risk-based stories predict ...
-```
 
 ## Workflow coupling
 

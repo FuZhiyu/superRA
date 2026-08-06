@@ -63,28 +63,13 @@ At write-up, review the notation you reasoned with and replace each shorthand ra
 
 A new symbol earns its place two ways: standard notation an economist writes without prompting ($r$, $w$, $\beta$), defined at first use; or writing its expression out each time would lose real meaning — the one-site test in the ledger's `What the name carries` slot, applied to every new output symbol. A symbol meeting neither is inlined — introducing notation that fails this bar counts against the work like an algebra error.
 
-**Artifact: per-symbol ledger entry at the end of the task's `## Results`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling is a format violation, not a judgment call. Tasks introducing no new symbols record "None."
+**Artifact: notation ledger table at the end of the task's `## Results`.** One row per object. An indexed family ($x_k$ for $k=1,\dots,K$) is one row; distinct symbols never share a row. Tasks introducing no new symbols record "None."
 
-Symbols already in the tree's canonical Notation Conventions table (on the governing ancestor task) are reused with the canonical meaning, not redefined locally, and need no new ledger entry.
+| Symbol | Meaning | First use | Reuse | Inline alternative | Carries | Nearest existing | Why not existing |
+|---|---|---|---|---|---|---|---|
+| `<name>` | `<type; denotation; origin>` | `<ref>` | `<refs / none>` | `<expression>` | `<lost meaning>` | `<symbol / none in scope>` | `<only if applicable>` |
 
-**Slot template** (all required except where noted):
-
-```
-Symbol: <name>
-Meaning: <type/space + denotation + origin if derived>
-First-use site: <task ## Results line or equation label in this task>
-Reuse sites: <every additional site, with refs; "none" if one-site>
-Inline alternative: <the actual expression substituted at first-use>
-What the name carries beyond the expression:
-  <interpretive content lost by inlining: sign meaning, role in a
-   structural identity, named scalar cited at site X. "Shorter
-   string" does not qualify.>
-Nearest existing symbol considered:
-  <from the canonical Notation Conventions table, active lemma, or
-   upstream derivation in this task; "none in scope" is a falsifiable claim>
-Why this name and not that one:
-  <only if "Nearest existing" is non-empty>
-```
+Symbols in the governing ancestor's canonical Notation Conventions table are reused with their canonical meaning and need no row.
 
 **Writing the Meaning slot.** Three components, all required:
 
@@ -121,32 +106,11 @@ The Proof-deletion test diagnoses whether the slot satisfies this recipe.
 
 Assumptions carry the economic content. Each is attached to a primitive object, readable as economics, and no weaker than it needs to be — one interpretable primitive over a scattering of weak technical restrictions.
 
-**Artifact: per-assumption ledger entry at the end of the task's `## Results`.** One entry per assumption. Tasks introducing no new assumptions record "None."
+**Artifact: assumption ledger table at the end of the task's `## Results`.** One row per assumption. Tasks introducing no new assumptions record "None."
 
-**Slot template:**
-
-```
-Assumption: <statement>
-Interpretation:
-  <one-sentence plain-language reading a researcher can defend>
-Attached to:
-  <primitive — preferences / technology / endowment / information /
-   timing / distribution / parameter domain / boundary / normalization>
-First-bite site: <where in this task's derivation it is invoked>
-Reuse / scope: <every result that depends on it>
-Without this assumption:
-  <which conclusion changes; if "none", the assumption fails
-   necessity and should be removed>
-What this assumption carries beyond existing assumptions:
-  <the additional restriction on the named primitive that no
-   existing assumption already imposes. "Cleaner statement" does
-   not qualify.>
-Nearest existing assumption considered:
-  <from the canonical Assumption Map or upstream derivations>
-Why state it this way and not via the existing one:
-  <only if "Nearest existing" is non-empty; if a stronger version of
-   the existing assumption would cover this case, prefer the synthesis>
-```
+| Assumption | Interpretation | Primitive | First bite | Scope | Without it | New restriction | Nearest existing | Why not existing |
+|---|---|---|---|---|---|---|---|---|
+| `<statement>` | `<plain reading>` | `<primitive>` | `<ref>` | `<results>` | `<changed conclusion>` | `<increment>` | `<assumption / none>` | `<only if applicable>` |
 
 **Checklist:**
 
@@ -179,12 +143,12 @@ Derivations must be auditable — a correct result that cannot be checked is not
 
 A derivation is complete only after surviving at least one independent check and reading cleanly for a human audience.
 
-**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used if any, and the pass condition. The rendered output is the human-readable markdown / LaTeX shipping in the task's `## Results`.
+**Artifact: verification work + rendered output.** Report symbolic checks in the human-readable markdown / LaTeX shipping in `## Results`. Run numerical checks when needed to verify algebra; keep their parameters, evaluations, and outcomes internal.
 
 **Checklist:**
 
 - `[BLOCKING]` Every headline symbolic result checked against at least one independent verification mode: substitute back into the original conditions, test a limiting or special case, or evaluate a simple numerical example.
-- `[BLOCKING]` Numerical verification uses explicit parameter values and states what is checked: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence.
+- `[BLOCKING]` Numerical verification, when needed, uses explicit parameter values and a pass condition: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence. It is not reported.
 - `[BLOCKING]` Special and limiting cases interpreted economically, not just numerically confirmed ("at $\beta \to 0$ the policy reduces to the myopic rule, matching the one-period benchmark"), and compared against intuition and any hypotheses stated in the task objective; divergences flagged before proceeding.
 - `[BLOCKING]` Results checked back against the assumption map. A step quietly needing a stronger sign, domain, or regularity restriction than the map states: update the map before using the result.
 - `[BLOCKING]` With code, CAS output, or a solver, the human-readable result matches the computed object exactly. No manual transcription drift.
