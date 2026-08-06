@@ -52,7 +52,7 @@ Each task's `## Results` matures through two stages.
 
 ### Two-Stage Lifecycle
 
-- **Stage 1 — Dev log (IMPLEMENT phase).** `## Results` is the live, agent-facing findings record. A line belongs only if a future reader needs it to use, reproduce, or trust the result — the inclusion test mirrors the objective's rejection test in `task-tree-design.md` §Writing Objectives and Planner Guidance. Detail that clears the test sits low in the pyramid or behind a link; anything a linked artifact, commit, or upstream task already carries is pointed at, not restated (`implement-task` §Reporting). Re-implementation replaces a task's results; it never appends history.
+- **Stage 1 — Dev log (IMPLEMENT phase).** `## Results` is the live, agent-facing findings record. A line belongs only if a future reader needs it to use, reproduce, or trust the result — the inclusion test mirrors the objective's rejection test in `task-tree-design.md` §Writing Objectives and Planner Guidance. Detail that clears the test sits low in the pyramid or behind a link; anything a linked artifact, commit, or upstream task already carries is pointed at, not restated (`communicate`). Re-implementation replaces a task's results; it never appends history.
 - **Stage 2 — Permanent record (INTEGRATE Mature & Consolidate).** After Protect selects results, documentation homes, consolidation dispositions, and protection mechanisms: create the user-facing documentation and result files first, then distil each touched task's `## Results` to a disposition below and apply the structural fold owned by `skills/superplan/references/consolidation.md`. Ordering and record verification: `superintegrate/references/mature-consolidate.md`.
 
 ### Maturation Disposition Menu
@@ -73,7 +73,7 @@ Most results are a few lines under `## Results` with no subsections. Add one onl
 
 | Subsection | Add when |
 |---|---|
-| `### Key Findings` | more than one finding — by the bar in `implement-task` §Reporting, a result the researcher would quote or act on — needs separating from the surrounding narrative |
+| `### Key Findings` | more than one finding — by the bar in `communicate/references/structures.md`, a result the researcher would quote or act on — needs separating from the surrounding narrative |
 | `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
 | `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
 | `### Notes` | a caveat, data quirk, or decision changes how the result is read |
@@ -89,4 +89,4 @@ Any `## Results` riding higher than the task that produced a finding — a paren
 
 ### Figure Embedding
 
-Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/report-in-markdown/references/rich-content.md`.
+Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/communicate/references/rich-content.md`.

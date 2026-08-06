@@ -1,12 +1,4 @@
----
-name: report-in-markdown
-description: Markdown style guide for task files, status reports, and standalone reports. Use when writing or revising Markdown with source citations, figures, math, or tables.
-user-invocable: true
----
-
-# Report in Markdown
-
-Markdown mechanics for anything you write. Apply the rules below; load references only for figures, task companion files, or standalone-report IO.
+# Markdown Mechanics
 
 ## File-reference rule
 
@@ -42,7 +34,7 @@ Three patterns render broken in the dashboard with no error:
 - **Write KaTeX-undefined operators as `\operatorname{...}`.** `\diag`, `\cov`, `\var`, `\corr`, `\Cov`, `\Var`, `\E`, `\plim`, `\argmin`, `\argmax`, `\sgn`, `\tr`, `\rank` work in a `.tex` document but are undefined in KaTeX and render as an error. Use `\operatorname{diag}`, `\operatorname{Cov}`, etc.
 - **Keep each inline `$…$` span on a single line.** Never hard-wrap between an opening `$` and its closing `$` — the inline rule has no dotAll flag, so a split span renders as raw literal text with visible backslashes. Escape a literal `$` in prose as `\$`.
 
-The task hook runs this check on edited `.md` files under a task root and surfaces non-blocking feedback. For standalone markdown, or when no hook ran, use the self-diagnose CLI (reports only, never edits):
+The task hook runs this check on edited `.md` files under a task root and surfaces non-blocking feedback. For standalone Markdown, or when no hook ran, use the self-diagnose CLI; it reports but never edits:
 
 ```
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
@@ -78,9 +70,3 @@ The dashboard renders task markdown with `html: true` and sanitizes the result w
 - **Scripts, iframes, event handlers (`onclick=`, `onerror=`), and `javascript:` URLs are stripped.** Nothing interactive survives — build static layouts, not widgets.
 
 HTML-heavy content is **dashboard-first**: GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled on GitHub. Keep the meaning legible without the styling, or keep such content out of GitHub-read files.
-
-## References
-
-- `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding). Load when the output includes figures.
-- `../using-superra/references/task-companion-files.md` — task-local companion classification, placement, reproducibility, promotion, and maturation. Load before retaining any file with a task.
-- `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Load for permanent standalone artifacts (reports, rendered notes, dashboards); task-local Markdown companions follow the companion-file contract instead.

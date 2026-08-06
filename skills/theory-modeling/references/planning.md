@@ -106,7 +106,7 @@ Every theory/modeling plan includes explicit verification tasks.
 
 3. **Document expected outcomes.** Per check: what should happen, and what counts as a concerning failure.
 
-4. **Tie verification to renderable outputs.** Equations, tables, or figures for a human reader route through `superRA:report-in-markdown`, not a separate formatting path.
+4. **Tie verification to renderable outputs.** Equations, tables, or figures for a human reader route through `superRA:communicate`, not a separate formatting path.
 
 5. **Keep reproducibility explicit.** More than one script or notebook: include a pipeline entry point so symbolic and numerical outputs rerun from source.
 

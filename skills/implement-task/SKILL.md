@@ -19,7 +19,7 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 ## Before You Start
 
-1. Load `superRA:using-superra`, then the stage and domain skills per its §Skill-Load Manifest, plus any skill the dispatch's `Additionally:` line names.
+1. Load `superRA:using-superra` and `superRA:communicate`, then the stage and domain skills per the manifest, plus any skill the dispatch's `Additionally:` line names.
 2. Read each assigned task via `superra task read <path>`.
 
 ## Execution
@@ -34,36 +34,14 @@ Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Results`
 
 ## Reporting
 
-Writing it is half the task, use a significant share of the thinking budget on reporting.
-
-`## Results` is the deliverable; its readers never saw your session. Write it for a cold reader: assume no session context.
-
-- **Pyramid.** Main result in plain language first, then findings, then evidence and caveats, then mechanics. One takeaway per section; a section with no takeaway doesn't exist.
-- **Findings bar.** A finding is what the researcher would quote or act on. That a step ran or a merge kept rows is mechanics — a sample line or caveat at most. Most tasks produce no finding.
-- **Each fact once.** A fact lives where it is produced — the code, the document, the commit, the producing task's `## Results`. An artifact deliverable: point to it, never restate its content. A number copied into a second file survives wrong in every copy once the result changes.
-- **Extras wait to be asked for.** A possibly-relevant detail you chose not to record: name it in your return as a delta. It enters `## Results` only if the researcher or orchestrator says so.
-- **Concise by selection, not compression.** Cut lines the reader doesn't need, not words the reader does. Short nested bullets over prose — speak per `superRA:using-superra` §Communication.
-- **Current, not a log.** Edit in place; delete superseded content. No "Update:" blocks or strikethroughs. Findings land in the task body before any status return; the return points at the file. Change summary goes in the commit body.
-
-Over-written merge results:
-
-> ### Key Findings
-> - We ran the merge step and it completed successfully on `fund_id` and `date`.
-> - Left join kept 252,341 of 254,004 fund-months; the 1,663 dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
-> - Overall the data preparation went well and the outputs are ready for downstream use.
-
-Rewritten:
-
-> Panel ready for the alpha regressions: 252,341 fund-months, 1994–2023 ([Data/panel.parquet](Data/panel.parquet)). The 0.7% dropped have no CRSP match ([Code/03.py:42](Code/03.py#L42)).
-
-A merge count is not a key finding: heading gone, count becomes the sample line, drop survives as the one caveat.
+Apply `superRA:communicate` to `## Results` and the status return. Record material findings before returning; keep results current rather than appending session history. The return points to the task instead of repeating it.
 
 ## Self-Check
 
 Before commit:
 
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
-2. **Results.** `## Results` holds to §Reporting.
+2. **Results.** `## Results` and the return hold to `superRA:communicate` and §Reporting.
 3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
 
 ## Commit
@@ -77,7 +55,7 @@ git commit -m "implement(<task-path>): <STATE> — <delta>"   # STATE = DONE | C
 
 ## Report Format
 
-Status enum + commit SHA, plus the deltas §Reporting and §Self-Check send here — extras you left out, unaddressed `[ADVISORY]` items. Nothing restated from the task file.
+Status enum + commit SHA, plus extras left out and unaddressed `[ADVISORY]` items. Nothing restated from the task file.
 
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Commit SHA:** `<sha>` — BLOCKED / NEEDS_CONTEXT have no commit; carry the blocker or missing context instead.

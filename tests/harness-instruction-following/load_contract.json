@@ -19,9 +19,9 @@
       ],
       "trigger": "Any superRA role dispatch.",
       "expected_evidence": [
-        "source manifest names superRA:using-superra as the skill every dispatch always loads",
-        "each role skill's Before You Start instructs loading it",
-        "Codex transcript contains the task-read command event, plus the markdown-check event for the on-demand superRA:report-in-markdown load the fixture task calls for",
+        "source manifest names superRA:using-superra and superRA:communicate as the skills every dispatch always loads",
+        "each role skill's Before You Start instructs loading both",
+        "Codex transcript contains the task-read and superRA:communicate markdown-check command events",
         "live artifact matches the exact schema"
       ],
       "classification": [

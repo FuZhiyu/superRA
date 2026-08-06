@@ -143,7 +143,7 @@ Anything unexpected: STOP and investigate.
 - `[BLOCKING]` Markdown cells explain what each block does and why.
 - `[BLOCKING]` **Headline findings presented visually.** Each headline result as a figure — a distribution, a relationship, or a time path.
   - Exception: a figure would not clarify it — a lone scalar, a small table that already reads clearly.
-- `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
+- `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:communicate`.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 

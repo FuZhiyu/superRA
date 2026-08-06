@@ -85,13 +85,12 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
-| Universal task read/edit interface — read a task with injected context, edit mechanics, house citation/figure conventions | `using-superra` (§Task Interface); editing principles live in `implement-task` (§Reporting), per-role edit ownership in each role skill's §Self-Check |
-| Reporting contract — pyramid structure, finding selection, one home per fact | `implement-task` (§Reporting) |
+| Universal task read/edit interface — read a task with injected context, edit mechanics, per-role ownership | `using-superra` (§Task Interface) and each role skill's §Self-Check |
+| Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `writing` |
 | Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
 | Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
-| Markdown mechanics — KaTeX render traps, tables, figure embedding, raw HTML, plus the full form of the house citation rule | `report-in-markdown` (load-on-demand; the render-integrity hook points agents to it) |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superra/references/` |
 | Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `skills/implement-task` and `skills/review-task` |
 
@@ -110,8 +109,7 @@ What each agent loads in a session. This section documents the architecture for 
 
 | Load | When | Weight |
 |---|---|---|
-| `using-superra` + `references/main-agent.md` | session start (hook-reminded on any superRA mention) | Mandatory |
-| `report-in-markdown` | markdown mechanics beyond the house conventions in `using-superra` §Task Interface; render-integrity hook feedback | On demand |
+| `using-superra` + `communicate` + `using-superra/references/main-agent.md` | session start (`using-superra` hook-reminded on any superRA mention; `communicate` required before human-facing writes) | Mandatory |
 | Phase workflow skill (`superplan` / `superintegrate`) | phase entry | Mandatory |
 | `using-superra/references/interactive-mode.md` | executing a task in the default interactive mode | Typical |
 | `superimplement` | autonomous execution, on researcher request or an accepted recommendation | On demand |
@@ -127,8 +125,7 @@ What each agent loads in a session. This section documents the architecture for 
 | Load | How | Weight |
 |---|---|---|
 | Role skill (`implement-task` / `review-task`) | dispatch-prompt load line | Mandatory |
-| `using-superra` | role-skill §Before You Start load instruction | Mandatory |
-| `report-in-markdown` | markdown mechanics beyond the house conventions; render-integrity hook feedback | On demand |
+| `using-superra` + `communicate` | role-skill §Before You Start load instruction | Mandatory |
 | Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
 | Domain skill(s) per the manifest | manifest | Typical |
 | Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |

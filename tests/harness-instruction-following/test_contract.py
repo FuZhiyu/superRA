@@ -268,8 +268,8 @@ def test_task_companion_contract_has_one_canonical_route():
     assert "references/task-companion-files.md" in read_text(
         "skills/using-superra/SKILL.md"
     )
-    assert "../using-superra/references/task-companion-files.md" in read_text(
-        "skills/report-in-markdown/SKILL.md"
+    assert "using-superra/references/task-companion-files.md" in read_text(
+        "skills/communicate/SKILL.md"
     )
 
 

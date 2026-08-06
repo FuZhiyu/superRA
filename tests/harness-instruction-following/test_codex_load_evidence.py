@@ -48,13 +48,13 @@ def test_default_ci_path_never_imports_codex_cli():
 
 
 def test_green_canary_present_in_command():
-    spec = CanarySpec(skill="report-in-markdown", token="CANARY_VERDANT_7Q")
+    spec = CanarySpec(skill="communicate", token="CANARY_VERDANT_7Q")
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=[
-            "python3 skills/report-in-markdown/scripts/check_markdown.py CANARY_VERDANT_7Q.md",
+            "python3 skills/communicate/scripts/check_markdown.py CANARY_VERDANT_7Q.md",
         ],
     )
     report.assert_ok()
@@ -73,7 +73,7 @@ def test_green_canary_command_satisfies():
 
 def test_red_canary_absent_from_commands():
     spec = CanarySpec(
-        skill="report-in-markdown",
+        skill="communicate",
         token="CANARY_VERDANT_7Q",
     )
     report = CanaryReport()

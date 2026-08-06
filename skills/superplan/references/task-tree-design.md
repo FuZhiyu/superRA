@@ -4,7 +4,7 @@ Load when designing, changing, consolidating, or integration-checking a `superRA
 
 ## Writing Objectives and Planner Guidance
 
-`## Objective` is the contract — with the user at planning time, with the implementer and reviewer at dispatch. It states what must be true when the task is done, and nothing else. Keep it short: a goal statement (often a close paraphrase of the user's request) plus a few binding bullets, in the terse style of `using-superra` §Communication. That style binds `## Planner Guidance` and every other planning artifact.
+`## Objective` is the contract — with the user at planning time, with the implementer and reviewer at dispatch. It states what must be true when the task is done, and nothing else. Keep it short: a goal statement (often a close paraphrase of the user's request) plus a few binding bullets, following `superRA:communicate`. The same contract binds `## Planner Guidance` and every other planning artifact.
 
 A line belongs in the objective only if the reviewer should reject work that violates it:
 - **The goal** — what the task must produce or verify, naming the artifacts that define its scope.

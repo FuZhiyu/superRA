@@ -14,7 +14,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from always_loaded_live import (  # noqa: E402
     CODEX_SKILL_LOAD_CANARIES,
-    CODEX_REPORT_IN_MARKDOWN_CANARY,
+    CODEX_COMMUNICATE_CANARY,
     CODEX_USING_SUPERRA_CANARY,
     EXPECTED_ARTIFACT,
     check_claude_always_loaded_static,
@@ -36,18 +36,18 @@ def test_green_codex_both_canaries_from_commands():
         report,
         CODEX_SKILL_LOAD_CANARIES,
         command_strings=[
-            "python3 skills/report-in-markdown/scripts/check_markdown.py task.md",
+            "python3 skills/communicate/scripts/check_markdown.py task.md",
             "./superRA/superra task read always-loaded-task",
         ],
     )
     report.assert_ok()
 
 
-def test_red_codex_report_in_markdown_canary_absent():
+def test_red_codex_communicate_canary_absent():
     report = CanaryReport()
     evaluate_canaries(
         report,
-        [CODEX_REPORT_IN_MARKDOWN_CANARY],
+        [CODEX_COMMUNICATE_CANARY],
         command_strings=["ls -la", "cat task.md"],
     )
     assert not report.ok
@@ -80,7 +80,7 @@ def test_red_static_backbone_missing_skill(tmp_path):
         path = tmp_path / rel
         path.parent.mkdir(parents=True)
         path.write_text(
-            "# Role\n\n## Before You Start\n\n1. Load superRA:report-in-markdown.\n",
+            "# Role\n\n## Before You Start\n\n1. Load superRA:using-superra.\n",
             encoding="utf-8",
         )
     report = SkillLoadReport()

@@ -1,6 +1,6 @@
 ---
 title: "Communicate Skill and References"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -27,3 +27,18 @@ Create the concise, standalone `superRA:communicate` skill and its progressive-r
 - The skill body models the target style; detailed structures, rewrite operations, friction diagnostics, and Markdown mechanics load from their owning references.
 
 ## Results
+
+- `superRA:communicate` now owns human-facing selection, hierarchy, rewriting, distillation, and review ([SKILL.md:8](../../../../../skills/communicate/SKILL.md#L8)).
+  - The three-layer contract leads with the outcome or honest present state, keeps evidence and disqualifying caveats together, and links mechanics last.
+  - The load map composes manuscript work with academic `writing` and routes structures, rewrites, friction audits, Markdown, figures, and standalone IO to on-demand references ([SKILL.md:22](../../../../../skills/communicate/SKILL.md#L22)).
+- The references make the contract operational.
+  - `structures.md` defaults multi-point output to short nested pyramids and includes paragraph-wall, flat-list, and nested variants ([structures.md:3](../../../../../skills/communicate/references/structures.md#L3)).
+  - `rewrite.md` routes patch, structural rewrite, or stop; classifies source units; and preserves exact literals, semantics, dependencies, claim force, and voice ([rewrite.md:3](../../../../../skills/communicate/references/rewrite.md#L3)).
+  - `friction-audit.md` changes only patterns with observable reader cost and preserves harmless voice markers; its pinned provenance records the adapted MIT source ([friction-audit.md:18](../../../../../skills/communicate/references/friction-audit.md#L18)).
+- `report-in-markdown` is retired; its Markdown, rich-content, standalone-IO, checker, tests, and packaging entry moved under `communicate`.
+  - Active role, workflow, task-tree, inventory, release-note, docs-site, and harness callers now point to the new owner.
+  - Three legacy pointers remain in user-modified files for orchestrator reconciliation: [theory-modeling/SKILL.md:169](../../../../../skills/theory-modeling/SKILL.md#L169), [theory-modeling/SKILL.md:188](../../../../../skills/theory-modeling/SKILL.md#L188), and [theory-modeling/references/integration.md:135](../../../../../skills/theory-modeling/references/integration.md#L135).
+- Verification passes:
+  - Skill validator; 29 render-checker tests; 47 targeted always-loaded and migration contract tests; harness compatibility; Markdown self-diagnosis; task-tree check.
+  - Two read-only Codex sessions covered planning, task-result distillation, role returns, review/rewrite, and academic composition. The first exposed paragraph drift and tightened the surface rule; the second produced the nested pyramid from paragraph-wall and flat-list inputs, preserved the exact `DONE` schema and literals, and retained first-person voice, a calibrated hedge, and em dashes.
+  - The broader `test_contract.py` still has two unrelated baseline failures: it expects a removed `superimplement` seat table and `superplan/references/decomposition.md`.

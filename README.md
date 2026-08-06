@@ -11,7 +11,7 @@ superRA turns an AI coding agent into a disciplined research assistant. It runs 
 1. A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
 2. An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
 3. **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
-4. **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
+4. **Utility skills** that teach agents practical mechanics — communicating dense results clearly, loading papers from Zotero, syncing data across worktrees, and more.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 

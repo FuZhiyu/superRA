@@ -306,7 +306,7 @@ def evidence_from_hook_records(
 
 
 # The skills every role skill must pull in before acting.
-ALWAYS_LOADED_SKILLS = ("superRA:using-superra",)
+ALWAYS_LOADED_SKILLS = ("superRA:using-superra", "superRA:communicate")
 
 # Role skills that carry the always-loaded contract as a body load instruction.
 ROLE_SKILL_FILES = ("skills/implement-task/SKILL.md", "skills/review-task/SKILL.md")

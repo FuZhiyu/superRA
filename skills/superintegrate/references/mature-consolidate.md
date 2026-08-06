@@ -25,7 +25,7 @@ Agent:
     structure per `superplan/references/consolidation.md` and mature `## Results`
     per `task-tree/references/task-file-contract.md` §Results Shape. Rewriting
     surviving task files down to terse is part of the job: `implement-task`
-    §Reporting is the bar for every section you touch, not only new writes.
+    `superRA:communicate` is the bar for every section you touch, not only new writes.
     Land recoverable commits per affected subtree.
 ```
 

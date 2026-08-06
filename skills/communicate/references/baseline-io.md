@@ -1,6 +1,6 @@
 # Baseline IO: frontmatter, filename, paths, metadata
 
-Load when producing a **permanent standalone** Markdown artifact outside a task directory. Stage 1 task `## Results` do not need it; task-local Markdown companions follow `skills/using-superra/references/task-companion-files.md`.
+Load when producing a **permanent standalone** Markdown artifact outside a task directory. Task `## Results` do not need it; task-local Markdown companions follow `skills/using-superra/references/task-companion-files.md`.
 
 ## Resolve output path
 

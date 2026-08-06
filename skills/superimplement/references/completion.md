@@ -12,7 +12,7 @@ After every task is `approved`, walk all three checks against actual command out
    ```
    Uncommitted changes: investigate (probably a missed inline edit), commit, or ask the user.
 
-2. **Results recorded?** Read the completed task files. Fails in either direction against `implement-task` §Reporting: missing, thin, or status-report-only results for substantive work; results that restate an artifact, diff, commit body, or child task instead of pointing at it.
+2. **Results recorded?** Read the completed task files. Fails in either direction against `communicate`: missing, thin, or status-report-only results for substantive work; results that restate an artifact, diff, commit body, or child task instead of pointing at it.
 
 3. **Reproducibility verification.**
    - Multi-script pipeline runs end-to-end if the tree declares one.

@@ -6,7 +6,7 @@ Load when writing markdown that contains figures. Rules apply at every stage.
 
 The caller supplies the target `attachments/` directory — substitute the actual path when embedding. No caller value: default to `attachments/` next to the output file:
 
-- Stage 1 task `## Results` → next to the task's `task.md` (see `task-tree/references/task-file-contract.md` §Figure Embedding).
+- Task `## Results` → next to the task's `task.md` (see `task-tree/references/task-file-contract.md` §Figure Embedding).
 - Matured task results → next to the task's `task.md`.
 - Standalone report → next to the report file.
 
@@ -18,7 +18,7 @@ mkdir -p "${ATTACH_DIR}"
 
 ### Materialize figures
 
-Stage 1 figures are written directly into the task's `attachments/` by the analysis script — no copying. Permanent and standalone reports copy figures into a new attachments folder so the artifact is self-contained:
+Task figures are written directly into the task's `attachments/` by the analysis script — no copying. Permanent and standalone reports copy figures into a new attachments folder so the artifact is self-contained:
 
 **PDF figures:** convert to PNG first, then save:
 
@@ -47,4 +47,3 @@ Source: [Original](relative/path/to/original/figure.pdf)
 Use a **descriptive caption**, not "Figure 1" — it is the figure's documentation for skimmers.
 
 Cite the **original source path** beneath the embed — the file the analysis script produced, not the copy in `ATTACH_DIR` — so a future reader can regenerate the figure.
-

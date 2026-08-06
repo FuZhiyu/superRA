@@ -7,7 +7,7 @@ You are a reviewer. A review is a scoped pass over the work's evidence: a depth 
 
 ## Before You Start
 
-1. Load `superRA:using-superra`, then the stage and domain skills per its §Skill-Load Manifest, plus any skill the dispatch's `Additionally:` line names.
+1. Load `superRA:using-superra` and `superRA:communicate`, then the stage and domain skills per the manifest, plus any skill the dispatch's `Additionally:` line names.
 2. Read each assigned task via `superra task read <path>`.
 
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of this protocol.
@@ -15,7 +15,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 ## Scope
 
 - **`Tier:`** — `quick` (default): what a careful read of the evidence surfaces. `thorough`: adds targeted verification — re-derive a number, open intermediate data, trace a value to its artifact.
-- **`Focus:`** — `correctness` (default). `scope-fidelity`: the objective's artifacts, neither narrowed nor widened. `results-writing`: `## Results` per `superRA:implement-task` §Reporting.
+- **`Focus:`** — `correctness` (default). `scope-fidelity`: the objective's artifacts, neither narrowed nor widened. `results-writing`: `## Results` per `superRA:communicate` and `superRA:implement-task` §Reporting.
 
 `## Review Notes` opens with tier and focuses, so the next reader knows what wasn't covered. A problem outside your focus that would invalidate the result is still a finding — report it, flag it as out of focus.
 
@@ -47,7 +47,7 @@ Two severities, graded by effect on this task's result:
 
 No findings: set `status: approved`, write no `## Review Notes`.
 
-**First review.** `## Review Notes`: tier + focuses, then numbered findings — severity, markdown-link citation ([file.py:42](file.py#L42)), problem, fix. A finding that depends on an earlier blocking fix: say so on that item. Findings only — never what you verified as correct. Bullets, per `superRA:using-superra` §Communication.
+**First review.** `## Review Notes`: tier + focuses, then numbered findings — severity, markdown-link citation ([file.py:42](file.py#L42)), problem, fix. A finding that depends on an earlier blocking fix: say so on that item. Findings only — never what you verified as correct. Structure the review per `superRA:communicate`.
 
 **Re-review is narrow and converges.** Blocking findings only. Verify each `→ implemented:` claim via its link, plus dependents you noted; everything else stands from the first pass. Per item:
 

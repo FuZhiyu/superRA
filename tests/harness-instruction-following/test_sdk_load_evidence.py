@@ -252,7 +252,10 @@ def test_red_always_loaded_load_instruction_missing_file(tmp_path):
 
 def test_always_loaded_skills_constant_is_qualified():
     # The contract checks the plugin-qualified names the load instruction names.
-    assert ALWAYS_LOADED_SKILLS == ("superRA:using-superra",)
+    assert ALWAYS_LOADED_SKILLS == (
+        "superRA:using-superra",
+        "superRA:communicate",
+    )
 
 
 # --------------------------------------------------------------------------- #

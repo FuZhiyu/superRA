@@ -95,7 +95,7 @@ No YAML library — the parser is minimal and purpose-built.
 
 **Reconcile.** On a match the hook runs `validate_plan` and `propagate_parent_status`, each in its own try/except, never blocking, always exit 0.
 
-**Render-integrity check.** Every edited `.md` under a task root runs through `_markdown_integrity_feedback` (imports `check()` from `report-in-markdown/scripts/md_integrity.py`): findings (display `$$` blocks not blank-line separated, TeX-only KaTeX macros) merge into the feedback payload, followed by a line telling the agent to load `report-in-markdown`. Checker failure is swallowed and never breaks the hook.
+**Render-integrity check.** Every edited `.md` under a task root runs through `_markdown_integrity_feedback` (imports `check()` from `communicate/scripts/md_integrity.py`): findings (display `$$` blocks not blank-line separated, TeX-only KaTeX macros) merge into the feedback payload, followed by a line telling the agent to load `communicate`. Checker failure is swallowed and never breaks the hook.
 
 **Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook runs the same lossless maintenance as `superra task move` via the shared `_task_io` core — cascading sibling `depends_on` (`cascade_depends_on_rename`) and re-pointing relative Markdown links into and out of the renamed task (`compute_move_link_rewrites`) before reconcile, so `validate_plan` sees a coherent tree. Cross-parent moves, task deletes, and merges are ambiguous post-hoc state with no clean from→to: they warn via normal dangling-dependency validation rather than auto-mutating.
 

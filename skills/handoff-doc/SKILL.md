@@ -7,7 +7,7 @@ description: "DEPRECATED. Redirects to task-tree and the role skills."
 
 Its concerns are now owned by:
 
-- **Editing discipline (inline-edit rule):** `superRA:implement-task` §Reporting; role deltas in `superRA:implement-task` §Self-Check and `superRA:review-task` §Self-Check
+- **Human-facing content:** `superRA:communicate`; role edits in `superRA:implement-task` §Self-Check and `superRA:review-task` §Self-Check
 - **Task anatomy, field notes, ownership rules:** `skills/task-tree/references/task-file-contract.md`
 - **Results format and two-stage lifecycle:** `skills/task-tree/references/task-file-contract.md` §Results Shape
 - **User decisions:** fold into task objectives directly (see `skills/superplan/references/task-tree-design.md` §Writing Objectives and Planner Guidance)
