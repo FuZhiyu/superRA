@@ -14,6 +14,8 @@ Use three layers:
 
 This combines bottom-line-up-front communication with progressive disclosure. It applies to chat, task results, planner updates, reviews, and handoffs through small adapters rather than separate style guides. Supporting guidance: [Army correspondence standard](https://home.army.mil/wood/application/files/3015/5751/8343/AR_25_50_Army_Correspondence.pdf), [ONS content structure](https://service-manual.ons.gov.uk/content/writing-for-users/structuring-content), and [Google technical-writing guidance](https://developers.google.com/tech-writing/one/documents).
 
+The researcher set nested lists with short, complete sentences as the default rendering of this hierarchy. Top-level bullets carry takeaways; indentation reveals supporting evidence, caveats, and mechanics only as the reader digs deeper. Paragraphs remain for connected reasoning, narrative, or causality that a list would fragment. The target is a visible pyramid, not a paragraph wall or a flat list with no hierarchy.
+
 Answer-first ordering is not mechanical. Exploratory work leads with provisional state and the unresolved branch; a caveat that changes the conclusion stays beside it. Academic exposition may need known-to-new or argument order rather than operational BLUF ([GOV.UK research background](https://www.gov.uk/government/publications/govuk-content-principles-conventions-and-research-background/govuk-content-principles-conventions-and-research-background)).
 
 ### Rewrite is a separate, on-demand protocol
@@ -51,6 +53,7 @@ Independent adaptation needs only a pinned provenance note. Copying distinctive 
 - Frozen technical spans: retained literals compare byte-for-byte after a structural rewrite.
 - Academic voice: remove repetition without strengthening a calibrated hedge or changing established terminology.
 - Buried outcome: reorder outcome, evidence/caveat, then mechanics without breaking causal or temporal dependencies.
+- Skimmability: convert a paragraph wall or flat bullet list into a nested pyramid without dropping relationships or creating fragments.
 - Harmless marker: preserve an em dash, technical term, list, or first-person voice when it adds no reader cost.
 
 ## Enforcement implication
