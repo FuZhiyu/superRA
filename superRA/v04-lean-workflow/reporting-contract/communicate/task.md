@@ -1,6 +1,6 @@
 ---
 title: "Communicate: Write, Rewrite, Distill, Review"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -19,8 +19,10 @@ Deliver `superRA:communicate` as the standalone human-facing communication contr
 - Upstream reference: [`conorbronsdon/avoid-ai-writing` at `b72b7c4`](https://github.com/conorbronsdon/avoid-ai-writing/commit/b72b7c42b196e113d2477c21c62df58061bc804f). Curate by the parent contract rather than vendoring its catalog as the communication goal.
 - The split is by edit surface: `skill-and-references` owns skill content, routing, and inventories; `hooks` owns runtime enforcement and harness evidence.
 
-## Revision Notes
-
-The first version made its own rules hard to apply: sentence-level style had no explicit home, and compressed labels such as “low-value units” increased reader effort. The new child owns the correction.
-
 ## Results
+
+- [`superRA:communicate`](../../../../skills/communicate/SKILL.md) now gives all superRA roles one human-facing communication contract, with load-on-demand references for structure, sentence style, rewriting, friction review, and Markdown mechanics.
+  - The [style-guidance task](style-guidance/task.md) replaced compressed labels with observable tests and verified the result through cold-reader and rewrite probes.
+- Main-agent hooks enforce the contract at the two requested checkpoints.
+  - Markdown writes require the relevant task context and Communicate load.
+  - Moving a task to `implemented` succeeds, then prompts for a final writing check.

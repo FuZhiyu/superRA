@@ -1,6 +1,6 @@
 ---
 title: "Make Communicate Easy to Read"
-status: in-progress
+status: implemented
 depends_on:
   - skill-and-references
 ---
@@ -23,4 +23,10 @@ Make `superRA:communicate` easy to understand and give sentence-level style guid
 
 ## Results
 
-(empty)
+- [`superRA:communicate`](../../../../../skills/communicate/SKILL.md) now states its core rules in plain language and models the nested pyramid it teaches.
+  - “Low-value units” is replaced by one observable test: keep a sentence or bullet only when it adds a claim, evidence, caveat, decision, or action.
+  - [`style.md`](../../../../../skills/communicate/references/style.md) now owns sentence-level choices; the structure, rewrite, and friction references retain separate roles.
+- Two read-only behavior probes pass.
+  - A cold reader found no remaining ambiguous or duplicated rule after one correction round.
+  - A rewrite probe removed empty framing, preserved literals and claim strength, and attached a caveat directly to the claim it limits.
+- Skill validation, Markdown checks, task-tree checks, and diff checks pass. A 301-test regression run passed 299 tests and reproduced two unrelated pre-existing contract failures in `superimplement` and `superplan`.

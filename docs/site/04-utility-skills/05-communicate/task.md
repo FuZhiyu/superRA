@@ -14,16 +14,18 @@ created: 2026-06-17
 Use communicate to rewrite analyses/example/RESULTS.md for a cold reader.
 ```
 
-- The first layer gives the outcome, decision, or honest present state.
-  - Evidence, material caveats, and the next action follow.
-  - Linked mechanics and optional detail come last.
+- The opening gives the answer or honest current state.
+  - Evidence, caveats, and the next action follow.
+  - Linked implementation details come last.
 - Short nested lists are the default pyramid.
-  - Conclusion headings and top-level bullets carry takeaways.
+  - Headings and top-level bullets state the main points.
   - Paragraphs remain for connected reasoning, narrative, or causality.
-- Rewriting preserves exact literals, meaning, claim force, dependencies, and useful voice.
-  - The friction audit changes a pattern only when it creates observable reader cost; it does not try to detect AI authorship.
+- Sentence style is direct and concrete.
+  - Each sentence names the actor and action, keeps relationships explicit, and uses one term per concept.
+- Rewriting preserves exact literals, meaning, claim strength, dependencies, and useful voice.
+  - The friction audit changes a pattern only when it makes text slower to understand; it does not try to detect AI authorship.
 
-On-demand references cover [structures](skills/communicate/references/structures.md), [rewriting](skills/communicate/references/rewrite.md), [friction audits](skills/communicate/references/friction-audit.md), and [Markdown mechanics](skills/communicate/references/markdown.md). The Markdown checker still catches display-math and KaTeX failures:
+On-demand references cover [structures](skills/communicate/references/structures.md), [sentence style](skills/communicate/references/style.md), [rewriting](skills/communicate/references/rewrite.md), [friction audits](skills/communicate/references/friction-audit.md), and [Markdown mechanics](skills/communicate/references/markdown.md). The Markdown checker still catches display-math and KaTeX failures:
 
 ```
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
