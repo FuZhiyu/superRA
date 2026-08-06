@@ -1,6 +1,6 @@
 ---
 title: "Enforce Communicate on Markdown and Implemented Status"
-status: not-started
+status: implemented
 depends_on:
   - skill-and-references
 ---
@@ -24,3 +24,16 @@ Enforce two main-agent writing checks through the existing hook infrastructure w
 - Interpret “task files, reporting, or communication skill” in the final architecture through the owning context: task Markdown needs its task-read context and `superRA:communicate`; other Markdown needs `superRA:communicate`, with domain skills still loaded when their existing triggers apply. Do not retain `report-in-markdown` as a legacy bypass after it is retired.
 
 ## Results
+
+The hook layer now enforces Communicate before main-thread Markdown writes and prompts once after a leaf task moves directly to `implemented`.
+
+- Markdown mutations are gated across Claude `Edit`/`Write`, Codex `apply_patch`, and supported Bash forms ([communicate_gate.py](../../../../../hooks/communicate_gate.py)).
+  - Every Markdown target requires `superRA:communicate`; task-owned Markdown also requires its exact `superra task read` context.
+  - Retries pass after both evidence fields appear. Missing targets, unsupported commands, unreadable transcripts, and subagent calls fail open.
+- Implemented-status feedback is non-blocking, transition-specific, and one-shot ([task_hook.py](../../../../../skills/task-tree/scripts/task_hook.py)).
+  - A pre/post snapshot covers `Write` and Bash paths that carry no before-state; `Edit` and `apply_patch` retain diff-based fallback coverage.
+  - The reminder excludes later edits and ancestor rollups, preserves `status: implemented`, and names the Communicate core and conditional final-pass references.
+- Hook packaging remains aligned across Claude, Codex, and Cursor.
+  - The task-hook shim was regenerated from [wrapper_resolver.py](../../../../../skills/task-tree/scripts/wrapper_resolver.py); both authenticated live probes now load Communicate and task context before their Markdown edit.
+  - Deterministic verification passed 27 gate cases, 38 focused task-hook/shim cases, the existing hook suites, and the cross-harness compatibility check ([gate tests](../../../../../tests/hooks/test-ensure-communicate.sh)).
+  - The paid/authenticated live probes were syntax-checked but not executed.

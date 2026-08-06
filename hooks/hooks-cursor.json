@@ -8,6 +8,9 @@
     ],
     "preToolUse": [
       {
+        "command": "./hooks/ensure-communicate"
+      },
+      {
         "command": "./hooks/merge-guard"
       },
       {

@@ -1,6 +1,6 @@
 ---
 title: "Communicate: Write, Rewrite, Distill, Review"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

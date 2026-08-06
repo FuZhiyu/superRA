@@ -13,6 +13,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" ensure-communicate",
+            "async": false
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {

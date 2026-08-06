@@ -2238,6 +2238,43 @@ class TestTaskHook:
     def _assert_empty_json(self, stdout: str) -> None:
         assert json.loads(stdout) == {}
 
+    def _run_communicate_gate(
+        self,
+        payload: dict,
+        transcript: Path,
+        state_dir: Path,
+        cwd: Path,
+    ):
+        """Run the paired pre-tool hook to persist the before-status snapshot."""
+        import subprocess
+
+        hook_path = SCRIPTS_DIR.parents[2] / "hooks" / "communicate_gate.py"
+        full_payload = {
+            **payload,
+            "cwd": str(cwd),
+            "transcript_path": str(transcript),
+            "hook_event_name": "PreToolUse",
+        }
+        env = os.environ.copy()
+        env["SUPERRA_COMMUNICATE_STATE_DIR"] = str(state_dir)
+        return subprocess.run(
+            [sys.executable, str(hook_path)],
+            input=json.dumps(full_payload),
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            env=env,
+        )
+
+    def _write_implemented_fixture(self, tmp_path: Path) -> tuple[Path, Path]:
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        leaf = root / "alpha"
+        leaf.mkdir()
+        _write_task_md(leaf / "task.md", "Alpha", "in-progress")
+        return root, leaf / "task.md"
+
     def test_ignores_non_task_md(self, plan_root):
         """Hook exits 0 immediately for non-task.md files."""
         payload = {
@@ -2422,6 +2459,175 @@ class TestTaskHook:
         self._assert_empty_json(result.stdout)
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists()
+
+    def test_edit_direct_implemented_transition_reminds_without_blocking(self, tmp_path):
+        root, task_md = self._write_implemented_fixture(tmp_path)
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": str(task_md),
+                "old_string": "status: in-progress",
+                "new_string": "status: implemented",
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        assert "decision" not in data
+        output = data["hookSpecificOutput"]
+        assert output["hookEventName"] == "PostToolUse"
+        assert "superRA:communicate" in output["additionalContext"]
+        assert "references/structures.md" in output["additionalContext"]
+        assert "keep `status: implemented`" in output["additionalContext"]
+        assert _task_io.parse_task(root / "task.md").status == "implemented"
+        assert f"{root / 'task.md'}. Confirm" not in output["additionalContext"]
+
+    def test_apply_patch_direct_implemented_transition_reminds(self, tmp_path):
+        _, task_md = self._write_implemented_fixture(tmp_path)
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": "\n".join(
+                    [
+                        "*** Begin Patch",
+                        "*** Update File: superRA/alpha/task.md",
+                        "@@",
+                        "-status: in-progress",
+                        "+status: implemented",
+                        "*** End Patch",
+                    ]
+                )
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Direct leaf transition" in context
+        assert "superRA:communicate" in context
+
+    def test_later_edit_of_implemented_task_does_not_repeat(self, tmp_path):
+        _, task_md = self._write_implemented_fixture(tmp_path)
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": str(task_md),
+                "old_string": "## Results\n\n(empty)",
+                "new_string": "## Results\n\nDone.",
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_write_snapshot_detects_transition_once(self, tmp_path):
+        _, task_md = self._write_implemented_fixture(tmp_path)
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text(
+            '{"skill":"superRA:communicate"}\n'
+            '{"command":"./superRA/superra task read alpha"}\n',
+            encoding="utf-8",
+        )
+        state_dir = tmp_path / "state"
+        payload = {
+            "session_id": "session-write",
+            "tool_use_id": "tool-write",
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(task_md), "content": "replacement"},
+        }
+        pre = self._run_communicate_gate(payload, transcript, state_dir, tmp_path)
+        assert pre.returncode == 0
+        self._assert_empty_json(pre.stdout)
+
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+        env = {"SUPERRA_COMMUNICATE_STATE_DIR": str(state_dir)}
+        first = self._run_hook_result(payload, cwd=tmp_path, env=env)
+        assert (
+            "Direct leaf transition"
+            in json.loads(first.stdout)["hookSpecificOutput"]["additionalContext"]
+        )
+
+        second = self._run_hook_result(payload, cwd=tmp_path, env=env)
+        assert second.returncode == 0
+        assert second.stdout == ""
+
+    def test_bash_snapshot_detects_direct_transition(self, tmp_path):
+        _, task_md = self._write_implemented_fixture(tmp_path)
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text(
+            '{"skill":"superRA:communicate"}\n'
+            '{"command":"./superRA/superra task read alpha"}\n',
+            encoding="utf-8",
+        )
+        state_dir = tmp_path / "state"
+        payload = {
+            "session_id": "session-bash",
+            "tool_use_id": "tool-bash",
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": f"sed -i s/in-progress/implemented/ {task_md}"
+            },
+        }
+        pre = self._run_communicate_gate(payload, transcript, state_dir, tmp_path)
+        assert pre.returncode == 0
+        self._assert_empty_json(pre.stdout)
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+
+        result = self._run_hook_result(
+            payload,
+            cwd=tmp_path,
+            env={"SUPERRA_COMMUNICATE_STATE_DIR": str(state_dir)},
+        )
+        assert result.returncode == 0
+        assert "Direct leaf transition" in json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+
+    def test_ancestor_implemented_edit_is_not_a_leaf_transition(self, tmp_path):
+        root, _ = self._write_implemented_fixture(tmp_path)
+        root_md = root / "task.md"
+        root_md.write_text(
+            root_md.read_text(encoding="utf-8").replace(
+                "status: not-started", "status: implemented", 1
+            ),
+            encoding="utf-8",
+        )
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": str(root_md),
+                "old_string": "status: not-started",
+                "new_string": "status: implemented",
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
 
     def test_empty_stdin_exits_zero(self):
         """Hook exits 0 on empty or invalid stdin (resilient to harness edge cases)."""

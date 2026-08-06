@@ -699,11 +699,11 @@ run_s7() {
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
   out="$cwd/s7.ndjson"
   local sys_prompt
-  sys_prompt='Use only the Read and Edit tools. Edit exactly superRA/01-child/task.md by changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok.'
+  sys_prompt="First invoke Skill(skill=\"superRA:communicate\"). Then run \"$REPO_ROOT/superRA/superra task read 01-child\" with Bash. Finally use Edit exactly once on superRA/01-child/task.md, changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok."
   if ! run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
-    --tools Read,Edit \
-    --allowedTools Read,Edit \
+    --tools Skill,Bash,Read,Edit \
+    --allowedTools Skill,Bash,Read,Edit \
     --permission-mode acceptEdits \
     --append-system-prompt "$sys_prompt" \
     -- "Run the task-hook edit probe now."; then
