@@ -1,6 +1,6 @@
 ---
 title: "Rename Writing to Academic Writing"
-status: implemented
+status: approved
 depends_on:
   - communicate
 ---
