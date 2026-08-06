@@ -1,38 +1,29 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: approved
-depends_on: [role-skills]
+status: not-started
+depends_on:
+  - role-skills
 ---
 
 ## Objective
 
-Establish one reporting contract covering everything agents write — task files, documents, and conversation — built on selection before writing, one home per fact, and pointers across homes.
+Maintain **Communicate**, superRA's human-facing communication contract across conversation, task files, reports, and workflow handoffs. A cold reader should reach the outcome, evidence, caveats, and next action without duplicated facts or avoidable decoding work.
 
-- Teach principles, not rule catalogs: a small principle set with a paired example or two, written in the style it prescribes, placed where agents already are at write time. Agents apply the principle to cases the examples don't cover. The contract's own prose and examples must be as terse as the style they demand — very concise, easy to skim.
-- Core principles: reporting is part of the task — a task is complete only when its report is digestible, so a real share of the task's thinking budget goes to planning the report (who reads this, what they'll do next, which facts they need first); pyramid structure per the Minto treatment `writing/references/structure.md` owns — main result first, then levels of decreasing importance; helpful details are placed low in the pyramid, not omitted, and only detail that helps no reader is left out; selecting findings is analysis — a finding is a result the researcher would quote or act on, and pipeline mechanics (a merge count, a completed step) surface only as caveats, never as key findings; state each fact once and warn about the cross-reference failure mode; short by selection, not compression (full sentences, no fragments, invented abbreviations, or arrow chains); plain words, consistent terminology; structural budgets over word counts.
-- Write-time DRY: a fact's home is decided when the output is produced. When the deliverable is itself an artifact (a document, a code change), the artifact is the record — `## Results` points to it with at most a high-level summary, never restating its content or the diff. Generalizes the maturation-time trim-to-pointer disposition to write time.
-- Conversation boundary: chat carries deltas and pointers — what changed at a high level plus the task-file/dashboard reference; content recorded in a task file is referenced, never reproduced. Extras the agent chose not to record go to conversation with an offer to add to `## Results` if the researcher wants them. Replace the unbounded `<summarize the results>` placeholder in `superimplement`; parent rollups link to child findings instead of restating their numbers.
-- Results shape (`task-file-contract.md`): operationalize "terse" with an inclusion test mirroring the objective test (a line belongs in `## Results` only if a future reader needs it to use, reproduce, or trust the result); demote the five-slot template to an omit-by-default menu; rebalance the `using-superra` "self-contained account" line with point-over-copy (self-contained through self-orienting pointers, not restatement).
-- End stage accretion: the final-diff-self-check trail (`refactor-and-integrate`) moves to the commit body; Protect decisions are not re-narrated into `## Results` (the protect commit records them).
-- No decision ledgers: a researcher decision enters a task file by rewriting the owning objective or constraint to its current state — never as a dated "decisions" section or "per user decision <date>" note (the date belongs in git). Add dated decision logs to the stale-content classes in `task-file-contract.md`; sweep the instruction files that model the pattern (e.g. `writing/references/consistency/numerical.md:5`).
-- Role skills carry only one-line hooks (a results-economy self-check item symmetric to the thin-results gate); the review skill's results-writing focus enforces this contract.
-- Validation: each rule has one home with pointers elsewhere; no surviving instruction invites reproducing `## Results` in conversation or restating an artifact in `## Results`.
-
-### Placement
-
-The contract targets task-file reporting and lives where the writer is; `using-superra` slims to the all-agent survival kit; `report-in-markdown` stays an on-demand reference behind the hook safety net:
-
-- **Reporting contract → `implement-task`, as a salient section.** Dedicated task-file reporting instructions: why reporting matters (it is half the task and gets a real share of the thinking budget), pyramid structure (lead with the main result, expand into levels of decreasing importance — helpful details are placed low, not omitted; the full treatment stays owned by `writing/references/structure.md`), the finding bar, one-home-per-fact with an explicit warning about the failure mode (exact numbers restated across task files survive wrong in every copy when the result changes — costly to maintain, hard to read), the anti-compression guardrail, plain-language example labels, and the merged editing principles (latest state not a log, doc before report, standalone through pointers). House conventions (line-anchor citations, figures under `attachments/`) sit in the same section. Conversation rules stay minimal: the return and chat point at the task file, nothing more. The reviewer's `results-writing` focus points here.
-- **`Work Defaults` → `implement-task`.** Implementer discipline, not reviewer load.
-- **Runtime Workflow Map → `references/main-agent.md`.** Subagents get their stage from the dispatch; only main agents navigate phases.
-- **`using-superra` keeps** the Task Interface (read/edit mechanics, ownership, hook behaviors), a consolidated and much shorter commit section (path-scoped staging plus the subject grammar — agents know git), Execution Modes, and the Skill-Load Manifest.
-- **General mechanics → hook-backed, load-on-demand.** `report-in-markdown` survives as the reference for markdown mechanics (math renderer traps, tables, figure embedding, raw HTML) but drops out of the always-loaded set. The existing render-integrity hook is the safety net: when it fires, its warning tells the agent to load `report-in-markdown` for the proper form. Do not attempt to make the hook check everything the skill teaches — it catches what it catches; the skill is the authority the hook points to.
+- `superRA:communicate` is standalone and available to planners, implementers, reviewers, integrators, and direct user invocations.
+- Brevity comes from selection and structure; clarity wins when compression would obscure meaning.
+- The contract governs information choice, order, rewriting, distillation, and review. Academic `writing` owns manuscript discipline; technical Markdown guidance owns rendering mechanics.
+- Each fact has one durable home. Other surfaces point to it.
+- Learn from `avoid-ai-writing` only where a pattern lowers information density or raises communication friction. Authorship detection and “sound human” are outside scope.
 
 ## Planner Guidance
 
-- Ranked diagnosis of what makes task files long, with `file:line` evidence and live examples: [writing-surfaces map](../attachments/map-writing-surfaces.md); candidate rules and compliance mechanics (short contracts beat catalogs; paired examples are the highest-leverage device; file verbosity needs targeting separate from chat verbosity; the anti-compression guardrail is as necessary as the anti-verbosity rule): [concise-writing research](../attachments/research-concise-writing.md) §C–D.
-- The objective-side economy discipline to mirror (rejection test, overflow valve, point-over-copy ladder) exists at `task-tree-design.md` §Writing Objectives and §Context Distillation — cite it; add the missing trim counterpart to its §Objective rewrites on scope expansion.
-- Showcase/docs exemplar rewrite is out of v0.4 scope; touch `docs/site` only where statements are invalidated.
+- The approved Results below document the v0.4 baseline. The child task owns the expanded architecture.
+- Evidence: [writing-surfaces map](../attachments/map-writing-surfaces.md) and [concise-writing research](../attachments/research-concise-writing.md).
+- Showcase/task-file hygiene remains out of scope; update user-facing docs invalidated by the skill replacement.
+
+## Revision Notes
+
+Substantive expansion: replace the implementer-centered reporting contract with the cross-role standalone **Communicate** skill. Remove this section once the child implementation lands and the parent Results reflect the new owner.
 
 ## Results
 

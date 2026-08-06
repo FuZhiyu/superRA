@@ -1,6 +1,6 @@
 ---
 title: "v0.4 Lean Workflow: Skill Roles, Triggered Review, Concise Output"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -31,10 +31,10 @@ Evidence base: [review-prompting research](attachments/research-review-prompting
 
 ## Critical Files
 
-- [`skills/using-superra/SKILL.md`](../../skills/using-superra/SKILL.md) — Task Interface, Skill-Load Manifest, and execution-mode pointers every subtask touches or inherits
-- [`skills/superimplement/SKILL.md`](../../skills/superimplement/SKILL.md) — the implement loop being made triggered and interactive-first
-- [`skills/agent-orchestration/SKILL.md`](../../skills/agent-orchestration/SKILL.md) — dispatch templates, seat assignment, verdict adjudication
-- [`agents/implementer.md`](../../agents/implementer.md), [`agents/reviewer.md`](../../agents/reviewer.md) — source bodies for the new role skills
-- [`skills/task-tree/references/task-file-contract.md`](../../skills/task-tree/references/task-file-contract.md) — results shape and status ownership the writing and review contracts rewrite
+- [`skills/using-superra/SKILL.md`](../../skills/using-superra/SKILL.md) — current communication defaults and the universal load contract
+- [`skills/implement-task/SKILL.md`](../../skills/implement-task/SKILL.md) — current reporting owner to slim into a role-specific pointer
+- [`skills/report-in-markdown/SKILL.md`](../../skills/report-in-markdown/SKILL.md) — technical mechanics to move under `communicate` references
+- [`skills/writing/SKILL.md`](../../skills/writing/SKILL.md) — academic-writing boundary and additive load path
+- [`hooks/autoload-superra`](../../hooks/autoload-superra), [`tests/harness-instruction-following/test_always_loaded_live.py`](../../tests/harness-instruction-following/test_always_loaded_live.py) — main/role enforcement surfaces
 
 ## Results
