@@ -166,7 +166,7 @@ Beyond the per-symbol / per-assumption ledgers:
 
 - `[BLOCKING]` The canonical Notation Conventions table is **user-gated** — implementers do NOT inline-edit it. A symbol is promoted from the task-level ledger only when the user confirms it should become canonical project-wide; until then the ledger entry is that task's source of truth.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices written alongside the math or code, not left only in chat.
-- `[BLOCKING]` Human-readable equations, tables, and figures routed through `superRA:report-in-markdown`.
+- `[BLOCKING]` Human-readable equations, tables, and figures routed through `superRA:communicate`.
 - `[BLOCKING]` Rendered math, prose, and supporting code use consistent notation for the same object.
 
 ## Common Rationalizations
@@ -185,4 +185,4 @@ Excuses the gate checklists alone do not catch.
 
 ## See also
 
-- `superRA:report-in-markdown` — format discipline for equations, tables, figures, and LaTeX in markdown.
+- `superRA:communicate` — format discipline for equations, tables, figures, and LaTeX in Markdown.

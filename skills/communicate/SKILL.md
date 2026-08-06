@@ -1,6 +1,6 @@
 ---
 name: communicate
-description: Human-facing communication discipline for writing, rewriting, distilling, and reviewing conversation, task files, plans, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; load with using-superra in every superRA role. Academic writing retains manuscript-specific discipline.
+description: Human-facing communication discipline for writing, rewriting, distilling, and reviewing conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; load with using-superra in every superRA role. Academic writing retains manuscript-specific discipline.
 ---
 
 # Communicate

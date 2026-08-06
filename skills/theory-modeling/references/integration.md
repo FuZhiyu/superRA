@@ -132,7 +132,7 @@ Diff pre- and post-refactor versions of every modified artifact. Per `[BLOCKING]
 
 ### Utility reuse and documented deviations
 
-- `[BLOCKING]` **Route human-readable equations, tables, and figures through `superRA:report-in-markdown`.**
+- `[BLOCKING]` **Route human-readable equations, tables, and figures through `superRA:communicate`.**
 - `[BLOCKING]` **Document notation changes.** Any intentional rename or consolidation carries an explicit old-to-new mapping.
 - `[BLOCKING]` **Document strengthened assumptions.** A refactor revealing that a result needs stronger primitive restrictions than stated: record the new restriction, where it enters, and why.
 - `[ADVISORY]` **Leave migration pointers when consolidating helpers.** Symbolic or numerical helper code moved to a shared location with older files still referencing the old one: leave a one-line pointer.
