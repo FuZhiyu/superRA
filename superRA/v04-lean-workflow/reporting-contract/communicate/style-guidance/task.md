@@ -1,6 +1,6 @@
 ---
 title: "Make Communicate Easy to Read"
-status: implemented
+status: approved
 depends_on:
   - skill-and-references
 ---
