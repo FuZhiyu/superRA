@@ -86,7 +86,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Universal task read/edit interface — read a task with injected context, edit mechanics, per-role ownership | `using-superra` (§Task Interface) and each role skill's §Self-Check |
-| Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `writing` |
+| Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `academic-writing` |
 | Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |

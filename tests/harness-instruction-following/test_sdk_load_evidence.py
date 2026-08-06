@@ -51,7 +51,7 @@ def test_green_required_skills_load_before_first_edit():
     evidence = evidence_from_hook_records(
         skill_tool_events=[
             ("econ-data-analysis", 0),
-            ("writing", 1),
+            ("academic-writing", 1),
         ],
         edit_event_indices=[5],
     )
@@ -60,7 +60,7 @@ def test_green_required_skills_load_before_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "writing"],
+        ["econ-data-analysis", "academic-writing"],
     )
 
     report.assert_ok()
@@ -78,7 +78,7 @@ def test_red_required_skill_never_loaded():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "writing"],
+        ["econ-data-analysis", "academic-writing"],
     )
 
     assert not report.ok
@@ -88,7 +88,7 @@ def test_red_skill_loaded_only_after_first_edit():
     # The skill loaded, but after the agent already started editing — the
     # load-before-mutation invariant is violated.
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("econ-data-analysis", 0), ("writing", 4)],
+        skill_tool_events=[("econ-data-analysis", 0), ("academic-writing", 4)],
         edit_event_indices=[2],
     )
     report = SkillLoadReport()
@@ -96,7 +96,7 @@ def test_red_skill_loaded_only_after_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "writing"],
+        ["econ-data-analysis", "academic-writing"],
     )
 
     assert not report.ok
@@ -118,7 +118,7 @@ def test_no_edit_session_counts_any_load_as_before_edit():
 
 def test_all_failures_collected_together():
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("writing", 6)],
+        skill_tool_events=[("academic-writing", 6)],
         edit_event_indices=[1],
     )
     report = SkillLoadReport()
@@ -126,7 +126,7 @@ def test_all_failures_collected_together():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "writing"],
+        ["econ-data-analysis", "academic-writing"],
     )
 
     assert not report.ok

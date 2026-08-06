@@ -61,7 +61,7 @@ def test_green_canary_present_in_command():
 
 
 def test_green_canary_command_satisfies():
-    spec = CanarySpec(skill="writing", token="CANARY_COBALT_9")
+    spec = CanarySpec(skill="academic-writing", token="CANARY_COBALT_9")
     report = CanaryReport()
     evaluate_canary(
         report,

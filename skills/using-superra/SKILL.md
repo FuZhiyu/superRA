@@ -33,7 +33,7 @@ Every dispatch first loads `superRA:using-superra` and `superRA:communicate`, th
 
 1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
 2. **Stage** — the workflow phase the dispatch is in (table below). 
-3. **Domain** — The task operates on (table below). Load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
+3. **Domain** — The task operates on (table below). Load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `academic-writing`, so load both.
 
 ### Stage
 
@@ -44,7 +44,7 @@ Every dispatch first loads `superRA:using-superra` and `superRA:communicate`, th
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
-| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `writing` (prose-heavy maturation) |
+| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `academic-writing` (prose-heavy maturation) |
 
 ### Domain
 
@@ -52,7 +52,7 @@ Every dispatch first loads `superRA:using-superra` and `superRA:communicate`, th
 |---|---|
 | `econ-data-analysis` (`superRA:econ-data-analysis`) | involves data analysis |
 | `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
-| `writing` (`superRA:writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
+| `academic-writing` (`superRA:academic-writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.

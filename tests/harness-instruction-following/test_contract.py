@@ -174,14 +174,14 @@ def test_skill_load_manifest_tables_match_contract():
         "protection": ("result-protection",),
         "sync": ("semantic-merge",),
         "integration": ("refactor-and-integrate",),
-        "maturation": ("task-tree", "superplan", "writing"),
+        "maturation": ("task-tree", "superplan", "academic-writing"),
     }
 
     domain_rows = markdown_table_rows(manifest, "### Domain")
     assert {inline_code(row[0])[0] for row in domain_rows} == {
         "econ-data-analysis",
         "theory-modeling",
-        "writing",
+        "academic-writing",
         "slide-design",
     }
 

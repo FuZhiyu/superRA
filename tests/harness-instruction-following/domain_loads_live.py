@@ -8,7 +8,7 @@ loading every matching domain, not just the first):
 
 - ``econ-data-analysis`` — wording about importing/cleaning/merging/regressing data
 - ``theory-modeling``    — wording about deriving/solving/proving
-- ``writing``            — wording about drafting/polishing reader-facing prose
+- ``academic-writing``   — wording about drafting/polishing reader-facing prose
 - ``slide-design``       — wording about creating/revising slides/Beamer
 
 One parametrized table (:data:`DOMAIN_ROWS`) is the single source of truth, so
@@ -88,7 +88,7 @@ DOMAIN_ROWS: tuple[DomainRow, ...] = (
         ),
     ),
     DomainRow(
-        skill="writing",
+        skill="academic-writing",
         trigger_wording=(
             "draft and polish the reader-facing prose of the manuscript section"
         ),
@@ -121,9 +121,9 @@ def domain_row(skill: str) -> DomainRow:
 # --------------------------------------------------------------------------- #
 
 # The load-bearing case: wording that matches BOTH theory-modeling (derive a
-# result) AND writing (write it up). The manifest requires loading EVERY matching
+# result) AND academic-writing (write it up). The manifest requires loading EVERY matching
 # domain, so the assertion below requires the FULL set, not just the first match.
-MULTI_DOMAIN_SKILLS: tuple[str, ...] = ("theory-modeling", "writing")
+MULTI_DOMAIN_SKILLS: tuple[str, ...] = ("theory-modeling", "academic-writing")
 MULTI_DOMAIN_WORDING = (
     "derive the equilibrium result and then draft the reader-facing prose that "
     "writes it up in the manuscript"

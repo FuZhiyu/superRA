@@ -29,7 +29,7 @@ Rename the academic-prose domain skill from `writing` to `academic-writing`; the
 
 - [`superRA:communicate`](../../../skills/communicate/SKILL.md) is the always-loaded owner for human-facing selection, hierarchy, rewriting, distillation, review, and Markdown mechanics.
   - It leads with the outcome or honest present state, reveals decision-relevant support before mechanics, and keeps each fact in one durable home.
-  - Its on-demand references cover nested-pyramid structures, structural rewriting, friction audits, rich Markdown, and standalone-report IO. Academic manuscripts compose it with `superRA:writing`.
+  - Its on-demand references cover nested-pyramid structures, structural rewriting, friction audits, rich Markdown, and standalone-report IO. Academic manuscripts compose it with `superRA:academic-writing`.
   - The [skill task](communicate/skill-and-references/task.md) owns the implementation and verification record.
 - Hook enforcement now covers the two writing checkpoints requested for main agents.
   - Markdown mutations require Communicate evidence; task-owned Markdown also requires the exact task-read context.

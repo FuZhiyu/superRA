@@ -1,6 +1,6 @@
 ---
 title: "Rename Writing to Academic Writing"
-status: not-started
+status: implemented
 depends_on:
   - communicate
 ---
@@ -22,4 +22,4 @@ Rename the academic-prose domain skill from `writing` to `academic-writing` with
 
 ## Results
 
-(empty)
+Renamed the skill, docs route, packaging symlink, active manifests, inventories, release note, and harness contracts to `academic-writing` / `superRA:academic-writing`; no active legacy pointer remains. The deterministic harness suite, skill validation, and task-tree check pass.

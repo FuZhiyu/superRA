@@ -1,5 +1,5 @@
 ---
-name: writing
+name: academic-writing
 description: Academic prose support. Use for reviewing, polishing, proofreading, consistency checks, citation checks, or drafting manuscript text in LaTeX, Markdown, Quarto, or plain text.
 user-invocable: true
 ---

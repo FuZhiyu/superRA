@@ -52,7 +52,7 @@
       "expected_evidence": [
         "structured table parse finds the stage rows and load targets",
         "live transcript for non-empty stage rows shows the target skill(s)/reference loaded before action",
-        "the maturation row loads task-tree + superplan (writing conditional, prose-heavy maturation only)",
+        "the maturation row loads task-tree + superplan (academic-writing conditional, prose-heavy maturation only)",
         "the implementation row produces no extra stage-skill expectation"
       ],
       "classification": [
@@ -309,12 +309,12 @@
         "skills/using-superra/SKILL.md#L76-L76",
         "skills/task-tree/SKILL.md",
         "skills/superplan/SKILL.md",
-        "skills/writing/SKILL.md"
+        "skills/academic-writing/SKILL.md"
       ],
       "trigger": "Dispatch has Stage: maturation.",
       "expected_evidence": [
-        "structured table parse confirms the manifest maps maturation to task-tree, superplan, and writing",
-        "live transcript shows task-tree and superplan loaded before action; writing is not a guaranteed load",
+        "structured table parse confirms the manifest maps maturation to task-tree, superplan, and academic-writing",
+        "live transcript shows task-tree and superplan loaded before action; academic-writing is not a guaranteed load",
         "the over-load check treats task-tree and superplan as stage skills (a maturation skill on the negative implementation stage is an over-load)"
       ],
       "classification": [
@@ -323,7 +323,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, writing row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, academic-writing row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (multi-skill stage evaluator + schema/stage artifact)"
@@ -390,22 +390,22 @@
           "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + academic-writing) every-match canary"
         ],
-        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and writing."
+        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and academic-writing."
       }
     },
     {
       "id": "LC013",
-      "area": "domain-writing",
+      "area": "domain-academic-writing",
       "source_paths": [
         "skills/using-superra/SKILL.md#L84-L84",
-        "skills/writing/SKILL.md#L58-L86"
+        "skills/academic-writing/SKILL.md#L58-L86"
       ],
       "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
       "expected_evidence": [
         "structured table parse confirms the domain is present in the manifest",
-        "fixture Markdown/prose task should lead transcript to load writing",
+        "fixture Markdown/prose task should lead transcript to load academic-writing",
         "reference loads depend on Review/Polish/Draft classification rather than all files at once"
       ],
       "classification": [
@@ -414,15 +414,15 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (writing domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (academic-writing domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[writing] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[academic-writing] + multi-domain (theory-modeling + academic-writing) every-match canary"
         ],
-        "notes": "Claude live-verified: prose task loads writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only."
+        "notes": "Claude live-verified: prose task loads academic-writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only."
       }
     },
     {

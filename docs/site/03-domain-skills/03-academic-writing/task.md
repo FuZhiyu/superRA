@@ -1,5 +1,5 @@
 ---
-title: "writing"
+title: "Academic Writing"
 status: not-started
 depends_on:  []
 tags: []
@@ -42,4 +42,4 @@ Polish edits sentences and paragraphs; it does not reorganize. Restructuring sta
 - **Polish your own edits as a diff.** Edit by hand — commit them or leave them unstaged — then say "polish my unstaged changes" or "polish the changes in the last commit." The agent reads your `git diff` as the polish target and lands its work *with* your direction instead of reverting toward the old text, which means you never have to name line ranges.
 - **Leave directives in the text.** Markers like `TODO`, `[fill in]`, `??`, or placeholder phrasing are treated as work to finish in scope; `DO NOT EDIT` blocks are left alone; a `% intent: …` comment above a paragraph tells Draft what to write and Polish what to check against.
 
-For mode routing, the consistency dimensions it checks, fix tiers, and the audience-first discipline, see [writing](skills/writing/SKILL.md).
+For mode routing, the consistency dimensions it checks, fix tiers, and the audience-first discipline, see [academic-writing](skills/academic-writing/SKILL.md).
