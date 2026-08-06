@@ -34,7 +34,7 @@ Evidence base: [review-prompting research](attachments/research-review-prompting
 - [`skills/using-superra/SKILL.md`](../../skills/using-superra/SKILL.md) — current communication defaults and the universal load contract
 - [`skills/implement-task/SKILL.md`](../../skills/implement-task/SKILL.md) — current reporting owner to slim into a role-specific pointer
 - [`skills/report-in-markdown/SKILL.md`](../../skills/report-in-markdown/SKILL.md) — technical mechanics to move under `communicate` references
-- [`skills/writing/SKILL.md`](../../skills/writing/SKILL.md) — academic-writing boundary and additive load path
-- [`hooks/autoload-superra`](../../hooks/autoload-superra), [`tests/harness-instruction-following/test_always_loaded_live.py`](../../tests/harness-instruction-following/test_always_loaded_live.py) — main/role enforcement surfaces
+- [`hooks/ensure-using-superra`](../../hooks/ensure-using-superra) — transcript-evidence and deny-payload precedent for the Markdown pre-tool guard
+- [`skills/task-tree/scripts/task_hook.py`](../../skills/task-tree/scripts/task_hook.py) — post-edit status reconciliation and non-blocking feedback owner
 
 ## Results
