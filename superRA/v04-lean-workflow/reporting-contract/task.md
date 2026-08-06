@@ -1,6 +1,6 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: implemented
+status: revise
 depends_on:
   - role-skills
 ---

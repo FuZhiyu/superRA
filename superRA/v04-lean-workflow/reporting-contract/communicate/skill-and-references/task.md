@@ -1,6 +1,6 @@
 ---
 title: "Communicate Skill and References"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -42,3 +42,10 @@ Create the concise, standalone `superRA:communicate` skill and its progressive-r
   - Skill validator; 29 render-checker tests; 47 targeted always-loaded and migration contract tests; harness compatibility; Markdown self-diagnosis; task-tree check.
   - Two read-only Codex sessions covered planning, task-result distillation, role returns, review/rewrite, and academic composition. The first exposed paragraph drift and tightened the surface rule; the second produced the nested pyramid from paragraph-wall and flat-list inputs, preserved the exact `DONE` schema and literals, and retained first-person voice, a calibrated hedge, and em dashes.
   - The broader `test_contract.py` still has two unrelated baseline failures: it expects a removed `superimplement` seat table and `superplan/references/decomposition.md`.
+
+## Review Notes
+
+Tier: thorough. Focuses: correctness, scope-fidelity, results-writing.
+
+1. `[BLOCKING]` The retired skill still has live callers in [theory-modeling/SKILL.md:169](../../../../../skills/theory-modeling/SKILL.md#L169), [theory-modeling/SKILL.md:188](../../../../../skills/theory-modeling/SKILL.md#L188), [theory-modeling/references/integration.md:135](../../../../../skills/theory-modeling/references/integration.md#L135), and both [showcase write-up fixtures](../../../../../docs/showcase-fixtures/after-planning/showcase-analysis/03-writeup/task.md#L22). Replace every active `report-in-markdown` load or instruction with the `communicate` owner; preserve and exclude unrelated dirty hunks when staging the theory files.
+2. `[BLOCKING]` The discovery description names “plans” as an artifact in [communicate/SKILL.md:3](../../../../../skills/communicate/SKILL.md#L3), violating the contributor terminology gate that reserves *plan* for the verb. Name the actual surface, such as planning updates.
