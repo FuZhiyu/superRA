@@ -1,6 +1,6 @@
 ---
 title: "Reporting Contract: Concise Writing and the Conversation Boundary"
-status: approved
+status: in-progress
 depends_on:
   - role-skills
 ---
@@ -11,7 +11,7 @@ Maintain **Communicate**, superRA's human-facing communication contract across c
 
 - `superRA:communicate` is standalone and available to planners, implementers, reviewers, integrators, and direct user invocations.
 - Brevity comes from selection and structure; clarity wins when compression would obscure meaning.
-- The contract governs information choice, order, rewriting, distillation, and review. Academic `writing` owns manuscript discipline; technical Markdown guidance owns rendering mechanics.
+- The contract governs information choice, order, rewriting, distillation, and review. `academic-writing` owns manuscript discipline; technical Markdown guidance owns rendering mechanics.
 - Each fact has one durable home. Other surfaces point to it.
 - Learn from `avoid-ai-writing` only where a pattern lowers information density or raises communication friction. Authorship detection and “sound human” are outside scope.
 
@@ -20,6 +20,10 @@ Maintain **Communicate**, superRA's human-facing communication contract across c
 - The approved Results below document the v0.4 baseline. The child task owns the expanded architecture.
 - Evidence: [writing-surfaces map](../attachments/map-writing-surfaces.md) and [concise-writing research](../attachments/research-concise-writing.md).
 - Showcase/task-file hygiene remains out of scope; update user-facing docs invalidated by the skill replacement.
+
+## Revision Notes
+
+Rename the academic-prose domain skill from `writing` to `academic-writing`; the new child owns the cross-repository migration.
 
 ## Results
 
