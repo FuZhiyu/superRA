@@ -88,7 +88,7 @@ Quick and standard depth: skip this step unless the user asks for a handoff revi
 
 ### User Review
 
-Present the tree (`superra task tree`) with the dashboard link and surface open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way — as options, not assertions. No genuine questions: the presentation itself is the review.
+Present the tree (`superra task tree`) with the dashboard link. A tradeoff the assembled tree exposes as still unsettled re-enters §Grilling.
 
 Per newly created task (especially top-level): state the existing concern you considered and why it does not cover the work.
 
@@ -98,7 +98,7 @@ Commit `superRA/` atomically (`plan(add): <summary>` for initial authoring; full
 
 ## Grilling
 
-**Put every unsettled decision to the researcher in frontier-ordered rounds**, each question carrying your recommended answer: `references/grilling.md`. Standard and thorough depth grill by default; quick depth skips it unless the researcher asks. A `grill me` request grills at any depth.
+**Put every unsettled decision to the researcher in frontier-ordered rounds**, each question carrying your recommended answer: `references/grilling.md`. Standard and thorough depth grill by default; quick depth skips it unless the researcher asks.
 
 ## User Feedback and Changing the Task Tree
 

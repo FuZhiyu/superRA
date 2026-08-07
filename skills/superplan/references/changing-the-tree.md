@@ -38,7 +38,7 @@ Update task files inline; never start a parallel tree, append an "Addendum", or 
 
 **Protocol:**
 
-1. **Confirm intent.** A passing remark in chat is not authorization — confirm with `AskUserQuestion`.
+1. **Confirm intent.** A passing remark in chat is not authorization — confirm with `AskUserQuestion`. Decisions the change leaves unsettled run through `superplan §Grilling`.
 2. **Update `superRA/` inline.** Place, rewrite, split, merge, or remove tasks by `task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. Then rewrite any governing-ancestor field that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment, per `task-tree-design.md` §Objective rewrites on scope expansion.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.

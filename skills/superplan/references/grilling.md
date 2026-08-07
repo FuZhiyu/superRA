@@ -6,7 +6,7 @@ Load when planning needs decisions from the researcher: a scoping round at §Ent
 
 **Map the work as a tree of decisions** — every decision branches into the decisions that hang off it.
 
-The **frontier** is every decision whose prerequisites are already settled: askable now, without guessing at an answer you have not heard. A question depending on one still open belongs to a later round.
+The **frontier** is every decision whose prerequisites are already settled: askable now, without guessing at an answer you have not heard.
 
 ## Facts are yours
 
@@ -18,17 +18,15 @@ The **frontier** is every decision whose prerequisites are already settled: aska
 
 ## The round
 
-Ask the whole frontier in one round.
-
-- **Channel: `AskUserQuestion`**, batched call after call until the frontier is empty. Never hold a question back for want of slots in a call.
+- **Channel: `AskUserQuestion`**, batched call after call until the frontier is empty.
 - **Recommended answer first**, labeled `(Recommended)`, on every question.
 - **A decision with no discrete alternatives** rides the same round as plain numbered text: `❓ **Q1** — **<title>**: <body>`, then `➡️ <recommended answer>`.
 - **Carry the evidence.** Name the survey finding or exploration result that raises the question.
 
-Answers settle decisions and push the frontier outward. Recompute it and ask the next round.
+Recompute the frontier and ask the next round.
 
 ## Landing
 
-**Every settled decision reaches the tree** — a binding objective bullet, a scoped `### Context` / `### Constraints`, or `## Planner Guidance`, per `task-tree-design.md` §Writing Objectives and Planner Guidance. State it as the current contract; git carries the date.
+**Every settled decision reaches the tree** as contract, per `task-tree-design.md` §Writing Objectives and Planner Guidance.
 
-**Frontier empty ends the session.** Go to Phase 3 decomposition.
+**An empty frontier ends the round**, returning to the step that entered it — the Phase 3 round to decomposition, a scoping round to §Entry Assessment, a re-entry round to the change that reopened scope. No confirmation round.
