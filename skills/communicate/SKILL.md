@@ -1,9 +1,11 @@
 ---
 name: communicate
-description: Human-facing communication discipline for writing, rewriting, distilling, and reviewing conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; load with using-superra in every superRA role.
+description: Human-facing communication discipline for writing, rewriting, distilling, and reviewing conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; Must load for superRA who produces human-facing text. 
 ---
 
 # Communicate
+
+Terse by default — in chat, returns, task files, and documents. One sentence when one is enough. **The style holds all session** — do not drift back to full prose.
 
 ## Write for a reader with no session context
 
@@ -12,7 +14,7 @@ They have the artifact and the repo, not your conversation.
 - Session vocabulary: use the standard term.
 - Reintroduce a term, sample, or object when it returns after a long gap.
 - Editing-history cues: "the table now defines" and "the updated script" have no *before* for this reader.
-- A correction is an instruction, not content. "No, this is not a robustness check" means fix or delete the sentence; the reader never saw the wrong version.
+- A correction is an instruction, not content. When users provide feedback, "No, this is not a robustness check", you fix or delete the sentence without stressing the correction. The reader sees only the final text.
 - Every claim the reader may rely on links its artifact, output, source, or commit.
 
 ## Pyramid structure
@@ -21,7 +23,7 @@ The main point comes first at every level.
 
 - **Message:** the opening line is the outcome, decision, or current state. No preamble, no restating the request, no recap of what you just did, no closing offer.
 - **Section:** the heading states the point — `The merge loses 0.7% of observations`, not `Merge results` — and the section reads alone. Split by main points, not by template slots.
-- **Nested list:** each child supports, limits, or acts on its parent. Implementation detail goes deepest or becomes a link: commands, paths, commits, methods.
+- **Nested structure:** nesting at all levels (sections and subsections, nested lists, ...), each layer progressively reveals more detail. 
 - **Paragraph:** the first sentence carries the message.
 
 One set of facts, three shapes.
@@ -48,9 +50,10 @@ One set of facts, three shapes.
 
 ## Choose the form
 
-- **Nested pyramid (default):** several main points, each with its support or action beneath it.
+For long reports, break the document into sections and subsections. Within each block, choose between:
+
+- **Nested bullet points (preferred):** several main points, each with its support or action beneath it.
 - **Paragraph:** connected reasoning, narrative, or causality whose order a list would break.
-- **Table:** repeated fields or exact comparisons across items.
 
 ## Carry the paragraph forward
 

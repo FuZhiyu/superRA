@@ -5,7 +5,7 @@ description: "Proactively plan or update superRA work. Requires superRA:using-su
 
 # superplan — the PLAN phase
 
-**First, load `superRA:using-superra` if not already loaded.**
+**First, load `superRA:using-superra` and `superRA:communicate` if not already loaded.**
 
 **Harness plan mode active: load `references/harness-plan-mode.md` before proceeding.**
 

@@ -21,7 +21,9 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 **Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — the CLI tool inject more relevant context than a bare `Read` of the file. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
-**Human-facing text:** follow `superRA:communicate`; load its Markdown references for citations, figures, math, tables, or raw HTML.
+**Human-facing text:** follow `superRA:communicate`.
+
+- **Cite files as markdown links**, resolved relative to the citing file — never as plain or backticked paths: `[file.py:42](file.py#L42)`, `[file.py:40-50](file.py#L40-L50)`, `[file.py](file.py)`.
 
 **Edit** the `task.md` directly with Read/Edit. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
@@ -29,7 +31,7 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 ## Skill-Load Manifest
 
-Every dispatch first loads `superRA:using-superra` and `superRA:communicate`, then loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
+Every agent — main and dispatched — loads `superRA:using-superra` and `superRA:communicate`. A dispatch then loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
 1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
 2. **Stage** — the workflow phase the dispatch is in (table below). 

@@ -58,7 +58,7 @@ Writing-side conventions are paper-specific choices among defensible alternative
 1. **Classify the request into a mode** before reading the file — the mode determines what to load.
 2. **Inspect in-flight author work** with `git status` / `git diff` before editing; an unstaged diff often *is* the polish target.
 3. **Inline directives are work assigned to you.** `TODO`, `% TODO:`, `\todo{...}`, `[fill in]`, `??`, `XXX`, and crude or placeholder phrasing get cleaned up inside scope. An explicit `DO NOT EDIT` (or equivalent) marks a line or block off-limits even within scope.
-4. **Intent comments** (`% intent: …` / `<!-- intent: … -->` above a paragraph) are author-owned: Draft writes them from the request, Polish preserves but never invents them. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
+4. **Intent comments** (`% intent: …` / `<!-- intent: … -->` above a paragraph) are author-owned:  Polish preserves but never invents them. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
 
 ## Mode routing
 

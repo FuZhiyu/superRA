@@ -34,14 +34,18 @@ Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Results`
 
 ## Reporting
 
-Apply `superRA:communicate` to `## Results` and the status return. Record material findings before returning; keep results current rather than appending session history. The return points to the task instead of repeating it.
+`## Results` is the deliverable — spend a real share of the thinking budget on it. Rules: 
+
+- **Current, not a log.** Edit `## Results` in place and delete what your work superseded — no "Update:" blocks, no strikethroughs, no session chronology. On a REVISE round, re-read the section end to end against the current state and rewrite every line the fixes made stale.
+- **Findings land in the task file before the return.** The return points at the task; the change summary goes in the commit body.
+
 
 ## Self-Check
 
 Before commit:
 
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
-2. **Results.** `## Results` and the return hold to `superRA:communicate` and §Reporting.
+2. **Results.** `## Results` and the return hold to `superRA:communicate` and §Reporting — nothing left in `## Results` is stale.
 3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
 
 ## Commit

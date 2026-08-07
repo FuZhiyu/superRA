@@ -117,7 +117,7 @@ Three coherence layers, each with its own authority:
 
 ### Principle
 
-Refactoring silently changes assumptions, branch choices, solver defaults, equation rendering, or the parameter set used for verification. **Refactored modeling work is re-validated, not carried forward.** Section D guards the derivation-discipline artifacts that already existed — ledger entries, per-step reasons, stated intuitions, verification records.
+Refactoring silently changes assumptions, branch choices, solver defaults, equation rendering, or verification parameters. **Refactored modeling work is re-validated, not carried forward.** Section D guards the derivation-discipline artifacts that already existed — ledger entries, per-step reasons, stated intuitions, verification work.
 
 ### Identification protocol
 
@@ -125,7 +125,7 @@ Diff pre- and post-refactor versions of every modified artifact. Per `[BLOCKING]
 
 ### Checklist
 
-- `[BLOCKING]` **Every four-gate artifact the original work carried survives the refactor**, in a form and place a reader can use: symbol intuitions and mnemonics (Gate 1), plain-language assumption interpretations (Gate 2), the technical rule *and* the one-sentence reason on each non-trivial step (Gate 3), the per-task Notation & Assumptions Ledger in `## Results` (Gates 1–2), and the substitution checks, limiting cases, and numerical examples (Gate 4) — Gate-4 checks are rerun successfully on the refactored work, not carried forward. Reorganize freely; collapsing one into opaque prose, a bare code comment, or a math restriction without its economic reading is deletion.
+- `[BLOCKING]` **Every four-gate artifact the original work carried survives the refactor**, in a form and place a reader can use: symbol intuitions and mnemonics (Gate 1), plain-language assumption interpretations (Gate 2), the per-task Notation & Assumptions Ledger in `## Results` (Gates 1–2), the technical rule and one-sentence reason on each non-trivial step (Gate 3), and symbolic checks or limiting cases (Gate 4). Internal numerical checks, where used, are rerun successfully, not reported. Reorganize freely; collapsing one into opaque prose, a bare code comment, or a math restriction without its economic reading is deletion.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored work; failures are adjudicated per `references/integrate-drift-tests.md`.
 - `[BLOCKING]` **Rendered markdown/LaTeX matches the refactored code.** Equation blocks, symbols, and case labels match the live derivation and numerical outputs.
 - `[BLOCKING]` **The canonical Notation Conventions table contains only user-confirmed promotions** (per [superimplement/references/completion.md](../../superimplement/references/completion.md)). Orphan entries — added without a logged user confirmation — are REVISE.
