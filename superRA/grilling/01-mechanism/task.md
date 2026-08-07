@@ -1,6 +1,6 @@
 ---
 title: "Author the grilling mechanism and route superplan into it"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -33,3 +33,18 @@ Validation: `grep -rn "Substantive Questions" skills/` returns no dangling citat
 - §Substantive Questions is the existing weak version of this concern — it names the standard ("present the options, don't assert one and narrate") but supplies no ordering, no question form, and no stopping rule. Rewriting it as the routing point is the intended landing; a new section beside it is the failure mode.
 - The upstream question format is `❓ **Q1** — **<title>**: <body>` followed by `➡️ <recommended answer>`. Its load-bearing part is the recommended answer, which survives here as the `(Recommended)` first option; the glyphs are what the plain-text path can reuse.
 - `references/` files sit one level deep with a stated load condition from `SKILL.md`, per `CLAUDE.md` §Skill Authoring Guidelines.
+
+## Results
+
+The mechanism ships in [grilling.md](../../../skills/superplan/references/grilling.md), 34 lines under five headings: the design tree and frontier, the three facts rules, the round, and landing. `superplan/SKILL.md` grew 103 → 105 lines, so the spine held.
+
+- **The round.** `AskUserQuestion` batched call after call until the frontier is empty, never holding a question back for want of slots; recommended answer first, labeled `(Recommended)`; a decision with no discrete alternatives rides the same round as plain numbered `❓`/`➡️` text; each question carries the survey finding that raises it.
+- **Facts split three ways.** The environment's facts are the agent's to read or explore; the researcher's own facts are questions; a fact only work can produce is a task boundary, split with `depends_on` and open-ended dependents, re-grilled when the evidence lands.
+- **Landing and stopping.** Settled decisions reach the tree as contract, and an empty frontier goes straight to decomposition with no confirmation round.
+- **Routing.** [§Grilling](../../../skills/superplan/SKILL.md) replaces §Substantive Questions and carries the depth rule; §Entry Assessment runs a scoping round when the request is too vague to aim exploration; Phase 3 opens with "Grill before decomposing"; the frontmatter description now names grill, stress-test, and interrogate as triggers.
+
+**Verification.** `grep -rn "Substantive Questions"` over `skills/` and `docs/site` is clean — the only surviving mentions are historical task records in `superRA/`. The §Depth Tiers thorough row and [thorough-planning.md §Reconciliation](../../../skills/superplan/references/thorough-planning.md) now cite §Grilling, and `test_superplan_routed_references_exist`'s existence assertion covers the new path.
+
+`tests/harness-instruction-following/test_contract.py` has two failures that also fail on the parent commit: `test_superplan_routed_references_exist` asserts `references/decomposition.md`, renamed to `build-and-review.md` before this task, and `test_superimplement_executes_each_selected_seat_filler`. Neither involves grilling.
+
+The `skill-creator` load that `CLAUDE.md` requires before editing a skill is unavailable in this environment — no such skill is installed. The edits were held to `CLAUDE.md` §Skill Prose Style and the §Teach the Protocol three tests instead, applied line by line: two rationale clauses were cut from the spine edits during self-review.

@@ -1,6 +1,6 @@
 ---
 name: superplan
-description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, or reflecting material decisions in the task tree."
+description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, reflecting material decisions in the task tree, or on any request to grill, stress-test, or interrogate a loose idea into decisions."
 ---
 
 # superplan — the PLAN phase
@@ -29,7 +29,7 @@ Assess three dimensions before exploration or task design — creating a tree an
 
 Interactive canvas cadence (the default, and where light planning and execution move together): load `using-superra/references/interactive-mode.md`.
 
-**Ask when unclear.** Placement or depth ambiguous: present the concrete options — candidate placements from the descent, standard vs. thorough — with a one-line rationale each. Don't guess.
+**Ask when unclear.** Placement or depth ambiguous, or the request too vague to aim exploration: run a scoping round per §Grilling — candidate placements from the descent, standard vs. thorough. Don't guess.
 
 ## Depth Tiers
 
@@ -39,7 +39,7 @@ A spectrum, not rigid modes — escalate mid-planning when complexity warrants. 
 |---|---|---|
 | **Quick** | Minor updates, known additions, single-task changes — an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment. | Light scan of `superRA/`, skip deep exploration, design inline. |
 | **Standard** (default) | New workstreams in familiar territory, a significant new branch, satisfying domain hard gates. | Explore project structure, load the domain skill, design tasks. |
-| **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Substantive Questions. |
+| **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Grilling. |
 
 ## Phase 1: Exploration
 
@@ -55,7 +55,9 @@ No implemented domain skill for the work: proceed to Phase 3, flag the gap to th
 
 ## Phase 3: Design & Task Decomposition
 
-Load `references/build-and-review.md`; follow its procedure.
+**Grill before decomposing.** Run the main round per §Grilling.
+
+Then load `references/build-and-review.md`; follow its procedure.
 
 ## Phase 4: Review & Commit
 
@@ -94,9 +96,9 @@ Per newly created task (especially top-level): state the existing concern you co
 
 Commit `superRA/` atomically (`plan(add): <summary>` for initial authoring; full sub-step set in §User Feedback and Changing the Task Tree). Then execute the frontier in the current execution mode (`superRA:using-superra/references/main-agent.md` §Execution Modes).
 
-## Substantive Questions
+## Grilling
 
-**Genuine design tradeoff with distinct alternatives: present the options for the user to choose** — don't assume intent silently or assert one and narrate. A quality mechanism for tying loose ends, not a process checkpoint.
+**Put every unsettled decision to the researcher in frontier-ordered rounds**, each question carrying your recommended answer: `references/grilling.md`. Standard and thorough depth grill by default; quick depth skips it unless the researcher asks. A `grill me` request grills at any depth.
 
 ## User Feedback and Changing the Task Tree
 

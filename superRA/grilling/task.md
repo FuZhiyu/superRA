@@ -1,6 +1,6 @@
 ---
 title: "Grilling: Frontier-Rounds Questions as Planning's Only Approval Gate"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 

@@ -58,7 +58,7 @@ One agent per area, each scoped to its own findings and constraints.
 
 - **Shared assumptions** both designs made independently — confirms the approach.
 - **Interface disagreements** — one design expects an output format the other does not produce. Resolve by adjusting task objectives.
-- **Genuine tradeoffs** — fundamentally different approaches whose choice depends on research intent. Substantive questions for the user (`superplan §Substantive Questions`): present the tradeoff with the competing proposals as evidence, let the user decide, fold the decision into the tree.
+- **Genuine tradeoffs** — fundamentally different approaches whose choice depends on research intent. A frontier question for the researcher (`superplan §Grilling`), carrying the competing proposals as its evidence.
 
 ## Critical Files for Implementation
 
