@@ -1,8 +1,6 @@
 # Markdown Mechanics
 
-## File-reference rule
-
-**Always** cite source files as **markdown links with line anchors**, not backtick-wrapped paths.
+## Cite files as links with line anchors, never as backticked paths
 
 | Use case | Form |
 |---|---|
@@ -10,11 +8,9 @@
 | Line range | [file.py:40-50](file.py#L40-L50) |
 | Whole file | [file.py](file.py) |
 
-Resolve paths **relative to the markdown file's directory** (use `../` as needed). 
+Resolve paths relative to the markdown file's directory (use `../` as needed).
 
-## Math
-
-Use KaTeX syntax:
+## Math renders through KaTeX
 
 - Inline: `$...$` — e.g., `The return $r_t$ is defined as ...`
 - Display: `$$...$$`:
@@ -42,15 +38,15 @@ uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
 
 where `<skill-dir>` is the directory holding this `SKILL.md`. Stdlib-only, so `python3 <skill-dir>/scripts/check_markdown.py …` also works.
 
-## Tables
+## Inline small tables, link large ones
 
-Inline small results (< ~15 rows) as markdown tables. For larger or code-generated tables, link to the output file instead:
+Under ~15 rows goes inline. Larger or code-generated tables become a link:
 
 ```markdown
 See [output/summary_stats.csv](../output/summary_stats.csv).
 ```
 
-When inlining, keep alignment syntax consistent and include units in headers:
+When inlining, keep alignment syntax consistent and put units in the headers:
 
 ```markdown
 | Variable      | Mean   | SD    | N       |
@@ -58,7 +54,6 @@ When inlining, keep alignment syntax consistent and include units in headers:
 | Return (%)    |   0.08 |  1.24 | 252,341 |
 | Volume (M)    |  12.40 |  8.15 | 252,341 |
 ```
-
 
 ## Figures
 
@@ -102,17 +97,16 @@ cp path/to/figure.png "${ATTACH_DIR}/description.png"
 Source: [Original](relative/path/to/original/figure.pdf)
 ```
 
-Use a **descriptive caption**, not "Figure 1" — it is the figure's documentation for skimmers.
+- **Caption:** describe the figure, never "Figure 1" — it is the figure's documentation for skimmers.
+- **Source line:** the original path the analysis script produced, not the copy in `ATTACH_DIR`, so a future reader can regenerate the figure.
 
-Cite the **original source path** beneath the embed — the file the analysis script produced, not the copy in `ATTACH_DIR` — so a future reader can regenerate the figure.
+## Raw HTML is dashboard-only
 
-## Raw HTML
-
-Reach for raw HTML only for layouts markdown cannot express — flow diagrams, side-by-side cards, styled callouts. Prose, lists, tables, code, and math stay plain markdown.
+Reach for it only for layouts markdown cannot express — flow diagrams, side-by-side cards, styled callouts. Prose, lists, tables, code, and math stay plain markdown.
 
 The dashboard renders task markdown with `html: true` and sanitizes the result with DOMPurify before display, so:
 
 - **`class` and `style` survive** — style inline with `style="..."`, or reach the dashboard CSS tokens (`var(--text)`, `var(--bg-alt)`, etc.) via `class`/`style` so a diagram themes with the page.
 - **Scripts, iframes, event handlers (`onclick=`, `onerror=`), and `javascript:` URLs are stripped.** Nothing interactive survives — build static layouts, not widgets.
 
-HTML-heavy content is **dashboard-first**: GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled on GitHub. Keep the meaning legible without the styling, or keep such content out of GitHub-read files.
+GitHub's renderer strips `style` and most attributes, so a block that looks right in the dashboard renders unstyled there. Keep the meaning legible without the styling, or keep such content out of GitHub-read files.

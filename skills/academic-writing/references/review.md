@@ -8,7 +8,7 @@
 2. **Load the review-lane files matching the scope**: `style.md` for language/style, `structure.md` for structure, the relevant `consistency/*.md` for consistency dimensions.
 3. **Read the target end-to-end before classifying findings.** Severity often depends on whether the issue recurs or is local.
 4. **Classify each finding** as **style** (sentence- or paragraph-level), **structure** (section ordering, missing topic sentence, buried governing idea), **consistency** (name the dimension), or **argument** (the logic doesn't hold; a claim isn't supported; an unstated assumption is load-bearing). Argument findings are the highest-leverage and easiest to miss — read for them deliberately.
-5. **Report.** Per finding: source location per `communicate/references/markdown.md` §File-reference rule, classification, one-line description, recommendation. Group by classification; within a class, order by severity if obvious, otherwise by file order.
+5. **Report.** Per finding: source location as a link with a line anchor per `communicate/references/markdown.md`, classification, one-line description, recommendation. Group by classification; within a class, order by severity if obvious, otherwise by file order.
 
 ## Fix tiers
 

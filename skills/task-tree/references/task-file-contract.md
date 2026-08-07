@@ -73,7 +73,7 @@ Most results are a few lines under `## Results` with no subsections. Add one onl
 
 | Subsection | Add when |
 |---|---|
-| `### Key Findings` | more than one finding — by the bar in `communicate` §Shape by surface, a result the researcher would quote or act on — needs separating from the surrounding narrative |
+| `### Key Findings` | more than one finding a researcher would quote or act on needs separating from the surrounding narrative |
 | `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
 | `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
 | `### Notes` | a caveat, data quirk, or decision changes how the result is read |

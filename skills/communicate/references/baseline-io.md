@@ -1,6 +1,6 @@
 # Baseline IO: frontmatter, filename, paths, metadata
 
-Load when producing a **permanent standalone** Markdown artifact outside a task directory. Task `## Results` do not need it; task-local Markdown companions follow `skills/using-superra/references/task-companion-files.md`.
+For a permanent standalone Markdown artifact outside a task directory.
 
 ## Resolve output path
 
@@ -52,17 +52,14 @@ Field notes:
 - `author`: wiki-link `[[Name]]` when the project uses wiki links (Obsidian-style notes); otherwise a plain name.
 - `tags`: caller can add more (e.g., `"results"`, `"integration"`, `"30-minute"`).
 - `project`: include if known from context or project guidance.
-- `git_message`: HEAD commit subject.
 - `git_dirty`: record honestly — auditability, not gating. `false` at commit time, `true` while drafting.
-- `permalink`: project-relative path with no extension. Example: `analyses/bop/RESULTS` or `notes/2026-03-07-report-analysis`.
+- `permalink`: e.g. `analyses/bop/RESULTS` or `notes/2026-03-07-report-analysis`.
 
 ## Write the file
 
-Write the caller's content verbatim after the frontmatter. **No content modifications.** Content violating `markdown.md` is the caller's responsibility — report back, never silently edit.
+Write the caller's content verbatim after the frontmatter. Content violating `markdown.md` is the caller's responsibility — report back, never silently edit.
 
 ## Return a clickable link
-
-After writing, print:
 
 ```
 Report saved: [REPORT_DIR/FILENAME.md](REPORT_DIR/FILENAME.md)
