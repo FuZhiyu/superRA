@@ -8,7 +8,7 @@ Load at the **PLAN phase** when the work involves mathematical modeling. `superp
 
 Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model.
 
-Both homes are the governing ancestor task, the one whose subtree is the whole model. The **inventory** goes in its `## Planner Guidance`. The parts a reviewer rejects work against — the canonical Notation Conventions, the Assumptions, and the Verification Plan — go in its `## Objective`.
+Both homes are the governing ancestor task, the one whose subtree is the whole model. The **catalogue** — timing, primitives, endogenous objects — goes in its `## Planner Guidance`. What a reviewer rejects work against goes in its `## Objective`: the solution concept, the canonical Notation Conventions, the Assumptions, and the Verification Plan. A restriction the timing implies is an Assumptions row, not a guidance line.
 
 ### Checklist
 
@@ -36,9 +36,6 @@ In order:
 ### Timing / Information Structure
 - [State the sequence of moves, information available at each step, and any commitment or observability assumptions.]
 
-### Solution Concept
-- [State the active solution concept: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other.]
-
 ### Primitives
 | Object | Meaning | Domain / Units | Notes |
 |---|---|---|---|
@@ -53,6 +50,11 @@ In order:
 `## Objective`:
 
 ```markdown
+**Assumption map:**
+
+### Solution Concept
+- [State the active solution concept: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other.]
+
 ### Notation Conventions
 | Symbol | Meaning | Why this notation |
 |---|---|---|
@@ -76,7 +78,7 @@ fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 
 ### Frontier Contributions
 
-The inventory settles facts; the choices it exposes go to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer:
+The inventory settles facts; the choices it exposes go to the researcher as frontier questions (`superplan §Grilling`):
 
 - **Functional form** — the "right" utility, production, or cost specification for this research intent.
 - **Solution concept and equilibrium selection** where more than one is defensible.

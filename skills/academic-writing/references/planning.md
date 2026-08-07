@@ -6,7 +6,7 @@ Covers writing work large enough to need durable tasks, reviewer dispatch, or cr
 
 ## Frontier Contributions
 
-Collect enough context before task drafting to populate the header fields below. The writing targets and the build command are facts to find in the project; the rest go to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer:
+Collect enough context before task drafting to populate the header fields below. The writing targets and the build command are facts to find in the project; the rest go to the researcher as frontier questions (`superplan §Grilling`):
 
 - **Mode** — review, polish, or draft.
 - **Audience** — journal, working paper, slides, response letter, or replication reader.

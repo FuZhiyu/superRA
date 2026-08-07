@@ -11,7 +11,7 @@ Both happen once, during planning.
 
 ## Data Inventory
 
-Data logistics, not research design. Planning guidance: it informs what tasks to write.
+Data logistics, not research design.
 
 **Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Planner Guidance` of the governing task — advisory, per `task-tree/references/task-file-contract.md` §Task Anatomy.
 
@@ -44,7 +44,7 @@ In order:
 
 ### Frontier Contributions
 
-The inventory settles facts; what it leaves open goes to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer and the finding that raises it:
+The inventory settles facts; what it leaves open goes to the researcher as frontier questions (`superplan §Grilling`):
 
 - **Disposition of each gap** — acquire it, scope the analysis down to what exists, or proceed and mark the limitation.
 - **Which robustness checks matter** for this study, from the `data-robustness-checklist.md` menu.

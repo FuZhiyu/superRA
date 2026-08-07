@@ -4,15 +4,12 @@ Load in PLAN phase when slide work enters the superRA workflow.
 
 ## Audience-Context Inventory
 
-Before task decomposition, record in the governing ancestor task's `## Planner Guidance`:
+Before task decomposition, record the inventory in the governing ancestor task's `## Objective` — review judges the deck against it, and it must reach every descendant:
 
 - **Audience:** venue, likely fields, seniority, and whether they know the paper/project.
 - **Shared context:** concepts, methods, data, notation, and institutions the audience knows without setup.
 - **Missing context:** concepts, notation, mechanisms, empirical design details, or institutional facts to introduce before they can support a claim.
 - **Divergent priors:** phrases or claims likely to read differently across fields.
-
-The two decisions the review gates check against go in that task's `## Objective`:
-
 - **Talk objective:** the one thing the audience should understand or believe by the end.
 - **Main-vs-backup policy:** which rigor, robustness, expert objections, and derivations belong off the main path.
 
@@ -20,7 +17,7 @@ The inventory is a planning artifact, not prose for the slides.
 
 ## Frontier Contributions
 
-Venue and audience makeup are researcher-held facts, so they are frontier questions (`superplan §Grilling`) rather than inferences — as are the talk objective and the main-vs-backup policy. Recommend an answer for each from the paper and deck you can read.
+Frontier questions (`superplan §Grilling`): venue, audience makeup, the talk objective, and the main-vs-backup policy.
 
 ## Deck Structure
 
