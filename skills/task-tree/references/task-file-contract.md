@@ -73,7 +73,7 @@ Most results are a few lines under `## Results` with no subsections. Add one onl
 
 | Subsection | Add when |
 |---|---|
-| `### Key Findings` | more than one finding — by the bar in `communicate/references/structures.md`, a result the researcher would quote or act on — needs separating from the surrounding narrative |
+| `### Key Findings` | more than one finding — by the bar in `communicate` §Shape by surface, a result the researcher would quote or act on — needs separating from the surrounding narrative |
 | `### Row Counts / Sample` | a downstream task or reviewer must reconcile against the sample the work produced |
 | `### Figures and Tables` | the task produced a figure or table a reader needs to see — embed as `![caption](attachments/fig_name.png)` |
 | `### Notes` | a caveat, data quirk, or decision changes how the result is read |
@@ -89,4 +89,4 @@ Any `## Results` riding higher than the task that produced a finding — a paren
 
 ### Figure Embedding
 
-Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/communicate/references/rich-content.md`.
+Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/communicate/references/markdown.md` §Figures.

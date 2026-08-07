@@ -6,6 +6,26 @@
 - **Meaning:** propositions, conditions, caveats, commitments, dependencies, and claim strength.
 - **Voice:** useful terminology, emphasis, rhythm, and register unless they make the text harder to understand.
 
+## Audit by cost
+
+Diagnose what slows the reader. This audit never tries to infer authorship or make prose "sound human."
+
+- **Redundancy:** two passages make the same contribution.
+  - Merge overlapping passages, link to the maintained source, or drop the repeat.
+- **Indirection:** framing, meta-commentary, process narration, or a missing actor delays the claim.
+  - Repair with [SKILL.md § Write sentences a cold reader parses once](../SKILL.md#write-sentences-a-cold-reader-parses-once); keep framing only when it changes interpretation.
+- **Vague claims:** importance language, vague attribution, or a broad interpretation outruns the evidence.
+  - State exactly what the evidence supports, or remove the claim.
+- **Buried structure:** a topic heading, paragraph wall, or flat list hides priority and relationships.
+  - Rebuild the visible hierarchy; keep connected reasoning in prose.
+- **Ambiguity:** fragments, invented abbreviations, unclear pronouns, compressed dependencies, or inconsistent names force reconstruction.
+  - Repair with the same section; restore the full relationship rather than the shortest phrasing.
+
+### Preserve harmless style
+
+- **Identify the reading problem before changing a style marker.** Preserve an em dash, domain term, hedge, first-person voice, contrast, list, or repeated cadence when it does not slow understanding.
+- **Reject detector mechanics.** Do not use banned-word lists, punctuation quotas, vocabulary tiers, rhythm targets, type-token targets, personality injection, or repeated passes until markers disappear.
+
 ## Route the rewrite
 
 - **Patch:** the main point and order already work; repair local repetition, ambiguity, or indirection.

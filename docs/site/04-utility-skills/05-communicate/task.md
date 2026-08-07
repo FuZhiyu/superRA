@@ -20,12 +20,12 @@ Use communicate to rewrite analyses/example/RESULTS.md for a cold reader.
 - Short nested lists are the default pyramid.
   - Headings and top-level bullets state the main points.
   - Paragraphs remain for connected reasoning, narrative, or causality.
-- Sentence style is direct and concrete.
+- Sentence style is direct and concrete, and lives in the always-loaded core.
   - Each sentence names the actor and action, keeps relationships explicit, and uses one term per concept.
 - Rewriting preserves exact literals, meaning, claim strength, dependencies, and useful voice.
   - The friction audit changes a pattern only when it makes text slower to understand; it does not try to detect AI authorship.
 
-On-demand references cover [structures](skills/communicate/references/structures.md), [sentence style](skills/communicate/references/style.md), [rewriting](skills/communicate/references/rewrite.md), [friction audits](skills/communicate/references/friction-audit.md), and [Markdown mechanics](skills/communicate/references/markdown.md). The Markdown checker still catches display-math and KaTeX failures:
+Structure, sentence style, and the content test all live in the always-loaded core. On-demand references cover [rewriting and friction audits](skills/communicate/references/rewrite.md), [Markdown mechanics](skills/communicate/references/markdown.md), and [standalone Markdown files](skills/communicate/references/baseline-io.md). The Markdown checker still catches display-math and KaTeX failures:
 
 ```
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md

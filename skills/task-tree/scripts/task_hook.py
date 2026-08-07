@@ -247,9 +247,8 @@ def _implemented_transition_feedback(data: dict) -> list[str]:
         f"Direct leaf transition to `implemented`: {labels}. Confirm `superRA:communicate` "
         "was loaded and the human-facing writing was reviewed. If either is missing, load "
         "the skill and run a final pass before the next workflow action: the core contract, "
-        "plus `references/structures.md`, `references/rewrite.md`, or "
-        "`references/friction-audit.md` when their load conditions match. Fix the task text "
-        "in place and keep `status: implemented`."
+        "plus `references/rewrite.md` or `references/markdown.md` when their load conditions "
+        "match. Fix the task text in place and keep `status: implemented`."
     ]
 
 

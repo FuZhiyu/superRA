@@ -58,7 +58,7 @@ Field notes:
 
 ## Write the file
 
-Write the caller's content verbatim after the frontmatter. **No content modifications.** Content violating `rich-content.md` is the caller's responsibility — report back, never silently edit.
+Write the caller's content verbatim after the frontmatter. **No content modifications.** Content violating `markdown.md` is the caller's responsibility — report back, never silently edit.
 
 ## Return a clickable link
 

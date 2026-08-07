@@ -2483,7 +2483,7 @@ class TestTaskHook:
         output = data["hookSpecificOutput"]
         assert output["hookEventName"] == "PostToolUse"
         assert "superRA:communicate" in output["additionalContext"]
-        assert "references/structures.md" in output["additionalContext"]
+        assert "references/rewrite.md" in output["additionalContext"]
         assert "keep `status: implemented`" in output["additionalContext"]
         assert _task_io.parse_task(root / "task.md").status == "implemented"
         assert f"{root / 'task.md'}. Confirm" not in output["additionalContext"]
