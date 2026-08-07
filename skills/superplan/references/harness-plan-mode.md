@@ -10,7 +10,7 @@ Load when the harness activates plan mode AND you recognize you are in a superRA
 
 The read-only constraint blocks file creation, not exploration. Run the superplan phases that write no task files — **Entry Assessment**, **Exploration**, **Domain Setup & Scope** (`../SKILL.md`).
 
-Write the plan file last, after exploration completes and any domain hard gate is satisfied — a presentation artifact, not a working draft.
+Write the plan file last, after exploration and the domain survey complete — a presentation artifact, not a working draft.
 
 ## Harness Plan File Template
 

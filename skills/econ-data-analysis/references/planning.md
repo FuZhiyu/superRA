@@ -11,7 +11,7 @@ Both happen once, during planning.
 
 ## Data Inventory
 
-Data logistics, not research design. Planning guidance: it informs what tasks to write and is presented to the researcher before drafting them.
+Data logistics, not research design. Planning guidance: it informs what tasks to write.
 
 **Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Planner Guidance` of the governing task — advisory, per `task-tree/references/task-file-contract.md` §Task Anatomy.
 
@@ -19,7 +19,7 @@ Data logistics, not research design. Planning guidance: it informs what tasks to
 
 In order:
 
-1. **Understand the analysis goal** — ask what they need to analyze and what data they expect to use. One question at a time.
+1. **Understand the analysis goal** — what needs analyzing, and what data the researcher expects to use.
 
 2. **Explore project data** — check existing data directories, symlinks, and documentation:
    ```bash
@@ -42,7 +42,13 @@ In order:
 
    WRDS or Refinitiv data skills available: note them as download tools.
 
-6. **Present the inventory to the researcher** — in chat, before task drafting, so gaps surface while the structure is still open.
+### Frontier Contributions
+
+The inventory settles facts; what it leaves open goes to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer and the finding that raises it:
+
+- **Disposition of each gap** — acquire it, scope the analysis down to what exists, or proceed and mark the limitation.
+- **Which robustness checks matter** for this study, from the `data-robustness-checklist.md` menu.
+- **Whether a borderline sensitivity failure is meaningful** — judging "robust enough" is research judgment, not an RA call.
 
 ### Discipline
 
@@ -58,15 +64,11 @@ Applies to every analysis however simple — simple analyses hide the same data-
 
 Every data-analysis plan includes sensitivity analysis tasks.
 
-1. **Discuss with the researcher:** which robustness checks matter here. Not all checks are meaningful for every study.
+1. **Pick candidate checks from the menu** in `data-robustness-checklist.md`. Not all checks are meaningful for every study, so the selection is a frontier question (§Frontier Contributions).
 
-2. **Pick checks from the menu** in `data-robustness-checklist.md`.
+2. **Design as dedicated task(s):** typically after the main analysis produces baseline results.
 
-3. **Design as dedicated task(s):** typically after the main analysis produces baseline results.
-
-4. **Document expected sensitivity:** per check, what you expect and what would be concerning.
-
-5. **Unsure whether a sensitivity failure would be meaningful: ask the researcher** — judging "robust enough" is research judgment, not an RA call.
+3. **Document expected sensitivity:** per check, what you expect and what would be concerning.
 
 ---
 

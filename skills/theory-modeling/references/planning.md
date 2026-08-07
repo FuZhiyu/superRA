@@ -6,13 +6,15 @@ Load at the **PLAN phase** when the work involves mathematical modeling. `superp
 
 ## Model Inventory / Assumption Map
 
-Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model. The inventory is project-wide: it becomes a `### Model Inventory / Assumption Map` subsection of the `## Objective` on the governing ancestor task — the task whose subtree is the whole model.
+Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model.
+
+Both homes are the governing ancestor task, the one whose subtree is the whole model. The **inventory** goes in its `## Planner Guidance`. The parts a reviewer rejects work against — the canonical Notation Conventions, the Assumptions, and the Verification Plan — go in its `## Objective`.
 
 ### Checklist
 
 In order:
 
-1. **Understand the modeling goal** - ask what the model explains, what outputs matter, and whether the work is derivation, proof, comparative statics, calibration, or mixed.
+1. **Understand the modeling goal** - what the model explains, what outputs matter, and whether the work is derivation, proof, comparative statics, calibration, or mixed.
 
 2. **Inventory primitives and endogenous objects** - write down:
    - primitives: parameters, endowments, technologies, exogenous processes, information structure, timing, institutional rules
@@ -24,25 +26,18 @@ In order:
 
 5. **Design the verification plan** - which results are checked by substitution, which need limiting or special cases, which need a simple numerical example, what baseline parameter values or ranges apply, and what pass condition each check must satisfy.
 
-6. **Present the inventory and get researcher approval.** Write it into that ancestor task's objective as a scoped subsection in this structure, then confirm before task drafting:
+6. **Write it into the two homes**, in this structure.
+
+`## Planner Guidance`:
 
 ```markdown
-**Model Inventory / Assumption Map:**
+**Model inventory:**
 
 ### Timing / Information Structure
 - [State the sequence of moves, information available at each step, and any commitment or observability assumptions.]
 
 ### Solution Concept
 - [State the active solution concept: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other.]
-
-### Notation Conventions
-| Symbol | Meaning | Why this notation |
-|---|---|---|
-| ... | ... | ... |
-
-The **Why this notation** column is required for every non-conventional
-symbol — the intuition or mnemonic behind the choice. Symbols already
-fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 
 ### Primitives
 | Object | Meaning | Domain / Units | Notes |
@@ -53,6 +48,19 @@ fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 | Object | Meaning | Defined by | Notes |
 |---|---|---|---|
 | ... | ... | ... | ... |
+```
+
+`## Objective`:
+
+```markdown
+### Notation Conventions
+| Symbol | Meaning | Why this notation |
+|---|---|---|
+| ... | ... | ... |
+
+The **Why this notation** column is required for every non-conventional
+symbol — the intuition or mnemonic behind the choice. Symbols already
+fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 
 ### Assumptions
 | Assumption | Applies to | Role in the model | Interpretation | Notes |
@@ -66,16 +74,25 @@ fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 | ... | ... | ... | ... |
 ```
 
+### Frontier Contributions
+
+The inventory settles facts; the choices it exposes go to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer:
+
+- **Functional form** — the "right" utility, production, or cost specification for this research intent.
+- **Solution concept and equilibrium selection** where more than one is defensible.
+- **Normalizations** that change interpretation rather than only algebra.
+- **Verification mode per result** — substitution, limiting case, numerical example — and what counts as a concerning failure.
+
 ### Principles (non-default constraints)
 
 - **Notation Conventions is canonical and user-gated** - the planner seeds the table with the symbols agreed at planning time. During implementation, new symbols go to the per-task **Notation & Assumptions Ledger** in the task's `## Results` (`SKILL.md` §Documentation and handoff); promotion to the canonical table requires explicit user confirmation.
 - **Interpretability is blocking; prefer synthesis** - every assumption carries a plain-language interpretation a researcher can defend at planning time, and scattered weak restrictions replaceable by one stronger interpretable primitive are synthesized. Full checklist: `skills/theory-modeling/SKILL.md` §Assumptions.
-- **Escalate methodology choices** - the "right" utility form, equilibrium concept, or normalization depending on research intent: ask, don't choose.
+- **Escalate methodology choices** - never choose one silently; they are §Frontier Contributions.
 
 ### Red Flags
 
 **Never:**
-- Proceed to task drafting on a verbal description. The inventory goes into the governing ancestor task's objective.
+- Proceed to task drafting on a verbal description. The inventory goes into the governing ancestor task.
 - Say "the notation is standard" without listing the symbols and meanings.
 - Write tasks in parallel with the inventory "to save time."
 - Use "TBD assumptions", "notation to be cleaned later", or "verify numerically if needed" in task steps.
@@ -95,7 +112,7 @@ fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 
 Every theory/modeling plan includes explicit verification tasks.
 
-1. **Discuss with the researcher which checks matter.** Typical options:
+1. **Propose which checks matter** — a §Frontier Contributions question, so recommend rather than choose. Typical options:
    - substitution back into first-order conditions, laws of motion, or equilibrium conditions
    - limiting or special cases
    - sign checks for comparative statics
@@ -114,4 +131,4 @@ Every theory/modeling plan includes explicit verification tasks.
 
 ## Handoff to Implementation
 
-Inventory approved, verification plan agreed, tasks drafted: `superplan` commits and hands off to execution. Implementation-step discipline is the `theory-modeling` SKILL.md body (Iron Law and the four gates).
+Inventory written down, frontier empty, tasks drafted: `superplan` commits and hands off to execution. Implementation-step discipline is the `theory-modeling` SKILL.md body (Iron Law and the four gates).

@@ -38,7 +38,7 @@ A spectrum, not rigid modes — escalate mid-planning when complexity warrants. 
 | Tier | Use for | Phase 1 |
 |---|---|---|
 | **Quick** | Minor updates, known additions, single-task changes — an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment. | Light scan of `superRA/`, skip deep exploration, design inline. |
-| **Standard** (default) | New workstreams in familiar territory, a significant new branch, satisfying domain hard gates. | Explore project structure, load the domain skill, design tasks. |
+| **Standard** (default) | New workstreams in familiar territory, a significant new branch, work a domain skill governs. | Explore project structure, load the domain skill, design tasks. |
 | **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Grilling. |
 
 ## Phase 1: Exploration
@@ -49,7 +49,7 @@ Exploration shifts placement or depth: revisit the entry assessment.
 
 ## Phase 2: Domain Setup & Scope
 
-**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy any planning hard gate it defines before returning to Phase 3.** Where the domain skill gates on a planning-stage inventory artifact, the researcher approves it before any task structure is drafted.
+**Stop here, load the matching domain skill and follow its planning-stage reference per its own stage-load table.** Run its planning survey before any task structure is drafted: the survey lands in `## Planner Guidance`, and the decisions it raises join the frontier for the Phase 3 round.
 
 No implemented domain skill for the work: proceed to Phase 3, flag the gap to the researcher.
 

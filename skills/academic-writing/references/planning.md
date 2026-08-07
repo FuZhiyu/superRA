@@ -4,9 +4,14 @@
 
 Covers writing work large enough to need durable tasks, reviewer dispatch, or cross-session continuity; most writing work stays standalone.
 
-## Hard Gate
+## Frontier Contributions
 
-Collect enough context before task drafting to populate the header fields below. The gate passes on researcher approval of target, mode, review lanes or drafting scope, audience, build command, and disposition.
+Collect enough context before task drafting to populate the header fields below. The writing targets and the build command are facts to find in the project; the rest go to the researcher as frontier questions (`superplan §Grilling`), each carrying your recommended answer:
+
+- **Mode** — review, polish, or draft.
+- **Audience** — journal, working paper, slides, response letter, or replication reader.
+- **Review lanes** in scope, or the drafting scope.
+- **Disposition of the output** — task-local review notes, an edited manuscript, or a drafted section.
 
 ## Writing Plan Header
 
