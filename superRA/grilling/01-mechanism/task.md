@@ -1,6 +1,6 @@
 ---
 title: "Author the grilling mechanism and route superplan into it"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -48,3 +48,23 @@ The mechanism ships in [grilling.md](../../../skills/superplan/references/grilli
 `tests/harness-instruction-following/test_contract.py` has two failures that also fail on the parent commit: `test_superplan_routed_references_exist` asserts `references/decomposition.md`, renamed to `build-and-review.md` before this task, and `test_superimplement_executes_each_selected_seat_filler`. Neither involves grilling.
 
 The `skill-creator` load that `CLAUDE.md` requires before editing a skill is unavailable in this environment — no such skill is installed. The edits were held to `CLAUDE.md` §Skill Prose Style and the §Teach the Protocol three tests instead, applied line by line: two rationale clauses were cut from the spine edits during self-review.
+
+## Review Notes
+
+Tier `quick`. Focus: `CLAUDE.md` §Teach the Protocol three tests and §Skill Prose Style, line by line over the new instruction prose.
+
+1. `[BLOCKING]` **One exit for three entry points.** [grilling.md:34](../../../skills/superplan/references/grilling.md#L34) sends every empty frontier to Phase 3 decomposition, but [grilling.md:3](../../../skills/superplan/references/grilling.md#L3) declares three entry points. An agent that runs the §Entry Assessment scoping round and empties that frontier is told to decompose — skipping Phase 1 exploration and the Phase 2 domain hard gate, which [SKILL.md:52](../../../skills/superplan/SKILL.md#L52) makes a stop. Scope the exit to the caller: the main round's empty frontier goes to decomposition; a scoping round returns to §Entry Assessment, a re-entry round to the step that reopened scope.
+
+2. `[BLOCKING]` **The retired mechanism still lives at §User Review.** [SKILL.md:91](../../../skills/superplan/SKILL.md#L91) — "surface open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way — as options, not assertions. No genuine questions: the presentation itself is the review" — is the §Substantive Questions standard this task replaced, restated in a second place (test 1). It also contradicts finding 1's neighbor rule, `**Frontier empty ends the session**`: grilling settles decisions before decomposition, so Phase 4 has no open questions to surface as options. Cut the question-surfacing clause and keep §User Review to presenting the tree, or point it at §Grilling.
+
+3. `[BLOCKING]` **Re-entry routes nowhere.** [grilling.md:3](../../../skills/superplan/references/grilling.md#L3) claims a load "on any tree change that reopens scope", but no file a tree-changing agent reads points at §Grilling: [SKILL.md:105](../../../skills/superplan/SKILL.md#L105) routes to [changing-the-tree.md](../../../skills/superplan/references/changing-the-tree.md), whose protocol step 1 asks only for intent confirmation. The objective's "Re-entry on a tree change routes through the same section" needs the route stated where the agent stands — one line at [changing-the-tree.md:42](../../../skills/superplan/references/changing-the-tree.md#L42) or in §Grilling.
+
+4. `[BLOCKING]` **"Ask the whole frontier, never truncate" is stated three times** across [grilling.md:21](../../../skills/superplan/references/grilling.md#L21) ("Ask the whole frontier in one round."), :23a ("batched call after call until the frontier is empty"), and :23b ("Never hold a question back for want of slots in a call.") — the objective states it once. L21 is the sentence announcing the list that §Skill Prose Style deletes; :23b is :23a's rejection test (test 2). Keep :23a alone.
+
+5. `[ADVISORY]` **Frontier defined, then re-derived.** [grilling.md:9](../../../skills/superplan/references/grilling.md#L9) gives the inclusion rule ("every decision whose prerequisites are already settled") and then its rejection test ("A question depending on one still open belongs to a later round") — the pair test 2 names by example; the two sentences swap with nothing missing, and [grilling.md:28](../../../skills/superplan/references/grilling.md#L28) already carries deferral into the next round. Cut the second sentence.
+
+6. `[ADVISORY]` **The landing menu paraphrases what it points at.** [grilling.md:32](../../../skills/superplan/references/grilling.md#L32) lists objective bullet / scoped `### Context` / `## Planner Guidance` in the same sentence that cites `task-tree-design.md` §Writing Objectives and Planner Guidance, which the planner has loaded by Phase 3 — a pointer, not a paraphrase (test 1). "git carries the date" is a rationale clause.
+
+7. `[ADVISORY]` **Depth rule stated twice.** [SKILL.md:101](../../../skills/superplan/SKILL.md#L101): standard and thorough grill by default, so "A `grill me` request grills at any depth" bites only at quick, which "quick depth skips it unless the researcher asks" already covers.
+
+8. `[ADVISORY]` **Narration before the imperative.** [grilling.md:28](../../../skills/superplan/references/grilling.md#L28) — "Answers settle decisions and push the frontier outward" derives what the §The design tree definition already implies; the instruction is "Recompute it and ask the next round."
