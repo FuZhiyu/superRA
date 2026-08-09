@@ -2238,51 +2238,17 @@ class TestTaskHook:
     def _assert_empty_json(self, stdout: str) -> None:
         assert json.loads(stdout) == {}
 
-    def _run_communicate_gate(
-        self,
-        payload: dict,
-        transcript: Path,
-        state_dir: Path,
-        cwd: Path,
-    ):
-        """Run the paired pre-tool hook to persist the before-status snapshot."""
-        import subprocess
-
-        hook_path = SCRIPTS_DIR.parents[2] / "hooks" / "communicate_gate.py"
-        full_payload = {
-            **payload,
-            "cwd": str(cwd),
-            "transcript_path": str(transcript),
-            "hook_event_name": "PreToolUse",
-        }
-        env = os.environ.copy()
-        env["SUPERRA_COMMUNICATE_STATE_DIR"] = str(state_dir)
-        return subprocess.run(
-            [sys.executable, str(hook_path)],
-            input=json.dumps(full_payload),
-            capture_output=True,
-            text=True,
-            cwd=cwd,
-            env=env,
-        )
-
-    def _write_implemented_fixture(self, tmp_path: Path) -> tuple[Path, Path]:
-        root = tmp_path / "superRA"
-        root.mkdir()
-        _write_task_md(root / "task.md", "Root", "not-started")
-        leaf = root / "alpha"
-        leaf.mkdir()
-        _write_task_md(leaf / "task.md", "Alpha", "in-progress")
-        return root, leaf / "task.md"
-
-    def test_ignores_non_task_md(self, plan_root):
-        """Hook exits 0 immediately for non-task.md files."""
+    def test_edit_non_task_markdown_under_tree_reminds(self, plan_root):
         payload = {
             "tool_name": "Edit",
             "tool_input": {"file_path": str(plan_root / "01-first" / "README.md")},
         }
-        code, _ = self._run_hook(payload)
-        assert code == 0
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Markdown edited under the task tree" in context
+        assert "superRA:communicate" in context
+        assert "otherwise continue" in context
 
     def test_ignores_non_edit_write_tools(self, plan_root):
         """Hook exits 0 immediately for tools other than Edit/Write."""
@@ -2294,15 +2260,17 @@ class TestTaskHook:
         assert code == 0
 
     def test_exits_zero_on_valid_task_md(self, plan_root):
-        """Hook exits 0 when processing a valid task.md."""
+        """Hook reminds without blocking when processing a valid task.md."""
         payload = {
             "tool_name": "Edit",
             "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
         }
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        assert result.stdout == ""
         assert result.stderr == ""
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
 
     def test_codex_empty_json_mode_valid_task_md_outputs_object(self, plan_root):
         """Codex no-feedback task.md paths emit parseable empty hook JSON."""
@@ -2315,7 +2283,9 @@ class TestTaskHook:
             env={task_hook.CODEX_EMPTY_JSON_ENV: "1"},
         )
         assert result.returncode == 0
-        self._assert_empty_json(result.stdout)
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
 
     def test_exits_zero_on_validation_failure(self, plan_root):
@@ -2396,7 +2366,9 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
-        self._assert_empty_json(result.stdout)
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists(), (
             "the hook must not auto-generate a dashboard"
@@ -2460,21 +2432,14 @@ class TestTaskHook:
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists()
 
-    def test_edit_direct_implemented_transition_reminds_without_blocking(self, tmp_path):
-        root, task_md = self._write_implemented_fixture(tmp_path)
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8").replace(
-                "status: in-progress", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
+    def test_write_markdown_under_tree_reminds_without_before_state(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        task_md = root / "notes.md"
+        task_md.write_text("For the user.\n", encoding="utf-8")
         payload = {
-            "tool_name": "Edit",
-            "tool_input": {
-                "file_path": str(task_md),
-                "old_string": "status: in-progress",
-                "new_string": "status: implemented",
-            },
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(task_md), "content": "For the user."},
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
@@ -2482,30 +2447,28 @@ class TestTaskHook:
         assert "decision" not in data
         output = data["hookSpecificOutput"]
         assert output["hookEventName"] == "PostToolUse"
+        assert "Markdown edited under the task tree" in output["additionalContext"]
         assert "superRA:communicate" in output["additionalContext"]
-        assert "references/rewrite.md" in output["additionalContext"]
-        assert "keep `status: implemented`" in output["additionalContext"]
-        assert _task_io.parse_task(root / "task.md").status == "implemented"
-        assert f"{root / 'task.md'}. Confirm" not in output["additionalContext"]
 
-    def test_apply_patch_direct_implemented_transition_reminds(self, tmp_path):
-        _, task_md = self._write_implemented_fixture(tmp_path)
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8").replace(
-                "status: in-progress", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
+    def test_apply_patch_markdown_under_tree_reminds_once_for_all_paths(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        (root / "one.md").write_text("One.\n", encoding="utf-8")
+        (root / "two.md").write_text("Two.\n", encoding="utf-8")
         payload = {
             "tool_name": "apply_patch",
             "tool_input": {
                 "command": "\n".join(
                     [
                         "*** Begin Patch",
-                        "*** Update File: superRA/alpha/task.md",
+                        "*** Update File: superRA/one.md",
                         "@@",
-                        "-status: in-progress",
-                        "+status: implemented",
+                        "-One.",
+                        "+One changed.",
+                        "*** Update File: superRA/two.md",
+                        "@@",
+                        "-Two.",
+                        "+Two changed.",
                         "*** End Patch",
                     ]
                 )
@@ -2514,116 +2477,30 @@ class TestTaskHook:
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Direct leaf transition" in context
+        assert context.count("Markdown edited under the task tree") == 1
+        assert str(root / "one.md") in context
+        assert str(root / "two.md") in context
         assert "superRA:communicate" in context
 
-    def test_later_edit_of_implemented_task_does_not_repeat(self, tmp_path):
-        _, task_md = self._write_implemented_fixture(tmp_path)
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8").replace(
-                "status: in-progress", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
+    def test_edit_markdown_outside_tree_stays_silent(self, tmp_path):
+        readme = tmp_path / "README.md"
+        readme.write_text("Outside.\n", encoding="utf-8")
         payload = {
             "tool_name": "Edit",
-            "tool_input": {
-                "file_path": str(task_md),
-                "old_string": "## Results\n\n(empty)",
-                "new_string": "## Results\n\nDone.",
-            },
+            "tool_input": {"file_path": str(readme)},
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
         assert result.stdout == ""
 
-    def test_write_snapshot_detects_transition_once(self, tmp_path):
-        _, task_md = self._write_implemented_fixture(tmp_path)
-        transcript = tmp_path / "transcript.jsonl"
-        transcript.write_text(
-            '{"skill":"superRA:communicate"}\n'
-            '{"command":"./superRA/superra task read alpha"}\n',
-            encoding="utf-8",
-        )
-        state_dir = tmp_path / "state"
-        payload = {
-            "session_id": "session-write",
-            "tool_use_id": "tool-write",
-            "tool_name": "Write",
-            "tool_input": {"file_path": str(task_md), "content": "replacement"},
-        }
-        pre = self._run_communicate_gate(payload, transcript, state_dir, tmp_path)
-        assert pre.returncode == 0
-        self._assert_empty_json(pre.stdout)
-
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8").replace(
-                "status: in-progress", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
-        env = {"SUPERRA_COMMUNICATE_STATE_DIR": str(state_dir)}
-        first = self._run_hook_result(payload, cwd=tmp_path, env=env)
-        assert (
-            "Direct leaf transition"
-            in json.loads(first.stdout)["hookSpecificOutput"]["additionalContext"]
-        )
-
-        second = self._run_hook_result(payload, cwd=tmp_path, env=env)
-        assert second.returncode == 0
-        assert second.stdout == ""
-
-    def test_bash_snapshot_detects_direct_transition(self, tmp_path):
-        _, task_md = self._write_implemented_fixture(tmp_path)
-        transcript = tmp_path / "transcript.jsonl"
-        transcript.write_text(
-            '{"skill":"superRA:communicate"}\n'
-            '{"command":"./superRA/superra task read alpha"}\n',
-            encoding="utf-8",
-        )
-        state_dir = tmp_path / "state"
-        payload = {
-            "session_id": "session-bash",
-            "tool_use_id": "tool-bash",
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": f"sed -i s/in-progress/implemented/ {task_md}"
-            },
-        }
-        pre = self._run_communicate_gate(payload, transcript, state_dir, tmp_path)
-        assert pre.returncode == 0
-        self._assert_empty_json(pre.stdout)
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8").replace(
-                "status: in-progress", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
-
-        result = self._run_hook_result(
-            payload,
-            cwd=tmp_path,
-            env={"SUPERRA_COMMUNICATE_STATE_DIR": str(state_dir)},
-        )
-        assert result.returncode == 0
-        assert "Direct leaf transition" in json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-
-    def test_ancestor_implemented_edit_is_not_a_leaf_transition(self, tmp_path):
-        root, _ = self._write_implemented_fixture(tmp_path)
-        root_md = root / "task.md"
-        root_md.write_text(
-            root_md.read_text(encoding="utf-8").replace(
-                "status: not-started", "status: implemented", 1
-            ),
-            encoding="utf-8",
-        )
+    def test_non_markdown_under_tree_stays_silent(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        script = root / "notes.txt"
+        script.write_text("Not Markdown.\n", encoding="utf-8")
         payload = {
             "tool_name": "Edit",
-            "tool_input": {
-                "file_path": str(root_md),
-                "old_string": "status: not-started",
-                "new_string": "status: implemented",
-            },
+            "tool_input": {"file_path": str(script)},
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
@@ -3006,9 +2883,9 @@ class TestTaskHook:
         commands = [
             entry["hooks"][0]["command"]
             for entry in post_tool
-            if entry.get("matcher") in {"Edit|Write", "Bash"}
+            if entry.get("matcher") == "Edit|Write|Bash"
         ]
-        assert len(commands) == 2
+        assert len(commands) == 1
 
         payload = {"tool_name": "apply_patch", "tool_input": {"command": ""}}
         for command in commands:
@@ -3034,8 +2911,8 @@ class TestTaskHook:
         )
         path.write_text(f"---\n{fm}---\n\n{body}", encoding="utf-8")
 
-    def test_edit_clean_md_is_silent(self, plan_root):
-        """A clean .md produces no output."""
+    def test_edit_clean_md_emits_only_communicate_reminder(self, plan_root):
+        """A clean .md skips integrity findings but still gets the reminder."""
         target = plan_root / "01-first" / "task.md"
         self._md_task_with_body(
             target,
@@ -3044,8 +2921,10 @@ class TestTaskHook:
         payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        assert result.stdout == ""
         assert result.stderr == ""
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Markdown edited under the task tree" in context
+        assert "Markdown render-integrity issue" not in context
 
     def test_edit_non_md_file_is_silent(self, plan_root):
         """A non-.md edit under a task root produces no markdown feedback and

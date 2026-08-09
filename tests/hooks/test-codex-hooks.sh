@@ -216,7 +216,12 @@ case_codex_manifest_task_hook_apply_patch() {
 
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
-  assert_empty_json_object "$name" "$out" || return
+  assert_json "$name" "$out" || return
+  context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", ""))')
+  if [[ "$context" != *"Markdown edited under the task tree"* ]] || [[ "$context" != *"superRA:communicate"* ]]; then
+    record_fail "$name" "missing Communicate reminder: $out"
+    return
+  fi
 
   status=$(python3 - "$work/.plan/task.md" <<'PY'
 from pathlib import Path

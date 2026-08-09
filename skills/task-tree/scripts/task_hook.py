@@ -25,7 +25,6 @@ PostToolUse stdin format:
 
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import re
@@ -39,19 +38,6 @@ LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 CODEX_EMPTY_JSON_ENV = "SUPERRA_TASK_HOOK_EMPTY_JSON"
 _CODEX_EMPTY_JSON_MODE = False
-
-
-def _communicate_gate_module():
-    """Load the hook-shared one-shot status state helper."""
-    hooks_dir = _scripts_dir().parents[2] / "hooks"
-    if not (hooks_dir / "communicate_gate.py").is_file():
-        return None
-    if str(hooks_dir) not in sys.path:
-        sys.path.insert(0, str(hooks_dir))
-    try:
-        return importlib.import_module("communicate_gate")
-    except Exception:
-        return None
 
 
 def _scripts_dir() -> Path:
@@ -119,11 +105,29 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
     return feedback
 
 
+def _communicate_reminder(file_paths: list[Path]) -> list[str]:
+    """Remind after Markdown edits under a task root without blocking."""
+    paths: list[str] = []
+    seen: set[Path] = set()
+    for file_path in file_paths:
+        if not _is_markdown_under_task_root(file_path) or file_path in seen:
+            continue
+        seen.add(file_path)
+        paths.append(str(file_path))
+    if not paths:
+        return []
+    return [
+        f"Markdown edited under the task tree: {', '.join(paths)}. If these edits are "
+        "meant for a user to read, make sure they follow `superRA:communicate`; "
+        "otherwise continue."
+    ]
+
+
 def _feedback_json(feedback: list[str]) -> str:
     context = (
         "<IMPORTANT>Task-system hook feedback:\n"
         + "\n".join(f"- {line}" for line in feedback)
-        + "\n\nThe hook stayed non-blocking; fix the task tree before proceeding."
+        + "\n\nThe hook stayed non-blocking; apply any relevant action before proceeding."
         + "</IMPORTANT>"
     )
     return json.dumps(
@@ -135,121 +139,6 @@ def _feedback_json(feedback: list[str]) -> str:
         },
         separators=(",", ":"),
     )
-
-
-_STATUS_LINE_RE = re.compile(r"^status:\s*([^\s#]+)", re.MULTILINE)
-
-
-def _status_from_text(text: str) -> str | None:
-    match = _STATUS_LINE_RE.search(text)
-    return match.group(1) if match else None
-
-
-def _direct_implemented_paths(data: dict) -> list[Path]:
-    """Recover direct status transitions from Edit/apply_patch payloads."""
-    tool_name = data.get("tool_name", "") or data.get("tool", "")
-    tool_input = data.get("tool_input", {}) or {}
-    cwd = Path(data.get("cwd", "") or os.getcwd())
-
-    if tool_name == "Edit" and isinstance(tool_input, dict):
-        file_path = tool_input.get("file_path", "")
-        old = tool_input.get("old_string", "")
-        new = tool_input.get("new_string", "")
-        if (
-            isinstance(file_path, str)
-            and file_path
-            and isinstance(old, str)
-            and isinstance(new, str)
-            and _status_from_text(old) != "implemented"
-            and _status_from_text(new) == "implemented"
-        ):
-            path = Path(file_path)
-            return [path if path.is_absolute() else cwd / path]
-        return []
-
-    if tool_name != "apply_patch" or not isinstance(tool_input, dict):
-        return []
-    command = tool_input.get("command", "")
-    if not isinstance(command, str) or not command:
-        return []
-
-    paths: list[Path] = []
-    current: Path | None = None
-    removed_status: str | None = None
-    added_status: str | None = None
-
-    def finish() -> None:
-        nonlocal removed_status, added_status
-        if (
-            current is not None
-            and removed_status != "implemented"
-            and added_status == "implemented"
-        ):
-            paths.append(current)
-        removed_status = None
-        added_status = None
-
-    for line in command.splitlines():
-        match = _APPLY_PATCH_FILE_RE.match(line)
-        if match:
-            finish()
-            raw = (match.group("path") or match.group("move_to") or "").strip()
-            candidate = Path(raw)
-            current = candidate if candidate.is_absolute() else cwd / candidate
-            continue
-        if current is None:
-            continue
-        if line.startswith("-status:"):
-            removed_status = _status_from_text(line[1:])
-        elif line.startswith("+status:"):
-            added_status = _status_from_text(line[1:])
-    finish()
-    return paths
-
-
-def _is_leaf_implemented_task(path: Path) -> bool:
-    if path.name != "task.md" or not path.is_file():
-        return False
-    try:
-        if _status_from_text(path.read_text(encoding="utf-8")) != "implemented":
-            return False
-        return not any(
-            child.is_dir() and (child / "task.md").is_file()
-            for child in path.parent.iterdir()
-        )
-    except OSError:
-        return False
-
-
-def _implemented_transition_feedback(data: dict) -> list[str]:
-    """Emit the final-writing reminder once for direct leaf transitions."""
-    helper = _communicate_gate_module()
-    snapshot = helper.consume_status_snapshot(data) if helper is not None else None
-    candidates: list[Path] = []
-    if snapshot is not None:
-        for item in snapshot:
-            if not isinstance(item, dict) or item.get("status") == "implemented":
-                continue
-            raw = item.get("path", "")
-            if isinstance(raw, str) and raw:
-                candidates.append(Path(raw))
-    elif not data.get("tool_use_id"):
-        # Harnesses without tool-use IDs cannot share the pre-tool snapshot.
-        # Diff-bearing Edit/apply_patch payloads still prove the transition.
-        candidates.extend(_direct_implemented_paths(data))
-
-    transitioned = [path for path in candidates if _is_leaf_implemented_task(path)]
-    if not transitioned:
-        return []
-
-    labels = ", ".join(str(path) for path in transitioned)
-    return [
-        f"Direct leaf transition to `implemented`: {labels}. Confirm `superRA:communicate` "
-        "was loaded and the human-facing writing was reviewed. If either is missing, load "
-        "the skill and run a final pass before the next workflow action: the core contract, "
-        "plus `references/rewrite.md` or `references/markdown.md` when their load conditions "
-        "match. Fix the task text in place and keep `status: implemented`."
-    ]
 
 
 def _truthy_env(name: str) -> bool:
@@ -462,17 +351,15 @@ def _handle_bash(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
-        _exit_success(_implemented_transition_feedback(data))
-
-    transition_feedback = _implemented_transition_feedback(data)
+        _exit_success()
 
     # Gate: must reference a task root AND contain a mutating verb. A read-only
     # command that merely mentions a task root (task_query.py, grep, serve) is
     # not a structural change and must early-exit.
     if not _command_mentions_task_root(command):
-        _exit_success(transition_feedback)
+        _exit_success()
     if not _MUTATING_RE.search(command):
-        _exit_success(transition_feedback)
+        _exit_success()
 
     _ensure_scripts_on_path()
     import _task_io as task_io
@@ -550,7 +437,7 @@ def _handle_bash(data: dict) -> None:
                 plan_roots.append(candidate)
                 break
 
-    feedback: list[str] = list(rewire_feedback) + transition_feedback
+    feedback: list[str] = list(rewire_feedback)
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
             continue
@@ -572,15 +459,15 @@ def _handle_edit_write(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     file_path_str = tool_input.get("file_path", "")
     if not file_path_str:
-        _exit_success(_implemented_transition_feedback(data))
+        _exit_success()
 
     file_path = Path(file_path_str)
 
     # Cheap gate: only a .md under a task root is of interest to either branch.
     if not _is_markdown_under_task_root(file_path):
-        _exit_success(_implemented_transition_feedback(data))
+        _exit_success()
 
-    feedback: list[str] = []
+    feedback = _communicate_reminder([file_path])
 
     # task.md-only branch: validate the tree and propagate parent status.
     if file_path.name == "task.md":
@@ -599,7 +486,6 @@ def _handle_edit_write(data: dict) -> None:
 
     # Broader branch: render-integrity-check any .md under a task root.
     feedback.extend(_markdown_integrity_feedback(file_path))
-    feedback.extend(_implemented_transition_feedback(data))
 
     _exit_success(feedback)
 
@@ -649,16 +535,18 @@ def _handle_apply_patch(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
-        _exit_success(_implemented_transition_feedback(data))
+        _exit_success()
 
     cwd = Path.cwd()
     roots: list[Path] = []
     seen: set[Path] = set()
     feedback: list[str] = []
+    edited_paths: list[Path] = []
 
     for raw_path in _apply_patch_paths(command):
         path = Path(raw_path)
         file_path = path if path.is_absolute() else cwd / path
+        edited_paths.append(file_path)
 
         # Render-integrity-check any .md under a task root (including task.md);
         # the cheap gate inside short-circuits everything else.
@@ -675,10 +563,10 @@ def _handle_apply_patch(data: dict) -> None:
         seen.add(resolved)
         roots.append(plan_root)
 
+    feedback.extend(_communicate_reminder(edited_paths))
+
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))
-
-    feedback.extend(_implemented_transition_feedback(data))
 
     _exit_success(feedback)
 

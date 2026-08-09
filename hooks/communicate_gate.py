@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
-"""PreToolUse Markdown gate and one-shot task-status snapshot support."""
+"""PreToolUse gate requiring Communicate before Markdown mutation."""
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
 import shlex
 import sys
-import tempfile
 from pathlib import Path
 
 
 COMMUNICATE = "superRA:communicate"
-STATE_DIR_ENV = "SUPERRA_COMMUNICATE_STATE_DIR"
 _PATCH_PATH_RE = re.compile(
     r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
 )
-_STATUS_RE = re.compile(r"^status:\s*([^\s#]+)", re.MULTILINE)
 _REDIRECT_MD_RE = re.compile(r"(?:^|[\s;|&])(?:\d*)>>?\s*(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])", re.IGNORECASE)
 _TEE_MD_RE = re.compile(r"(?:^|[\s;|&])tee(?:\s+-[a-zA-Z]+)*\s+(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])", re.IGNORECASE)
 _IN_PLACE_MD_RE = re.compile(
@@ -152,71 +148,6 @@ def _transcript_has_skill(evidence: dict[str, list[str]]) -> bool:
     return any(pattern.search(value) for value in evidence["command"] + evidence["path"])
 
 
-def _state_key(data: dict) -> str | None:
-    session_id = data.get("session_id", "")
-    tool_use_id = data.get("tool_use_id", "")
-    if (
-        not isinstance(session_id, str)
-        or not session_id
-        or not isinstance(tool_use_id, str)
-        or not tool_use_id
-    ):
-        return None
-    return hashlib.sha256(f"{session_id}\0{tool_use_id}".encode()).hexdigest()
-
-
-def state_path(data: dict) -> Path | None:
-    key = _state_key(data)
-    if key is None:
-        return None
-    default = Path(tempfile.gettempdir()) / "superra-communicate-hook"
-    root = Path(os.environ.get(STATE_DIR_ENV, default))
-    return root / f"{key}.json"
-
-
-def _read_status(path: Path) -> str | None:
-    if path.name != "task.md" or not path.is_file():
-        return None
-    try:
-        match = _STATUS_RE.search(path.read_text(encoding="utf-8"))
-    except OSError:
-        return None
-    return match.group(1) if match else None
-
-
-def save_status_snapshot(data: dict, targets: list[Path]) -> None:
-    path = state_path(data)
-    if path is None:
-        return
-    statuses = []
-    for target in targets:
-        status = _read_status(target)
-        if status is not None:
-            statuses.append({"path": str(target), "status": status})
-    if not statuses:
-        return
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps({"targets": statuses}, separators=(",", ":"))
-        path.write_text(payload, encoding="utf-8")
-    except OSError:
-        return
-
-
-def consume_status_snapshot(data: dict) -> list[dict] | None:
-    """Consume a pre-tool snapshot; None means no keyed snapshot exists."""
-    path = state_path(data)
-    if path is None or not path.is_file():
-        return None
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        path.unlink()
-    except (OSError, ValueError, TypeError):
-        return None
-    targets = payload.get("targets", []) if isinstance(payload, dict) else []
-    return targets if isinstance(targets, list) else []
-
-
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -269,7 +200,6 @@ def main() -> None:
         )
         return
 
-    save_status_snapshot(data, targets)
     _empty()
 
 
