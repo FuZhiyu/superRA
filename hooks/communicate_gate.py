@@ -15,7 +15,6 @@ from pathlib import Path
 
 COMMUNICATE = "superRA:communicate"
 STATE_DIR_ENV = "SUPERRA_COMMUNICATE_STATE_DIR"
-TASK_ROOT_NAMES = ("superRA", ".plan")
 _PATCH_PATH_RE = re.compile(
     r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
 )
@@ -107,31 +106,6 @@ def markdown_targets(data: dict) -> list[Path]:
     return targets
 
 
-def _is_task_root_part(part: str) -> bool:
-    return part in TASK_ROOT_NAMES or part.startswith(".plan.")
-
-
-def task_context(target: Path) -> str | None:
-    """Return the nearest existing task owner's root-relative path."""
-    start = target.parent
-    candidates = [start, *start.parents]
-    for candidate in candidates:
-        if not (candidate / "task.md").is_file():
-            continue
-        parts = candidate.parts
-        indexes = [i for i, part in enumerate(parts) if _is_task_root_part(part)]
-        if not indexes:
-            continue
-        root_index = indexes[-1]
-        root = Path(*parts[: root_index + 1])
-        try:
-            relative = candidate.relative_to(root)
-        except ValueError:
-            continue
-        return "" if str(relative) == "." else relative.as_posix()
-    return None
-
-
 def _transcript_evidence(text: str) -> dict[str, list[str]] | None:
     """Extract skill, command, and path fields from JSONL hook transcripts."""
     records = []
@@ -176,15 +150,6 @@ def _transcript_has_skill(evidence: dict[str, list[str]]) -> bool:
         return True
     pattern = re.compile(r"skills[/\\]communicate[/\\]SKILL\.md", re.IGNORECASE)
     return any(pattern.search(value) for value in evidence["command"] + evidence["path"])
-
-
-def _transcript_has_task_read(evidence: dict[str, list[str]], task_path: str) -> bool:
-    escaped = re.escape(task_path or ".")
-    pattern = rf"(?:\./)?superRA/superra\s+task\s+read\s+(?:['\"])?{escaped}(?:['\"])?(?=$|[\s;&|}},])"
-    if any(re.search(pattern, command, re.IGNORECASE) for command in evidence["command"]):
-        return True
-    generic = rf"\bsuperra\s+task\s+read\s+(?:['\"])?{escaped}(?:['\"])?(?=$|[\s;&|}},])"
-    return any(re.search(generic, command, re.IGNORECASE) for command in evidence["command"])
 
 
 def _state_key(data: dict) -> str | None:
@@ -285,27 +250,10 @@ def main() -> None:
         _empty()
         return
 
-    missing: list[str] = []
     if not _transcript_has_skill(evidence):
-        missing.append(f"load `{COMMUNICATE}`")
-
-    contexts: list[str] = []
-    for target in targets:
-        context = task_context(target)
-        if context is None:
-            continue
-        task_path = context
-        if task_path not in contexts:
-            contexts.append(task_path)
-    for task_path in contexts:
-        if not _transcript_has_task_read(evidence, task_path):
-            missing.append(f"run `./superRA/superra task read {task_path or '.'}`")
-
-    if missing:
         reason = (
-            "Before editing Markdown, "
-            + " and ".join(missing)
-            + ", then retry the same tool call."
+            f"Before editing Markdown, load `{COMMUNICATE}`, "
+            "then retry the same tool call."
         )
         print(
             json.dumps(

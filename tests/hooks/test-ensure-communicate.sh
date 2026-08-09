@@ -84,10 +84,8 @@ run_case "Unreadable transcript fails open" silent Edit "{\"file_path\":\"$proje
 run_case "Malformed transcript fails open" silent Edit "{\"file_path\":\"$project/README.md\"}" 'not-json'
 run_case "Subagent call is ignored" silent Edit "{\"file_path\":\"$project/README.md\"}" "$other" subagent-1
 
-run_case "Task Markdown requires task context" deny Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$loaded" "" './superRA/superra task read alpha'
 run_case "Task Markdown requires Communicate" deny Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$task_read" "" 'load `superRA:communicate`'
-run_case "Task Markdown passes with both loads" silent Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$loaded
-$task_read"
+run_case "Task Markdown passes with Communicate load" silent Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$loaded"
 run_case "Prose mention is not load evidence" deny Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$mentioned"
 run_case "Retry passes when evidence appears" silent Edit "{\"file_path\":\"$project/README.md\"}" "$loaded"
 
