@@ -55,7 +55,7 @@ This matrix maps **every** load-contract entry LC001–LC023 from [load_contract
 
 **Fixture / parser unit tests** exercise the real `task_read.py` against the committed `bundle-two-tasks` fixture and the transcript parser against committed sample transcripts. The fixture tests confirm `superra task read` surfaces ancestor `## Objective` context, unresolved comments, and sibling dependency status, and that a dependency's `## Results` sentinel never leaks into the target's context. The parser tests confirm interactive task-update → question-tool → reviewer-dispatch ordering, role-skill load → opposite-seat dispatch for both main-seat routes, default orchestration dispatch, and artifact-diff behavior. Negative fixtures prove missing or reordered structural events fail without relying on generated prose.
 
-**Hook unit test** asserts the Claude and Codex hook registries wire the expected events, matchers, and commands — Claude has `UserPromptSubmit/PreToolUse/PostToolUse` with a `Skill` PreToolUse matcher and the `ensure-using-superra` / `ensure-agent-orchestration` autoloads; Codex adds a `Stop` hook, drops the Claude-only `Skill` matcher and autoloads, and keeps `autoload-superra` / `merge-guard` / `task-hook`.
+**Hook unit test** asserts the Claude and Codex hook registries wire the expected events, matchers, and commands — Claude has `UserPromptSubmit/PreToolUse/PostToolUse` with a `Skill` PreToolUse matcher and the `ensure-companion` gate; Codex adds a `Stop` hook, drops the Claude-only `Skill` matcher and autoloads, and keeps `autoload-superra` / `merge-guard` / `task-hook`.
 
 **Manual live smokes** drive a real Claude or Codex agent through the bundled fixture and assert structural transcript evidence with the shared parser. See below.
 

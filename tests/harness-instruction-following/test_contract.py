@@ -312,12 +312,11 @@ def test_hook_registry_boundaries_for_claude_and_codex():
 
     claude_commands = all_hook_commands(claude)
     assert any("autoload-superra" in command for command in claude_commands)
-    assert any("ensure-using-superra" in command for command in claude_commands)
-    assert any("ensure-agent-orchestration" in command for command in claude_commands)
+    assert any("ensure-companion" in command for command in claude_commands)
     assert any("merge-guard" in command for command in claude_commands)
     assert any("task-hook" in command for command in claude_commands)
     assert "Skill" in hook_matchers_for(claude, "PreToolUse")
-    assert {"Edit|Write", "Bash", "ExitPlanMode"} <= hook_matchers_for(
+    assert {"Edit|Write|Bash", "ExitPlanMode"} <= hook_matchers_for(
         claude,
         "PostToolUse",
     )
@@ -327,10 +326,9 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert any("merge-guard" in command for command in codex_commands)
     assert any("task-hook" in command for command in codex_commands)
     assert any("codex-plan-stop" in command for command in codex_commands)
-    assert not any("ensure-using-superra" in command for command in codex_commands)
-    assert not any("ensure-agent-orchestration" in command for command in codex_commands)
+    assert not any("ensure-companion" in command for command in codex_commands)
     assert "Skill" not in hook_matchers_for(codex, "PreToolUse")
-    assert {"Edit|Write", "Bash"} <= hook_matchers_for(codex, "PostToolUse")
+    assert "Edit|Write|Bash" in hook_matchers_for(codex, "PostToolUse")
     assert hook_commands_for(codex, "Stop")
 
 
