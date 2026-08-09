@@ -34,4 +34,5 @@ The hook layer now enforces Communicate before main-thread Markdown writes and r
 - Hook packaging remains aligned across Claude, Codex, and Cursor.
   - The task-hook shim remains generated from [wrapper_resolver.py](../../../../../skills/task-tree/scripts/wrapper_resolver.py); no wrapper change was required.
   - Deterministic verification passed 26 gate cases and 35 focused task-hook cases ([gate tests](../../../../../tests/hooks/test-ensure-communicate.sh)).
+  - After refreshing the local plugin cache, an in-session Codex `apply_patch` probe emitted the Communicate reminder after editing this Results section.
   - The paid/authenticated live probes were syntax-checked but not executed.
