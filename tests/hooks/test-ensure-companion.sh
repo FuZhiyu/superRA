@@ -100,6 +100,23 @@ print(d.get("hookSpecificOutput", {}).get("permissionDecisionReason", ""))
   fi
 }
 
+run_raw_silent_case() {
+  local name="$1"
+  local input="$2"
+  local out
+  out=$(env -i PATH="$PATH" HOME="$HOME" bash "$HOOK" <<<"$input")
+  local rc=$?
+
+  if [ $rc -eq 0 ] && [ "$out" = "{}" ]; then
+    printf 'PASS  %-50s (got silent)\n' "$name"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-50s (expected silent, got rc=%s output=%s)\n' "$name" "$rc" "$out"
+    failed_names+=("$name")
+    fail=$((fail + 1))
+  fi
+}
+
 using_loaded='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superra"}}]}}'
 orch_loaded='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:agent-orchestration"}}]}}'
 both_loaded="$using_loaded
@@ -139,6 +156,10 @@ run_case "V5b transcript nonexistent"    expect-silent "Skill" "superRA:superpla
 
 # V6: deny reason round-trips embedded quotes through json escaping.
 run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:superplan" "$unrelated" file 'superRA:superplan'
+
+# V7: valid JSON with the wrong top-level shape fails open.
+run_raw_silent_case "V7 non-object JSON array" '[1,2,3]'
+run_raw_silent_case "V7 non-object JSON null"  'null'
 
 # Registry wiring: Claude + Cursor reference ensure-companion; Codex has no
 # Skill interception so it must NOT wire the gate.

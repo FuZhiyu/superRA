@@ -1,6 +1,6 @@
 ---
 title: "Workflow Defaults: Interactive Main Agent, On-the-Fly Review"
-status: approved
+status: implemented
 depends_on: [role-skills, review-skill]
 ---
 
@@ -62,5 +62,8 @@ The live smoke covers the review-requested path, not the no-review path this cha
 Post-approval review of `22c0c973` (2026-08-09): `ensure-agent-orchestration` and `ensure-using-superra` merged into the table-driven `hooks/ensure-companion`; the gate invariant recorded above is unchanged (both always-dispatching skills still require `superRA:agent-orchestration`; `superplan` stays ungated on it). The old suite's vectors moved to `tests/hooks/test-ensure-companion.sh` (20/20).
 
 - [BLOCKING] `hooks/ensure-companion` crashes without emitting JSON on a valid-JSON-but-non-dict stdin payload (`echo '[1,2,3]' | bash hooks/ensure-companion` → `AttributeError` on `data.get`, rc=1). The retired bash wrappers failed open on the same input via their `|| printf` fallback. Guard `isinstance(data, dict)` (and non-dict `tool_input`) before field access.
+  → implemented: [ensure-companion](../../../hooks/ensure-companion) now fails open for non-object JSON; [test-ensure-companion.sh](../../../tests/hooks/test-ensure-companion.sh) covers array and `null` payloads.
 - [BLOCKING] `tests/check-harness-compatibility.sh:60-61` still asserts the pre-merge separate `Edit|Write` and `Bash` PostToolUse matchers and now exits non-zero against the merged `Edit|Write|Bash` registry in `hooks/hooks-codex.json`. Update the assertion to the merged matcher.
+  → implemented: [check-harness-compatibility.sh](../../../tests/check-harness-compatibility.sh) asserts the shipped merged matcher and exits zero.
 - [ADVISORY] Live-smoke fixtures synthesize their own registries with the pre-merge `matcher = "Edit|Write"` (`tests/hooks/test-codex-e2e-cli.sh:92`, `tests/harness-instruction-following/codex-live-smoke.sh:84`, `always-loaded-codex-smoke.sh:74`, `sdk_load_harness.py:215`), and `load_contract.json:595` describes the split matchers. Behavior is unaffected — the fixtures still fire on Edit/Write — but they no longer mirror the shipped registry.
+  → implemented: the three Codex profiles and [load_contract.json](../../../tests/harness-instruction-following/load_contract.json) now use or describe `Edit|Write|Bash`. `sdk_load_harness.py` stays unchanged: its cited matcher is Claude `PreToolUse` edit instrumentation, not a synthesized task-hook registry, and including Bash would misclassify shell calls as edits.

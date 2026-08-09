@@ -592,7 +592,7 @@
       "trigger": "Plugin hook manifests are installed or task.md / markdown files are edited through harness tools.",
       "expected_evidence": [
         "CI static check parses hook registries under hooks/ and confirms UserPromptSubmit, PreToolUse, PostToolUse, and Codex Stop where expected",
-        "CI hook fixtures invoke task-hook wrapper for Edit|Write/apply_patch and Bash matchers",
+        "CI hook fixtures invoke the task-hook wrapper through the merged Edit|Write|Bash matcher",
         "manual live transcript can confirm PostToolUse hook feedback when task-hook emits feedback"
       ],
       "classification": [
