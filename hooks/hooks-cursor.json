@@ -8,6 +8,9 @@
     ],
     "preToolUse": [
       {
+        "command": "./hooks/guard-task-approval"
+      },
+      {
         "command": "./hooks/ensure-communicate"
       },
       {

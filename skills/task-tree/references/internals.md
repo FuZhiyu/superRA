@@ -87,7 +87,9 @@ No YAML library — the parser is minimal and purpose-built.
 
 ## Hook Architecture
 
-`task_hook.py` is the task tree's PostToolUse hook. Gating regexes and plan-root discovery live in `task_hook.py`; the wiring in `hooks/hooks.json` and `hooks/hooks-codex.json`.
+`task_hook.py` is the task tree's PostToolUse hook. `hooks/task_approval_gate.py` is the PreToolUse approval gate. Wiring lives in the harness manifests under `hooks/`.
+
+**Approval gate.** `guard-task-approval` denies an `Edit`, `Write`, or Codex `apply_patch` whose result would leave `status: approved` with `[BLOCKING]` inside `## Review Notes`. Advisory findings and `[BLOCKING]` text outside that section remain valid. `task check` reports the same invariant for mutations outside the edit hooks.
 
 **Matcher gating.** Two groups fire the hook:
 - **`Edit|Write` / `apply_patch`** — fires on any `.md` edited under a task root (runs render-integrity check) and on `task.md` edits specifically (also runs reconcile). Codex's matcher covers `apply_patch`; `task_hook.py` also accepts `tool_name: "apply_patch"` payloads.

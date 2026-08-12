@@ -12,6 +12,15 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" guard-task-approval; else printf '{}\\n'; fi"
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write|Bash",
         "hooks": [
           {

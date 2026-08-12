@@ -9,6 +9,7 @@ message source.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from _task_io import (
@@ -60,6 +61,33 @@ def validate_revision_notes(task: Task) -> list[str]:
     return [
         f"{task.status} task still carries a ## Revision Notes section; "
         "the implementer should have removed it once implemented"
+    ]
+
+
+def approved_with_blocking_review_notes(text: str) -> bool:
+    """Return whether task Markdown violates the approval-review invariant."""
+    from _task_io import parse_body_sections, parse_frontmatter
+
+    fm, body = parse_frontmatter(text)
+    review_notes = parse_body_sections(body).get("Review Notes", "")
+    return _review_notes_block_approval(
+        str(fm.get("status", "not-started")), review_notes
+    )
+
+
+def _review_notes_block_approval(status: str, review_notes: str) -> bool:
+    return status == "approved" and bool(
+        re.search(r"\[BLOCKING\]", review_notes, re.IGNORECASE)
+    )
+
+
+def validate_review_notes(task: Task) -> list[str]:
+    """Warn when an approved task retains blocking review findings."""
+    if not _review_notes_block_approval(task.status, task.review_notes):
+        return []
+    return [
+        "approved task still carries a [BLOCKING] item in ## Review Notes; "
+        "run narrow re-review or keep the task in revision"
     ]
 
 
@@ -155,6 +183,9 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_revision_notes(task):
                 warnings_out.append(f"{prefix}: {w}")
 
+            for w in validate_review_notes(task):
+                warnings_out.append(f"{prefix}: {w}")
+
             for w in validate_dependencies(task, sibling_names):
                 warnings_out.append(f"{prefix}: {w}")
 
@@ -172,6 +203,8 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_frontmatter(root_task):
                 warnings_out.append(f"(root): {w}")
             for w in validate_revision_notes(root_task):
+                warnings_out.append(f"(root): {w}")
+            for w in validate_review_notes(root_task):
                 warnings_out.append(f"(root): {w}")
         except Exception as exc:
             warnings_out.append(f"(root): parse error: {exc}")

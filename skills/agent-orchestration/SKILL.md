@@ -108,11 +108,16 @@ Done by the orchestrator alone, at every workflow stage:
 
 Adjudicate every finding — REVISE (`[BLOCKING]`) or APPROVE (`[ADVISORY]`) — before moving on; read cited code or task context only when needed to decide. Per finding:
 
+**Approval gate.** `[BLOCKING]` in `## Review Notes` keeps the task out of `approved`.
+
 - **Accept** real issues.
 - **Reject** false positives, removing them from `## Review Notes`.
 - **Escalate** findings that would materially change the direction of the task.
 
 **Schedule accepted fixes against the whole workflow**
 
-- **Fix now** when the issue significantly affects downstream tasks. For a REVISE task, redispatch implementer and reviewer, iterate to APPROVE before advancing the frontier. A tiny fix you can verify directly: apply or verify it, clear it from `## Review Notes`, and (REVISE) set `status: approved` inline. With warm agents and a small fix/re-review, steer the same agent rather than spawning fresh (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
-- **Defer** when the open items do not affect downstream work, defer the fix and proceed for now. Clear them later in bundles (see §Workload Balancing) and re-review to close them out before the workflow's completion gate.
+- **Fix now** when the issue significantly affects downstream tasks:
+  1. **Implementer:** choose a dispatched or main seat; execute it per §Seat Assignment.
+  2. **Reviewer:** choose a dispatched or main seat; execute it per §Seat Assignment. Iterate to APPROVE before advancing the frontier.
+  Small fix/re-review with warm agents: steer each existing seat rather than spawning replacements (in Claude Code, `SendMessage` to its id/name; a new `Agent` call always starts cold).
+- **Defer** when the open items do not affect downstream work, defer the fix and proceed for now. Fix them later in bundles (see §Workload Balancing) and re-review before the workflow's completion gate.

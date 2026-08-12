@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# PreToolUse gate: an approved task cannot retain blocking review findings.
+
+set -uo pipefail
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+script_dir="$(cd "$script_dir" && pwd)"
+
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 "$script_dir/task_approval_gate.py"
+fi
+
+# A missing runtime must not wedge the session.
+printf '{}\n'
+exit 0

@@ -3047,6 +3047,31 @@ class TestValidateRevisionNotes:
         assert _task_validate.validate_revision_notes(t) == []
 
 
+class TestValidateReviewNotes:
+    def test_approved_with_blocking_review_item_warns(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Review Notes\n\n> [BLOCKING] Fix this.\n",
+            review_notes="> [BLOCKING] Fix this.\n",
+        )
+        assert _task_validate.validate_review_notes(t)
+
+    def test_approved_with_advisory_review_item_passes(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Review Notes\n\n> [ADVISORY] Consider this.\n",
+            review_notes="> [ADVISORY] Consider this.\n",
+        )
+        assert _task_validate.validate_review_notes(t) == []
+
+    def test_blocking_text_outside_review_notes_passes(self):
+        text = (
+            "---\ntitle: T\nstatus: approved\ndepends_on: []\n---\n\n"
+            "## Objective\n\nApply the [BLOCKING] checklist.\n"
+        )
+        assert not _task_validate.approved_with_blocking_review_notes(text)
+
+
 class TestValidatePlanRevisionNotes:
     def _write(self, path: Path, text: str) -> None:
         path.write_text(text, encoding="utf-8")
@@ -3568,6 +3593,27 @@ class TestTaskCheck:
         findings = task_check.run_checks(root_dir, category="status")
         assert any(
             f.category == "status"
+            for f in findings
+        )
+
+    def test_detects_approved_task_with_blocking_review_item(self, tmp_path):
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        task_dir = root_dir / "01-stale"
+        task_dir.mkdir()
+        task_md = task_dir / "task.md"
+        _write_task_md(task_md, "Stale", "approved")
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Review Notes\n\n> [BLOCKING] Fix this.\n",
+            encoding="utf-8",
+        )
+        findings = task_check.run_checks(root_dir, category="status")
+        assert any(
+            f.category == "status"
+            and f.severity == "error"
+            and "[BLOCKING]" in f.message
             for f in findings
         )
 
