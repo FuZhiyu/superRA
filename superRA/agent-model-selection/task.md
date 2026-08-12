@@ -44,10 +44,6 @@ This is a new top-level workstream because the concern crosses orchestration pol
 - [`hooks/hooks-codex.json`](../../hooks/hooks-codex.json) — Codex lifecycle-hook wiring
 - [`tests/harness-instruction-following/test_contract.py`](../../tests/harness-instruction-following/test_contract.py) — cross-harness static contract checks
 
-## Review Notes
-
-1. **[BLOCKING] The Claude and Codex wiring siblings have overlapping mutable ownership but no ordering or convergence contract.** The Claude task claims shared manifest/compatibility tests and active hook documentation ([03-claude-wiring/task.md:13-16](03-claude-wiring/task.md#L13-L16)); the Codex task separately claims instruction-following/compatibility tests and the same active hook documentation surface ([04-codex-wiring/task.md:13-16](04-codex-wiring/task.md#L13-L16)). Both become frontier-ready after `02-enforcement-hook`, while the parent explicitly identifies one cross-harness contract file as shared ([task.md:39-45](task.md#L39-L45)). That makes them unsafe for the workflow's normal parallel-frontier execution and leaves no single task accountable for the final cross-harness test/document state. Assign disjoint files plus one owner for every shared cross-harness surface, serialize one wiring task after the other and give the downstream task the combined-state check, or add a small convergence task depending on both.
-
 ## Results
 
 (empty)
