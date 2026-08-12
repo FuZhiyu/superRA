@@ -44,6 +44,14 @@ Default to medium — Sonnet in Claude Code, medium thinking in Codex. Step up t
 
 Fable is reserved for the most challenging, expensive tasks. Defaults, not rules — an explicit user preference wins.
 
+### Explicit Generic-Dispatch Configuration
+
+After selecting the tier, use this generic Agent-tool call with the dispatch prompt below. Omitted and `inherit` values do not select a model. Codex maps this boundary to its separate arguments in [`codex-instructions.md`](../using-superra/references/codex-instructions.md).
+
+```
+Agent(model: <concrete Claude model>, prompt: <dispatch prompt>)
+```
+
 ## Parallelization and Worktree Isolation
 
 **Load `references/parallel-dispatch.md` before dispatching agents in parallel or isolating an agent in its own worktree** — parallel agents require per-agent worktrees, and the seeding and harvest rules live there.
@@ -52,7 +60,7 @@ Fable is reserved for the most challenging, expensive tasks. Defaults, not rules
 
 **Implementer:**
 ```
-Agent:
+Prompt:
   Load `using-superra` and `implement-task` skill.
 
   Stage: <stage-name>
@@ -64,7 +72,7 @@ Agent:
 
 **Reviewer:**
 ```
-Agent:
+Prompt:
   Load `using-superra` and `superRA:review-task` skill.
 
   Stage: <stage-name>

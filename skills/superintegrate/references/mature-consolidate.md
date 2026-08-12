@@ -13,7 +13,7 @@ Read the latest applicable `integrate(protect)` commit body, its recorded protec
 Assign the single drafter — the `Stage: maturation` implementer seat — per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent:
+Prompt:
   Load `superRA:implement-task` skill.
 
   Stage: maturation
@@ -36,7 +36,7 @@ Structural folds and result maturation happen together, so removed task content 
 Assign the single reviewer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent:
+Prompt:
   Load `superRA:review-task` skill.
 
   Stage: maturation

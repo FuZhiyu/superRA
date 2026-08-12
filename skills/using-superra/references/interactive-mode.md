@@ -18,7 +18,7 @@ You fill no seat and run no role protocol here — this loop is your protocol fo
 3. **Review and update the task.** Before each pause, update `## Results` per `superRA:communicate` and move `status` as the work lands (`in-progress` → `implemented`). Remove stale content so the task always reflects the latest stage.
 4. **Commit instantly** per edit, per `using-superra` §Commits.
 5. **Ask before review, with a tool — required.** `AskUserQuestion` (plain text only if the harness lacks it): review now / defer / skip, carrying the recommendation `main-agent.md` §Deciding on Review calls for. Never dispatch a reviewer on your own read.
-   - **Now** — load `superRA:agent-orchestration` and dispatch a reviewer subagent at the tier and focuses you named; APPROVE lands the task at `approved`.
+   - **Now** — load `superRA:agent-orchestration` and dispatch a reviewer through its generic dispatch shape at the tier and focuses you named; APPROVE lands the task at `approved`.
    - **Defer** — leave the task at `implemented`; the review is still owed.
    - **Skip** — §Deciding on Review's no-review branch.
 6. **Continue**, pausing frequently for feedback before the next unit of work.

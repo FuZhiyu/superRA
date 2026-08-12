@@ -1,6 +1,6 @@
 ---
-title: Explicit Model Selection for Generic Agent Dispatches
-status: not-started
+title: "Explicit Model Selection for Generic Agent Dispatches"
+status: in-progress
 depends_on: []
 ---
 

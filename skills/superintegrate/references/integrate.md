@@ -31,7 +31,7 @@ Ask whether to approve the protected record and task. A change to the Protect de
 Assign the `Stage: integration` implementer seat per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent:
+Prompt:
   Load `superRA:implement-task` skill.
 
   Stage: integration
@@ -52,7 +52,7 @@ This pass always runs: it is the one independent review of the accumulated work,
 First complete `skills/using-superra/references/task-companion-files.md` §Promote for each affected task retaining companions. Then assign per `agent-orchestration` §Seat Assignment:
 
 ```text
-Agent:
+Prompt:
   Load `superRA:review-task` skill.
 
   Stage: integration

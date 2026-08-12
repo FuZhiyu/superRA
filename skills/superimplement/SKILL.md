@@ -29,7 +29,7 @@ Entering this skill *is* autonomous mode. Interactive main-agent execution is th
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `superra task frontier`.** Execute frontier tasks singly or as same-parent bundles; use a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
+**Compute the frontier with `superra task frontier`.** Execute frontier tasks singly or as same-parent bundles; use the `agent-orchestration` generic dispatch shape in a parallel Agent-tool batch when multiple selected seats are dispatched and independent (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each completed task or bundle.
 
 #### Task Execution Steps
 
