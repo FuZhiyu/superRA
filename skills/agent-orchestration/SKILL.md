@@ -49,7 +49,7 @@ Fable is reserved for the most challenging, expensive tasks. Defaults, not rules
 After selecting the tier, use this generic Agent-tool call with the dispatch prompt below. Omitted and `inherit` values do not select a model. Codex maps this boundary to its separate arguments in [`codex-instructions.md`](../using-superra/references/codex-instructions.md).
 
 ```
-Agent(model: <concrete Claude model>, prompt: <dispatch prompt>)
+Agent(subagent_type="general-purpose", model: <concrete Claude model>, prompt: <dispatch prompt>)
 ```
 
 ## Parallelization and Worktree Isolation
