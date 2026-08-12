@@ -1,6 +1,6 @@
 ---
 title: "Enforce Communicate on Markdown"
-status: implemented
+status: approved
 depends_on:
   - skill-and-references
 ---
