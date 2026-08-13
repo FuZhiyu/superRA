@@ -1,6 +1,6 @@
 ---
 title: Wire and Verify Codex Enforcement
-status: implemented
+status: approved
 depends_on:
   - 02-enforcement-hook
 ---
