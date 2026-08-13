@@ -35,5 +35,7 @@ Claude-oriented tool names appearing in these skills map to:
 | `AskUserQuestion` | `request_user_input` when available; plain-text question otherwise |
 | `Skill` | load the named skill |
 | `TodoWrite` | `update_plan` |
-| `Agent` | `spawn_agent(agent_type="default")` |
+| `Agent` | `spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>)` |
 | `SendMessage` | `send_input` |
+
+The generic-dispatch model selection in `agent-orchestration` maps to both `model` and `reasoning_effort`; pass concrete values for each. The tier rubric remains there.

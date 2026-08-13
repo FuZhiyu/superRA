@@ -1,6 +1,6 @@
 ---
-title: Explicit Model Selection for Generic Agent Dispatches
-status: not-started
+title: "Explicit Model Selection for Generic Agent Dispatches"
+status: in-progress
 depends_on: []
 ---
 
@@ -9,7 +9,7 @@ depends_on: []
 Require every generic agent dispatch in Claude Code and Codex to carry a conscious, explicit model configuration before the subagent starts, whether or not `agent-orchestration` was loaded or a superRA workflow is active.
 
 - Deny a noncompliant dispatch and require the caller to choose and retry; never inject an automatic default.
-- Target Claude Code's `general-purpose` agent and Codex's `default` or omitted generic agent type. Leave named, custom, and specialized agent types outside this hook.
+- Target Claude Code's `general-purpose` agent and Codex's `default` or omitted generic agent type. Leave non-default specialized agent types outside this hook.
 - Require a concrete Claude `model` value and reject missing, empty, or `inherit` selections.
 - Require both `model` and `reasoning_effort` on Codex generic dispatches because they are separate per-dispatch cost and capability controls.
 - Enforce at `PreToolUse` for the `Agent` tool alias. Do not use `SubagentStart` as the enforcement point because both harnesses start the subagent before that event can affect creation.
@@ -19,13 +19,13 @@ Require every generic agent dispatch in Claude Code and Codex to carry a conscio
 ### Conventions
 
 - Follow the repository's contributor discipline and DRY / Necessity gate in [`CLAUDE.md`](../../CLAUDE.md); this work changes workflow instructions and hooks, so implementation must load `skill-creator` before editing any `skills/*/SKILL.md`.
-- The generated Codex agent files [`.codex/agents/superra_implementer.toml`](../../.codex/agents/superra_implementer.toml) and [`.codex/agents/superra_reviewer.toml`](../../.codex/agents/superra_reviewer.toml) remain out of scope because this task does not change their canonical `agents/*` sources. If that boundary changes, edit the canonical agent source and regenerate with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --project` rather than editing either TOML directly.
+- Preserve v0.4's single dispatch mechanism established by [`v04-lean-workflow/role-skills`](../v04-lean-workflow/role-skills/task.md): general-purpose/default agents load role skills at dispatch. Do not reintroduce `agents/`, `.codex/agents/`, or named-agent generator plumbing.
 
 ## Planner Guidance
 
 Both harnesses now document the same usable interception point: `PreToolUse` can inspect raw local-function arguments, `spawn_agent` matches the `Agent` alias in Codex, and a deny decision prevents the call. `SubagentStart` is useful only for audit/context because it cannot stop creation. The raw tool input, not the hook payload's top-level effective model, is the evidence that the caller made an explicit choice.
 
-Keep the policy in [`skills/agent-orchestration/SKILL.md`](../../skills/agent-orchestration/SKILL.md), harness syntax in the existing Claude/Codex adapter references, and deterministic enforcement in one shared hook script. Current generic call sites are the sync author and reviewer dispatches in [`skills/superintegrate/references/sync.md`](../../skills/superintegrate/references/sync.md).
+Keep the policy in [`skills/agent-orchestration/SKILL.md`](../../skills/agent-orchestration/SKILL.md), Claude's argument shape in the shared `Agent` dispatch templates and call sites, Codex's translation in [`skills/using-superra/references/codex-instructions.md`](../../skills/using-superra/references/codex-instructions.md), and deterministic enforcement in one shared hook script. In v0.4, every dispatched seat uses a generic/default agent that loads its role skill, so sweep every `Agent` call site across planning, implementation, integration, and interactive-mode references.
 
 Official capability references consulted during planning:
 
@@ -34,12 +34,12 @@ Official capability references consulted during planning:
 - [Codex hooks: tool coverage and `PreToolUse`](https://learn.chatgpt.com/docs/hooks#tool-coverage)
 - [Codex subagent model and reasoning selection](https://learn.chatgpt.com/docs/agent-configuration/subagents#choosing-models-and-reasoning)
 
-This is a new top-level workstream because the concern crosses orchestration policy, integration's generic sync dispatches, shared hook code, and two harness adapters. The approved `interactive-mode` subtree owns human cadence and seat assignment, while `task-tree/codex-task-hooks` owns task-file reconciliation; neither owns per-dispatch model selection.
+This remains a new top-level workstream because the concern crosses orchestration policy, every role-skill dispatch, shared hook code, and both harnesses. The approved `v04-lean-workflow/role-skills` task owns role loading and `v04-lean-workflow/workflow-defaults` owns cadence and review defaults; neither owns per-dispatch model selection. The `task-tree/codex-task-hooks` subtree owns task-file reconciliation rather than generic-agent admission.
 
 ## Critical Files
 
 - [`skills/agent-orchestration/SKILL.md`](../../skills/agent-orchestration/SKILL.md) — authoritative model-tier policy and dispatch mechanics
-- [`skills/superintegrate/references/sync.md`](../../skills/superintegrate/references/sync.md) — current generic author and reviewer dispatches
+- [`skills/using-superra/references/codex-instructions.md`](../../skills/using-superra/references/codex-instructions.md) — Codex translation of the shared `Agent` dispatch contract
 - [`hooks/hooks.json`](../../hooks/hooks.json) — Claude Code lifecycle-hook wiring
 - [`hooks/hooks-codex.json`](../../hooks/hooks-codex.json) — Codex lifecycle-hook wiring
 - [`tests/harness-instruction-following/test_contract.py`](../../tests/harness-instruction-following/test_contract.py) — cross-harness static contract checks
@@ -47,3 +47,7 @@ This is a new top-level workstream because the concern crosses orchestration pol
 ## Results
 
 (empty)
+
+## Revision Notes
+
+- Adapted during transfer to the v0.4 worktree: every dispatched seat now uses a generic/default agent with a role skill, so the contract covers all `Agent` call sites; removed v0.3 named-agent, generator, and Claude-adapter assumptions.

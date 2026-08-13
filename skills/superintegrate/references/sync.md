@@ -52,7 +52,7 @@ Otherwise size the sync against `semantic-merge §Scope the merge first`. Trivia
 Non-trivial: dispatch one generic sync author.
 
 ```text
-Agent:
+Prompt:
   Stage: sync
   Role: sync author
   References:
@@ -81,7 +81,7 @@ Sync author returns `NEEDS_CONTEXT` or `BLOCKED` on a required user decision: th
 Before Mature & Consolidate begins:
 
 ```text
-Agent:
+Prompt:
   Stage: sync
   Role: sync reviewer
   References:

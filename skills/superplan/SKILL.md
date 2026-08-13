@@ -67,11 +67,11 @@ Run `references/build-and-review.md` §Self-Review.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt and call its generic dispatch shape.
 
 **Planning reviewer:**
 ```
-Agent:
+Prompt:
   Load `superRA:review-task` skill.
 
   Stage: planning-review
