@@ -1,6 +1,6 @@
 ---
 title: Define the Explicit Generic-Dispatch Contract
-status: implemented
+status: approved
 depends_on: []
 ---
 
