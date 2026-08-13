@@ -1,6 +1,6 @@
 ---
 title: Implement the Shared Pre-Dispatch Model Gate
-status: implemented
+status: approved
 depends_on:
   - 01-dispatch-contract
 ---
