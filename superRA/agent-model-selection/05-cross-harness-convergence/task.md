@@ -1,6 +1,6 @@
 ---
 title: Converge the Cross-Harness Contract and Verification
-status: not-started
+status: implemented
 depends_on:
   - 03-claude-wiring
   - 04-codex-wiring
@@ -22,4 +22,9 @@ This task is the sole owner of files that compare or describe both harnesses. Re
 
 ## Results
 
-(empty)
+- [`test_contract.py`](../../../tests/harness-instruction-following/test_contract.py) and [`check-harness-compatibility.sh`](../../../tests/check-harness-compatibility.sh) require both manifests to run the same shared guard at `PreToolUse(Agent)`, retain harness-specific events, keep the policy in `agent-orchestration`, map only syntax in adapters, and keep model names out of the guard.
+- The [load contract](../../../tests/harness-instruction-following/load_contract.json), [verification guide](../../../tests/harness-instruction-following/README.md), and [Codex setup guide](../../../docs/README.codex.md) distinguish CI-safe wiring/raw-input coverage from live runtime behavior.
+- Six synthetic hook suites pass: 86 cases. The harness compatibility script passes, including generated-agent drift checks. The instruction-following contract passes: 16 tests.
+- Claude's opt-in Agent SDK smoke passed with one denied model-less call, one explicit `haiku` retry, and one `SubagentStart`.
+- Codex's opt-in CLI smoke exited 3 with `pretooluse_payloads: 0` and `start: default` on version 0.147.0. The official `PreToolUse(Agent)` wiring and deterministic raw-input behavior are implemented, but this runtime's specialized `spawn_agent` path bypasses the enforcement point.
+- The final branch diff contains no generated-agent edits, model-name allowlist, or unrelated hook behavior changes.

@@ -584,16 +584,19 @@
       "id": "LC019",
       "area": "hook-registries",
       "source_paths": [
-        "hooks/hooks.json#L1-L79",
-        "hooks/hooks-codex.json#L1-L55",
+        "hooks/hooks.json",
+        "hooks/hooks-codex.json",
+        "hooks/agent-model-guard",
+        "skills/agent-orchestration/SKILL.md#model-tier-selection",
         "skills/task-tree/references/internals.md#L93-L115",
-        "tests/check-harness-compatibility.sh#L37-L66"
+        "tests/check-harness-compatibility.sh"
       ],
-      "trigger": "Plugin hook manifests are installed or task.md / markdown files are edited through harness tools.",
+      "trigger": "Plugin hook manifests are installed, a generic agent is dispatched, or task.md / markdown files are edited through harness tools.",
       "expected_evidence": [
-        "CI static check parses hook registries under hooks/ and confirms UserPromptSubmit, PreToolUse, PostToolUse, and Codex Stop where expected",
+        "CI static check confirms both registries run agent-model-guard at PreToolUse(Agent) while retaining their harness-specific events",
+        "CI hook fixtures reject generic raw calls without explicit model controls and preserve named agents",
         "CI hook fixtures invoke the task-hook wrapper through the merged Edit|Write|Bash matcher",
-        "manual live transcript can confirm PostToolUse hook feedback when task-hook emits feedback"
+        "manual live smokes record pre-dispatch payload and SubagentStart evidence or an explicit runtime opt-out"
       ],
       "classification": [
         "ci_safe_static",
@@ -605,15 +608,16 @@
           "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (event sets, matchers, commands)"
         ],
         "ci_safe_fixture": [
+          "test-agent-model-guard.sh + harness-specific manifest tests",
           "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (same test asserts wired commands)"
         ],
         "manual_live_claude": [
-          "not separately asserted live — PostToolUse hook feedback is observable only when task-hook emits; covered by registry-wiring static checks"
+          "claude-agent-model-live.py (denial, retry, then SubagentStart)"
         ],
         "manual_live_codex": [
-          "Codex Bash hook coverage is best-effort (SF003); live tests do not depend on catching every shell mutation"
+          "codex-agent-model-live.sh (Codex 0.147.0 records the specialized spawn_agent PreToolUse opt-out and exits 3)"
         ],
-        "notes": "Registry wiring is fully CI-covered. Live PostToolUse feedback is not separately asserted (static-only by design per SF003); not a coverage gap in the load contract."
+        "notes": "Registry wiring and raw-input decisions are CI-covered. Claude proves pre-start enforcement live. Codex 0.147.0 starts the subagent without the documented PreToolUse event, so its live path records a runtime limitation rather than claiming enforcement."
       }
     },
     {

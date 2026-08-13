@@ -48,12 +48,16 @@ assert entry["source"]["source"] == "url", entry["source"]
 assert entry["source"]["url"] == "https://github.com/FuZhiyu/superRA.git", entry["source"]["url"]
 assert entry["source"]["ref"] == "main", entry["source"]["ref"]
 
-hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
-events = hooks["hooks"]
+claude_events = json.loads(Path("hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
+events = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))["hooks"]
 assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
 assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
 assert "PostToolUse" in events, "Codex hooks must include PostToolUse task-hook reconcile coverage"
 assert "Stop" in events, "Codex hooks must include Stop"
+for harness, registry in (("Claude", claude_events), ("Codex", events)):
+    agent_groups = [group for group in registry["PreToolUse"] if group.get("matcher") == "Agent"]
+    assert len(agent_groups) == 1, f"{harness} must wire one PreToolUse(Agent) group"
+    assert any("agent-model-guard" in hook["command"] for hook in agent_groups[0]["hooks"]), f"{harness} Agent group must run agent-model-guard"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
 post_tool_groups = events["PostToolUse"]
 post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}

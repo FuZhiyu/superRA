@@ -315,6 +315,8 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert any("ensure-companion" in command for command in claude_commands)
     assert any("merge-guard" in command for command in claude_commands)
     assert any("task-hook" in command for command in claude_commands)
+    assert any("agent-model-guard" in command for command in claude_commands)
+    assert "Agent" in hook_matchers_for(claude, "PreToolUse")
     assert "Skill" in hook_matchers_for(claude, "PreToolUse")
     assert {"Edit|Write|Bash", "ExitPlanMode"} <= hook_matchers_for(
         claude,
@@ -327,9 +329,23 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert any("task-hook" in command for command in codex_commands)
     assert any("codex-plan-stop" in command for command in codex_commands)
     assert not any("ensure-companion" in command for command in codex_commands)
+    assert any("agent-model-guard" in command for command in codex_commands)
+    assert "Agent" in hook_matchers_for(codex, "PreToolUse")
     assert "Skill" not in hook_matchers_for(codex, "PreToolUse")
     assert "Edit|Write|Bash" in hook_matchers_for(codex, "PostToolUse")
     assert hook_commands_for(codex, "Stop")
+
+
+def test_generic_agent_model_policy_is_owned_and_mapped_once():
+    orchestration = read_text("skills/agent-orchestration/SKILL.md")
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+    guard = read_text("hooks/agent-model-guard")
+
+    assert "Explicit Generic-Dispatch Configuration" in orchestration
+    assert "Agent(model: <concrete Claude model>" in orchestration
+    assert 'spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>)' in codex
+    assert "Model Tier Selection" in codex
+    assert "gpt-" not in guard and "sonnet" not in guard and "opus" not in guard
 
 
 def test_task_read_fixture_contract_surfaces_context_without_dependency_results():

@@ -1,6 +1,6 @@
 ---
 title: "Explicit Model Selection for Generic Agent Dispatches"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -47,7 +47,3 @@ This remains a new top-level workstream because the concern crosses orchestratio
 ## Results
 
 (empty)
-
-## Revision Notes
-
-- Adapted during transfer to the v0.4 worktree: every dispatched seat now uses a generic/default agent with a role skill, so the contract covers all `Agent` call sites; removed v0.3 named-agent, generator, and Claude-adapter assumptions.
