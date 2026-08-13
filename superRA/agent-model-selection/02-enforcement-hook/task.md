@@ -1,6 +1,6 @@
 ---
 title: Implement the Shared Pre-Dispatch Model Gate
-status: not-started
+status: implemented
 depends_on:
   - 01-dispatch-contract
 ---
@@ -24,4 +24,6 @@ Before locking field names, capture representative raw `PreToolUse(Agent)` paylo
 
 ## Results
 
-(empty)
+- [`hooks/agent-model-guard`](../../../hooks/agent-model-guard) inspects raw `tool_input` and denies only generic Claude `Agent` or Codex `spawn_agent` calls with missing explicit controls. It does not carry a model allowlist and emits `{}` for compliant, unrelated, or unreadable inputs.
+- [`test-agent-model-guard.sh`](../../../tests/hooks/test-agent-model-guard.sh) covers 17 synthetic cases: both payload shapes, every missing or empty field, Claude `inherit`, omitted generic types, named agents, unrelated tools, malformed JSON, non-object payloads, and JSON-valid output.
+- The synthetic hook suite passes: 17 tests.
