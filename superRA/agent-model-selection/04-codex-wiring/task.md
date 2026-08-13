@@ -1,6 +1,6 @@
 ---
 title: Wire and Verify Codex Enforcement
-status: not-started
+status: implemented
 depends_on:
   - 02-enforcement-hook
 ---
@@ -21,4 +21,7 @@ Current official Codex documentation states that `spawn_agent` matches the `Agen
 
 ## Results
 
-(empty)
+- [`hooks/hooks-codex.json`](../../../hooks/hooks-codex.json) registers the shared guard at `PreToolUse(Agent)` without changing Codex's other lifecycle hooks.
+- [`test-codex-hooks.sh`](../../../tests/hooks/test-codex-hooks.sh) now verifies that the manifest command rejects a generic raw `spawn_agent` input lacking per-call controls, permits explicit `model` plus `reasoning_effort`, and leaves named agents unchanged. Its payload carries a top-level active `model`, which does not satisfy the raw-input check; 16 Codex hook tests pass.
+- [`codex-agent-model-live.sh`](../../../tests/hooks/codex-agent-model-live.sh) captures raw `PreToolUse` input when the installed runtime exposes it and requires exactly one `SubagentStart` after denial and retry. Run it with `RUN_LIVE_HARNESS=1 bash tests/hooks/codex-agent-model-live.sh`.
+- **Runtime limitation:** Codex CLI 0.147.0 starts the generic subagent without emitting `PreToolUse` for `spawn_agent`, even with the documented `Agent` matcher; a wildcard diagnostic also captured no local-function event. The finalized live smoke exits 3 with `pretooluse_payloads: 0` and `start: default`. The manifest follows the current official contract, but this installed specialized tool path cannot enforce it before start.
