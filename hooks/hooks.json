@@ -13,6 +13,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" agent-model-guard",
+            "async": false
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write",
         "hooks": [
           {

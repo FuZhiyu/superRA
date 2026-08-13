@@ -1,6 +1,6 @@
 ---
 title: Wire and Verify Claude Code Enforcement
-status: not-started
+status: implemented
 depends_on:
   - 02-enforcement-hook
 ---
@@ -21,4 +21,7 @@ Claude's documented `SubagentStart` payload omits the original Agent arguments a
 
 ## Results
 
-(empty)
+- [`hooks/hooks.json`](../../../hooks/hooks.json) registers the shared guard under `PreToolUse` with matcher `Agent`; unrelated lifecycle hooks are unchanged.
+- [`test-claude-agent-model-hook.sh`](../../../tests/hooks/test-claude-agent-model-hook.sh) verifies the manifest command denies an omitted model, permits a concrete model, and leaves a named role agent unchanged.
+- [`claude-agent-model-live.py`](../../../tests/hooks/claude-agent-model-live.py) ran through Claude Agent SDK 0.1.48 with Claude Code 2.1.231. The captured raw calls contained one generic dispatch without `model` and one retry with `model: haiku`; the first was denied before the second produced one `SubagentStart` event.
+- The live command is `RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk python tests/hooks/claude-agent-model-live.py`; it is opt-in because it uses an authenticated model turn.
