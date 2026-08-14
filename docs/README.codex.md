@@ -57,7 +57,7 @@ The Codex hook list should include `autoload-superra`, `agent-model-guard`,
 ## Hook Coverage
 
 Codex does not expose the same hook events as Claude Code, so the Codex hook set
-uses reliable Codex-native events:
+uses Codex-native events. Runtime-specific coverage limits are documented per hook:
 
 | Hook | Codex event | Notes |
 |------|-------------|-------|

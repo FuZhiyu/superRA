@@ -336,16 +336,34 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert hook_commands_for(codex, "Stop")
 
 
-def test_generic_agent_model_policy_is_owned_and_mapped_once():
+def test_generic_agent_model_policy_has_one_owner_and_harness_mappings():
     orchestration = read_text("skills/agent-orchestration/SKILL.md")
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     guard = read_text("hooks/agent-model-guard")
 
+    skill_docs = {
+        path.relative_to(REPO_ROOT).as_posix(): path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "skills").rglob("*.md")
+    }
+    owner = "skills/agent-orchestration/SKILL.md"
+    assert [
+        path for path, content in skill_docs.items()
+        if "### Model Tier Selection" in content
+    ] == [owner]
+    assert [
+        path for path, content in skill_docs.items()
+        if "### Explicit Generic-Dispatch Configuration" in content
+    ] == [owner]
+    assert [
+        path for path, content in skill_docs.items()
+        if re.search(r"(?m)^Agent\(", content)
+    ] == [owner]
+
     assert "Explicit Generic-Dispatch Configuration" in orchestration
     assert "Agent(model: <concrete Claude model>" in orchestration
     assert 'spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>)' in codex
-    assert "Model Tier Selection" in codex
-    assert "gpt-" not in guard and "sonnet" not in guard and "opus" not in guard
+    assert "agent-orchestration" in codex and "Model Tier Selection" in codex
+    assert not re.search(r"\b(Sonnet|Opus|Fable|gpt-)\b", codex + guard)
 
 
 def test_task_read_fixture_contract_surfaces_context_without_dependency_results():
