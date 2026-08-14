@@ -1,6 +1,6 @@
 ---
 title: Converge the Cross-Harness Contract and Verification
-status: implemented
+status: revise
 depends_on:
   - 03-claude-wiring
   - 04-codex-wiring
@@ -28,3 +28,9 @@ This task is the sole owner of files that compare or describe both harnesses. Re
 - Claude's opt-in Agent SDK smoke passed with one denied model-less call, one explicit `haiku` retry, and one `SubagentStart`.
 - Codex's opt-in CLI smoke exited 3 with `pretooluse_payloads: 0` and `start: default` on version 0.147.0. The official `PreToolUse(Agent)` wiring and deterministic raw-input behavior are implemented, but this runtime's specialized `spawn_agent` path bypasses the enforcement point.
 - The final branch diff contains no generated-agent edits, model-name allowlist, or unrelated hook behavior changes.
+
+## Review Notes
+
+1. **MAJOR:** [`test_contract.py:374-386`](../../../tests/harness-instruction-following/test_contract.py#L374-L386) does not establish the result's claim that policy ownership is single-sourced and adapters “map only syntax.” It proves that the owner phrase, adapter placeholders, and owner pointers exist, but a duplicated rubric in either adapter or another active document would still pass. Strengthen the contract to detect policy restatement on non-owning surfaces, or narrow the result claim and record the evidence that directly verifies the no-duplication requirement.
+2. **MAJOR:** The objective requires every opt-in live test to be reported with its exact command and evidence, but [`task.md:28-29`](task.md#L28-L29) records only outcomes. Add both exact commands and the observed output/version evidence to `## Results`; keep the Codex exit-3 result explicitly classified as the Codex 0.147.0 runtime bypass rather than successful enforcement.
+3. **MAJOR:** [`docs/README.codex.md:77-83`](../../../docs/README.codex.md#L77-L83) says the hook set uses “reliable Codex-native events,” then documents that Codex 0.147.0 does not emit the `PreToolUse(Agent)` event for `spawn_agent`. Make the preamble consistent with the table's accurate runtime limitation so the guide does not describe the bypassed enforcement point as reliable.
