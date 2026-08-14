@@ -1,6 +1,6 @@
 ---
 title: "Explicit Model Selection for Generic Agent Dispatches"
-status: implemented
+status: approved
 depends_on: []
 ---
 
