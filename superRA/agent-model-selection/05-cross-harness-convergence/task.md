@@ -1,6 +1,6 @@
 ---
 title: Converge the Cross-Harness Contract and Verification
-status: approved
+status: revise
 depends_on:
   - 03-claude-wiring
   - 04-codex-wiring
@@ -28,3 +28,7 @@ This task is the sole owner of files that compare or describe both harnesses. Re
 - Claude's opt-in Agent SDK smoke command is `RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk python tests/hooks/claude-agent-model-live.py`. Claude Agent SDK 0.2.139 with Claude Code 2.1.233 printed `PASS Claude live model guard: denied=1 allowed=1 starts=1`; the captured calls show a model-less denial, an explicit `model: haiku` retry, and one `SubagentStart`.
 - Codex's opt-in CLI smoke command is `RUN_LIVE_HARNESS=1 bash tests/hooks/codex-agent-model-live.sh`. Codex CLI 0.147.0 printed `LIMITATION Codex did not route spawn_agent through PreToolUse(Agent); SubagentStart still fired` and `{"pretooluse_payloads": 0, "start": "default"}`, then exited 3. This is runtime-bypass evidence, not successful enforcement: the official wiring and deterministic raw-input behavior are implemented, but Codex 0.147.0's specialized `spawn_agent` path bypasses the enforcement point.
 - The final branch diff contains no generated-agent edits, model-name allowlist, or unrelated hook behavior changes.
+
+## Revision Notes
+
+- Revalidate shared ownership and adapter mappings after removing redundant default agent-type arguments from the dispatch instructions.
