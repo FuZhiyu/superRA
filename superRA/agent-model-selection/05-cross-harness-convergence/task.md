@@ -1,6 +1,6 @@
 ---
 title: Converge the Cross-Harness Contract and Verification
-status: implemented
+status: approved
 depends_on:
   - 03-claude-wiring
   - 04-codex-wiring
