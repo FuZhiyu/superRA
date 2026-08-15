@@ -1,6 +1,6 @@
 ---
 title: "Rename the planner-guidance section to Details and state the binding test"
-status: implemented
+status: approved
 depends_on: []
 ---
 
