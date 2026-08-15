@@ -44,7 +44,7 @@ Default to medium — Sonnet in Claude Code, medium thinking in Codex. Step up t
 
 Fable is reserved for the most challenging, expensive tasks. Defaults, not rules — an explicit user preference wins.
 
-Model (and reasoning tiers) must be specified in the dispatch. Unspecified dispatch will be rejected.
+**No agent type:** call `Agent(model: <concrete Claude model>, prompt: <dispatch prompt>)`.
 
 ## Parallelization and Worktree Isolation
 

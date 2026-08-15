@@ -352,7 +352,7 @@ def test_generic_agent_model_policy_has_one_owner_and_harness_mappings():
     ] == [owner]
     assert [
         path for path, content in skill_docs.items()
-        if re.search(r"(?m)^Agent\(", content)
+        if "Agent(model: <concrete Claude model>" in content
     ] == [owner]
 
     assert "Agent(model: <concrete Claude model>" in orchestration
