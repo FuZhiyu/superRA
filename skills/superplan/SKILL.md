@@ -45,6 +45,8 @@ A spectrum, not rigid modes — escalate mid-planning when complexity warrants. 
 
 Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md`, and git history for relevant prior work, scaled to the tier (table above). Domain planning-survey gathering (data inventory, model primitives survey, manuscript assessment) begins here.
 
+Before dispatching exploration, load `superRA:agent-orchestration` and use its generic dispatch shape.
+
 Exploration shifts placement or depth: revisit the entry assessment.
 
 ## Phase 2: Domain Setup & Scope

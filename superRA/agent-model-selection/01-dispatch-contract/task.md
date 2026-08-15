@@ -22,8 +22,8 @@ The current rubric already selects Sonnet for Claude Code and medium thinking fo
 
 Generic dispatches now require an explicit configuration at the tool boundary.
 
-- [`agent-orchestration`](../../../skills/agent-orchestration/SKILL.md) owns the single Claude `Agent(model: …, prompt: …)` shape immediately after its existing tier rubric; the role templates now supply only the prompt.
-- [`codex-instructions.md`](../../../skills/using-superra/references/codex-instructions.md) maps that selection to concrete `model` and `reasoning_effort` arguments without copying the rubric.
-- The planning, autonomous implementation, integration, and interactive dispatch paths point to the owner; their stage templates no longer restate the Agent tool call.
+- [`agent-orchestration`](../../../skills/agent-orchestration/SKILL.md) owns the single Claude `Agent(subagent_type="general-purpose", model: …, prompt: …)` shape immediately after its existing tier rubric; the role templates now supply only the prompt.
+- [`codex-instructions.md`](../../../skills/using-superra/references/codex-instructions.md) maps that selection to concrete `model` and `reasoning_effort` arguments on a bounded `fork_turns="none"` call without copying the rubric.
+- The planning, autonomous implementation, integration, interactive, thorough-exploration, and grilling-exploration paths load or point to the owner; their stage templates no longer restate the Agent tool call.
 
-**Verification.** `rg '^Agent:' skills --glob '*.md'` is empty, leaving one owned `Agent(model: …)` call shape. `uv run --with pytest python -m pytest tests/harness-instruction-following/test_contract.py` passes 12 of 15 checks. Two failures predate this task (`#### Seat execution` and `references/decomposition.md` assertions); the remaining stale Codex tool-map assertion belongs to the shared convergence task.
+**Verification.** `rg '^Agent:' skills --glob '*.md'` is empty, leaving one owned generic call shape. The focused instruction suite passes 32 of 34 checks; its two failures (`#### Seat execution` and `references/decomposition.md`) reproduce on the v0.4 baseline, which passes 31 of 33 before the added model-selection contract.
