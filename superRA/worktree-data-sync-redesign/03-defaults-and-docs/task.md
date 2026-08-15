@@ -18,7 +18,7 @@ Make `--from` default to the worktree containing the caller instead of the repos
 
 **Validation:** a test that a seed invoked with cwd inside a linked worktree and no `--from` uses that worktree as source (and one for the clear error outside any worktree); a line-by-line pass over the three doc diffs against the DRY + necessity tests.
 
-## Planner Guidance
+## Details
 
 `resolve_endpoints` already resolves and validates both endpoints; the change is confined to the default-source branch. For the SKILL.md rewrite, the §Modes/§Managed Path Discovery sections are the ones that drift; §Data Teardown and §See Also should survive untouched.
 

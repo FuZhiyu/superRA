@@ -16,7 +16,7 @@ Rewrite the execution-mode contract in `skills/using-superra/references/main-age
 
 Success: the contract presents the two-mode model on the autonomy axis; no "trivial fallback" or `manual` language remains; it points to the superplan interactive reference and to `agent-orchestration` for seat mechanics, and no longer references any direct-mode role file.
 
-## Planner Guidance
+## Details
 
 This contract *names* the model; the `seat-assignment` task implements the mechanics in `agent-orchestration`, and `superimplement-mode-default` adds the selection default. Keep the three DRY: the contract owns the model vocabulary, the other two point to it. Depends on `interactive-reference` so the contract can point to a reference that exists.
 

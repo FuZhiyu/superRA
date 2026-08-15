@@ -15,7 +15,7 @@ Maintain **Communicate**, superRA's human-facing communication contract across c
 - State each fact once. Other surfaces link to the source that produces or maintains it.
 - Learn from `avoid-ai-writing` only where a pattern lowers information density or raises communication friction. Authorship detection and “sound human” are outside scope.
 
-## Planner Guidance
+## Details
 
 - The approved Results below document the v0.4 baseline. The child task owns the expanded architecture.
 - Evidence: [writing-surfaces map](../attachments/map-writing-surfaces.md) and [concise-writing research](../attachments/research-concise-writing.md).

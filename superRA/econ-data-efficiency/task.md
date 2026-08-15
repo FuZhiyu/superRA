@@ -13,7 +13,7 @@ Fold two efficiency refinements into `skills/econ-data-analysis/SKILL.md`, as do
 
 Success: both behaviors are stated in the domain skill, positively framed, DRY against the existing generic reviewer rule (`agents/reviewer.md:30`) and the upstream-validated-data line (`SKILL.md:58`) — stated as a domain instantiation, not a paraphrase — and with no cross-skill citations.
 
-## Planner Guidance
+## Details
 
 These are the two edits drafted and reverted during planning; wording exists in that session and is a starting point, not a spec. Fix #1 is a domain instantiation of the generic "no full re-runs, targeted verification" rule — instantiate with concrete triggers, don't restate the generic line. Fix #2: the researcher's intent is "always prefer visualization," so encode it as `[BLOCKING]` with a built-in judgment escape ("unless a figure would not clarify the finding") rather than a mechanical requirement on every single result. Independent of the interactive-mode workstream — a separate concern (data-domain discipline), placed as its own top-level task per concern-first placement.
 

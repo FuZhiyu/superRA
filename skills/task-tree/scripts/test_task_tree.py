@@ -651,23 +651,23 @@ class TestTaskCreate:
         assert task.status == "not-started"
         assert task.depends_on == []
 
-    def test_create_with_planner_guidance(self, plan_root):
+    def test_create_with_details(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
             task_path="04-new-task",
             title="New Task",
             objective="A binding objective.",
-            guidance="Consider starting from Code/example.py.",
+            details="Consider starting from Code/example.py.",
         )
         content = (plan_root / "04-new-task" / "task.md").read_text(
             encoding="utf-8"
         )
         assert "## Objective\n\nA binding objective." in content
-        assert "## Planner Guidance\n\nConsider starting from Code/example.py." in content
-        assert content.index("## Objective") < content.index("## Planner Guidance")
-        assert content.index("## Planner Guidance") < content.index("## Results")
+        assert "## Details\n\nConsider starting from Code/example.py." in content
+        assert content.index("## Objective") < content.index("## Details")
+        assert content.index("## Details") < content.index("## Results")
 
-    def test_create_without_guidance_omits_empty_section(self, plan_root):
+    def test_create_without_details_omits_empty_section(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
             task_path="04-new-task",
@@ -677,7 +677,15 @@ class TestTaskCreate:
         content = (plan_root / "04-new-task" / "task.md").read_text(
             encoding="utf-8"
         )
-        assert "## Planner Guidance" not in content
+        assert "## Details" not in content
+
+    def test_details_and_guidance_flags_write_the_same_section(self):
+        assert task_create.parse_args(
+            ["--path", "x", "--title", "T", "--details", "Route A."]
+        ).details == "Route A."
+        assert task_create.parse_args(
+            ["--path", "x", "--title", "T", "--guidance", "Route A."]
+        ).details == "Route A."
 
     def test_create_with_deps(self, plan_root):
         task_create.create_task(
@@ -1530,7 +1538,7 @@ class TestParseBodySections:
     def test_all_sections(self):
         body = (
             "## Objective\n\nDo the thing.\n\n"
-            "## Planner Guidance\n\nTry the obvious path.\n\n"
+            "## Details\n\nTry the obvious path.\n\n"
             "## Results\n\n### Key Findings\n- Found it\n\n"
             "## Decisions\n\n> Use method A\n\n"
             "## Revision Notes\n\nChanged scope to X.\n\n"
@@ -1539,8 +1547,8 @@ class TestParseBodySections:
         sections = parse_body_sections(body)
         assert "Objective" in sections
         assert "Do the thing." in sections["Objective"]
-        assert "Planner Guidance" in sections
-        assert "Try the obvious path." in sections["Planner Guidance"]
+        assert "Details" in sections
+        assert "Try the obvious path." in sections["Details"]
         assert "Results" in sections
         assert "Decisions" in sections
         assert "Revision Notes" in sections
@@ -2112,16 +2120,18 @@ class TestTaskRead:
         assert "task" in data
         assert "dependencies" in data
 
-    def test_planner_guidance_rendered_in_json_sections(self, plan_root):
+    @pytest.mark.parametrize("heading", ["## Details", "## Planner Guidance"])
+    def test_details_rendered_in_json_sections(self, plan_root, heading):
+        """The legacy heading parses to the same section as the current one."""
         task_md = plan_root / "02-second" / "task.md"
         task_md.write_text(
             task_md.read_text(encoding="utf-8")
-            + "\n## Planner Guidance\n\nUse the current helper if it fits.\n",
+            + f"\n{heading}\n\nUse the current helper if it fits.\n",
             encoding="utf-8",
         )
         target = _task_io.parse_task(task_md)
         data = json.loads(task_read.render_json([], target, [], show_ancestors=False))
-        assert data["task"]["sections"]["Planner Guidance"] == (
+        assert data["task"]["sections"]["Details"] == (
             "Use the current helper if it fits."
         )
 

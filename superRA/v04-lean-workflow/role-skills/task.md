@@ -15,7 +15,7 @@ Convert the implementer and reviewer role specs into role skills loaded by dispa
 - Update every surface that cites the role specs: `using-superra` §Task Interface role-ownership pointers, `task-file-contract.md` status/section ownership sentences, `codex-instructions.md` routing, `handoff-doc` redirect, `CLAUDE.md` ownership table + Agent Load Surface, plugin manifests, and the harness tests under `tests/harness-instruction-following/`.
 - Validation: the test suite passes, and one scripted or live dispatch shows a general-purpose agent loading the role skill and completing a task turn (read task → edit → commit → status return).
 
-## Planner Guidance
+## Details
 
 - The Sync step (`superintegrate/references/sync.md`) already dispatches generic agents with instructed skill loads — use its dispatch shape as the template.
 - Codex has no frontmatter autoload today; the role bodies already instruct loads there, so the skill-based model is closer to how Codex works than the agent model is.

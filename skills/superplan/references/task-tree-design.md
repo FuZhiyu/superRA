@@ -2,11 +2,11 @@
 
 Load when designing, changing, consolidating, or integration-checking a `superRA/` task tree. The `task.md` file contract lives in `skills/task-tree/references/task-file-contract.md`.
 
-## Writing Objectives and Planner Guidance
+## Writing Objectives and Details
 
-`## Objective` is the contract — with the user at planning time, with the implementer and reviewer at dispatch. It states what must be true when the task is done, and nothing else. Keep it short: a goal statement (often a close paraphrase of the user's request) plus a few binding bullets, following `superRA:communicate`. The same contract binds `## Planner Guidance` and every other planning artifact.
+`## Objective` is the contract — with the user at planning time, with the implementer and reviewer at dispatch. It states what must be true when the task is done, and nothing else. Keep it short: a goal statement (often a close paraphrase of the user's request) plus a few binding bullets, following `superRA:communicate`. The same contract binds `## Details` and every other planning artifact.
 
-A line belongs in the objective only if the reviewer should reject work that violates it:
+Sort each line by the binding-versus-information test (`task-tree/references/task-file-contract.md` §Task Anatomy). Four kinds of line are binding:
 - **The goal** — what the task must produce or verify, naming the artifacts that define its scope.
 - **Decisions** — user or methodology choices that must be preserved.
 - **Constraints** — what to avoid, what to keep intact.
@@ -14,23 +14,23 @@ A line belongs in the objective only if the reviewer should reject work that vio
 
 The artifacts the goal names are the task's scope. **Mark a deliberately open-ended task as open-ended** — explore the space, propose options, find whatever is there — the implementer treats an unmarked objective as closed and delivers exactly what it names.
 
-Binding conventions that live elsewhere enter as pointers, not prose (§Context Distillation). An objective outgrowing a short paragraph plus its must-bullets: either the task needs splitting (§Splitting Tasks), or the excess is information and belongs in `## Planner Guidance`. Still-rejectable bullets are neither — a one-edit-surface task carries a binding bullet per concern it serves.
+Binding conventions that live elsewhere enter as pointers, not prose (§Context Distillation). An objective outgrowing a short paragraph plus its must-bullets: either the task needs splitting (§Splitting Tasks), or the excess is information and belongs in `## Details`. Still-rejectable bullets are neither — a one-edit-surface task carries a binding bullet per concern it serves.
 
 The implementer's working context is the assembled set of: auto-loaded `CLAUDE.md` / `AGENTS.md` (project-level plus any nested in a directory it reads), manifest-loaded skills, the assigned task and its ancestor chain via `superra task read`, and on-demand directory walking. The objective makes that set *sufficient* — pointing into it so the right standing context and files are reachable — rather than reproducing it.
 
-`## Planner Guidance` is the planner's information handoff: what planning discovered that the implementer would otherwise re-derive — candidate files and their roles, data locations and quirks, the suggested route and why, known dead ends. Advisory in force; any route satisfying `## Objective` is acceptable.
+`## Details` is the planner's information handoff: what planning discovered that the implementer would otherwise re-derive — candidate files and their roles, data locations and quirks, the suggested route and why, known dead ends. Any route satisfying `## Objective` is acceptable.
 
 Work whose result is high-stakes or hard to verify from its own output: say so here, with the review tier and focuses you would want. Whoever executes decides on the day (`using-superra/references/main-agent.md` §Deciding on Review) — never schedule review by writing it into the tree as a task.
 
-A line belongs in guidance only if it is task-specific and was learned during planning. Holds for any task in this domain, or already in the implementer's standing context: delete. Nothing qualifies: omit the section.
+A line belongs in details only if it is task-specific and was learned during planning. Holds for any task in this domain, or already in the implementer's standing context: delete. Nothing qualifies: omit the section.
 
 **Steps vs. subtasks vs. suggestions:**
 - Necessary steps needing independent tracking and review become subtasks.
-- Suggested approaches go in `## Planner Guidance`, e.g. "Consider using a left join on fund_id x date."
+- Suggested approaches go in `## Details`, e.g. "Consider using a left join on fund_id x date."
 - No implementation steps unless the step itself is the deliverable.
 - Do prescribe validation criteria.
 
-Task files without `## Planner Guidance` remain valid — split objective/guidance opportunistically on creation or material rewrite, never as a bulk migration.
+Task files without `## Details` remain valid — split objective/details opportunistically on creation or material rewrite, never as a bulk migration.
 
 ## Context Distillation
 

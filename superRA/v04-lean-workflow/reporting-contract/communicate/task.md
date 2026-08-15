@@ -13,7 +13,7 @@ Deliver `superRA:communicate` as the standalone human-facing communication contr
 - Main-agent Markdown writes require Communicate before mutation. Every Markdown edit under the task tree triggers a non-blocking reminder to apply Communicate when the text is user-facing.
 - Each instruction has one authoritative home; callers point rather than restate.
 
-## Planner Guidance
+## Details
 
 - Primary evidence: [Communicate research synthesis](../../attachments/research-communicate.md), [concise-writing research](../../attachments/research-concise-writing.md), and [writing-surfaces map](../../attachments/map-writing-surfaces.md).
 - Upstream reference: [`conorbronsdon/avoid-ai-writing` at `b72b7c4`](https://github.com/conorbronsdon/avoid-ai-writing/commit/b72b7c42b196e113d2477c21c62df58061bc804f). Curate by the parent contract rather than vendoring its catalog as the communication goal.

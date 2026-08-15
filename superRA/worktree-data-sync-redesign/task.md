@@ -26,7 +26,7 @@ Design settled with the researcher in-session (2026-07-08); the decisions below 
 - Tests simulate dataless files by monkeypatching the dataless check — never rely on real cloud-placeholder files. Run the suite with `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py` (dev convenience only; the scripts themselves stay uv-free).
 - None of the files this subtree touches are generated artifacts — do not run `sync_codex_agents.py`. Prose edits to `SKILL.md` and the agent-orchestration references must pass the root `CLAUDE.md` teach-the-protocol gate (DRY + necessity, line by line).
 
-## Planner Guidance
+## Details
 
 `01-seed-fast-path` and `02-discovery-precision` touch different scripts but share `test_worktree_data_sync.py`; dispatch them serially in this worktree (or give each its own worktree) to avoid colliding edits to the shared test file.
 

@@ -21,7 +21,7 @@ Require every generic agent dispatch in Claude Code and Codex to carry a conscio
 - Follow the repository's contributor discipline and DRY / Necessity gate in [`CLAUDE.md`](../../CLAUDE.md); this work changes workflow instructions and hooks, so implementation must load `skill-creator` before editing any `skills/*/SKILL.md`.
 - Preserve v0.4's single dispatch mechanism established by [`v04-lean-workflow/role-skills`](../v04-lean-workflow/role-skills/task.md): general-purpose/default agents load role skills at dispatch. Do not reintroduce `agents/`, `.codex/agents/`, or named-agent generator plumbing.
 
-## Planner Guidance
+## Details
 
 Both harnesses now document the same usable interception point: `PreToolUse` can inspect raw local-function arguments, `spawn_agent` matches the `Agent` alias in Codex, and a deny decision prevents the call. `SubagentStart` is useful only for audit/context because it cannot stop creation. The raw tool input, not the hook payload's top-level effective model, is the evidence that the caller made an explicit choice.
 

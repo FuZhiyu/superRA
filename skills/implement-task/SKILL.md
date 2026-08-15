@@ -24,7 +24,7 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 ## Execution
 
-`## Objective` is the contract. `## Planner Guidance` is advisory — deviate when a better route satisfies the objective; list material deviations in `## Results`: what you skipped, what you did, why the objective still holds.
+`## Objective` is the contract. `## Details` is information, not contract — deviate when a better route satisfies the objective; list material deviations in `## Results`: what you skipped, what you did, why the objective still holds.
 
 `## Revision Notes`, if present, is the delta since you last touched this task — read it before executing, then remove the section once incorporated. It does not survive past `status: implemented`, whether or not review follows.
 

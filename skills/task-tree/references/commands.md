@@ -18,7 +18,7 @@ superra task create 01-data/03-filter \
   --depends-on 02-merge
 ```
 
-`--guidance` is optional — seeds an advisory `## Planner Guidance` section.
+`--details` is optional — seeds a `## Details` section. `--guidance` is a working alias.
 
 ## Bulk status operations
 

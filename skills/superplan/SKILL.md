@@ -49,7 +49,7 @@ Exploration shifts placement or depth: revisit the entry assessment.
 
 ## Phase 2: Domain Setup & Scope
 
-**Stop here, load the matching domain skill and follow its planning-stage reference per its own stage-load table.** Run its planning survey before any task structure is drafted: the survey lands in `## Planner Guidance`, and the decisions it raises join the frontier for the Phase 3 round.
+**Stop here, load the matching domain skill and follow its planning-stage reference per its own stage-load table.** Run its planning survey before any task structure is drafted: the survey lands in `## Details`, and the decisions it raises join the frontier for the Phase 3 round.
 
 No implemented domain skill for the work: proceed to Phase 3, flag the gap to the researcher.
 

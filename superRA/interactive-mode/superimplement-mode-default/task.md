@@ -13,7 +13,7 @@ State it as a short default rule that points to `main-agent.md §Execution Modes
 
 Success: `superimplement` carries the subagent-by-default rule with the explicit-opt-in exception, referencing the contract for the mode model rather than re-describing it.
 
-## Planner Guidance
+## Details
 
 DRY: the contract owns the mode model; this task adds only the *default selection* rule. Depends on `execution-mode-contract` for the vocabulary it points to.
 

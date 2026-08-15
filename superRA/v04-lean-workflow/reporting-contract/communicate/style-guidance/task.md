@@ -15,7 +15,7 @@ Make `superRA:communicate` easy to understand and give sentence-level style guid
 - Teach direct wording, concrete actors and actions, short complete sentences, stable terminology, visible relationships, and voice preservation without banned-word lists, punctuation rules, or word quotas.
 - Update routing and affected documentation, then validate with cold-reader and rewrite cases that expose vague labels, flat structure, paragraph walls, and harmless voice markers.
 
-## Planner Guidance
+## Details
 
 - The user identified “low-value units” and the first reader/action rule as opaque. Treat those comments as failures of the instruction surface, not requests for more terminology.
 - The current dirty `skills/communicate/SKILL.md` contains user edits: a thinking-budget principle, an inline critique comment, and a shortened unresolved-work rule. Preserve their intent while producing clean final skill text.

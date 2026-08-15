@@ -14,7 +14,7 @@ The reference states, and nothing else in the repo restates:
 - **The round asks the whole frontier.** Batch `AskUserQuestion` calls back to back until the frontier is empty. Each question carries the recommended answer as its first option, labeled `(Recommended)`. A decision with no discrete alternatives rides the same round as plain numbered text.
 - **Facts the environment holds are the agent's job** — read them, or dispatch exploration per `agent-orchestration/references/parallel-dispatch.md`. A running exploration is an unsettled prerequisite: it defers the questions downstream of it, not the round. A fact only the researcher holds, such as the venue or the research intent, is a question like any other.
 - **A fact that only work can produce is a task boundary.** Split there per `task-tree-design.md` §Splitting Tasks, queue the dependents with `depends_on`, write them as deliberately open-ended, and re-enter grilling when the evidence lands.
-- **Every settled decision lands in the tree as contract**, per `task-tree-design.md` §Writing Objectives and Planner Guidance. No decision survives only in conversation.
+- **Every settled decision lands in the tree as contract**, per `task-tree-design.md` §Writing Objectives and Details. No decision survives only in conversation.
 - **An empty frontier ends the round** and returns to the step that entered it, with no separate confirmation round.
 
 `skills/superplan/SKILL.md` changes:
@@ -29,7 +29,7 @@ Name `AskUserQuestion` as the rest of superRA names it, leaving Codex's equivale
 
 Validation: `grep -rn "Substantive Questions" skills/` returns no dangling citation; the reference passes the `CLAUDE.md` §Teach the Protocol three tests line by line; a dry run over an under-specified request produces at least two rounds where the second round's questions were genuinely unaskable in the first.
 
-## Planner Guidance
+## Details
 
 - §Substantive Questions is the existing weak version of this concern — it names the standard ("present the options, don't assert one and narrate") but supplies no ordering, no question form, and no stopping rule. Rewriting it as the routing point is the intended landing; a new section beside it is the failure mode.
 - The upstream question format is `❓ **Q1** — **<title>**: <body>` followed by `➡️ <recommended answer>`. Its load-bearing part is the recommended answer, which survives here as the `(Recommended)` first option; the glyphs are what the plain-text path can reuse.

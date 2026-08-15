@@ -8,7 +8,7 @@ Load at the **PLAN phase** when the work involves mathematical modeling. `superp
 
 Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model.
 
-Both homes are the governing ancestor task, the one whose subtree is the whole model. The **catalogue** — timing, primitives, endogenous objects — goes in its `## Planner Guidance`. What a reviewer rejects work against goes in its `## Objective`: the solution concept, the canonical Notation Conventions, the Assumptions, and the Verification Plan. A restriction the timing implies is an Assumptions row, not a guidance line.
+Both homes are the governing ancestor task, the one whose subtree is the whole model. The **catalogue** — timing, primitives, endogenous objects — goes in its `## Details`. What a reviewer rejects work against goes in its `## Objective`: the solution concept, the canonical Notation Conventions, the Assumptions, and the Verification Plan. A restriction the timing implies is an Assumptions row, not a details line.
 
 ### Checklist
 
@@ -28,7 +28,7 @@ In order:
 
 6. **Write it into the two homes**, in this structure.
 
-`## Planner Guidance`:
+`## Details`:
 
 ```markdown
 **Model inventory:**

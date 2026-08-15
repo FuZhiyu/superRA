@@ -27,6 +27,6 @@ Recompute the frontier and ask the next round.
 
 ## Landing
 
-**Every settled decision reaches the tree** as contract, per `task-tree-design.md` §Writing Objectives and Planner Guidance.
+**Every settled decision reaches the tree** as contract, per `task-tree-design.md` §Writing Objectives and Details.
 
 **An empty frontier ends the round**, returning to the step that entered it — the Phase 3 round to decomposition, a scoping round to §Entry Assessment, a re-entry round to the change that reopened scope. No confirmation round.

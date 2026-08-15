@@ -25,7 +25,7 @@ Positioning routes to `references/task-tree-design.md §Placing Work`. The confi
 
 Success: the reference is self-contained for a main agent running the mode across both forward light-planning and retroactive capture, loadable via a clear condition from the de-crowded `superplan/SKILL.md`, and consistent with the retained positioning discipline.
 
-## Planner Guidance
+## Details
 
 Progressive disclosure — `SKILL.md` stays lean; this reference carries the loop. Retroactive capture is the same machinery run results-first — reuse superplan's retroactive documentation path, do not fork a parallel one. Reuse `implemented`/`approved`; do not invent an "awaiting-review" status (see `task-tree/references/task-file-contract.md §Task Anatomy`). Editable-from-dashboard is out of scope. Depends on `superplan-decrowd` so it plugs into the new routing rather than the old crowded structure.
 

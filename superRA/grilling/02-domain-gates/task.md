@@ -6,7 +6,7 @@ depends_on: [01-mechanism]
 
 ## Objective
 
-Replace every PLAN-phase domain approval gate with named frontier questions, and move every domain planning survey out of `## Objective` into `## Planner Guidance`.
+Replace every PLAN-phase domain approval gate with named frontier questions, and move every domain planning survey out of `## Objective` into `## Details`.
 
 `skills/superplan/SKILL.md` Phase 2 keeps the domain survey as a requirement that precedes decomposition and drops the researcher-approval stop: the decisions the survey raises enter the frontier instead of an artifact the researcher signs off.
 
@@ -17,7 +17,7 @@ Each domain planning reference gains a named list of the decisions it contribute
 - [academic-writing](../../../skills/academic-writing/references/planning.md) — mode, audience, review lanes, and output disposition. §Hard Gate is retired; targets and the build command are facts the agent finds.
 - [slide-design](../../../skills/slide-design/references/planning.md) — venue and audience, the talk objective, and the main-versus-backup policy.
 
-Homes follow one test, applied per domain by the skill that owns the content: **binding goes in `## Objective`, information goes in `## Planner Guidance`.** Binding means a reviewer rejects work against it, and only the objective reaches descendants — a task read injects an ancestor's objective and nothing else.
+Homes follow one test, applied per domain by the skill that owns the content: **binding goes in `## Objective`, information goes in `## Details`.** Binding means a reviewer rejects work against it, and only the objective reaches descendants — a task read injects an ancestor's objective and nothing else.
 
 - **Information:** econ-data-analysis's data inventory, which is explicitly not binding, and theory-modeling's catalogue of timing, primitives, and endogenous objects.
 - **Binding:** theory-modeling's solution concept, canonical Notation Conventions, Assumptions, and Verification Plan; slide-design's whole audience-context inventory, which its `[BLOCKING]` review check judges the deck against; academic-writing's writing header.
@@ -28,7 +28,7 @@ Sweep the retired gate's stale references, including the §Depth Tiers standard 
 
 Validation: a no-silent-loss audit gate by gate — every decision a retired gate forced appears as a named frontier question or as a documented survey output, quoted side by side in `## Results`. `grep -rni "hard gate\|researcher approval\|get researcher\|present the inventory" skills/` returns nothing for planning gates, and all edited prose passes the `CLAUDE.md` §Teach the Protocol three tests.
 
-## Planner Guidance
+## Details
 
 - The split rule is contract versus discovery, not artifact name: a reviewer-rejectable line is objective content wherever it came from. academic-writing's writing header is mode, audience, lanes, and disposition — decisions throughout — so it stays in the objective, and theory-modeling's Verification Plan stays with it as a validation criterion.
 - The risk is softening discipline while removing the stop. Walk each gate's current text and place its content before deleting it: econ-data-analysis step 6 ("present the inventory to the researcher"), theory-modeling step 6 ("present the inventory and get researcher approval") plus its "never proceed to task drafting on a verbal description" red flag, academic-writing §Hard Gate, and slide-design's before-decomposition recording rule.
@@ -48,7 +48,7 @@ Every PLAN-phase approval gate is gone, and each of the four domain planning ref
 
 | Retired gate text | Where it went |
 |---|---|
-| econ step 6, "present the inventory … so gaps surface while the structure is still open" | gap-disposition question; the inventory keeps its existing `## Planner Guidance` home |
+| econ step 6, "present the inventory … so gaps surface while the structure is still open" | gap-disposition question; the inventory keeps its existing `## Details` home |
 | econ sensitivity steps 1 and 5, "discuss which checks matter" / "ask the researcher" whether a failure is meaningful | two questions, the "research judgment, not an RA call" wording kept verbatim |
 | theory step 6, "present the inventory and get researcher approval … confirm before task drafting" | write-into-two-homes step; four methodology questions |
 | theory verification step 1, "discuss with the researcher which checks matter" | verification-mode question |
@@ -63,4 +63,4 @@ Every PLAN-phase approval gate is gone, and each of the four domain planning ref
 
 Review then showed the test has a second edge: a descendant task read injects an ancestor's `## Objective` and nothing else ([task_read.py:213](../../../skills/task-tree/scripts/task_read.py#L213)), so content in ancestor guidance never reaches the agent below. Two `[BLOCKING]` domain checks read exactly what this task had moved — theory-modeling requires the solution concept named before derivation starts, slide-design judges the deck against the recorded audience context. Both are binding, so the solution concept moved into the objective block and slide-design's inventory stayed where it was. econ-data-analysis's data inventory is not binding and keeps its guidance home. The rule is now stated in the objective, and each domain skill applies it to its own content.
 
-The section rename this exposes — `## Planner Guidance` reads as advice when the real distinction is binding versus information — is [task-tree/details-rename](../../task-tree/details-rename/task.md), not this task.
+The section rename this exposes — `## Details` reads as advice when the real distinction is binding versus information — is [task-tree/details-rename](../../task-tree/details-rename/task.md), not this task.

@@ -22,7 +22,7 @@ Starting from the current `main` workflow, make the minimum changes needed for r
 - Preserve the original standalone consolidation and result-protection mechanisms except where the agreed ordering and user decisions require a change.
 - Keep the two researcher touchpoints distinct: early protection and documentation choices, then one review of the completed record and proposed refactoring.
 
-## Planner Guidance
+## Details
 
 This task replaces the durable concern's former code-first ordering with the researcher's protection-led documentation and refactoring sequence.
 

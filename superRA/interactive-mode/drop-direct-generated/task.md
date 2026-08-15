@@ -18,7 +18,7 @@ Keep the Codex named-agent `.toml` files (`.codex/agents/superra_implementer.tom
 
 Success: the two `direct-mode-*.md` files are gone; `sync_codex_agents.py` runs clean and still produces the `.toml` agents; no dangling reference to the deleted files remains anywhere in the repo.
 
-## Planner Guidance
+## Details
 
 These are generated artifacts (`CLAUDE.md` §"Generated artifacts stay generated"): change the generator, don't only hand-delete. Verify the `.toml` generation path is unaffected after removing the direct-mode-ref emission. Depends on `execution-mode-contract` so the contract no longer points to the files before they are removed.
 

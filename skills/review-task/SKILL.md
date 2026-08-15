@@ -21,7 +21,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 
 ## Review Protocol
 
-**Review as a senior researcher.** One question: does the work satisfy `## Objective`? Judge the whole implementation with your domain understanding — a step-by-step match with plan or checklists is evidence, never the verdict. Material deviation from `## Planner Guidance` unexplained in `## Results` is a blocking evidence gap.
+**Review as a senior researcher.** One question: does the work satisfy `## Objective`? Judge the whole implementation with your domain understanding — a step-by-step match with plan or checklists is evidence, never the verdict. Material deviation from `## Details` unexplained in `## Results` is a blocking evidence gap.
 
 **Verify from evidence; re-execute only when something is off.** Spot-check a subset when a value looks wrong; full rerun only with researcher approval. Evidence can't support a claim → "evidence missing" finding; the implementer closes it.
 

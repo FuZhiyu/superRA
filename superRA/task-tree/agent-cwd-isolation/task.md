@@ -15,7 +15,7 @@ Diagnose and close the path by which an agent session running with its cwd outsi
 - Until this closes, live agent-SDK traces against a fixture are unsafe to run from a dirty working tree of this repo.
 - Once the guard is in place, run the two v0.4 traces the escape blocked: `workflow-defaults` trace 2 (a broad frontier produces a subagent-mode recommendation) and trace 3 (a completed high-stakes task produces a review recommendation naming tier and focuses). They are that task's acceptance bar, recorded there as validation debt; this task carries them because it owns the blocker.
 
-## Planner Guidance
+## Details
 
 - Evidence: this session's git history around `0b39cd7e`, and the `## Results` / `### Validation` section of `v04-lean-workflow/workflow-defaults`, which records the escape and why trace 2 was invalidated.
 - Root resolution lives in `skills/task-tree/scripts/cli.py` and `lib/paths.py`; the wrapper's source-resolution chain is single-sourced in `skills/task-tree/scripts/wrapper_resolver.py`.

@@ -34,7 +34,7 @@ Replace per-file subprocess copying in `--mode seed` (`skills/worktree-data-sync
 - An injected copy failure produces the per-path error listing and a nonzero exit.
 - Existing never-overwrite and seed-mode tests still pass.
 
-## Planner Guidance
+## Details
 
 One `os.walk` can serve as the preflight; the contaminated set is the union of ancestor chains of dataless paths. Deriving per-directory cleanliness bottom-up avoids a second walk. Keep `run_seed`'s signature and `SeedSummary` usable from tests — extend the summary with the failure list rather than replacing it. `_progress` per-root messages can stay; consider adding the preflight's per-root size/file-count to the progress line so long copies are explainable.
 

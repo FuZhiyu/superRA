@@ -20,7 +20,7 @@ Create the concise, standalone `superRA:communicate` skill and its progressive-r
 - Update `README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`, the Skill-Load Manifest, release notes, and affected docs-site utility pages. Apply the contributor DRY, same-file-restatement, and necessity gates line by line.
 - Validate with the skill validator, relevant automated suites, and realistic sessions covering planning, task-result distillation, implementer returns, review/rewrite, Markdown rendering, and academic-writing composition. Test a nested pyramid against paragraph-wall and flat-list variants, plus a harmless `avoid-ai-writing` marker that must survive.
 
-## Planner Guidance
+## Details
 
 - Read the parent research pointers before authoring. Use paired examples only for transferable decisions: answer-first hierarchy, selection over compression, nested pyramid structure, and friction-based rewriting.
 - Preserve the current render checker while relocating [`report-in-markdown`](../../../../../skills/report-in-markdown/SKILL.md); the task-tree hook imports its scripts by path, and harness canaries name the skill explicitly.

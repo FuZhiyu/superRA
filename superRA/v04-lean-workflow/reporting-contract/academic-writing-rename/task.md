@@ -14,7 +14,7 @@ Rename the academic-prose domain skill from `writing` to `academic-writing` with
 - Preserve concurrent user edits and keep unrelated hunks out of the rename commit.
 - Validate both the renamed skill and its discovery/load behavior, then prove the old path and invocation are absent from active surfaces.
 
-## Planner Guidance
+## Details
 
 - The user has already changed `skills/writing/SKILL.md` frontmatter to `name: academic-writing`; the same dirty file has a separate intent-comment edit. `skills/communicate/SKILL.md` and `skills/theory-modeling/references/integration.md` also carry user changes. Preserve all three working diffs and stage only rename-owned hunks.
 - The active surface includes `using-superra`'s stage/domain manifest, Communicate's composition pointer, `CLAUDE.md`, `skills/CATEGORIES.md`, the current release-note entry, docs-site domain routing, `.agents/skills`, and harness instruction-following contracts. Archived planning docs and older release-note entries remain historical.

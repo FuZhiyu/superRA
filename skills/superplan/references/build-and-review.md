@@ -16,7 +16,7 @@ Artifacts planned inside a task directory follow `skills/using-superra/reference
 
 **Each task is one logical unit of work with full discipline applied.** The active domain skill defines that discipline. Documentation is written continuously alongside the work, not as a separate task.
 
-Objective writing, task splitting: `task-tree-design.md` §Writing Objectives and Planner Guidance, §Splitting Tasks.
+Objective writing, task splitting: `task-tree-design.md` §Writing Objectives and Details, §Splitting Tasks.
 
 ## Creating Tasks
 
@@ -51,7 +51,7 @@ After writing the complete task tree:
 2. **Placeholder scan.** Vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria — fixed.
 3. **Pipeline consistency.** Artifact names in the pipeline file match each task's artifacts, in dependency order.
 4. **Validation coverage.** Every transformative task has a validation criterion in its objective.
-5. **Objective/guidance split.** Contract in `## Objective`; planning findings and suggested route in `## Planner Guidance` (`task-tree-design.md` §Writing Objectives and Planner Guidance).
+5. **Objective/details split.** Contract in `## Objective`; planning findings and suggested route in `## Details` (`task-tree-design.md` §Writing Objectives and Details).
 6. **Handoff test.** A new agent reading any leaf's ancestor chain could continue from here.
 7. **Verification coverage.** The tree covers the active domain skill's verification / robustness requirements.
 8. **Dependency sanity.** Every task declares `depends_on:`; no cycles, no nonexistent siblings; terminal task(s) produce the top-line results.

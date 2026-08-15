@@ -58,7 +58,7 @@ Resolve what you can from code and data first.
 
 ## Deciding on Review
 
-Judge from the result's stakes and plausibility whether a separate pass is worth it, and at which tier and focuses (`superRA:review-task` §Scope). Review when the researcher asks, when `## Planner Guidance` marks the task high-stakes, when the implementer returns a concern or uncertainty, or when a load-bearing result is one you cannot verify from the evidence in front of you. A planner suggestion is advice, not a binding schedule.
+Judge from the result's stakes and plausibility whether a separate pass is worth it, and at which tier and focuses (`superRA:review-task` §Scope). Review when the researcher asks, when `## Details` marks the task high-stakes, when the implementer returns a concern or uncertainty, or when a load-bearing result is one you cannot verify from the evidence in front of you. A planner suggestion is advice, not a binding schedule.
 
 The action once you've judged differs by mode:
 

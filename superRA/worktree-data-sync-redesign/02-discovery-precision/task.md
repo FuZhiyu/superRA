@@ -25,7 +25,7 @@ Scope rules:
 - A denylisted-name root carrying a `# data-sync:symlink` annotation is discovered as symlink-only.
 - A tracked repo-internal symlink is not collected; an untracked top-level symlink to an external directory still is.
 
-## Planner Guidance
+## Details
 
 Regression fixture idea: this very repo's observed over-collection — `.DS_Store`, `.claude`, and the tracked `AGENT.md`/`AGENTS.md` aliases all came back as managed entries. `fnmatch` against the basename covers the `*.egg-info` glob; keep the constant a tuple/frozenset so callers can reference it in the SKILL.md doc task.
 

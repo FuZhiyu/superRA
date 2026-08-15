@@ -13,7 +13,7 @@ Both happen once, during planning.
 
 Data logistics, not research design.
 
-**Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Planner Guidance` of the governing task — advisory, per `task-tree/references/task-file-contract.md` §Task Anatomy.
+**Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Details` of the governing task — information, not binding, per `task-tree/references/task-file-contract.md` §Task Anatomy.
 
 ### Checklist
 

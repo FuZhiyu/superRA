@@ -320,6 +320,9 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     return fm, body
 
 
+_SECTION_ALIASES = {"Planner Guidance": "Details"}
+
+
 def parse_body_sections(body: str) -> dict[str, str]:
     """Split a task body on ``## `` headers into {section_name: content} pairs.
 
@@ -327,6 +330,9 @@ def parse_body_sections(body: str) -> dict[str, str]:
     treated as body content, not a section header, so a header quoted inside an
     Objective/Results template does not start a spurious section (mirrors
     ``_has_nonempty_section``).
+
+    Legacy heading names in ``_SECTION_ALIASES`` parse to their current name, so
+    a task file written under the old vocabulary reads as the same section.
     """
     sections: dict[str, str] = {}
     current_name: str | None = None
@@ -342,7 +348,7 @@ def parse_body_sections(body: str) -> dict[str, str]:
         if m:
             if current_name is not None:
                 sections[current_name] = "\n".join(current_lines)
-            current_name = m.group(1)
+            current_name = _SECTION_ALIASES.get(m.group(1), m.group(1))
             current_lines = []
         elif current_name is not None:
             current_lines.append(line)

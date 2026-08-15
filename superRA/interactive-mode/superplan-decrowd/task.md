@@ -15,7 +15,7 @@ Content to relocate into new or existing references (one level deep, each with a
 
 Success: `SKILL.md` is materially shorter and reads as a spine; every `[BLOCKING]` gate, stop point, and status-transition rule survives verbatim in its new home and remains loadable via a stated `SKILL.md` load condition; ownership boundaries per `CLAUDE.md` intact.
 
-## Planner Guidance
+## Details
 
 Pure structural refactor with real correctness risk: a moved gate must not be silently softened. The reviewer verifies every gate/stop-point/transition present before the move is present after, in a reference with a clear load condition. Keep references one level deep. This task lands before `interactive-reference`, which plugs the new interactive loop into the de-crowded routing.
 

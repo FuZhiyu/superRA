@@ -16,7 +16,7 @@ Implement one cross-platform command hook that rejects validly parsed generic-ag
 - Fail open on malformed/unreadable hook input so hook corruption cannot wedge all agent dispatches.
 - Add deterministic synthetic tests for both harness payload shapes, every missing-field branch, inheritance rejection, compliant calls, unrelated agent types/tools, malformed input, and JSON validity.
 
-## Planner Guidance
+## Details
 
 Follow the existing extensionless Bash hook plus `run-hook.cmd` packaging pattern. A model allowlist would become stale and is unnecessary because each harness validates its own model and reasoning values. Keep `SubagentStart` out of the blocking path.
 

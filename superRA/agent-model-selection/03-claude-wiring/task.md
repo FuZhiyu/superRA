@@ -15,7 +15,7 @@ Enable the shared model-selection gate on Claude Code's `PreToolUse(Agent)` path
 - Record any documented headless-CLI limitation precisely; synthetic tests may supplement but not replace one realistic harness verification of the changed path.
 - Update only Claude-specific hook documentation where the supported behavior or troubleshooting surface changes. Leave shared cross-harness contract tests and documentation to `05-cross-harness-convergence`.
 
-## Planner Guidance
+## Details
 
 Claude's documented `SubagentStart` payload omits the original Agent arguments and cannot block creation. The existing live harness notes warn that filesystem `PreToolUse` behavior differs under some `claude -p` paths; prefer the Agent SDK surface when necessary and state what the live run actually proves.
 

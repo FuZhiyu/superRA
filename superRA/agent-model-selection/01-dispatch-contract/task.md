@@ -14,7 +14,7 @@ Make explicit generic-agent model selection a single, actionable orchestration c
 - Preserve the existing model-tier heuristics and v0.4 role-skill dispatch behavior; do not create a second rubric or hard-code a list of currently available models.
 - Apply the repository's line-by-line DRY and Necessity gate to every changed instruction line.
 
-## Planner Guidance
+## Details
 
 The current rubric already selects Sonnet for Claude Code and medium thinking for Codex by default, but v0.4's generic dispatch templates omit explicit tool arguments. Keep the behavioral rule near that rubric. Claude uses the shared `Agent` surface; Codex-specific parameter translation belongs in `skills/using-superra/references/codex-instructions.md`.
 

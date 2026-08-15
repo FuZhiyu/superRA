@@ -17,7 +17,7 @@ Rewrite the review protocol in the new review role skill so a review is an expli
 - Recalibrate the gated checklists to the same two-severity semantics: econ-data-analysis, theory-modeling, refactor-and-integrate, result-protection, semantic-merge, slide-design, writing consistency lanes, `planning-review.md`. Delete verification-scaffolding instructions frontier models perform unprompted (re-check/double-check/verify-again lines, verify-subagents); prune items failing the `CLAUDE.md` DRY/Necessity tests; keep domain-substantive gates (merge validation, look-ahead bias, proof verification) intact. No "what not to flag" exclusion lists. (The final-diff-self-check trail item in refactor-and-integrate is owned by `reporting-contract` — leave it.)
 - Validation: one severity vocabulary repo-wide; no surviving instruction tells a reviewer to flag on uncertainty, walk every gate top-to-bottom regardless of focus, or re-verify work the model already verifies; domain hard gates survive.
 
-## Planner Guidance
+## Details
 
 - The exact pedantry-driving lines to rewrite are quoted with `file:line` in the [review-architecture map](../attachments/map-review-architecture.md) §4; checklist inventory with per-file `[BLOCKING]` counts: §3c (largest: econ-data-analysis 66 items, theory-modeling 45).
 - Prompting techniques with sources (find-then-filter, two-severity semantics, convergence, evidence bar) and the Opus 5 over-verification findings: [review-prompting research](../attachments/research-review-prompting.md) §B, §D.

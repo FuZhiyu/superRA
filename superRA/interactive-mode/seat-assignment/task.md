@@ -17,7 +17,7 @@ These are the three seat structures of **subagent** mode (autonomous). Whoever f
 
 Success: `agent-orchestration` documents the three seat configurations and a per-task choice heuristic (size / stakes / context-cost), and its dispatch mechanics cover the main-as-reviewer-over-subagent-implementer case; the reviewer's adversarial protocol is unchanged.
 
-## Planner Guidance
+## Details
 
 `agent-orchestration` owns dispatch, role assignment, and verdict adjudication (`CLAUDE.md` ownership table) — this is the right home. Leave the role specs (`agents/implementer.md`, `agents/reviewer.md`) unchanged: they describe role behavior independent of which agent fills the seat. This task is orchestration-level assignment, not role protocol. Depends on `execution-mode-contract` for the shared model vocabulary.
 

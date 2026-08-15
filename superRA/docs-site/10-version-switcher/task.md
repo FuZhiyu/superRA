@@ -15,6 +15,6 @@ Let a visitor switch the published docs site between branch/version builds, reus
 
 Success criteria: a two-ref CI build where switching versions on a deep-linked page lands on the same page in the other version (or its landing fallback), verified on the published site; single-ref builds remain visually unchanged.
 
-## Planner Guidance
+## Details
 
 The worktree-switch plumbing to study: `ACTIVE_WT`, `applyWorktree`, and the `?wt=` token handling in `base.html`, plus the multi-worktree discovery in `cli.py`. The version list is the static analog of the live worktree list.

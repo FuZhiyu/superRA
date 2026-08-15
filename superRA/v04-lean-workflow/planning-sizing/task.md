@@ -15,7 +15,7 @@ Fix the planning instructions that produce over-granular, concern-per-task trees
 - No numeric task-count caps.
 - Validation: replaying this plan's own inputs against the updated instructions would flag the 8-task tree (three tasks editing one file) at self-review or planning review.
 
-## Planner Guidance
+## Details
 
 - The diagnosis attachment carries the causal lines with quotes and `file:line`, the missing counterweights, and the reasoning behind each proposed edit — read it before editing.
 - `review-skill` also edits `planning-review.md` (severity vocabulary); the dependency edge serializes the shared file.
@@ -40,7 +40,7 @@ All nine ranked edits from the diagnosis §c are applied, plus three counterweig
 | 9 | [decomposition.md:37](../../../skills/superplan/references/decomposition.md#L37) | §Task Dependencies now states the planning-side consequence rather than a bundling imperative with no mechanism: "Siblings sharing an edit surface are not a dependency case — merge them." This is the `depends_on`-instead-of-merge reflex the reviewer at `ba35ee55` actually had, corrected where it occurs. |
 | — (objective bullet 4) | [thorough-planning.md:28](../../../skills/superplan/references/thorough-planning.md#L28) | Exploration Synthesis states the guard: the exploration split is an evidence partition, not a task partition — cut by edit surface, not by which agent or report section found a thing. |
 | — (counterweight (b)3, in-pass reach only) | [consolidation.md:16](../../../skills/superplan/references/consolidation.md#L16), [consolidation.md:41](../../../skills/superplan/references/consolidation.md#L41) | Detection bullet and the matching Merge row both broadened from "overlapping objectives or outputs" to "objectives, outputs, or edit surfaces", so a consolidation pass following the detection list reaches the merge action for tasks whose objectives differ but whose files do not. Scope note in §Residual. |
-| — (counterweight (b)7) | [task-tree-design.md:17](../../../skills/superplan/references/task-tree-design.md#L17) | The split-or-demote dichotomy gains its third branch: "Still-rejectable bullets are neither — a one-edit-surface task carries a binding bullet per concern it serves." Without it the line pushed a correctly consolidated objective's binding bullets down into advisory `## Planner Guidance`, undercutting the merge rule this task installs. |
+| — (counterweight (b)7) | [task-tree-design.md:17](../../../skills/superplan/references/task-tree-design.md#L17) | The split-or-demote dichotomy gains its third branch: "Still-rejectable bullets are neither — a one-edit-surface task carries a binding bullet per concern it serves." Without it the line pushed a correctly consolidated objective's binding bullets down into advisory `## Details`, undercutting the merge rule this task installs. |
 
 ### Skipped
 
