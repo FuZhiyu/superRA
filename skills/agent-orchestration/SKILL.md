@@ -44,11 +44,7 @@ Default to medium — Sonnet in Claude Code, medium thinking in Codex. Step up t
 
 Fable is reserved for the most challenging, expensive tasks. Defaults, not rules — an explicit user preference wins.
 
-**Default dispatch:** pass the selected model explicitly; Codex uses the [`codex-instructions.md`](../using-superra/references/codex-instructions.md) mapping.
-
-```
-Agent(model: <concrete Claude model>, prompt: <dispatch prompt>)
-```
+Model (and reasoning tiers) must be specified in the dispatch. Unspecified dispatch will be rejected.
 
 ## Parallelization and Worktree Isolation
 
