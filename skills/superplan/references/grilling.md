@@ -10,7 +10,7 @@ The **frontier** is every decision whose prerequisites are already settled: aska
 
 ## Facts are yours
 
-**A fact the environment holds is your job.** Read it, or load `superRA:agent-orchestration` and dispatch exploration through its generic dispatch shape per `agent-orchestration/references/parallel-dispatch.md`. A running exploration is an unsettled prerequisite — it defers the questions downstream of it, not the round.
+**A fact the environment holds is your job.** Read it, or load `superRA:agent-orchestration` and dispatch exploration per `agent-orchestration/references/parallel-dispatch.md`. A running exploration is an unsettled prerequisite — it defers the questions downstream of it, not the round.
 
 **A fact only the researcher holds is a question:** venue, research intent, what an output is for.
 

@@ -13,7 +13,7 @@ In Phase 1, dispatch 2-4 exploration agents in parallel, each covering a distinc
 - **History and prior work** — git log for the affected areas, past approaches, related `superRA/` tasks.
 - **Domain-specific survey** — data inventory for analysis work, model notes for theory work, manuscript structure for writing work.
 
-**Dispatch shape.** Exploration agents skip the canonical task-scoped template — no task path, no stage. Use `agent-orchestration`'s generic dispatch shape with a read-only exploration prompt (agent type: harness adapter reference):
+**Dispatch shape.** Exploration agents skip the canonical task-scoped template — no task path, no stage. Dispatch a read-only exploration agent (agent type: harness adapter reference) with objective and scope as plain prose:
 
 ```
 Explore: Map the data pipeline in `src/analysis/`: what scripts exist, what each
@@ -42,7 +42,7 @@ Default is parallel exploration with single-agent design — the main agent desi
 
 Skip it when the work is large but structurally straightforward (many tasks, one approach), when the "perspectives" are parts of one sequential pipeline, or when a single pass with the exploration findings suffices.
 
-**Dispatch shape.** Apply the same generic dispatch configuration to a lightweight read-only prompt: design objective plus relevant exploration findings and constraints in the prompt body; ask for task titles, objectives, dependencies, and expected outputs as structured text, no files created.
+**Dispatch shape.** Same lightweight read-only exploration shape: design objective plus relevant exploration findings and constraints in the prompt body; ask for task titles, objectives, dependencies, and expected outputs as structured text, no files created.
 
 ```
 Explore: Propose a task tree for rebuilding the data pipeline in `src/data/`.

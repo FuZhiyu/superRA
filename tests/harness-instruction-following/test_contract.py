@@ -285,7 +285,7 @@ def test_codex_tool_map_matches_contract():
     assert mappings["AskUserQuestion"] == ("request_user_input",)
     assert mappings["TodoWrite"] == ("update_plan",)
     assert mappings["Agent"] == (
-        'spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")',
+        'spawn_agent(model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")',
     )
     assert mappings["SendMessage"] == ("send_input",)
 
@@ -352,16 +352,11 @@ def test_generic_agent_model_policy_has_one_owner_and_harness_mappings():
     ] == [owner]
     assert [
         path for path, content in skill_docs.items()
-        if "### Explicit Generic-Dispatch Configuration" in content
-    ] == [owner]
-    assert [
-        path for path, content in skill_docs.items()
         if re.search(r"(?m)^Agent\(", content)
     ] == [owner]
 
-    assert "Explicit Generic-Dispatch Configuration" in orchestration
-    assert 'Agent(subagent_type="general-purpose", model: <concrete Claude model>' in orchestration
-    assert 'spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")' in codex
+    assert "Agent(model: <concrete Claude model>" in orchestration
+    assert 'spawn_agent(model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")' in codex
     assert "agent-orchestration" in codex and "Model Tier Selection" in codex
     assert not re.search(r"\b(Sonnet|Opus|Fable|gpt-)\b", codex + guard)
 

@@ -1,6 +1,6 @@
 ---
 title: Define the Explicit Generic-Dispatch Contract
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -20,14 +20,6 @@ The current rubric already selects Sonnet for Claude Code and medium thinking fo
 
 ## Results
 
-Generic dispatches now require an explicit configuration at the tool boundary.
+[`agent-orchestration`](../../../skills/agent-orchestration/SKILL.md) owns one default call shape, `Agent(model: …, prompt: …)`; dispatch templates contain only `Prompt:` bodies. [`codex-instructions.md`](../../../skills/using-superra/references/codex-instructions.md) maps it to explicit `model` and `reasoning_effort` arguments without specifying `agent_type` or copying the tier rubric.
 
-- [`agent-orchestration`](../../../skills/agent-orchestration/SKILL.md) owns the single Claude `Agent(subagent_type="general-purpose", model: …, prompt: …)` shape immediately after its existing tier rubric; the role templates now supply only the prompt.
-- [`codex-instructions.md`](../../../skills/using-superra/references/codex-instructions.md) maps that selection to concrete `model` and `reasoning_effort` arguments on a bounded `fork_turns="none"` call without copying the rubric.
-- The planning, autonomous implementation, integration, interactive, thorough-exploration, and grilling-exploration paths load or point to the owner; their stage templates no longer restate the Agent tool call.
-
-**Verification.** `rg '^Agent:' skills --glob '*.md'` is empty, leaving one owned generic call shape. The focused instruction suite passes 32 of 34 checks; its two failures (`#### Seat execution` and `references/decomposition.md`) reproduce on the v0.4 baseline, which passes 31 of 33 before the added model-selection contract.
-
-## Revision Notes
-
-- Rely on each harness's default agent type in dispatch instructions; keep generic-versus-specialized detection inside the enforcement hook.
+**Verification.** The guard suite passes 17/17, focused contract tests pass 3/3, and harness compatibility plus task-tree checks pass. The full instruction suite passes 125/127; the two failures are unchanged v0.4 baseline assertions for `#### Seat execution` and `references/decomposition.md`.

@@ -46,7 +46,7 @@ Legitimate stop points:
 
 ## Dispatch Convention
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt and use its generic dispatch shape.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; never restate load lists in prompts.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; never restate load lists in prompts.
 
 Any REVISE verdict at any step: adjudicate per `agent-orchestration` §Handling Reviewer Feedback, iterate to APPROVE.
 

@@ -13,7 +13,7 @@ The user invoking `superRA:superimplement`, `superRA:superintegrate`, or `superR
 
 `harness-forced-inline` is an autonomous fallback only when Codex exposes no agent tool: run each seat's role skill as its own in-session pass — the reviewer one only when `main-agent.md` §Deciding on Review calls for it — and state that the harness forced the fallback. It is not interactive and never applies because a task is trivial or the researcher requested inline work.
 
-- A workflow step that says dispatch: spawn the default agent with the dispatch prompt, not an inline pass under the harness-default anti-delegation guidance.
+- A workflow step that says dispatch: call `spawn_agent` with the dispatch prompt, not an inline pass under the harness-default anti-delegation guidance.
 - Interactive mode (the `direct` alias) is the default cadence, not a trivial-task fallback (`main-agent.md` §Execution Modes). It runs the work in-session by its own loop — that is not the `harness-forced-inline` route above.
 
 ## Warm Agent Lifecycle in Codex
@@ -35,7 +35,7 @@ Claude-oriented tool names appearing in these skills map to:
 | `AskUserQuestion` | `request_user_input` when available; plain-text question otherwise |
 | `Skill` | load the named skill |
 | `TodoWrite` | `update_plan` |
-| `Agent` | `spawn_agent(agent_type="default", model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")` |
+| `Agent` | `spawn_agent(model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")` |
 | `SendMessage` | `send_input` |
 
-The generic-dispatch model selection in [`agent-orchestration`](../../agent-orchestration/SKILL.md) §Model Tier Selection maps to both `model` and `reasoning_effort`; pass concrete values for each.
+Choose the values via [`agent-orchestration` §Model Tier Selection](../../agent-orchestration/SKILL.md#model-tier-selection).
