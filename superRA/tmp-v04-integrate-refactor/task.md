@@ -1,6 +1,6 @@
 ---
 title: "TEMPORARY — v0.4 Integrate Refactor"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -84,3 +84,16 @@ All three actions executed as authored; no scope widening.
 - `git grep -n 'econ-data-efficiency\|details-rename\|superRA/grilling'` outside `docs/plans/` — hits only in this task's own Action 2/Verification prose and the two repointed `map-writing-surfaces.md` citations, both of which name the string as a forward-pointing historical label per Action 2, not a stale reference.
 
 Left untouched: an unrelated pre-existing uncommitted change to `superRA/v04-lean-workflow/review-skill/comments.yaml` (a dashboard comment-resolution artifact, not part of this task) — not staged or discarded.
+
+## Review Notes
+
+Thorough tier; focuses: correctness, scope-fidelity, and the `refactor-and-integrate` integration checklist.
+
+1. `[BLOCKING]` **Action 3's `agents/` retirement is incomplete in both files it targeted.** Two more claims naming the deleted surface survive, and the Project Doc Audit rule "update stale claims contradicted by the diff" applies to base-current lines in a file the diff touches, not only to lines the branch rewrote.
+   - [README.md:61](../../README.md#L61) — "restart Claude Code (or start a new session) and the skills, agents, and hooks are available." The branch deletes `agents/implementer.md`, `agents/reviewer.md`, and both `.codex/agents/*.toml`; neither [.claude-plugin/plugin.json](../../.claude-plugin/plugin.json) nor [.codex-plugin/plugin.json](../../.codex-plugin/plugin.json) ships an agent surface, and [docs/README.codex.md:40](../../docs/README.codex.md#L40) states the retirement outright. A reader of the install section is told they get something the plugin no longer contains. Fix: "the skills and hooks are available."
+   - [CLAUDE.md:5](../../CLAUDE.md#L5) — "When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs". `agents` is no longer a superRA surface; role behavior is a skill, so the term is now covered by `skills`. Fix: drop `agents,` from the list.
+2. `[ADVISORY]` **[README.md:85](../../README.md#L85) now enumerates a subset alongside its superset.** "Read it before modifying skills, hooks, or role skills" — role skills are skills, so the third item no longer names a distinct surface the way "agent files" did. Fix with finding 1: "skills, hooks, or harness adapters".
+3. `[ADVISORY]` **The tracer-grep verification criterion does not pass as authored.** `git grep -n 'econ-data-efficiency\|details-rename\|superRA/grilling'` still returns [map-writing-surfaces.md:39,66](../v04-lean-workflow/attachments/map-writing-surfaces.md), which keep the deleted path as an annotated historical label. `## Results` discloses this, and the annotations are accurate — `66b0ef45` and [RELEASE-NOTES.md:82-115](../../RELEASE-NOTES.md#L82-L115) confirm the two rules live in `econ-data-analysis/SKILL.md` and the `0.3.4` notes — but the criterion carried researcher approval at `b694e856`, so the divergence is the researcher's call at the Integrate gate.
+4. `[ADVISORY]` **The Project Doc Audit trail omits two docs the literal walk-up surfaces.** Walking every governing-diff file up to the repo root reaches [skills/academic-writing/CLAUDE.md](../../skills/academic-writing/CLAUDE.md) and [skills/theory-modeling/CLAUDE.md](../../skills/theory-modeling/CLAUDE.md), neither named in `## Results`. Checked both: no claim in either is contradicted by the governing diff, so the audit outcome stands and only the trail is short.
+
+**Verified this pass** (outside the sandbox; `uv` and the shimmed `python3` panic inside it): `tests/harness-instruction-following` 126 passed, `skills/task-tree/scripts` 809 passed, `worktree-data-sync` 43 passed, `check-harness-compatibility.sh` exit 0, `./superRA/superra task check` clean, 0 broken relative links under `superRA/`, and the five non-live `tests/hooks/test-*.sh` pass. The four live-model hook scripts were not rerun; their result stands from the implementer's pass.
