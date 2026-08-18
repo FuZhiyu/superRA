@@ -32,7 +32,7 @@ The recovery branch `backup/pruning-redesign-before-restart-20260725` contains a
 
 Follow the instruction-authoring and generated-artifact rules in [CLAUDE.md](../../../CLAUDE.md). Prefer a small end-to-end workflow fixture over prose canaries or exhaustive protocol simulations.
 
-The maturation-only ownership change touches [agents/reviewer.md](../../../agents/reviewer.md); regenerate [.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml) with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
+The maturation-only ownership change touches the reviewer role spec; regenerate the Codex reviewer agent with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
 
 ## Results
 
@@ -48,7 +48,7 @@ Rebuilt INTEGRATE around a protected permanent record, one maturation drafter, o
 - The discarded redesign was not restored. Its independently useful subtree-removal implementation remains only on the recovery branch for future evaluation; this workflow does not require a special deletion command.
 - Review follow-up removed duplicate domain confirmation prompts, corrected theory protection routing, scoped proposal-before-execution to standalone consolidation, reduced repeated dispatch instructions, and made every later approval durable even when it changes no files.
 - The loaded refactoring discipline now uses the protected record as the sole workflow exemption from the automatic pruning list; its broader justification sources remain available only in standalone use.
-- [agents/reviewer.md](../../../agents/reviewer.md) carries the narrow maturation-only task-creation ownership exception, and the generated [.codex reviewer](../../../.codex/agents/superra_reviewer.toml) is current.
+- The reviewer role spec carries the narrow maturation-only task-creation ownership exception; it lived in `agents/reviewer.md` and its generated Codex agent, both retired by [v04-lean-workflow/role-skills](../../v04-lean-workflow/role-skills/task.md) in favor of [review-task](../../../skills/review-task/SKILL.md).
 - Main-seat review removed a duplicate refactoring-protocol echo and aligned the reviewer’s edit, self-check, and commit boundaries with its temporary-task ownership.
 
 Verification completed on the implementation diff:
