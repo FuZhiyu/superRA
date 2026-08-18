@@ -58,7 +58,7 @@ claude plugin marketplace add FuZhiyu/superRA
 claude plugin install superRA@superRA
 ```
 
-That's it — restart Claude Code (or start a new session) and the skills, agents, and hooks are available.
+That's it — restart Claude Code (or start a new session) and the skills and hooks are available.
 
 To update later:
 
@@ -82,7 +82,7 @@ claude plugin install superRA@superRA
 
 ## Contributing
 
-Design principles, DRY / composability rules, skill-design patterns, and the extension path for adding a new domain vertical live in [`CLAUDE.md`](./CLAUDE.md). Read it before modifying skills, hooks, or role skills.
+Design principles, DRY / composability rules, skill-design patterns, and the extension path for adding a new domain vertical live in [`CLAUDE.md`](./CLAUDE.md). Read it before modifying skills, hooks, or harness adapters.
 
 ## Upstream
 

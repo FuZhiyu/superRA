@@ -2,7 +2,7 @@
 
 This file is the contributor-facing entry point for superRA internals. Read `README.md` first for the user-facing product model; keep that overview there rather than duplicating it here.
 
-When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs — treat the work as skill creation. Load `skill-creator` before editing any `skills/*/SKILL.md`, and load the relevant superRA workflow skills before changing workflow behavior.
+When modifying superRA itself — skills, hooks, harness adapters, or internal docs — treat the work as skill creation. Load `skill-creator` before editing any `skills/*/SKILL.md`, and load the relevant superRA workflow skills before changing workflow behavior.
 
 ## Contributor Discipline
 
