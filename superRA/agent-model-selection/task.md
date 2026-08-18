@@ -46,4 +46,12 @@ This remains a new top-level workstream because the concern crosses orchestratio
 
 ## Results
 
-(empty)
+Explicit model selection is contract, code, and wiring in both harnesses; Claude Code enforces it before a subagent starts, Codex 0.147.0 does not.
+
+- **One call shape, one owner.** [`agent-orchestration`](../../skills/agent-orchestration/SKILL.md) defines `Agent(model: …, prompt: …)` and [`codex-instructions.md`](../../skills/using-superra/references/codex-instructions.md) maps it to Codex's `model` plus `reasoning_effort`. Dispatch templates carry only `Prompt:` bodies, and neither surface copies the tier rubric or names an agent type — see [01-dispatch-contract](01-dispatch-contract/task.md).
+- **The gate is one shared script.** [`hooks/agent-model-guard`](../../hooks/agent-model-guard) inspects raw `tool_input` at `PreToolUse(Agent)`, denies only generic dispatches missing their explicit controls, and passes named and specialized agents through. It carries no model allowlist and emits `{}` for compliant, unrelated, or unreadable input — see [02-enforcement-hook](02-enforcement-hook/task.md).
+- **Claude Code enforcement is proven end to end.** A live Agent SDK run captured a model-less dispatch denied, an explicit `model: haiku` retry, and exactly one `SubagentStart` — see [03-claude-wiring](03-claude-wiring/task.md).
+- **Codex enforcement is wired but bypassed at runtime.** Codex CLI 0.147.0 starts `spawn_agent` without emitting `PreToolUse`, despite the documented `Agent` matcher; the deterministic raw-input behavior is verified by synthetic tests, and the live smoke exits 3 recording the bypass — see [04-codex-wiring](04-codex-wiring/task.md).
+- **Shared cross-harness surfaces** — the contract tests, compatibility check, hook load contract, and Codex setup guide — assert both manifests run the same guard and separate CI-safe wiring coverage from live runtime behavior; see [05-cross-harness-convergence](05-cross-harness-convergence/task.md).
+
+Both live smokes are opt-in because they spend an authenticated model turn: `RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk python tests/hooks/claude-agent-model-live.py` and `RUN_LIVE_HARNESS=1 bash tests/hooks/codex-agent-model-live.sh`.
