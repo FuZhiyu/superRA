@@ -1,6 +1,6 @@
 # superRA
 
-> ⚠️ **Breaking change (0.3.0):** `PLAN.md` / `RESULTS.md` are replaced by the `superRA/` task tree. Existing projects are detected and offered migration automatically (or run `superra task migrate from-plan`); to stay on the previous model, pin the install to the frozen `v0.1.2` tag. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note and full history, including the 0.2.0 workflow-skill rename.
+> ⚠️ **Breaking change (0.4.0):** the dedicated implementer/reviewer agents are retired — roles are now skills, independent review is triggered rather than scheduled, and interactive execution is the default. Existing projects and task trees keep working with nothing to migrate; Codex users who installed the named agents globally should delete the stale files (`rm -f ~/.codex/agents/superra_*.toml`). See [RELEASE-NOTES](RELEASE-NOTES.md) for the full 0.4.0 entry and history.
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
@@ -71,14 +71,7 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-This release replaces the legacy `PLAN.md` / `RESULTS.md` files with the `superRA/` task tree. Existing projects keep working: superRA detects a legacy `PLAN.md` at session start and offers to migrate it (`superra task migrate from-plan`). See the [superRA docs](http://fuzhiyu.me/superRA/) for details.
-
-To stay on the previous version instead, pin the install to the frozen `v0.1.2` tag:
-
-```bash
-claude plugin marketplace add FuZhiyu/superRA@v0.1.2
-claude plugin install superRA@superRA
-```
+0.4.0 retires the dedicated role agents in favor of role skills; existing projects and task trees keep working with nothing to migrate. Codex users who installed the named agents globally should delete the stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml` — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
 
 ## Contributing
 
