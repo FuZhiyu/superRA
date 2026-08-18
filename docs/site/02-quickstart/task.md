@@ -57,7 +57,7 @@ of tasks.
 
 Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root: build the panel, run the regressions and the GRS test, and write up the result. The task tree holds the project's state. Instead of keeping the plan in one agent's context window or a temporary plan file, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
 
-Planning is autonomous but stops at one gate: before any code is written, the planner shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
+Decisions the planner cannot settle from the project come to you as rounds of questions, each with a recommended answer; before any code is written, it also shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
 
 ```bash
 ./superRA/superra dashboard
