@@ -22,7 +22,7 @@ Rewrite the review protocol in the new review role skill so a review is an expli
 - The exact pedantry-driving lines to rewrite are quoted with `file:line` in the [review-architecture map](../attachments/map-review-architecture.md) §4; checklist inventory with per-file `[BLOCKING]` counts: §3c (largest: econ-data-analysis 66 items, theory-modeling 45).
 - Prompting techniques with sources (find-then-filter, two-severity semantics, convergence, evidence bar) and the Opus 5 over-verification findings: [review-prompting research](../attachments/research-review-prompting.md) §B, §D.
 - Calibrate with the evidence bar and severity semantics, not enumerated "what not to flag" lists (a rejected design option — see the top-level contract).
-- The read-first reviewer default already exists in `econ-data-analysis` (see the approved `econ-data-efficiency` task); this task generalizes it to the review skill itself.
+- The read-first reviewer default already exists as domain discipline in `econ-data-analysis`; this task generalizes it to the review skill itself.
 - The results-writing focus applies the `reporting-contract` sibling's rules (landing in `using-superra`); reference them rather than restating.
 
 ## Results
