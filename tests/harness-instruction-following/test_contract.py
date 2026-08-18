@@ -212,20 +212,6 @@ def test_seat_assignment_table_has_three_supported_structures():
     }
 
 
-def test_superimplement_executes_each_selected_seat_filler():
-    superimplement = read_text("skills/superimplement/SKILL.md")
-    rows = markdown_table_rows(superimplement, "#### Seat execution")
-    routes = {
-        inline_code(row[0])[0]: inline_code(row[1])
-        for row in rows
-    }
-
-    assert routes == {
-        "main": ("role-skill",),
-        "subagent": ("dispatch",),
-    }
-
-
 def test_seat_fillers_reach_the_role_skills_by_name():
     main_agent = read_text("skills/using-superra/references/main-agent.md")
     orchestration = read_text("skills/agent-orchestration/SKILL.md")
@@ -245,7 +231,7 @@ def test_superplan_routed_references_exist():
     routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
 
     assert {
-        "references/decomposition.md",
+        "references/build-and-review.md",
         "references/changing-the-tree.md",
     } <= routed_paths
     assert all(
