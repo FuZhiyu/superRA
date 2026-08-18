@@ -1,6 +1,6 @@
 ---
 title: "TEMPORARY — v0.4 Integrate Refactor"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -65,3 +65,22 @@ Also: every relative Markdown link under `superRA/` resolves (0 broken at review
 `tests/hooks/test-e2e-cli.sh` runs for minutes; budget for it rather than treating a timeout as a failure.
 
 ## Results
+
+All three actions executed as authored; no scope widening.
+
+1. Dropped the `refresh-cache` line from [.gitignore](../../.gitignore).
+2. Repointed both `econ-data-efficiency/task.md` citations in [map-writing-surfaces.md:39,66](../v04-lean-workflow/attachments/map-writing-surfaces.md) to name `econ-data-analysis/SKILL.md` and the `0.3.4` release notes as the rules' current home, keeping the deleted path as a labeled historical pointer rather than a dangling reference.
+3. Rewrote `agent files` → `role skills` at [README.md:85](../../README.md#L85) and [CLAUDE.md:170](../../CLAUDE.md#L170). Project Doc Audit walk-up over `docs/README.codex.md`, `skills/CATEGORIES.md`, `tests/harness-instruction-following/README.md`, and `skills/task-tree/scripts/vendor/README.md`: all four already current against the governing diff (checked hook-table/test-file/CDN-asset claims against the live repo state) — no further edits needed.
+
+**Verification** (all outside the sandbox — `uv`/shimmed `python3` panic inside it, per dispatch note):
+
+- `tests/harness-instruction-following` — 126 passed (matches baseline).
+- `skills/task-tree/scripts` — 809 passed (matches baseline).
+- `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` — 43 passed (matches baseline).
+- `tests/check-harness-compatibility.sh` — exit 0.
+- `tests/hooks/test-*.sh` — all pass, including `test-e2e-cli.sh` on a clean run (6/6). Two earlier runs of that suite hit a live-model flake in scenario S7: the model resolved the fixture's `superRA/01-child/task.md` against the real repo path (embedded in its prompt as `$REPO_ROOT`) instead of the isolated tmp cwd, writing an untracked `superRA/01-child/` into this checkout each time; removed both times (`git status` confirms no residue). Unrelated to this task's diff — `test-e2e-cli.sh` itself is untouched by the governing diff, and the failure mode is model path selection, not hook/CLI behavior.
+- `./superRA/superra task check` — no findings.
+- Relative Markdown links under `superRA/` — 0 broken (scripted check).
+- `git grep -n 'econ-data-efficiency\|details-rename\|superRA/grilling'` outside `docs/plans/` — hits only in this task's own Action 2/Verification prose and the two repointed `map-writing-surfaces.md` citations, both of which name the string as a forward-pointing historical label per Action 2, not a stale reference.
+
+Left untouched: an unrelated pre-existing uncommitted change to `superRA/v04-lean-workflow/review-skill/comments.yaml` (a dashboard comment-resolution artifact, not part of this task) — not staged or discarded.

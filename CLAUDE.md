@@ -167,7 +167,7 @@ Measure the pass in words, not lines. Worked example: `daea6ae3..f525b63e` on `s
 
 Adding a new vertical means composing existing workflow pieces with a new domain skill. Create `skills/<vertical>/SKILL.md`, add its domain discipline and gated checklists, add stage-scoped references only for stages it touches, then add the vertical to routing/inventory surfaces.
 
-The workflow skills, agent files, orchestration skill, and generic utility skills should carry over unchanged unless the new vertical exposes a genuinely generic gap.
+The workflow skills, role skills, orchestration skill, and generic utility skills should carry over unchanged unless the new vertical exposes a genuinely generic gap.
 
 ## Design Audit Checklist
 

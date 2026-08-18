@@ -36,7 +36,7 @@ Unbounded, at the moment the orchestrator's context is fullest. The subagent→o
 ## 6. Live evidence — what actually makes files long
 
 - **Triple-written result (showcase)**: mean |α|, GRS statistics, and the small-growth exception each appear in `showcase-analysis/task.md`, `02-analysis/task.md` (multiple times: results, tables, a validation checklist restating its own numbers), and `03-writeup/task.md`; figure captions duplicated verbatim across files. `03-writeup`'s objective even says "link down... rather than restating every number" — and the result restates the verdict table anyway. A reader needs ~25 lines of the 118-line `## Results`. This subtree is the docs-site showcase, so it teaches the norm.
-- **Stage accretion (`econ-data-efficiency/task.md`)**: `## Results` = implement findings + `### Integration protection` (duplicating the protect commit body) + `### Integration fit` + `**Final diff self-check**` (mandated by `refactor-and-integrate:91`, `[BLOCKING]` if missing per :97) — process telemetry useful for one review round, permanently resident.
+- **Stage accretion (`econ-data-efficiency/task.md`, folded into `econ-data-analysis/SKILL.md` and the `0.3.4` release notes)**: `## Results` = implement findings + `### Integration protection` (duplicating the protect commit body) + `### Integration fit` + `**Final diff self-check**` (mandated by `refactor-and-integrate:91`, `[BLOCKING]` if missing per :97) — process telemetry useful for one review round, permanently resident.
 - **Four-way duplicated verification counts**: the same test-suite numbers in child, parent, grandparent, and an unrelated sibling task file; plus a round-by-round `Revision:` log surviving review despite the no-log rule.
 - **Changelog-style leaf (`task-tree/dashboard/task.md`)**: six "what shipped" bullets + per-feature subsections, duplicating its parent's and `docs-site`'s descriptions of the same capabilities.
 - **The counter-example that works**: `task-tree/task.md` (35 lines) — four one-line child summaries with links, one design decision, one verification line. Concise rollup is achievable under today's rules; it is just not required.
@@ -63,4 +63,4 @@ Unbounded, at the moment the orchestrator's context is fullest. The subagent→o
 
 **Tier 4 (planner)**: `task-tree-design.md:88` trim counterpart.
 
-**Tier 5 (exemplars/docs — deferred out of v0.4 scope)**: showcase task files + `docs/showcase-fixtures/**`; `docs/site` quickstart/task-file pages; hygiene of this repo's own tree (`econ-data-efficiency`, `task-tree/dashboard`, `interactive-mode` subtree).
+**Tier 5 (exemplars/docs — deferred out of v0.4 scope)**: showcase task files + `docs/showcase-fixtures/**`; `docs/site` quickstart/task-file pages; hygiene of this repo's own tree (`task-tree/dashboard`, `interactive-mode` subtree — `econ-data-efficiency` since folded into `econ-data-analysis/SKILL.md` and the `0.3.4` release notes, so no longer applicable here).
