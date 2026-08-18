@@ -1,6 +1,6 @@
 # superRA
 
-> ⚠️ **Breaking change (0.4.0):** the dedicated implementer/reviewer agents are retired — roles are now skills, independent review is triggered rather than scheduled, and interactive execution is the default. Existing projects and task trees keep working with nothing to migrate; Codex users who installed the named agents globally should delete the stale files (`rm -f ~/.codex/agents/superra_*.toml`). See [RELEASE-NOTES](RELEASE-NOTES.md) for the full 0.4.0 entry and history.
+> ⚠️ **Breaking change (0.4.0):** the dedicated implementer/reviewer agents are retired — roles are now skills, independent review is triggered rather than scheduled, and interactive execution is the default. Existing projects and task trees keep working with nothing to migrate; stale Codex named-agent installs from earlier versions are detected in-session and cleaned up with your confirmation. See [RELEASE-NOTES](RELEASE-NOTES.md) for the full 0.4.0 entry and history.
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
@@ -64,14 +64,14 @@ To update later:
 
 ```bash
 claude plugin marketplace update superRA
-claude plugin update superRA
+claude plugin update superRA@superRA
 ```
 
 For Codex setup and a local-clone install (to track or modify superRA itself), see [`docs/README.codex.md`](docs/README.codex.md). Any other harness that supports skills and subagents installs the same plugin sources.
 
 ### Upgrading
 
-0.4.0 retires the dedicated role agents in favor of role skills; existing projects and task trees keep working with nothing to migrate. Codex users who installed the named agents globally should delete the stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml` — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
+0.4.0 retires the dedicated role agents in favor of role skills; existing projects and task trees keep working with nothing to migrate. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
 
 ## Contributing
 

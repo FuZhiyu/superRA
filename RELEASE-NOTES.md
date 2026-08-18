@@ -32,7 +32,7 @@ everything agents write is governed by one reporting contract.
 ### Removed
 
 - The prototype agent files (`agents/implementer.md`, `agents/reviewer.md`), the generated Codex named agents (`.codex/agents/superra_*.toml`), the `codex-superra-setup` skill and its generator, and the canonical-role resolver (`using-superra/scripts/resolve_role.py`, `references/canonical-role.md`, `references/claude-instructions.md`).
-- **Codex users who installed the named agents globally:** delete the now-stale files — `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml`. Nothing replaces them; the skills bundle carries the roles.
+- **Codex users who installed the named agents globally:** a session that finds the now-stale files (`~/.codex/agents/superra_*.toml`) deletes them with your confirmation (or remove them by hand: `rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml`). Nothing replaces them; the skills bundle carries the roles.
 
 ### Release Prep
 

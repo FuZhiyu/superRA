@@ -41,7 +41,7 @@ Codex plugins package skills, hooks, apps, and MCP configuration, and Codex disc
 
 That keeps the workflow single-sourced — canonical skills stay in `skills/`, and Codex-specific surfaces are limited to adapters, symlinks, and install metadata.
 
-If you installed superRA before v0.4, delete the stale generated agents:
+If you installed superRA before v0.4, a session that finds the stale generated agents flags them and deletes them with your confirmation; to remove them yourself:
 
 ```bash
 rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml

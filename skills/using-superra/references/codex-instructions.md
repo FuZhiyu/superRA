@@ -26,6 +26,10 @@ The user invoking `superRA:superimplement`, `superRA:superintegrate`, or `superR
 
 Codex may run spawned agents in internal scratch workspaces. Never use `.codex/worktrees` or any Codex-internal path as a superRA worktree. For parallel dispatch, the orchestrator creates the git worktree at the `agent-orchestration` placement path, passes its absolute path in `Worktree:`, and the agent enters that path before editing.
 
+## Retired Named Agents
+
+`superra_implementer` / `superra_reviewer` named agents are retired — never dispatch them; the dispatch prompt names the role skill instead. If `~/.codex/agents/superra_implementer.toml` or `~/.codex/agents/superra_reviewer.toml` exists, tell the user they are stale pre-0.4 installs and delete them on confirmation.
+
 ## Codex Tool Map
 
 Claude-oriented tool names appearing in these skills map to:
