@@ -24,33 +24,6 @@ These are generated artifacts (`CLAUDE.md` §"Generated artifacts stay generated
 
 ## Results
 
-The two generated direct-mode role references are gone, the generator no longer emits them, and the `.toml` named-agents are unaffected.
+The two generated direct-mode role references are gone: the generator stopped emitting them, `CLAUDE.md`'s generated-artifact enumeration dropped them, and the live surfaces that hard-referenced them — the harness compatibility script and the `load_contract.json` source paths — were repointed. A whole-repo grep left hits only in the dated `docs/plans/` archives, which record past regenerations accurately and were left alone.
 
-**Generator ([sync_codex_agents.py](../../../skills/codex-superra-setup/scripts/sync_codex_agents.py)).** Stripped all direct-mode logic: removed the `direct_mode_target` / `direct_mode_title` fields from `RoleSpec`, the `DIRECT_MODE_MANAGED_HEADER` constant, `render_all_direct_mode_refs` / `render_direct_mode_ref` / `split_top_level_sections` / `render_implementer_direct_mode_before_you_start` / `render_reviewer_direct_mode_before_you_start`, and the now-unused `import re`. `main()` and `run_check()` no longer render, write, or check the direct-mode refs; both now operate on the `.toml` agents only. The docstring drops "and direct-mode role references."
-
-**Deleted files.** [direct-mode-implementer.md] and [direct-mode-reviewer.md] removed via `git rm` from `skills/using-superra/references/`.
-
-**Tests ([test_sync_codex_agents.py](../../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py)).** Removed `test_committed_direct_mode_refs_match_generator` and `test_generated_direct_mode_refs_have_managed_headers` (both called the deleted `render_all_direct_mode_refs`), and the now-unused `runpy` import + `SCRIPT_NS`.
-
-**CLAUDE.md.** Three live dangling references removed: the "Currently generated" enumeration now lists only the two `.toml`s; the "Generated artifacts stay generated" bullet drops "Direct-mode role references and"; and the obsolete "Direct mode reads skill-owned role references" architecture bullet (its loading mechanism no longer exists) is deleted.
-
-**Test fixtures.** Two live test surfaces hard-referenced the deleted files and were repointed:
-- [check-harness-compatibility.sh:70](../../../tests/check-harness-compatibility.sh#L70) — removed the two `test -f skills/using-superra/references/direct-mode-*.md` assertions under the "Codex adapter references" section (the script runs under `set -euo pipefail` and aborted with the files gone). The `codex-instructions.md` assertion and the `AGENTS.md`/`AGENT.md` readlink checks remain, so the section stays non-empty.
-- [load_contract.json](../../../tests/harness-instruction-following/load_contract.json) — dropped the two `direct-mode-*` paths from LC005 and LC006 `source_paths`, and reworded LC006's `expected_evidence` so the drift check describes regenerating only the `.codex` agent TOML.
-
-**Verification.**
-- `python3 sync_codex_agents.py --scope project` → clean; `--check` → "All generated agent files are up to date"; `git status` shows the two `.toml`s unmodified (already up to date), confirming the kept named-agents are unaffected.
-- Both `.toml` agents present: `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
-- `python3 test_sync_codex_agents.py` → `Ran 3 tests OK`.
-- `bash tests/check-harness-compatibility.sh` → exit 0.
-- `pytest tests/harness-instruction-following/test_contract.py` → 10 passed.
-- Whole-repo grep (including `tests/`) for `direct-mode-implementer` / `direct-mode-reviewer` returns zero hits in any live surface — skill prose, agent files, adapter references, and test fixtures are all clean. The only remaining mentions are the `docs/plans/*.md` archives and three `task.md` files (this task plus two siblings), all covered below.
-
-**Left untouched (out of scope, flagged).**
-- `docs/plans/*.md` — dated historical plan/results archives that accurately record past regenerations of these files (one, [2026-05-20-markdown-style-guide-results.md](../../../docs/plans/2026-05-20-markdown-style-guide-results.md), holds actual markdown links to the deleted files). Rewriting an archive to erase accurate history is worse than a dead link in a non-loaded record; the dispatch's sweep scope (skill/agent/adapter prose) excludes these.
-- Sibling task files `execution-mode-contract/task.md` and `task-tree/dashboard/worktree-scoped-launch-url/task.md` mention the filenames but belong to other tasks — not edited per the ownership boundary. The latter's "do not edit these generated files" note is now stale and should be cleaned when that task is next touched.
-
-**Regression protection.** [test_sync_codex_agents.py](../../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py) now asserts that a fresh installation emits exactly `superra_implementer.toml` and `superra_reviewer.toml`; the existing project `--check` continues to byte-check the committed generated agents against the canonical role specs. Red-green verification changed the expected reviewer filename, observed the failure, restored it, and passed.
-
-[direct-mode-implementer.md]: ../../../skills/using-superra/references/direct-mode-implementer.md
-[direct-mode-reviewer.md]: ../../../skills/using-superra/references/direct-mode-reviewer.md
+The Codex named-agent TOMLs this task deliberately preserved, and the `codex-superra-setup` generator itself, were retired soon after by [v04-lean-workflow/role-skills](../../v04-lean-workflow/role-skills/task.md). Nothing this task touched survives on the current surface.

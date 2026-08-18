@@ -37,8 +37,8 @@ audited test surfaces without changing production code:
 - Residual Markdown and generated-agent tests retain rule/line identity and
   verify an unmanaged file remains unchanged instead of matching remediation
   copy
-  ([test_md_integrity.py](../../../../skills/report-in-markdown/scripts/test_md_integrity.py),
-  [test_sync_codex_agents.py](../../../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py)).
+  ([test_md_integrity.py](../../../../skills/communicate/scripts/test_md_integrity.py),
+  and `test_sync_codex_agents.py`, since retired with its generator).
 
 The test-only diff is 122 insertions and 1,002 deletions across 16 existing
 files. It adds no files, helpers, subprocesses, live calls, or production

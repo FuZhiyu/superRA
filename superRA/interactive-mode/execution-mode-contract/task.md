@@ -22,20 +22,14 @@ This contract *names* the model; the `seat-assignment` task implements the mecha
 
 ## Results
 
-Rewrote the execution-mode contract as the authoritative home of the two-mode model.
+[main-agent.md §Execution Modes](../../../skills/using-superra/references/main-agent.md) owns the mode vocabulary: two dials, selection by autonomy and human cadence.
 
-**`skills/using-superra/references/main-agent.md §Execution Modes`** ([main-agent.md](../../../skills/using-superra/references/main-agent.md)) states that two dials set how a task runs; selection is by autonomy and human cadence:
+- **Axis A — human cadence:** autonomous (default at the time) versus interactive, an explicit opt-in.
+- **Axis B — seat assignment:** each task's implementer and reviewer seat filled by main or subagent, with the structures and the per-task choice owned by [agent-orchestration §Seat Assignment](../../../skills/agent-orchestration/SKILL.md) — pointed at, not duplicated.
+- **Two modes.** `subagent` is autonomous: Axis B picks the seat structure, a main-filled seat runs that seat's role spec and dispatches the other, and everything routes through `agent-orchestration`. `interactive` (alias `direct`) has the main agent execute the task itself at high human cadence and **ask the researcher** before dispatching a reviewer.
 
-- **Axis A — human cadence:** autonomous (default) vs interactive (explicit opt-in).
-- **Axis B — seat assignment:** each task's implementer and reviewer seat filled by main or subagent; `superRA:agent-orchestration §Seat Assignment` owns the structures and the per-task choice (pointer only, no duplication).
-- **Two modes:** `subagent` (default) — autonomous; Axis B picks the seat structure, and when the main agent fills a seat it runs that seat's role spec (`implementer.md`/`reviewer.md`) and dispatches the other; everything routes through `agent-orchestration`. `interactive` (or `direct`) — main executes the task itself at high human cadence via `superplan/references/interactive-mode.md`, and **asks the researcher** before dispatching a reviewer rather than dispatching on its own.
+The `manual` preset is gone — it duplicated interactive with review deferred. So are the "direct mode is a fallback for trivial tasks" framing and the direct-mode protocol block that read the since-deleted generated mirrors. The Codex adapter separates three capability states in a structured table: normal dispatch, a missing-agent setup path, and a harness-forced in-session implementer→reviewer pass when Codex exposes no agent tool at all.
 
-Removed the old "Direct mode is a fallback: only for trivial tasks" framing and the "Direct mode protocol" block (the dropped `direct-mode-implementer.md` / `direct-mode-reviewer.md` reads). The Codex-agents pointer is retained unchanged.
+**Protection is structural.** [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) parses the Codex availability table and distinguishes unavailable agent tooling from a missing installation; interactive and seat behavior are checked by the transcript evaluators in [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py).
 
-**Follow-up revision (interactive-mode branch review).** Per researcher feedback the `manual` preset was dropped (it duplicated interactive-with-deferred-review) and the "not task difficulty" mandate removed; the interactive bullet now states the ask-before-review behavior. `skills/using-superra/SKILL.md §Execution Modes` one-line pointer unchanged in intent. The Codex adapter now separates three capability states in a structured availability table: normal named dispatch; named-agent setup when the tool exists but role agents are missing; and a harness-forced autonomous in-session implementer→reviewer pass only when Codex exposes no agent tool.
-
-**DRY held:** the contract owns the model vocabulary; the interactive how-to points to the superplan reference, seat mechanics point to `agent-orchestration`.
-
-**Verification:** `grep -i "trivial\|fallback\|manual\|direct-mode-implementer\|direct-mode-reviewer"` over `main-agent.md §Execution Modes` returns no matches.
-
-**Regression protection.** Authored instruction prose and labels are never test oracles; protection uses structured surfaces or observable behavior. [test_contract.py](../../../tests/harness-instruction-following/test_contract.py) parses the structured Codex availability table and distinguishes unavailable agent tooling from a missing named-agent installation. Interactive behavior and seat behavior are protected by transcript/artifact evaluators in [test_transcript_assertions.py](../../../tests/harness-instruction-following/test_transcript_assertions.py).
+v0.4 flipped Axis A's default to interactive and retired the named-agent Codex path; see [v04-lean-workflow](../../v04-lean-workflow/task.md).
