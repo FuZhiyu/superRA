@@ -1,14 +1,1 @@
-[
-  {
-    "id": 1,
-    "author": "Julie Zhiyu Fu",
-    "timestamp": "2026-08-01T18:16:49.355552",
-    "resolved": true,
-    "anchor": {
-      "section": "Objective",
-      "block_index": 1,
-      "text_preview": "\nParameterize the review skill by tier (depth: quick pass vs"
-    },
-    "body": "Requesting reproducibility is very dangerous, because reviewers often rerun the code, which can be very costly for large‑scale data analysis. When the code is run three times—incremental runs, reviewer runs, and orchestrator runs—it becomes prohibitively expensive.\n\nSo we also need to find a smarter way to think about this."
-  }
-]
+[]
