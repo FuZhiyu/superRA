@@ -1,6 +1,6 @@
 ---
 title: "Discovery Precision: Built-in Denylist and Tracked-Symlink Exclusion"
-status: revise
+status: approved
 depends_on: []
 ---
 
@@ -37,6 +37,6 @@ Discovery returns only genuine data roots. Both changes live in [worktree_data_d
 
 **The top-level symlink safety net skips symlinks git already tracks.** `_tracked_external_symlink_paths` returned all tracked symlinks despite its name (the external filter lived at its one call site), so it is renamed `_tracked_symlink_paths` and computed once. A tracked repo-internal alias such as `AGENTS.md` → `CLAUDE.md` is no longer re-collected by the safety net after the dedicated tracked-symlink pass has already excluded it.
 
-**`TestDiscoveryPrecision`** adds three tests: denylisted `.venv`, `__pycache__`, and `.DS_Store` excluded while a sibling gitignored `data/` survives; an annotated `.cache/` root returning `symlink_only: True`; a tracked `AGENTS.md` symlink excluded while an untracked top-level symlink to an external directory is still discovered. 44 tests pass overall.
+**`TestDiscoveryPrecision`** adds three tests: denylisted `.venv`, `__pycache__`, and `.DS_Store` excluded while a sibling gitignored `data/` survives; an annotated `.cache/` root returning `symlink_only: True`; a tracked `AGENTS.md` symlink excluded while an untracked top-level symlink to an external directory is still discovered. 43 tests pass overall.
 
 **One pre-existing test moved off a denylisted name.** `TestNestedWorktreeSelfReference` used a gitignored directory literally named `.worktrees` to exercise the destination-containment guard, including a case asserting it is *kept* when no `dest_worktree` is passed — no longer true once `.worktrees` is denylisted. Its fixture directory is renamed `nested-worktrees` so it keeps testing the self-reference guard in isolation.

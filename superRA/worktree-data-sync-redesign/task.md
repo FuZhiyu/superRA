@@ -1,6 +1,6 @@
 ---
 title: "Worktree Data Sync Redesign: Fast Seeding, Precise Discovery, Loud Failures"
-status: revise
+status: approved
 depends_on: []
 ---
 
@@ -32,18 +32,11 @@ Design settled with the researcher in-session (2026-07-08); the decisions below 
 
 ## Results
 
-Seeding a fresh worktree is now one clone per clean root instead of one subprocess per file, discovery returns only genuine data roots, and every failure is named and exits nonzero. The behavior is documented in [worktree-data-sync/SKILL.md](../../skills/worktree-data-sync/SKILL.md); 44 tests cover it in [test_worktree_data_sync.py](../../skills/worktree-data-sync/scripts/test_worktree_data_sync.py).
+Seeding a fresh worktree is now one clone per clean root instead of one subprocess per file, discovery returns only genuine data roots, and every failure is named and exits nonzero. The behavior is documented in [worktree-data-sync/SKILL.md](../../skills/worktree-data-sync/SKILL.md); 43 tests cover it in [test_worktree_data_sync.py](../../skills/worktree-data-sync/scripts/test_worktree_data_sync.py).
 
 - **Seed routes each managed root by a stat-only preflight** ([01-seed-fast-path](01-seed-fast-path/task.md)). A clean fresh root is one `cp -c -R -p` — the measured 0.3s against 15.5s for the old per-file loop on 2,000 files. Directories holding cloud placeholders are rebuilt with per-file symlinks and batched copies; a mostly-placeholder root seeds per file and suggests annotating it `# data-sync:symlink` rather than switching behavior. Never-overwrite holds in every path, and off APFS the clone falls back to `shutil.copytree` before recording a failure.
-- **Failures are loud.** Each failed path is recorded with its reason, listed on stderr (first 20 plus a count), and exits 1 — replacing a swallowed `errors=N` counter that exited 0.
+- **Failures are loud.** Each failed path is recorded with its reason, listed on stderr, and exits 1 — replacing a swallowed `errors=N` counter that exited 0.
 - **Discovery stops collecting junk** ([02-discovery-precision](02-discovery-precision/task.md)). A built-in denylist filters discovered entries by basename — venvs, caches, build directories, harness-local state — while an explicit `# data-sync:symlink` annotation always overrides it, and root *contents* are never filtered. The top-level symlink safety net skips symlinks git already tracks, so a repo-internal alias like `AGENTS.md` → `CLAUDE.md` is no longer double-collected.
 - **`--from` defaults to the caller's own worktree** ([03-defaults-and-docs](03-defaults-and-docs/task.md)), not the repository's main worktree, and errors clearly when cwd sits outside every worktree. The "always pass `--from`" warning is deleted from [parallel-dispatch.md](../../skills/agent-orchestration/references/parallel-dispatch.md) and the `--from "$(pwd)"` workaround from [worktree-harness-fallback.md](../../skills/agent-orchestration/references/worktree-harness-fallback.md).
 
 Both scripts stay stdlib-only and PEP 723-free so they never provision a venv inside a target project.
-
-## Review Notes
-
-Quick tier; focuses: correctness, results-writing.
-
-1. **[BLOCKING]** The suite is 43 tests, not 44, and the record says 44 in three places — the `## Results` opener above ("44 tests cover it"), [01-seed-fast-path](01-seed-fast-path/task.md) ("**Verification.** 44 tests pass"), and [02-discovery-precision](02-discovery-precision/task.md) ("44 tests pass overall"). The maturation commit `ae010f3f` wrote or rewrote all three lines; `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -q` reports `43 passed`. The count went stale at `b5464687`, which deleted `test_seed_failure_emits_capped_listing` under the recorded prose-test cleanup. Fix: 44 → 43 in all three.
-2. **[ADVISORY]** "listed on stderr (first 20 plus a count)" in the `## Results` bullet above is the one claimed behavior whose only test `b5464687` removed. [`emit_seed_failures`](../../skills/worktree-data-sync/scripts/sync_worktree_data.py#L1135) still implements the cap, and the surviving `test_cli_seed_nonzero_exit_on_failure` asserts the failure list and exit code but no longer reads stderr. Either note the coverage gap where the claim is made, or drop the cap detail from the claim.

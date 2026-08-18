@@ -1,6 +1,6 @@
 ---
 title: "Seed Fast Path: Subtree Cloning with Dataless Preflight and Loud Errors"
-status: revise
+status: approved
 depends_on: []
 ---
 
@@ -48,7 +48,7 @@ Subprocess calls now scale with contaminated directories rather than files — t
 
 **Failures reach the caller.** `SeedSummary` gained a `failures` list and a `record_failure` method that every former `summary.errors += 1` site now calls, so `errors == len(failures)`. `emit_seed_failures` prints the first 20 `path: reason` lines with an `… and K more` tail to stderr, and `main` exits 1 whenever the list is non-empty.
 
-**Verification.** 44 tests pass — `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py`. `TestSeedFastPath` covers each routing case with a subprocess spy, including a regression guard that a directory symlink inside a mostly-dataless root is recreated verbatim rather than followed into or dropped. An end-to-end CLI seed into a fresh worktree cloned a three-file root wholesale, symlinked the annotated root, and exited 0.
+**Verification.** 43 tests pass — `uv run --with pytest python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py`. `TestSeedFastPath` covers each routing case with a subprocess spy, including a regression guard that a directory symlink inside a mostly-dataless root is recreated verbatim rather than followed into or dropped. An end-to-end CLI seed into a fresh worktree cloned a three-file root wholesale, symlinked the annotated root, and exited 0.
 
 ### Notes
 
