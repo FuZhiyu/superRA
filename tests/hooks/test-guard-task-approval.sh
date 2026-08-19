@@ -81,6 +81,55 @@ patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md'
 out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
 expect 'Blocking vocabulary outside Review Notes passes' allow "$out"
 
+# A hunk context line may be the empty string (no leading space); the parser
+# must treat it as context, not drop it and fail open.
+write_task revise '> [BLOCKING] Fix it.'
+patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md' '@@' '-status: revise' '+status: approved' '@@' ' ## Review Notes' '' ' > [BLOCKING] Fix it.' '*** End Patch')
+out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
+expect 'Blank-context hunk blocks approval' deny "$out"
+
+# Hunks may arrive out of order; each must match from position 0.
+write_task revise '> [BLOCKING] Fix it.'
+patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md' '@@' '-Test.' '+Tested.' '@@' '-status: revise' '+status: approved' '*** End Patch')
+out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
+expect 'Out-of-order hunks block approval' deny "$out"
+
+# A `Move to:` header must not reset the parser and drop the hunks.
+write_task revise '> [BLOCKING] Fix it.'
+patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md' '*** Move to: superRA/beta/task.md' '@@' '-status: revise' '+status: approved' '*** End Patch')
+out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
+expect 'Move-to patch blocks approval' deny "$out"
+
+# Fail closed: an unreconstructable patch that adds `status: approved` onto a
+# file with blocking review notes is denied, not waved through.
+write_task revise '> [BLOCKING] Fix it.'
+patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md' '@@' '-status: no-such-line' '+status: approved' '*** End Patch')
+out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
+expect 'Unreconstructable approval patch fails closed' deny "$out"
+
+write_task revise '> [ADVISORY] Consider it.'
+patch=$(printf '%s\n' '*** Begin Patch' '*** Update File: superRA/alpha/task.md' '@@' '-status: no-such-line' '+status: approved' '*** End Patch')
+out=$(run_hook apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch")")
+expect 'Unreconstructable patch without blocking notes passes' allow "$out"
+
+# Bash in-place mutations are never reconstructable: conservative deny when the
+# command sets `status: approved` and the file retains a blocker.
+write_task revise '> [BLOCKING] Fix it.'
+out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"sed -i \"\" \"s/status: revise/status: approved/\" " + sys.argv[1]}))' "$task")")
+expect 'Bash sed in-place approval flip is denied' deny "$out"
+
+write_task revise '> [BLOCKING] Fix it.'
+out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"printf \"status: approved\" > " + sys.argv[1]}))' "$task")")
+expect 'Bash redirect approval flip is denied' deny "$out"
+
+write_task revise '> [ADVISORY] Consider it.'
+out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"sed -i \"\" \"s/status: revise/status: approved/\" " + sys.argv[1]}))' "$task")")
+expect 'Bash approval flip without blocking notes passes' allow "$out"
+
+write_task revise '> [BLOCKING] Fix it.'
+out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"sed -i \"\" \"s/Test./Tested./\" " + sys.argv[1]}))' "$task")")
+expect 'Bash mutation without approval flip passes' allow "$out"
+
 codex_command=$(python3 - "$REPO_ROOT/hooks/hooks-codex.json" <<'PY'
 import json, sys
 groups = json.load(open(sys.argv[1]))["hooks"]["PreToolUse"]
@@ -106,12 +155,13 @@ import json, sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
-for name in ("hooks.json", "hooks-codex.json"):
+for name, matcher in (("hooks.json", "Edit|Write|Bash"), ("hooks-codex.json", "Edit|Write|Bash|apply_patch")):
     groups = json.loads((root / "hooks" / name).read_text())["hooks"]["PreToolUse"]
     assert any(
-        any("guard-task-approval" in hook.get("command", "") for hook in group.get("hooks", []))
+        group.get("matcher") == matcher
+        and any("guard-task-approval" in hook.get("command", "") for hook in group.get("hooks", []))
         for group in groups
-    )
+    ), name
 cursor = json.loads((root / "hooks/hooks-cursor.json").read_text())
 assert any("guard-task-approval" in hook["command"] for hook in cursor["hooks"]["preToolUse"])
 PY

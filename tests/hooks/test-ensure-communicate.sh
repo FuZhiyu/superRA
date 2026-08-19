@@ -89,6 +89,36 @@ run_case "Task Markdown passes with Communicate load" silent Edit "{\"file_path\
 run_case "Prose mention is not load evidence" deny Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$mentioned"
 run_case "Retry passes when evidence appears" silent Edit "{\"file_path\":\"$project/README.md\"}" "$loaded"
 
+read_tool='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"skills/communicate/SKILL.md"}}]}}'
+grep_tool='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Grep","input":{"path":"skills/communicate/SKILL.md","pattern":"pyramid"}}]}}'
+git_diff='{"type":"tool_use","name":"Bash","input":{"command":"git diff skills/communicate/SKILL.md"}}'
+grep_cmd='{"type":"function_call","name":"exec_command","arguments":{"cmd":"grep -n pyramid skills/communicate/SKILL.md"}}'
+run_case "Read-tool path counts as load" silent Edit "{\"file_path\":\"$project/README.md\"}" "$read_tool"
+run_case "Grep-tool path is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$grep_tool"
+run_case "git diff mention is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$git_diff"
+run_case "grep command mention is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$grep_cmd"
+
+agent_type_only=$(python3 -c '
+import json, sys
+print(json.dumps({
+    "session_id": "session",
+    "transcript_path": "",
+    "cwd": sys.argv[1],
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Edit",
+    "tool_input": {"file_path": sys.argv[1] + "/README.md"},
+    "agent_type": "general-purpose",
+}))
+' "$project")
+out=$(bash "$HOOK" <<<"$agent_type_only")
+if [ "$out" = "{}" ]; then
+  printf 'PASS  agent_type-only subagent call is ignored\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL  agent_type-only subagent call is ignored (got %s)\n' "$out"
+  fail=$((fail + 1))
+fi
+
 patch_md=$(printf '%s\n' '*** Begin Patch' '*** Update File: README.md' '@@' '*** End Patch')
 patch_txt=$(printf '%s\n' '*** Begin Patch' '*** Update File: notes.txt' '@@' '*** End Patch')
 run_case "apply_patch Markdown is gated" deny apply_patch "$(python3 -c 'import json,sys; print(json.dumps({"command":sys.argv[1]}))' "$patch_md")" "$other"
@@ -114,15 +144,15 @@ claude = json.loads((root / "hooks/hooks.json").read_text(encoding="utf-8"))
 codex = json.loads((root / "hooks/hooks-codex.json").read_text(encoding="utf-8"))
 cursor = json.loads((root / "hooks/hooks-cursor.json").read_text(encoding="utf-8"))
 
-def wired(groups):
+def wired(groups, matcher):
     return any(
-        group.get("matcher") == "Edit|Write|Bash"
+        group.get("matcher") == matcher
         and any("ensure-communicate" in hook.get("command", "") for hook in group.get("hooks", []))
         for group in groups
     )
 
-assert wired(claude["hooks"]["PreToolUse"])
-assert wired(codex["hooks"]["PreToolUse"])
+assert wired(claude["hooks"]["PreToolUse"], "Edit|Write|Bash")
+assert wired(codex["hooks"]["PreToolUse"], "Edit|Write|Bash|apply_patch")
 assert any("ensure-communicate" in hook["command"] for hook in cursor["hooks"]["preToolUse"])
 PY
 then

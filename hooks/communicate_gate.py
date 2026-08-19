@@ -12,57 +12,35 @@ from pathlib import Path
 
 
 COMMUNICATE = "superRA:communicate"
-_PATCH_PATH_RE = re.compile(
-    r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
-)
-_REDIRECT_MD_RE = re.compile(r"(?:^|[\s;|&])(?:\d*)>>?\s*(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])", re.IGNORECASE)
-_TEE_MD_RE = re.compile(r"(?:^|[\s;|&])tee(?:\s+-[a-zA-Z]+)*\s+(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])", re.IGNORECASE)
-_IN_PLACE_MD_RE = re.compile(
-    r"(?:^|[\s;|&])(?:sed|perl)\s+[^;|&]*?-i(?:\S*)?\s+[^;|&]*?(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])",
-    re.IGNORECASE,
-)
+_SKILL_MD_RE = re.compile(r"skills[/\\]communicate[/\\]SKILL\.md", re.IGNORECASE)
+# Shell verbs whose invocation reads a file rather than mutating it. `sed`
+# counts only with `-n` (print mode); bare `sed` rewrites.
+_READ_VERBS = ("cat", "head", "bat", "less")
 
 
 def _empty() -> None:
     print("{}")
 
 
+def _scripts_dir() -> Path:
+    return Path(__file__).resolve().parent.parent / "skills" / "task-tree" / "scripts"
+
+
+def _shared_module():
+    try:
+        scripts = str(_scripts_dir())
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        import _apply_patch
+
+        return _apply_patch
+    except Exception:
+        return None
+
+
 def _resolve(path: str, cwd: Path) -> Path:
     candidate = Path(path.strip().strip("'\""))
     return candidate if candidate.is_absolute() else cwd / candidate
-
-
-def _patch_paths(command: str) -> list[str]:
-    paths: list[str] = []
-    for line in command.splitlines():
-        match = _PATCH_PATH_RE.match(line)
-        if match:
-            path = (match.group("path") or match.group("move_to") or "").strip()
-            if path:
-                paths.append(path)
-    return paths
-
-
-def _bash_markdown_paths(command: str) -> list[str]:
-    paths: list[str] = []
-    for pattern in (_REDIRECT_MD_RE, _TEE_MD_RE, _IN_PLACE_MD_RE):
-        paths.extend(match.group(1).strip("'\"") for match in pattern.finditer(command))
-    for segment in re.split(r"(?:&&|\|\||[;|])", command):
-        try:
-            tokens = shlex.split(segment)
-        except ValueError:
-            continue
-        if not tokens:
-            continue
-        executable = Path(tokens[0]).name
-        operands = [token for token in tokens[1:] if not token.startswith("-")]
-        if executable == "touch":
-            paths.extend(token for token in operands if token.lower().endswith(".md"))
-        elif executable in ("cp", "mv") and operands:
-            destination = operands[-1]
-            if destination.lower().endswith(".md"):
-                paths.append(destination)
-    return paths
 
 
 def markdown_targets(data: dict) -> list[Path]:
@@ -79,12 +57,15 @@ def markdown_targets(data: dict) -> list[Path]:
     if tool_name in ("Edit", "Write"):
         file_path = tool_input.get("file_path", "") if isinstance(tool_input, dict) else ""
         raw_paths = [file_path] if isinstance(file_path, str) and file_path else []
-    elif tool_name == "apply_patch":
+    elif tool_name in ("apply_patch", "Bash"):
         command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
-        raw_paths = _patch_paths(command) if isinstance(command, str) and command else []
-    elif tool_name == "Bash":
-        command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
-        raw_paths = _bash_markdown_paths(command) if isinstance(command, str) and command else []
+        shared = _shared_module()
+        if shared is None or not isinstance(command, str) or not command:
+            return []
+        if tool_name == "apply_patch":
+            raw_paths = shared.patch_paths(command)
+        else:
+            raw_paths = shared.bash_markdown_mutation_targets(command)
     else:
         return []
 
@@ -103,7 +84,13 @@ def markdown_targets(data: dict) -> list[Path]:
 
 
 def _transcript_evidence(text: str) -> dict[str, list[str]] | None:
-    """Extract skill, command, and path fields from JSONL hook transcripts."""
+    """Extract skill loads, shell commands, and Read-tool paths from JSONL transcripts.
+
+    Path fields count as evidence only when they belong to a Read tool call, so
+    a `grep`/`Grep` hit or `git diff` mention of the skill file never clears the
+    gate. Tool attribution is the nearest enclosing dict carrying a string
+    ``name`` beside an ``input``/``arguments`` payload.
+    """
     records = []
     for line in text.splitlines():
         if not line.strip():
@@ -118,10 +105,16 @@ def _transcript_evidence(text: str) -> dict[str, list[str]] | None:
         except json.JSONDecodeError:
             return None
 
-    evidence: dict[str, list[str]] = {"skill": [], "command": [], "path": []}
+    evidence: dict[str, list[str]] = {"skill": [], "command": [], "read_path": []}
 
-    def collect(value) -> None:
+    def collect(value, tool: str) -> None:
         if isinstance(value, dict):
+            name = value.get("name")
+            if isinstance(name, str) and (
+                isinstance(value.get("input"), dict)
+                or isinstance(value.get("arguments"), dict)
+            ):
+                tool = name
             for key, item in value.items():
                 key_lower = key.lower()
                 if isinstance(item, str):
@@ -129,23 +122,43 @@ def _transcript_evidence(text: str) -> dict[str, list[str]] | None:
                         evidence["skill"].append(item)
                     elif key_lower in ("command", "cmd"):
                         evidence["command"].append(item)
-                    elif key_lower in ("file_path", "path"):
-                        evidence["path"].append(item)
-                collect(item)
+                    elif key_lower in ("file_path", "path") and tool == "Read":
+                        evidence["read_path"].append(item)
+                collect(item, tool)
         elif isinstance(value, list):
             for item in value:
-                collect(item)
+                collect(item, tool)
 
     for record in records:
-        collect(record)
+        collect(record, "")
     return evidence
+
+
+def _command_reads_skill(command: str) -> bool:
+    """Whether a shell command reads the Communicate SKILL.md."""
+    for segment in re.split(r"(?:&&|\|\||[;|])", command):
+        try:
+            tokens = shlex.split(segment)
+        except ValueError:
+            continue
+        if not tokens:
+            continue
+        verb = tokens[0].rsplit("/", 1)[-1]
+        if verb == "sed" and "-n" not in tokens:
+            continue
+        if verb != "sed" and verb not in _READ_VERBS:
+            continue
+        if any(_SKILL_MD_RE.search(token) for token in tokens[1:]):
+            return True
+    return False
 
 
 def _transcript_has_skill(evidence: dict[str, list[str]]) -> bool:
     if any(skill.lower() == COMMUNICATE.lower() for skill in evidence["skill"]):
         return True
-    pattern = re.compile(r"skills[/\\]communicate[/\\]SKILL\.md", re.IGNORECASE)
-    return any(pattern.search(value) for value in evidence["command"] + evidence["path"])
+    if any(_SKILL_MD_RE.search(value) for value in evidence["read_path"]):
+        return True
+    return any(_command_reads_skill(value) for value in evidence["command"])
 
 
 def main() -> None:
@@ -155,9 +168,10 @@ def main() -> None:
         _empty()
         return
 
-    # Claude exposes agent_id only inside a subagent tool call. The hard gate is
-    # deliberately main-thread-only; harnesses without this evidence fail open.
-    if data.get("agent_id"):
+    # Claude exposes agent_id/agent_type only inside a subagent tool call. The
+    # hard gate is deliberately main-thread-only; harnesses without this
+    # evidence fail open.
+    if data.get("agent_id") or data.get("agent_type"):
         _empty()
         return
 

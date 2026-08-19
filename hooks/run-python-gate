@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Shared gate shim: run the Python gate named by $gate (or $1) beside this
+# file, reading stdin directly. Sourced by the per-gate wrappers so no new
+# shell is spawned — hook runners may provide a sparse PATH without bash.
+# A missing runtime must not wedge the session — fail open with {}.
+
+set -uo pipefail
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+script_dir="$(cd "$script_dir" && pwd)"
+gate="${gate:-${1:-}}"
+
+if [ -n "$gate" ] && command -v python3 >/dev/null 2>&1; then
+  exec python3 "$script_dir/$gate"
+fi
+
+printf '{}\n'
+exit 0

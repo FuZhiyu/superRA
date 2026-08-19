@@ -8,6 +8,9 @@
     ],
     "preToolUse": [
       {
+        "command": "./hooks/agent-model-guard"
+      },
+      {
         "command": "./hooks/guard-task-approval"
       },
       {

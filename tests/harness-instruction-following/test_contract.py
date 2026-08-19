@@ -318,7 +318,7 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert any("agent-model-guard" in command for command in codex_commands)
     assert "Agent" in hook_matchers_for(codex, "PreToolUse")
     assert "Skill" not in hook_matchers_for(codex, "PreToolUse")
-    assert "Edit|Write|Bash" in hook_matchers_for(codex, "PostToolUse")
+    assert "Edit|Write|Bash|apply_patch" in hook_matchers_for(codex, "PostToolUse")
     assert hook_commands_for(codex, "Stop")
 
 

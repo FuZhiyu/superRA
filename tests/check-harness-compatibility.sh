@@ -61,7 +61,7 @@ for harness, registry in (("Claude", claude_events), ("Codex", events)):
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
 post_tool_groups = events["PostToolUse"]
 post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}
-assert "Edit|Write|Bash" in post_tool_matchers, "Codex PostToolUse must wire the merged task-hook matcher"
+assert "Edit|Write|Bash|apply_patch" in post_tool_matchers, "Codex PostToolUse must wire the merged task-hook matcher"
 assert all(
     any("run-hook.cmd" in h["command"] and "task-hook" in h["command"] for h in group["hooks"])
     for group in post_tool_groups

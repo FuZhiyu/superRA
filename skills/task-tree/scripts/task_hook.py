@@ -234,11 +234,6 @@ _MUTATING_RE = re.compile(
 _PLAN_TOKEN_RE = re.compile(
     r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?(?:superRA(?=$|/|[\s'\";|&])(?:/[^\s'\";|&]*)?|\.plan[^\s'\";|&]*))"
 )
-_APPLY_PATCH_FILE_RE = re.compile(
-    r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
-)
-
-
 def _command_mentions_task_root(command: str) -> bool:
     return _PLAN_TOKEN_RE.search(command) is not None
 
@@ -518,16 +513,10 @@ def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
 
 def _apply_patch_paths(command: str) -> list[str]:
     """Extract file paths from an apply_patch command payload."""
-    paths: list[str] = []
-    for line in command.splitlines():
-        match = _APPLY_PATCH_FILE_RE.match(line)
-        if not match:
-            continue
-        path = match.group("path") or match.group("move_to") or ""
-        path = path.strip()
-        if path:
-            paths.append(path)
-    return paths
+    _ensure_scripts_on_path()
+    from _apply_patch import patch_paths
+
+    return patch_paths(command)
 
 
 def _handle_apply_patch(data: dict) -> None:

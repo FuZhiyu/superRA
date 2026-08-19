@@ -2893,7 +2893,7 @@ class TestTaskHook:
         commands = [
             entry["hooks"][0]["command"]
             for entry in post_tool
-            if entry.get("matcher") == "Edit|Write|Bash"
+            if entry.get("matcher") == "Edit|Write|Bash|apply_patch"
         ]
         assert len(commands) == 1
 
@@ -4197,3 +4197,87 @@ class TestForestDetection:
         # Frontier tasks keep their full root-relative prefix.
         assert "01-alpha/01-model/01-derive" in paths
         assert "02-beta/01-data" in paths
+
+
+class TestApplyPatchParser:
+    """Shared apply_patch grammar in _apply_patch.py."""
+
+    def _parse(self, *lines):
+        import _apply_patch
+        return _apply_patch.parse_patch("\n".join(lines))
+
+    def test_headers_and_move_to(self):
+        patches = self._parse(
+            "*** Begin Patch",
+            "*** Update File: a/task.md",
+            "*** Move to: b/task.md",
+            "@@",
+            "-old",
+            "+new",
+            "*** Delete File: c.md",
+            "*** Add File: d.md",
+            "+hello",
+            "*** End Patch",
+        )
+        kinds = [(p.kind, p.path, p.move_to) for p in patches]
+        assert kinds == [
+            ("update", "a/task.md", "b/task.md"),
+            ("delete", "c.md", None),
+            ("add", "d.md", None),
+        ]
+        # The Move to: header must not reset the parser and drop the hunks.
+        assert patches[0].hunks == [["-old", "+new"]]
+        assert patches[0].target_path == "b/task.md"
+
+    def test_patch_paths_include_move_targets(self):
+        import _apply_patch
+        command = "\n".join(
+            [
+                "*** Begin Patch",
+                "*** Update File: a/task.md",
+                "*** Move to: b/task.md",
+                "@@",
+                "*** End Patch",
+            ]
+        )
+        assert _apply_patch.patch_paths(command) == ["a/task.md", "b/task.md"]
+
+    def test_blank_line_is_context(self):
+        import _apply_patch
+        patch = self._parse(
+            "*** Update File: x.md",
+            "@@",
+            " alpha",
+            "",
+            "-beta",
+            "+gamma",
+        )[0]
+        result = _apply_patch.apply_to_text(patch, "alpha\n\nbeta\n")
+        assert result == "alpha\n\ngamma\n"
+
+    def test_out_of_order_hunks_apply(self):
+        import _apply_patch
+        patch = self._parse(
+            "*** Update File: x.md",
+            "@@",
+            "-third",
+            "+THIRD",
+            "@@",
+            "-first",
+            "+FIRST",
+        )[0]
+        result = _apply_patch.apply_to_text(patch, "first\nsecond\nthird\n")
+        assert result == "FIRST\nsecond\nTHIRD\n"
+
+    def test_unmatched_hunk_returns_none(self):
+        import _apply_patch
+        patch = self._parse("*** Update File: x.md", "@@", "-absent", "+there")[0]
+        assert _apply_patch.apply_to_text(patch, "content\n") is None
+        assert patch.added_lines() == ["there"]
+
+    def test_add_and_delete(self):
+        import _apply_patch
+        add = self._parse("*** Add File: x.md", "+line one", "+line two")[0]
+        assert _apply_patch.apply_to_text(add, "") == "line one\nline two\n"
+        delete = self._parse("*** Delete File: x.md")[0]
+        assert _apply_patch.apply_to_text(delete, "anything\n") == ""

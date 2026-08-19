@@ -21,7 +21,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|apply_patch",
+        "matcher": "Edit|Write|Bash|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -30,7 +30,7 @@
         ]
       },
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit|Write|Bash|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -50,7 +50,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit|Write|Bash|apply_patch",
         "hooks": [
           {
             "type": "command",

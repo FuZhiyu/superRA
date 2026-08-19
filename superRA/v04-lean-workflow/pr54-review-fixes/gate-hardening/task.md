@@ -1,6 +1,6 @@
 ---
 title: "Harden the Approval and Communicate Gates"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -27,3 +27,13 @@ File/line map from the review:
 - Tests pinning the old behavior: [test-ensure-communicate.sh:117](../../../../tests/hooks/test-ensure-communicate.sh#L117) pins the matcher without `apply_patch`; `test-codex-hooks.sh` and `check-harness-compatibility.sh` may pin matcher strings; `test-agent-model-guard.sh` may assert the `cat`/`printf` internals.
 
 The Bash branch of the approval gate reuses the communicate gate's Bash-target regexes — move them into the shared module. A false deny from the conservative fallback is acceptable; the deny message should say to split the status flip from the notes edit. Residual accepted for the communicate gate: a genuine Read of the SKILL.md still counts as loaded.
+
+## Results
+
+- All five confirmed gate bypasses now deny, each with a reproducing regression test; the full `skills/task-tree/scripts` pytest suite (815 tests) and every `tests/hooks/` suite pass.
+  - The shared parser [_apply_patch.py](../../../../skills/task-tree/scripts/_apply_patch.py) replaces the three hand-rolled copies; blank-context lines parse as context and each hunk matches from position 0 (`test_task_tree.py::TestApplyPatchParser`).
+  - The approval gate fails closed: an unreconstructable patch whose added lines set `status: approved` while the file's `## Review Notes` carries `[BLOCKING]` denies, as do Bash in-place mutations (redirect, `tee`, `sed -i`, `cp`/`mv` targets); the deny message says to split the status flip from the notes edit.
+  - The communicate gate counts only read evidence — the exact `skill` field, Read-tool `file_path` records, and read-verb shell segments (`cat`/`head`/`bat`/`less`/`sed -n`) targeting the SKILL.md; `git diff`/`grep` mentions no longer clear it. Subagent detection is `agent_id or agent_type`. Accepted residual: a genuine Read of the SKILL.md still counts as loaded.
+  - Registry sweep: `hooks-codex.json` ensure-communicate, task-hook, and guard-task-approval matchers gain `apply_patch`; guard-task-approval gains `Bash` in `hooks.json` and `hooks-codex.json` (`hooks-cursor.json` is matcher-less and already runs it); `hooks-cursor.json` gains agent-model-guard.
+  - The three gate shims source a shared [run-python-gate](../../../../hooks/run-python-gate) — sourced rather than exec'd through `bash`, since hook runners provide a sparse PATH without it (caught by `test-codex-hooks.sh`); agent-model-guard's inline python moved to [agent_model_guard.py](../../../../hooks/agent_model_guard.py), which reads stdin directly with no `cat`/`printf` buffering.
+  - Matcher-pinning tests updated to the new registry shape: `test-ensure-communicate.sh`, `test-guard-task-approval.sh`, `check-harness-compatibility.sh`, `test_task_tree.py`, `test_contract.py`, `load_contract.json`, and the Codex e2e/smoke fixture generators.

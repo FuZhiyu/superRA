@@ -595,7 +595,7 @@
       "expected_evidence": [
         "CI static check confirms both registries run agent-model-guard at PreToolUse(Agent) while retaining their harness-specific events",
         "CI hook fixtures reject generic raw calls without explicit model controls and preserve named agents",
-        "CI hook fixtures invoke the task-hook wrapper through the merged Edit|Write|Bash matcher",
+        "CI hook fixtures invoke the task-hook wrapper through the merged Edit|Write|Bash|apply_patch matcher",
         "manual live smokes record pre-dispatch payload and SubagentStart evidence or an explicit runtime opt-out"
       ],
       "classification": [
