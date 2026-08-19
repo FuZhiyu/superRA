@@ -17,7 +17,7 @@ not-started → in-progress → implemented → approved
                                         ↘ revise → implemented → approved
 ```
 
-A skipped review does not park a task: whoever orchestrates verifies the work and sets `approved`. `implemented` means the approval decision is still open — a review is running, or one is owed and deferred.
+Interactive work remains `implemented` when independent review is deferred or skipped.
 
 The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (treated as resolved so dependents can proceed); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
 
@@ -25,7 +25,7 @@ The two statuses that are yours to set are scope decisions: tell the agent to dr
 |---|---|
 | `not-started` | Waiting to be dispatched. |
 | `in-progress` | An implementer is on it. |
-| `implemented` | Done; the approval decision is still open. |
+| `implemented` | Done and awaiting or deferring independent review. |
 | `revise` | A reviewer sent it back with findings. |
 | `approved` | Signed off. |
 | `archived` | You dropped it from scope. |

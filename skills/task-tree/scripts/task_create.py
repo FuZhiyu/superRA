@@ -28,7 +28,7 @@ depends_on: {depends_on}
 
 {objective}
 
-{details_section}\
+{guidance_section}\
 ## Results
 
 """
@@ -44,7 +44,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--path", required=True, help="Task path relative to plan root (e.g., 01-data-prep/01-load)")
     parser.add_argument("--title", required=True, help="Task title")
     parser.add_argument("--objective", default="", help="Task objective (one-line description)")
-    parser.add_argument("--details", "--guidance", default="", help="Optional Details section")
+    parser.add_argument("--guidance", default="", help="Optional advisory Planner Guidance section")
     parser.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependency names")
     return parser.parse_args(argv)
 
@@ -54,7 +54,7 @@ def create_task(
     task_path: str,
     title: str,
     objective: str = "",
-    details: str = "",
+    guidance: str = "",
     depends_on: list[str] | None = None,
 ) -> Path:
     depends_on = depends_on or []
@@ -92,7 +92,7 @@ def create_task(
     content = TASK_TEMPLATE.format(
         title=safe_title,
         objective=objective,
-        details_section=f"## Details\n\n{details}\n\n" if details else "",
+        guidance_section=f"## Planner Guidance\n\n{guidance}\n\n" if guidance else "",
         depends_on=deps_yaml,
     )
 
@@ -116,7 +116,7 @@ def main(argv: list[str] | None = None) -> None:
         task_path=args.path,
         title=args.title,
         objective=args.objective,
-        details=args.details,
+        guidance=args.guidance,
         depends_on=args.depends_on,
     )
 

@@ -8,16 +8,13 @@
     ],
     "preToolUse": [
       {
-        "command": "./hooks/guard-task-approval"
-      },
-      {
-        "command": "./hooks/ensure-communicate"
-      },
-      {
         "command": "./hooks/merge-guard"
       },
       {
-        "command": "./hooks/ensure-companion"
+        "command": "./hooks/ensure-using-superra"
+      },
+      {
+        "command": "./hooks/ensure-agent-orchestration"
       }
     ],
     "postToolUse": [

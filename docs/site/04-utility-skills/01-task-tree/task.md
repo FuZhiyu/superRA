@@ -8,7 +8,7 @@ created: 2026-06-17
 
 ## Objective
 
-You ask the agent to plan and work a project, and you want it to know what is actually left to do. Say "superra, plan this analysis" and the agent breaks the work into a tree of tasks; say "work the ready tasks" and it does them in dependency order. Ask "what's left on the holdings pipeline?" mid-project and the answer comes from recorded state, not from guessing.
+You ask the agent to plan and work a project, and you want it to know what is actually left to do. Say "superra, plan this analysis" and the agent breaks the work into a tree of tasks; say "superimplement" and it works the ready ones in dependency order. Ask "what's left on the holdings pipeline?" mid-project and the answer comes from recorded state, not from guessing.
 
 A bare agent keeps project state in the conversation — which steps are done, which are blocked, what the last run found — and that state evaporates when the session ends. The next session reconstructs it from scrollback and scattered TODOs, and gets it wrong in costly ways: a finished step gets redone, a task starts on an input its dependency never produced, or a load-bearing result is forgotten because it lived in a message that scrolled off.
 

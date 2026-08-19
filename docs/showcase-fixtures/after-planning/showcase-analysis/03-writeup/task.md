@@ -19,7 +19,7 @@ Synthesize the study into a short, self-contained reader-facing narrative in `##
 - Embed the key figures from `02-analysis` (the CAPM-vs-FF3 alpha grids and the realized-vs-predicted scatter) inline with interpretation.
 - Draw the economic conclusion: how much of the size-value cross-section FF3 explains relative to CAPM, where it still fails (the small-growth corner), and what that implies.
 
-Write for a researcher reader following `communicate`; link down to `02-analysis` for the per-task evidence rather than restating every number. No new estimation — this task only narrates and cross-references results `02-analysis` already produced and verified.
+Write for a researcher reader following `report-in-markdown`; link down to `02-analysis` for the per-task evidence rather than restating every number. No new estimation — this task only narrates and cross-references results `02-analysis` already produced and verified.
 
 ## Results
 

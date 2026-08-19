@@ -69,8 +69,7 @@ expected_artifact_path() {
 # no installs, no test runs.
 smoke_task_prompt() {
   cat <<'EOF'
-Load `superRA:implement-task` skill. You are assigned a bundle of two
-superRA tasks in this workspace:
+You are an implementer assigned a bundle of two superRA tasks in this workspace:
 agent-loading-bundle/02-primary-loading-task and
 agent-loading-bundle/03-secondary-loading-task.
 
@@ -127,10 +126,8 @@ dispatchable frontier is the two leaf tasks under agent-loading-bundle
 (02-primary-loading-task and 03-secondary-loading-task); they are a same-parent
 bundle and each is a shallow sentinel-collection task that writes loading-evidence.json.
 
-This prompt opts into autonomous subagent execution and requests an independent
-review of both tasks — the researcher-request trigger in §Deciding on Review — so
-the run dispatches both seats: an implementer subagent for the frontier (a subagent
-told to load `superRA:implement-task`), then a reviewer subagent the same way with
-`superRA:review-task`. Do not fall back to the interactive canvas loop.
+Follow the documented default dispatch path: dispatch an implementer subagent for
+the frontier, then dispatch a reviewer subagent to review the implementation. Do
+not switch to interactive mode: this prompt does not opt into it.
 EOF
 }

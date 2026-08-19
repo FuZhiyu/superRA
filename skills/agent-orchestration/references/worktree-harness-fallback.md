@@ -1,10 +1,10 @@
 # Worktree Lifecycle — Harness Tools and Raw-Git Fallback
 
-Loaded by the orchestrator to **create**, **enter**, or **remove** a git worktree when no dedicated harness tool is available. When parallel subagents need their own worktrees: `references/parallel-dispatch.md`. Seeding non-git data into an existing worktree: `skills/worktree-data-sync/SKILL.md`.
+Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `references/parallel-dispatch.md` for when parallel subagents require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
 
 ## Prefer Harness Tools
 
-Use a harness worktree tool only when the orchestrator can choose the worktree path from §Placement. Hidden harness scratch locations are not superRA worktrees. No path-controlled tool: use raw git.
+Use harness worktree tools only when the orchestrator can choose the worktree path from §Placement. Hidden harness scratch locations are not superRA worktrees. If no path-controlled worktree tool exists, use raw git.
 
 ## Raw-Git Fallback
 
@@ -14,11 +14,11 @@ Use a harness worktree tool only when the orchestrator can choose the worktree p
 git worktree add <path> -b <branch-name> <base-ref>
 ```
 
-- `<path>` — absolute or repo-relative, per §Placement.
-- `<branch-name>` — new branch at `<base-ref>`. Orchestrator-managed parallel slots: `<current-branch>-agent/parallel/<slug>`.
-- `<base-ref>` — typically the current branch (`HEAD` when already on it).
+- `<path>` — absolute or repo-relative. Placement convention below.
+- `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<current-branch>-agent/parallel/<slug>`.
+- `<base-ref>` — typically the current branch (`HEAD` is fine when already on it).
 
-Then seed non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
+After creation, the orchestrator seeds non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
 
 ### Enter
 
@@ -27,7 +27,7 @@ cd <path>
 git rev-parse --show-toplevel   # verify we landed where we expected
 ```
 
-Agents dispatched with a `Worktree:` field do this themselves via the dispatch's `Additionally:` steering.
+Agents dispatched with a `Worktree:` field are instructed to do this themselves via the dispatch's `Additionally:` steering (see `references/parallel-dispatch.md`).
 
 ### Remove
 
@@ -37,31 +37,31 @@ git worktree remove <path>
 git branch -D <branch-name>                # only after merge or explicit discard
 ```
 
-`git worktree remove` refuses a worktree with uncommitted changes unless `--force`. **Never pass `--force` without first confirming `git status` inside the worktree.** Seeded data inside the directory (including `worktree-data-sync --mode seed` symlinks) goes with it; the source worktree's data is untouched.
+`git worktree remove` refuses to remove a worktree with uncommitted changes unless `--force` is passed. **Never pass `--force` without first confirming `git status` inside the worktree.** Seeded data inside the worktree directory (including symlinks created by `worktree-data-sync --mode seed`) is removed implicitly when the directory is deleted; the source worktree's data is untouched.
 
 ## Placement
 
-Priority order:
+Priority order when choosing where to put the worktree:
 
-1. **Project-level override.** Grep the repo-root `CLAUDE.md` / `AGENTS.md` for a `worktree` directive (`grep -i "worktree.*director" CLAUDE.md`); use any path it specifies.
-2. **Default for ephemeral parallel worktrees:** `${TMPDIR:-/tmp}/superRA-worktrees/<repo-name>/<branch-name>`.
-3. **Existing project convention** (`./.worktrees/`, `./worktrees/`) — only when the project-level directive names it.
+1. **Project-level override.** Grep the repo-root `CLAUDE.md` / `AGENTS.md` for a `worktree` directive (`grep -i "worktree.*director" CLAUDE.md`). If a path is specified, use it.
+2. **Default for ephemeral parallel worktrees.** Use `${TMPDIR:-/tmp}/superRA-worktrees/<repo-name>/<branch-name>`.
+3. **Existing project convention.** Reuse `./.worktrees/` or `./worktrees/` only when the project-level directive names it.
 
-Before first use of a project-local directory, verify it is gitignored:
+Before first use of a project-local directory (`.worktrees/`, `worktrees/`), verify it is gitignored:
 
 ```bash
 git check-ignore -q .worktrees 2>/dev/null || echo "NOT IGNORED — add to .gitignore first"
 ```
 
-Global-location worktrees (e.g. `~/.config/superpowers/worktrees/<project>/`) live outside the project and need no gitignore entry.
+Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) need no gitignore entry — they live outside the project.
 
-**Cloud-synced repos** (Dropbox, iCloud): prefer global-location worktrees — sibling-directory worktrees conflict across machines.
+**Cloud-synced repos** (Dropbox, iCloud): prefer global-location worktrees — sibling-directory worktrees can conflict across machines.
 
 ## Gotchas
 
-- **Clean state before remove.** `git status` inside the worktree first; unclean means uncommitted work is about to be discarded.
-- **Branch deletion lag.** `git branch -D <branch>` only after the branch merged into its target, or on an explicit discard decision. Never delete an unharvested parallel-slot branch.
-- **Detached HEAD on add.** A SHA `<base-ref>` without `-b` lands the worktree in detached HEAD. Always pass `-b <new-branch>`.
+- **Clean state before remove.** Always `git status` inside the worktree before removing. An unclean state means uncommitted work is about to be discarded.
+- **Branch deletion lag.** `git branch -D <branch>` only after the branch has been merged into its intended target, or the orchestrator has explicitly decided to discard. A parallel-slot branch that hasn't been harvested yet must not be deleted.
+- **Detached HEAD on add.** If `<base-ref>` is a SHA rather than a branch name and `-b` is omitted, the worktree lands in detached HEAD. Always pass `-b <new-branch>`.
 
 ## Example Orchestrator Invocation
 

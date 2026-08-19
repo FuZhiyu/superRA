@@ -39,7 +39,7 @@ This is a documentation artifact built from fully public data — no vendor or p
 - A single committed `run_all.sh` at the tree root reproduces every output in dependency order and fails fast (`set -e`): download → build panel → estimate/test/visualize. Update it whenever a script is added.
 - This tree is the showcase artifact and is exported with the **full task-tracker chrome** (status pills, rollup, DAG, kanban) — non-doc-mode — by the docs build, so each task's `## Results` should read well as a standalone, figure-bearing record.
 
-## Details
+## Planner Guidance
 
 - Scripts live under `analysis/` (and `data/` for the downloader) at the tree root; committed figures live under each task's `attachments/`. `02-analysis` carries the regression and GRS tables plus the figures; `03-writeup` re-embeds the key figures inline.
 

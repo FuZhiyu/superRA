@@ -45,9 +45,7 @@ def _check_codex_with_dispatch_log(dispatch_log: str) -> AssertionReport:
 
     report = AssertionReport()
     dispatch_report = DispatchReport()
-    # Both seats spawn the default agent (the role is in the prompt, which the
-    # hook payload does not carry), so the seats are counted, not named apart.
-    evaluate_dispatch_log(dispatch_report, dispatch_log, minimum_dispatches=2)
+    evaluate_dispatch_log(dispatch_report, dispatch_log)
     report.observations.extend(dispatch_report.observations)
     report.missing.extend(dispatch_report.missing)
     return report

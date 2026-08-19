@@ -320,9 +320,6 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     return fm, body
 
 
-_SECTION_ALIASES = {"Planner Guidance": "Details"}
-
-
 def parse_body_sections(body: str) -> dict[str, str]:
     """Split a task body on ``## `` headers into {section_name: content} pairs.
 
@@ -330,9 +327,6 @@ def parse_body_sections(body: str) -> dict[str, str]:
     treated as body content, not a section header, so a header quoted inside an
     Objective/Results template does not start a spurious section (mirrors
     ``_has_nonempty_section``).
-
-    Legacy heading names in ``_SECTION_ALIASES`` parse to their current name, so
-    a task file written under the old vocabulary reads as the same section.
     """
     sections: dict[str, str] = {}
     current_name: str | None = None
@@ -348,7 +342,7 @@ def parse_body_sections(body: str) -> dict[str, str]:
         if m:
             if current_name is not None:
                 sections[current_name] = "\n".join(current_lines)
-            current_name = _SECTION_ALIASES.get(m.group(1), m.group(1))
+            current_name = m.group(1)
             current_lines = []
         elif current_name is not None:
             current_lines.append(line)
@@ -1085,11 +1079,9 @@ def compute_status(task: Task) -> str:
        postponed, else archived (a deferred child dominates an abandoned one)
     2. All children approved -> approved
     3. Any child revise -> revise
-    4. All children implemented or approved -> implemented (the subtree's
-       work product exists; review is still open)
-    5. Any child in-progress or implemented -> in-progress
-    6. Any child approved (but not all) -> in-progress
-    7. Otherwise -> not-started
+    4. Any child in-progress or implemented -> in-progress
+    5. Any child approved (but not all) -> in-progress
+    6. Otherwise -> not-started
     """
     if task.is_leaf:
         return task.status
@@ -1104,8 +1096,6 @@ def compute_status(task: Task) -> str:
         return "approved"
     if any(s == "revise" for s in child_statuses):
         return "revise"
-    if all(s in ("implemented", "approved") for s in child_statuses):
-        return "implemented"
     if any(s in ("in-progress", "implemented") for s in child_statuses):
         return "in-progress"
     if any(s == "approved" for s in child_statuses):
@@ -1162,13 +1152,11 @@ def compute_frontier(root: Task) -> list[Task]:
 
     A leaf task is on the frontier when:
     1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
-       implement), 'implemented' (approval decision open), or 'revise' (ready
-       to fix).
+       implement), 'implemented' (ready to review), or 'revise' (ready to fix).
        Each entry carries its status, so a caller reads the next action from it.
-    2. All sibling dependencies have effective_status 'approved', 'archived',
-       'implemented', or 'revise' — i.e. the dependency's work product exists,
-       even if review or a fix round is still open. Only 'not-started',
-       'in-progress', and 'postponed' dependencies block dependents.
+    2. All sibling dependencies have effective_status 'approved' (or 'archived').
+       Note this is approved-only: a dependency that is merely 'implemented' or
+       'revise' is not satisfied, so dependents of unreviewed work stay blocked.
     3. All ancestor tasks' sibling dependencies are met (recursively)
     """
     frontier: list[Task] = []
@@ -1211,13 +1199,11 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
                 )
                 deps_met = False
                 break
-            # A dependency is satisfied once its work product exists —
-            # 'implemented' and 'revise' count, so dependents can proceed while
-            # review or a deferred fix round is open. Postponed dependencies
-            # are NOT satisfied — postponing a task deliberately blocks its
-            # dependents until it is resumed.
+            # Archived dependencies are treated as satisfied; postponed ones
+            # are NOT — postponing a task deliberately blocks its dependents
+            # until it is resumed and approved.
             dep_status = dep_task.effective_status()
-            if dep_status not in ("approved", "archived", "implemented", "revise"):
+            if dep_status not in ("approved", "archived"):
                 deps_met = False
                 break
 

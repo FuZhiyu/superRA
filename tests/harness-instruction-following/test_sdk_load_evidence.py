@@ -2,13 +2,13 @@
 """CI-safe unit tests for the Claude Agent-SDK skill-load evidence layer.
 
 Drives :mod:`sdk_load_evidence` on synthetic hook records and on the real
-in-repo role skills — no live model call, and ``claude_agent_sdk`` is never
+in-repo role specs — no live model call, and ``claude_agent_sdk`` is never
 imported. Covers:
 
 - on-demand skill ordering: green plus the two red cases the parent objective
   names (required skill missing; skill loaded only after the first edit);
-- the static always-loaded load-instruction contract (green against the real role
-  skills; red against a synthetic skill missing one);
+- the static always-loaded frontmatter contract (green against the real role
+  specs; red against a synthetic spec missing a skill);
 - the reusable behavioral-canary checker task 10 consumes (green + red).
 """
 
@@ -24,14 +24,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from sdk_load_evidence import (  # noqa: E402
     ALWAYS_LOADED_SKILLS,
-    LOAD_INSTRUCTION_HEADING,
-    ROLE_SKILL_FILES,
     SkillLoadReport,
-    check_always_loaded_load_instruction,
+    check_always_loaded_frontmatter,
     check_skills_loaded_before_first_edit,
     evidence_from_hook_records,
     normalize_skill_name,
-    parse_section,
+    parse_frontmatter_skills,
 )
 
 
@@ -51,7 +49,7 @@ def test_green_required_skills_load_before_first_edit():
     evidence = evidence_from_hook_records(
         skill_tool_events=[
             ("econ-data-analysis", 0),
-            ("academic-writing", 1),
+            ("writing", 1),
         ],
         edit_event_indices=[5],
     )
@@ -60,7 +58,7 @@ def test_green_required_skills_load_before_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "academic-writing"],
+        ["econ-data-analysis", "writing"],
     )
 
     report.assert_ok()
@@ -78,7 +76,7 @@ def test_red_required_skill_never_loaded():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "academic-writing"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert not report.ok
@@ -88,7 +86,7 @@ def test_red_skill_loaded_only_after_first_edit():
     # The skill loaded, but after the agent already started editing — the
     # load-before-mutation invariant is violated.
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("econ-data-analysis", 0), ("academic-writing", 4)],
+        skill_tool_events=[("econ-data-analysis", 0), ("writing", 4)],
         edit_event_indices=[2],
     )
     report = SkillLoadReport()
@@ -96,7 +94,7 @@ def test_red_skill_loaded_only_after_first_edit():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "academic-writing"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert not report.ok
@@ -118,7 +116,7 @@ def test_no_edit_session_counts_any_load_as_before_edit():
 
 def test_all_failures_collected_together():
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("academic-writing", 6)],
+        skill_tool_events=[("writing", 6)],
         edit_event_indices=[1],
     )
     report = SkillLoadReport()
@@ -126,7 +124,7 @@ def test_all_failures_collected_together():
     check_skills_loaded_before_first_edit(
         report,
         evidence,
-        ["econ-data-analysis", "academic-writing"],
+        ["econ-data-analysis", "writing"],
     )
 
     assert not report.ok
@@ -191,70 +189,81 @@ def test_qualified_observations_still_reject_genuinely_absent_skill():
 
 
 # --------------------------------------------------------------------------- #
-# Always-loaded load-instruction contract (static)
+# Always-loaded frontmatter contract (static)
 # --------------------------------------------------------------------------- #
 
 
-def test_parse_section_stops_at_next_same_level_heading():
+def test_parse_frontmatter_inline_list():
     text = (
-        "# Title\n\n"
-        "## Before You Start\n\n"
-        "1. Load `superRA:using-superra`.\n\n"
-        "### Nested\n\n"
-        "still inside\n\n"
-        "## Execution Protocol\n\n"
-        "outside\n"
+        "---\n"
+        "name: implementer\n"
+        "skills: [superRA:using-superra, superRA:report-in-markdown]\n"
+        "---\n"
+        "body\n"
     )
-    section = parse_section(text, "## Before You Start")
-    assert "superRA:using-superra" in section
-    assert "still inside" in section
-    assert "outside" not in section
+    assert parse_frontmatter_skills(text) == [
+        "superRA:using-superra",
+        "superRA:report-in-markdown",
+    ]
 
 
-def test_parse_section_missing_heading():
-    assert parse_section("no headings here", "## Before You Start") == ""
-
-
-def _write_role_skill(root, rel, skills):
-    path = root / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
-    listed = "".join(f"`{skill}` " for skill in skills)
-    path.write_text(
-        f"---\nname: x\n---\n\n{LOAD_INSTRUCTION_HEADING}\n\n1. Load {listed}.\n",
-        encoding="utf-8",
+def test_parse_frontmatter_block_list():
+    text = (
+        "---\n"
+        "name: implementer\n"
+        "skills:\n"
+        "  - superRA:using-superra\n"
+        "  - superRA:report-in-markdown\n"
+        "---\n"
+        "body\n"
     )
+    assert parse_frontmatter_skills(text) == [
+        "superRA:using-superra",
+        "superRA:report-in-markdown",
+    ]
 
 
-def test_green_always_loaded_load_instruction_real_role_skills():
-    # Both real role skills must instruct loading every always-loaded skill —
-    # this is what replaces the retired agent-frontmatter autoload.
+def test_parse_frontmatter_no_block():
+    assert parse_frontmatter_skills("no frontmatter here") == []
+
+
+def test_green_always_loaded_frontmatter_real_role_specs():
+    # The real agents/implementer.md and agents/reviewer.md must both declare
+    # both always-loaded skills — this is the live preloaded-skill contract.
     report = SkillLoadReport()
-    check_always_loaded_load_instruction(report, REPO_ROOT)
+    check_always_loaded_frontmatter(report, REPO_ROOT)
     report.assert_ok()
 
 
-def test_red_always_loaded_load_instruction_missing_skill(tmp_path):
-    # A role skill whose load instruction drops an always-loaded skill regressed
-    # the contract.
-    _write_role_skill(tmp_path, ROLE_SKILL_FILES[0], ["superRA:econ-data-analysis"])
-    _write_role_skill(tmp_path, ROLE_SKILL_FILES[1], ALWAYS_LOADED_SKILLS)
+def test_red_always_loaded_frontmatter_missing_skill(tmp_path):
+    # A role spec missing report-in-markdown is a regressed preloaded contract.
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "implementer.md").write_text(
+        "---\nname: implementer\nskills: [superRA:using-superra]\n---\nbody\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "agents" / "reviewer.md").write_text(
+        "---\nname: reviewer\n"
+        "skills: [superRA:using-superra, superRA:report-in-markdown]\n---\nbody\n",
+        encoding="utf-8",
+    )
     report = SkillLoadReport()
-    check_always_loaded_load_instruction(report, tmp_path)
+    check_always_loaded_frontmatter(report, tmp_path)
 
     assert not report.ok
 
 
-def test_red_always_loaded_load_instruction_missing_file(tmp_path):
+def test_red_always_loaded_frontmatter_missing_file(tmp_path):
     report = SkillLoadReport()
-    check_always_loaded_load_instruction(report, tmp_path)
+    check_always_loaded_frontmatter(report, tmp_path)
     assert not report.ok
 
 
 def test_always_loaded_skills_constant_is_qualified():
-    # The contract checks the plugin-qualified names the load instruction names.
+    # The contract checks the plugin-qualified names that appear in frontmatter.
     assert ALWAYS_LOADED_SKILLS == (
         "superRA:using-superra",
-        "superRA:communicate",
+        "superRA:report-in-markdown",
     )
 
 

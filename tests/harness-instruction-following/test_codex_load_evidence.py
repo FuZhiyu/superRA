@@ -48,20 +48,20 @@ def test_default_ci_path_never_imports_codex_cli():
 
 
 def test_green_canary_present_in_command():
-    spec = CanarySpec(skill="communicate", token="CANARY_VERDANT_7Q")
+    spec = CanarySpec(skill="report-in-markdown", token="CANARY_VERDANT_7Q")
     report = CanaryReport()
     evaluate_canary(
         report,
         spec,
         command_strings=[
-            "python3 skills/communicate/scripts/check_markdown.py CANARY_VERDANT_7Q.md",
+            "python3 skills/report-in-markdown/scripts/check_markdown.py CANARY_VERDANT_7Q.md",
         ],
     )
     report.assert_ok()
 
 
 def test_green_canary_command_satisfies():
-    spec = CanarySpec(skill="academic-writing", token="CANARY_COBALT_9")
+    spec = CanarySpec(skill="writing", token="CANARY_COBALT_9")
     report = CanaryReport()
     evaluate_canary(
         report,
@@ -73,7 +73,7 @@ def test_green_canary_command_satisfies():
 
 def test_red_canary_absent_from_commands():
     spec = CanarySpec(
-        skill="communicate",
+        skill="report-in-markdown",
         token="CANARY_VERDANT_7Q",
     )
     report = CanaryReport()
@@ -123,19 +123,19 @@ def test_command_strings_from_events_pulls_codex_command_execution():
 def test_handle_payload_extracts_agent_type():
     assert (
         handle_subagent_start_payload(
-            {"hook_event_name": "SubagentStart", "agent_type": "default"}
+            {"hook_event_name": "SubagentStart", "agent_type": "superra_implementer"}
         )
-        == "default"
+        == "superra_implementer"
     )
 
 
 def test_handle_payload_accepts_alternate_key_spellings():
     assert (
-        handle_subagent_start_payload({"subagent_type": "default"})
-        == "default"
+        handle_subagent_start_payload({"subagent_type": "superra_reviewer"})
+        == "superra_reviewer"
     )
-    assert handle_subagent_start_payload({"name": "default"}) == (
-        "default"
+    assert handle_subagent_start_payload({"name": "superra_implementer"}) == (
+        "superra_implementer"
     )
 
 
@@ -147,17 +147,17 @@ def test_handle_payload_disambiguates_by_agent_type_not_session_id():
 
 def test_append_subagent_start_writes_log(tmp_path):
     log = tmp_path / "nested" / "dispatch.log"
-    assert append_subagent_start(log, {"agent_type": "default"}) == (
-        "default"
+    assert append_subagent_start(log, {"agent_type": "superra_implementer"}) == (
+        "superra_implementer"
     )
-    assert append_subagent_start(log, {"agent_type": "default"}) == (
-        "default"
+    assert append_subagent_start(log, {"agent_type": "superra_reviewer"}) == (
+        "superra_reviewer"
     )
     # No agent type -> nothing appended.
     assert append_subagent_start(log, {"session_id": "x"}) is None
     assert dispatched_agent_types(log.read_text()) == [
-        "default",
-        "default",
+        "superra_implementer",
+        "superra_reviewer",
     ]
 
 
@@ -166,15 +166,15 @@ def test_append_subagent_start_writes_log(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-def test_green_dispatch_log_has_both_seats():
+def test_green_dispatch_log_has_both_sentinels():
     report = DispatchReport()
-    evaluate_dispatch_log(report, "default\ndefault\n", minimum_dispatches=2)
+    evaluate_dispatch_log(report, "superra_implementer\nsuperra_reviewer\n")
     report.assert_ok()
 
 
-def test_red_dispatch_log_has_only_one_seat():
+def test_red_dispatch_log_missing_reviewer():
     report = DispatchReport()
-    evaluate_dispatch_log(report, "default\n", minimum_dispatches=2)
+    evaluate_dispatch_log(report, "superra_implementer\n")
     assert not report.ok
 
 
@@ -192,7 +192,7 @@ def test_red_dispatch_log_empty():
 def test_subagent_start_hook_executable_appends(tmp_path):
     log = tmp_path / "dispatch.log"
     payload = json.dumps(
-        {"hook_event_name": "SubagentStart", "agent_type": "default"}
+        {"hook_event_name": "SubagentStart", "agent_type": "superra_reviewer"}
     )
     result = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "subagent_start_hook.py")],
@@ -203,7 +203,7 @@ def test_subagent_start_hook_executable_appends(tmp_path):
     )
     assert result.returncode == 0
     assert result.stdout.strip() == "{}"
-    assert dispatched_agent_types(log.read_text()) == ["default"]
+    assert dispatched_agent_types(log.read_text()) == ["superra_reviewer"]
 
 
 def test_subagent_start_hook_survives_malformed_payload(tmp_path):

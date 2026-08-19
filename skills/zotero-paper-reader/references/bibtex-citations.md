@@ -1,12 +1,24 @@
 # BibTeX, Cite, and Bibliography
 
-The three citation commands in `scripts/zotero_tool.py`: `bibtex` (export entries + sync a master `.bib`), `cite` (insert a citation into a draft + sync its entry), and `bibliography` (render formatted references).
+Full reference for the three citation commands in `scripts/zotero_tool.py`: `bibtex` (export entries + sync a master `.bib`), `cite` (insert a citation into a draft + sync its entry), and `bibliography` (render formatted references). Load this when you need command examples, the full flag list, the Better BibTeX key model, fallback semantics, group-library targeting, or troubleshooting.
+
+## Contents
+
+- [Key model: BBT default, built-in fallback](#key-model-bbt-default-built-in-fallback)
+- [Selection flags (shared)](#selection-flags-shared)
+- [`bibtex` — export and master-`.bib` sync](#bibtex--export-and-master-bib-sync)
+- [`cite` — insert into a draft](#cite--insert-into-a-draft)
+- [`bibliography` — formatted references](#bibliography--formatted-references)
+- [Library targeting](#library-targeting)
+- [Master-`.bib` sync semantics](#master-bib-sync-semantics)
+- [JSON output fields](#json-output-fields)
+- [Troubleshooting](#troubleshooting)
 
 All commands run via `uv run --script <skill-dir>/scripts/zotero_tool.py <subcommand> ...`, where `<skill-dir>` is the directory containing `SKILL.md` — substitute the real path. All emit JSON; add `--help` to any subcommand for parameter details.
 
 ## Key model: BBT default, built-in fallback
 
-The three commands resolve citekeys and entries from **Better BibTeX (BBT)** by default, so exported entries reuse the researcher's BBT citekeys and stay consistent with a BBT-maintained master `.bib`. BBT is a local-only Zotero plugin — **not** part of the Zotero Web API or pyzotero — so the BBT-keyed path requires local Zotero plus the Better BibTeX plugin installed and running. `health` reports `better_bibtex_available`, which tells you the path a command will take.
+The three commands resolve citekeys and entries from **Better BibTeX (BBT)** by default, so exported entries reuse the researcher's BBT citekeys and stay consistent with a BBT-maintained master `.bib`. BBT is a local-only Zotero plugin — it is **not** part of the Zotero Web API or pyzotero — so the BBT-keyed path requires local Zotero plus the Better BibTeX plugin installed and running. `health` reports `better_bibtex_available` so you can tell which path a command will take.
 
 **Default — BBT keys.** The tool talks to BBT's JSON-RPC endpoint at `http://127.0.0.1:23119/better-bibtex/json-rpc`:
 
@@ -23,7 +35,7 @@ The three commands resolve citekeys and entries from **Better BibTeX (BBT)** by 
 - `bibtex` / `cite` emit entries via Zotero's built-in BibTeX translator — `item(key, format="bibtex")`, which returns the raw BibTeX body in both local and Web mode.
 - `bibliography` renders via the built-in CSL formatter — `item(key, include="bib", style=...)`, which returns the formatted reference under the `bib` key.
 
-The built-in translator generates **different** citekeys from BBT, so on the `bibtex` / `cite` fallback path the command prints a key-mismatch warning and sets `bbt_fallback: true` in its JSON — the emitted keys may not match a BBT-exported `.bib`. The `bibliography` fallback prints the same warning and sets the same flag; its citekey-oriented text there only signals that the built-in renderer was used.
+The built-in translator generates **different** citekeys from BBT. So on the `bibtex` / `cite` fallback path the command prints a key-mismatch warning and sets `bbt_fallback: true` in its JSON — the emitted keys may not match a BBT-exported `.bib`. The `bibliography` fallback also prints the same warning and sets `bbt_fallback: true` (the warning text is citekey-oriented; for `bibliography` it just signals the built-in renderer was used).
 
 ## Selection flags (shared)
 
@@ -57,7 +69,7 @@ JSON reports `keys`, `bib_path`, `added` / `skipped`, and the `bbt_used` / `bbt_
 
 ## `cite` — insert into a draft
 
-Insert a citation into a draft and sync the cited entry into a master `.bib`. `--bib PATH` is **required**. Give **exactly one** draft target:
+Insert a citation into a draft and sync the cited entry into a master `.bib`. `--bib PATH` is **required** (a citation with no entry in the bibliography is useless). Give **exactly one** draft target:
 
 | Flag | Inserts |
 |---|---|
@@ -74,7 +86,7 @@ zotero_tool.py cite --item-key ABCD1234 --tex paper.tex --bib refs.bib
 zotero_tool.py cite --query "Fama French 1993" --markdown draft.md --bib refs.bib --marker "[CITE-FF]"
 ```
 
-JSON reports `edited_file`, `citation_key`, `citation`, `bib_path`, `added` / `skipped`, and the `bbt_used` / `bbt_fallback` flags.
+JSON reports `edited_file`, `citation_key`, `citation`, `bib_path`, `added` / `skipped`, and the `bbt_used` / `bbt_fallback` flags. When the selection resolves to several items, the first is the inserted citation and every resolved entry is still synced.
 
 ## `bibliography` — formatted references
 
@@ -92,7 +104,7 @@ JSON carries an `entries` list (one rendered string per item) plus `style`, `cou
 
 ## Library targeting
 
-The commands default to the user's own library ("My Library"). For a group library, run `libraries` first to get the group ids, then pass `--library <group-id>` (or `--library group:<id>`); the tool maps it to the right BBT `libraryID`. `--library` works on `bibtex`, `cite`, and `bibliography` consistently with the read commands.
+By default the commands act on the user's own library ("My Library"). To act on a group library, run `libraries` first to get the group ids, then pass `--library <group-id>` (or `--library group:<id>`). The tool passes the correct BBT `libraryID` (user library is BBT `libraryID` 1; group libraries use their own numeric group id). `--library` works on `bibtex`, `cite`, and `bibliography` consistently with the read commands.
 
 ```bash
 zotero_tool.py bibtex --query "your query" --library <group-id> --bib refs.bib
@@ -106,7 +118,7 @@ zotero_tool.py bibtex --query "your query" --library <group-id> --bib refs.bib
 - Existing entries are **never reordered or rewritten**; new entries are appended at the end.
 - Re-running the same export into the same `.bib` is idempotent: the first run reports `added 1 / skipped 0`, a second run `added 0 / skipped 1`, and the file holds exactly one entry.
 
-`cite` reuses the same dedup-append helper, so a citation and its bibliography entry stay in one source of truth. The entry parser balances braces (an `@type{key,` token only opens an entry at top level, depth 0), so a BibTeX-like token inside a field value — e.g. an abstract quoting `@inproceedings{notakey, ...}` — does not spawn a phantom entry. Known limitation: an unbalanced brace inside a double-quoted field value (`field = "...{..."`) in an externally-sourced `.bib` can throw the depth counter; BBT and the built-in translator both emit balanced, brace-delimited fields, so tool-generated input never triggers it.
+`cite` reuses this same dedup-append helper, so a citation and its bibliography entry stay in one source of truth. Because the `.bib` you point at may hold arbitrary externally-sourced entries, the entry parser balances braces (an `@type{key,` token only opens an entry at top level, depth 0), so a BibTeX-like token inside a field value — e.g. an abstract quoting `@inproceedings{notakey, ...}` — does not spawn a phantom entry. One known limitation: an unbalanced brace inside a double-quoted field value (`field = "...{..."`) in an externally-sourced `.bib` can throw the depth counter; BBT and the built-in translator both emit balanced, brace-delimited fields, so tool-generated input never triggers it.
 
 ## JSON output fields
 
@@ -122,16 +134,16 @@ zotero_tool.py bibtex --query "your query" --library <group-id> --bib refs.bib
 | `bbt_used` | all | `true` when BBT resolved the entry/keys |
 | `bbt_fallback` | all | `true` when the built-in path was used; prints the BBT-unreachable warning on stderr (citekey mismatch matters for `bibtex`/`cite`) |
 
-Credentials are never printed to the agent transcript.
+Credentials are never printed to the agent transcript (the no-secret-leak invariant from the read commands carries over).
 
 ## Troubleshooting
 
-**BBT not installed / Zotero closed (`bbt_used: false`, `bbt_fallback: true`).** The command still works via the built-in translator, but on `bibtex`/`cite` the emitted citekeys may differ from your BBT-exported `.bib`. For BBT keys, install the Better BibTeX plugin and keep Zotero Desktop running. Check `health` → `better_bibtex_available`.
+**BBT not installed / Zotero closed (`bbt_used: false`, `bbt_fallback: true`).** The command still works via the built-in translator, but on `bibtex`/`cite` the emitted citekeys may differ from your BBT-exported `.bib` (hence the printed warning). To get BBT keys, install the Better BibTeX plugin and keep Zotero Desktop running. Check `health` → `better_bibtex_available`.
 
 **Web-API mode.** BBT is local-only, so any command run against the Web API uses the built-in fallback path. Same key-mismatch caveat applies.
 
-**`item.export` / `item.bibliography` returns "not found".** These BBT methods take **citekeys**, not Zotero item keys. The tool resolves item key → citekey first; `item.citationkey` returning `null` means the item is not in the library, or BBT has not assigned it a key yet.
+**`item.export` / `item.bibliography` returns "not found".** BBT's export and bibliography methods take **citekeys**, not Zotero item keys. The tool resolves item key → citekey first; if `item.citationkey` returns `null` for a key, that item is not in the library (or BBT has not assigned it a key yet).
 
-**Missing-marker error.** `cite --marker STR` errors (rc 1) on an absent marker rather than silently appending, so a typo cannot insert a citation in the wrong place. Fix the marker text or drop `--marker` to append.
+**Missing-marker error.** `cite --marker STR` errors (rc 1) when the marker is absent rather than silently appending, so a typo cannot insert a citation in the wrong place. Fix the marker text or drop `--marker` to append.
 
 **`bibtex` / `cite` report no selection.** Pass at least one of `--item-key`, `--query`, or `--doi`.

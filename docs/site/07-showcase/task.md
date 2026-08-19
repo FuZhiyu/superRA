@@ -20,7 +20,7 @@ The tree is a finished, real empirical study, run end-to-end through the workflo
 
 The export is a self-contained page with the full task-tracker chrome. As you explore, these are the elements to notice — each one maps back to a concept page.
 
-- **Status pills.** Every task carries a colored status: green for `approved`, yellow for `implemented` (done, approval decision still open), red for `revise` (a reviewer sent it back), blue for `in-progress`, grey for `not-started`. The [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier) explains how a task moves between them.
+- **Status pills.** Every task carries a colored status: green for `approved`, yellow for `implemented` (done but not yet reviewed), red for `revise` (a reviewer sent it back), blue for `in-progress`, grey for `not-started`. The [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier) explains how a task moves between them.
 - **Rollup.** A parent task's status is computed from its children, not set by hand. A tree with one child in `revise` shows the parent as un-finished — you can see at a glance that the project is not done, and where the holdup is.
 - **The DAG.** The dependency graph view draws the edges between tasks: which task must finish before which can start. A task with an unmet dependency is off the [frontier](#/04-utility-skills/01-task-tree/03-status-and-frontier) — the set of tasks ready to be worked right now.
 - **The kanban board.** The same tasks, grouped into columns by status, so a whole project's progress reads as one glance across the board.

@@ -604,7 +604,7 @@ run_s3() {
 # The autoload-superra UserPromptSubmit hook injects an additionalContext
 # reminder on any prompt mentioning "superRA", and a compliant model will
 # load Skill(superRA:using-superra) voluntarily before it ever attempts the
-# workflow-skill call — which makes ensure-companion silently pass and
+# workflow-skill call — which makes ensure-using-superra silently pass and
 # the assertion fail. We countermand the injected reminder via the system
 # prompt below ("Ignore any system-reminder or additionalContext...") so
 # the model proceeds straight to the workflow-skill call and triggers the
@@ -617,11 +617,11 @@ run_s3() {
 # worth. Today S4 passes because Haiku obeys the system-prompt countermand
 # against the injected reminder; a future model that prefers reminders
 # over system prompts could regress this test, in which case it is safe to
-# drop S4 — the stdin-synthesis unit test in test-ensure-companion.sh
+# drop S4 — the stdin-synthesis unit test in test-ensure-using-superra.sh
 # already covers the deny logic; S4's unique value is wiring validation,
 # which S5 provides redundantly via the same PreToolUse:Skill matcher.
 run_s4() {
-  local name="S4 ensure-companion denies workflow skill"
+  local name="S4 ensure-using-superra denies workflow skill"
   local cwd sid out
   new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
@@ -637,19 +637,19 @@ run_s4() {
   echo "       cost: \$$cost"
 }
 
-# S5 — after using-superra loads, retry denied for agent-orchestration.
+# S5 — after using-superra loads, retry denied by ensure-agent-orchestration.
 # This is inherently a continuation of S4's retry loop. We assert that at
 # least one PreToolUse hook_response in the run names superRA:agent-orchestration
 # in its deny reason. The probe uses superimplement: superplan is
-# intentionally ungated on agent-orchestration.
+# intentionally ungated by ensure-agent-orchestration.
 run_s5() {
-  local name="S5 ensure-companion denies missing agent-orchestration"
+  local name="S5 ensure-agent-orchestration denies after using-superra loads"
   local cwd sid out
   new_tmp_cwd "${FUNCNAME[0]#run_}"; cwd="$TMP_CWD"
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
   out="$cwd/s5.ndjson"
   # Tell the model to first load using-superra, then retry the workflow
-  # skill without loading agent-orchestration. The ensure-companion
+  # skill without loading agent-orchestration. The ensure-agent-orchestration
   # hook should deny the second call.
   local sys_prompt
   sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superra") once. Step 2: invoke Skill(skill="superRA:superimplement") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
@@ -699,11 +699,11 @@ run_s7() {
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
   out="$cwd/s7.ndjson"
   local sys_prompt
-  sys_prompt="First invoke Skill(skill=\"superRA:communicate\"). Then run \"$REPO_ROOT/superRA/superra task read 01-child\" with Bash. Finally use Edit exactly once on superRA/01-child/task.md, changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok."
+  sys_prompt='Use only the Read and Edit tools. Edit exactly superRA/01-child/task.md by changing only the frontmatter status line from not-started to approved. Do not edit any other file. After the edit, reply with exactly the word ok.'
   if ! run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
-    --tools Skill,Bash,Read,Edit \
-    --allowedTools Skill,Bash,Read,Edit \
+    --tools Read,Edit \
+    --allowedTools Read,Edit \
     --permission-mode acceptEdits \
     --append-system-prompt "$sys_prompt" \
     -- "Run the task-hook edit probe now."; then

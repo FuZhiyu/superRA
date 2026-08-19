@@ -1,13 +1,19 @@
 # Agent Teams — Technical Mechanics
 
-> **ARCHIVED (2026-04-17).** Agent Teams mode proved unreliable in practice and is no longer used by any superRA workflow. Retained as historical reference only — **do not load it, do not cite it from any active skill**. A pointer that sent you here is stale; flag it.
+> **ARCHIVED (2026-04-17).** Agent Teams mode proved unreliable in practice
+> and is no longer used by any superRA workflow. This file is retained as
+> a historical reference only — **do not load it, do not cite it from any
+> active skill**. If you are reading this because an agent pointed you
+> here, the pointer is stale; please flag it.
 
-Technical how-to for Agent Teams and parallel-dispatch: TeamCreate usage, task-graph construction, the parallel-dispatch pattern, known limitations. High-level orchestration guidance lives in `SKILL.md`.
+This reference carries the technical how-to for Agent Teams and parallel-dispatch: TeamCreate usage, task-graph construction, the parallel-dispatch pattern, and known limitations. Load it whenever you are about to spawn or clean up a team, or dispatch parallel subagents and want the mechanics right. High-level orchestration guidance (when to dispatch at all, how to adjudicate reviewer feedback, how to relay) lives in `SKILL.md`.
 
 **Pointers — do not duplicate here:**
 
-- **Skill-loads per stage: `superRA:using-superra` §Skill-Load Manifest.** Every agent reads the manifest; this file does not repeat per-stage lists.
-- **Team composition: one teammate per stage the workflow runs.** Role comes from the skill the teammate's prompt names — `superRA:implement-task` for implementer-role stages, `superRA:review-task` for reviewer-role stages. The teammate then loads what the manifest lists for its Stage.
+- **For skill-loads per stage, see `superRA:using-superra` §Skill-Load Manifest.** Every agent (main, subagent, team teammate) reads the manifest; this file does not repeat per-stage skill/reference lists.
+- **Team composition: spawn one teammate per stage the workflow runs.** Role is encoded by `subagent_type` — `superRA:implementer` for implementer-role stages, `superRA:reviewer` for reviewer-role stages. The teammate then loads what the manifest lists for its Stage. No per-workflow team recipe is needed.
+
+---
 
 ## Availability Check
 
@@ -16,7 +22,7 @@ Agent Teams require the experimental feature flag:
 - Environment: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 - Or settings.json: `{"env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}}`
 
-Session-start context includes "Agent Teams: available": use teams for appropriate workflows. Otherwise fall back to subagent patterns (orchestrator relay).
+If the session-start context includes "Agent Teams: available", use teams for appropriate workflows. Otherwise, fall back to subagent patterns (orchestrator relay).
 
 ## When to Use Teams vs Subagents
 
@@ -30,7 +36,9 @@ Session-start context includes "Agent Teams: available": use teams for appropria
 
 ## Critical Constraint: One Team Per Session
 
-Only one team exists per session; the lead cleans up the current team before starting the next.
+Only one team can exist per session. The lead must clean up the current team before starting a new one.
+
+The full superRA workflow spans three team-worthy phases:
 
 ```
 superimplement (analysis team)
@@ -39,146 +47,158 @@ superimplement (analysis team)
       → cleanup
 ```
 
+Sequential teams with cleanup. The lead cleans up each team before spawning the next.
+
 ## Spawning a Team
 
-Composition is derived, not recipe-driven: one teammate per stage the workflow runs, naming `superRA:implement-task` or `superRA:review-task`; the teammate loads what the manifest lists for its Stage.
+Team composition is derived from the manifest — the lead spawns one teammate per stage the workflow runs, using `subagent_type: superRA:implementer` for implementer-role stages and `superRA:reviewer` for reviewer-role stages; the teammate loads what `superRA:using-superra` §Skill-Load Manifest lists for its Stage. There is no per-workflow recipe beyond this; the composition is read from the workflow skill (which stages it runs) and the manifest (what each stage loads).
 
 **Generic spawn template:**
 
 ```
 Create an agent team for <workflow-name>:
-- <teammate-name>: role skill <superRA:implement-task | superRA:review-task>; Stage: <stage-name from manifest>
+- <teammate-name>: subagent_type <superRA:implementer | superRA:reviewer>; Stage: <stage-name from manifest>
 - <teammate-name>: ...
 ```
 
-No skill/reference lists in the spawn prompt — the teammate reads the manifest itself.
+Each teammate loads what the manifest specifies for its Stage. Do not duplicate skill/reference lists in the spawn prompt — the teammate reads the manifest itself.
 
 ## Task-Graph Construction
 
-Construct the full task graph from the `superRA/` tree upfront so teammates see the whole scope. Each node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
+Construct the full task graph from the `superRA/` task tree upfront so teammates see the whole scope. Each graph node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
 
 **Dependency rules:**
 
 - Review depends on implementation of the same task.
-- Implementation of task N+1 depends on review APPROVE of task N — the implementer must not start the next task before the current one is approved.
-- Integration / merge workflows: refactor depends on the preceding review; post-refactor drift-test runs depend on the refactor; re-review depends on the post-refactor run.
+- Implementation of task N+1 depends on review APPROVE of task N. This prevents the implementer from starting the next task before the current one is fully approved.
+- For integration / merge workflows: refactor depends on the preceding review; post-refactor drift-test runs depend on the refactor; re-review depends on the post-refactor run.
 
-**Task creation order:** `TeamCreate` before `TaskCreate`. Tasks created before the team live in a separate namespace, invisible to teammates.
+**Task creation order:** Create the team (`TeamCreate`) before creating tasks (`TaskCreate`). Tasks created before the team exist in a separate namespace and are invisible to teammates.
 
-**Iteration pattern:** a reviewer returning REVISE messages the implementer/refactorer directly; the implementer fixes and messages the reviewer to re-review. The lead adjudicates per `SKILL.md` §Handling Reviewer Feedback.
+**Iteration pattern:** When a reviewer returns REVISE, they message the implementer/refactorer directly with specific feedback. The implementer fixes and messages the reviewer to re-review. The orchestrator lead adjudicates REVISE feedback per `SKILL.md` §Handling Reviewer Feedback (Orchestrator Discipline) — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong.
 
 ## Parallel Dispatch (Subagents, Not Teams)
 
-For 2+ independent tasks with no shared state or sequential dependencies, use parallel subagent dispatch via the Task tool — teams add coordination overhead independent tasks do not need.
+For 2+ independent tasks that can be worked on without shared state or sequential dependencies, use parallel subagent dispatch via the Task tool (not an Agent Team — teams add coordination overhead that independent tasks do not need).
 
-**Use when:**
+**When to use:**
 
 - 3+ test files failing with different root causes
 - Multiple subsystems broken independently
-- Each problem is understandable without context from the others
+- Each problem can be understood without context from others
 - No shared state between investigations
 
-**Do not use when:**
+**When NOT to use:**
 
 - Failures are related (fixing one might fix others)
-- Full system state must be understood
-- Agents would interfere — editing the same files
+- Need to understand full system state
+- Agents would interfere with each other (editing same files)
 
 ### Infrastructure for Parallel Work
 
-Parallel agents needing isolated workspaces follow `references/parallel-dispatch.md`:
+When dispatching parallel agents that need isolated workspaces, follow `references/parallel-dispatch.md`:
 
-- One worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
+- Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
 - Merge back with plain `git merge` on the `<current-branch>-agent/parallel/<slug>` branches.
 
-Never hand-roll worktree setup or data-copy scripts.
+Do not hand-roll worktree setup or data-copy scripts.
 
 ### The Pattern
 
-1. **Identify independent domains.** Group failures by what is broken; fixing one must not affect the others.
-2. **Create focused agent tasks.** Each agent gets a specific scope (one file or subsystem), a clear goal, constraints, and an explicit expected output.
-3. **Dispatch in parallel using the canonical template** from `SKILL.md` §Dispatch Templates. The `Additionally:` tail carries task-specific steering only.
+1. **Identify independent domains.** Group failures by what's broken. Each domain is independent — fixing one doesn't affect the others.
+
+2. **Create focused agent tasks.** Each agent gets a specific scope (one file or subsystem), a clear goal, constraints (don't change other code), and an explicit expected output.
+
+3. **Dispatch in parallel using the canonical template.** Every dispatch follows the `Stage:` / `Task:` / `Additionally:` shape defined in `SKILL.md` §Dispatch Templates. The agent reads its standard protocol and the manifest; the `Additionally:` tail carries task-specific steering only.
 
    ```
-   Agent:
-     Load `superRA:implement-task` skill.
-
+   Agent(subagent_type: "superRA:implementer"):
      Stage: <stage-name>
      Task: <task pointer>
 
      Additionally: <focus: one independent domain>
 
-   Agent:
-     Load `superRA:implement-task` skill.
-
+   Agent(subagent_type: "superRA:implementer"):
      Stage: <stage-name>
      Task: <task pointer>
 
      Additionally: <focus: a different independent domain>
    ```
 
-   All dispatches go out in one message so they run concurrently.
+   All dispatches go out in one message so they run concurrently. No per-dispatch recitation of task-tree content or manifest loads — the agent reads those itself.
 
-4. **Review and integrate.** Read each status report, verify fixes do not conflict, run the full test suite or pipeline, integrate.
+4. **Review and integrate.** When agents return, read each status report, verify fixes don't conflict, run the full test suite (or pipeline), and integrate all changes.
 
 ### Common Mistakes
 
-- **Too broad:** "Fix all the tests" — the agent gets lost.
-- **No context in the `Additionally:` tail:** "Fix the race condition" — the agent does not know where.
-- **No constraints:** the agent refactors everything.
-- **Vague output:** "Fix it" — the status return navigates only if the dispatch steered it.
+- **Too broad:** "Fix all the tests" — agent gets lost.
+- **No context in the `Additionally:` tail:** "Fix the race condition" — agent doesn't know where.
+- **No constraints:** Agent might refactor everything.
+- **Vague output:** "Fix it" — you don't know what changed; the status return is a navigation aid only if the dispatch steered it.
 
 ### Verification
 
-1. Read each agent's commit body.
+After agents return:
+
+1. Read each agent's commit body to understand what changed.
 2. Check for conflicts — did agents edit the same code?
-3. Run the full pipeline to verify the fixes work together.
-4. Spot check — agents make systematic errors.
+3. Run the full pipeline to verify fixes work together.
+4. Spot check — agents can make systematic errors.
 
 ## Team Lifecycle & Session Handoff
 
 ### Cleanup Protocol
 
+When a team's work is complete:
+
 1. Shut down each teammate: "Ask [teammate-name] to shut down"
 2. Wait for all teammates to confirm shutdown
-3. "Clean up the team"
-4. Verify team config and task list are removed
+3. Clean up team resources: "Clean up the team"
+4. Verify cleanup: team config and task list removed
 
-**The lead cleans up.** Teammates do not.
+**Always use the lead to clean up.** Teammates should not run cleanup.
 
 ### Session Interruption
 
-- **Teammates are lost.** `/resume` and `/rewind` do not restore them.
-- **Completed work is safe** — committed to git and recorded in `superRA/` task files.
-- **A new session detects in-progress work** via the cross-session detection in `superRA:using-superra` `references/main-agent.md`.
-- **Resume with a new team** from the last completed task in the tree.
+If context runs out or the session ends mid-team:
+
+- **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
+- **Completed work is safe.** All completed tasks are committed to git and recorded in `superRA/` task files.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `superRA/` task tree.
+- **Resume with new team.** New session reads the `superRA/` task tree to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety
 
-- Commit after each completed task (already required).
-- Update task files with status and result notes (already required).
-- **Additionally:** the lead records the active team phase in the governing ancestor task when spawning a team.
+Because teammates can be lost at any time, checkpointing discipline is critical:
+
+- Commit after each completed task (already required by superRA)
+- Update task files with status and result notes (already required)
+- **Additionally:** lead records active team phase in the governing ancestor task when spawning a team.
+
+Example team status note:
 
 ```markdown
 ## Team Status
 Analysis team active. 3 of 5 tasks approved. Reviewer reviewing data-prep/merge.
 ```
 
+On session resume, this tells the new lead exactly where to pick up.
+
 ## Constraints
 
-- **Task creation order:** `TeamCreate` before `TaskCreate`.
-- **File conflicts:** never assign two teammates the same file simultaneously. Task dependencies cover sequential work; for parallel tasks, give each teammate different files.
-- **Ordering guarantees:** review of task N completes before implementation of task N+1 starts. Enforce via task dependencies, never convention.
-- **Escalation to user:** teammates message the lead, never the user. The lead handles all user communication.
-- **Team size:** 2–4 teammates. Larger teams add coordination overhead and token cost without proportional benefit.
-- **Cleanup:** the lead shuts down all teammates and cleans up team resources. No zombie teammates.
+- **Task creation order:** Create the team (`TeamCreate`) before creating tasks (`TaskCreate`). Tasks created before the team exist in a separate namespace and are invisible to teammates.
+- **File conflicts:** Never assign two teammates to edit the same file simultaneously. Task dependencies prevent this for sequential work. For parallel tasks, ensure each teammate owns different files.
+- **Ordering guarantees:** Review of task N must complete before implementation of task N+1 starts. Enforce via task dependencies, never via convention.
+- **Escalation to user:** Teammates must message the lead (not the user directly) for escalation decisions. The lead handles all user communication.
+- **Team size:** Keep teams small (2–4 teammates). Larger teams increase coordination overhead and token cost without proportional benefit.
+- **Cleanup:** Lead must shut down all teammates and clean up team resources when done. Never leave zombie teammates running.
 
 ## Known Limitations
 
 - **No session resumption** — `/resume` and `/rewind` do not restore teammates.
-- **Task status can lag** — teammates sometimes fail to mark tasks completed; check whether the work is actually done.
-- **One team per session** — clean up before starting a new team.
-- **No nested teams** — teammates cannot spawn teams (they can use subagents via the Task tool).
-- **Skills / mcpServers frontmatter** — not applied to teammates; they load from project and user settings like regular sessions, picking up `superRA:using-superra` via the `Skill` tool.
-- **Shutdown can be slow** — teammates finish the current request / tool call first.
+- **Task status can lag** — teammates sometimes fail to mark tasks as completed; check if work is actually done.
+- **One team per session** — must clean up before starting a new team.
+- **No nested teams** — teammates cannot spawn their own teams (they can use subagents via Task tool).
+- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. Teammates pick up `superRA:using-superra` the same way as any regular session — via the `Skill` tool — since there is no per-teammate frontmatter preload.
+- **Shutdown can be slow** — teammates finish current request / tool call before shutting down.

@@ -5,17 +5,17 @@ description: Protect key research results with permanent documentation, drift te
 
 # Result Protection
 
-Protect key results from unintended changes. Permanent results documentation suffices when the researcher chooses it; drift tests and other checks add automated protection where useful.
+Tool skill for protecting key results from unintended changes. Permanent results documentation is sufficient when the researcher chooses it; drift tests and other checks add automated protection where useful.
 
 ## References
 
-Load only the reference for the protection mechanism in use:
+Load only the reference needed for the protection mechanism in use:
 
 | Reference | Load when |
 |---|---|
 | `references/drift-test-quality.md` | Writing, refreshing, or reviewing drift/regression tests for selected results. |
 
-Load any domain-specific drift-test reference per the active domain skill's stage-load table at the `protection` stage.
+The active domain skill's stage-load table routes any domain-specific drift-test reference at the `protection` stage; load it per that table.
 
 ## Scope Gate
 

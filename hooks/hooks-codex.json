@@ -12,33 +12,6 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" agent-model-guard; else printf '{}\\n'; fi"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write|apply_patch",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" guard-task-approval; else printf '{}\\n'; fi"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" ensure-communicate; else printf '{}\\n'; fi"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -50,7 +23,16 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "export SUPERRA_TASK_HOOK_EMPTY_JSON=1; root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" task-hook; else printf '{}\\n'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",

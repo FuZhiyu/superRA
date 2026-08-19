@@ -9,7 +9,6 @@ message source.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from _task_io import (
@@ -46,48 +45,21 @@ def validate_frontmatter(task: Task) -> list[str]:
 
 
 def validate_revision_notes(task: Task) -> list[str]:
-    """Warn when a task past ``implemented`` still carries a ``## Revision Notes`` section.
+    """Warn when an ``approved`` task still carries a ``## Revision Notes`` section.
 
-    The implementer consumes and removes the note in the same commit that sets
-    ``status: implemented`` (see ``implement-task`` SKILL.md Execution), whether
-    or not review follows. A note is legitimate only before that point —
-    ``not-started`` or ``in-progress``. Detection is fence-aware so a header
-    quoted inside a code block does not trigger it.
+    The reviewer owns revision-note removal at approval, so an approved task
+    holding a non-empty note is a stale leak. Only ``approved`` warns:
+    ``implemented`` + a note is a legitimate mid-state (a reopened, reworked
+    task awaiting re-review), and earlier states never carry one. Detection is
+    fence-aware so a header quoted inside a code block does not trigger it.
     """
-    if task.status in ("not-started", "in-progress"):
+    if task.status != "approved":
         return []
     if not _has_nonempty_section(task.body, "Revision Notes"):
         return []
     return [
-        f"{task.status} task still carries a ## Revision Notes section; "
-        "the implementer should have removed it once implemented"
-    ]
-
-
-def approved_with_blocking_review_notes(text: str) -> bool:
-    """Return whether task Markdown violates the approval-review invariant."""
-    from _task_io import parse_body_sections, parse_frontmatter
-
-    fm, body = parse_frontmatter(text)
-    review_notes = parse_body_sections(body).get("Review Notes", "")
-    return _review_notes_block_approval(
-        str(fm.get("status", "not-started")), review_notes
-    )
-
-
-def _review_notes_block_approval(status: str, review_notes: str) -> bool:
-    return status == "approved" and bool(
-        re.search(r"\[BLOCKING\]", review_notes, re.IGNORECASE)
-    )
-
-
-def validate_review_notes(task: Task) -> list[str]:
-    """Warn when an approved task retains blocking review findings."""
-    if not _review_notes_block_approval(task.status, task.review_notes):
-        return []
-    return [
-        "approved task still carries a [BLOCKING] item in ## Review Notes; "
-        "run narrow re-review or keep the task in revision"
+        "approved task still carries a ## Revision Notes section; "
+        "the reviewer should remove it at approval"
     ]
 
 
@@ -183,9 +155,6 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_revision_notes(task):
                 warnings_out.append(f"{prefix}: {w}")
 
-            for w in validate_review_notes(task):
-                warnings_out.append(f"{prefix}: {w}")
-
             for w in validate_dependencies(task, sibling_names):
                 warnings_out.append(f"{prefix}: {w}")
 
@@ -203,8 +172,6 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_frontmatter(root_task):
                 warnings_out.append(f"(root): {w}")
             for w in validate_revision_notes(root_task):
-                warnings_out.append(f"(root): {w}")
-            for w in validate_review_notes(root_task):
                 warnings_out.append(f"(root): {w}")
         except Exception as exc:
             warnings_out.append(f"(root): parse error: {exc}")

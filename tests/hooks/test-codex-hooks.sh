@@ -192,27 +192,6 @@ case_codex_manifest_claude_root_fallback() {
   fi
 }
 
-case_codex_manifest_agent_model_guard() {
-  local name="Codex manifest enforces explicit generic-agent controls"
-  local missing explicit named out_missing out_explicit out_named decision
-  missing=$(python3 -c 'import json; print(json.dumps({"hook_event_name":"PreToolUse","tool_name":"spawn_agent","model":"gpt-5.6","tool_input":{"agent_type":"default","message":"probe"}}))')
-  explicit=$(python3 -c 'import json; print(json.dumps({"hook_event_name":"PreToolUse","tool_name":"spawn_agent","model":"gpt-5.6","tool_input":{"agent_type":"default","message":"probe","model":"gpt-5.6-luna","reasoning_effort":"low"}}))')
-  named=$(python3 -c 'import json; print(json.dumps({"hook_event_name":"PreToolUse","tool_name":"spawn_agent","model":"gpt-5.6","tool_input":{"agent_type":"superra_reviewer","message":"probe"}}))')
-
-  out_missing=$(run_codex_manifest_hook agent-model-guard "$missing" plugin)
-  out_explicit=$(run_codex_manifest_hook agent-model-guard "$explicit" plugin)
-  out_named=$(run_codex_manifest_hook agent-model-guard "$named" plugin)
-  assert_json "$name" "$out_missing" || return
-  assert_empty_json_object "$name" "$out_explicit" || return
-  assert_empty_json_object "$name" "$out_named" || return
-  decision=$(printf '%s' "$out_missing" | json_get 'print(d.get("hookSpecificOutput", {}).get("permissionDecision", ""))')
-  if [ "$decision" = "deny" ]; then
-    record_pass "$name"
-  else
-    record_fail "$name" "missing deny decision: $out_missing"
-  fi
-}
-
 case_codex_manifest_plan_stop_execution() {
   local name="Codex manifest command executes plan Stop hook"
   local input out decision
@@ -237,12 +216,7 @@ case_codex_manifest_task_hook_apply_patch() {
 
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
-  assert_json "$name" "$out" || return
-  context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", ""))')
-  if [[ "$context" != *"Markdown edited under the task tree"* ]] || [[ "$context" != *"superRA:communicate"* ]]; then
-    record_fail "$name" "missing Communicate reminder: $out"
-    return
-  fi
+  assert_empty_json_object "$name" "$out" || return
 
   status=$(python3 - "$work/.plan/task.md" <<'PY'
 from pathlib import Path
@@ -373,7 +347,6 @@ case_autoload_codex_wording
 case_merge_guard_codex_bash
 case_codex_manifest_sparse_path
 case_codex_manifest_claude_root_fallback
-case_codex_manifest_agent_model_guard
 case_codex_manifest_plan_stop_execution
 case_codex_manifest_task_hook_apply_patch
 case_codex_manifest_task_hook_invalid_status_feedback

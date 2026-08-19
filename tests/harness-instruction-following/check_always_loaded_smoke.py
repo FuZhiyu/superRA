@@ -2,7 +2,7 @@
 """Evaluate a live Codex always-loaded smoke run.
 
 Parses the Codex JSONL transcript and the agent-written schema artifact, then
-runs the :class:`~always_loaded_live.CODEX_SKILL_LOAD_CANARIES`
+runs the always-loaded :class:`~always_loaded_live.CODEX_ALWAYS_LOADED_CANARIES`
 against existing ``command_execution`` events.
 
 Usage:
@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from always_loaded_live import (  # noqa: E402
-    CODEX_SKILL_LOAD_CANARIES,
+    CODEX_ALWAYS_LOADED_CANARIES,
     EXPECTED_ARTIFACT,
 )
 from codex_load_evidence import (  # noqa: E402
@@ -45,7 +45,7 @@ def main() -> int:
     report = CanaryReport()
     evaluate_canaries(
         report,
-        CODEX_SKILL_LOAD_CANARIES,
+        CODEX_ALWAYS_LOADED_CANARIES,
         command_strings=commands,
     )
     if artifact != EXPECTED_ARTIFACT:
@@ -62,8 +62,8 @@ def main() -> int:
     for msg in report.missing:
         print(f"  - {msg}", file=sys.stderr)
     print(
-        "  An absent canary is a real loading-contract finding "
-        "(role-skill body-load path) to escalate, not a test to relax.",
+        "  An absent canary is a real always-loaded loading-contract finding "
+        "(role-spec body-load path) to escalate, not a test to relax.",
         file=sys.stderr,
     )
     return 1

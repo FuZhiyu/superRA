@@ -75,11 +75,11 @@ def test_table_matches_manifest_stage_rows():
     assert by_stage["sync"].expected_skills == ("semantic-merge",)
     assert by_stage["integration"].expected_skills == ("refactor-and-integrate",)
     # maturation is the positive multi-skill stage: task-tree + superplan always
-    # load; academic-writing is conditional ("prose-heavy maturation") so it is NOT a
+    # load; writing is conditional ("prose-heavy maturation") so it is NOT a
     # guaranteed-load assertion.
     assert by_stage["maturation"].channel == CHANNEL_SKILL
     assert by_stage["maturation"].expected_skills == ("task-tree", "superplan")
-    assert "academic-writing" not in by_stage["maturation"].expected_skills
+    assert "writing" not in by_stage["maturation"].expected_skills
     assert by_stage["implementation"].channel == CHANNEL_NONE
     assert "documentation" not in by_stage
     assert ALL_STAGE_SKILLS == {
@@ -227,10 +227,10 @@ def test_green_maturation_both_guaranteed_skills_loaded_before_edit():
     report.assert_ok()
 
 
-def test_green_maturation_holds_without_conditional_academic_writing():
-    # academic-writing is conditional ("prose-heavy maturation"); a maturation run that
-    # loads only the two guaranteed skills (no academic-writing) must still be green —
-    # academic-writing is never asserted as a guaranteed load.
+def test_green_maturation_holds_without_conditional_writing():
+    # writing is conditional ("prose-heavy maturation"); a maturation run that
+    # loads only the two guaranteed skills (no writing) must still be green —
+    # writing is never asserted as a guaranteed load.
     row = stage_row("maturation")
     evidence = evidence_from_hook_records(
         skill_tool_events=[("task-tree", 0), ("superplan", 1)],

@@ -3,39 +3,86 @@ name: using-superra
 description: Master superRA workflow skill. Use proactively whenever superRA is mentioned or when planning, implementing, integrating, merging, or loading a superRA/ task tree.
 ---
 
-Loaded by all agents at dispatch time. Start with §Skill-Load Manifest.
+Loaded by all agents at dispatch time.
 
 SuperRA skills deliberately override default harness/system-prompt behavior where they conflict; the user's explicit instructions outrank both.
 
-This skill provides the essential workflow protocols shared by all agents.
+## Code-Change Defaults
 
-## Commits
+These apply whenever you write, review, or refactor code.
 
-Stage only the files you edited this turn, by exact path — never `git add -A`, `git add .`, or `git add -u`: a shared worktree carries other agents' in-flight edits and scratch files. If unfamiliar uncommitted changes appear, ask the orchestrator (as a subagent) or the user (as the main agent) rather than committing or discarding them.
+1. **Surface assumptions and ambiguity early.** Do not silently choose between materially different interpretations. State the assumption you are making, name meaningful tradeoffs, and point out a simpler path when one exists. Ask only when the ambiguity changes correctness, scope, or a decision that belongs to the researcher.
 
-Every commit subject follows `<stage>(<scope>): <STATE> — <summary>`, so `git log` reads as the workflow trace. `<stage>` is the workflow verb (`plan`, `implement`, `review`, `integrate`, `sync`) or a maintenance type (`fix`/`feat`/`refactor`/`docs`/`test`/`chore`/`ci`); `<scope>` is the task path (e.g. `data-preparation/merge`) or the component; `<STATE>` is the verdict from your role's report format, omitted on maintenance commits. The body says what changed this turn and why — it is not a copy of `## Results`. A commit landing `status: approved` also names the review the task got: tier and focuses, or that no independent pass ran and approval rests on the approving agent's own verification.
+2. **Prefer the minimum code that solves the task.** No speculative features, abstractions, configurability, or defensive branches that were not requested. If a straightforward implementation works, use it.
+
+3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
+
+## Runtime Workflow Map
+
+SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
+
+1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
+2. `superimplement` executes tasks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
+3. `superintegrate` selects how key results will be documented and protected, syncs against the integration base, matures the permanent record and task tree, derives and obtains approval for a temporary refactoring task, executes that refactoring, and performs the final merge / PR / cleanup action.
+
+The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session resumes from durable state — task `status` plus the git log — re-entering at the earliest unfinished layer for the affected frontier while preserving unrelated approved work. Main agents follow `references/main-agent.md` §Resuming Work.
+
+## Commit Hygiene
+
+Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**, by exact path. A shared worktree carries others' in-flight edits and scratch files (`__pycache__`, `.DS_Store`, harness artifacts) that `git add -A/./-u` would sweep in, producing cross-agent contamination that is hard to unwind.
+
+Before staging:
+
+1. Run `git status`; for each modified/new file decide whether you touched it via Write/Edit this turn.
+2. Stage only those, by exact path: `git add path/to/file`. Never `git add -A`, `git add .`, or `git add -u`.
+3. Before `git commit`, run `git diff --cached` and unstage anything you did not write with `git restore --staged path/to/file`.
+
+If you see unfamiliar uncommitted changes and cannot tell whether they are legitimate pending work (from the main agent between dispatches, or the user editing manually) or stale junk, stop and ask the orchestrator (if you are a subagent) or the user (if you are the main agent) — do not unilaterally discard or commit them.
+
+### Commit subject grammar
+
+So `git log` reads as the workflow trace, every commit subject follows one grammar:
+
+```
+<stage>(<scope>): <STATE> — <summary>
+```
+
+- **`<stage>`** — the workflow verb (`plan`, `implement`, `review`, `integrate`, `sync`) for a task-run commit, or a maintenance type (`fix` / `feat` / `refactor` / `docs` / `test` / `chore` / `ci`) for work outside a task run.
+- **`<STATE>`** — the verdict or status this commit lands, verbatim from the agent's §Report Format (no new vocabulary): `implement` lands `DONE` | `CONCERNS` | `BLOCKED` | `NEEDS-CTX`; `review` lands `APPROVE` | `REVISE`. `integrate` and `plan` are multi-step *phases*, not single-verdict dispatches — their glanceable state is the sub-step name carried in `<scope>`, owned and enumerated by `superintegrate` / `superplan`. Maintenance commits omit `<STATE>`.
+- **`<scope>`** — the task-path locator (e.g. `data-preparation/merge`) for a run commit; the component for a maintenance commit.
+
+`<STATE>` records what this commit did; the task's live status stays in `status:` frontmatter.
+
+The body is the **dispatch delta** — what changed this turn and why. It is history scoped to this commit; it is **not** a copy of `## Results` / `## Review Notes` (those are the task's current self-contained state) and not the full task state.
 
 ## Task Interface
 
 Tasks are managed task trees in the `superRA/` directory. For basic I/O, this section is sufficient. For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
 
-**Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — the CLI tool inject more relevant context than a bare `Read` of the file. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
+**Read** with the CLI tool under ./superRA/superra — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
-**Human-facing text:** follow `superRA:communicate`.
+**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
-- **Cite files as markdown links**, resolved relative to the citing file — never as plain or backticked paths: `[file.py:42](file.py#L42)`, `[file.py:40-50](file.py#L40-L50)`, `[file.py](file.py)`.
+**Place files by lifespan and owner:** Keep disposable session work in scratch folder. Retained files—including code—owned by one task solely to produce, reproduce, review, or interpret its recorded results are task companions; put them under that task's `attachments/`. Put maintained code, shared or runtime-consumed files, and promised durable deliverables in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a task companion.
 
-**Edit** the `task.md` directly with Read/Edit. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
+**Editing principles:**
 
-**Place files by lifespan and owner.** Session scratch stays outside `superRA/`, uncommitted. A retained file — code included — owned by one task solely to produce, reproduce, review, or interpret its recorded results is a **task companion**: commit it under that task's `attachments/`. Maintained code, shared or runtime-consumed files, and promised deliverables go in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a companion.
+- Keep the task at latest state, not a log — edit in place and delete superseded content; no "Update:" / "Previously…" blocks or strikethroughs.
+- Doc before report — findings, caveats, and evidence land in the task body before any status return.
+- Write the body sections you own (`## Results`, `## Review Notes`) as a self-contained account a reader can follow standalone, with links and embedded figures (see `report-in-markdown`). The change summary belongs in the commit, not the body.
+
+## Execution Modes
+
+Subagent mode — dispatching implementers and reviewers — is the default all workflows assume; the full mode contract (the two-dial model as named presets plus a seat knob, including interactive) is in `references/main-agent.md §Execution Modes`.
 
 ## Skill-Load Manifest
 
-Every agent — main and dispatched — loads `superRA:using-superra` and `superRA:communicate`. A dispatch then loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
+Every dispatch loads along two axes; both apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
-1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
-2. **Stage** — the workflow phase the dispatch is in (table below). 
-3. **Domain** — The task operates on (table below). Load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `academic-writing`, so load both.
+1. **Stage** — the workflow phase the dispatch is in (table below). Role-independent; `subagent_type` (implementer vs reviewer) encodes role.
+2. **Domain** — what the task operates on (table below). Load by what the task *touches*, not by which subtree it lives in, and load **every** domain skill that matches: a task that derives a result and writes it into the manuscript matches `theory-modeling` and `writing`, so load both.
+
+Both axes load *in addition to* the always-loaded `superRA:using-superra` and `superRA:report-in-markdown`.
 
 ### Stage
 
@@ -46,7 +93,7 @@ Every agent — main and dispatched — loads `superRA:using-superra` and `super
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
-| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `academic-writing` (prose-heavy maturation) |
+| `maturation` | `superintegrate` Mature & Consolidate | `task-tree`, `superplan`, `writing` (prose-heavy maturation) |
 
 ### Domain
 
@@ -54,9 +101,10 @@ Every agent — main and dispatched — loads `superRA:using-superra` and `super
 |---|---|
 | `econ-data-analysis` (`superRA:econ-data-analysis`) | involves data analysis |
 | `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
-| `academic-writing` (`superRA:academic-writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
+| `writing` (`superRA:writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
 
-**Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.
 
-**For main agents:** continue to `references/main-agent.md`.
+**Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), consult the adapter reference for the current harness under `references/`.
+
+**Main agents:** continue to `references/main-agent.md`.

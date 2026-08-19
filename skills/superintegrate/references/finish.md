@@ -1,10 +1,10 @@
 # Finish
 
-Finish executes the user's choice from the IMPLEMENT completion menu. `superRA/` is committed as-is — part of the permanent branch record; any closeout commit lands as `integrate(finish): …` per `SKILL.md` §Stop Points.
+Finish executes the user's completion choice from `superimplement`. The `superRA/` directory is committed as-is — it is part of the permanent branch record; any closeout commit here lands as `integrate(finish): …` per `SKILL.md` §Stop Points.
 
 ## Step 1: Freshness check
 
-`BASE_REF` and `BASE_HEAD_SHA` carry over within a session. Resumed session: recover them from the sync merge commit — its base-side parent is `BASE_HEAD_SHA`, its message records the base synced. Sync was a no-op: use the pre-Integrate base ref directly.
+`BASE_REF` and `BASE_HEAD_SHA` carry over within a session. On a resumed session, recover them from the sync merge commit: its base-side parent is `BASE_HEAD_SHA`, and the commit message records the base that was synced. If Sync was a no-op (the branch was already current), use the pre-Integrate base ref directly.
 
 Fetch `BASE_REF` when it is a remote-tracking ref and check whether it advanced since Integrate:
 
@@ -17,18 +17,18 @@ fi
 CURRENT_BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
-`CURRENT_BASE_HEAD_SHA` differs from `BASE_HEAD_SHA`: re-enter Sync before publishing or landing.
+If `CURRENT_BASE_HEAD_SHA` differs from `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
 
 ## Step 2: Publish or land
 
-PR:
+For a PR:
 
 ```bash
 git push -u origin <analysis-branch>
 gh pr create --title "<title>" --body "<summary, data, reproducibility, quality gates>"
 ```
 
-Local fast-forward into the base:
+For a local fast-forward into the base:
 
 ```bash
 git checkout <base-branch>
@@ -36,10 +36,10 @@ git pull
 git merge --ff-only <analysis-branch>
 ```
 
-Run the project pipeline or targeted verification on the final tree; investigate any failure before cleanup.
+Run the project pipeline or targeted verification on the final tree. If it fails, investigate before cleanup.
 
 ## Step 3: Cleanup
 
-Work used a worktree: remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree — data teardown in `superRA:worktree-data-sync`.
+If the work used a worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree; see `superRA:worktree-data-sync` for data teardown.
 
 Report what was published or landed and what was cleaned up.

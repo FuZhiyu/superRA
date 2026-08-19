@@ -2,24 +2,28 @@
 
 Load at the **PLAN phase** when the analysis involves data work.
 
-- **Data Inventory** — what data exists, what's missing, where to find it.
-- **Sensitivity Analysis Design** — which robustness checks matter for this study.
+Two planning-only concerns:
 
-Both happen once, during planning.
+1. **Data Inventory — the hard gate that blocks task drafting until available data is inventoried and gaps are surfaced.**
+2. **Sensitivity Analysis Design — which robustness checks matter for this specific study.**
+
+Both happen once at planning time and then live as scoped subsections on the `## Objective` of the governing ancestor task — the task whose subtree the data governs.
 
 ---
 
-## Data Inventory
+## Data Inventory (Hard Gate)
 
-Data logistics, not research design.
+Your job here is data logistics — what exists, what's missing, where to find it — not research design.
 
-**Not objective content.** The inventory itself never goes into a task's `## Objective`. Carry into a task only the specific paths, variables, and known gaps its work depends on. A durable record of the survey belongs in `## Details` of the governing task — information, not binding, per `task-tree/references/task-file-contract.md` §Task Anatomy.
+<HARD-GATE>
+Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have presented a data inventory and the researcher has approved it. This applies to EVERY data analysis regardless of perceived simplicity.
+</HARD-GATE>
 
 ### Checklist
 
-In order:
+Create a task for each of these items and complete them in order:
 
-1. **Understand the analysis goal** — what needs analyzing, and what data the researcher expects to use.
+1. **Understand the analysis goal** — ask the researcher what they need to analyze and what data they expect to use. One question at a time; don't overwhelm.
 
 2. **Explore project data** — check existing data directories, symlinks, and documentation:
    ```bash
@@ -30,9 +34,9 @@ In order:
    grep -ri "data" CLAUDE.md AGENTS.md README.md 2>/dev/null | head -20
    ```
 
-3. **Inventory available data** — per dataset: name and path, format, approximate size (rows × columns), key variables, date range, source.
+3. **Inventory available data** — for each dataset found, document name and path, format, approximate size (rows × columns), key variables, date range, source.
 
-4. **Identify gaps** — needs against availability: missing datasets, wrong time period or frequency, missing variables within available datasets, data quality concerns.
+4. **Identify gaps** — compare what the researcher needs against what's available: missing datasets entirely, available data with wrong time period or frequency, missing variables within available datasets, data quality concerns.
 
 5. **Research sources** — for missing data, suggest specific sources:
    - **Financial:** WRDS (CRSP, Compustat, IBES, TAQ), Bloomberg, Refinitiv
@@ -40,41 +44,42 @@ In order:
    - **Academic:** journal replication packages, ICPSR
    - **Project-specific:** check project documentation for custom data pipelines
 
-   WRDS or Refinitiv data skills available: note them as download tools.
+   If WRDS or Refinitiv data skills are available, note them as tools for downloading.
 
-### Frontier Contributions
+6. **Present the inventory and get researcher approval.** Use the Data Inventory format from `task-tree/references/task-file-contract.md` §Task Anatomy. Ask the researcher to confirm before proceeding to task drafting.
 
-The inventory settles facts; what it leaves open goes to the researcher as frontier questions (`superplan §Grilling`):
+### Gate loopholes to close
 
-- **Disposition of each gap** — acquire it, scope the analysis down to what exists, or proceed and mark the limitation.
-- **Which robustness checks matter** for this study, from the `data-robustness-checklist.md` menu.
-- **Whether a borderline sensitivity failure is meaningful** — judging "robust enough" is research judgment, not an RA call.
+The gate is sequential and applies to every analysis, however simple — simple analyses hide the same data-shape surprises as complex ones. Closed loopholes:
 
-### Discipline
+- Explore the file system before asking "what data do you have?" — don't ask about data the project directory already holds.
+- The inventory is written into the governing task's objective in `superRA/`, never just verbally agreed.
+- No speculative task structure while data availability is uncertain; no "I'll assume we have X, check later." Check first.
+- No "pending data availability" or "TBD sources" in task steps — every source is grounded in a verified file or table.
 
-Applies to every analysis however simple — simple analyses hide the same data-shape surprises.
-
-- Explore the file system before asking "what data do you have?"
-- No speculative task structure while data availability is uncertain; no "I'll assume we have X, check later."
-- No "pending data availability" or "TBD sources" in task steps — every source grounded in a verified file or table.
+After the researcher approves the inventory, proceed to task drafting.
 
 ---
 
 ## Sensitivity Analysis Design
 
-Every data-analysis plan includes sensitivity analysis tasks.
+Every data-analysis plan should include sensitivity analysis tasks. At the planning stage:
 
-1. **Pick candidate checks from the menu** in `data-robustness-checklist.md`. Not all checks are meaningful for every study, so the selection is a frontier question (§Frontier Contributions).
+1. **Discuss with researcher:** What robustness checks matter for this analysis? Not all checks are meaningful for every study — the researcher knows which dimensions are most important.
 
-2. **Design as dedicated task(s):** typically after the main analysis produces baseline results.
+2. **Pick checks from the menu** in `data-robustness-checklist.md` (same `references/` folder).
 
-3. **Document expected sensitivity:** per check, what you expect and what would be concerning.
+3. **Design as dedicated task(s):** Sensitivity checks are their own task(s), typically after the main analysis produces baseline results.
+
+4. **Document expected sensitivity:** For each check, note what you expect and what would be concerning.
+
+5. **If unsure whether a sensitivity failure would be meaningful, ask the researcher** — judging "robust enough" is research judgment, not an RA call.
 
 ---
 
 ## Pipeline File (Reproducibility Requirement)
 
-More than one script: the plan's file-structure section carries a pipeline file — one entry point running every script in dependency order, failing fast on errors. Update it whenever a script is added.
+If the analysis involves more than one script, the plan must include a pipeline file in its file-structure section — a single entry point that runs every script in dependency order and fails fast on errors. Update it whenever a new script is added.
 
 ```bash
 # run_all.sh

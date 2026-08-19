@@ -11,7 +11,7 @@ created: 2026-06-19
 ## Objective
 
 Read this task with `./superRA/superra task read stage-loads-task`. You are an
-implementer (or reviewer); load the skill or reference your role skill and the
+implementer (or reviewer); load the skill or reference your role spec and the
 Skill-Load Manifest tell you to load for the `Stage:` your dispatch named, before
 acting. Do not edit source code, install anything, run a test suite, or explore
 the codebase.

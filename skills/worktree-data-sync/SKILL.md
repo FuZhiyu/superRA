@@ -6,7 +6,7 @@ user-invocable: true
 
 # Worktree Data Sync Skill
 
-Non-git data sync between existing worktrees — seed, diff, apply, data teardown. Worktree lifecycle (create / enter / remove): `skills/agent-orchestration/references/worktree-harness-fallback.md`.
+Non-git data sync between existing worktrees — seed, diff, apply, and data teardown. For worktree lifecycle (create / enter / remove), see `skills/agent-orchestration/references/worktree-harness-fallback.md`.
 
 ## When to Use
 
@@ -36,7 +36,7 @@ Per managed directory root, a stat-only preflight walk picks the cheapest path:
 - **more than half the root's files are dataless:** seeds per-file (symlink placeholders, batch-copy the rest) and prints a suggestion to annotate the root `# data-sync:symlink`, since it never switches modes automatically
 - **destination root already exists:** falls back to the per-file merge walk, copying only what's missing
 
-Every failed path is recorded with its reason; seed prints the listing to stderr (capped, plus a total count) and exits nonzero when any path failed.
+Every failed path is recorded with its reason; seed prints the listing to stderr (capped, plus a total count) and exits nonzero when any path failed — nothing is swallowed silently.
 
 Optional: `--seed-sync-mode <auto|force-symlink|force-cow>` (default: `auto`)
 
@@ -44,7 +44,7 @@ Optional: `--seed-sync-mode <auto|force-symlink|force-cow>` (default: `auto`)
 - `force-symlink`: create top-level symlinks for all managed roots when the destination path does not already exist; conflicting paths are skipped
 - `force-cow`: copy/COW all managed roots, including symlink-only annotated paths
 
-`--seed-sync-mode` is valid only with `--mode seed`; the CLI rejects it elsewhere.
+`--seed-sync-mode` is only valid with `--mode seed`; the CLI rejects it for other modes.
 
 ### `--mode diff`
 
@@ -79,10 +79,10 @@ No delete/discard action is provided.
 Discovery is stateless and source-driven. Managed roots come from:
 - gitignored paths via `git ls-files --others --ignored --exclude-standard --directory`, minus a built-in denylist (below)
 - tracked symlinks that resolve outside the repo
-- top-level symlink safety net, skipping symlinks git already tracks (git checks those out in the destination)
+- top-level symlink safety net, skipping symlinks git already tracks (those are checked out by git in the destination already)
 - `.gitignore` symlink-only annotations
 
-A gitignored entry whose basename matches a well-known non-data name — `.venv`, `venv`, `.direnv`, `node_modules`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `.tox`, `.nox`, `.cache`, `.ipynb_checkpoints`, `.quarto`, `dist`, `build`, `*.egg-info`, `.DS_Store`, `.env`, `.envrc`, `.worktrees`, `.claude`, `.codex` — is excluded from managed entries. The denylist filters discovered entries only — it excludes nothing from inside an otherwise-managed root. A `# data-sync:symlink` annotation always wins over the denylist, so an annotated root stays managed even under a denylisted name.
+A gitignored entry whose basename matches a well-known non-data name — `.venv`, `venv`, `.direnv`, `node_modules`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `.tox`, `.nox`, `.cache`, `.ipynb_checkpoints`, `.quarto`, `dist`, `build`, `*.egg-info`, `.DS_Store`, `.env`, `.envrc`, `.worktrees`, `.claude`, `.codex` — is excluded from managed entries. The denylist filters discovered entries only; it does not exclude anything from inside a root that is otherwise managed. A `# data-sync:symlink` annotation always wins over the denylist, so a deliberately annotated root (even one carrying a denylisted name) is still managed.
 
 Annotate a path as symlink-only by adding a **duplicate line** with the tag comment:
 
@@ -141,9 +141,9 @@ python3 <skill-dir>/scripts/sync_worktree_data.py \
 
 ## Data Teardown
 
-Materialized data inside a worktree (copies, COW clones, symlinks created by `--mode seed`) disappears when the worktree directory is deleted — no separate "unseed" step. The source worktree's data is untouched.
+Materialized data inside a worktree (regular copies, COW clones, and symlinks created by `--mode seed`) is removed implicitly when the worktree directory is deleted — there is no separate "unseed" step. The source worktree's data is untouched.
 
-Worktree removal itself (`git worktree remove`, branch deletion, safety checks): `skills/agent-orchestration/references/worktree-harness-fallback.md` §Remove.
+For worktree removal itself (`git worktree remove`, branch deletion, and safety checks), see `skills/agent-orchestration/references/worktree-harness-fallback.md` §Remove.
 
 ## See Also
 

@@ -8,16 +8,16 @@ user-invocable: true
 
 ## Core Concepts
 
-- **Task** — an immediate subdirectory of a task directory or the rootless `./superRA` forest that contains `task.md`. `attachments/` is always an asset container, never a task. A leaf task has no child task directories.
-- **Filesystem hierarchy is the task hierarchy.** `walk_plan()` discovers children by scanning subdirectories.
-- Retained files are companions, not task nodes — classification, placement, and lifecycle in `../using-superra/references/task-companion-files.md`.
+- Every immediate subdirectory of a task directory or rootless `./superRA` forest that contains `task.md` is a **task**, except `attachments/`, which is always an asset container. A leaf task has no child task directories.
+- The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
+- Files retained with a task are companions, not task nodes; their classification, placement, and lifecycle live in `../using-superra/references/task-companion-files.md`.
 - **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
-- **Parent status rolls up** from children automatically — `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded.
-- **DAG order vs. display order.** The dependency DAG controls execution order; numeric directory prefixes (`01-load`, `02-merge`) control display order only. Independent.
+- **Parent task status rolls up** from children automatically — a parent is `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded from the rollup computation.
+- **DAG-derived ordering vs. display order.** The dependency DAG controls execution order. Numeric prefixes on directory names (e.g. `01-load`, `02-merge`) control display order only — these are independent.
 
 ## CLI Setup
 
-Bootstrap a fresh project's wrapper from the loaded skill directory (`<skill-dir>` = the directory holding this `SKILL.md`; substitute the real path), then use the wrapper for everything after:
+In a fresh project, bootstrap the wrapper with the loaded skill directory (`<skill-dir>` = the directory containing this `SKILL.md`; substitute the real path), then use the wrapper for everything after:
 
 ```bash
 uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra (planner/main bootstrap)
@@ -26,7 +26,7 @@ uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/super
 
 ## Reading the Tree
 
-Run the committed `./superRA/superra` wrapper created above — contributors inside the superRA checkout substitute `uv run --script skills/task-tree/scripts/cli.py`. Every `superra …` example below and in the references denotes it:
+Run the committed `./superRA/superra` wrapper (created above; contributors in the superRA checkout substitute `uv run --script skills/task-tree/scripts/cli.py`). Every `superra …` example below and in the references denotes this wrapper:
 
 ```bash
 ./superRA/superra task tree            # tree with status badges
@@ -36,7 +36,7 @@ Run the committed `./superRA/superra` wrapper created above — contributors ins
 ./superRA/superra dashboard --no-open  # idempotent; starts or reuses a server and prints this worktree's scoped URL
 ```
 
-**Deep-link a dashboard task:** append `#/<task-path>` to the scoped URL from `dashboard --no-open`. `<task-path>` is the `task read` locator (no `superRA/` prefix, empty for the tree root). Use the emitted URL as-is — its URL-encoded `?wt=` selector handles worktree-name collisions.
+**Deep-linking a task in the dashboard:** append `#/<task-path>` to the scoped URL emitted by `dashboard --no-open`. `<task-path>` is the same locator as `task read` (no `superRA/` prefix, empty for the tree root). Use the emitted URL as-is because its URL-encoded `?wt=` selector handles worktree-name collisions.
 
 ## Task File Format
 
@@ -55,14 +55,17 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 
 ## Results
 
-Left join preserved all 4.7M holdings rows.
-Quarterly characteristics were matched to monthly holdings by nearest prior date.
+### Key Findings
+- Merge preserved all 4.7M rows
+
+### Notes
+- Used fuzzy date matching for quarterly vs monthly frequency mismatch
 
 ## Review Notes
-> [BLOCKING] Inner join used instead of left join
+> [MAJOR] Inner join used instead of left join
 ```
 
-Field-by-field anatomy and body-section ownership: `references/task-file-contract.md` §Task Anatomy.
+Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Task Anatomy.
 
 ## Routing — operate on the tree
 
@@ -78,4 +81,4 @@ Field-by-field anatomy and body-section ownership: `references/task-file-contrac
 | Dashboard server mechanics (idempotent ensure-running, task URLs, artifact export) | `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-Intentional task path changes go through `superra task move` (`task rename` for same-parent compatibility), never raw `mv` / `git mv`. It resolves the fallout — relative Markdown links tree-wide and sibling-only `depends_on` edges — so run the move directly rather than rewriting links or rewiring dependencies by hand first. Mechanics and cross-parent dependency rules: `references/commands.md §Move / rename a task`.
+Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`. It resolves the move's fallout for you — relative Markdown links across the tree and sibling-only `depends_on` edges — so run the move directly; do not rewrite links or rewire dependencies by hand first. Mechanics and the cross-parent dependency rules are in `references/commands.md §Move / rename a task`.

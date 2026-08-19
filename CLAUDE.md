@@ -2,7 +2,7 @@
 
 This file is the contributor-facing entry point for superRA internals. Read `README.md` first for the user-facing product model; keep that overview there rather than duplicating it here.
 
-When modifying superRA itself — skills, hooks, harness adapters, or internal docs — treat the work as skill creation. Load `skill-creator` before editing any `skills/*/SKILL.md`, and load the relevant superRA workflow skills before changing workflow behavior.
+When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs — treat the work as skill creation. Load `skill-creator` before editing any `skills/*/SKILL.md`, and load the relevant superRA workflow skills before changing workflow behavior.
 
 ## Contributor Discipline
 
@@ -32,28 +32,27 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 - **Mechanisms over contingency trees.** Prefer reusable mechanisms such as plan revision, stage-scoped references, dispatch templates, and gated checklists over long branches of "if this happens, then do that" workflow prose.
 - **Re-entry is normal.** A phase, mechanism, or utility should be enterable from different stages, re-enterable after discoveries, and skippable when the user intentionally invokes only part of the workflow.
 - **Keep choreography simple.** Workflow skills should state the sequence and stop points needed for safety, then delegate domain discipline, dispatch mechanics, and document mechanics to their owning skills.
-- **Gates are local discipline.** Adaptability does not mean optional quality control. Once a workflow/task is entered, its status transitions and blocking checklist items are enforced, and a review that runs enforces its gates. Whether an independent review runs at all is an execution-time call — see the triggers in `using-superra/references/main-agent.md` §Deciding on Review.
+- **Gates are local discipline.** Adaptability does not mean optional quality control. Once a workflow/task is entered, its review gates, status transitions, and blocking checklist items are enforced.
 - **Domain and utility skills stand alone.** They may mention workflow artifacts such as `PLAN.md`, `RESULTS.md`, implementers, or reviewers as optional context, but their main instructions should work when loaded directly by a researcher or another orchestrator.
-- **Compose at the workflow edge.** A workflow step is assembled from the workflow skill, `agent-orchestration`, the role skill, the active domain skill, and any needed utility skills. Do not restate those pieces inside each other.
+- **Compose at the workflow edge.** A workflow step is assembled from the workflow skill, `agent-orchestration`, the role spec, the active domain skill, and any needed utility skills. Do not restate those pieces inside each other.
 
 ### Minimal, Targeted Instructions
 
-- **Put instructions where they are loaded.** Place role-specific guidance in the role skills, stage-specific guidance in stage references, and cross-stage guidance in the smallest owning skill.
+- **Put instructions where they are loaded.** Place role-specific guidance in role specs or role references, stage-specific guidance in stage references, and cross-stage guidance in the smallest owning skill.
 - **Load only what is needed.** Top-level `SKILL.md` files should route to references instead of carrying every detail. References stay one level deep from the skill unless there is a strong reason.
 - **Prefer positive instructions.** Write the action agents should take: "Describe the data before transforming it" is better than "Do not transform data without describing it first."
 - **Skip design essays in skill bodies.** Skills need executable guidance. Keep rationale in contributor docs, commit messages, PRs, or short comments only when it helps the agent adapt correctly.
 
 ### Teach the Protocol, Don't Prescribe Each Action
 
-**This is a gate.** Every implementer editing any file under `skills/*` self-applies all three tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails any test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
+**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
 Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
-Three tests, applied in order — each asks "what's actually new here?" against a different source of already-known:
+Two tests, applied in order:
 
-1. **DRY.** Already carried by another skill, reference, dispatch field, or handoff doc the agent reads: do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
-2. **Same-file restatement.** Already said earlier in this file, in any phrasing — a bullet re-deriving a test the file states elsewhere, two sentences giving the same inclusion rule once as a definition and again as a rejection test: merge into whichever form the section already uses, or point to the earlier line. A restatement in new words is exactly as cuttable as a verbatim repeat; compressing its wording without cutting it doesn't pass this test. Find candidates by testing pairs: two lines that could swap positions without any fact reading as missing are one fact stated twice.
-3. **Necessity.** The agent would already do this unprompted, with no upstream line to point at — just default competence: delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
+1. **DRY.** If the information is already carried by another skill, reference, dispatch field, or handoff doc the agent reads, do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
+2. **Necessity.** If the instruction only tells the agent to do what it would already do with the content in front of it, delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
 
 **Anti-patterns to watch for:**
 
@@ -76,29 +75,29 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 | Concern | Owner |
 | --- | --- |
-| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate`; default IMPLEMENT choreography in `using-superra/references/interactive-mode.md` |
+| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
 | Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
 | Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
-| Skill-Load Manifest | `using-superra` |
-| Execution modes, the review trigger, and the interactive canvas loop | `using-superra/references/main-agent.md` (§Execution Modes, §Deciding on Review) and `references/interactive-mode.md` |
+| Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
-| Universal task read/edit interface — read a task with injected context, edit mechanics, per-role ownership | `using-superra` (§Task Interface) and each role skill's §Self-Check |
-| Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `academic-writing` |
+| Universal task read/edit interface — read a task with injected context, edit body sections, shared editing principles, ownership-boundary principle | `using-superra` (§Task Interface) |
 | Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
 | Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
+| Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superra/references/` |
-| Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `skills/implement-task` and `skills/review-task` |
+| Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `agents/implementer.md` and `agents/reviewer.md` |
 
 ## Architectural Patterns
 
-- **Roles are skills.** A dispatch prompt names the role skill (`implement-task` / `review-task`); that skill carries the role protocol and pulls the stage/domain loads. The Skill-Load Manifest in `using-superra` is the authoritative map from role, `Stage:` value, and task domain to required skills.
+- **Lean agents, rich references.** Prototype agents carry role protocol and load stage/domain references at dispatch time. The Skill-Load Manifest in `using-superra` is the authoritative map from `Stage:` value and task domain to required skills.
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md` and `README.md`, not in nested directories.
-- **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items are recorded and never block.
+- **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
+- **Generated artifacts stay generated.** Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
 - **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
 ## Agent Load Surface
@@ -109,11 +108,10 @@ What each agent loads in a session. This section documents the architecture for 
 
 | Load | When | Weight |
 |---|---|---|
-| `using-superra` + `communicate` + `using-superra/references/main-agent.md` | session start (`using-superra` hook-reminded on any superRA mention; `communicate` required before human-facing writes) | Mandatory |
-| Phase workflow skill (`superplan` / `superintegrate`) | phase entry | Mandatory |
-| `using-superra/references/interactive-mode.md` | executing a task in the default interactive mode | Typical |
-| `superimplement` | autonomous execution, on researcher request or an accepted recommendation | On demand |
-| `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` and the interactive loop are ungated — each instructs the load at its own dispatch point) | Mandatory when dispatching |
+| `using-superra` + `references/main-agent.md` | session start (hook-reminded on any superRA mention) | Mandatory |
+| `report-in-markdown` | with `using-superra` — the always-loaded pair | Mandatory |
+| Phase workflow skill (`superplan` / `superimplement` / `superintegrate`) | phase entry | Mandatory |
+| `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` is ungated — it instructs the load at its one dispatch point) | Mandatory when dispatching |
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
 | `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |
 | Domain skill(s) per the manifest | when the work touches that domain | Typical |
@@ -124,13 +122,13 @@ What each agent loads in a session. This section documents the architecture for 
 
 | Load | How | Weight |
 |---|---|---|
-| Role skill (`implement-task` / `review-task`) | dispatch-prompt load line | Mandatory |
-| `using-superra` + `communicate` | role-skill §Before You Start load instruction | Mandatory |
+| Role spec (`agents/implementer.md` / `agents/reviewer.md`) | `subagent_type` at dispatch | Mandatory |
+| `using-superra` + `report-in-markdown` | frontmatter `skills:` autoload in Claude Code; role-body load instruction in Codex | Mandatory |
 | Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
 | Domain skill(s) per the manifest | manifest | Typical |
 | Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |
 
-Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contract.md`, or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `agent-orchestration` is never subagent-loaded.
+Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contract.md`, or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role spec, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `agent-orchestration` is never subagent-loaded.
 
 ## Skill Authoring Guidelines
 
@@ -142,32 +140,20 @@ Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contra
 - Add new skills only for distinct concerns. Prefer improving an owning skill when the concern already has an owner.
 - Update `skills/CATEGORIES.md`, `README.md`, and (for domain skills) the `using-superra` Skill-Load Manifest Domain table when adding, renaming, or removing skills.
 
-### Skill Prose Style
-
-Skill prose is terse. Writing or restyling a skill file is two passes, in order: the §Teach the Protocol gate deletes lines; then compress the survivors. The moves, from the accepted exemplars (`skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`):
-
-- **Bolded imperative + short elaboration.** The bold states the action; what follows sharpens it. No lead-in sentence before the imperative.
-- **Definition bullets over framing sentences.** Delete the sentence that announces a list ("Two dispatch fields set the pass:"); each bullet is `**term** — definition`, defaults inline: "`quick` (default): …".
-- **Condition as a noun phrase, colon, action fragments.** "Unclear task structure: flag in your return, don't invent one" — not "Flag unclear task structure in your return rather than inventing one."
-- **No rationale or derivation clauses.** State the action. Keep a purpose clause only when it changes what the agent produces ("…so the next reader knows what wasn't covered").
-- **Trust the earlier mention.** Second reference shortens: "keep the `→ implemented: ...` annotation" becomes "keep the annotation". Cut examples and parentheticals whose content an adjacent line already carries.
-- **Meaning survives verbatim.** Gates, enums, defaults, and ordering constraints keep their content exactly; so do decision-carrying hedges and qualifiers ("usually", "only", "existing", "if any") — a hedge that carries a decision branch is protocol content, not filler. Compress wording only, and keep the imperative verb: a cut that leaves a section body with no instruction went too far.
-
-Measure the pass in words, not lines. Worked example: `daea6ae3..f525b63e` on `skills/review-task/SKILL.md` — the first commit restyled the surface and cut 12% of words; the accepted second pass cut another 18% by deleting whole clauses, with no protocol loss. A pass that barely moves the word count compressed connectives, not clauses — redo it.
-
 ## Codex and Harness Design
 
-- **Canonical instructions stay shared.** Workflow and role behavior both live in root `skills/`. Do not create Codex-only copies of shared behavior.
+- **Canonical instructions stay shared.** Workflow behavior lives in root `skills/`; role behavior lives in `agents/`. Do not create Codex-only copies of shared behavior.
 - **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superra/references/`, such as `codex-instructions.md`.
-- **One dispatch mechanism, both harnesses.** Both spawn the harness's default agent and let the dispatch prompt name the role skill. There are no named custom agents to generate or install; `.codex/agents/` is not a superRA surface.
-- **Surface generated artifacts in the task tree.** When a task touches a generated file, list it and its generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through the generator rather than being hand-edited. No agent-facing files are generated today.
+- **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
+- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `superRA/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
+- **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 
 ## Domain Vertical Extension
 
 Adding a new vertical means composing existing workflow pieces with a new domain skill. Create `skills/<vertical>/SKILL.md`, add its domain discipline and gated checklists, add stage-scoped references only for stages it touches, then add the vertical to routing/inventory surfaces.
 
-The workflow skills, role skills, orchestration skill, and generic utility skills should carry over unchanged unless the new vertical exposes a genuinely generic gap.
+The workflow skills, agent files, orchestration skill, and generic utility skills should carry over unchanged unless the new vertical exposes a genuinely generic gap.
 
 ## Design Audit Checklist
 

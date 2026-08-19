@@ -2,8 +2,8 @@
 """Read-only diagnostic tool for task tree integrity.
 
 Checks:
-1. Status validity — all status values in valid enum, no approved task retains
-   blocking review findings, flags stale review_status / integration_status fields.
+1. Status validity — all status values in valid enum, flags stale
+   review_status / integration_status fields still in frontmatter.
 2. Dependency integrity — all depends_on resolve to existing siblings,
    no cycles, flags dependencies on archived tasks.
 3. Rollup consistency — stored parent status matches compute_status()
@@ -33,7 +33,7 @@ from _task_io import (
     resolve_plan_root_arg,
     walk_plan,
 )
-from _task_validate import detect_cycles, invalid_status_message, validate_review_notes
+from _task_validate import detect_cycles, invalid_status_message
 
 
 # ---------------------------------------------------------------------------
@@ -83,14 +83,6 @@ def _check_status_recursive(
             category="status",
             severity="error",
             message=invalid_status_message(task.status),
-        ))
-
-    for message in validate_review_notes(task):
-        findings.append(Finding(
-            task_path=task.path,
-            category="status",
-            severity="error",
-            message=message,
         ))
 
     # Check for stale review_status / integration_status in raw frontmatter

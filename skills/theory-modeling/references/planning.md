@@ -1,56 +1,40 @@
 # Theory-Modeling Planning Discipline
 
-Load at the **PLAN phase** when the work involves mathematical modeling. `superplan` invokes it after Phase 1 (scope check), before tasks are drafted.
+Load at the **PLAN phase** when the work involves mathematical modeling. `superplan` invokes this reference after Phase 1 (scope check) to apply domain-specific discipline before tasks are drafted.
 
 ---
 
-## Model Inventory / Assumption Map
+## Model Inventory / Assumption Map (Hard Gate)
 
-Surface what the model contains — primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence counts as verification. Not a redesign of the researcher's model.
+The plan cannot be written without a model inventory. The researcher arrives with a question and methodology already in mind. Your job at this gate is not to redesign the model. Your job is to surface what the model actually contains: primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence will count as verification. The inventory is deliberately project-wide, so it becomes a `### Model Inventory / Assumption Map` subsection of the `## Objective` on the governing ancestor task — the task whose subtree is the whole model.
 
-Both homes are the governing ancestor task, the one whose subtree is the whole model. The **catalogue** — timing, primitives, endogenous objects — goes in its `## Details`. What a reviewer rejects work against goes in its `## Objective`: the solution concept, the canonical Notation Conventions, the Assumptions, and the Verification Plan. A restriction the timing implies is an Assumptions row, not a details line.
+<HARD-GATE>
+Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have written the Model Inventory / Assumption Map and the researcher has approved it. This applies to EVERY theory/modeling project regardless of perceived simplicity.
+</HARD-GATE>
 
 ### Checklist
 
-In order:
+Complete the following planning checks in order:
 
-1. **Understand the modeling goal** - what the model explains, what outputs matter, and whether the work is derivation, proof, comparative statics, calibration, or mixed.
+1. **Understand the modeling goal** - ask the researcher what the model is meant to explain, what outputs matter, and whether the task is derivation, proof, comparative statics, calibration, or a mixed workflow.
 
 2. **Inventory primitives and endogenous objects** - write down:
    - primitives: parameters, endowments, technologies, exogenous processes, information structure, timing, institutional rules
    - endogenous objects: choices, value functions, prices, allocations, laws of motion, equilibrium conditions, welfare objects
 
-3. **Map assumptions explicitly** - per primitive, the assumptions making the model well-defined: domains, signs, continuity/concavity/convexity, support of shocks, boundary or transversality conditions, normalizations, equilibrium-selection rules. Assumptions go on primitives, not on desired properties of endogenous objects — unless the project proves those properties.
+3. **Map assumptions explicitly** - for each primitive, record the assumptions that make the model well-defined: domains, signs, continuity/concavity/convexity, support of shocks, boundary or transversality conditions, normalizations, and equilibrium-selection rules. Put assumptions on primitives whenever possible; do not phrase them as desired properties of endogenous objects unless the project is proving those properties.
 
-4. **Audit notation before drafting tasks** - every symbol, its meaning, and whether the notation is conventional. No placeholders (`A/B/C/D`, `T1/T2`, `eq1`, `var2`). Conventional notation is fine when explicit and intuitive — `r` for an interest rate, `beta` for a discount factor.
+4. **Audit notation before drafting tasks** - list every symbol, what it means, and whether the notation is conventional. Ban lazy placeholders such as `A/B/C/D`, `T1/T2`, `eq1`, and `var2`. Conventional notation is allowed when explicit and intuitive, for example `r` for an interest rate or `beta` for a discount factor.
 
-5. **Design the verification plan** - which results are checked by substitution, which need limiting or special cases, which need a simple numerical example, what baseline parameter values or ranges apply, and what pass condition each check must satisfy.
+5. **Design the verification plan** - decide which results will be checked by substitution, which need limiting or special cases, which need a simple numerical example, what baseline parameter values or ranges will be used, and what pass condition each check must satisfy.
 
-6. **Write it into the two homes**, in this structure.
-
-`## Details`:
+6. **Present the inventory and get researcher approval.** Write it into that ancestor task's objective as a scoped subsection using this structure, then ask the researcher to confirm before proceeding to task drafting:
 
 ```markdown
-**Model inventory:**
+**Model Inventory / Assumption Map:**
 
 ### Timing / Information Structure
 - [State the sequence of moves, information available at each step, and any commitment or observability assumptions.]
-
-### Primitives
-| Object | Meaning | Domain / Units | Notes |
-|---|---|---|---|
-| ... | ... | ... | ... |
-
-### Endogenous Objects
-| Object | Meaning | Defined by | Notes |
-|---|---|---|---|
-| ... | ... | ... | ... |
-```
-
-`## Objective`:
-
-```markdown
-**Assumption map:**
 
 ### Solution Concept
 - [State the active solution concept: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other.]
@@ -61,8 +45,20 @@ In order:
 | ... | ... | ... |
 
 The **Why this notation** column is required for every non-conventional
-symbol — the intuition or mnemonic behind the choice. Symbols already
-fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
+symbol — record the intuition or mnemonic that justifies the choice.
+Conventional symbols already fixed by the literature (for example `r`
+for an interest rate, `beta` for a discount factor, `w` for a wage) may
+leave the column as "conventional" and skip further justification.
+
+### Primitives
+| Object | Meaning | Domain / Units | Notes |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+### Endogenous Objects
+| Object | Meaning | Defined by | Notes |
+|---|---|---|---|
+| ... | ... | ... | ... |
 
 ### Assumptions
 | Assumption | Applies to | Role in the model | Interpretation | Notes |
@@ -76,61 +72,54 @@ fixed by the literature (`r`, `beta`, `w`) may leave it as "conventional".
 | ... | ... | ... | ... |
 ```
 
-### Frontier Contributions
-
-The inventory settles facts; the choices it exposes go to the researcher as frontier questions (`superplan §Grilling`):
-
-- **Functional form** — the "right" utility, production, or cost specification for this research intent.
-- **Solution concept and equilibrium selection** where more than one is defensible.
-- **Normalizations** that change interpretation rather than only algebra.
-- **Verification mode per result** — substitution, limiting case, numerical example — and what counts as a concerning failure.
-
 ### Principles (non-default constraints)
 
-- **Notation Conventions is canonical and user-gated** - the planner seeds the table with the symbols agreed at planning time. During implementation, new symbols go to the per-task **Notation & Assumptions Ledger** in the task's `## Results` (`SKILL.md` §Documentation and handoff); promotion to the canonical table requires explicit user confirmation.
-- **Interpretability is blocking; prefer synthesis** - every assumption carries a plain-language interpretation a researcher can defend at planning time, and scattered weak restrictions replaceable by one stronger interpretable primitive are synthesized. Full checklist: `skills/theory-modeling/SKILL.md` §Assumptions.
-- **Escalate methodology choices** - never choose one silently; they are §Frontier Contributions.
+- **Notation Conventions is canonical and user-gated, not implementer-editable** - the planner seeds the table with the symbols agreed at planning time. During implementation, new symbols are logged to the per-task **Notation & Assumptions Ledger** in the task's `## Results` section (see `SKILL.md` §Documentation and handoff). Promotion from the per-task ledger to the canonical Notation Conventions table requires explicit user confirmation.
+- **Interpretability is blocking; prefer synthesis** - every assumption must carry a plain-language interpretation a researcher can defend at planning time, and when multiple scattered weak restrictions can be replaced by a single stronger interpretable primitive, prefer the synthesis. See `skills/theory-modeling/SKILL.md` §Assumptions for the full checklist.
+- **Escalate methodology choices** - if the "right" utility form, equilibrium concept, or normalization depends on research intent, ask the researcher rather than choosing unilaterally.
 
 ### Red Flags
 
 **Never:**
-- Proceed to task drafting on a verbal description. The inventory goes into the governing ancestor task.
+- Proceed to task drafting on the basis of a verbal description only. The inventory must be written into the governing ancestor task's objective.
 - Say "the notation is standard" without listing the symbols and meanings.
 - Write tasks in parallel with the inventory "to save time."
 - Use "TBD assumptions", "notation to be cleaned later", or "verify numerically if needed" in task steps.
-- Assume existence, uniqueness, or interiority because the target result is nicer under them.
-- Leave a symbol's intuition or mnemonic as "TBD" in the Notation Conventions table.
-- Write an assumption row with a blank **Interpretation** column, or "later" / "to be explained".
-- Enumerate weak technical assumptions where one stronger interpretable primitive is clearly available.
+- Assume existence, uniqueness, or interiority just because the target result would be nicer under those conditions.
+- Leave a new symbol's intuition or mnemonic as "TBD" in the Notation Conventions table.
+- Write an assumption row whose **Interpretation** column is blank or says "later" / "to be explained".
+- Enumerate multiple weak technical assumptions where a single stronger interpretable primitive is clearly available — synthesize instead.
 
-**Rationalizations that mean STOP:**
+**Common rationalizations that mean STOP:**
 - "This is just a short derivation." Short derivations hide the same assumption drift as long ones.
-- "The researcher obviously means the textbook setup." Write the setup down anyway; the doc is the record.
-- "I can draft tasks now and pin down assumptions later." Unknown assumptions make the task structure speculative.
+- "The researcher obviously means the textbook setup." Write down the setup anyway. The doc is the record.
+- "I can draft tasks now and pin down assumptions later." No. Unknown assumptions mean the task structure is speculative.
+
+After the researcher approves the inventory, proceed to task drafting.
 
 ---
 
 ## Verification Plan
 
-Every theory/modeling plan includes explicit verification tasks.
+Every theory/modeling plan should include explicit verification tasks. At the planning stage:
 
-1. **Propose which checks matter** — a §Frontier Contributions question, so recommend rather than choose. Typical options:
+1. **Discuss with the researcher which checks matter.** Typical options:
    - substitution back into first-order conditions, laws of motion, or equilibrium conditions
    - limiting or special cases
    - sign checks for comparative statics
    - small numerical examples or calibrations
    - boundary and corner-case checks
 
-2. **Design verification as dedicated task work.** Its own task, or an explicit step inside each derivation task — never a vague "sanity check later".
+2. **Design verification as dedicated task work.** Verification is usually its own task or an explicit step inside each derivation task; it is not a vague "sanity check later".
 
-3. **Document expected outcomes.** Per check: what should happen, and what counts as a concerning failure.
+3. **Document expected outcomes.** For each planned check, note what should happen and what would count as a concerning failure.
 
-4. **Tie verification to renderable outputs.** Equations, tables, or figures for a human reader route through `superRA:communicate`, not a separate formatting path.
+4. **Tie verification to renderable outputs.** If the final artifact includes equations, tables, or figures for a human reader, plan to use `superRA:report-in-markdown` rather than inventing a separate formatting path.
 
-5. **Keep reproducibility explicit.** More than one script or notebook: include a pipeline entry point so symbolic and numerical outputs rerun from source.
+5. **Keep reproducibility explicit.** If the modeling workflow uses more than one script or notebook, include a pipeline entry point in the plan so symbolic and numerical outputs can be rerun from source.
 
 ---
 
 ## Handoff to Implementation
 
-Inventory written down, frontier empty, tasks drafted: `superplan` commits and hands off to execution. Implementation-step discipline is the `theory-modeling` SKILL.md body (Iron Law and the four gates).
+Once the Model Inventory / Assumption Map is approved, the verification plan agreed, and tasks drafted, `superplan` commits and hands off to `superimplement`. Implementation-step discipline lives in the `theory-modeling` SKILL.md body (Iron Law and the four gates).

@@ -48,20 +48,17 @@ assert entry["source"]["source"] == "url", entry["source"]
 assert entry["source"]["url"] == "https://github.com/FuZhiyu/superRA.git", entry["source"]["url"]
 assert entry["source"]["ref"] == "main", entry["source"]["ref"]
 
-claude_events = json.loads(Path("hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
-events = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))["hooks"]
+hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
+events = hooks["hooks"]
 assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
 assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
 assert "PostToolUse" in events, "Codex hooks must include PostToolUse task-hook reconcile coverage"
 assert "Stop" in events, "Codex hooks must include Stop"
-for harness, registry in (("Claude", claude_events), ("Codex", events)):
-    agent_groups = [group for group in registry["PreToolUse"] if group.get("matcher") == "Agent"]
-    assert len(agent_groups) == 1, f"{harness} must wire one PreToolUse(Agent) group"
-    assert any("agent-model-guard" in hook["command"] for hook in agent_groups[0]["hooks"]), f"{harness} Agent group must run agent-model-guard"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
 post_tool_groups = events["PostToolUse"]
 post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}
-assert "Edit|Write|Bash" in post_tool_matchers, "Codex PostToolUse must wire the merged task-hook matcher"
+assert "Edit|Write" in post_tool_matchers, "Codex PostToolUse must wire task-hook for edit/apply_patch paths"
+assert "Bash" in post_tool_matchers, "Codex PostToolUse must wire task-hook for structural Bash paths"
 assert all(
     any("run-hook.cmd" in h["command"] and "task-hook" in h["command"] for h in group["hooks"])
     for group in post_tool_groups
@@ -74,10 +71,10 @@ test -f skills/using-superra/references/codex-instructions.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 
-section "Role skills are packaged"
-test -f skills/implement-task/SKILL.md
-test -f skills/review-task/SKILL.md
-test ! -e .codex/agents
+section "Codex agent generation"
+python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
+python3 skills/using-superra/scripts/test_resolve_role.py
+python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
 
 section "Codex skill packaging invariants"
 ruby - <<'RUBY'

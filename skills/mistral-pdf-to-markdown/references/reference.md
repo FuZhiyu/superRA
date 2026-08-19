@@ -6,13 +6,17 @@ In the path and command examples below, `<skill-dir>` is the directory containin
 
 ## API Details
 
-The conversion uses the `mistral-ocr-latest` model.
+### Mistral OCR API
+
+The conversion uses Mistral's OCR API (`mistral-ocr-latest` model):
 
 **Endpoint:** `https://api.mistral.ai/v1/ocr`
 
 **Authentication:** Bearer token via `MISTRAL_API_KEY`
 
-**Supported formats:** PDF, PPTX, DOCX; PNG, JPEG, AVIF images
+**Supported Formats:**
+- PDF, PPTX, DOCX
+- PNG, JPEG, AVIF images
 
 ### Response Structure
 
@@ -39,13 +43,16 @@ OCRResponse
 
 ### Image Data Format
 
-Images come back base64-encoded:
+Images are returned in base64-encoded format:
 
 ```
 data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...
 ```
 
-The script strips the data URI prefix (`data:image/jpeg;base64,`), decodes the base64 string, and saves JPEG files.
+The script automatically:
+1. Strips the data URI prefix (`data:image/jpeg;base64,`)
+2. Decodes the base64 string
+3. Saves as JPEG files
 
 ## Advanced Usage
 
@@ -100,7 +107,7 @@ for pdf_file in pdf_dir.glob("*.pdf"):
 
 ### Custom Output Location
 
-The script always creates the `images/` folder in the output markdown file's own directory:
+The script always creates an `images/` folder in the same directory as the output markdown file:
 
 ```python
 # Output structure is automatically created
@@ -118,22 +125,26 @@ output_path = Path("custom/location/document.md")
 
 ### Optimization Tips
 
-- **Extract specific pages** when you need only certain sections:
-  ```bash
-  --pages "10-20"  # Only process 10 pages instead of entire document
-  ```
-- **Batch similar requests** to minimize API overhead.
-- **Cache results** — save the converted markdown rather than re-processing.
+1. **Extract specific pages** when you only need certain sections:
+   ```bash
+   --pages "10-20"  # Only process 10 pages instead of entire document
+   ```
+
+2. **Batch similar requests** to minimize API overhead
+
+3. **Cache results** - Save converted markdown to avoid re-processing
 
 ## Troubleshooting
 
-### Empty or missing images
+### Common Issues
 
-**Symptom:** Markdown shows image references but no files were saved.
+#### 1. Empty or Missing Images
 
-**Cause:** The images may carry no `image_base64` attribute.
+**Symptom:** Markdown shows image references but files not saved
 
-**Solution:** Verify `include_image_base64=True` in the API call.
+**Cause:** Images may not have `image_base64` attribute
+
+**Solution:** Verify `include_image_base64=True` in API call
 
 ```python
 # Check API response
@@ -143,22 +154,25 @@ for page in ocr_response.pages:
             print(f"Warning: Image {img.id} missing base64 data")
 ```
 
-### Incorrect image paths
+#### 2. Incorrect Image Paths
 
-**Symptom:** Markdown shows `![...](img-0.jpeg)` but the images sit in `images/`.
+**Symptom:** Markdown shows `![...](img-0.jpeg)` but images are in `images/`
 
-**Cause:** The path replacement was not applied.
+**Cause:** Path replacement not applied
 
-**Solution:** The script fixes this automatically with:
+**Solution:** The script automatically fixes this with:
 ```python
 markdown_content = markdown_content.replace('](img-', '](images/img-')
 ```
 
-### API authentication errors
+#### 3. API Authentication Errors
 
-**Symptom:** `401 Unauthorized`.
+**Symptom:** `401 Unauthorized` error
 
-**Causes:** an invalid or expired API key, or a key that never loaded from `.env`.
+**Causes:**
+- Invalid API key
+- Expired API key
+- API key not loaded from `.env`
 
 **Solutions:**
 ```bash
@@ -170,18 +184,18 @@ export MISTRAL_API_KEY="your-key-here"
 python -c "from mistralai.client import Mistral; print(Mistral(api_key='$MISTRAL_API_KEY'))"
 ```
 
-### Large file processing
+#### 4. Large File Processing
 
-**Symptom:** Timeout or memory errors on large PDFs.
+**Symptom:** Timeout or memory errors with large PDFs
 
 **Solutions:**
 - Extract pages in chunks: `--pages "1-10"`, then `--pages "11-20"`, etc.
-- Reduce the PDF size first (compress images).
-- Process locally with the `pdf` skill for non-OCR needs.
+- Reduce PDF size before processing (compress images)
+- Process locally with `pdf` skill for non-OCR needs
 
 ### Debugging
 
-Verbose output:
+Enable verbose output:
 
 ```python
 # Add to script
@@ -189,7 +203,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
 
-Response details:
+Check response details:
 
 ```python
 print(f"Pages processed: {ocr_response.usage_info.pages_processed}")
@@ -205,27 +219,78 @@ print(f"Model: {ocr_response.model}")
 | Scanned PDFs | ✓ Yes (OCR) | ✗ No | ✗ No |
 | Image extraction | ✓ Automatic | ✗ No | ✗ No |
 | Markdown output | ✓ Native | ✗ Manual | ✗ Manual |
-| Cost | \$ API calls | Free | Free |
+| Cost | $ API calls | Free | Free |
 | Speed | Moderate | Fast | Moderate |
 | Formatting | ✓ Excellent | ~ Basic | ✓ Good |
 
-**Use Mistral OCR when:** the PDF is scanned and needs OCR, you want formatted Markdown or automatic image extraction, and API cost is acceptable.
+**Use Mistral OCR when:**
+- PDF contains scanned images requiring OCR
+- Need Markdown output with formatting
+- Want automatic image extraction
+- Willing to pay for API usage
 
-**Use local tools (`pdf` skill) when:** plain text extraction suffices, no OCR is required, or you are processing many documents and want the speed and cost savings.
+**Use local tools (`pdf` skill) when:**
+- Processing many documents (cost savings)
+- Simple text extraction sufficient
+- No OCR required
+- Need faster processing
 
-## Example Workflow: Figures Only
+## Example Workflows
 
-Identify the figure pages (manually or via the table of contents), then extract just those:
+### Extract Figures from Research Paper
 
 ```bash
+# Step 1: Identify figure pages (manually or via table of contents)
+# Assume figures are on pages 15, 18, 22, 25
+
+# Step 2: Extract those pages
 uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
   "paper.pdf" \
   "Output/PDFConversions/paper_figures.md" \
   --pages "15,18,22,25"
+
+# Step 3: Images are now in Output/PDFConversions/images/
+# Markdown contains captions and references
 ```
 
-The images land in the conversion's `images/` folder, and the markdown carries the captions and references.
+### Convert Book Chapter
+
+```bash
+# Chapter 3 is pages 45-78
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
+  "book.pdf" \
+  "Output/PDFConversions/chapter3.md" \
+  --pages "45-78"
+```
+
+### Process Scanned Document
+
+```bash
+# Scanned documents benefit most from OCR
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
+  "scanned_contract.pdf" \
+  "Output/PDFConversions/contract.md"
+```
 
 ## API Cost Estimation
 
-Check Mistral's pricing page for current rates. Charged per page processed; image extraction may cost extra, and larger pages (higher DPI) may cost more.
+Check Mistral's pricing page for current rates. As of 2025:
+
+- Charged per page processed
+- Image extraction may incur additional costs
+- Larger pages (higher DPI) may cost more
+
+**Example calculation:**
+- 100-page document
+- Only need pages 50-60 (10 pages)
+- Use `--pages "50-60"` to process only 10 pages instead of 100
+
+## Future Enhancements
+
+Potential improvements to the script:
+
+1. **Parallel processing** - Process multiple pages concurrently
+2. **Resume capability** - Continue from last processed page after interruption
+3. **Image format options** - Save as PNG instead of JPEG
+4. **Markdown customization** - Custom heading levels, formatting styles
+5. **OCR language detection** - Automatic language detection and processing
