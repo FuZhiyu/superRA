@@ -147,8 +147,10 @@ _TEE_MD_RE = re.compile(
     r"(?:^|[\s;|&])tee(?:\s+-[a-zA-Z]+)*\s+(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])",
     re.IGNORECASE,
 )
+# The -i may sit inside a flag cluster (perl -pi -e), so match any flag token
+# containing i, not only a standalone -i.
 _IN_PLACE_MD_RE = re.compile(
-    r"(?:^|[\s;|&])(?:sed|perl)\s+[^;|&]*?-i(?:\S*)?\s+[^;|&]*?(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])",
+    r"(?:^|[\s;|&])(?:sed|perl)\s+(?:[^;|&]*?\s)?-[a-zA-Z]*i\S*\s+[^;|&]*?(['\"]?[^\s;|&'\"]+\.md)['\"]?(?=$|[\s;|&])",
     re.IGNORECASE,
 )
 

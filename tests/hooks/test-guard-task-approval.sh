@@ -122,6 +122,10 @@ write_task revise '> [BLOCKING] Fix it.'
 out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"printf \"status: approved\" > " + sys.argv[1]}))' "$task")")
 expect 'Bash redirect approval flip is denied' deny "$out"
 
+write_task revise '> [BLOCKING] Fix it.'
+out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"perl -pi -e \"s/status: revise/status: approved/\" " + sys.argv[1]}))' "$task")")
+expect 'Bash perl clustered -pi approval flip is denied' deny "$out"
+
 write_task revise '> [ADVISORY] Consider it.'
 out=$(run_hook Bash "$(python3 -c 'import json,sys; print(json.dumps({"command":"sed -i \"\" \"s/status: revise/status: approved/\" " + sys.argv[1]}))' "$task")")
 expect 'Bash approval flip without blocking notes passes' allow "$out"

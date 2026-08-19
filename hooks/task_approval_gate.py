@@ -35,7 +35,9 @@ def _deny(reason: str) -> None:
 def _deny_violation(path: Path) -> None:
     _deny(
         f"Cannot approve {path}: `## Review Notes` still contains `[BLOCKING]`. "
-        "Run narrow re-review and remove confirmed findings, or keep the task in revision."
+        "Run narrow re-review and remove confirmed findings, or keep the task in revision. "
+        "The gate cannot tell a quoted marker from a live finding: prose in Review Notes "
+        "that merely mentions the marker must spell it out of band."
     )
 
 

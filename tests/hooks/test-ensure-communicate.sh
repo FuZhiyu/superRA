@@ -94,6 +94,10 @@ grep_tool='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"
 git_diff='{"type":"tool_use","name":"Bash","input":{"command":"git diff skills/communicate/SKILL.md"}}'
 grep_cmd='{"type":"function_call","name":"exec_command","arguments":{"cmd":"grep -n pyramid skills/communicate/SKILL.md"}}'
 run_case "Read-tool path counts as load" silent Edit "{\"file_path\":\"$project/README.md\"}" "$read_tool"
+tail_read='{"type":"tool_use","name":"Bash","input":{"command":"tail -50 skills/communicate/SKILL.md"}}'
+sed_cluster_read='{"type":"function_call","name":"exec_command","arguments":{"cmd":"sed -ne 1,50p skills/communicate/SKILL.md"}}'
+run_case "tail read counts as load" silent Edit "{\"file_path\":\"$project/README.md\"}" "$tail_read"
+run_case "sed clustered -n read counts as load" silent Edit "{\"file_path\":\"$project/README.md\"}" "$sed_cluster_read"
 run_case "Grep-tool path is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$grep_tool"
 run_case "git diff mention is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$git_diff"
 run_case "grep command mention is not load evidence" deny Edit "{\"file_path\":\"$project/README.md\"}" "$grep_cmd"
@@ -129,6 +133,7 @@ run_case "Bash redirection is gated" deny Bash '{"command":"printf text > README
 run_case "Bash append is gated" deny Bash '{"command":"echo text >> README.md"}' "$other"
 run_case "Bash tee is gated" deny Bash '{"command":"printf text | tee README.md"}' "$other"
 run_case "Bash sed in-place is gated" deny Bash '{"command":"sed -i s/a/b/ README.md"}' "$other"
+run_case "Bash perl clustered in-place is gated" deny Bash '{"command":"perl -pi -e s/a/b/ README.md"}' "$other"
 run_case "Bash touch is gated" deny Bash '{"command":"touch README.md"}' "$other"
 run_case "Bash copy destination is gated" deny Bash '{"command":"cp notes.txt README.md"}' "$other"
 run_case "Bash copy source is not mistaken for destination" silent Bash '{"command":"cp README.md notes.txt"}' "$other"

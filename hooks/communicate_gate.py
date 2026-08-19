@@ -15,7 +15,7 @@ COMMUNICATE = "superRA:communicate"
 _SKILL_MD_RE = re.compile(r"skills[/\\]communicate[/\\]SKILL\.md", re.IGNORECASE)
 # Shell verbs whose invocation reads a file rather than mutating it. `sed`
 # counts only with `-n` (print mode); bare `sed` rewrites.
-_READ_VERBS = ("cat", "head", "bat", "less")
+_READ_VERBS = ("cat", "head", "tail", "bat", "less")
 
 
 def _empty() -> None:
@@ -144,9 +144,11 @@ def _command_reads_skill(command: str) -> bool:
         if not tokens:
             continue
         verb = tokens[0].rsplit("/", 1)[-1]
-        if verb == "sed" and "-n" not in tokens:
-            continue
-        if verb != "sed" and verb not in _READ_VERBS:
+        if verb == "sed":
+            # -n may sit inside a flag cluster (sed -ne '1,50p').
+            if not any(re.match(r"-[a-zA-Z]*n", token) for token in tokens[1:]):
+                continue
+        elif verb not in _READ_VERBS:
             continue
         if any(_SKILL_MD_RE.search(token) for token in tokens[1:]):
             return True

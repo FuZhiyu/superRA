@@ -251,6 +251,8 @@ _MUTATING_RE = re.compile(
 _PLAN_TOKEN_RE = re.compile(
     r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?(?:superRA(?=$|/|[\s'\";|&])(?:/[^\s'\";|&]*)?|\.plan[^\s'\";|&]*))"
 )
+
+
 def _command_mentions_task_root(command: str) -> bool:
     return _PLAN_TOKEN_RE.search(command) is not None
 
