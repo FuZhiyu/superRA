@@ -70,9 +70,9 @@ def _is_markdown_under_task_root(file_path: Path) -> bool:
 def _markdown_integrity_feedback(file_path: Path) -> list[str]:
     """Run the render-integrity checker on a `.md` under a task root.
 
-    The detection logic lives in the sibling report-in-markdown skill; this only
+    The detection logic lives in the sibling communicate skill; this only
     imports and calls it. Resolves the checker relative to this file's own
-    location (skills/task-tree/scripts -> skills/report-in-markdown/scripts) so
+    location (skills/task-tree/scripts -> skills/communicate/scripts) so
     it works across local checkout, plugin cache, and GitHub-clone installs where
     the whole skills/ tree ships together. Best-effort: any failure (gate miss,
     unreadable file, import or check error) returns no feedback rather than
@@ -85,17 +85,41 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
     except OSError:
         return []
     try:
-        md_scripts = _scripts_dir().parent.parent / "report-in-markdown" / "scripts"
+        md_scripts = _scripts_dir().parent.parent / "communicate" / "scripts"
         if str(md_scripts) not in sys.path:
             sys.path.insert(0, str(md_scripts))
         import md_integrity
         issues = md_integrity.check(text)
     except Exception:
         return []
-    return [
+    if not issues:
+        return []
+    feedback = [
         f"Markdown render-integrity issue in {file_path}:{it.line} "
         f"[{it.rule}] {it.message}"
         for it in issues
+    ]
+    feedback.append(
+        "Load the `superRA:communicate` skill for the correct form before fixing these."
+    )
+    return feedback
+
+
+def _communicate_reminder(file_paths: list[Path]) -> list[str]:
+    """Remind after Markdown edits under a task root without blocking."""
+    paths: list[str] = []
+    seen: set[Path] = set()
+    for file_path in file_paths:
+        if not _is_markdown_under_task_root(file_path) or file_path in seen:
+            continue
+        seen.add(file_path)
+        paths.append(str(file_path))
+    if not paths:
+        return []
+    return [
+        f"Markdown edited under the task tree: {', '.join(paths)}. If these edits are "
+        "meant for a user to read, make sure they follow `superRA:communicate`; "
+        "otherwise continue."
     ]
 
 
@@ -103,7 +127,7 @@ def _feedback_json(feedback: list[str]) -> str:
     context = (
         "<IMPORTANT>Task-system hook feedback:\n"
         + "\n".join(f"- {line}" for line in feedback)
-        + "\n\nThe hook stayed non-blocking; fix the task tree before proceeding."
+        + "\n\nThe hook stayed non-blocking; apply any relevant action before proceeding."
         + "</IMPORTANT>"
     )
     return json.dumps(
@@ -443,7 +467,7 @@ def _handle_edit_write(data: dict) -> None:
     if not _is_markdown_under_task_root(file_path):
         _exit_success()
 
-    feedback: list[str] = []
+    feedback = _communicate_reminder([file_path])
 
     # task.md-only branch: validate the tree and propagate parent status.
     if file_path.name == "task.md":
@@ -517,10 +541,12 @@ def _handle_apply_patch(data: dict) -> None:
     roots: list[Path] = []
     seen: set[Path] = set()
     feedback: list[str] = []
+    edited_paths: list[Path] = []
 
     for raw_path in _apply_patch_paths(command):
         path = Path(raw_path)
         file_path = path if path.is_absolute() else cwd / path
+        edited_paths.append(file_path)
 
         # Render-integrity-check any .md under a task root (including task.md);
         # the cheap gate inside short-circuits everything else.
@@ -536,6 +562,8 @@ def _handle_apply_patch(data: dict) -> None:
             continue
         seen.add(resolved)
         roots.append(plan_root)
+
+    feedback.extend(_communicate_reminder(edited_paths))
 
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))

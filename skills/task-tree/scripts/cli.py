@@ -255,7 +255,7 @@ def _run_create(args: argparse.Namespace) -> None:
         task_path=args.path,
         title=args.title,
         objective=args.objective or "",
-        guidance=args.guidance or "",
+        details=args.details or "",
         depends_on=args.depends_on,
     )
 
@@ -576,7 +576,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     create.add_argument("--title", required=True, help="Task title")
     create.add_argument("--objective", default="", help="Task objective")
-    create.add_argument("--guidance", default="", help="Optional Planner Guidance text")
+    create.add_argument("--details", "--guidance", default="", help="Optional Details text")
     create.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependencies")
     _set_runner(create, _run_create)
 

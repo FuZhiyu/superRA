@@ -1,10 +1,10 @@
 # Sync
 
-Sync brings the branch onto the current base before permanent documentation and refactoring. A trivial sync (per Step 3) lands inline; a non-trivial sync is serialized — one generic sync author followed by one generic sync reviewer, no parallelization. A dispatched sync (its own `Stage: sync`) commits under the `sync` stage verb; an inline sync lands as `integrate(sync): …` per `SKILL.md` §Stop Points.
+Sync brings the branch onto the current base before permanent documentation and refactoring. A trivial sync (Step 3) lands inline and commits as `integrate(sync): …` per `SKILL.md` §Stop Points; a non-trivial sync is dispatched under its own `Stage: sync`, commits under the `sync` stage verb, and is serialized — one generic sync author, then one generic sync reviewer, no parallelization.
 
 ## Step 1: Resolve the target base
 
-Resolve and record a candidate base ref from prior task context or git. This is a branch/ref name, not a merge-base SHA:
+Resolve a candidate base ref from prior task context or git — a branch/ref name, not a merge-base SHA:
 
 ```bash
 if git rev-parse --verify --quiet origin/main >/dev/null; then
@@ -16,7 +16,7 @@ else
 fi
 ```
 
-If no prior decision records the base, ask:
+No prior decision records the base: ask.
 
 ```text
 This integration will sync the branch against <base-ref>.
@@ -24,7 +24,7 @@ Is that correct, or did it split from a release branch, co-authored track,
 or sibling branch?
 ```
 
-Confirm `BASE_REF` before fetching, computing anchors, or dispatching. It is a working value for this integration pass, not a stored field — the sync merge commit records which base was synced (and pins `BASE_HEAD_SHA` as its base-side parent), so a resumed session recovers it from git rather than from a task section.
+Confirm `BASE_REF` before fetching, computing anchors, or dispatching. A working value for this pass, not a stored field — the sync merge commit records which base was synced (pinning `BASE_HEAD_SHA` as its base-side parent), so a resumed session recovers it from git.
 
 ## Step 2: Compute sync anchors
 
@@ -40,19 +40,19 @@ PRE_SYNC_BASE_SHA=$(git merge-base HEAD "$BASE_REF")
 BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
-- `PRE_SYNC_BASE_SHA` is evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
-- `BASE_HEAD_SHA` is the post-sync governing baseline for Mature & Consolidate and Integrate: `BASE_HEAD_SHA..HEAD`.
+- `PRE_SYNC_BASE_SHA` — evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
+- `BASE_HEAD_SHA` — the post-sync governing baseline for Mature & Consolidate and Integrate: `BASE_HEAD_SHA..HEAD`.
 
 ## Step 3: Sync the branch when needed
 
-If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced — proceed to Mature & Consolidate.
+`git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds: already synced — proceed to Mature & Consolidate.
 
-Otherwise size the sync against `semantic-merge §Scope the merge first`. When it scopes trivial, announce the inline path and land the merge following that section, then skip the author and reviewer dispatch that follow and proceed to Mature & Consolidate.
+Otherwise size the sync against `semantic-merge §Scope the merge first`. Trivial: announce the inline path, land the merge following that section, skip the author and reviewer dispatches, proceed to Mature & Consolidate.
 
-When the sync is non-trivial, dispatch one generic sync author:
+Non-trivial: dispatch one generic sync author.
 
 ```text
-Agent(generic):
+Prompt:
   Stage: sync
   Role: sync author
   References:
@@ -74,14 +74,14 @@ Agent(generic):
   Project Doc Audit walk-up, minimum net diff — to Integrate.
 ```
 
-If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, folds the decision into the relevant task objective, commits, and re-dispatches the sync author with the decision context.
+Sync author returns `NEEDS_CONTEXT` or `BLOCKED` on a required user decision: the orchestrator asks the user, folds the decision into the relevant task objective, commits, and re-dispatches with the decision context.
 
 ## Step 4: Dispatch the sync reviewer
 
-Before Mature & Consolidate begins, dispatch one generic sync reviewer:
+Before Mature & Consolidate begins:
 
 ```text
-Agent(generic):
+Prompt:
   Stage: sync
   Role: sync reviewer
   References:
@@ -102,4 +102,4 @@ Agent(generic):
   task home). Return APPROVE or REVISE.
 ```
 
-On REVISE, re-dispatch the sync author for accepted items, then re-dispatch the sync reviewer. Mature & Consolidate starts only after sync review APPROVES.
+On REVISE, re-dispatch the sync author for accepted items, then re-dispatch the reviewer. Mature & Consolidate starts only after sync review APPROVES.

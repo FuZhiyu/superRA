@@ -12,7 +12,7 @@ The vertical is a **domain skill** under the existing PLAN → IMPLEMENT → INT
 
 ## Per-task ledger and user-gated canonical Notation Conventions
 
-Why the canonical Notation Conventions table is user-gated rather than implementer-editable: notation conventions in a paper are a researcher decision. Letting an implementer edit the canonical table mid-derivation lets locally-convenient names spread silently across the project. The per-task ledger discipline forces every implementer to walk a structured slot set per symbol, which surfaces near-duplicates against canonical names before they propagate. Promotion happens at `superimplement` Step 4 under researcher confirmation.
+Why the canonical Notation Conventions table is user-gated rather than implementer-editable: notation conventions in a paper are a researcher decision. Letting an implementer edit the canonical table mid-derivation lets locally-convenient names spread silently across the project. The per-task ledger discipline forces every implementer to walk a structured slot set per symbol, which surfaces near-duplicates against canonical names before they propagate. Promotion happens at the IMPLEMENT completion gate (`superimplement/references/completion.md`) under researcher confirmation.
 
 ## Falsification tests
 
@@ -28,10 +28,10 @@ The Stage-Scoped References table in `SKILL.md` is the authoritative load map. A
 
 ## What this skill deliberately does not carry
 
-- **Generic reviewer-protocol mechanics** (verdicts, dependent findings, re-review behavior). These are owned by `agent-orchestration` and the canonical role specs in `agents/`. The Falsification tests in `SKILL.md` are theory-specific; everything else points at the standard protocol.
+- **Generic reviewer-protocol mechanics** (verdicts, dependent findings, re-review behavior). These are owned by `agent-orchestration` and the role skills (`implement-task`, `review-task`). The Falsification tests in `SKILL.md` are theory-specific; everything else points at the standard protocol.
 - **Generic codebase-coherence concerns** (naming consistency, utility reuse, PR-friendly diffs, Project Doc Audit). Owned by `refactor-and-integrate`. `integration.md` Sections A–C are the theory-modeling-specific rewriting layer; Section D guards correctness-discipline artifacts during refactoring; everything else loads `refactor-and-integrate` at `Stage: integration`.
 - **Audience-discipline / perspective-collapse essays.** Earlier drafts carried `audience-discipline-modeling.md` and `audience-discipline-writing.md` (~315 lines combined). They were dropped: the operational core (workflow-vocabulary leak detection, three-channel separation) did not pay its keep against the framing-essay overhead, and the worked examples were paper-specific in a way that did not transfer. Concrete prose-to-math precision rules survive in `integration.md` Section B (math-symbol-not-English-description, equation-reference-not-position).
-- **Rendering utility.** Owned by `superRA:report-in-markdown`. The skill points at it and otherwise does not invent rendering conventions.
+- **Rendering utility.** Owned by `superRA:communicate`. The skill points at it and otherwise does not invent rendering conventions.
 
 ## Extension patterns
 

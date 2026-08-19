@@ -79,17 +79,17 @@ with open(out, "w", encoding="utf-8") as f:
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
     f.write("[[hooks.PreToolUse]]\n")
+    f.write('matcher = "Edit|Write|Bash"\n')
+    f.write("[[hooks.PreToolUse.hooks]]\n")
+    f.write('type = "command"\n')
+    f.write(f"command = {toml_string(cmd('ensure-communicate'))}\n\n")
+    f.write("[[hooks.PreToolUse]]\n")
     f.write('matcher = "Bash"\n')
     f.write("[[hooks.PreToolUse.hooks]]\n")
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('merge-guard'))}\n\n")
     f.write("[[hooks.PostToolUse]]\n")
-    f.write('matcher = "Edit|Write"\n')
-    f.write("[[hooks.PostToolUse.hooks]]\n")
-    f.write('type = "command"\n')
-    f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n\n")
-    f.write("[[hooks.PostToolUse]]\n")
-    f.write('matcher = "Bash"\n')
+    f.write('matcher = "Edit|Write|Bash"\n')
     f.write("[[hooks.PostToolUse.hooks]]\n")
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n\n")
@@ -158,7 +158,7 @@ write_minimal_task_md "$TMPROOT/superRA/task.md" "Codex Hook Root" "not-started"
 write_minimal_task_md "$TMPROOT/superRA/01-child/task.md" "Codex Hook Child" "not-started"
 
 TASK_OUT="$TMPROOT/codex-task-hook.jsonl"
-TASK_PROMPT='Edit only superRA/01-child/task.md. Use the file edit/apply-patch tool, not a shell command, to change the frontmatter line `status: not-started` to `status: approved`. Do not edit any other file. Then reply with exactly ok.'
+TASK_PROMPT="First read $REPO_ROOT/skills/communicate/SKILL.md. Then run $REPO_ROOT/superRA/superra task read 01-child. After both commands finish, edit only superRA/01-child/task.md. Use the file edit/apply-patch tool, not a shell command, to change the frontmatter line \`status: not-started\` to \`status: approved\`. Do not edit any other file. Then reply with exactly ok."
 
 codex --profile "$CODEX_PROFILE_NAME" \
   --dangerously-bypass-hook-trust \

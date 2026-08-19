@@ -8,7 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-This tutorial walks you through installing superRA, pointing it at a project, and pushing one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task through its implementer–reviewer pair, watch progress and read results in the dashboard, and integrate the result.
+This tutorial walks you through installing superRA, pointing it at a project, and pushing one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task and review it, watch progress and read results in the dashboard, and integrate the result.
 
 ### Prerequisite
 
@@ -57,7 +57,7 @@ of tasks.
 
 Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root: build the panel, run the regressions and the GRS test, and write up the result. The task tree holds the project's state. Instead of keeping the plan in one agent's context window or a temporary plan file, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
 
-Planning is autonomous but stops at one gate: before any code is written, the planner shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
+Decisions the planner cannot settle from the project come to you as rounds of questions, each with a recommended answer; before any code is written, it also shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
 
 ```bash
 ./superRA/superra dashboard
@@ -68,19 +68,19 @@ Here is this study right after planning — three tasks under one root, every on
 
 [Open the freshly-planned tree →](showcase-after-planning.html)
 
-#### Superimplement
+#### Implement
 
-Now run a task. Ask Claude to `superimplement`:
+Now run a task. Ask Claude to work it:
 
 ```text
-superimplement @superRA/showcase-analysis.
+Work @superRA/showcase-analysis.
 ```
 
-By default, the main agent runs tasks autonomously through implementer and reviewer seats, usually dispatching both to subagents. This keeps the main agent's context window clean, so it stays sharp and can run far longer without degrading. For closely steered work, explicitly ask for **interactive mode** (`direct` remains an alias): the main agent co-edits and executes with you, self-reviews, and asks whether to run independent review now, defer it, or skip it.
+By default the main agent does the work itself, with you: it executes the task, records results in the task file, commits, and pauses often for your feedback. When a task lands it asks whether to run an independent review — now, deferred, or skipped — and recommends a depth and focus. For a broad, parallelizable, or context-heavy frontier, ask for `superimplement` (or accept the agent's recommendation of it) and the run goes **autonomous**: the main agent dispatches implementer and reviewer seats to subagents, which keeps its own context window clean so it stays sharp far longer.
 
-In this default autonomous mode, every task runs through an **implementer–reviewer pair**. The implementer does the work — here, downloading the Ken French data and building the monthly panel — records what it found in the task's `## Results` section, and hands off. A separate reviewer then inspects the committed result *independently*.
+Either way, the work — here, downloading the Ken French data and building the monthly panel — is recorded in the task's `## Results` section, and an independent review is a *separate* agent reading the committed result.
 
-The reviewer is adversarial by design. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer with a different prompt and a mandate to find failure catches the silent bad merge, the wrong aggregation, the unreproducible output. Anything that advances in this mode has passed a second, independent read at every step. The full role behavior is in the [implementer](agents/implementer.md) and [reviewer](agents/reviewer.md) specs.
+That independence is the point. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer reads the committed evidence — the files, the diff, the outputs — at a depth and focus named in the dispatch, and reports what it finds rather than filtering to what it judges serious. That is what catches the silent bad merge, the wrong aggregation, the unreproducible output. Review runs where it earns its cost: on a result you want a second read of, on work the planner flagged as high-stakes, or whenever the implementer comes back uncertain. The full role behavior is in the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills.
 
 The implementer writes its findings straight into the task file, so the panel task's `## Results` reads like this:
 
@@ -101,13 +101,13 @@ Re-running superRA/showcase-analysis/run_all.sh reproduces every output.
 
 During implementation, agents commit atomically by default, so every step is tracked in git. Because that produces many small commits, it is recommended to work on a separate branch rather than directly on your default branch.
 
-The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) and waiting for its reviewer, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written and waiting on review:
+The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) with its approval decision still open, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written:
 
 [Open the study mid-implement →](showcase-mid-implement.html)
 
 #### Watch progress and read results
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task has survived its review, the whole tree is `approved` (green) — the state INTEGRATE picks up:
+The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task is approved, the whole tree is `approved` (green) — the state INTEGRATE picks up:
 
 [Open the finished study →](showcase-analysis-tree.html)
 
@@ -157,7 +157,7 @@ Or point superRA at work you have already done and have it build the tree retroa
 
 You have run a full cycle. Two further pieces of discipline each have a page — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on:
 
-- **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, writing, and more, and how a domain skill loads on top of any phase.
+- **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, academic writing, and more, and how a domain skill loads on top of any phase.
 - **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.
 
 For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To open and click through the finished study this page walked you through — the live task tree with its regression tables, figures, and full review history — go to the [Showcase](#/07-showcase).

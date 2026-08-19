@@ -62,6 +62,13 @@ CODEX_SPAWN_TOOL_NAMES = {
     "spawn_agent",
 }
 
+# The skill each seat loads. A dispatch names it in the prompt; a main-filled
+# seat loads it directly.
+ROLE_SKILLS = {
+    "implementer": "implement-task",
+    "reviewer": "review-task",
+}
+
 MUTATING_COMMAND_RE = re.compile(
     r"(^|\s)(apply_patch|cat\s+<<|tee\s+|touch\s+|mv\s+|cp\s+|rm\s+|"
     r"python3?\s+-\s*<<|perl\s+-0?pi\b|sed\s+-i\b)"
@@ -149,6 +156,18 @@ class TranscriptEvent:
         if lowered_tools & CLAUDE_AGENT_TOOL_NAMES:
             return self._has_agent_type(agent_type)
         return False
+
+    def is_role_dispatch(self, role_skill: str) -> bool:
+        """A dispatch event whose prompt names ``role_skill``.
+
+        Roles are skills, so both harnesses spawn a generic agent and the role
+        travels in the prompt — the agent type no longer names the role.
+        """
+
+        lowered_tools = {name.lower() for name in self.tool_names}
+        if not lowered_tools & (CODEX_SPAWN_TOOL_NAMES | CLAUDE_AGENT_TOOL_NAMES):
+            return False
+        return role_skill.lower() in self.haystack.lower()
 
     def _has_agent_type(self, agent_type: str) -> bool:
         expected = _agent_type_aliases(agent_type)
@@ -360,7 +379,7 @@ def check_interactive_canvas_order(
         None,
     )
     reviewer = next(
-        (event for event in events if event.is_dispatch_of("superra_reviewer")),
+        (event for event in events if event.is_role_dispatch("review-task")),
         None,
     )
 
@@ -392,28 +411,18 @@ def check_main_seat_route(
     *,
     main_role: str,
 ) -> None:
-    """Require the main seat's role load and the opposite-seat dispatch."""
+    """Require the main seat's role-skill load and the opposite-seat dispatch."""
 
-    if main_role not in {"implementer", "reviewer"}:
+    if main_role not in ROLE_SKILLS:
         raise ValueError(f"unsupported main role: {main_role}")
     opposite = "reviewer" if main_role == "implementer" else "implementer"
-    role_path = f"agents/{main_role}.md"
+    role_skill = ROLE_SKILLS[main_role]
     report.require(
-        any(
-            any(
-                "resolve_role.py" in command and main_role in command
-                for command in event.commands
-            )
-            for event in events
-        ),
-        f"main {main_role} seat: missing canonical-role resolution",
+        any(role_skill in event.haystack for event in events),
+        f"main {main_role} seat: missing role-skill load for {role_skill}",
     )
     report.require(
-        any(event.is_read_of(role_path) for event in events),
-        f"main {main_role} seat: missing role load for {role_path}",
-    )
-    report.require(
-        any(event.is_dispatch_of(f"superra_{opposite}") for event in events),
+        any(event.is_role_dispatch(ROLE_SKILLS[opposite]) for event in events),
         f"main {main_role} seat: missing opposite-seat {opposite} dispatch",
     )
 
@@ -422,16 +431,16 @@ def check_orchestrator_dispatches(
     report: AssertionReport,
     events: Sequence[TranscriptEvent],
     *,
-    implementer_needles: Sequence[str] = ("superra_implementer",),
-    reviewer_needles: Sequence[str] = ("superra_reviewer",),
+    implementer_needles: Sequence[str] = ("implement-task",),
+    reviewer_needles: Sequence[str] = ("review-task",),
 ) -> None:
     """Require structural implementer and reviewer dispatch evidence."""
 
-    implementer_type = implementer_needles[0]
-    reviewer_type = reviewer_needles[0]
-    has_implementer = any(event.is_dispatch_of(implementer_type)
+    implementer_skill = implementer_needles[0]
+    reviewer_skill = reviewer_needles[0]
+    has_implementer = any(event.is_role_dispatch(implementer_skill)
                           for event in events)
-    has_reviewer = any(event.is_dispatch_of(reviewer_type)
+    has_reviewer = any(event.is_role_dispatch(reviewer_skill)
                        for event in events)
     if has_implementer and has_reviewer:
         report.observations.append("orchestrator dispatch events observed")

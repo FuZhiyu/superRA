@@ -7,10 +7,10 @@ loading is observable *by name*, reliably in headless mode — filesystem
 references/load-testing-research.md).
 
 The session is configured with the superRA plugin directory so ``Skill(...)``
-resolves and the real plugin role agents (``superRA:implementer`` /
-``superRA:reviewer``) are dispatchable, and it **dispatches the real role agent**
-rather than running a bare ``query()`` — only a real role dispatch reproduces the
-manifest-driven loads. A ``PreToolUse(matcher="Skill")`` hook records every skill
+resolves, and it **dispatches a general-purpose agent whose prompt names the role
+skill** (``superRA:implement-task`` / ``superRA:review-task``) rather than running
+a bare ``query()`` — only a real role dispatch reproduces the manifest-driven
+loads. A ``PreToolUse(matcher="Skill")`` hook records every skill
 the agent loads on demand, by name; the live run confirmed it fires for an
 explicit ``Skill(...)`` call. The linchpin for the downstream stage/domain smokes
 (11/12) is that this hook *also* fires for tool use inside the dispatched
@@ -31,10 +31,10 @@ There is **no ``InstructionsLoaded`` hook**: it is not a registrable
 ``claude_agent_sdk`` ``HookEvent`` (the union is ``PreToolUse``, ``PostToolUse``,
 ``PostToolUseFailure``, ``UserPromptSubmit``, ``Stop``, ``SubagentStop``,
 ``PreCompact``, ``Notification``, ``SubagentStart``, ``PermissionRequest``), so
-registering it is a silent no-op. Always-loaded skills (``using-superra``,
-``report-in-markdown``) are preloaded via agent frontmatter ``skills: [...]`` and
-are covered by the static frontmatter contract in :mod:`sdk_load_evidence`, not
-by this hook.
+registering it is a silent no-op. The always-loaded skill (``using-superra``)
+reaches the agent through the role skill's §Before You Start
+load instruction and is covered by the static load-instruction contract in
+:mod:`sdk_load_evidence`, not by this hook.
 
 This module is the *only* place ``claude_agent_sdk`` is imported, and the import
 is deferred into :func:`run_skill_load_session`. The default CI path imports
@@ -75,8 +75,10 @@ from sdk_load_evidence import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "bundle-two-tasks"
 
-# The plugin-qualified role agent the harness dispatches so manifest loads fire.
-DEFAULT_AGENT_TYPE = "superRA:implementer"
+# The agent the harness dispatches, and the role skill its prompt names so the
+# manifest loads fire.
+DEFAULT_AGENT_TYPE = "general-purpose"
+DEFAULT_ROLE_SKILL = "superRA:implement-task"
 
 
 class _EventCounter:
@@ -152,7 +154,7 @@ def _is_subagent_load(input_data) -> bool:
     hook fires from inside a Task-spawned sub-agent; absent on the main thread",
     so it is the reliable discriminator; ``agent_type`` corroborates. Live-probed
     against the installed SDK: a subagent ``Skill`` load carries
-    ``agent_id`` + ``agent_type='superRA:implementer'`` in ``input_data``.
+    ``agent_id`` + ``agent_type`` in ``input_data``.
     """
 
     if not isinstance(input_data, dict):
@@ -167,6 +169,7 @@ async def _run_session_async(
     model: str,
     plugin_dir: Path,
     agent_type: str,
+    role_skill: str,
     allowed_tools: list[str],
     capture_reads: bool,
 ) -> SkillLoadEvidence:
@@ -227,12 +230,13 @@ async def _run_session_async(
         hooks={"PreToolUse": pretooluse},
     )
 
-    # Dispatch the real plugin role agent rather than running the prompt at the
-    # top level: only a real role dispatch reproduces the manifest-driven loads,
-    # and it is what exercises the subagent tool-lifecycle hook path.
+    # Dispatch a real role-carrying subagent rather than running the prompt at
+    # the top level: only a real role dispatch reproduces the manifest-driven
+    # loads, and it is what exercises the subagent tool-lifecycle hook path.
     dispatch_prompt = (
-        f"Dispatch the {agent_type} agent (via the Task/Agent tool) with this "
-        f"instruction, then stop:\n\n{prompt}"
+        f"Dispatch a {agent_type} agent (via the Task/Agent tool) with this "
+        f"instruction, then stop:\n\n"
+        f"Load `{role_skill}` skill.\n\n{prompt}"
     )
 
     async for _ in query(prompt=dispatch_prompt, options=options):
@@ -248,13 +252,15 @@ def run_skill_load_session(
     model: str | None = None,
     plugin_dir: Path | str | None = None,
     agent_type: str = DEFAULT_AGENT_TYPE,
+    role_skill: str = DEFAULT_ROLE_SKILL,
     allowed_tools: list[str] | None = None,
     capture_reads: bool = False,
 ) -> SkillLoadEvidence:
-    """Run one live SDK session that dispatches the real role agent.
+    """Run one live SDK session that dispatches a role-carrying subagent.
 
-    Dispatches ``agent_type`` (default ``superRA:implementer``) so the
-    manifest-driven on-demand loads fire, and returns the structured skill-load
+    Dispatches ``agent_type`` (default ``general-purpose``) with a prompt naming
+    ``role_skill`` (default ``superRA:implement-task``) so the manifest-driven
+    on-demand loads fire, and returns the structured skill-load
     evidence captured by the in-process ``Skill`` hook (including loads inside
     the dispatched subagent, tagged via ``SkillLoadRecord.source``).
 
@@ -287,6 +293,7 @@ def run_skill_load_session(
             model=resolved_model,
             plugin_dir=resolved_plugin,
             agent_type=agent_type,
+            role_skill=role_skill,
             allowed_tools=resolved_tools,
             capture_reads=capture_reads,
         )

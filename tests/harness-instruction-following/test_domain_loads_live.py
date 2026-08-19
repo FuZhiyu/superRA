@@ -62,7 +62,7 @@ def test_table_matches_manifest_domain_rows():
     assert ALL_DOMAIN_SKILLS == {
         "econ-data-analysis",
         "theory-modeling",
-        "writing",
+        "academic-writing",
         "slide-design",
     }
 
@@ -131,9 +131,9 @@ def test_red_domain_never_loaded():
 
 
 def test_red_domain_loaded_after_first_edit():
-    row = domain_row("writing")
+    row = domain_row("academic-writing")
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("writing", 5)],
+        skill_tool_events=[("academic-writing", 5)],
         edit_event_indices=[2],
     )
     report = DomainLoadReport()
@@ -168,7 +168,7 @@ def test_green_multi_domain_all_loaded():
     evidence = evidence_from_hook_records(
         skill_tool_events=[
             ("superRA:theory-modeling", 0),
-            ("superRA:writing", 1),
+            ("superRA:academic-writing", 1),
         ],
         edit_event_indices=[4],
     )
@@ -178,7 +178,7 @@ def test_green_multi_domain_all_loaded():
 
 
 def test_red_multi_domain_loaded_only_one():
-    # Only theory-modeling loaded; writing did not. First-match instead of
+    # Only theory-modeling loaded; academic-writing did not. First-match instead of
     # every-match is a real LC011–LC014 finding — must fail, naming the missing
     # domain.
     evidence = evidence_from_hook_records(

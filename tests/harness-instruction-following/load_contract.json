@@ -13,15 +13,15 @@
       "id": "LC001",
       "area": "manifest-always-loaded",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L58-L66",
-        "agents/implementer.md#L1-L9",
-        "agents/reviewer.md#L1-L10"
+        "skills/using-superra/SKILL.md#L59-L67",
+        "skills/implement-task/SKILL.md#L10-L13",
+        "skills/review-task/SKILL.md#L15-L18"
       ],
       "trigger": "Any superRA role dispatch.",
       "expected_evidence": [
-        "source manifest names superRA:using-superra and superRA:report-in-markdown as always loaded",
-        "role frontmatter lists those skills",
-        "Codex transcript contains the task-read and markdown-check command events",
+        "source manifest names superRA:using-superra and superRA:communicate as the skills every dispatch always loads",
+        "each role skill's Before You Start instructs loading both",
+        "Codex transcript contains the task-read and superRA:communicate markdown-check command events",
         "live artifact matches the exact schema"
       ],
       "classification": [
@@ -31,15 +31,15 @@
       "covered_by": {
         "ci_safe_static": [
           "test_always_loaded_live.py::test_green_static_backbone_real_role_specs",
-          "sdk_load_evidence.py::check_always_loaded_frontmatter"
+          "sdk_load_evidence.py::check_always_loaded_load_instruction"
         ],
         "fixture_unit": [
-          "test_always_loaded_live.py (frontmatter, command-event, and schema checks)"
+          "test_always_loaded_live.py (load-instruction, command-event, and schema checks)"
         ],
         "manual_live_codex": [
           "always-loaded-codex-smoke.sh + check_always_loaded_smoke.py (task-read and markdown-check commands; built/CI-tested, live-pending)"
         ],
-        "notes": "Role-frontmatter declarations are deterministic. Codex live not yet run."
+        "notes": "Role-skill load instructions are deterministic. Codex live not yet run."
       }
     },
     {
@@ -52,7 +52,7 @@
       "expected_evidence": [
         "structured table parse finds the stage rows and load targets",
         "live transcript for non-empty stage rows shows the target skill(s)/reference loaded before action",
-        "the maturation row loads task-tree + superplan (writing conditional, prose-heavy maturation only)",
+        "the maturation row loads task-tree + superplan (academic-writing conditional, prose-heavy maturation only)",
         "the implementation row produces no extra stage-skill expectation"
       ],
       "classification": [
@@ -131,10 +131,8 @@
       "id": "LC005",
       "area": "role-task-read-contract",
       "source_paths": [
-        "agents/implementer.md#L13-L17",
-        "agents/reviewer.md#L14-L18",
-        ".codex/agents/superra_implementer.toml#L17-L20",
-        ".codex/agents/superra_reviewer.toml#L17-L23"
+        "skills/implement-task/SKILL.md#L13",
+        "skills/review-task/SKILL.md#L18"
       ],
       "trigger": "Implementer or reviewer receives Task: or Tasks: in a dispatch.",
       "expected_evidence": [
@@ -160,25 +158,24 @@
     },
     {
       "id": "LC006",
-      "area": "generated-agent-drift",
+      "area": "role-skill-surface",
       "source_paths": [
-        "agents/implementer.md",
-        "agents/reviewer.md",
-        ".codex/agents/superra_implementer.toml#L1-L8",
-        ".codex/agents/superra_reviewer.toml#L1-L8",
-        "skills/codex-superra-setup/scripts/sync_codex_agents.py"
+        "skills/implement-task/SKILL.md",
+        "skills/review-task/SKILL.md",
+        "skills/agent-orchestration/SKILL.md#L50-L85"
       ],
-      "trigger": "Canonical role specs change, or generated role surfaces are checked.",
+      "trigger": "Role behavior changes, or the dispatch surface is checked.",
       "expected_evidence": [
-        "static drift check regenerates the .codex agent TOML into a temp tree and compares bytes",
-        "generated headers retain source and regeneration notice"
+        "both role skills exist and are named by the manifest, the orchestration templates, and main-agent seat routing",
+        "no named-agent surface survives: no agents/, no .codex/agents/, no generator or role resolver"
       ],
       "classification": [
         "ci_safe_static"
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_generated_agent_drift_check_is_ci_safe (runs sync_codex_agents.py --check)"
+          "test_contract.py::test_seat_fillers_reach_the_role_skills_by_name",
+          "test_contract.py::test_no_named_agent_surface_survives"
         ],
         "notes": "Fully CI-covered; no live row by design."
       }
@@ -187,9 +184,9 @@
       "id": "LC007",
       "area": "stage-planning-review",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L71-L71",
+        "skills/using-superra/SKILL.md#L72-L72",
         "skills/superplan/references/planning-review.md#L1-L24",
-        "agents/reviewer.md#L19-L20"
+        "skills/review-task/SKILL.md#L20-L20"
       ],
       "trigger": "Reviewer dispatch has Stage: planning-review.",
       "expected_evidence": [
@@ -312,12 +309,12 @@
         "skills/using-superra/SKILL.md#L76-L76",
         "skills/task-tree/SKILL.md",
         "skills/superplan/SKILL.md",
-        "skills/writing/SKILL.md"
+        "skills/academic-writing/SKILL.md"
       ],
       "trigger": "Dispatch has Stage: maturation.",
       "expected_evidence": [
-        "structured table parse confirms the manifest maps maturation to task-tree, superplan, and writing",
-        "live transcript shows task-tree and superplan loaded before action; writing is not a guaranteed load",
+        "structured table parse confirms the manifest maps maturation to task-tree, superplan, and academic-writing",
+        "live transcript shows task-tree and superplan loaded before action; academic-writing is not a guaranteed load",
         "the over-load check treats task-tree and superplan as stage skills (a maturation skill on the negative implementation stage is an over-load)"
       ],
       "classification": [
@@ -326,7 +323,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, writing row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (maturation -> task-tree, superplan, academic-writing row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (multi-skill stage evaluator + schema/stage artifact)"
@@ -393,22 +390,22 @@
           "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[theory-modeling] + multi-domain (theory-modeling + academic-writing) every-match canary"
         ],
-        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and writing."
+        "notes": "Claude live-verified: derivation task loads theory-modeling, and the multi-domain every-match rule loads both theory-modeling and academic-writing."
       }
     },
     {
       "id": "LC013",
-      "area": "domain-writing",
+      "area": "domain-academic-writing",
       "source_paths": [
         "skills/using-superra/SKILL.md#L84-L84",
-        "skills/writing/SKILL.md#L58-L86"
+        "skills/academic-writing/SKILL.md#L58-L86"
       ],
       "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
       "expected_evidence": [
         "structured table parse confirms the domain is present in the manifest",
-        "fixture Markdown/prose task should lead transcript to load writing",
+        "fixture Markdown/prose task should lead transcript to load academic-writing",
         "reference loads depend on Review/Polish/Draft classification rather than all files at once"
       ],
       "classification": [
@@ -417,15 +414,15 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (writing domain row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (academic-writing domain row)"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifacts)"
         ],
         "manual_live_claude": [
-          "domain_loads_live.py DOMAIN_ROWS[writing] + multi-domain (theory-modeling + writing) every-match canary"
+          "domain_loads_live.py DOMAIN_ROWS[academic-writing] + multi-domain (theory-modeling + academic-writing) every-match canary"
         ],
-        "notes": "Claude live-verified: prose task loads writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only."
+        "notes": "Claude live-verified: prose task loads academic-writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only."
       }
     },
     {
@@ -587,16 +584,19 @@
       "id": "LC019",
       "area": "hook-registries",
       "source_paths": [
-        "hooks/hooks.json#L1-L79",
-        "hooks/hooks-codex.json#L1-L55",
+        "hooks/hooks.json",
+        "hooks/hooks-codex.json",
+        "hooks/agent-model-guard",
+        "skills/agent-orchestration/SKILL.md#model-tier-selection",
         "skills/task-tree/references/internals.md#L93-L115",
-        "tests/check-harness-compatibility.sh#L37-L66"
+        "tests/check-harness-compatibility.sh"
       ],
-      "trigger": "Plugin hook manifests are installed or task.md / markdown files are edited through harness tools.",
+      "trigger": "Plugin hook manifests are installed, a generic agent is dispatched, or task.md / markdown files are edited through harness tools.",
       "expected_evidence": [
-        "CI static check parses hook registries under hooks/ and confirms UserPromptSubmit, PreToolUse, PostToolUse, and Codex Stop where expected",
-        "CI hook fixtures invoke task-hook wrapper for Edit|Write/apply_patch and Bash matchers",
-        "manual live transcript can confirm PostToolUse hook feedback when task-hook emits feedback"
+        "CI static check confirms both registries run agent-model-guard at PreToolUse(Agent) while retaining their harness-specific events",
+        "CI hook fixtures reject generic raw calls without explicit model controls and preserve named agents",
+        "CI hook fixtures invoke the task-hook wrapper through the merged Edit|Write|Bash matcher",
+        "manual live smokes record pre-dispatch payload and SubagentStart evidence or an explicit runtime opt-out"
       ],
       "classification": [
         "ci_safe_static",
@@ -608,43 +608,41 @@
           "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (event sets, matchers, commands)"
         ],
         "ci_safe_fixture": [
+          "test-agent-model-guard.sh + harness-specific manifest tests",
           "test_contract.py::test_hook_registry_boundaries_for_claude_and_codex (same test asserts wired commands)"
         ],
         "manual_live_claude": [
-          "not separately asserted live — PostToolUse hook feedback is observable only when task-hook emits; covered by registry-wiring static checks"
+          "claude-agent-model-live.py (denial, retry, then SubagentStart)"
         ],
         "manual_live_codex": [
-          "Codex Bash hook coverage is best-effort (SF003); live tests do not depend on catching every shell mutation"
+          "codex-agent-model-live.sh (Codex 0.147.0 records the specialized spawn_agent PreToolUse opt-out and exits 3)"
         ],
-        "notes": "Registry wiring is fully CI-covered. Live PostToolUse feedback is not separately asserted (static-only by design per SF003); not a coverage gap in the load contract."
+        "notes": "Registry wiring and raw-input decisions are CI-covered. Claude proves pre-start enforcement live. Codex 0.147.0 starts the subagent without the documented PreToolUse event, so its live path records a runtime limitation rather than claiming enforcement."
       }
     },
     {
       "id": "LC020",
       "area": "workflow-superimplement-orchestration",
       "source_paths": [
-        "skills/superimplement/SKILL.md#L12-L27",
-        "skills/superimplement/SKILL.md#L77-L91",
-        "skills/superimplement/SKILL.md#L163-L166",
-        "skills/using-superra/references/main-agent.md#L43-L53",
-        "skills/using-superra/references/claude-instructions.md",
+        "skills/superimplement/SKILL.md#L12-L22",
+        "skills/superimplement/SKILL.md#L78-L91",
+        "skills/superimplement/references/completion.md",
+        "skills/using-superra/references/main-agent.md#L40-L66",
         "skills/using-superra/references/codex-instructions.md#L7-L22",
-        "skills/using-superra/references/canonical-role.md",
-        "skills/using-superra/scripts/resolve_role.py",
-        "skills/superplan/references/interactive-mode.md#L1-L43",
-        "skills/agent-orchestration/SKILL.md#L85-L95",
-        "skills/codex-superra-setup/scripts/sync_codex_agents.py"
+        "skills/implement-task/SKILL.md",
+        "skills/review-task/SKILL.md",
+        "skills/using-superra/references/interactive-mode.md#L1-L36",
+        "skills/agent-orchestration/SKILL.md#L88-L98"
       ],
-      "trigger": "User invokes superimplement or implementation workflow over a task tree.",
+      "trigger": "User invokes superimplement or otherwise executes a task tree.",
       "expected_evidence": [
-        "structured Codex availability table distinguishes missing named agents from an unavailable agent tool",
-        "structured superimplement seat-execution table routes main fillers through canonical roles and subagent fillers through dispatch",
-        "both harness adapters route canonical-role through the shared packaged-role resolver",
-        "the packaged resolver discovers both role specs from a foreign project directory",
+        "structured Codex availability table routes dispatch when the agent tool is present and harness-forced-inline when it is not",
+        "structured superimplement seat-execution table routes main fillers through the role skill and subagent fillers through dispatch",
+        "the manifest, orchestration templates, and main-agent seat routing all name both role skills",
         "interactive fixture records implemented status and non-empty Results before a question-tool event, which precedes reviewer dispatch",
-        "seat fixtures show each main-seat route resolving and reading its canonical role file before dispatching the opposite seat",
-        "fixture parser requires structural implementer and reviewer dispatches for the default superimplement smoke",
-        "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the default path"
+        "seat fixtures show each main-seat route loading its role skill before dispatching the opposite seat",
+        "fixture parser requires structural implementer and reviewer dispatches for the superimplement smoke",
+        "manual live transcript shows main agent loads superimplement and agent-orchestration, then dispatches implementer and reviewer for the autonomous path"
       ],
       "classification": [
         "ci_safe_static",
@@ -653,10 +651,10 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_availability_routes_distinguish_tool_and_agent_absence; test_contract.py::test_interactive_review_dispositions_route_lifecycle; test_contract.py::test_seat_assignment_table_has_three_supported_structures; test_contract.py::test_superimplement_executes_each_selected_seat_filler; test_contract.py::test_harness_adapters_route_to_shared_canonical_role_resolver"
+          "test_contract.py::test_codex_availability_routes_key_off_agent_tool_presence; test_contract.py::test_interactive_review_dispositions_route_lifecycle; test_contract.py::test_seat_assignment_table_has_three_supported_structures; test_contract.py::test_superimplement_executes_each_selected_seat_filler; test_contract.py::test_seat_fillers_reach_the_role_skills_by_name"
         ],
         "fixture_unit": [
-          "skills/using-superra/scripts/test_resolve_role.py (packaged-layout discovery from a foreign project); test_transcript_assertions.py (interactive ordering and both main-seat canonical-role-resolution/role-load/opposite-dispatch fixtures); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
+          "test_transcript_assertions.py (interactive ordering and both main-seat role-skill-load/opposite-dispatch fixtures); test_contract.py::test_codex_orchestrator_sample_has_structural_dispatches"
         ],
         "manual_live_claude": [
           "orchestrator-live-smoke.sh + check_orchestrator_smoke.py (implementer then reviewer dispatch via Task/Agent events) — built/CI-tested; live run not part of the 08-12 expansion"
@@ -702,12 +700,12 @@
       "area": "codex-orchestration-adapter",
       "source_paths": [
         "skills/using-superra/references/codex-instructions.md#L9-L31",
-        "skills/using-superra/references/codex-instructions.md#L52-L83"
+        "skills/using-superra/references/codex-instructions.md#L52-L64"
       ],
-      "trigger": "Codex main agent dispatches role agents in a superRA workflow.",
+      "trigger": "Codex main agent dispatches a role-carrying agent in a superRA workflow.",
       "expected_evidence": [
-        "structured table parse confirms the named implementer and reviewer agent mappings",
-        "manual Codex transcript shows spawn_agent agent_type superra_implementer/superra_reviewer"
+        "structured table parse confirms Agent maps to spawn_agent(agent_type=\"default\")",
+        "manual Codex transcript shows two spawn_agent dispatches of agent_type default"
       ],
       "classification": [
         "ci_safe_static",
@@ -715,7 +713,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_codex_tool_map_matches_contract (Codex named-agent mappings)"
+          "test_contract.py::test_codex_tool_map_matches_contract (generic-agent mapping)"
         ],
         "manual_live_codex": [
           "orchestrator-live-smoke.sh HARNESS=codex + subagent_start_hook.py dispatch log (built/CI-tested, live-pending — no credentials yet)"

@@ -1,4 +1,4 @@
 {"type":"user","execution_mode":"interactive"}
 {"type":"tool_use","name":"Write","input":{"file_path":"interactive-fixture/task.md","content":"---\ntitle: Interactive fixture\nstatus: implemented\ndepends_on: []\n---\n\n## Objective\n\nExercise the canvas.\n\n## Results\n\nThe requested unit landed.\n"}}
 {"type":"tool_use","name":"AskUserQuestion","input":{"question":"How should independent review proceed?","options":["Review now","Defer","Skip"]}}
-{"type":"tool_use","name":"Agent","input":{"subagent_type":"superRA:reviewer"}}
+{"type":"tool_use","name":"Agent","input":{"subagent_type":"general-purpose","prompt":"Load `superRA:review-task` skill."}}
