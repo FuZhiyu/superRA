@@ -129,6 +129,15 @@ class TestAnchoredBlock:
         assert c.anchor.block_index == 2
         assert c.orphaned is False
 
+    def test_legacy_alias_anchor_resolves(self):
+        # A comment anchored under the legacy section name resolves against the
+        # current name instead of orphaning.
+        body = "## Objective\n\nx\n\n## Details\n\nGuidance paragraph target.\n"
+        c = _mk_comment("Planner Guidance", 0, "Guidance paragraph")
+        block = anchored_block(c, body)
+        assert block == "Guidance paragraph target."
+        assert c.orphaned is False
+
     def test_orphaned_section_removed_returns_none(self, plan_root):
         body = _task_body(plan_root / "01-task")
         c = _mk_comment("Nonexistent Section", 0, "Second paragraph")

@@ -81,7 +81,7 @@ with open(out, "w", encoding="utf-8") as f:
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
     f.write("[[hooks.PostToolUse]]\n")
-    f.write('matcher = "Edit|Write"\n')
+    f.write('matcher = "Edit|Write|Bash|apply_patch"\n')
     f.write("[[hooks.PostToolUse.hooks]]\n")
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n")

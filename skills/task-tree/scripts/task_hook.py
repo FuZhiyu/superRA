@@ -70,9 +70,9 @@ def _is_markdown_under_task_root(file_path: Path) -> bool:
 def _markdown_integrity_feedback(file_path: Path) -> list[str]:
     """Run the render-integrity checker on a `.md` under a task root.
 
-    The detection logic lives in the sibling report-in-markdown skill; this only
+    The detection logic lives in the sibling communicate skill; this only
     imports and calls it. Resolves the checker relative to this file's own
-    location (skills/task-tree/scripts -> skills/report-in-markdown/scripts) so
+    location (skills/task-tree/scripts -> skills/communicate/scripts) so
     it works across local checkout, plugin cache, and GitHub-clone installs where
     the whole skills/ tree ships together. Best-effort: any failure (gate miss,
     unreadable file, import or check error) returns no feedback rather than
@@ -85,17 +85,41 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
     except OSError:
         return []
     try:
-        md_scripts = _scripts_dir().parent.parent / "report-in-markdown" / "scripts"
+        md_scripts = _scripts_dir().parent.parent / "communicate" / "scripts"
         if str(md_scripts) not in sys.path:
             sys.path.insert(0, str(md_scripts))
         import md_integrity
         issues = md_integrity.check(text)
     except Exception:
         return []
-    return [
+    if not issues:
+        return []
+    feedback = [
         f"Markdown render-integrity issue in {file_path}:{it.line} "
         f"[{it.rule}] {it.message}"
         for it in issues
+    ]
+    feedback.append(
+        "Load the `superRA:communicate` skill for the correct form before fixing these."
+    )
+    return feedback
+
+
+def _communicate_reminder(file_paths: list[Path]) -> list[str]:
+    """Remind after Markdown edits under a task root without blocking."""
+    paths: list[str] = []
+    seen: set[Path] = set()
+    for file_path in file_paths:
+        if not _is_markdown_under_task_root(file_path) or file_path in seen:
+            continue
+        seen.add(file_path)
+        paths.append(str(file_path))
+    if not paths:
+        return []
+    return [
+        f"Markdown edited under the task tree: {', '.join(paths)}. If these edits are "
+        "meant for a user to read, make sure they follow `superRA:communicate`; "
+        "otherwise continue."
     ]
 
 
@@ -103,7 +127,7 @@ def _feedback_json(feedback: list[str]) -> str:
     context = (
         "<IMPORTANT>Task-system hook feedback:\n"
         + "\n".join(f"- {line}" for line in feedback)
-        + "\n\nThe hook stayed non-blocking; fix the task tree before proceeding."
+        + "\n\nThe hook stayed non-blocking; apply any relevant action before proceeding."
         + "</IMPORTANT>"
     )
     return json.dumps(
@@ -150,6 +174,23 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     import _task_validate as task_validate
     feedback: list[str] = []
 
+    # Propagate parent status first so validation below describes the state
+    # this run produced, not the pre-rollup tree. Best-effort, never fail.
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            propagation_warnings: list[str] = []
+            if task_path is None:
+                _propagate_whole_tree(task_io, plan_root, propagation_warnings)
+            else:
+                task_io.propagate_parent_status(
+                    plan_root, task_path, feedback=propagation_warnings
+                )
+        for w in propagation_warnings:
+            feedback.append(f"Status propagation warning in {plan_root}: {w}")
+    except Exception as exc:
+        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
+
     # Validate — collect warnings for model-visible JSON feedback.
     try:
         with warnings.catch_warnings():
@@ -161,21 +202,12 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
-    # Propagate parent status up the tree — best-effort, never fail.
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if task_path is None:
-                _propagate_whole_tree(task_io, plan_root)
-            else:
-                task_io.propagate_parent_status(plan_root, task_path)
-    except Exception as exc:
-        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
-
     return feedback
 
 
-def _propagate_whole_tree(task_io, plan_root: Path) -> int:
+def _propagate_whole_tree(
+    task_io, plan_root: Path, feedback: list[str] | None = None
+) -> int:
     """Recompute parent status across every branch in the tree.
 
     propagate_parent_status only walks the ancestors of one task_path, so a
@@ -197,8 +229,17 @@ def _propagate_whole_tree(task_io, plan_root: Path) -> int:
     _collect(root)
 
     updated = 0
+    seen_warnings: set[str] = set()
     for leaf_path in leaf_paths:
-        updated += task_io.propagate_parent_status(plan_root, leaf_path)
+        leaf_warnings: list[str] = []
+        updated += task_io.propagate_parent_status(
+            plan_root, leaf_path, feedback=leaf_warnings
+        )
+        for w in leaf_warnings:
+            # Ancestor chains overlap across leaves; report each warning once.
+            if feedback is not None and w not in seen_warnings:
+                seen_warnings.add(w)
+                feedback.append(w)
     return updated
 
 
@@ -209,9 +250,6 @@ _MUTATING_RE = re.compile(
 # Path-like tokens that mention a task-root directory.
 _PLAN_TOKEN_RE = re.compile(
     r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?(?:superRA(?=$|/|[\s'\";|&])(?:/[^\s'\";|&]*)?|\.plan[^\s'\";|&]*))"
-)
-_APPLY_PATCH_FILE_RE = re.compile(
-    r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
 )
 
 
@@ -443,7 +481,7 @@ def _handle_edit_write(data: dict) -> None:
     if not _is_markdown_under_task_root(file_path):
         _exit_success()
 
-    feedback: list[str] = []
+    feedback = _communicate_reminder([file_path])
 
     # task.md-only branch: validate the tree and propagate parent status.
     if file_path.name == "task.md":
@@ -494,16 +532,10 @@ def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
 
 def _apply_patch_paths(command: str) -> list[str]:
     """Extract file paths from an apply_patch command payload."""
-    paths: list[str] = []
-    for line in command.splitlines():
-        match = _APPLY_PATCH_FILE_RE.match(line)
-        if not match:
-            continue
-        path = match.group("path") or match.group("move_to") or ""
-        path = path.strip()
-        if path:
-            paths.append(path)
-    return paths
+    _ensure_scripts_on_path()
+    from _apply_patch import patch_paths
+
+    return patch_paths(command)
 
 
 def _handle_apply_patch(data: dict) -> None:
@@ -517,10 +549,12 @@ def _handle_apply_patch(data: dict) -> None:
     roots: list[Path] = []
     seen: set[Path] = set()
     feedback: list[str] = []
+    edited_paths: list[Path] = []
 
     for raw_path in _apply_patch_paths(command):
         path = Path(raw_path)
         file_path = path if path.is_absolute() else cwd / path
+        edited_paths.append(file_path)
 
         # Render-integrity-check any .md under a task root (including task.md);
         # the cheap gate inside short-circuits everything else.
@@ -536,6 +570,8 @@ def _handle_apply_patch(data: dict) -> None:
             continue
         seen.add(resolved)
         roots.append(plan_root)
+
+    feedback.extend(_communicate_reminder(edited_paths))
 
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))

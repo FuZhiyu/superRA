@@ -320,6 +320,9 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     return fm, body
 
 
+_SECTION_ALIASES = {"Planner Guidance": "Details"}
+
+
 def parse_body_sections(body: str) -> dict[str, str]:
     """Split a task body on ``## `` headers into {section_name: content} pairs.
 
@@ -327,11 +330,29 @@ def parse_body_sections(body: str) -> dict[str, str]:
     treated as body content, not a section header, so a header quoted inside an
     Objective/Results template does not start a spurious section (mirrors
     ``_has_nonempty_section``).
+
+    Legacy heading names in ``_SECTION_ALIASES`` parse to their current name, so
+    a task file written under the old vocabulary reads as the same section. When
+    a legacy heading and its current name both appear, their bodies merge with a
+    blank line between rather than the later one overwriting the earlier.
     """
     sections: dict[str, str] = {}
     current_name: str | None = None
     current_lines: list[str] = []
     in_fence = False
+
+    def _store(name: str, lines: list[str]) -> None:
+        # An alias collision (e.g. legacy ## Planner Guidance beside ## Details)
+        # merges both bodies with a blank line between — never drop planner text.
+        content = "\n".join(lines)
+        existing = sections.get(name)
+        if existing is None:
+            sections[name] = content
+        elif not existing.strip():
+            sections[name] = content
+        elif content.strip():
+            sections[name] = existing.rstrip("\n") + "\n\n" + content.lstrip("\n")
+
     for line in body.split("\n"):
         if re.match(r"^[ \t]*(```|~~~)", line):
             in_fence = not in_fence
@@ -341,13 +362,13 @@ def parse_body_sections(body: str) -> dict[str, str]:
         m = None if in_fence else re.match(r"^## (.+)$", line)
         if m:
             if current_name is not None:
-                sections[current_name] = "\n".join(current_lines)
-            current_name = m.group(1)
+                _store(current_name, current_lines)
+            current_name = _SECTION_ALIASES.get(m.group(1), m.group(1))
             current_lines = []
         elif current_name is not None:
             current_lines.append(line)
     if current_name is not None:
-        sections[current_name] = "\n".join(current_lines)
+        _store(current_name, current_lines)
     return sections
 
 
@@ -1079,9 +1100,11 @@ def compute_status(task: Task) -> str:
        postponed, else archived (a deferred child dominates an abandoned one)
     2. All children approved -> approved
     3. Any child revise -> revise
-    4. Any child in-progress or implemented -> in-progress
-    5. Any child approved (but not all) -> in-progress
-    6. Otherwise -> not-started
+    4. All children implemented or approved -> implemented (the subtree's
+       work product exists; review is still open)
+    5. Any child in-progress or implemented -> in-progress
+    6. Any child approved (but not all) -> in-progress
+    7. Otherwise -> not-started
     """
     if task.is_leaf:
         return task.status
@@ -1096,6 +1119,8 @@ def compute_status(task: Task) -> str:
         return "approved"
     if any(s == "revise" for s in child_statuses):
         return "revise"
+    if all(s in ("implemented", "approved") for s in child_statuses):
+        return "implemented"
     if any(s in ("in-progress", "implemented") for s in child_statuses):
         return "in-progress"
     if any(s == "approved" for s in child_statuses):
@@ -1103,11 +1128,16 @@ def compute_status(task: Task) -> str:
     return "not-started"
 
 
-def propagate_parent_status(plan_root: Path, task_path: str) -> int:
+def propagate_parent_status(
+    plan_root: Path, task_path: str, feedback: list[str] | None = None
+) -> int:
     """Walk from task_path up to the root, recomputing parent statuses.
 
     For each ancestor that is not a leaf, computes rolled-up status from
-    children via compute_status() and writes back if changed.
+    children via compute_status() and writes back if changed. An ``approved``
+    rollup is never written onto a parent whose ``## Review Notes`` still carry
+    ``[BLOCKING]``: the current status is held and a warning is appended to
+    ``feedback`` when a list is passed.
 
     Returns the number of ancestor tasks updated.
     """
@@ -1136,6 +1166,18 @@ def propagate_parent_status(plan_root: Path, task_path: str) -> int:
         changed = False
         rolled_status = compute_status(ancestor_task)
 
+        if rolled_status == "approved" and ancestor_task.status != "approved":
+            from _task_validate import _review_notes_block_approval
+
+            if _review_notes_block_approval(rolled_status, ancestor_task.review_notes):
+                if feedback is not None:
+                    prefix = ancestor_task.path if ancestor_task.path else "(root)"
+                    feedback.append(
+                        f"{prefix}: children approved but parent Review Notes still "
+                        "carry [BLOCKING]; clear or re-review"
+                    )
+                continue
+
         if ancestor_task.status != rolled_status:
             ancestor_task.status = rolled_status
             changed = True
@@ -1152,11 +1194,13 @@ def compute_frontier(root: Task) -> list[Task]:
 
     A leaf task is on the frontier when:
     1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
-       implement), 'implemented' (ready to review), or 'revise' (ready to fix).
+       implement), 'implemented' (approval decision open), or 'revise' (ready
+       to fix).
        Each entry carries its status, so a caller reads the next action from it.
-    2. All sibling dependencies have effective_status 'approved' (or 'archived').
-       Note this is approved-only: a dependency that is merely 'implemented' or
-       'revise' is not satisfied, so dependents of unreviewed work stay blocked.
+    2. All sibling dependencies have effective_status 'approved', 'archived',
+       'implemented', or 'revise' — i.e. the dependency's work product exists,
+       even if review or a fix round is still open. Only 'not-started',
+       'in-progress', and 'postponed' dependencies block dependents.
     3. All ancestor tasks' sibling dependencies are met (recursively)
     """
     frontier: list[Task] = []
@@ -1199,11 +1243,13 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
                 )
                 deps_met = False
                 break
-            # Archived dependencies are treated as satisfied; postponed ones
-            # are NOT — postponing a task deliberately blocks its dependents
-            # until it is resumed and approved.
+            # A dependency is satisfied once its work product exists —
+            # 'implemented' and 'revise' count, so dependents can proceed while
+            # review or a deferred fix round is open. Postponed dependencies
+            # are NOT satisfied — postponing a task deliberately blocks its
+            # dependents until it is resumed.
             dep_status = dep_task.effective_status()
-            if dep_status not in ("approved", "archived"):
+            if dep_status not in ("approved", "archived", "implemented", "revise"):
                 deps_met = False
                 break
 

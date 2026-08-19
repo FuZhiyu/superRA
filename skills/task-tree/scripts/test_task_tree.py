@@ -432,10 +432,10 @@ class TestComputeFrontier:
         assert _task_io.compute_frontier(root) == []
 
     def test_revise_and_implemented_on_frontier(self, plan_root):
-        """'revise' (ready to fix) and 'implemented' (ready to review) are
+        """'revise' (ready to fix) and 'implemented' (approval decision open) are
         actionable, so they appear on the frontier; the per-task status tells
-        the caller the next action. A dependency in either state is still NOT
-        satisfied, so its dependents stay blocked.
+        the caller the next action. A dependency in either state is satisfied
+        (its work product exists), so its dependents unlock alongside it.
         """
         root = _task_io.walk_plan(plan_root)
         # 02-second depends on 01-first (approved), so deps are met.
@@ -446,9 +446,11 @@ class TestComputeFrontier:
             assert "02-second" in paths, (
                 f"'{state}' tasks are actionable and should be on the frontier"
             )
-            # 03-third depends on 02-second which is not 'approved',
-            # so 03-third stays blocked.
-            assert "03-third" not in paths
+            # 03-third depends on 02-second, whose work product exists,
+            # so 03-third is dispatchable too.
+            assert "03-third" in paths, (
+                f"a '{state}' dependency is satisfied; dependents unlock"
+            )
 
     def test_diamond_dependency(self, tmp_path):
         """Diamond DAG: D(approved) -> B, D -> C, B -> A, C -> A.
@@ -649,23 +651,23 @@ class TestTaskCreate:
         assert task.status == "not-started"
         assert task.depends_on == []
 
-    def test_create_with_planner_guidance(self, plan_root):
+    def test_create_with_details(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
             task_path="04-new-task",
             title="New Task",
             objective="A binding objective.",
-            guidance="Consider starting from Code/example.py.",
+            details="Consider starting from Code/example.py.",
         )
         content = (plan_root / "04-new-task" / "task.md").read_text(
             encoding="utf-8"
         )
         assert "## Objective\n\nA binding objective." in content
-        assert "## Planner Guidance\n\nConsider starting from Code/example.py." in content
-        assert content.index("## Objective") < content.index("## Planner Guidance")
-        assert content.index("## Planner Guidance") < content.index("## Results")
+        assert "## Details\n\nConsider starting from Code/example.py." in content
+        assert content.index("## Objective") < content.index("## Details")
+        assert content.index("## Details") < content.index("## Results")
 
-    def test_create_without_guidance_omits_empty_section(self, plan_root):
+    def test_create_without_details_omits_empty_section(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
             task_path="04-new-task",
@@ -675,7 +677,15 @@ class TestTaskCreate:
         content = (plan_root / "04-new-task" / "task.md").read_text(
             encoding="utf-8"
         )
-        assert "## Planner Guidance" not in content
+        assert "## Details" not in content
+
+    def test_details_and_guidance_flags_write_the_same_section(self):
+        assert task_create.parse_args(
+            ["--path", "x", "--title", "T", "--details", "Route A."]
+        ).details == "Route A."
+        assert task_create.parse_args(
+            ["--path", "x", "--title", "T", "--guidance", "Route A."]
+        ).details == "Route A."
 
     def test_create_with_deps(self, plan_root):
         task_create.create_task(
@@ -1528,7 +1538,7 @@ class TestParseBodySections:
     def test_all_sections(self):
         body = (
             "## Objective\n\nDo the thing.\n\n"
-            "## Planner Guidance\n\nTry the obvious path.\n\n"
+            "## Details\n\nTry the obvious path.\n\n"
             "## Results\n\n### Key Findings\n- Found it\n\n"
             "## Decisions\n\n> Use method A\n\n"
             "## Revision Notes\n\nChanged scope to X.\n\n"
@@ -1537,8 +1547,8 @@ class TestParseBodySections:
         sections = parse_body_sections(body)
         assert "Objective" in sections
         assert "Do the thing." in sections["Objective"]
-        assert "Planner Guidance" in sections
-        assert "Try the obvious path." in sections["Planner Guidance"]
+        assert "Details" in sections
+        assert "Try the obvious path." in sections["Details"]
         assert "Results" in sections
         assert "Decisions" in sections
         assert "Revision Notes" in sections
@@ -2110,16 +2120,18 @@ class TestTaskRead:
         assert "task" in data
         assert "dependencies" in data
 
-    def test_planner_guidance_rendered_in_json_sections(self, plan_root):
+    @pytest.mark.parametrize("heading", ["## Details", "## Planner Guidance"])
+    def test_details_rendered_in_json_sections(self, plan_root, heading):
+        """The legacy heading parses to the same section as the current one."""
         task_md = plan_root / "02-second" / "task.md"
         task_md.write_text(
             task_md.read_text(encoding="utf-8")
-            + "\n## Planner Guidance\n\nUse the current helper if it fits.\n",
+            + f"\n{heading}\n\nUse the current helper if it fits.\n",
             encoding="utf-8",
         )
         target = _task_io.parse_task(task_md)
         data = json.loads(task_read.render_json([], target, [], show_ancestors=False))
-        assert data["task"]["sections"]["Planner Guidance"] == (
+        assert data["task"]["sections"]["Details"] == (
             "Use the current helper if it fits."
         )
 
@@ -2236,14 +2248,17 @@ class TestTaskHook:
     def _assert_empty_json(self, stdout: str) -> None:
         assert json.loads(stdout) == {}
 
-    def test_ignores_non_task_md(self, plan_root):
-        """Hook exits 0 immediately for non-task.md files."""
+    def test_edit_non_task_markdown_under_tree_reminds(self, plan_root):
         payload = {
             "tool_name": "Edit",
             "tool_input": {"file_path": str(plan_root / "01-first" / "README.md")},
         }
-        code, _ = self._run_hook(payload)
-        assert code == 0
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Markdown edited under the task tree" in context
+        assert "superRA:communicate" in context
+        assert "otherwise continue" in context
 
     def test_ignores_non_edit_write_tools(self, plan_root):
         """Hook exits 0 immediately for tools other than Edit/Write."""
@@ -2255,15 +2270,17 @@ class TestTaskHook:
         assert code == 0
 
     def test_exits_zero_on_valid_task_md(self, plan_root):
-        """Hook exits 0 when processing a valid task.md."""
+        """Hook reminds without blocking when processing a valid task.md."""
         payload = {
             "tool_name": "Edit",
             "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
         }
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        assert result.stdout == ""
         assert result.stderr == ""
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
 
     def test_codex_empty_json_mode_valid_task_md_outputs_object(self, plan_root):
         """Codex no-feedback task.md paths emit parseable empty hook JSON."""
@@ -2276,7 +2293,9 @@ class TestTaskHook:
             env={task_hook.CODEX_EMPTY_JSON_ENV: "1"},
         )
         assert result.returncode == 0
-        self._assert_empty_json(result.stdout)
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
 
     def test_exits_zero_on_validation_failure(self, plan_root):
@@ -2357,7 +2376,9 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
-        self._assert_empty_json(result.stdout)
+        assert "Markdown edited under the task tree" in json.loads(
+            result.stdout
+        )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists(), (
             "the hook must not auto-generate a dashboard"
@@ -2420,6 +2441,80 @@ class TestTaskHook:
         self._assert_empty_json(result.stdout)
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists()
+
+    def test_write_markdown_under_tree_reminds_without_before_state(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        task_md = root / "notes.md"
+        task_md.write_text("For the user.\n", encoding="utf-8")
+        payload = {
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(task_md), "content": "For the user."},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        assert "decision" not in data
+        output = data["hookSpecificOutput"]
+        assert output["hookEventName"] == "PostToolUse"
+        assert "Markdown edited under the task tree" in output["additionalContext"]
+        assert "superRA:communicate" in output["additionalContext"]
+
+    def test_apply_patch_markdown_under_tree_reminds_once_for_all_paths(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        (root / "one.md").write_text("One.\n", encoding="utf-8")
+        (root / "two.md").write_text("Two.\n", encoding="utf-8")
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": "\n".join(
+                    [
+                        "*** Begin Patch",
+                        "*** Update File: superRA/one.md",
+                        "@@",
+                        "-One.",
+                        "+One changed.",
+                        "*** Update File: superRA/two.md",
+                        "@@",
+                        "-Two.",
+                        "+Two changed.",
+                        "*** End Patch",
+                    ]
+                )
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert context.count("Markdown edited under the task tree") == 1
+        assert str(root / "one.md") in context
+        assert str(root / "two.md") in context
+        assert "superRA:communicate" in context
+
+    def test_edit_markdown_outside_tree_stays_silent(self, tmp_path):
+        readme = tmp_path / "README.md"
+        readme.write_text("Outside.\n", encoding="utf-8")
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(readme)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_non_markdown_under_tree_stays_silent(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        script = root / "notes.txt"
+        script.write_text("Not Markdown.\n", encoding="utf-8")
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(script)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
 
     def test_empty_stdin_exits_zero(self):
         """Hook exits 0 on empty or invalid stdin (resilient to harness edge cases)."""
@@ -2798,9 +2893,9 @@ class TestTaskHook:
         commands = [
             entry["hooks"][0]["command"]
             for entry in post_tool
-            if entry.get("matcher") in {"Edit|Write", "Bash"}
+            if entry.get("matcher") == "Edit|Write|Bash|apply_patch"
         ]
-        assert len(commands) == 2
+        assert len(commands) == 1
 
         payload = {"tool_name": "apply_patch", "tool_input": {"command": ""}}
         for command in commands:
@@ -2826,8 +2921,8 @@ class TestTaskHook:
         )
         path.write_text(f"---\n{fm}---\n\n{body}", encoding="utf-8")
 
-    def test_edit_clean_md_is_silent(self, plan_root):
-        """A clean .md produces no output."""
+    def test_edit_clean_md_emits_only_communicate_reminder(self, plan_root):
+        """A clean .md skips integrity findings but still gets the reminder."""
         target = plan_root / "01-first" / "task.md"
         self._md_task_with_body(
             target,
@@ -2836,8 +2931,10 @@ class TestTaskHook:
         payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
         result = self._run_hook_result(payload)
         assert result.returncode == 0
-        assert result.stdout == ""
         assert result.stderr == ""
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Markdown edited under the task tree" in context
+        assert "Markdown render-integrity issue" not in context
 
     def test_edit_non_md_file_is_silent(self, plan_root):
         """A non-.md edit under a task root produces no markdown feedback and
@@ -2917,9 +3014,17 @@ class TestValidateRevisionNotes:
         )
         assert _task_validate.validate_revision_notes(t) == []
 
-    def test_implemented_with_revnote_no_warn(self):
+    def test_implemented_with_revnote_warns(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="implemented",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
+        )
+        assert _task_validate.validate_revision_notes(t)
+
+    def test_revise_with_revnote_no_warn(self):
+        # A fresh note on `revise` is the prescribed planner-to-implementer handoff.
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="revise",
             body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
         )
         assert _task_validate.validate_revision_notes(t) == []
@@ -2953,6 +3058,31 @@ class TestValidateRevisionNotes:
         assert _task_validate.validate_revision_notes(t) == []
 
 
+class TestValidateReviewNotes:
+    def test_approved_with_blocking_review_item_warns(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Review Notes\n\n> [BLOCKING] Fix this.\n",
+            review_notes="> [BLOCKING] Fix this.\n",
+        )
+        assert _task_validate.validate_review_notes(t)
+
+    def test_approved_with_advisory_review_item_passes(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Review Notes\n\n> [ADVISORY] Consider this.\n",
+            review_notes="> [ADVISORY] Consider this.\n",
+        )
+        assert _task_validate.validate_review_notes(t) == []
+
+    def test_blocking_text_outside_review_notes_passes(self):
+        text = (
+            "---\ntitle: T\nstatus: approved\ndepends_on: []\n---\n\n"
+            "## Objective\n\nApply the [BLOCKING] checklist.\n"
+        )
+        assert not _task_validate.approved_with_blocking_review_notes(text)
+
+
 class TestValidatePlanRevisionNotes:
     def _write(self, path: Path, text: str) -> None:
         path.write_text(text, encoding="utf-8")
@@ -2968,7 +3098,7 @@ class TestValidatePlanRevisionNotes:
         warnings = _task_validate.validate_plan(root)
         assert warnings
 
-    def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
+    def test_validate_plan_warns_on_implemented_revnote(self, tmp_path):
         root = tmp_path / "superRA"
         root.mkdir()
         self._write(root / "task.md", _task_md_text("Root", "not-started"))
@@ -2976,6 +3106,17 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "implemented", revnote="rework"))
+        warnings = _task_validate.validate_plan(root)
+        assert warnings
+
+    def test_validate_plan_silent_on_in_progress_revnote(self, tmp_path):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
+        d = root / "01-task"
+        d.mkdir()
+        self._write(d / "task.md",
+                    _task_md_text("Task", "in-progress", revnote="wip"))
         warnings = _task_validate.validate_plan(root)
         assert warnings == []
 
@@ -3466,6 +3607,27 @@ class TestTaskCheck:
             for f in findings
         )
 
+    def test_detects_approved_task_with_blocking_review_item(self, tmp_path):
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        task_dir = root_dir / "01-stale"
+        task_dir.mkdir()
+        task_md = task_dir / "task.md"
+        _write_task_md(task_md, "Stale", "approved")
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Review Notes\n\n> [BLOCKING] Fix this.\n",
+            encoding="utf-8",
+        )
+        findings = task_check.run_checks(root_dir, category="status")
+        assert any(
+            f.category == "status"
+            and f.severity == "error"
+            and "[BLOCKING]" in f.message
+            for f in findings
+        )
+
     def test_detects_stale_integration_status(self, tmp_path):
         """Flags stale integration_status field still present in frontmatter."""
         root_dir = tmp_path / "superRA"
@@ -3731,13 +3893,13 @@ class TestFixStatusConsistency:
         _write_task_md(child2 / "task.md", "Child B", "implemented")
 
         # Parent status is "not-started" but children are approved/implemented
-        # Rolled-up status should be "in-progress"
+        # Rolled-up status should be "implemented" (all work product exists)
         fixed = task_update.fix_status_consistency(root_dir)
         assert fixed >= 1
 
         # Re-read the parent task
         parent_task = _task_io.parse_task(parent / "task.md")
-        assert parent_task.status == "in-progress"
+        assert parent_task.status == "implemented"
 
     def test_fix_mode_no_change_for_leaf(self, tmp_path):
         """--fix should NOT change leaf task status (only branches)."""
@@ -3816,19 +3978,19 @@ class TestPropagateParentStatus:
         updated = _task_io.propagate_parent_status(root_dir, "parent/child")
         assert updated >= 1
 
-        # Parent should be in-progress (child is implemented, not approved)
+        # Parent should be implemented (its only child is implemented)
         parent_task = _task_io.parse_task(parent / "task.md")
-        assert parent_task.status == "in-progress"
+        assert parent_task.status == "implemented"
 
-        # Root should also be in-progress
+        # Root should also be implemented
         root_task = _task_io.parse_task(root_dir / "task.md")
-        assert root_task.status == "in-progress"
+        assert root_task.status == "implemented"
 
     def test_no_update_when_already_correct(self, tmp_path):
         """No writes happen if parent already has the correct status."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "in-progress")
+        _write_task_md(root_dir / "task.md", "Root", "implemented")
         child = root_dir / "child"
         child.mkdir()
         _write_task_md(child / "task.md", "Child", "implemented")
@@ -4036,3 +4198,189 @@ class TestForestDetection:
         # Frontier tasks keep their full root-relative prefix.
         assert "01-alpha/01-model/01-derive" in paths
         assert "02-beta/01-data" in paths
+
+
+class TestApplyPatchParser:
+    """Shared apply_patch grammar in _apply_patch.py."""
+
+    def _parse(self, *lines):
+        import _apply_patch
+        return _apply_patch.parse_patch("\n".join(lines))
+
+    def test_headers_and_move_to(self):
+        patches = self._parse(
+            "*** Begin Patch",
+            "*** Update File: a/task.md",
+            "*** Move to: b/task.md",
+            "@@",
+            "-old",
+            "+new",
+            "*** Delete File: c.md",
+            "*** Add File: d.md",
+            "+hello",
+            "*** End Patch",
+        )
+        kinds = [(p.kind, p.path, p.move_to) for p in patches]
+        assert kinds == [
+            ("update", "a/task.md", "b/task.md"),
+            ("delete", "c.md", None),
+            ("add", "d.md", None),
+        ]
+        # The Move to: header must not reset the parser and drop the hunks.
+        assert patches[0].hunks == [["-old", "+new"]]
+        assert patches[0].target_path == "b/task.md"
+
+    def test_patch_paths_include_move_targets(self):
+        import _apply_patch
+        command = "\n".join(
+            [
+                "*** Begin Patch",
+                "*** Update File: a/task.md",
+                "*** Move to: b/task.md",
+                "@@",
+                "*** End Patch",
+            ]
+        )
+        assert _apply_patch.patch_paths(command) == ["a/task.md", "b/task.md"]
+
+    def test_blank_line_is_context(self):
+        import _apply_patch
+        patch = self._parse(
+            "*** Update File: x.md",
+            "@@",
+            " alpha",
+            "",
+            "-beta",
+            "+gamma",
+        )[0]
+        result = _apply_patch.apply_to_text(patch, "alpha\n\nbeta\n")
+        assert result == "alpha\n\ngamma\n"
+
+    def test_out_of_order_hunks_apply(self):
+        import _apply_patch
+        patch = self._parse(
+            "*** Update File: x.md",
+            "@@",
+            "-third",
+            "+THIRD",
+            "@@",
+            "-first",
+            "+FIRST",
+        )[0]
+        result = _apply_patch.apply_to_text(patch, "first\nsecond\nthird\n")
+        assert result == "FIRST\nsecond\nTHIRD\n"
+
+    def test_unmatched_hunk_returns_none(self):
+        import _apply_patch
+        patch = self._parse("*** Update File: x.md", "@@", "-absent", "+there")[0]
+        assert _apply_patch.apply_to_text(patch, "content\n") is None
+        assert patch.added_lines() == ["there"]
+
+    def test_add_and_delete(self):
+        import _apply_patch
+        add = self._parse("*** Add File: x.md", "+line one", "+line two")[0]
+        assert _apply_patch.apply_to_text(add, "") == "line one\nline two\n"
+        delete = self._parse("*** Delete File: x.md")[0]
+        assert _apply_patch.apply_to_text(delete, "anything\n") == ""
+
+
+class TestSectionAliasCollision:
+    """Legacy ## Planner Guidance beside ## Details merges; nothing is dropped."""
+
+    def test_legacy_then_current_merges_with_blank_line(self):
+        body = (
+            "## Planner Guidance\n\nlegacy planner text\n\n"
+            "## Details\n\ncurrent details text\n"
+        )
+        sections = parse_body_sections(body)
+        assert sections["Details"] == "\nlegacy planner text\n\ncurrent details text\n"
+
+    def test_current_then_legacy_merges_with_blank_line(self):
+        body = (
+            "## Details\n\ncurrent details text\n\n"
+            "## Planner Guidance\n\nlegacy planner text\n"
+        )
+        sections = parse_body_sections(body)
+        assert sections["Details"] == "\ncurrent details text\n\nlegacy planner text\n"
+
+    def test_empty_duplicate_does_not_erase_content(self):
+        body = "## Details\n\ncontent\n\n## Planner Guidance\n\n"
+        sections = parse_body_sections(body)
+        assert "content" in sections["Details"]
+
+
+class TestTreeHookInvariants:
+    """The tree hooks never produce a state their own validators flag."""
+
+    def _tree(self, tmp_path, parent_body_extra="", parent_status="in-progress"):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        (root / "task.md").write_text(
+            "---\ntitle: Root\nstatus: not-started\ndepends_on: []\n---\n\n"
+            "## Objective\n\nx\n",
+            encoding="utf-8",
+        )
+        parent = root / "parent"
+        parent.mkdir()
+        (parent / "task.md").write_text(
+            f"---\ntitle: Parent\nstatus: {parent_status}\ndepends_on: []\n---\n\n"
+            f"## Objective\n\nx\n{parent_body_extra}",
+            encoding="utf-8",
+        )
+        for name in ("child-a", "child-b"):
+            d = parent / name
+            d.mkdir()
+            (d / "task.md").write_text(
+                f"---\ntitle: {name}\nstatus: approved\ndepends_on: []\n---\n\n"
+                "## Objective\n\nx\n",
+                encoding="utf-8",
+            )
+        return root, parent
+
+    def test_no_approved_rollup_onto_blocking_parent(self, tmp_path):
+        root, parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = []
+        _task_io.propagate_parent_status(root, "parent/child-a", feedback=feedback)
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+        assert any("[BLOCKING]" in w for w in feedback)
+
+    def test_blocking_hold_warning_reaches_hook_feedback(self, tmp_path):
+        root, _parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = task_hook._reconcile(root, task_path="parent/child-a")
+        assert any(
+            "children approved but parent Review Notes still carry [BLOCKING]" in w
+            for w in feedback
+        )
+        # The status was held, so the same run reports no approved+blocking state.
+        assert not any("approved task still carries" in w for w in feedback)
+
+    def test_whole_tree_propagation_surfaces_hold_warning_once(self, tmp_path):
+        root, parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = task_hook._reconcile(root, task_path=None)
+        hold = [
+            w for w in feedback
+            if "children approved but parent Review Notes still carry [BLOCKING]" in w
+        ]
+        assert len(hold) == 1
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+    def test_reconcile_validates_post_propagation_state(self, tmp_path):
+        root, _parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Revision Notes\n\nstale planner note\n",
+        )
+        feedback = task_hook._reconcile(root, task_path="parent/child-a")
+        # Propagation lands the parent at approved before validation runs, so
+        # the leftover Revision Notes warning appears in the same run.
+        assert any("Revision Notes" in w for w in feedback)

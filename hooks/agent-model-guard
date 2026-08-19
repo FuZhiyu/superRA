@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse(Agent) hook: require explicit model controls on generic dispatches.
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+gate="agent_model_guard.py"
+. "$script_dir/run-python-gate"

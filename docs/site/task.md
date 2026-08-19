@@ -51,7 +51,7 @@ superRA turns an AI coding agent into a disciplined research assistant. It runs 
 What it is:
 
 - A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. [Here](#/07-showcase) is an example — and you are looking at the dashboard right now, since this documentation site is built on the very same system.
-- An adaptive **plan-implement-integrate workflow** with autonomous implementer–reviewer execution by default, a closely steered interactive mode, and long-term reproducibility.
+- An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
 - **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design.
 - **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
 
@@ -117,7 +117,7 @@ A typical superRA workflow looks like this:
 </svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, you choose the permanent record and protection, the agent syncs and matures that record, you approve one temporary refactoring task, and the agent executes and ships.
+In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, the main agent co-edits and executes with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it; on request, autonomous subagent mode runs implementer and reviewer seats instead. In **INTEGRATE**, you choose the permanent record and protection, the agent syncs and matures that record, you approve one temporary refactoring task, and the agent executes and ships.
 
 Research is rarely this linear, though: unanticipated issues surface mid-implementation, and exploratory sessions turn up findings worth recording as tasks for later. superRA supports changing the plan on the fly, or retroactively creating tasks to be reviewed and integrated.
 
@@ -126,8 +126,8 @@ Research is rarely this linear, though: unanticipated issues surface mid-impleme
 superRA's design centers on a few ideas:
 
 - **The repo reflects the latest state of every task.** Each task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. So you can always start a fresh agent and continue the work without losing the context.
-- **Review discipline at every step.** Autonomous subagent mode requires an adversarial reviewer to `APPROVE` each task; interactive mode always self-reviews and asks you whether to run independent review now, defer it, or skip it.
-- **Autonomous by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
+- **Review where it earns its cost.** Every task is self-reviewed against its objective; an independent reviewer runs when you ask for one, when the plan flagged the task, or when the agent is uncertain — and once over the accumulated work before anything ships. A review advances the task only on `APPROVE`.
+- **Forward by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
 - **Composable and adaptive.** superRA hands the agent composable mechanisms rather than a fixed pipeline. The workflow is domain-neutral, so you can drop in your own domain skill (say, model simulation) without forking it.
 
 ## Start here

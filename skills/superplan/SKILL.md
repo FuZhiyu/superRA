@@ -1,21 +1,19 @@
 ---
 name: superplan
-description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, or reflecting material decisions in the task tree."
+description: "Proactively plan or update superRA work. Requires superRA:using-superra. Use when starting or changing work, creating/revising superRA/, reflecting material decisions in the task tree, or on any request to grill, stress-test, or interrogate a loose idea into decisions."
 ---
 
 # superplan — the PLAN phase
 
-**First, load `superRA:using-superra` if not already loaded.**
+**First, load `superRA:using-superra` and `superRA:communicate` if not already loaded.**
 
-**If the harness has activated plan mode, load `references/harness-plan-mode.md` before proceeding.**
+**Harness plan mode active: load `references/harness-plan-mode.md` before proceeding.**
 
 ## Overview
 
-Owns the procedural shape of the **PLAN** phase: discovery of existing work, exploration, domain setup, task decomposition, self-review, and handoff. Output is a `superRA/` task tree for superimplement to consume.
+Output: a `superRA/` task tree to execute.
 
-The `## Objective` / `## Planner Guidance` split — contract vs. planning findings — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
-
-Task-tree design judgment — placement, task splitting, context distillation, update-task lifecycle, and retroactive task-tree creation — lives in `references/task-tree-design.md`.
+Task-tree design judgment — objective/guidance writing, placement, splitting, context distillation, update-task lifecycle, retroactive creation — lives in `references/task-tree-design.md`.
 
 **Announce at start:** "I'm using the superplan skill to create the task tree."
 
@@ -23,84 +21,84 @@ Task-tree design judgment — placement, task splitting, context distillation, u
 
 ## Entry Assessment
 
-Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
+Assess three dimensions before exploration or task design — creating a tree and updating one both pass through this.
 
-**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work in the Existing Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise create the work as the first top-level task under `superRA/`.
+- **Placement.** `superRA/` exists: place by `references/task-tree-design.md` §Placing Work in the Existing Tree. Legacy `PLAN.md` without a tree: offer migration (`task-tree` §Migration). Neither: the work becomes the first top-level task under `superRA/`.
+- **Depth tier.** Choose from §Depth Tiers.
+- **Routing path.** Forward planning (default), or **retroactive documentation** — code/results without task coverage need a `superRA/` record; same phases, per `task-tree-design.md` §Retroactive Task-Tree Creation. Structural cleanup of an existing tree is neither — that is the separate `references/consolidation.md` pass, entered on structural debt, not on new work needing placement.
 
-**2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
+Interactive canvas cadence (the default, and where light planning and execution move together): load `using-superra/references/interactive-mode.md`.
 
-**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
-
-When the researcher opts into **interactive canvas cadence**, load `references/interactive-mode.md`.
-
-**Ask when unclear.** When the tree and project context leave placement or depth ambiguous, present the concrete options (the candidate placements from the descent, or standard vs. thorough depth) with a one-line rationale each rather than guessing.
+**Ask when unclear.** Placement or depth ambiguous, or the request too vague to aim exploration: run a scoping round per §Grilling — candidate placements from the descent, standard vs. thorough. Don't guess.
 
 ## Depth Tiers
 
-A spectrum, not rigid modes — escalate mid-planning if complexity warrants. The tier mainly modulates Phase 1; Phases 2-3 scale with it; Phase 4 is identical except thorough adds an agent review step (§Agent Review).
+A spectrum, not rigid modes — escalate mid-planning when complexity warrants. The tier mainly modulates Phase 1; Phase 4 is identical except thorough adds §Agent Review.
 
 | Tier | Use for | Phase 1 |
 |---|---|---|
 | **Quick** | Minor updates, known additions, single-task changes — an objective rewrite after a scope revision, a well-understood subtask, a dependency adjustment. | Light scan of `superRA/`, skip deep exploration, design inline. |
-| **Standard** (default) | New workstreams in familiar territory, a significant new branch, satisfying domain hard gates. | Explore project structure, load the domain skill, design tasks. |
-| **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Substantive Questions. |
+| **Standard** (default) | New workstreams in familiar territory, a significant new branch, work a domain skill governs. | Explore project structure, load the domain skill, design tasks. |
+| **Thorough** | Complex or unfamiliar projects, large scope across codebase areas, or an explicit request ("plan hard", "explore thoroughly", "detailed plan"). | Dispatch parallel exploration agents per `references/thorough-planning.md`; competing designs feed §Grilling. |
 
 ## Phase 1: Exploration
 
-Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md` files, and git history for relevant prior work, scaled to the chosen tier (quick: scan the tree neighborhood where the work lands; standard: systematic exploration of the relevant areas; thorough: parallel exploration agents per `references/thorough-planning.md`). The domain hard-gate data gathering (data inventory, model primitives survey, manuscript assessment) begins here, though the phase itself is domain-neutral.
+Read project structure, existing code, data directories, documentation, `CLAUDE.md`/`README.md`, and git history for relevant prior work, scaled to the tier (table above). Domain planning-survey gathering (data inventory, model primitives survey, manuscript assessment) begins here.
 
-Revisit the entry assessment if exploration shows placement or depth needs adjustment.
+Exploration shifts placement or depth: revisit the entry assessment.
 
 ## Phase 2: Domain Setup & Scope
 
-Identify the domain of the work and load the matching domain skill's planning reference, which carries the domain's hard gates and templates.
+**Stop here, load the matching domain skill and follow its planning-stage reference per its own stage-load table.** Run its planning survey before any task structure is drafted: the survey lands in `## Details`, and the decisions it raises join the frontier for the Phase 3 round.
 
-**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 3.** The researcher must approve the domain skill's planning-stage inventory artifact before any task structure is drafted.
-
-If the task is in a domain without an implemented domain skill: proceed to Phase 3, but flag the gap to the researcher.
+No implemented domain skill for the work: proceed to Phase 3, flag the gap to the researcher.
 
 ## Phase 3: Design & Task Decomposition
 
-Load `references/decomposition.md` and follow its task-decomposition procedure.
+**Grill before decomposing.** Run the main round per §Grilling.
+
+Then load `references/build-and-review.md`; follow its procedure.
 
 ## Phase 4: Review & Commit
 
 ### Self-Review
 
-Run `references/decomposition.md` §Self-Review.
+Run `references/build-and-review.md` §Self-Review.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests enter the same step. Load `superRA:agent-orchestration` before writing the dispatch prompt.
 
 **Planning reviewer:**
 ```
-Agent(subagent_type: "superRA:reviewer"):
+Prompt:
+  Load `superRA:review-task` skill.
+
   Stage: planning-review
   Task: <task path or root>
   Review mode: handoff-readiness | design-review
   Context: <exploration synthesis, inline or path>
 ```
 
-The two review modes are defined in `references/planning-review.md` §Review Mode.
+Review modes: `references/planning-review.md` §Review Mode — design-review for a newly authored tree, handoff-readiness once the design is settled.
 
-REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
+Fix REVISE findings before User Review.
 
-Skip this step at quick and standard depth unless the user explicitly asks for a handoff review — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
+Quick and standard depth: skip this step unless the user asks for a handoff review.
 
 ### User Review
 
-Verify the task tree aligns with the user's intent. Present the tree (via `superra task tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
+Present the tree (`superra task tree`) with the dashboard link. A tradeoff the assembled tree exposes as still unsettled re-enters §Grilling.
 
-For each newly created task — especially a new top-level one — state the existing concern you considered and why it does not cover the work, so the placement decision is visible for a human catch without enforcement machinery.
+Per newly created task (especially top-level): state the existing concern you considered and why it does not cover the work.
 
 ### Execution Handoff
 
-Commit the `superRA/` directory atomically (`plan(add): <summary>` for the initial tree authoring; see §User Feedback and Changing the Task Tree for the full sub-step set). Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
+Commit `superRA/` atomically (`plan(add): <summary>` for initial authoring; full sub-step set in §User Feedback and Changing the Task Tree). Then execute the frontier in the current execution mode (`superRA:using-superra/references/main-agent.md` §Execution Modes).
 
-## Substantive Questions
+## Grilling
 
-At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
+**Put every unsettled decision to the researcher in frontier-ordered rounds**, each question carrying your recommended answer: `references/grilling.md`. Standard and thorough depth grill by default; quick depth skips it unless the researcher asks.
 
 ## User Feedback and Changing the Task Tree
 

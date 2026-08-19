@@ -111,7 +111,7 @@ def test_load_contract_indexes_every_ci_safe_contract_area():
         "manifest-domain-loads": "ci_safe_static",
         "harness-adapter-routing": "ci_safe_static",
         "role-task-read-contract": "ci_safe_fixture",
-        "generated-agent-drift": "ci_safe_static",
+        "role-skill-surface": "ci_safe_static",
         "task-read-ancestor-context": "ci_safe_fixture",
         "task-read-comments": "ci_safe_fixture",
         "task-read-dependency-status": "ci_safe_fixture",
@@ -174,44 +174,28 @@ def test_skill_load_manifest_tables_match_contract():
         "protection": ("result-protection",),
         "sync": ("semantic-merge",),
         "integration": ("refactor-and-integrate",),
-        "maturation": ("task-tree", "superplan", "writing"),
+        "maturation": ("task-tree", "superplan", "academic-writing"),
     }
 
     domain_rows = markdown_table_rows(manifest, "### Domain")
     assert {inline_code(row[0])[0] for row in domain_rows} == {
         "econ-data-analysis",
         "theory-modeling",
-        "writing",
+        "academic-writing",
         "slide-design",
     }
 
 
-def test_codex_availability_routes_distinguish_tool_and_agent_absence():
+def test_codex_availability_routes_key_off_agent_tool_presence():
     codex = read_text("skills/using-superra/references/codex-instructions.md")
     rows = markdown_table_rows(codex, "### Availability routing")
-    routes = {
-        (row[0], row[1]): tuple(inline_code(cell) for cell in row[2:])
-        for row in rows
-    }
+    routes = {row[0]: tuple(inline_code(cell) for cell in row[1:]) for row in rows}
 
-    assert set(routes) == {
-        ("available", "available"),
-        ("available", "missing"),
-        ("unavailable", "any"),
-    }
-    assert routes[("available", "available")] == (
-        ("named-dispatch",),
-        (),
-        (),
-    )
-    assert routes[("available", "missing")] == (
-        ("setup",),
-        ("codex-superra-setup",),
-        (),
-    )
-    assert routes[("unavailable", "any")] == (
+    assert set(routes) == {"available", "unavailable"}
+    assert routes["available"] == (("dispatch",), (), ())
+    assert routes["unavailable"] == (
         ("harness-forced-inline",),
-        ("canonical-role", "canonical-role"),
+        ("implement-task", "review-task"),
         ("implemented", "approved", "revise"),
     )
 
@@ -228,32 +212,18 @@ def test_seat_assignment_table_has_three_supported_structures():
     }
 
 
-def test_superimplement_executes_each_selected_seat_filler():
-    superimplement = read_text("skills/superimplement/SKILL.md")
-    rows = markdown_table_rows(superimplement, "#### Seat execution")
-    routes = {
-        inline_code(row[0])[0]: inline_code(row[1])
-        for row in rows
-    }
-
-    assert routes == {
-        "main": ("canonical-role",),
-        "subagent": ("dispatch",),
-    }
-
-
-def test_harness_adapters_route_to_shared_canonical_role_resolver():
+def test_seat_fillers_reach_the_role_skills_by_name():
     main_agent = read_text("skills/using-superra/references/main-agent.md")
-    claude = read_text("skills/using-superra/references/claude-instructions.md")
-    codex = read_text("skills/using-superra/references/codex-instructions.md")
+    orchestration = read_text("skills/agent-orchestration/SKILL.md")
+    manifest = read_text("skills/using-superra/SKILL.md")
 
-    assert "references/claude-instructions.md" in main_agent
     assert "references/codex-instructions.md" in main_agent
-    assert "references/canonical-role.md" in claude
-    assert "references/canonical-role.md" in codex
-    assert (
-        REPO_ROOT / "skills" / "using-superra" / "scripts" / "resolve_role.py"
-    ).is_file()
+    for skill in ("superRA:implement-task", "superRA:review-task"):
+        assert skill in main_agent
+        assert skill in orchestration
+        assert skill in manifest
+    for rel in ("implement-task", "review-task"):
+        assert (REPO_ROOT / "skills" / rel / "SKILL.md").is_file()
 
 
 def test_superplan_routed_references_exist():
@@ -261,7 +231,7 @@ def test_superplan_routed_references_exist():
     routed_paths = set(re.findall(r"`(references/[^`]+\.md)`", superplan))
 
     assert {
-        "references/decomposition.md",
+        "references/build-and-review.md",
         "references/changing-the-tree.md",
     } <= routed_paths
     assert all(
@@ -284,8 +254,8 @@ def test_task_companion_contract_has_one_canonical_route():
     assert "references/task-companion-files.md" in read_text(
         "skills/using-superra/SKILL.md"
     )
-    assert "../using-superra/references/task-companion-files.md" in read_text(
-        "skills/report-in-markdown/SKILL.md"
+    assert "using-superra/references/task-companion-files.md" in read_text(
+        "skills/communicate/SKILL.md"
     )
 
 
@@ -300,35 +270,18 @@ def test_codex_tool_map_matches_contract():
 
     assert mappings["AskUserQuestion"] == ("request_user_input",)
     assert mappings["TodoWrite"] == ("update_plan",)
-    assert mappings['Agent(subagent_type: "superRA:implementer")'] == (
-        'spawn_agent(agent_type="superra_implementer")',
-    )
-    assert mappings['Agent(subagent_type: "superRA:reviewer")'] == (
-        'spawn_agent(agent_type="superra_reviewer")',
+    assert mappings["Agent"] == (
+        'spawn_agent(model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")',
     )
     assert mappings["SendMessage"] == ("send_input",)
 
 
-def test_codex_generated_agent_drift_check_is_ci_safe():
-    subprocess.run(
-        [
-            sys.executable,
-            str(
-                REPO_ROOT
-                / "skills"
-                / "codex-superra-setup"
-                / "scripts"
-                / "sync_codex_agents.py"
-            ),
-            "--scope",
-            "project",
-            "--check",
-        ],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+def test_no_named_agent_surface_survives():
+    # Roles are skills; nothing generates or installs named custom agents.
+    assert not (REPO_ROOT / "agents").exists()
+    assert not (REPO_ROOT / ".codex" / "agents").exists()
+    assert not (REPO_ROOT / "skills" / "codex-superra-setup").exists()
+    assert not (REPO_ROOT / "skills" / "using-superra" / "scripts").exists()
 
 
 def test_hook_registry_boundaries_for_claude_and_codex():
@@ -345,12 +298,13 @@ def test_hook_registry_boundaries_for_claude_and_codex():
 
     claude_commands = all_hook_commands(claude)
     assert any("autoload-superra" in command for command in claude_commands)
-    assert any("ensure-using-superra" in command for command in claude_commands)
-    assert any("ensure-agent-orchestration" in command for command in claude_commands)
+    assert any("ensure-companion" in command for command in claude_commands)
     assert any("merge-guard" in command for command in claude_commands)
     assert any("task-hook" in command for command in claude_commands)
+    assert any("agent-model-guard" in command for command in claude_commands)
+    assert "Agent" in hook_matchers_for(claude, "PreToolUse")
     assert "Skill" in hook_matchers_for(claude, "PreToolUse")
-    assert {"Edit|Write", "Bash", "ExitPlanMode"} <= hook_matchers_for(
+    assert {"Edit|Write|Bash", "ExitPlanMode"} <= hook_matchers_for(
         claude,
         "PostToolUse",
     )
@@ -360,11 +314,37 @@ def test_hook_registry_boundaries_for_claude_and_codex():
     assert any("merge-guard" in command for command in codex_commands)
     assert any("task-hook" in command for command in codex_commands)
     assert any("codex-plan-stop" in command for command in codex_commands)
-    assert not any("ensure-using-superra" in command for command in codex_commands)
-    assert not any("ensure-agent-orchestration" in command for command in codex_commands)
+    assert not any("ensure-companion" in command for command in codex_commands)
+    assert any("agent-model-guard" in command for command in codex_commands)
+    assert "Agent" in hook_matchers_for(codex, "PreToolUse")
     assert "Skill" not in hook_matchers_for(codex, "PreToolUse")
-    assert {"Edit|Write", "Bash"} <= hook_matchers_for(codex, "PostToolUse")
+    assert "Edit|Write|Bash|apply_patch" in hook_matchers_for(codex, "PostToolUse")
     assert hook_commands_for(codex, "Stop")
+
+
+def test_generic_agent_model_policy_has_one_owner_and_harness_mappings():
+    orchestration = read_text("skills/agent-orchestration/SKILL.md")
+    codex = read_text("skills/using-superra/references/codex-instructions.md")
+    guard = read_text("hooks/agent-model-guard")
+
+    skill_docs = {
+        path.relative_to(REPO_ROOT).as_posix(): path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "skills").rglob("*.md")
+    }
+    owner = "skills/agent-orchestration/SKILL.md"
+    assert [
+        path for path, content in skill_docs.items()
+        if "### Model Tier Selection" in content
+    ] == [owner]
+    assert [
+        path for path, content in skill_docs.items()
+        if "Agent(model: <concrete Claude model>" in content
+    ] == [owner]
+
+    assert "Agent(model: <concrete Claude model>" in orchestration
+    assert 'spawn_agent(model=<selected model>, reasoning_effort=<selected effort>, fork_turns="none")' in codex
+    assert "agent-orchestration" in codex and "Model Tier Selection" in codex
+    assert not re.search(r"\b(Sonnet|Opus|Fable|gpt-)\b", codex + guard)
 
 
 def test_task_read_fixture_contract_surfaces_context_without_dependency_results():

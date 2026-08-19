@@ -222,26 +222,29 @@ def dispatched_agent_types(log_text: str) -> list[str]:
 def evaluate_dispatch_log(
     report: DispatchReport,
     log_text: str,
-    required_agent_types: Iterable[str] = (
-        "superra_implementer",
-        "superra_reviewer",
-    ),
+    required_agent_types: Iterable[str] = ("default",),
+    minimum_dispatches: int = 1,
 ) -> None:
-    """Require each named agent type to appear in the SubagentStart log.
+    """Require each agent type to appear ``minimum_dispatches`` times in the log.
 
     The SubagentStart hook supersedes JSONL-based dispatch detection for the
-    Codex orchestrator path (the JSONL hides ``spawn_agent``). A required type
-    that never appears is a missing-dispatch finding.
+    Codex orchestrator path (the JSONL hides ``spawn_agent``). Since roles became
+    skills, both seats spawn the same ``default`` agent type and the role is
+    carried by the prompt, which the hook payload does not expose — so the
+    implementer and reviewer dispatches are counted, not named apart.
     """
 
     dispatched = dispatched_agent_types(log_text)
     for agent_type in required_agent_types:
-        if agent_type in dispatched:
-            report.observations.append(f"dispatch sentinel {agent_type!r} logged")
+        seen = dispatched.count(agent_type)
+        if seen >= minimum_dispatches:
+            report.observations.append(
+                f"dispatch sentinel {agent_type!r} logged {seen}x"
+            )
         else:
             report.missing.append(
-                f"SubagentStart log missing dispatch sentinel {agent_type!r} "
-                f"(observed: {dispatched})"
+                f"SubagentStart log has {seen} dispatch(es) of {agent_type!r}, "
+                f"needs {minimum_dispatches} (observed: {dispatched})"
             )
 
 

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse gate for main-thread Markdown mutations.
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+gate="communicate_gate.py"
+. "$script_dir/run-python-gate"

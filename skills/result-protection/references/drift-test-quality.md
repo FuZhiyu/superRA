@@ -1,16 +1,16 @@
 # Drift Test Quality Standards
 
-Shared reference for drift-test creation and review. Implementer and reviewer both walk the gated checklist below.
+Drift-test creation and review. The implementer walks the gated checklist below; the reviewer walks what its focus covers.
 
 ## How-To
 
 ### Tolerance calibration
 
-Tolerance calibration is domain-specific. Load the active domain skill's drift-test reference (per its stage-load table) for tolerance conventions specific to that domain.
+Tolerance calibration is domain-specific — load the active domain skill's drift-test reference (per its stage-load table) for its conventions.
 
 ### Red-green verification cycle
 
-A drift test that passes once is not verified. Verify every drift or regression test with the red-green cycle before committing it:
+A test that passes once is not verified. Run the red-green cycle on every drift or regression test before committing it:
 
 ```
 1. Write the test against the current correct output.
@@ -23,27 +23,25 @@ A drift test that passes once is not verified. Verify every drift or regression 
 
 ### Test format conventions
 
-Follow the project's testing conventions:
-
 - Python: pytest in `tests/`.
 - Julia: `Test` module in `test/`.
 - Match existing naming and structure.
-- If no tests exist, use the language's standard test framework.
+- No existing tests: use the language's standard test framework.
 
 ### Cross-Cutting Red Flags
 
-These rules apply wherever drift tests protect key results: Protect, Sync, Integrate, Finish, standalone `semantic-merge`, and future maintenance.
+These apply wherever drift tests protect key results: Protect, Sync, Integrate, Finish, standalone `semantic-merge`, future maintenance.
 
 **Never:**
 
-- **Silently update expectations for meaningful result changes.** A failure after a refactor, merge, or rebase means one of three things: the change broke something and must be fixed; the tolerance is too tight and needs domain justification plus researcher confirmation; or the result meaningfully shifted and needs a research conversation. Fold the decision into the relevant task objective before updating expectations.
+- **Silently update expectations for meaningful result changes.** A failure after a refactor, merge, or rebase is one of three: the change broke something and must be fixed; the tolerance is too tight and needs domain justification plus researcher confirmation; the result meaningfully shifted and needs a research conversation. Fold the decision into the relevant task objective before updating expectations.
 - **Proceed past failing drift tests without assessment.** Failing tests block the workflow until classified and resolved.
 - **Remove or weaken existing drift tests during Sync or Integrate.** Tests are part of the results contract.
-- **Treat drift tests as the only safety net.** They protect key results; they do not replace review or domain discipline.
+- **Treat drift tests as the only safety net.** They protect key results; they never replace review or domain discipline.
 
 ## Gated Checklist
 
-Walk every item. `[BLOCKING]` items must pass for approval; `[ADVISORY]` items may be reported as minor findings.
+`[BLOCKING]` items must pass for approval; `[ADVISORY]` items are recorded and do not block.
 
 **Coverage:**
 

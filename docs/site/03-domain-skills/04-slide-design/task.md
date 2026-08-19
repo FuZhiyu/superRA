@@ -14,7 +14,7 @@ The hard part is judging what the audience knows at each moment, so the skill ru
 
 ## How to ask for it
 
-Say what you are making and the discipline triggers on its own — you do not name the skill or pass a flag. The verb picks the mode the same way the writing skill works: ask to *create* a deck and you get new slides, ask to *review* one and you get located findings, ask to *polish* or *fix* and you get edits in place.
+Say what you are making and the discipline triggers on its own — you do not name the skill or pass a flag. The verb picks the mode the same way the academic-writing skill works: ask to *create* a deck and you get new slides, ask to *review* one and you get located findings, ask to *polish* or *fix* and you get edits in place.
 
 > "Turn §4 of the paper into a ten-minute conference talk. The audience is asset-pricing empiricists, not my coauthors."
 

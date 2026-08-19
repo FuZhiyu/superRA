@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse gate: an approved task cannot retain blocking review findings.
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+gate="task_approval_gate.py"
+. "$script_dir/run-python-gate"

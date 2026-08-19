@@ -10,7 +10,7 @@ LC007–LC010), in both harnesses, and that the sole negative stage
 - ``protection``      → ``result-protection``
 - ``sync``            → ``semantic-merge``
 - ``integration``     → ``refactor-and-integrate``
-- ``maturation``      → ``task-tree`` + ``superplan`` (always); ``writing``
+- ``maturation``      → ``task-tree`` + ``superplan`` (always); ``academic-writing``
   conditional ("prose-heavy maturation"), so it is not a guaranteed load
 
 ``maturation`` is the one positive stage whose manifest row loads **multiple**
@@ -72,7 +72,7 @@ class StageRow:
     - For a ``CHANNEL_SKILL`` row, ``expected_skills`` holds the manifest skill
       *name(s)* the stage **always** loads (e.g. ``("result-protection",)`` for a
       single-skill stage, ``("task-tree", "superplan")`` for the multi-skill
-      ``maturation`` stage). A skill the manifest marks conditional (``writing``
+      ``maturation`` stage). A skill the manifest marks conditional (``academic-writing``
       on ``maturation``) is **not** listed — it must not be a guaranteed-load
       assertion. ``expected`` is ``None`` for skill-channel rows.
     - For a ``CHANNEL_READ`` row, ``expected`` is the reference *path* (e.g.
@@ -118,7 +118,7 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         expected_skills=("refactor-and-integrate",),
     ),
     # Positive multi-skill stage: maturation always loads task-tree + superplan.
-    # writing is conditional ("prose-heavy maturation"), so it is deliberately
+    # academic-writing is conditional ("prose-heavy maturation"), so it is deliberately
     # absent from expected_skills — only the guaranteed loads are asserted.
     StageRow(
         stage="maturation",
@@ -308,7 +308,7 @@ def run_claude_stage_canary(
 ) -> StageLoadReport:
     """Run the live Claude per-stage skill-load canary for one stage (manual-only).
 
-    Dispatches the real ``superRA:implementer`` via 08's
+    Dispatches a general-purpose agent carrying ``superRA:implement-task`` via 08's
     :func:`sdk_load_harness.run_skill_load_session` with ``capture_reads=True``
     (so the ``planning-review`` reference read is observed), then evaluates the
     stage row. Because the live SDK dispatch is nondeterministic, it runs up to

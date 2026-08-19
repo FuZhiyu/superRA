@@ -1,13 +1,6 @@
 # Jupytext Percent Format Guide
 
-How to write and render analysis scripts in jupytext percent format.
-
-## Why percent format
-
-- **Git-friendly**: `.py`/`.jl` files diff cleanly; notebooks do not
-- **Human-readable**: code + narrative in one file, no JSON wrapping
-- **Executable**: runs as a normal script or converts to a notebook
-- **Same syntax** for Python and Julia
+Writing and rendering analysis scripts in jupytext percent format. Same syntax for Python and Julia; the `.py`/`.jl` file runs as a normal script and converts to a notebook.
 
 ## Syntax
 
@@ -42,18 +35,13 @@ Longer narrative with multiple paragraphs.
 ### Writing tips
 
 - One cell per logical operation (load, merge, filter, construct)
-- Markdown cell before each operation explaining what and why
-- `print()` for text diagnostics (row counts, shape, messages) — works in
-  both direct-script and notebook execution
-- Bare last expression for **rich objects** (DataFrames, figures) — only
-  that position triggers HTML / image MIME rendering
+- Markdown cell before each operation: what and why
+- `print()` for text diagnostics (row counts, shape, messages) — works in direct-script and notebook execution alike
+- Bare last expression for **rich objects** (DataFrames, figures) — only that position triggers HTML / image MIME rendering
 
 ### Rich display — Python specifics
 
-**DataFrames and summary tables.** Pandas registers `_repr_html_` so a
-DataFrame as the cell's final expression renders as an HTML table with
-column alignment, scroll overflow, and Jupyter theming. Wrapping it in
-`print()` falls back to the text `__repr__`:
+**DataFrames and summary tables.** A DataFrame as the cell's final expression renders as an HTML table (column alignment, scroll overflow, Jupyter theming) via pandas' `_repr_html_`. `print()` falls back to the text `__repr__`:
 
 ```python
 # good — HTML table
@@ -63,8 +51,7 @@ df[["mv", "w"]].describe(percentiles=[.01, .5, .99])
 print(df[["mv", "w"]].describe())
 ```
 
-When tables get truncated, adjust display options once at the top of the
-notebook rather than per-cell:
+Truncated tables: adjust display options once at the top of the notebook, not per-cell:
 
 ```python
 import pandas as pd
@@ -72,8 +59,7 @@ pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 200)
 ```
 
-**Matplotlib figures.** Prefer returning the `Figure` object as the cell's
-last expression over calling `plt.show()`:
+**Matplotlib figures.** Return the `Figure` object as the cell's last expression rather than calling `plt.show()`:
 
 ```python
 # preferred — Jupyter chooses retina/SVG/PNG via _repr_html_
@@ -82,13 +68,9 @@ ax.plot(x, y)
 fig
 ```
 
-`plt.show()` also works in a notebook but bypasses the MIME negotiation;
-stick to the trailing-`fig` form unless you explicitly need `show()`'s
-blocking behavior in a script context.
+`plt.show()` works too but bypasses MIME negotiation — use the trailing-`fig` form unless you need `show()`'s blocking behavior in a script context.
 
-**Mid-cell rich output.** The "one rich object per cell" rule is the
-default. When you genuinely need two rich objects in the same cell, use
-`IPython.display.display` as the explicit escape hatch:
+**Mid-cell rich output.** Two rich objects in one cell: `IPython.display.display` is the explicit escape hatch.
 
 ```python
 from IPython.display import display
@@ -96,35 +78,25 @@ display(df_top)
 display(df_bottom)
 ```
 
-Reach for this sparingly — splitting the cell is almost always cleaner.
+Splitting the cell is almost always cleaner.
 
 ## Execution
 
-Convert and execute in one step. `--set-kernel` is always required — it
-writes the kernel name into the notebook metadata (list available names
-with `jupyter kernelspec list`).
+Convert and execute in one step. `--set-kernel` is always required — it writes the kernel name into notebook metadata (names from `jupyter kernelspec list`).
 
 ### Python
 
-Execution needs a single environment that has both the rendering tools
-(`jupytext`, `nbconvert`, `ipykernel`) and the script's analysis packages, so
-the kernel's imports resolve. How that environment is provided is
-project-specific — an activated venv, a global install, or `uv run` against the
-project. Match the existing setup of the project you're in rather than imposing
-one.
+Execution needs one environment holding both the rendering tools (`jupytext`, `nbconvert`, `ipykernel`) and the script's analysis packages, so the kernel's imports resolve. How it is provided is project-specific — activated venv, global install, or `uv run` against the project. Match the project's existing setup.
 
 ```bash
 jupytext --set-kernel python3 --to notebook --execute script.py
 ```
 
-Note: `uv run` (without `--script`) discovers the surrounding project and
-provisions its `.venv` — expected when rendering inside a research project, but
-it is a side effect. Don't use it for throwaway, project-independent commands.
+`uv run` (without `--script`) discovers the surrounding project and provisions its `.venv` — fine when rendering inside a research project, not for throwaway project-independent commands.
 
 ### Julia
 
-The IJulia kernel spec includes `--project=@.`, which activates the nearest
-`Project.toml` automatically. Just match the installed kernel name:
+The IJulia kernel spec includes `--project=@.`, activating the nearest `Project.toml`. Match the installed kernel name:
 
 ```bash
 jupytext --set-kernel julia-1.12 --to notebook --execute script.jl
@@ -132,8 +104,7 @@ jupytext --set-kernel julia-1.12 --to notebook --execute script.jl
 
 ### Output path
 
-Use `-o` to write the notebook to a specific location (e.g., a project's
-output directory):
+`-o` writes the notebook to a specific location:
 
 ```bash
 jupytext --set-kernel python3 --to notebook --execute script.py -o Output/script.ipynb
@@ -141,16 +112,13 @@ jupytext --set-kernel python3 --to notebook --execute script.py -o Output/script
 
 ### Working directory
 
-Jupytext sets the working directory to the script's parent directory by default.
-Relative paths like `Data/file.csv` resolve relative to where the script lives.
+Jupytext defaults the working directory to the script's parent, so `Data/file.csv` resolves relative to the script's location.
 
 ### Sandbox note
 
-Execution requires a Jupyter kernel, which binds local sockets. In Claude Code,
-the sandbox blocks socket binding. Two options:
-1. Suggest the user type `! jupytext ...` (the `!` prefix bypasses sandbox; it
-   runs in the user's own session, so their project environment applies)
-2. Run with sandbox disabled (Claude Code will prompt for permission)
+Kernels bind local sockets, which the Claude Code sandbox blocks. Two options:
+1. Suggest the user type `! jupytext ...` — the `!` prefix runs in the user's own session, so their project environment applies
+2. Run with sandbox disabled (Claude Code prompts for permission)
 
 ## Pairing and Sync
 
@@ -173,8 +141,7 @@ jupyter nbconvert --to html script.ipynb --output-dir Output/
 ## Version Control
 
 - **Commit the `.py`/`.jl` script** — diffs cleanly
-- **Optionally commit `.ipynb`** for rendered outputs, or `.gitignore` and
-  re-render on demand
+- **`.ipynb` optional** — commit for rendered outputs, or `.gitignore` and re-render on demand
 
 ## Setup
 
@@ -196,9 +163,8 @@ Verify: `jupyter kernelspec list`
 
 ### Troubleshooting
 
-- **"No kernel found"**: use `--set-kernel <name>` with a name from `jupyter kernelspec list`
-- **Sandbox blocks execution**: kernels need sockets — use `!` prefix or disable sandbox
-- **Wrong Python packages**: run jupytext in the environment that holds the
-  project's packages (activate the project venv, or use the project's runner)
-- **Format not recognized**: ensure file starts with `# %%` and jupytext is installed
-- **Pairing not working**: check `jupytext.toml` or notebook metadata for correct `formats` string
+- **"No kernel found"** — `--set-kernel <name>` with a name from `jupyter kernelspec list`
+- **Sandbox blocks execution** — kernels need sockets; use the `!` prefix or disable sandbox
+- **Wrong Python packages** — run jupytext in the environment holding the project's packages (project venv or the project's runner)
+- **Format not recognized** — file must start with `# %%`, jupytext installed
+- **Pairing not working** — check `jupytext.toml` or notebook metadata for the correct `formats` string

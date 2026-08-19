@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Opt-in Codex always-loaded command-event smoke.
 #
-# Codex has no skill autoload, so the always-loaded skills (`superRA:using-superra`
-# and `superRA:report-in-markdown`) reach context only if the agent follows the
-# role-spec body-load instruction. This smoke drives a real Codex agent through
-# the `always-loaded-canary` fixture and asserts each always-loaded skill emitted
-# the existing markdown-check and `superra task read` command events. The output
-# artifact is checked separately for its exact schema.
+# Codex has no skill autoload, so `superRA:using-superra` and
+# `superRA:communicate` reach context only if the agent follows the role-skill
+# body-load instruction. This smoke drives a real Codex agent through the
+# `always-loaded-canary` fixture and asserts their prescribed command events —
+# `superra task read` and the markdown check. The output artifact is checked
+# separately for its exact schema.
 #
 # Manual-only. Gated behind RUN_LIVE_HARNESS=1; a bare invocation in CI is a
 # documented no-op. Requires a logged-in `codex` CLI and a model turn budget.
@@ -71,7 +71,7 @@ with open(out, "w", encoding="utf-8") as f:
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('autoload-superra'))}\n\n")
     f.write("[[hooks.PostToolUse]]\n")
-    f.write('matcher = "Edit|Write"\n')
+    f.write('matcher = "Edit|Write|Bash|apply_patch"\n')
     f.write("[[hooks.PostToolUse.hooks]]\n")
     f.write('type = "command"\n')
     f.write(f"command = {toml_string(cmd('task-hook', empty_json=True))}\n")
@@ -87,7 +87,7 @@ EOF
 chmod +x "$WORKSPACE/superRA/superra"
 
 OUT="$TMPROOT/codex.jsonl"
-PROMPT="You are an implementer assigned the superRA task always-loaded-task in this workspace. Run \`./superRA/superra task read always-loaded-task\` and follow its objective exactly, loading the skills your role spec tells you to load before acting. Do only what that task says; do not edit source code, install anything, or run a test suite."
+PROMPT="Load \`superRA:implement-task\` skill. You are assigned the superRA task always-loaded-task in this workspace. Run \`./superRA/superra task read always-loaded-task\` and follow its objective exactly. Do only what that task says; do not edit source code, install anything, or run a test suite."
 
 MODEL_ARGS=()
 if [ -n "${CODEX_MODEL:-}" ]; then

@@ -72,12 +72,18 @@ def test_claude_agent_dispatch_events_are_structural():
             json.dumps({
                 "type": "tool_use",
                 "name": "Agent",
-                "input": {"subagent_type": "superRA:implementer"},
+                "input": {
+                    "subagent_type": "general-purpose",
+                    "prompt": "Load `superRA:implement-task` skill.",
+                },
             }),
             json.dumps({
                 "type": "tool_use",
                 "name": "Agent",
-                "input": {"subagent_type": "superRA:reviewer"},
+                "input": {
+                    "subagent_type": "general-purpose",
+                    "prompt": "Load `superRA:review-task` skill.",
+                },
             }),
         ])
     )
@@ -135,7 +141,10 @@ def test_interactive_canvas_evaluator_rejects_wrong_event_order():
             json.dumps({
                 "type": "tool_use",
                 "name": "Agent",
-                "input": {"subagent_type": "superRA:reviewer"},
+                "input": {
+                    "subagent_type": "general-purpose",
+                    "prompt": "Load `superRA:review-task` skill.",
+                },
             }),
         ])
     )
@@ -167,7 +176,10 @@ def test_interactive_canvas_evaluator_requires_structured_opt_in():
             json.dumps({
                 "type": "tool_use",
                 "name": "Agent",
-                "input": {"subagent_type": "superRA:reviewer"},
+                "input": {
+                    "subagent_type": "general-purpose",
+                    "prompt": "Load `superRA:review-task` skill.",
+                },
             }),
         ])
     )
@@ -283,8 +295,8 @@ def test_orchestrator_dispatch_narration_without_tool_event_fails():
         json.dumps({
             "type": "assistant",
             "message": (
-                "I should dispatch superra_implementer and "
-                "superra_reviewer subagents."
+                "I should dispatch implement-task and "
+                "review-task subagents."
             ),
         })
     )

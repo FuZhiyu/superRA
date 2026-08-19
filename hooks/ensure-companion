@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# PreToolUse hook: hard-gate superRA workflow-skill calls on their companion
+# skills being loaded first. One table drives all gates:
+#
+#   superRA:superplan       -> superRA:using-superra
+#   superRA:superimplement  -> superRA:using-superra, superRA:agent-orchestration
+#   superRA:superintegrate  -> superRA:using-superra, superRA:agent-orchestration
+#
+# superRA:superplan is intentionally ungated on agent-orchestration — at
+# quick/standard depth it dispatches nothing; its SKILL.md instructs the load
+# at its one dispatch point (§Agent Review).
+#
+# Only acts when tool_name == "Skill" and tool_input.skill is in the table.
+# A single deny lists every companion still missing from the session
+# transcript, so one retry clears the gate. All other cases emit `{}`.
+#
+# Fail-open: if transcript_path is empty or unreadable, emit `{}` —
+# a misconfigured transcript must never wedge a session.
+#
+# Test vectors (see tests/hooks/test-ensure-companion.sh):
+#   V1  tool_name="Bash"                                        -> {}
+#   V2  skill="superRA:handoff-doc"                             -> {}
+#   V3  skill="superRA:superplan", using-superra not loaded     -> deny
+#   V4  skill="superRA:superplan", using-superra loaded         -> {}
+#   V5  skill="superRA:superimplement", neither loaded          -> deny (lists both)
+#   V6  skill="superRA:superimplement", both loaded             -> {}
+#   V7  transcript_path empty / nonexistent                     -> {}
+#   V8  deny payload is valid JSON with round-tripping reason
+
+set -uo pipefail
+
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 -c '
+import json, re, sys
+
+REQUIREMENTS = {
+    "superRA:superplan": ["superRA:using-superra"],
+    "superRA:superimplement": ["superRA:using-superra", "superRA:agent-orchestration"],
+    "superRA:superintegrate": ["superRA:using-superra", "superRA:agent-orchestration"],
+}
+
+
+def emit(payload):
+    print(json.dumps(payload, separators=(",", ":")))
+    sys.exit(0)
+
+
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    emit({})
+if not isinstance(data, dict):
+    emit({})
+
+tool_name = data.get("tool_name", "") or ""
+tool_input = data.get("tool_input", {}) or {}
+skill = tool_input.get("skill", "") if isinstance(tool_input, dict) else ""
+companions = REQUIREMENTS.get(skill) if tool_name == "Skill" else None
+if not companions:
+    emit({})
+
+transcript_path = data.get("transcript_path", "") or ""
+try:
+    transcript = open(transcript_path, encoding="utf-8", errors="replace").read()
+except OSError:
+    emit({})
+
+# Match the skill-name field tolerantly (case-insensitive, whitespace-tolerant
+# around the colon) so minor transcript-format drift does not cause a
+# spurious deny.
+missing = [
+    companion
+    for companion in companions
+    if not re.search(
+        r"\"skill\"\s*:\s*\"" + re.escape(companion) + r"\"", transcript, re.IGNORECASE
+    )
+]
+if not missing:
+    emit({})
+
+names = " and ".join(f"\"{companion}\"" for companion in missing)
+plural = "s" if len(missing) > 1 else ""
+pronoun = "them" if len(missing) > 1 else "it"
+reason = (
+    f"\"{skill}\" requires the companion skill{plural} {names} loaded first. "
+    f"Load {pronoun}, then retry \"{skill}\"."
+)
+emit(
+    {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }
+)
+'
+fi
+
+# A missing runtime must not wedge the session.
+printf '{}\n'
+exit 0

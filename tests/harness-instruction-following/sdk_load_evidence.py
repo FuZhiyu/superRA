@@ -18,11 +18,11 @@ Two separate channels, kept distinct (see load-testing-research.md):
 - **On-demand skills** (stage/domain loads from the Skill-Load Manifest) load
   through the ``Skill`` tool, so the ``Skill`` PreToolUse hook records them by
   name. That is what :class:`SkillLoadEvidence` carries.
-- **Always-loaded skills** (``using-superra``, ``report-in-markdown``) are
-  preloaded via agent frontmatter ``skills: [...]``; they emit no ``Skill``
-  tool_use and the SDK init message lists only *available* skills, not per-agent
-  preloaded ones, so the ``Skill`` hook cannot see them. They are covered by the
-  static frontmatter contract check (:func:`check_always_loaded_frontmatter`).
+- **Always-loaded skills** (``using-superra``) are pulled in by the role skill's
+  §Before You Start load instruction. Whether the harness
+  surfaces those loads as ``Skill`` events depends on how the agent batches them,
+  so the durable observable is the instruction itself, checked statically by
+  :func:`check_always_loaded_load_instruction`.
 """
 
 from __future__ import annotations
@@ -245,9 +245,8 @@ def check_skills_loaded_before_first_edit(
     one run reports all failures at once.
 
     This checks *on-demand* (Skill-tool) loads only — pass the stage/domain
-    skills a fixture's manifest entry should trigger. Always-loaded skills are
-    not loaded through the ``Skill`` tool; cover those with
-    :func:`check_always_loaded_frontmatter`, not here.
+    skills a fixture's manifest entry should trigger. Cover the always-loaded
+    pair with :func:`check_always_loaded_load_instruction`, not here.
     """
 
     loaded = evidence.loaded_skill_names
@@ -302,91 +301,77 @@ def evidence_from_hook_records(
 
 
 # --------------------------------------------------------------------------- #
-# Always-loaded frontmatter contract (CI-safe, static)
+# Always-loaded load-instruction contract (CI-safe, static)
 # --------------------------------------------------------------------------- #
 
 
-# The skills both role specs must preload via frontmatter. These never load
-# through the Skill tool, so they are verified statically here.
-ALWAYS_LOADED_SKILLS = ("superRA:using-superra", "superRA:report-in-markdown")
+# The skills every role skill must pull in before acting.
+ALWAYS_LOADED_SKILLS = ("superRA:using-superra", "superRA:communicate")
 
-# Role specs that carry the always-loaded contract in frontmatter.
-ROLE_SPEC_FILES = ("agents/implementer.md", "agents/reviewer.md")
+# Role skills that carry the always-loaded contract as a body load instruction.
+ROLE_SKILL_FILES = ("skills/implement-task/SKILL.md", "skills/review-task/SKILL.md")
+
+# The section whose first step is the load instruction.
+LOAD_INSTRUCTION_HEADING = "## Before You Start"
 
 
-def parse_frontmatter_skills(spec_text: str) -> list[str]:
-    """Parse the ``skills:`` list from an agent role-spec YAML frontmatter block.
+def parse_section(skill_text: str, heading: str) -> str:
+    """Return the body under ``heading``, up to the next same-or-higher heading.
 
-    Stdlib-only (no PyYAML dependency on the CI path): reads the leading
-    ``---``-delimited block and extracts the inline ``skills: [a, b]`` list. Both
-    role specs use the inline-list form; a block-list form (``skills:`` then
-    ``- a``) is also accepted so the checker is robust to a reformat. Returns the
-    skill names stripped of surrounding quotes/whitespace, or ``[]`` if there is
-    no frontmatter or no ``skills:`` key.
+    Stdlib-only (no PyYAML dependency on the CI path). Returns ``""`` when the
+    heading is absent.
     """
 
-    if not spec_text.startswith("---"):
-        return []
-    end = spec_text.find("\n---", 3)
-    if end == -1:
-        return []
-    block = spec_text[3:end]
-
-    lines = block.splitlines()
-    for i, raw in enumerate(lines):
-        line = raw.rstrip()
-        m = re.match(r"\s*skills:\s*(.*)$", line)
-        if not m:
-            continue
-        rest = m.group(1).strip()
-        if rest.startswith("[") and rest.endswith("]"):
-            inner = rest[1:-1]
-            return [_clean_skill(tok) for tok in inner.split(",") if tok.strip()]
-        # Block-list form: subsequent "- name" lines.
-        items: list[str] = []
-        for follow in lines[i + 1 :]:
-            fm = re.match(r"\s*-\s*(.+)$", follow)
-            if not fm:
-                break
-            items.append(_clean_skill(fm.group(1)))
-        return items
-    return []
+    level = len(heading) - len(heading.lstrip("#"))
+    lines = skill_text.splitlines()
+    try:
+        start = lines.index(heading.rstrip())
+    except ValueError:
+        return ""
+    body: list[str] = []
+    for line in lines[start + 1 :]:
+        m = re.match(r"(#+)\s", line)
+        if m and len(m.group(1)) <= level:
+            break
+        body.append(line)
+    return "\n".join(body)
 
 
-def _clean_skill(token: str) -> str:
-    return token.strip().strip("'\"").strip()
-
-
-def check_always_loaded_frontmatter(
+def check_always_loaded_load_instruction(
     report: SkillLoadReport,
     repo_root: Path | str,
     *,
-    role_spec_files: Iterable[str] = ROLE_SPEC_FILES,
+    role_skill_files: Iterable[str] = ROLE_SKILL_FILES,
     required_skills: Iterable[str] = ALWAYS_LOADED_SKILLS,
+    heading: str = LOAD_INSTRUCTION_HEADING,
 ) -> None:
-    """Assert every role spec declares every always-loaded skill in ``skills:``.
+    """Assert every role skill instructs loading every always-loaded skill.
 
-    CI-safe and static: parses each role-spec frontmatter and records a failure
-    for any role spec missing the file or missing a required always-loaded skill.
-    A missing declaration means the preloaded-skill contract regressed — that is
-    a real loading-contract finding, not a test bug.
+    CI-safe and static: reads each role skill's ``heading`` section and records a
+    failure for any missing file, missing section, or missing always-loaded skill
+    name. Dispatch reaches the role skill by name and the role skill reaches the
+    always-loaded skills by this instruction — dropping it regresses the loading
+    contract for every dispatched agent on every harness.
     """
 
     root = Path(repo_root)
     required = list(required_skills)
-    for rel in role_spec_files:
+    for rel in role_skill_files:
         path = root / rel
         if not path.exists():
-            report.missing.append(f"role spec {rel} not found at {path}")
+            report.missing.append(f"role skill {rel} not found at {path}")
             continue
-        declared = parse_frontmatter_skills(path.read_text(encoding="utf-8"))
+        section = parse_section(path.read_text(encoding="utf-8"), heading)
+        if not section.strip():
+            report.missing.append(f"{rel} has no {heading!r} section")
+            continue
         for skill in required:
-            if skill in declared:
+            if skill in section:
                 report.observations.append(
-                    f"{rel} declares always-loaded skill {skill!r}"
+                    f"{rel} {heading} instructs loading {skill!r}"
                 )
             else:
                 report.missing.append(
-                    f"{rel} frontmatter skills: is missing always-loaded skill "
-                    f"{skill!r} (declared: {declared})"
+                    f"{rel} {heading} does not instruct loading always-loaded "
+                    f"skill {skill!r}"
                 )

@@ -1,6 +1,6 @@
 # superRA
 
-> ⚠️ **Breaking change (0.3.0):** `PLAN.md` / `RESULTS.md` are replaced by the `superRA/` task tree. Existing projects are detected and offered migration automatically (or run `superra task migrate from-plan`); to stay on the previous model, pin the install to the frozen `v0.1.2` tag. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note and full history, including the 0.2.0 workflow-skill rename.
+> ⚠️ **Breaking change (0.4.0):** the dedicated implementer/reviewer agents are retired — roles are now skills, independent review is triggered rather than scheduled, and interactive execution is the default. Existing projects and task trees keep working with nothing to migrate; stale Codex named-agent installs from earlier versions are detected in-session and cleaned up with your confirmation. See [RELEASE-NOTES](RELEASE-NOTES.md) for the full 0.4.0 entry and history.
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
@@ -9,9 +9,9 @@
 superRA turns an AI coding agent into a disciplined research assistant. It runs on Claude Code and Codex, and ships:
 
 1. A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
-2. An adaptive **plan-implement-integrate workflow** with autonomous implementer–reviewer execution by default, a closely steered interactive mode, and long-term reproducibility.
+2. An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
 3. **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
-4. **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
+4. **Utility skills** that teach agents practical mechanics — communicating dense results clearly, loading papers from Zotero, syncing data across worktrees, and more.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 
@@ -23,7 +23,7 @@ Social-science research needs a different rhythm than software engineering: it i
 
 ## How it works
 
-A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, autonomous subagent mode runs implementer and reviewer seats and advances work only on `APPROVE`; interactive mode lets the main agent co-edit and execute with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it. In **INTEGRATE**, you first choose which results belong in the permanent record, how that record should look, and whether documentation or additional drift tests should protect each result. The agent syncs with your base branch, writes the permanent record, proposes pruning and other refactoring in one temporary task, asks you to approve the finished record and proposal together, then executes and ships.
+A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, the main agent co-edits and executes with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it; on request, autonomous subagent mode runs implementer and reviewer seats instead. In **INTEGRATE**, you first choose which results belong in the permanent record, how that record should look, and whether documentation or additional drift tests should protect each result. The agent syncs with your base branch, writes the permanent record, proposes pruning and other refactoring in one temporary task, asks you to approve the finished record and proposal together, then executes and ships.
 
 ```mermaid
 flowchart TB
@@ -58,31 +58,24 @@ claude plugin marketplace add FuZhiyu/superRA
 claude plugin install superRA@superRA
 ```
 
-That's it — restart Claude Code (or start a new session) and the skills, agents, and hooks are available.
+That's it — restart Claude Code (or start a new session) and the skills and hooks are available.
 
 To update later:
 
 ```bash
 claude plugin marketplace update superRA
-claude plugin update superRA
+claude plugin update superRA@superRA
 ```
 
 For Codex setup and a local-clone install (to track or modify superRA itself), see [`docs/README.codex.md`](docs/README.codex.md). Any other harness that supports skills and subagents installs the same plugin sources.
 
 ### Upgrading
 
-This release replaces the legacy `PLAN.md` / `RESULTS.md` files with the `superRA/` task tree. Existing projects keep working: superRA detects a legacy `PLAN.md` at session start and offers to migrate it (`superra task migrate from-plan`). See the [superRA docs](http://fuzhiyu.me/superRA/) for details.
-
-To stay on the previous version instead, pin the install to the frozen `v0.1.2` tag:
-
-```bash
-claude plugin marketplace add FuZhiyu/superRA@v0.1.2
-claude plugin install superRA@superRA
-```
+0.4.0 retires the dedicated role agents in favor of role skills; existing projects and task trees keep working with nothing to migrate. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
 
 ## Contributing
 
-Design principles, DRY / composability rules, skill-design patterns, and the extension path for adding a new domain vertical live in [`CLAUDE.md`](./CLAUDE.md). Read it before modifying skills, hooks, or agent files.
+Design principles, DRY / composability rules, skill-design patterns, and the extension path for adding a new domain vertical live in [`CLAUDE.md`](./CLAUDE.md). Read it before modifying skills, hooks, or harness adapters.
 
 ## Upstream
 
