@@ -1,6 +1,6 @@
 ---
 title: "PR #54 Review Fixes: Close Every Confirmed Finding Before Merge"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

@@ -49,7 +49,7 @@ Approach:
 
 Renaming a term of art (`treatment group` → `treated sample`):
 
-- The new term must be a legitimate synonym *for this paper's audience*. Consult `writing/references/consistency/terminology.md`.
+- The new term must be a legitimate synonym *for this paper's audience*. Consult `consistency/terminology.md`.
 - Check plural, possessive, hyphenated, and capitalized variants.
 - Respect case contextually — sentence-start vs mid-sentence.
 - Old term inside a direct quotation (block quote, citation): **do not substitute** — quotes are sacred.
@@ -57,7 +57,7 @@ Renaming a term of art (`treatment group` → `treated sample`):
 ### After any refactor — verify
 
 - **Build the document** (§Compile). Errors introduced by the refactor block the refactor.
-- **Cross-reference check.** Any label, citation key, or bib key touched? See `writing/references/consistency/cross-references.md`.
+- **Cross-reference check.** Any label, citation key, or bib key touched? See `consistency/cross-references.md`.
 - **Diff review.** Read the git diff end-to-end; every hunk intended.
 
 ### Refactor Gated Checklist
@@ -110,7 +110,7 @@ After any build, read the log:
 
 1. **Errors.** Halt the build; fix before completion.
 2. **Warnings.** Triage each per the table below.
-3. **`??` in output.** Unresolved cross-references — treat as errors (see `writing/references/consistency/cross-references.md`).
+3. **`??` in output.** Unresolved cross-references — treat as errors (see `consistency/cross-references.md`).
 
 ### Warning triage heuristics
 

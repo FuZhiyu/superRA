@@ -1,6 +1,6 @@
 ---
 title: "v0.4 Lean Workflow: Skill Roles, Triggered Review, Concise Output"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

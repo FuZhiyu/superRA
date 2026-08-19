@@ -67,7 +67,7 @@ The paper addresses the plausible ones explicitly, rather than listing "we canno
 
 ### Hedging calibration
 
-One hedge per claim; no stacking (`writing/references/style.md` §Single-hedge-per-claim). Per headline claim: is the hedge level proportional to the evidence strength?
+One hedge per claim; no stacking (`../style.md` §Single-hedge-per-claim). Per headline claim: is the hedge level proportional to the evidence strength?
 
 ### Logical gaps and circular reasoning
 
