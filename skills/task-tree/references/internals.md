@@ -60,7 +60,8 @@ Validation rules live in their own module: one owner and one message source per 
 |---|---|
 | `invalid_status_message(status)` | The single message source for the status-validity rule. |
 | `validate_frontmatter(task)` | Validate status enums, title non-empty, list types. Returns list of warning strings. |
-| `validate_revision_notes(task)` | Warn when an `approved` task still carries a `## Revision Notes` section. |
+| `validate_revision_notes(task)` | Warn when a task past `implemented` still carries a `## Revision Notes` section. A note is legitimate on `not-started`, `in-progress`, and `revise` — a fresh note on `revise` is the prescribed planner-to-implementer handoff. |
+| `validate_review_notes(task)` | Warn when an `approved` task retains a `[BLOCKING]` item in `## Review Notes`. |
 | `validate_dependencies(task, siblings)` | Check that all `depends_on` entries reference existing sibling directory names. |
 | `detect_cycles(tasks)` | DFS-based cycle detection among sibling tasks. Returns cycle description strings. |
 | `validate_plan(plan_root)` | Walk the entire plan tree, run all validations at each level. Returns aggregated prefixed warnings. |

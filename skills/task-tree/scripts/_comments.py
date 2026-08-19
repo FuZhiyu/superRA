@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from _task_io import parse_body_sections
+from _task_io import _SECTION_ALIASES, parse_body_sections
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +332,10 @@ def _reanchor(comment: Comment, sections: dict[str, str]) -> tuple[list[str], in
     orphaned (section gone, or preview matched no block).
     """
     anchor = comment.anchor
-    section_content = sections.get(anchor.section)
+    # parse_body_sections stores sections under their current names; normalize
+    # a legacy anchor (e.g. "Planner Guidance") through the same alias map so
+    # it resolves instead of orphaning.
+    section_content = sections.get(_SECTION_ALIASES.get(anchor.section, anchor.section))
 
     if section_content is None:
         comment.orphaned = True

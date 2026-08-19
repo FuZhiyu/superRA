@@ -332,12 +332,27 @@ def parse_body_sections(body: str) -> dict[str, str]:
     ``_has_nonempty_section``).
 
     Legacy heading names in ``_SECTION_ALIASES`` parse to their current name, so
-    a task file written under the old vocabulary reads as the same section.
+    a task file written under the old vocabulary reads as the same section. When
+    a legacy heading and its current name both appear, their bodies merge with a
+    blank line between rather than the later one overwriting the earlier.
     """
     sections: dict[str, str] = {}
     current_name: str | None = None
     current_lines: list[str] = []
     in_fence = False
+
+    def _store(name: str, lines: list[str]) -> None:
+        # An alias collision (e.g. legacy ## Planner Guidance beside ## Details)
+        # merges both bodies with a blank line between — never drop planner text.
+        content = "\n".join(lines)
+        existing = sections.get(name)
+        if existing is None:
+            sections[name] = content
+        elif not existing.strip():
+            sections[name] = content
+        elif content.strip():
+            sections[name] = existing.rstrip("\n") + "\n\n" + content.lstrip("\n")
+
     for line in body.split("\n"):
         if re.match(r"^[ \t]*(```|~~~)", line):
             in_fence = not in_fence
@@ -347,13 +362,13 @@ def parse_body_sections(body: str) -> dict[str, str]:
         m = None if in_fence else re.match(r"^## (.+)$", line)
         if m:
             if current_name is not None:
-                sections[current_name] = "\n".join(current_lines)
+                _store(current_name, current_lines)
             current_name = _SECTION_ALIASES.get(m.group(1), m.group(1))
             current_lines = []
         elif current_name is not None:
             current_lines.append(line)
     if current_name is not None:
-        sections[current_name] = "\n".join(current_lines)
+        _store(current_name, current_lines)
     return sections
 
 
@@ -1113,11 +1128,16 @@ def compute_status(task: Task) -> str:
     return "not-started"
 
 
-def propagate_parent_status(plan_root: Path, task_path: str) -> int:
+def propagate_parent_status(
+    plan_root: Path, task_path: str, feedback: list[str] | None = None
+) -> int:
     """Walk from task_path up to the root, recomputing parent statuses.
 
     For each ancestor that is not a leaf, computes rolled-up status from
-    children via compute_status() and writes back if changed.
+    children via compute_status() and writes back if changed. An ``approved``
+    rollup is never written onto a parent whose ``## Review Notes`` still carry
+    ``[BLOCKING]``: the current status is held and a warning is appended to
+    ``feedback`` when a list is passed.
 
     Returns the number of ancestor tasks updated.
     """
@@ -1145,6 +1165,18 @@ def propagate_parent_status(plan_root: Path, task_path: str) -> int:
 
         changed = False
         rolled_status = compute_status(ancestor_task)
+
+        if rolled_status == "approved" and ancestor_task.status != "approved":
+            from _task_validate import _review_notes_block_approval
+
+            if _review_notes_block_approval(rolled_status, ancestor_task.review_notes):
+                if feedback is not None:
+                    prefix = ancestor_task.path if ancestor_task.path else "(root)"
+                    feedback.append(
+                        f"{prefix}: children approved but parent Review Notes still "
+                        "carry [BLOCKING]; clear or re-review"
+                    )
+                continue
 
         if ancestor_task.status != rolled_status:
             ancestor_task.status = rolled_status

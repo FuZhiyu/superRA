@@ -17,6 +17,8 @@ from _task_io import (
     Task,
     _has_nonempty_section,
     iter_child_task_dirs,
+    parse_body_sections,
+    parse_frontmatter,
     parse_task,
 )
 
@@ -50,11 +52,12 @@ def validate_revision_notes(task: Task) -> list[str]:
 
     The implementer consumes and removes the note in the same commit that sets
     ``status: implemented`` (see ``implement-task`` SKILL.md Execution), whether
-    or not review follows. A note is legitimate only before that point —
-    ``not-started`` or ``in-progress``. Detection is fence-aware so a header
-    quoted inside a code block does not trigger it.
+    or not review follows. A note is legitimate before that point —
+    ``not-started``, ``in-progress``, or ``revise``, where a fresh note is the
+    prescribed planner-to-implementer handoff. Detection is fence-aware so a
+    header quoted inside a code block does not trigger it.
     """
-    if task.status in ("not-started", "in-progress"):
+    if task.status in ("not-started", "in-progress", "revise"):
         return []
     if not _has_nonempty_section(task.body, "Revision Notes"):
         return []
@@ -66,8 +69,6 @@ def validate_revision_notes(task: Task) -> list[str]:
 
 def approved_with_blocking_review_notes(text: str) -> bool:
     """Return whether task Markdown violates the approval-review invariant."""
-    from _task_io import parse_body_sections, parse_frontmatter
-
     fm, body = parse_frontmatter(text)
     review_notes = parse_body_sections(body).get("Review Notes", "")
     return _review_notes_block_approval(

@@ -174,6 +174,23 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     import _task_validate as task_validate
     feedback: list[str] = []
 
+    # Propagate parent status first so validation below describes the state
+    # this run produced, not the pre-rollup tree. Best-effort, never fail.
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            propagation_warnings: list[str] = []
+            if task_path is None:
+                _propagate_whole_tree(task_io, plan_root, propagation_warnings)
+            else:
+                task_io.propagate_parent_status(
+                    plan_root, task_path, feedback=propagation_warnings
+                )
+        for w in propagation_warnings:
+            feedback.append(f"Status propagation warning in {plan_root}: {w}")
+    except Exception as exc:
+        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
+
     # Validate — collect warnings for model-visible JSON feedback.
     try:
         with warnings.catch_warnings():
@@ -185,21 +202,12 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
-    # Propagate parent status up the tree — best-effort, never fail.
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            if task_path is None:
-                _propagate_whole_tree(task_io, plan_root)
-            else:
-                task_io.propagate_parent_status(plan_root, task_path)
-    except Exception as exc:
-        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
-
     return feedback
 
 
-def _propagate_whole_tree(task_io, plan_root: Path) -> int:
+def _propagate_whole_tree(
+    task_io, plan_root: Path, feedback: list[str] | None = None
+) -> int:
     """Recompute parent status across every branch in the tree.
 
     propagate_parent_status only walks the ancestors of one task_path, so a
@@ -221,8 +229,17 @@ def _propagate_whole_tree(task_io, plan_root: Path) -> int:
     _collect(root)
 
     updated = 0
+    seen_warnings: set[str] = set()
     for leaf_path in leaf_paths:
-        updated += task_io.propagate_parent_status(plan_root, leaf_path)
+        leaf_warnings: list[str] = []
+        updated += task_io.propagate_parent_status(
+            plan_root, leaf_path, feedback=leaf_warnings
+        )
+        for w in leaf_warnings:
+            # Ancestor chains overlap across leaves; report each warning once.
+            if feedback is not None and w not in seen_warnings:
+                seen_warnings.add(w)
+                feedback.append(w)
     return updated
 
 

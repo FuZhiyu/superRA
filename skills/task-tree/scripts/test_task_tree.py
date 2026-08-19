@@ -3021,12 +3021,13 @@ class TestValidateRevisionNotes:
         )
         assert _task_validate.validate_revision_notes(t)
 
-    def test_revise_with_revnote_warns(self):
+    def test_revise_with_revnote_no_warn(self):
+        # A fresh note on `revise` is the prescribed planner-to-implementer handoff.
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="revise",
             body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
         )
-        assert _task_validate.validate_revision_notes(t)
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_not_started_with_revnote_no_warn(self):
         t = _task_io.Task(
@@ -4281,3 +4282,105 @@ class TestApplyPatchParser:
         assert _apply_patch.apply_to_text(add, "") == "line one\nline two\n"
         delete = self._parse("*** Delete File: x.md")[0]
         assert _apply_patch.apply_to_text(delete, "anything\n") == ""
+
+
+class TestSectionAliasCollision:
+    """Legacy ## Planner Guidance beside ## Details merges; nothing is dropped."""
+
+    def test_legacy_then_current_merges_with_blank_line(self):
+        body = (
+            "## Planner Guidance\n\nlegacy planner text\n\n"
+            "## Details\n\ncurrent details text\n"
+        )
+        sections = parse_body_sections(body)
+        assert sections["Details"] == "\nlegacy planner text\n\ncurrent details text\n"
+
+    def test_current_then_legacy_merges_with_blank_line(self):
+        body = (
+            "## Details\n\ncurrent details text\n\n"
+            "## Planner Guidance\n\nlegacy planner text\n"
+        )
+        sections = parse_body_sections(body)
+        assert sections["Details"] == "\ncurrent details text\n\nlegacy planner text\n"
+
+    def test_empty_duplicate_does_not_erase_content(self):
+        body = "## Details\n\ncontent\n\n## Planner Guidance\n\n"
+        sections = parse_body_sections(body)
+        assert "content" in sections["Details"]
+
+
+class TestTreeHookInvariants:
+    """The tree hooks never produce a state their own validators flag."""
+
+    def _tree(self, tmp_path, parent_body_extra="", parent_status="in-progress"):
+        root = tmp_path / "superRA"
+        root.mkdir()
+        (root / "task.md").write_text(
+            "---\ntitle: Root\nstatus: not-started\ndepends_on: []\n---\n\n"
+            "## Objective\n\nx\n",
+            encoding="utf-8",
+        )
+        parent = root / "parent"
+        parent.mkdir()
+        (parent / "task.md").write_text(
+            f"---\ntitle: Parent\nstatus: {parent_status}\ndepends_on: []\n---\n\n"
+            f"## Objective\n\nx\n{parent_body_extra}",
+            encoding="utf-8",
+        )
+        for name in ("child-a", "child-b"):
+            d = parent / name
+            d.mkdir()
+            (d / "task.md").write_text(
+                f"---\ntitle: {name}\nstatus: approved\ndepends_on: []\n---\n\n"
+                "## Objective\n\nx\n",
+                encoding="utf-8",
+            )
+        return root, parent
+
+    def test_no_approved_rollup_onto_blocking_parent(self, tmp_path):
+        root, parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = []
+        _task_io.propagate_parent_status(root, "parent/child-a", feedback=feedback)
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+        assert any("[BLOCKING]" in w for w in feedback)
+
+    def test_blocking_hold_warning_reaches_hook_feedback(self, tmp_path):
+        root, _parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = task_hook._reconcile(root, task_path="parent/child-a")
+        assert any(
+            "children approved but parent Review Notes still carry [BLOCKING]" in w
+            for w in feedback
+        )
+        # The status was held, so the same run reports no approved+blocking state.
+        assert not any("approved task still carries" in w for w in feedback)
+
+    def test_whole_tree_propagation_surfaces_hold_warning_once(self, tmp_path):
+        root, parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Review Notes\n\n> [BLOCKING] Fix it.\n",
+        )
+        feedback = task_hook._reconcile(root, task_path=None)
+        hold = [
+            w for w in feedback
+            if "children approved but parent Review Notes still carry [BLOCKING]" in w
+        ]
+        assert len(hold) == 1
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+    def test_reconcile_validates_post_propagation_state(self, tmp_path):
+        root, _parent = self._tree(
+            tmp_path,
+            parent_body_extra="\n## Revision Notes\n\nstale planner note\n",
+        )
+        feedback = task_hook._reconcile(root, task_path="parent/child-a")
+        # Propagation lands the parent at approved before validation runs, so
+        # the leftover Revision Notes warning appears in the same run.
+        assert any("Revision Notes" in w for w in feedback)
