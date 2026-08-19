@@ -1,6 +1,6 @@
 ---
 name: communicate
-description: Human-facing communication discipline for writing, rewriting, distilling, and reviewing conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; Must load for superRA who produces human-facing text. 
+description: Communication discipline for writing, rewriting, distilling, and reviewing any text meant for human reading, including conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; Must load for superRA who produces human-facing text. 
 ---
 
 # Communicate

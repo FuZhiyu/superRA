@@ -31,7 +31,7 @@ Tasks are managed task trees in the `superRA/` directory. For basic I/O, this se
 
 ## Skill-Load Manifest
 
-Every agent — main and dispatched — loads `superRA:using-superra` and `superRA:communicate`. A dispatch then loads along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
+At each stage of superRA workflow, agents load additional skills along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
 1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
 2. **Stage** — the workflow phase the dispatch is in (table below). 

@@ -4,6 +4,7 @@
 
 Before your first substantive response:
 
+- Load `superRA:communicate` before your response.
 - Check whether the CLI wrapper `./superRA/superra` exists; bootstrap it per `superRA:task-tree` §CLI Setup if not.
 - Run `./superRA/superra task tree` for the full status summary.
 - Bring up the live dashboard without opening a browser: `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached). Retain its emitted scoped URL.
