@@ -1,6 +1,6 @@
 ---
 title: "Sweep Stale Pointers and Hook Docs"
-status: implemented
+status: approved
 depends_on: [gate-hardening]
 ---
 
@@ -23,3 +23,9 @@ Known `writing/` dangles: [refactor-and-compile.md:52](../../../../skills/academ
   - [docs/site/06-hooks/task.md](../../../../docs/site/06-hooks/task.md) adds agent-model-guard and guard-task-approval rows, notes the Codex `apply_patch` matchers on ensure-communicate and task-hook, and counts "eight of the nine" hooks for Claude.
   - [docs/README.codex.md](../../../../docs/README.codex.md) Hook Coverage adds guard-task-approval and ensure-communicate rows mirroring `hooks-codex.json` (both added to the `/hooks` verification list) and states the task-tree hook's `Edit|Write|Bash|apply_patch` event — the direct-task-edit claim is now backed by the gate-hardening matcher.
 - Remaining `skills/writing*` grep hits live under `docs/plans/` — historical plan records, not shipped pointers; left as archives.
+
+## Review Notes
+
+Tier: thorough. Focus: correctness. Verified the four path fixes resolve, re-counted the hook inventory against `hooks/` and all three registries, and re-ran the `writing/` sweep plus a wider one over `skills/`, `docs/site/`, `README.md`, and `CLAUDE.md`.
+
+1. [ADVISORY] One shipped doc still names the retired `writing` skill in prose: [04-slide-design/task.md:17](../../../../docs/site/03-domain-skills/04-slide-design/task.md#L17) — "the same way the writing skill works". The skill was renamed to `academic-writing` in `5cfd69db`, so a reader following the analogy finds nothing. Outside the Objective's enumerated `grep -rn 'writing/references\|skills/writing' skills/` sweep but inside its headline ("no shipped skill or doc points at a path or wiring that no longer exists"). Fix: name `academic-writing`, or drop the comparison.

@@ -1,6 +1,6 @@
 ---
 title: "Tree Hooks Respect the Invariants They Police"
-status: implemented
+status: approved
 depends_on: [gate-hardening]
 ---
 
