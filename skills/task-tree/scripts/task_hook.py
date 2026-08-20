@@ -100,7 +100,8 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
         for it in issues
     ]
     feedback.append(
-        "Load the `superRA:communicate` skill for the correct form before fixing these."
+        "Load the `superRA:communicate` skill and its `references/markdown.md` "
+        "for the correct form before fixing these."
     )
     return feedback
 
@@ -117,9 +118,9 @@ def _communicate_reminder(file_paths: list[Path]) -> list[str]:
     if not paths:
         return []
     return [
-        f"Markdown edited under the task tree: {', '.join(paths)}. If these edits are "
-        "meant for a user to read, make sure they follow `superRA:communicate`; "
-        "otherwise continue."
+        f"Markdown edited. If these edits are "
+        "meant for a user to read, make sure they follow `superRA:communicate` and its "
+        "`references/markdown.md`; otherwise continue."
     ]
 
 

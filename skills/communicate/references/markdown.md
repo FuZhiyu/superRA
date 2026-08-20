@@ -57,21 +57,15 @@ When inlining, keep alignment syntax consistent and put units in the headers:
 
 ## Figures
 
-### The attachments directory (`ATTACH_DIR`)
+Figures live in an `attachments/` directory beside the file that embeds them — `ATTACH_DIR` below, or the directory the caller passes in.
 
-The caller supplies the target `attachments/` directory — substitute the actual path when embedding. No caller value: default to `attachments/` next to the output file:
+### Materialize
 
-- Task `## Results` → next to the task's `task.md` (see `task-tree/references/task-file-contract.md` §Figure Embedding).
-- Matured task results → next to the task's `task.md`.
-- Standalone report → next to the report file.
+Task figures are written directly into the task's `attachments/` by the analysis script — no copying. Standalone reports copy figures into their own `attachments/` so the artifact is self-contained:
 
 ```bash
 mkdir -p "${ATTACH_DIR}"
 ```
-
-### Materialize figures
-
-Task figures are written directly into the task's `attachments/` by the analysis script — no copying. Permanent and standalone reports copy figures into a new attachments folder so the artifact is self-contained:
 
 **PDF figures:** convert to PNG first, then save:
 

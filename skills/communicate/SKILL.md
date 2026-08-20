@@ -5,7 +5,7 @@ description: Communication discipline for writing, rewriting, distilling, and re
 
 # Communicate
 
-Terse by default — in chat, returns, task files, and documents. One sentence when one is enough. **The style holds all session** — do not drift back to full prose.
+Be **terse** — in chat, returns, task files, and documents. One sentence when one is enough. **The style holds all session** — do not drift back to full prose.
 
 ## Write for a reader with no session context
 
@@ -50,10 +50,11 @@ One set of facts, three shapes.
 
 ## Choose the form
 
-For long reports, break the document into sections and subsections. Within each block, choose between:
+For long reports, break the document into sections and subsections. Within each block, follow the pecking orders:
 
-- **Nested bullet points (preferred):** several main points, each with its support or action beneath it.
-- **Paragraph:** connected reasoning, narrative, or causality whose order a list would break.
+- **visualization > tables > prose:** when presenting data, visualize whenever possible; if not, tabulate; 
+- **Nested bullet points:** several main points, each with its support or action beneath it.
+- Only use **Paragraph** when you need connected reasoning, narrative, or causality whose order a list would break.
 
 ## Carry the paragraph forward
 
@@ -103,11 +104,8 @@ Each rule fires on a real reading problem; applying one to a line that already r
 - **Write short, complete sentences.** In prose, no fragments and no arrow chains (`merge → 0.7% → fine`).
 
 ## Route the work
-
+- When editing a markdown file, **MUST** load [markdown.md](references/markdown.md) for formatting and presentation. 
 - **Rewriting existing material, or auditing why text is hard to read:** load [rewrite.md](references/rewrite.md).
-- **Source citations, math, tables, figures, or raw HTML:** load [markdown.md](references/markdown.md).
-- **Permanent standalone Markdown:** load [baseline-io.md](references/baseline-io.md). Task-local companions follow `using-superra/references/task-companion-files.md`.
-- **Manuscript prose:** compose this skill with `superRA:academic-writing`; that skill owns academic argument, voice, citations, and venue conventions.
 
 ## Final pass
 
