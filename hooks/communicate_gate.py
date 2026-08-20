@@ -199,8 +199,8 @@ def main() -> None:
 
     if not _transcript_has_skill(evidence):
         reason = (
-            f"Before editing Markdown, load `{COMMUNICATE}`, "
-            "then retry the same tool call."
+            f"Before editing Markdown, load `{COMMUNICATE}` and its "
+            "`references/markdown.md`, then retry the same tool call."
         )
         print(
             json.dumps(
