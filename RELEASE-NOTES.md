@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-19
+
+### Changed
+
+- `communicate` reworked: the standalone-report IO reference (`references/baseline-io.md`) is retired and its content folded into the remaining references; `rewrite.md` and `markdown.md` tightened.
+- The `communicate` load requirement is stated more strictly in `communicate`, `using-superra`, and `main-agent.md`.
+
+### Release Prep
+
+- Version manifests bumped to `0.4.1` across the maintained Claude,
+  marketplace, and Codex plugin metadata via `scripts/bump-version.sh`.
+
 ## [0.4.0] - 2026-08-18
 
 The lean-workflow release. Roles become skills, review becomes a decision rather
