@@ -1,7 +1,7 @@
 ---
 title: "Touch-Resizable Sidebar on iPad and Other Coarse-Pointer Devices"
-status: implemented
-depends_on:  []
+status: revise
+depends_on: []
 ---
 
 ## Objective
@@ -24,3 +24,17 @@ Touch devices can now drag the sidebar edge in both the pinned landscape layout 
 - Verification: `test_dashboard.py` template assertions updated (`TestTouchSidebar`); a Playwright touch drive (iPad 1024×768 pinned and 768×1024 drawer, `is_mobile`, `has_touch`) dragged the handle 280→400px in both modes with the width persisted to `localStorage` and the drawer staying open. The 20 `TestBackgroundLaunch`/idle-shutdown failures are sandbox process restrictions and fail identically on `main`.
 - Asset cache-busting: `index` renders `dashboard.css`/`dashboard.js` URLs with `?v=<12-hex content hash>` ([plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py) `_asset_version`), because iPad Safari reused the hour-cached assets without revalidating and never received the fix on reload.
 - Not covered: nav rows still ellipsize slug, title, and badge on one line, so a wide sidebar still hides part of a long title; wrapping touch rows is a separate design change.
+
+## Review Notes
+
+Tier: thorough. Focus: correctness, fine-pointer/desktop regressions, test coverage. Verified by the dashboard suite plus a Playwright drive (chromium, `is_mobile`/`has_touch`) over a standalone export at 1024×768, 768×1024, 390×844, and desktop 1400×900/500×900.
+
+1. **[BLOCKING]** The mode re-clamp overwrites the user's persisted width, so every trip through drawer mode permanently narrows the sidebar. [dashboard.js:2700-2701](../../../../skills/task-tree/scripts/templates/dashboard.js#L2700-L2701) passes the clamped value to [`applySidebarWidth`](../../../../skills/task-tree/scripts/templates/dashboard.js#L2648), which assigns the global `sbWidth` — the same variable that is the stored preference and the value [`persistSidebarWidth`](../../../../skills/task-tree/scripts/templates/dashboard.js#L2864-L2866) writes back. Drive result: `localStorage` = 480, viewport 1400 → 500 (drawer, cap `floor(0.86*500)` = 430) → `sbWidth` 430; back to 1400 → still 430, `localStorage` still 480. The iPad rotation path is the same, and on a 390px phone the cap (335) binds on every load, so the first subsequent drag or ←/→ nudge writes the phone-sized width over the user's choice. Fix: clamp at apply time only — keep the chosen width in its own variable and let the mode set the CSS custom property from `clampSidebarWidth(pref)` without reassigning the preference.
+
+2. **[ADVISORY]** `aria-valuemax` stays at the desktop `480` in drawer mode, where the reachable max is `floor(0.86 * innerWidth)` — 335 on a 390px phone. [base.html:194](../../../../skills/task-tree/scripts/templates/base.html#L194) hard-codes it and `applySidebarWidth` syncs only `aria-valuenow`; sync `aria-valuemax` from the same clamp.
+
+3. **[ADVISORY]** The mode-class comment still says `.sb-touch` "disables the mouse-only chrome (hover-rail, drag-resizer)" ([dashboard.css:558-559](../../../../skills/task-tree/scripts/templates/dashboard.css#L558-L559)); the drag-resizer is now the touch path's main affordance.
+
+4. **[ADVISORY]** The new coverage is source-string matching (`assert "window.innerWidth * 0.86" in BASE_HTML`, [test_dashboard.py:1900](../../../../skills/task-tree/scripts/test_dashboard.py#L1900)), which survives any rename of the expression and asserts nothing about behavior. Finding 1 reproduces in ~15 lines on the existing Playwright harness ([test_artifact_ui.py](../../../../skills/task-tree/scripts/test_artifact_ui.py)); a drawer-clamp + width-restore case there would hold the fix.
+
+5. **[ADVISORY]** This file now carries two `## Results` headings — an empty one at line 15 and the filled one at line 18. Delete the empty heading.
