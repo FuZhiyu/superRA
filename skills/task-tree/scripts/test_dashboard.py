@@ -312,7 +312,7 @@ class TestServerRoutes:
         is emitted in the active-node card and backed by shareSubtree(), served
         from the extracted dashboard.js (see /static/dashboard.js)."""
         html = client.get("/").text
-        assert '<script src="/static/dashboard.js"></script>' in html
+        assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', html)
         js = client.get("/static/dashboard.js").text
         assert "function shareSubtree" in js
         # The button is gated to server mode in the card header builder.
@@ -1884,10 +1884,21 @@ class TestTouchSidebar:
         assert "unpinned = false;" in BASE_HTML
 
     def test_mouse_only_chrome_disabled_on_touch(self):
-        """The hover-rail and the drag-resizer are fine-pointer affordances;
-        both are hidden under the .sb-touch guard."""
+        """The hover-rail is a fine-pointer affordance hidden under .sb-touch;
+        the drag-resizer stays, widened to a touch hit area with touch-action
+        opted out so a drag reaches the pointer handlers."""
         assert ".sb-touch .sidebar-rail { display: none; }" in BASE_HTML
-        assert ".sb-touch .sidebar-resizer { display: none; }" in BASE_HTML
+        assert ".sb-touch .sidebar-resizer { display: none; }" not in BASE_HTML
+        assert ".sb-touch .sidebar-resizer {" in BASE_HTML
+        assert "touch-action: none;" in BASE_HTML
+        assert "sbIsTouch()) return;" not in BASE_HTML
+
+    def test_resizer_rides_the_open_drawer_edge(self):
+        """Drawer mode hides the handle while closed and fixes it on the open
+        drawer's edge, clamped to the drawer's 86vw cap in JS and CSS alike."""
+        assert ".sb-drawer .sidebar-resizer { display: none; }" in BASE_HTML
+        assert ".sb-touch.sb-drawer.sb-drawer-open .sidebar-resizer {" in BASE_HTML
+        assert "window.innerWidth * 0.86" in BASE_HTML
 
     def test_hamburger_shown_in_drawer_mode_above_breakpoint(self):
         """A touch landscape iPad collapsed to the drawer sits above the 860px
@@ -1911,7 +1922,7 @@ class TestTouchSidebar:
         carries the touch primitives."""
         text = client.get("/").text
         assert "viewport-fit=cover" in text
-        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
         css = client.get("/static/dashboard.css").text
         assert "(hover: none), (pointer: coarse)" in css
         assert "env(safe-area-inset-top)" in css
@@ -2008,8 +2019,8 @@ class TestTouchPolish:
         stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
         assert 'id="search-sheet"' in text
-        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
-        assert '<script src="/static/dashboard.js"></script>' in text
+        assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
+        assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', text)
         css = client.get("/static/dashboard.css").text
         assert "@media (pointer: coarse)" in css
         assert "-webkit-tap-highlight-color: transparent;" in css

@@ -1109,6 +1109,7 @@ async def index(request: Request):
     html = template.render(
         root_task=state.root_task,
         all_tasks=all_tasks,
+        asset_version=_asset_version(),
         project_root=state.project_root,
         resolved_root=resolved_root,
         root_prefix=Path(resolved_root).name,
@@ -1121,6 +1122,22 @@ async def index(request: Request):
 
 
 # --- Route: GET /static/{name} (dashboard CSS/JS + vendored render libs) ---
+
+def _asset_version() -> str:
+    """Short content hash of dashboard.css + dashboard.js, appended as ``?v=``
+    to their ``<link>``/``<script>`` URLs so a page reload always fetches the
+    current assets: under ``max-age=3600`` a browser (iPad Safari in
+    particular) reuses the cached file without revalidating, so an edit or a
+    server relaunch on new source would otherwise not reach the page for an
+    hour."""
+    h = hashlib.sha256()
+    for name in ("dashboard.css", "dashboard.js"):
+        try:
+            h.update((_TEMPLATES_DIR / name).read_bytes())
+        except OSError:
+            pass
+    return h.hexdigest()[:12]
+
 
 def _resource_dir(name: str):
     if __package__:
@@ -1164,10 +1181,11 @@ _VENDOR_ASSET_TYPES = {
 async def static_asset(name: str, request: Request):
     """Serve base.html's extracted CSS/JS and the vendored render libraries as
     cacheable static files instead of re-templating/re-fetching them on every
-    page load. ETag-revalidated so an edit during development (or a re-pin)
-    is picked up on the next request even under the 1-hour ``max-age``; the
-    standalone export inlines the same files verbatim instead (see
-    ``_build_standalone_assets``).
+    page load. ETag-revalidated for a conditional request, but under the
+    1-hour ``max-age`` a browser usually reuses its copy without asking, so
+    ``index`` versions the CSS/JS URLs with ``_asset_version`` to pick up an
+    edit on the next reload; the standalone export inlines the same files
+    verbatim instead (see ``_build_standalone_assets``).
     """
     if name in _VENDOR_ASSET_TYPES:
         content_type = _VENDOR_ASSET_TYPES[name]
