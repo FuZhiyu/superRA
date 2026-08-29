@@ -5756,15 +5756,21 @@ class TestPidHelpers:
 
     def test_read_pid_port_roundtrip(self, tmp_path):
         p = tmp_path / "x.pid"
-        plan_dashboard._write_pid_port(p, 12345, 8123)
-        assert plan_dashboard._read_pid_port(p) == (12345, 8123)
+        plan_dashboard._write_pid_port(p, 12345, 8123, "192.168.1.5")
+        assert plan_dashboard._read_pid_port(p) == (12345, 8123, "192.168.1.5")
         assert plan_dashboard._read_pid(p) == 12345
 
     def test_read_pid_port_legacy_pid_only(self, tmp_path):
-        """A legacy pid-only file parses as (pid, None)."""
+        """A legacy pid-only file parses as (pid, None, None)."""
         p = tmp_path / "x.pid"
         p.write_text("12345\n", encoding="utf-8")
-        assert plan_dashboard._read_pid_port(p) == (12345, None)
+        assert plan_dashboard._read_pid_port(p) == (12345, None, None)
+
+    def test_read_pid_port_legacy_pid_and_port_only(self, tmp_path):
+        """A legacy pid+port file (predating the host field) parses host as None."""
+        p = tmp_path / "x.pid"
+        p.write_text("12345 8123\n", encoding="utf-8")
+        assert plan_dashboard._read_pid_port(p) == (12345, 8123, None)
 
     def test_pid_alive_self(self):
         assert plan_dashboard._pid_alive(os.getpid()) is True
@@ -5804,7 +5810,7 @@ class TestPidHelpers:
             plan_dashboard._write_pid_port(p, os.getpid(), recorded_port)
             other_port = TestIdleShutdownLifespan()._free_port()  # nothing serving
             result = plan_dashboard._running_pid(p, other_port)
-            assert result == (os.getpid(), recorded_port)
+            assert result == (os.getpid(), recorded_port, "127.0.0.1")
         finally:
             listener.close()
 
@@ -5837,23 +5843,32 @@ class TestBackgroundLaunch:
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
 
-    def test_idempotent_second_launch_reuses_server(self, tmp_path):
+    def test_idempotent_second_launch_reuses_server(self, tmp_path, capsys):
         pytest.importorskip("uvicorn")
         plan_root = _serve_plan(tmp_path)
         common = tmp_path / "common.git"
         common.mkdir()
         port = TestIdleShutdownLifespan()._free_port()
         pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        log_path = plan_dashboard._log_file(plan_root, str(common))
         try:
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=False
             ) == 0
             pid1 = plan_dashboard._read_pid(pid_path)
+            expected_url = plan_dashboard._dashboard_url(port, plan_root)
+            assert capsys.readouterr().out == (
+                f"Dashboard running at {expected_url} (PID {pid1})\n"
+                f"Logs: {log_path}\n"
+            )
             # Second launch must reuse, not spawn a duplicate.
             assert plan_dashboard.serve_background(
                 plan_root, port, str(common), open_browser=False
             ) == 0
             pid2 = plan_dashboard._read_pid(pid_path)
+            assert capsys.readouterr().out == (
+                f"Dashboard already running at {expected_url} (PID {pid1})\n"
+            )
             assert pid1 == pid2, "second launch spawned a different process"
             assert plan_dashboard._pid_alive(pid1)
         finally:
@@ -6146,7 +6161,9 @@ class TestBackgroundLaunch:
         assert rc == 1
         assert 55555 in terminated, "a child that never serves must not be left lingering"
 
-    def test_task_mode_launch_does_not_reuse_doc_mode_server(self, tmp_path, monkeypatch):
+    def test_task_mode_launch_does_not_reuse_doc_mode_server(
+        self, tmp_path, monkeypatch, capsys
+    ):
         """A task-mode launch must never adopt a same-repo --doc-mode server.
 
         The PID file is per-repo, not per-mode, so a second server can't coexist:
@@ -6158,8 +6175,13 @@ class TestBackgroundLaunch:
         common.mkdir()
         port = 34569
         repo = plan_dashboard._repo_id(str(common), plan_root)
-        # Our repo's doc-mode dashboard is present per both reuse layers.
-        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: (12321, port))
+        # The recorded server uses a non-loopback interface while this invocation
+        # leaves --host at its loopback default. The PID fast path must report the
+        # conflict against the recorded host rather than miss it in layer 2.
+        recorded_host = "100.64.0.1"
+        monkeypatch.setattr(
+            plan_dashboard, "_running_pid", lambda *a, **k: (12321, port, recorded_host)
+        )
         monkeypatch.setattr(
             plan_dashboard, "_probe_dashboard", lambda *a, **k: (12321, True, repo)
         )
@@ -6176,6 +6198,10 @@ class TestBackgroundLaunch:
         )
         assert not spawned, "task-mode launch must not spawn atop a doc-mode server"
         assert rc == 1, "a same-repo cross-mode conflict should be reported"
+        assert capsys.readouterr().err == (
+            f"Error: http://{recorded_host}:{port} is already serving a doc-mode "
+            "dashboard for this repo; stop it or launch with an explicit --port\n"
+        )
 
     def test_different_repo_on_port_advances_to_next_free_port(self, tmp_path, monkeypatch):
         """A *different* repo colliding on our start port must not be reused or
@@ -6197,7 +6223,7 @@ class TestBackgroundLaunch:
         monkeypatch.setattr(plan_dashboard, "_probe_dashboard", _fake_probe)
         monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
         # The start port is occupied (by the other repo); adjacent ports are free.
-        monkeypatch.setattr(plan_dashboard, "_port_serving", lambda p: p == base)
+        monkeypatch.setattr(plan_dashboard, "_port_serving", lambda p, *a, **k: p == base)
 
         spawned: list[list[str]] = []
 
@@ -6266,7 +6292,7 @@ class TestBackgroundLaunch:
             assert plan_dashboard.serve_background(
                 plan_b, port, str(common_b), open_browser=False
             ) == 0
-            b_pid, b_port = plan_dashboard._read_pid_port(pid_b)
+            b_pid, b_port, _b_host = plan_dashboard._read_pid_port(pid_b)
             assert b_pid is not None and b_pid != a_pid, "B must not adopt A's server"
             assert b_port != port, "B must bind an adjacent port, not A's"
             assert plan_dashboard._pid_alive(a_pid), "A must be untouched by B's launch"
@@ -6279,6 +6305,92 @@ class TestBackgroundLaunch:
         finally:
             plan_dashboard.stop_background(plan_a, str(common_a))
             plan_dashboard.stop_background(plan_b, str(common_b))
+
+    @staticmethod
+    def _local_nonloopback_ip() -> str | None:
+        """A non-loopback IPv4 address of this host, or None if unavailable.
+
+        A UDP "connect" needs no actual reachability (UDP does not handshake)
+        and yields this host's outbound-interface IP, reproducing the bug
+        scenario: a server bound to *only* that interface, unreachable via
+        127.0.0.1.
+        """
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        except OSError:
+            return None
+        finally:
+            s.close()
+        return ip if ip != "127.0.0.1" else None
+
+    def test_nonloopback_host_launch_binds_reports_and_reuses(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """A background launch bound to a non-loopback --host must be seen by
+        the launcher's own readiness probe (not just by a loopback-only one),
+        report a URL reachable at the bound host, and be reused (not re-spawned
+        or killed) by an immediate second launch with the same --host.
+        """
+        pytest.importorskip("uvicorn")
+        ip = self._local_nonloopback_ip()
+        if ip is None:
+            pytest.skip("no non-loopback interface available on this host")
+
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind((ip, 0))
+            port = listener.getsockname()[1]
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        log_path = plan_dashboard._log_file(plan_root, str(common))
+        pid: int | None = None
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), host=ip, open_browser=False
+            )
+            assert rc == 0, "launch bound to a non-loopback host must succeed"
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None and plan_dashboard._pid_alive(pid)
+            expected_url = plan_dashboard._dashboard_url(port, plan_root, ip)
+            assert capsys.readouterr().out == (
+                f"Dashboard running at {expected_url} (PID {pid})\n"
+                f"Logs: {log_path}\n"
+            )
+            # The server is bound only to `ip`: reachable there, not via loopback
+            # — this is exactly the scenario a loopback-only probe would miss.
+            assert plan_dashboard._probe_dashboard(port, probe_host=ip) is not None
+            assert plan_dashboard._probe_dashboard(port, probe_host="127.0.0.1") is None
+
+            # An immediate re-launch with the same args must reuse, not spawn.
+            spawned: list[list[str]] = []
+            real_popen = plan_dashboard.subprocess.Popen
+
+            def _tracking_popen(cmd, **kw):
+                if (
+                    len(cmd) > 2
+                    and cmd[1] == str(Path(plan_dashboard.__file__).resolve())
+                    and cmd[2] == "serve"
+                ):
+                    spawned.append(cmd)
+                return real_popen(cmd, **kw)
+
+            monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _tracking_popen)
+            rc2 = plan_dashboard.serve_background(
+                plan_root, port, str(common), host=ip, open_browser=False
+            )
+            assert rc2 == 0
+            assert capsys.readouterr().out == (
+                f"Dashboard already running at {expected_url} (PID {pid})\n"
+            )
+            assert not spawned, "reuse must not spawn a second server"
+            assert plan_dashboard._read_pid(pid_path) == pid, "reuse must keep the same PID"
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+            if pid is not None:
+                assert not plan_dashboard._pid_alive(pid)
 
 
 # ---------------------------------------------------------------------------
