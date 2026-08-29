@@ -1109,6 +1109,7 @@ async def index(request: Request):
     html = template.render(
         root_task=state.root_task,
         all_tasks=all_tasks,
+        asset_version=_asset_version(),
         project_root=state.project_root,
         resolved_root=resolved_root,
         root_prefix=Path(resolved_root).name,
@@ -1121,6 +1122,22 @@ async def index(request: Request):
 
 
 # --- Route: GET /static/{name} (dashboard CSS/JS + vendored render libs) ---
+
+def _asset_version() -> str:
+    """Short content hash of dashboard.css + dashboard.js, appended as ``?v=``
+    to their ``<link>``/``<script>`` URLs so a page reload always fetches the
+    current assets: under ``max-age=3600`` a browser (iPad Safari in
+    particular) reuses the cached file without revalidating, so an edit or a
+    server relaunch on new source would otherwise not reach the page for an
+    hour."""
+    h = hashlib.sha256()
+    for name in ("dashboard.css", "dashboard.js"):
+        try:
+            h.update((_TEMPLATES_DIR / name).read_bytes())
+        except OSError:
+            pass
+    return h.hexdigest()[:12]
+
 
 def _resource_dir(name: str):
     if __package__:

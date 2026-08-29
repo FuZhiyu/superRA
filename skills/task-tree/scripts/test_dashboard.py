@@ -312,7 +312,7 @@ class TestServerRoutes:
         is emitted in the active-node card and backed by shareSubtree(), served
         from the extracted dashboard.js (see /static/dashboard.js)."""
         html = client.get("/").text
-        assert '<script src="/static/dashboard.js"></script>' in html
+        assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', html)
         js = client.get("/static/dashboard.js").text
         assert "function shareSubtree" in js
         # The button is gated to server mode in the card header builder.
@@ -1922,7 +1922,7 @@ class TestTouchSidebar:
         carries the touch primitives."""
         text = client.get("/").text
         assert "viewport-fit=cover" in text
-        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
+        assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
         css = client.get("/static/dashboard.css").text
         assert "(hover: none), (pointer: coarse)" in css
         assert "env(safe-area-inset-top)" in css
@@ -2019,8 +2019,8 @@ class TestTouchPolish:
         stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
         assert 'id="search-sheet"' in text
-        assert '<link rel="stylesheet" href="/static/dashboard.css">' in text
-        assert '<script src="/static/dashboard.js"></script>' in text
+        assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
+        assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', text)
         css = client.get("/static/dashboard.css").text
         assert "@media (pointer: coarse)" in css
         assert "-webkit-tap-highlight-color: transparent;" in css
