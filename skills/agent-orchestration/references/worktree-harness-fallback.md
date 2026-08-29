@@ -27,7 +27,7 @@ cd <path>
 git rev-parse --show-toplevel   # verify we landed where we expected
 ```
 
-Agents dispatched with a `Worktree:` field do this themselves via the dispatch's `Additionally:` steering.
+Agents dispatched with a `Worktree:` field enter it themselves, per the `Additionally:` steering in `references/parallel-dispatch.md`.
 
 ### Remove
 
@@ -57,6 +57,18 @@ Global-location worktrees (e.g. `~/.config/superpowers/worktrees/<project>/`) li
 
 **Cloud-synced repos** (Dropbox, iCloud): prefer global-location worktrees — sibling-directory worktrees conflict across machines.
 
+## Writable Workspace
+
+Probe a write before dispatching into a worktree — write boundaries do not follow `cd`, and dispatched agents inherit them:
+
+```bash
+touch "$WT/.superra-probe" && rm -f "$WT/.superra-probe" || echo BLOCKED
+```
+
+BLOCKED: register the worktree **root** — not each worktree — in the harness's writable-roots configuration, then re-probe. Never widen access by disabling the sandbox or lowering the approval policy.
+
+Still BLOCKED: the session is confined to a harness-managed worktree. Run the tasks serially in the current worktree instead of dispatching.
+
 ## Gotchas
 
 - **Clean state before remove.** `git status` inside the worktree first; unclean means uncommitted work is about to be discarded.
@@ -71,6 +83,7 @@ One parallel slot's full lifecycle (create → seed → dispatch → merge → c
 WT="${TMPDIR:-/tmp}/superRA-worktrees/$(basename "$(git rev-parse --show-toplevel)")/${BR}-agent/parallel/$SLUG"
 mkdir -p "$(dirname "$WT")"
 git worktree add "$WT" -b "${BR}-agent/parallel/$SLUG" "$BR"
+touch "$WT/.superra-probe" && rm -f "$WT/.superra-probe" || echo BLOCKED
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
   --to "$WT" --mode seed   # add --seed-sync-mode force-symlink for top-level symlinks instead of copies
 # dispatch implementer with Worktree: <absolute path to $WT>
