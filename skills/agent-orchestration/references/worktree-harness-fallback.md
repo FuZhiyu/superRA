@@ -59,15 +59,15 @@ Global-location worktrees (e.g. `~/.config/superpowers/worktrees/<project>/`) li
 
 ## Writable Workspace
 
-Harnesses confine writes to the session's working root plus configured extra roots. `cd` does not extend that boundary, and dispatched agents inherit it. Reads usually succeed anywhere, so probe a write before dispatching into a worktree:
+Probe a write before dispatching into a worktree — write boundaries do not follow `cd`, and dispatched agents inherit them:
 
 ```bash
 touch "$WT/.superra-probe" && rm -f "$WT/.superra-probe" || echo BLOCKED
 ```
 
-BLOCKED: register the worktree **root** — not each worktree — in the harness's writable-roots configuration, then re-probe. Read the harness config file or `--help` for the current key. Never widen access by disabling the sandbox or lowering the approval policy.
+BLOCKED: register the worktree **root** — not each worktree — in the harness's writable-roots configuration, then re-probe. Never widen access by disabling the sandbox or lowering the approval policy.
 
-Still BLOCKED: the session is confined to a harness-managed worktree, which no configuration lifts. Run the tasks serially in the current worktree instead of dispatching.
+Still BLOCKED: the session is confined to a harness-managed worktree. Run the tasks serially in the current worktree instead of dispatching.
 
 ## Gotchas
 

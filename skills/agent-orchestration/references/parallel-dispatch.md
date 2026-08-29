@@ -4,11 +4,11 @@ Load when dispatching agents in parallel or isolating an agent in its own worktr
 
 Candidates: independent tasks, or reviewers covering disjoint work — every `Depends on:` satisfied, no shared mutable state. **Prefer background dispatch.**
 
-Parallel agents **must** run in separate worktrees, one per agent, created before dispatch, per `references/worktree-harness-fallback.md`. The branch name carries a `/parallel/` infix (`<current-branch>-agent/parallel/<slug>`) so the `merge-guard` hook exempts the source ref on merge-back. Create the worktree yourself rather than letting the harness isolate the agent: harness-managed isolation picks its own branch name, base ref, and path, so it satisfies neither the `/parallel/` infix nor pre-dispatch seeding.
+Parallel agents **must** run in separate worktrees, one per agent, created before dispatch, per `references/worktree-harness-fallback.md`. The branch name carries a `/parallel/` infix (`<current-branch>-agent/parallel/<slug>`) so the `merge-guard` hook exempts the source ref on merge-back.
 
 Pass the absolute worktree path in the dispatch `Worktree:` field, plus this `Additionally:` steering:
 
-> *Work inside the worktree at `<path>`: address files by absolute path under it, and prefix each shell command with `cd <path> &&` — a working directory set once may not survive to the next command. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
+> *Work inside the worktree at `<path>`: address files by absolute path under it, and prefix each shell command with `cd <path> &&`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
 **Seeding data in:** `worktree-data-sync` in `--mode seed`.
 
