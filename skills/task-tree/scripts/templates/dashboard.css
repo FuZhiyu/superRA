@@ -555,8 +555,8 @@ body {
                      the header hamburger, with backdrop + focus trap, regardless
                      of pin state.
    A fourth class, .sb-touch, is added on coarse-pointer / no-hover devices
-   (matchMedia('(hover: none), (pointer: coarse)')). It disables the mouse-only
-   chrome (hover-rail, drag-resizer) and the JS picks pinned-vs-drawer from
+   (matchMedia('(hover: none), (pointer: coarse)')). It disables the hover-rail,
+   widens the drag-resizer to a touch hit area, and the JS picks pinned-vs-drawer from
    orientation/room instead of width; the pin toggle then maps pinned <-> drawer
    (never the unreachable hover auto-hide). The fine-pointer path is untouched.
    --sidebar-width is the user-resizable width (drag handle / keyboard), clamped

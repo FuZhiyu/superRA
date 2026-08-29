@@ -2647,22 +2647,35 @@ function sbTouchWantsDrawer() {
    aria-valuenow. Clamped by the caller. */
 function applySidebarWidth(w) {
   sbWidth = w;
+  renderSidebarWidth(w);
+}
+
+/* Paint a width without touching the sbWidth preference: the mode re-clamp
+   in applySidebarMode shows a narrower width while a drawer cap binds, but the
+   user's chosen width must survive rotating back to a roomier layout. */
+function renderSidebarWidth(w) {
   var ws = workspaceEl();
   if (ws) ws.style.setProperty('--sidebar-width', w + 'px');
   var rz = document.getElementById('sidebar-resizer');
-  if (rz) rz.setAttribute('aria-valuenow', String(w));
+  if (rz) {
+    rz.setAttribute('aria-valuenow', String(w));
+    rz.setAttribute('aria-valuemax', String(sidebarWidthMax()));
+  }
+}
+
+/* Reachable max for the current mode: the drawer is CSS-capped at 86vw, so
+   the JS cap matches and the handle never runs past the drawer's real edge. */
+function sidebarWidthMax() {
+  var ws = workspaceEl();
+  if (ws && ws.classList.contains('sb-drawer')) {
+    return Math.min(SB_WIDTH_MAX, Math.floor(window.innerWidth * 0.86));
+  }
+  return SB_WIDTH_MAX;
 }
 
 function clampSidebarWidth(w) {
   if (isNaN(w)) return SB_WIDTH_DEFAULT;
-  var max = SB_WIDTH_MAX;
-  var ws = workspaceEl();
-  /* Drawer: the CSS caps the drawer at 86vw, so clamp to the same cap so the
-     handle never runs past the drawer's real edge. */
-  if (ws && ws.classList.contains('sb-drawer')) {
-    max = Math.min(max, Math.floor(window.innerWidth * 0.86));
-  }
-  return Math.max(SB_WIDTH_MIN, Math.min(max, Math.round(w)));
+  return Math.max(SB_WIDTH_MIN, Math.min(sidebarWidthMax(), Math.round(w)));
 }
 
 /* Set the workspace mode class from capability, pin state, and viewport.
@@ -2695,10 +2708,9 @@ function applySidebarMode() {
      the workspace), so the header chrome keys off the body class to show it
      above the 860px width breakpoint (touch landscape collapsed to drawer). */
   document.body.classList.toggle('sb-drawer-mode', drawer);
-  /* The drawer cap (86vw) can be tighter than the desktop max; re-clamp so
-     the persisted width never exceeds what the current mode can show. */
-  var clamped = clampSidebarWidth(sbWidth);
-  if (clamped !== sbWidth) applySidebarWidth(clamped);
+  /* The drawer cap (86vw) can be tighter than the desktop max: show the
+     clamped width but keep the sbWidth preference intact. */
+  renderSidebarWidth(clampSidebarWidth(sbWidth));
   if (!unpinned) {
     /* Leaving the unpinned hover context: clear any reveal state. */
     ws.classList.remove('sb-revealed');
