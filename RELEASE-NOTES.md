@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Dashboard sidebar is resizable by touch: the drag handle now shows on iPad and other coarse-pointer devices, in the pinned layout and on the open drawer, and the chosen width survives the drawer's width cap.
+- Dashboard CSS/JS URLs carry a content hash, so a page reload after a server relaunch fetches the current assets instead of the hour-cached copy.
+
 ## [0.4.1] - 2026-08-19
 
 ### Changed

@@ -47,7 +47,7 @@
 {% if standalone %}
 <style>{{ standalone_assets.dashboard_css | safe }}</style>
 {% else %}
-<link rel="stylesheet" href="/static/dashboard.css">
+<link rel="stylesheet" href="/static/dashboard.css?v={{ asset_version }}">
 {% endif %}
 </head>
 <body>
@@ -269,7 +269,7 @@ var SEARCH_INDEX = {{ search_index | default([]) | tojson }};
 {% if standalone %}
 <script>{{ standalone_assets.dashboard_js | safe }}</script>
 {% else %}
-<script src="/static/dashboard.js"></script>
+<script src="/static/dashboard.js?v={{ asset_version }}"></script>
 {% endif %}
 </body>
 </html>

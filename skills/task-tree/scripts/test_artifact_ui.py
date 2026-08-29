@@ -620,3 +620,66 @@ class TestAttachmentSurfaceBrowser:
                 browser.close()
         finally:
             _stop_server(server, thread)
+
+
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestSidebarResizeBrowser:
+    def test_touch_drag_and_drawer_clamp_keep_the_preference(self, tmp_path):
+        """A finger drag on the handle resizes the pinned touch sidebar and
+        persists it; a viewport narrow enough to force the drawer shows the
+        86vw-capped width without overwriting the preference, which returns
+        intact once the viewport widens again."""
+        from playwright.sync_api import sync_playwright
+
+        root = _attachment_tree(tmp_path)
+        export = tmp_path / "dashboard.html"
+        export.write_text(
+            plan_dashboard.render_standalone_html(root), encoding="utf-8"
+        )
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            ctx = browser.new_context(
+                viewport={"width": 1024, "height": 768},
+                is_mobile=True, has_touch=True,
+            )
+            page = ctx.new_page()
+            page.goto(export.as_uri())
+            page.wait_for_selector("#nav-tree .task-row")
+            page.wait_for_timeout(300)
+            box = page.eval_on_selector(
+                "#sidebar-resizer",
+                "e => { const r = e.getBoundingClientRect(); return {x: r.x, w: r.width}; }",
+            )
+            assert box["w"] >= 24, "touch hit area too narrow"
+            cx = box["x"] + box["w"] / 2
+            page.mouse.move(cx, 400)
+            page.mouse.down()
+            page.mouse.move(cx + 120, 400, steps=6)
+            page.mouse.up()
+            width = page.eval_on_selector(
+                "#sidebar", "e => e.getBoundingClientRect().width"
+            )
+            assert abs(width - 400) < 1.5, f"pinned drag landed at {width}px"
+            assert page.evaluate("localStorage.getItem('dashboard-sidebar-width')") == "400"
+
+            # Narrow to a viewport whose 86vw cap (344) binds: drawer shows the
+            # capped width, aria-valuemax follows, the preference is untouched.
+            page.set_viewport_size({"width": 400, "height": 768})
+            page.wait_for_timeout(300)
+            page.click("#nav-hamburger")
+            page.wait_for_timeout(300)
+            drawer = page.eval_on_selector(
+                "#sidebar", "e => e.getBoundingClientRect().width"
+            )
+            assert abs(drawer - 344) < 1.5, f"drawer width {drawer}px, expected 344"
+            assert page.get_attribute("#sidebar-resizer", "aria-valuemax") == "344"
+            assert page.evaluate("sbWidth") == 400
+
+            page.set_viewport_size({"width": 1024, "height": 768})
+            page.wait_for_timeout(300)
+            restored = page.eval_on_selector(
+                "#sidebar", "e => e.getBoundingClientRect().width"
+            )
+            assert abs(restored - 400) < 1.5, f"width after widening {restored}px"
+            assert page.get_attribute("#sidebar-resizer", "aria-valuemax") == "480"
+            browser.close()
