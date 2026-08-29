@@ -1,6 +1,6 @@
 ---
 title: "Touch-Resizable Sidebar on iPad and Other Coarse-Pointer Devices"
-status: implemented
+status: approved
 depends_on: []
 ---
 
