@@ -1897,7 +1897,7 @@ class TestTouchSidebar:
         """Drawer mode hides the handle while closed and fixes it on the open
         drawer's edge, clamped to the drawer's 86vw cap in JS and CSS alike."""
         assert ".sb-drawer .sidebar-resizer { display: none; }" in BASE_HTML
-        assert ".sb-drawer.sb-drawer-open .sidebar-resizer {" in BASE_HTML
+        assert ".sb-touch.sb-drawer.sb-drawer-open .sidebar-resizer {" in BASE_HTML
         assert "window.innerWidth * 0.86" in BASE_HTML
 
     def test_hamburger_shown_in_drawer_mode_above_breakpoint(self):

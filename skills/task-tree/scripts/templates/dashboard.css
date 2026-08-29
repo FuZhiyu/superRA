@@ -711,10 +711,11 @@ body {
 }
 .sb-touch .sidebar-resizer:active::before,
 .workspace.sb-touch.sb-resizing .sidebar-resizer::before { background: var(--accent); }
-/* Drawer: hidden while closed; while open the handle is fixed on the drawer's
-   right edge (the drawer is fixed to the viewport, width capped at 86vw). */
+/* Drawer: hidden while closed and on a fine-pointer drawer (the desktop
+   path is unchanged); on an open touch drawer the handle is fixed on the
+   drawer's right edge (the drawer is fixed to the viewport, capped at 86vw). */
 .sb-drawer .sidebar-resizer { display: none; }
-.sb-drawer.sb-drawer-open .sidebar-resizer {
+.sb-touch.sb-drawer.sb-drawer-open .sidebar-resizer {
   display: block;
   position: fixed;
   top: 0; bottom: 0;

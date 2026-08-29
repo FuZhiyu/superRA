@@ -2668,7 +2668,7 @@ function renderSidebarWidth(w) {
 function sidebarWidthMax() {
   var ws = workspaceEl();
   if (ws && ws.classList.contains('sb-drawer')) {
-    return Math.min(SB_WIDTH_MAX, Math.floor(window.innerWidth * 0.86));
+    return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.floor(window.innerWidth * 0.86)));
   }
   return SB_WIDTH_MAX;
 }
@@ -2834,9 +2834,9 @@ function initSidebarResizer() {
     ws.classList.remove('sb-resizing');
     document.body.classList.remove('sb-resizing-active');
     try { rz.releasePointerCapture(ev.pointerId); } catch (e) {}
-    rz.removeEventListener('pointermove', onMove);
-    rz.removeEventListener('pointerup', onUp);
-    rz.removeEventListener('pointercancel', onUp);
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
     persistSidebarWidth();
   }
   rz.addEventListener('pointerdown', function(ev) {
@@ -2849,12 +2849,13 @@ function initSidebarResizer() {
     document.body.classList.add('sb-resizing-active');
     /* Unpinned + drag: keep the sidebar revealed so the user sees the resize. */
     revealSidebar();
-    /* Capture the pointer on the handle so a fast finger/mouse that leaves the
-       24px strip keeps driving the drag (touch and mouse alike). */
+    /* Capture the pointer so a touch that leaves the strip keeps driving the
+       drag; the listeners sit on window so the drag still ends cleanly when
+       capture is unavailable. */
     try { rz.setPointerCapture(ev.pointerId); } catch (e) {}
-    rz.addEventListener('pointermove', onMove);
-    rz.addEventListener('pointerup', onUp);
-    rz.addEventListener('pointercancel', onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   });
 
   /* Keyboard: ←/← nudge by 16px, Home/End jump to clamp bounds. */

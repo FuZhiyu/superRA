@@ -1181,10 +1181,11 @@ _VENDOR_ASSET_TYPES = {
 async def static_asset(name: str, request: Request):
     """Serve base.html's extracted CSS/JS and the vendored render libraries as
     cacheable static files instead of re-templating/re-fetching them on every
-    page load. ETag-revalidated so an edit during development (or a re-pin)
-    is picked up on the next request even under the 1-hour ``max-age``; the
-    standalone export inlines the same files verbatim instead (see
-    ``_build_standalone_assets``).
+    page load. ETag-revalidated for a conditional request, but under the
+    1-hour ``max-age`` a browser usually reuses its copy without asking, so
+    ``index`` versions the CSS/JS URLs with ``_asset_version`` to pick up an
+    edit on the next reload; the standalone export inlines the same files
+    verbatim instead (see ``_build_standalone_assets``).
     """
     if name in _VENDOR_ASSET_TYPES:
         content_type = _VENDOR_ASSET_TYPES[name]
