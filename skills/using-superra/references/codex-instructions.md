@@ -24,7 +24,7 @@ The user invoking `superRA:superimplement`, `superRA:superintegrate`, or `superR
 
 ## Codex Worktree Ownership
 
-Codex may run spawned agents in internal scratch workspaces. Never use `.codex/worktrees` or any Codex-internal path as a superRA worktree. For parallel dispatch, the orchestrator creates the git worktree at the `agent-orchestration` placement path, passes its absolute path in `Worktree:`, and the agent enters that path before editing.
+Codex may run spawned agents in internal scratch workspaces. Never use `.codex/worktrees` or any Codex-internal path as a superRA worktree — the orchestrator creates and passes the worktree per `agent-orchestration/references/parallel-dispatch.md`.
 
 ## Retired Named Agents
 
