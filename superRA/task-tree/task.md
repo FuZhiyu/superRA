@@ -25,7 +25,7 @@ The `task-tree` skill ships as `skills/task-tree/` — a routing `SKILL.md` over
 What the subtree delivered, one durable concern per surviving child:
 
 - **Core mechanics** — the stdlib data layer (`_task_io.py`, `_task_validate.py`), the packaged `superra` CLI, the migration script (`plan_migrate.py`), the status model (single `status` field, sibling-only deps, automatic rollup), and the test suite.
-- **Dashboard** — a FastAPI live SSE server with a master-detail workspace, DAG and kanban views, multi-worktree serving, and a self-contained static export.
+- **Dashboard** — a FastAPI live SSE server with a master-detail workspace, DAG and kanban views, multi-worktree serving, host-aware background lifecycle, and a self-contained static export.
 - **Agent interface** — the task tree as the workflow handoff surface: the universal interface in `using-superra`, comment surfacing in `task read`, and the planning / integration workflow redesigns.
 - **Later refinements** — Codex task-hook parity, frontmatter narrowed to `title`/`status`/`depends_on`, the consolidation + maturation stage redesign, task-edit discipline, and the dep-rewire restructuring hook.
 

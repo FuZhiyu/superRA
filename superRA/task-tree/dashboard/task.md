@@ -21,8 +21,6 @@ A full design review (backend `plan_dashboard.py` read line-by-line; frontend `b
 
 Shared conventions for the subtree: the test-suite invocation and `uv run --script` conventions are in repo `CLAUDE.md` §Local Task-Tree CLI Development (standing context — run both the dashboard and full script suites before reporting); `vendor/` is hand-managed and re-fetched per `vendor/README.md`, never generated; no generated-from-spec artifacts are in scope for these tasks.
 
-Dispatch note: the sibling `nonloopback-host-serve` task is `postponed` (researcher decision, 2026-08-02 — off the frontier until resumed). When it resumes it touches the background-supervisor region of `plan_dashboard.py`, so avoid running it in parallel with other work touching that file in one worktree, and coordinate ordering at dispatch time.
-
 ## Results
 
 The dashboard is a **FastAPI live server** that renders `skills/task-tree/scripts/templates/base.html` plus htmx-swapped partials in a master-detail workspace, with a **standalone-mode render** of the same template for static export. `base.html` now carries page structure and a small Jinja config block only; its ~1,760 CSS and ~3,000 JS lines live in `dashboard.css`/`dashboard.js`, which the live server serves cacheably (`GET /static/{name}`, SHA-256 ETag + 304) and the standalone export inlines. The server-side machinery (routes, SSE broadcast, watcher lifecycle, idle monitor, Jinja render helpers, standalone build, CLI, background supervisor) lives in `skills/task-tree/scripts/plan_dashboard.py`; the standalone render threads its tree/index/project-root state explicitly through the per-worktree `WorktreeState` seam, with no module-global render state left.
@@ -34,7 +32,7 @@ What shipped, past the original single-file static HTML the objective first scop
 - **Self-contained, offline export** — the static export base64-embeds figures and inlines every render library (markdown-it, KaTeX, highlight.js, DOMPurify, texmath, htmx, sse.js) alongside the extracted `dashboard.css`/`dashboard.js`, so a downloaded file renders fully offline; the only network reference is Google Fonts (system-font fallback).
 - **Offline-functional live mode** — live mode also loads every render library from the server's own `/static/…` route out of the hand-managed `vendor/` bundle rather than a CDN (htmx and sse.js were vendored to close the last two gaps); a blocked network degrades only typography, never rendering or SSE.
 - **Multi-worktree serving** — one server/port per repo resolves any worktree per request via `?wt=<wt_id>`; switching is client navigation, not a server-wide swap.
-- **Serve lifecycle** — background-by-default launch with idempotent reuse, idle self-exit, `stop`, and a loopback-default `--host` bind.
+- **Serve lifecycle** — background-by-default launch with idempotent reuse, idle self-exit, `stop`, and a loopback-default `--host` bind whose readiness probes, reuse checks, and printed worktree-scoped URLs follow an explicitly requested interface.
 
 Task content is escaped at a single server-side trust boundary: Jinja autoescape is on, titles and section previews render HTML as literal text, and markdown bodies keep full HTML through the client DOMPurify gate. The kanban card wires clicks through a delegated `data-path` handler instead of an interpolated inline `onclick`, and comment-anchor selectors use `CSS.escape` so a `"` in a `##` header no longer aborts comment loading. Client DOM writes continue to go through `textContent`/`escapeHtml` helpers and controlled markdown-it rewrites.
 
@@ -45,6 +43,10 @@ Preserved throughout: distinctive typography (Source Serif 4 + IBM Plex Mono via
 Blocking route work runs off the event loop: `/export`, `/api/worktrees`, `/api/comments/summary`, and the worktree cache-miss path of `resolve_worktree` hand their git-subprocess, tree-walk, render, and base64-encoding cores to `asyncio.to_thread`, while every mutation of shared server state (`_worktree_cache`, client sets, watcher maps) stays on the loop thread — so SSE heartbeats and cheap requests stay responsive during a slow export ([plan_dashboard.py](../../../skills/task-tree/scripts/plan_dashboard.py)).
 
 The server fails loudly and keeps its connection bookkeeping truthful. A `task.md` that fails to re-parse during a watcher rebuild logs to stderr and stamps a `parse_error` state — a `badge-error` badge plus a `data-parse-error` attribute on the node ([nav_node.html](../../../skills/task-tree/scripts/templates/nav_node.html)) — instead of silently serving the last-good parse. A slow SSE client whose queue overflows receives a `_QUEUE_CLOSE` sentinel that ends its stream through the normal disconnect path, restoring the invariant the idle monitor depends on: registered queues == open connections. The root-or-children snippet that was duplicated inline is now one shared precompiled `Template`, and the nav-node render helper uses a precompiled template instead of a per-call `env.from_string`.
+
+### Launch and reuse lifecycle protection
+
+The background supervisor derives its health-check address from `--host` and records `<pid> <port> <host>`, so readiness, failed-bind diagnosis, idempotent reuse, and cross-mode conflict checks all use the interface the server actually bound. Wildcard binds probe through loopback; an explicit LAN or Tailscale interface is probed directly, and loopback and wildcard launches keep their exact `localhost` output. Detail and known limits — reuse ignores a changed `--host`, and IPv6 literals are unsupported — are in [nonloopback-host-serve](nonloopback-host-serve/task.md).
 
 ### Shutdown lifecycle protection
 
