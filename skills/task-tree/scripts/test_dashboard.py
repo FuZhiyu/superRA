@@ -1884,10 +1884,21 @@ class TestTouchSidebar:
         assert "unpinned = false;" in BASE_HTML
 
     def test_mouse_only_chrome_disabled_on_touch(self):
-        """The hover-rail and the drag-resizer are fine-pointer affordances;
-        both are hidden under the .sb-touch guard."""
+        """The hover-rail is a fine-pointer affordance hidden under .sb-touch;
+        the drag-resizer stays, widened to a touch hit area with touch-action
+        opted out so a drag reaches the pointer handlers."""
         assert ".sb-touch .sidebar-rail { display: none; }" in BASE_HTML
-        assert ".sb-touch .sidebar-resizer { display: none; }" in BASE_HTML
+        assert ".sb-touch .sidebar-resizer { display: none; }" not in BASE_HTML
+        assert ".sb-touch .sidebar-resizer {" in BASE_HTML
+        assert "touch-action: none;" in BASE_HTML
+        assert "sbIsTouch()) return;" not in BASE_HTML
+
+    def test_resizer_rides_the_open_drawer_edge(self):
+        """Drawer mode hides the handle while closed and fixes it on the open
+        drawer's edge, clamped to the drawer's 86vw cap in JS and CSS alike."""
+        assert ".sb-drawer .sidebar-resizer { display: none; }" in BASE_HTML
+        assert ".sb-drawer.sb-drawer-open .sidebar-resizer {" in BASE_HTML
+        assert "window.innerWidth * 0.86" in BASE_HTML
 
     def test_hamburger_shown_in_drawer_mode_above_breakpoint(self):
         """A touch landscape iPad collapsed to the drawer sits above the 860px

@@ -658,7 +658,8 @@ body {
 
 /* Resize drag handle on the sidebar's right edge. A 7px hit area straddling
    the border; a visible grip line on hover/focus/active. role="separator",
-   keyboard-operable (←/→). Hidden in drawer mode (width is fixed there). */
+   keyboard-operable (←/→). Touch widens the hit area and shows a grip pill;
+   in drawer mode the handle rides the open drawer's edge (see below). */
 .sidebar-resizer {
   position: absolute;
   top: 0; bottom: 0;
@@ -687,10 +688,41 @@ body {
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 .sidebar-resizer:focus-visible { outline: none; }
+/* Touch (coarse pointer): a 7px strip is untappable, so widen the hit area to
+   24px straddling the edge, opt out of scroll/zoom gestures so a drag reaches
+   the pointer handlers, and show an always-visible grip pill so the affordance
+   is discoverable without hover. */
+.sb-touch .sidebar-resizer {
+  left: calc(var(--sidebar-width) - 12px);
+  width: 24px;
+  touch-action: none;
+}
+.sb-touch .sidebar-resizer::after { left: 11px; width: 2px; }
+.sb-touch .sidebar-resizer::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 8px;
+  width: 8px; height: 44px;
+  margin-top: -22px;
+  border-radius: 4px;
+  background: var(--border);
+  box-shadow: 0 0 0 1px var(--bg-alt);
+  transition: background 0.12s ease;
+}
+.sb-touch .sidebar-resizer:active::before,
+.workspace.sb-touch.sb-resizing .sidebar-resizer::before { background: var(--accent); }
+/* Drawer: hidden while closed; while open the handle is fixed on the drawer's
+   right edge (the drawer is fixed to the viewport, width capped at 86vw). */
 .sb-drawer .sidebar-resizer { display: none; }
-/* Touch: the 7px drag-resizer is a fine-pointer affordance; hide it on touch
-   (the pinned landscape sidebar keeps its persisted/default width, not drag). */
-.sb-touch .sidebar-resizer { display: none; }
+.sb-drawer.sb-drawer-open .sidebar-resizer {
+  display: block;
+  position: fixed;
+  top: 0; bottom: 0;
+  left: calc(min(var(--sidebar-width), 86vw) - 12px);
+  width: 24px;
+  z-index: 131;
+  touch-action: none;
+}
 /* While dragging: kill the slide transitions so the sidebar tracks the cursor
    1:1 (no lag/rubber-banding), and disable text selection page-wide. */
 .workspace.sb-resizing .nav-tree,

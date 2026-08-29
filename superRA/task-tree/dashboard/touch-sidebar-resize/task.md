@@ -1,6 +1,6 @@
 ---
 title: "Touch-Resizable Sidebar on iPad and Other Coarse-Pointer Devices"
-status: not-started
+status: implemented
 depends_on:  []
 ---
 
@@ -14,3 +14,12 @@ Files: `skills/task-tree/scripts/templates/dashboard.css` (§Resize drag handle,
 
 ## Results
 
+
+## Results
+
+Touch devices can now drag the sidebar edge in both the pinned landscape layout and the open drawer.
+
+- [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css) §Resize drag handle: `.sb-touch .sidebar-resizer` is a 24px strip with `touch-action: none` and an always-visible grip pill; `.sb-drawer.sb-drawer-open .sidebar-resizer` fixes the handle on the open drawer's edge at `min(--sidebar-width, 86vw)`.
+- [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js) `initSidebarResizer`: the coarse-pointer and narrow-width refusals are gone; the handle captures the pointer for the drag, measures from the viewport edge in drawer mode, and `clampSidebarWidth` caps at `0.86 * innerWidth` while a drawer; `applySidebarMode` re-clamps the persisted width on mode change.
+- Verification: `test_dashboard.py` template assertions updated (`TestTouchSidebar`); a Playwright touch drive (iPad 1024×768 pinned and 768×1024 drawer, `is_mobile`, `has_touch`) dragged the handle 280→400px in both modes with the width persisted to `localStorage` and the drawer staying open. The 20 `TestBackgroundLaunch`/idle-shutdown failures are sandbox process restrictions and fail identically on `main`.
+- Not covered: nav rows still ellipsize slug, title, and badge on one line, so a wide sidebar still hides part of a long title; wrapping touch rows is a separate design change.

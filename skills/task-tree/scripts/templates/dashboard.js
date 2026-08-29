@@ -2655,7 +2655,14 @@ function applySidebarWidth(w) {
 
 function clampSidebarWidth(w) {
   if (isNaN(w)) return SB_WIDTH_DEFAULT;
-  return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.round(w)));
+  var max = SB_WIDTH_MAX;
+  var ws = workspaceEl();
+  /* Drawer: the CSS caps the drawer at 86vw, so clamp to the same cap so the
+     handle never runs past the drawer's real edge. */
+  if (ws && ws.classList.contains('sb-drawer')) {
+    max = Math.min(max, Math.floor(window.innerWidth * 0.86));
+  }
+  return Math.max(SB_WIDTH_MIN, Math.min(max, Math.round(w)));
 }
 
 /* Set the workspace mode class from capability, pin state, and viewport.
@@ -2688,6 +2695,10 @@ function applySidebarMode() {
      the workspace), so the header chrome keys off the body class to show it
      above the 860px width breakpoint (touch landscape collapsed to drawer). */
   document.body.classList.toggle('sb-drawer-mode', drawer);
+  /* The drawer cap (86vw) can be tighter than the desktop max; re-clamp so
+     the persisted width never exceeds what the current mode can show. */
+  var clamped = clampSidebarWidth(sbWidth);
+  if (clamped !== sbWidth) applySidebarWidth(clamped);
   if (!unpinned) {
     /* Leaving the unpinned hover context: clear any reveal state. */
     ws.classList.remove('sb-revealed');
@@ -2799,31 +2810,39 @@ function initSidebarResizer() {
 
   function onMove(ev) {
     if (!dragging) return;
-    /* Width = cursor X relative to the workspace's left edge. */
-    var rect = ws.getBoundingClientRect();
-    applySidebarWidth(clampSidebarWidth(ev.clientX - rect.left));
+    /* Width = pointer X relative to the sidebar's left edge: the workspace
+       edge when laid out beside the content, the viewport edge (0) when the
+       drawer is fixed to the viewport. */
+    var left = ws.classList.contains('sb-drawer') ? 0 : ws.getBoundingClientRect().left;
+    applySidebarWidth(clampSidebarWidth(ev.clientX - left));
   }
-  function onUp() {
+  function onUp(ev) {
     if (!dragging) return;
     dragging = false;
     ws.classList.remove('sb-resizing');
     document.body.classList.remove('sb-resizing-active');
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
+    try { rz.releasePointerCapture(ev.pointerId); } catch (e) {}
+    rz.removeEventListener('pointermove', onMove);
+    rz.removeEventListener('pointerup', onUp);
+    rz.removeEventListener('pointercancel', onUp);
     persistSidebarWidth();
   }
   rz.addEventListener('pointerdown', function(ev) {
-    /* Drag only makes sense for a fine pointer with the sidebar laid out
-       (not drawer mode, not touch — the resizer is hidden there anyway). */
-    if (sbIsNarrow() || sbIsTouch()) return;
+    /* The handle is laid out beside the content (pinned/unpinned) or on the
+       open drawer's edge; a closed drawer hides it, so refuse a stray press. */
+    if (ws.classList.contains('sb-drawer') && !ws.classList.contains('sb-drawer-open')) return;
     ev.preventDefault();
     dragging = true;
     ws.classList.add('sb-resizing');
     document.body.classList.add('sb-resizing-active');
     /* Unpinned + drag: keep the sidebar revealed so the user sees the resize. */
     revealSidebar();
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    /* Capture the pointer on the handle so a fast finger/mouse that leaves the
+       24px strip keeps driving the drag (touch and mouse alike). */
+    try { rz.setPointerCapture(ev.pointerId); } catch (e) {}
+    rz.addEventListener('pointermove', onMove);
+    rz.addEventListener('pointerup', onUp);
+    rz.addEventListener('pointercancel', onUp);
   });
 
   /* Keyboard: ←/← nudge by 16px, Home/End jump to clamp bounds. */
