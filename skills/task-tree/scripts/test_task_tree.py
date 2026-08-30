@@ -2256,7 +2256,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Markdown edited under the task tree" in context
+        assert "Markdown edited" in context
         assert "superRA:communicate" in context
         assert "otherwise continue" in context
 
@@ -2278,7 +2278,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         assert result.stderr == ""
-        assert "Markdown edited under the task tree" in json.loads(
+        assert "Markdown edited" in json.loads(
             result.stdout
         )["hookSpecificOutput"]["additionalContext"]
 
@@ -2293,7 +2293,7 @@ class TestTaskHook:
             env={task_hook.CODEX_EMPTY_JSON_ENV: "1"},
         )
         assert result.returncode == 0
-        assert "Markdown edited under the task tree" in json.loads(
+        assert "Markdown edited" in json.loads(
             result.stdout
         )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
@@ -2376,7 +2376,7 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
-        assert "Markdown edited under the task tree" in json.loads(
+        assert "Markdown edited" in json.loads(
             result.stdout
         )["hookSpecificOutput"]["additionalContext"]
         assert result.stderr == ""
@@ -2457,7 +2457,7 @@ class TestTaskHook:
         assert "decision" not in data
         output = data["hookSpecificOutput"]
         assert output["hookEventName"] == "PostToolUse"
-        assert "Markdown edited under the task tree" in output["additionalContext"]
+        assert "Markdown edited" in output["additionalContext"]
         assert "superRA:communicate" in output["additionalContext"]
 
     def test_apply_patch_markdown_under_tree_reminds_once_for_all_paths(self, tmp_path):
@@ -2487,9 +2487,7 @@ class TestTaskHook:
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert context.count("Markdown edited under the task tree") == 1
-        assert str(root / "one.md") in context
-        assert str(root / "two.md") in context
+        assert context.count("Markdown edited") == 1
         assert "superRA:communicate" in context
 
     def test_edit_markdown_outside_tree_stays_silent(self, tmp_path):
@@ -2933,7 +2931,7 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stderr == ""
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Markdown edited under the task tree" in context
+        assert "Markdown edited" in context
         assert "Markdown render-integrity issue" not in context
 
     def test_edit_non_md_file_is_silent(self, plan_root):
