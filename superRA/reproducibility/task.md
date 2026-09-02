@@ -49,3 +49,35 @@ Give superRA projects one reproduction graph that agents author inside the task 
 - [CLAUDE.md](../../CLAUDE.md) — ownership table and the instruction gate every skill edit passes
 
 ## Results
+
+## Review Notes
+
+Planning review, design-review mode, over the parent and all ten children. `superra task check` is clean; the findings below are design and dependency issues the structural check does not see.
+
+### [BLOCKING]
+
+1. **The root-task `config` home contradicts the umbrella-optional contract.** `### Decisions` and [01-section-contract](01-section-contract/task.md) place `vars` / `runners` / `env_deps` / `code_roots` in `superRA/task.md` only, and make "a non-root task carrying `config`" a validation finding. [task-file-contract.md §Tree Shape](../../skills/task-tree/references/task-file-contract.md#L7) states the umbrella is optional and "an ordinary task, not a privileged one" — a decision the `task-tree` subtree landed and recorded in [its `## Results`](../task-tree/task.md). A project with no umbrella task has nowhere to put reproduction config. Fix: give config a home that does not require the umbrella (a sidecar file, or the nearest ancestor task carrying `config`), or reopen the umbrella-optional decision explicitly.
+
+2. **A committed `pytask.lock` and sandbox-rooted outs cannot both hold.** [02-runner](02-runner/task.md) commits the lock at a fixed project-relative path, and ids are `os.path.relpath` from the config root. [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md) routes `${OUT}` to `output/sandbox/<email-local-part>/<branch>/`, and [01-section-contract](01-section-contract/task.md) applies `${VAR}` interpolation to `outs` — so every out id embeds an author and a branch, and the committed lock churns per author and per branch. That defeats the portable lock that motivated the engine choice. Fix: decide whether the lock is committed only for canonical builds, gitignored, or whether out ids stay canonical with sandbox routing applied below the id; pin the project root and the lock path in the contract while deciding.
+
+3. **[06-skill](06-skill/task.md) cannot meet its acceptance criterion at its declared dependency point.** Its validation requires "an agent given only this skill and a fixture project registers a two-step pipeline that `repro build` executes", but `depends_on` is `01-section-contract` alone and §Execution order schedules 06 in parallel with [02-runner](02-runner/task.md). Fix: add `02-runner` to 06's `depends_on`, or move the live dry run to [07-workflow-integration](07-workflow-integration/task.md) or [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md).
+
+4. **[04-dashboard-view](04-dashboard-view/task.md) and [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md) form an acceptance cycle.** 04's validation requires "a manual pass on the TreasuryGIV pilot graph … with a screenshot in `attachments/`", while 08 lists 04 in `depends_on` — so 04 cannot reach approval until 08 runs. 08 already carries the same check ("the dashboard Reproduction view renders the graph and one node comment round-trips"). Fix: run 04's manual pass on a fixture graph and leave the real-graph verification in 08.
+
+5. **The stdlib read path has no bounded YAML subset.** `### Constraints` keeps the core "stdlib-only with lazy `pyyaml`" and 01 requires "a stdlib-only (no `pyyaml`) parse of a well-formed section", but [03-task-interface](03-task-interface/task.md), [04-dashboard-view](04-dashboard-view/task.md), and [05-reminder-hook](05-reminder-hook/task.md) all read the section on the bare-`python3` path, and the declared schema uses nested mappings, lists of mappings, and inline maps (`{path: …, sidecar: …}`). Hand-rolling that parser is unbounded scope. The repo hit this before and solved it by writing the comment sidecar as JSON, a strict YAML subset ([_comments.py:179](../../skills/task-tree/scripts/_comments.py#L179)). Fix: pin the supported subset in 01 and constrain the schema to it, reuse the JSON-subset approach, or accept `pyyaml` for reproduction reads and drop the criterion.
+
+6. **[05-reminder-hook](05-reminder-hook/task.md)'s trigger condition is unsatisfiable.** "no `## Reproduction` section changed in the same tool call" is never false: PostToolUse carries one `tool_input.file_path` per invocation ([task_hook.py:475](../../skills/task-tree/scripts/task_hook.py#L475)), so no Edit or Write touches both a producer and a task file. The reminder fires on every producer edit, including the one right after its step was registered, and the "edit-with-section-change (no reminder)" test case is unreachable. Fix: state the suppression window the design means — turn or session — and where that state lives.
+
+### [ADVISORY]
+
+7. **The `canon` never-built finding fires on every fresh clone.** [01-section-contract](01-section-contract/task.md) makes "a `canon` task with a step whose outs are absent" a validation finding and [03-task-interface](03-task-interface/task.md) runs the `reproduction` category by default, so `task check` is dirty on any checkout before the first build. Separate "declared and never produced anywhere" from "not built here".
+
+8. **§Execution order restates `depends_on`.** Every edge in that paragraph is already in the children's frontmatter, and its postponed note is the `status` field. Two copies drift; delete the paragraph.
+
+9. **`tier: task` collides with "task", the tree unit.** `--tier task`, "task-level edges", and "the task's tier" land in adjacent sentences. A value such as `local` reads unambiguously.
+
+10. **`### Decisions` is off the objective subsection vocabulary.** [task-file-contract.md §Task Anatomy](../../skills/task-tree/references/task-file-contract.md#L15) names `### Context` / `### Conventions` / `### Constraints`, and §Stale Content Checklist names "a 'Decisions' section" as content to fold into the objective or its constraints. Several bullets there are already constraints ("machine-specific files … are never dependencies"; "task `depends_on` stays sibling-only orchestration").
+
+11. **[08-pilot-treasurygiv](08-pilot-treasurygiv/task.md) bundles four review units** — worktree setup, registering 44 steps with tiers, a six-clause verification, and a cross-repo defect-routing protocol. Consider splitting registration from verification-and-harvest.
+
+12. **Stale line citation.** [04-dashboard-view](04-dashboard-view/task.md) cites `dashboard.js#L2246`; `buildChildFlow` is at line 2252.
