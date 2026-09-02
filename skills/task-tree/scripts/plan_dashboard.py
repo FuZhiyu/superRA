@@ -45,9 +45,18 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
+from _repro import REPRO_SECTION, build_graph, graph_to_dict
+from _repro_state import (
+    LOCK_FILENAME,
+    STATUSES,
+    ReproStateError,
+    compute_status,
+    runner_paths,
+)
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
+    parse_body_sections,
     _walk_children,
     collect_all_tasks,
     has_symlink_task_component,
@@ -408,10 +417,17 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     structural_parent_paths: set[str] = set()
     changed_paths: set[str] = set()
     artifact_changed_paths: set[str] = set()
+    repro_lock_changed = False
+    repro_graph_changed = False
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
         name = fp.name
+
+        # A build rewrote the committed lock, so every step's freshness moved.
+        if name == LOCK_FILENAME:
+            repro_lock_changed = True
+            continue
 
         artifact_owner = artifacts.artifact_owner_for_change(
             state.plan_root, state.task_index, fp
@@ -465,7 +481,14 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         any_children_changed = False
 
         for task_path in content_paths:
+            # Whether this edit can move the reproduction graph, decided before
+            # and after the reparse so both adding and removing a section
+            # counts. An edit to a task with no section on either side leaves
+            # the graph alone, and the view is not asked to refetch.
+            before = _declares_reproduction(_find_task(state, task_path))
             updated, children_changed = rebuild_state_task(state, task_path)
+            if before or _declares_reproduction(updated):
+                repro_graph_changed = True
             if children_changed:
                 # A task.md edit that changes this task's own child set is
                 # structural too — let the client rebuild the sidebar.
@@ -485,6 +508,9 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         if content_paths and state.root_task is not None:
             summary_html = _render_summary(state.root_task)
             await _broadcast("summary-updated", summary_html, state.wt_id)
+
+    if repro_lock_changed or repro_graph_changed:
+        await _broadcast("repro-updated", "{}", state.wt_id)
 
     # Companion changes never rebuild the task tree or active card. Emit one
     # bounded, current manifest for each owner so a Files view can refresh only
@@ -550,11 +576,45 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     if state is None:
         return
 
-    async for changes in watchfiles.awatch(state.plan_root, stop_event=stop_event):
-        # watchfiles already debounces (default 1600ms); the sleep adds a
-        # short extra window so rapid back-to-back writes coalesce.
-        await asyncio.sleep(0.2)
-        await _rebuild_and_broadcast(state, changes)
+    # The committed reproduction lock sits at the project root, outside the
+    # watched plan root, so a build would otherwise be invisible here. Watch the
+    # file itself — cheap and non-recursive — but it does not exist until the
+    # project's first build, and a watch set is fixed for the life of an
+    # ``awatch``. So while the lock is absent, ask ``awatch`` to yield on its
+    # timeout as well: that tick is what notices the first build, announces it,
+    # and re-enters with the lock in the set. Once the lock is watched the tick
+    # is off and the loop is event-driven again.
+    lock_file = Path(state.project_root) / LOCK_FILENAME
+
+    while not stop_event.is_set():
+        watching_lock = lock_file.is_file()
+        watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
+        rearm = False
+        watcher = watchfiles.awatch(
+            *watch_paths, stop_event=stop_event, yield_on_timeout=not watching_lock
+        )
+        try:
+            async for changes in watcher:
+                if changes:
+                    # watchfiles already debounces (default 1600ms); the sleep
+                    # adds a short extra window so rapid back-to-back writes
+                    # coalesce.
+                    await asyncio.sleep(0.2)
+                    await _rebuild_and_broadcast(state, changes)
+                if not watching_lock and lock_file.is_file():
+                    # The first build just wrote the lock. Its write is not in
+                    # this watch set, so announce it here rather than waiting
+                    # for the second build.
+                    await _broadcast("repro-updated", "{}", state.wt_id)
+                    rearm = True
+                    break
+        finally:
+            # Close the generator explicitly: breaking out of the `async for`
+            # only suspends it, and leaving it to the garbage collector is what
+            # orphans the native fsevents thread (see this function's docstring).
+            await watcher.aclose()
+        if not rearm:
+            return
 
 
 # ---------------------------------------------------------------------------
@@ -1329,6 +1389,138 @@ async def kanban_view(request: Request):
     return HTMLResponse(content=template.render(all_tasks=all_tasks))
 
 
+# --- Routes: GET /api/repro/graph, GET /api/repro/status --------------------
+#
+# Two read-only payloads behind the Reproduction view: the graph the tasks
+# declare (`_repro.graph_to_dict`) and the freshness the committed lock records
+# (`_repro_state.compute_status(...).to_dict()`).  Neither creates
+# `.superra-repro/` — only `ensure_state_dir`, which the runner owns, does that,
+# so a project that has never built stays untouched.  Both run off the event
+# loop: building the graph resolves `${VAR}`, which runs any `shell:` var the
+# project configured, and computing status hashes files.
+#
+# The status payload carries each step's log tail so the node detail panel needs
+# no third route and the standalone export's snapshot of these two is complete.
+
+REPRO_LOG_TAIL_LINES = 20
+REPRO_LOG_TAIL_BYTES = 64 * 1024
+REPRO_TIERS = ("canon", "local", "all")
+
+# How long one build may serve later requests. The view opens with two requests
+# milliseconds apart and each build resolves `reproduction.vars`, which the
+# project may point at a shell probe; the window is short so a var that reads
+# the environment is still re-resolved on the next repaint.
+REPRO_GRAPH_TTL = 2.0
+
+# worktree id -> (built at, tree signature, Graph)
+_repro_graph_cache: dict[str, tuple[float, tuple, object]] = {}
+
+
+def _declares_reproduction(task: Task | None) -> bool:
+    """True when *task*'s body carries a ``## Reproduction`` section."""
+    if task is None or not task.body:
+        return False
+    return REPRO_SECTION in parse_body_sections(task.body)
+
+
+def _repro_tree_signature(state: WorktreeState) -> tuple:
+    """Fingerprint of every file `build_graph` reads out of the tree."""
+    def _mtime(path: Path) -> int:
+        try:
+            return path.stat().st_mtime_ns
+        except OSError:
+            return -1
+
+    root = state.root_task
+    tasks = [root, *collect_all_tasks(root)] if root is not None else []
+    return (
+        str(state.plan_root),
+        _mtime(state.plan_root / "config.yaml"),
+        tuple((t.path, _mtime(t.dir_path / "task.md")) for t in tasks),
+    )
+
+
+def _repro_graph(state: WorktreeState):
+    """Build the graph over the worktree's already-walked tree, or reuse a
+    build made in the last `REPRO_GRAPH_TTL` seconds from the same files."""
+    signature = _repro_tree_signature(state)
+    cached = _repro_graph_cache.get(state.wt_id)
+    if (
+        cached is not None
+        and cached[1] == signature
+        and time.monotonic() - cached[0] < REPRO_GRAPH_TTL
+    ):
+        return cached[2]
+    graph = build_graph(
+        state.plan_root,
+        project_root=Path(state.project_root),
+        root=state.root_task,
+    )
+    _repro_graph_cache[state.wt_id] = (time.monotonic(), signature, graph)
+    return graph
+
+
+def _repro_graph_payload(state: WorktreeState) -> dict:
+    return graph_to_dict(_repro_graph(state))
+
+
+def _repro_status_payload(state: WorktreeState, tier: str) -> dict:
+    """Runner state for every declared step, each with its log tail.
+
+    Degrades instead of failing when the lock cannot be read (Python < 3.11 has
+    no ``tomllib``): the payload keeps its shape with no step entries, names the
+    reason in ``unavailable``, and leaves the view to read every step as
+    ``unknown`` off the graph.
+    """
+    project_root = Path(state.project_root)
+    graph = _repro_graph(state)
+    paths = runner_paths(project_root)
+    findings = [f.to_dict() for f in graph.findings]
+    try:
+        report = compute_status(graph, paths, tier=tier)
+    except ReproStateError as exc:
+        summary = {name: 0 for name in STATUSES}
+        summary["total"] = 0
+        return {
+            "root": str(project_root),
+            "tier": tier,
+            "ok": False,
+            "summary": summary,
+            "steps": [],
+            "external_inputs": [],
+            "findings": findings,
+            "unavailable": str(exc),
+        }
+    payload = report.to_dict()
+    for entry in payload["steps"]:
+        # Address the log by step name rather than by the path the on-disk run
+        # record carries, so nothing this route reads decides what it opens.
+        entry["log_tail"] = _log_tail(
+            paths.log_file(entry["name"]), REPRO_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES
+        )
+    return payload
+
+
+@app.get("/api/repro/graph")
+async def repro_graph(request: Request):
+    """The reproduction graph the tree's `## Reproduction` sections declare."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_graph_payload, state)
+
+
+@app.get("/api/repro/status")
+async def repro_status(request: Request, tier: str = "all"):
+    """Per-step freshness at *tier* (`canon`, `local`, or `all`)."""
+    if tier not in REPRO_TIERS:
+        raise HTTPException(status_code=400, detail=f"Unknown tier: {tier}")
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_status_payload, state, tier)
+
+
 # --- Route: GET /files/{path} ----------------------------------------------
 
 @app.get("/files/{path:path}")
@@ -1973,6 +2165,12 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     # /kanban — the full board.
     kanban_tmpl = env.get_template("kanban.html")
     fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
+
+    # Reproduction view — a snapshot of the graph and of the freshness state at
+    # export time. The client asks for the whole tier and filters client-side,
+    # so one status fragment serves every tier the exported view can select.
+    fragments["/api/repro/graph"] = _repro_graph_payload(state)
+    fragments["/api/repro/status?tier=all"] = _repro_status_payload(state, "all")
 
     return fragments
 
@@ -2957,10 +3155,26 @@ def serve_background(
     return 1
 
 
-def _log_tail(log_path: Path, lines: int = 20) -> str:
-    """Return the last *lines* lines of the log file, or '' if unreadable."""
+def _log_tail(log_path: Path, lines: int = 20, max_bytes: int | None = None) -> str:
+    """Return the last *lines* lines of the log file, or '' if unreadable.
+
+    *max_bytes* reads only that much from the end of the file, so a caller
+    tailing a log it did not write (a build step's stdout can run to megabytes)
+    never pulls the whole thing into memory. The first line of a truncated read
+    may be a partial line and is dropped.
+    """
     try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
+        if max_bytes is None:
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+        else:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                size = handle.tell()
+                handle.seek(max(0, size - max_bytes))
+                chunk = handle.read()
+            text = chunk.decode("utf-8", errors="replace")
+            if size > max_bytes:
+                text = text.split("\n", 1)[-1]
     except OSError:
         return ""
     return "\n".join(text.splitlines()[-lines:])
