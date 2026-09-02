@@ -215,14 +215,15 @@
       "id": "LC008",
       "area": "stage-protection",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L73-L73",
-        "skills/result-protection/SKILL.md#L10-L23"
+        "skills/using-superra/SKILL.md#L48-L48",
+        "skills/result-protection/SKILL.md#L10-L23",
+        "skills/reproducibility/SKILL.md#L12-L18"
       ],
       "trigger": "Dispatch has Stage: protection.",
       "expected_evidence": [
-        "structured table parse confirms the manifest maps protection to result-protection",
+        "structured table parse confirms the manifest maps protection to result-protection and reproducibility",
         "static parse confirms drift/regression reference routing for the active mechanism",
-        "live transcript shows result-protection loaded before writing or reviewing protection tests"
+        "live transcript shows result-protection and reproducibility loaded before writing or reviewing protection tests"
       ],
       "classification": [
         "ci_safe_static",
@@ -230,15 +231,15 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (protection -> result-protection row)"
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (protection -> result-protection + reproducibility row)"
         ],
         "fixture_unit": [
           "test_stage_loads_live.py (stage evaluator + schema/stage artifact)"
         ],
         "manual_live_claude": [
-          "stage_loads_live.py STAGE_ROWS[protection] (result-protection via Skill tool)"
+          "stage_loads_live.py STAGE_ROWS[protection] (result-protection + reproducibility via Skill tool)"
         ],
-        "notes": "Claude live-verified: protection loads result-protection."
+        "notes": "Claude live-verified: protection loads result-protection. The reproducibility half of the row is not live-verified yet."
       }
     },
     {

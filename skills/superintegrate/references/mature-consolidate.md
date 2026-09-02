@@ -26,7 +26,9 @@ Prompt:
     per `task-tree/references/task-file-contract.md` §Results Shape. Rewriting
     surviving task files down to terse is part of the job: load
     `superRA:communicate` and its `references/rewrite.md`; that bar applies to
-    every section you touch, not only new writes.
+    every section you touch, not only new writes. A fold moves the folded task's
+    `## Reproduction` steps into the target task's section; no canon step
+    disappears with a removed directory.
     Land recoverable commits per affected subtree.
 ```
 

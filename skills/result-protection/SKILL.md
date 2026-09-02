@@ -5,7 +5,7 @@ description: Protect key research results with permanent documentation, drift te
 
 # Result Protection
 
-Protect key results from unintended changes. Permanent results documentation suffices when the researcher chooses it; drift tests and other checks add automated protection where useful.
+Protect key results from unintended changes. Permanent results documentation suffices when the researcher chooses it; drift tests, a registered `## Reproduction` step with its committed lock (`superRA:reproducibility`), and other checks add automated protection where useful.
 
 ## References
 
