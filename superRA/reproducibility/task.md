@@ -8,12 +8,13 @@ depends_on: []
 
 Give superRA projects one reproduction graph that agents author inside the task tree, a runner that rebuilds only what changed, a dashboard view the researcher reviews and comments on, and workflow duties that keep the graph current. Prove it on TreasuryGIV, then BondElasticity.
 
-### Decisions
+### Context
 
 - **Engine: pytask 0.6.** Steps are generated in memory from task files and executed through `pytask.build(tasks=...)`; no `task_*.py` files exist in a project. pytask supplies sha256 content hashing with no size cap, early cutoff within a run, `--dry-run --explain`, the portable TOML `pytask.lock`, and `pytask-parallel`.
-- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers the task; `tier: canon` opts its steps into the default build, `tier: task` (the default) registers them as allowed-stale. The root `superRA/task.md` section carries project-wide config (variables, runner templates, env deps, code roots). Schema: [01-section-contract](01-section-contract/task.md).
+- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers the task; `tier: canon` opts its steps into the default build, `tier: local` (the default) registers them as allowed-stale. A `config` key (variables, runner templates, env deps, code roots) may appear in any task's section and governs that task's subtree, nearest ancestor winning; project-wide config sits in the umbrella `superRA/task.md`, which the shared-context rule permits creating for this purpose. The YAML is a bounded subset the stdlib parser reads. Schema: [01-section-contract](01-section-contract/task.md).
 - **Build unit is a step, never a task.** Step-to-step edges are inferred from files. Task `depends_on` stays sibling-only orchestration; task-level reproduction dependencies are derived from step files for display and consistency checks, never declared.
 - **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
+- **The committed lock keys nodes by logical path.** Lock ids are the variable-form paths (`${OUT}/…`) so they do not embed an author or branch; hashing happens on the paths resolved for the invocation. Switching roots therefore reports stale honestly and never rewrites ids.
 - **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The new `reproducibility` utility skill owns the discipline: when to register, tiers, the hashing model agents must understand, boundary inputs, check steps, graph review, and the Protect / completion duties.
 - **Enforcement:** instructions, a `task check` category, the IMPLEMENT completion gate on `repro status --tier canon`, and a PostToolUse reminder hook.
 - **Detection:** agents declare deps/outs in v1; the loader adds Julia `include` closures and configured env deps. A file-open tracer is a postponed follow-up.
@@ -35,10 +36,6 @@ Give superRA projects one reproduction graph that agents author inside the task 
 - **BondElasticity lessons** (`.plan/` records in that repo): lock what the paper shows, not intermediates; never hash PNGs, track a deterministic CSV companion; declared-but-unproduced outputs surface only in from-scratch builds; keep the interpreter pin in one place; a non-reproducible artifact belongs at the graph boundary; gate destructive wipes with a dry-run diff.
 - **TreasuryGIV structure:** 44 orchestrator steps in `Code/run_all_results.jl`, ~9 min end to end with the sysimage, 68% estimation. Output paths depend on `TREASURYGIV_WRITE_CANONICAL` plus author and branch slugs; reads prefer the sandbox mirror when it exists. Steps 13 and 25 read sandbox-only paths; steps 17-19 and 11-12 share output directories; step 38 reads two artifacts whose producers are commented out. Existing tests are four standalone Julia scripts with CSV baselines.
 - **superRA touch points** for the pipeline requirement today: `superplan/references/build-and-review.md` (pipeline file, self-review item 3), `econ-data-analysis/references/planning.md` §Pipeline File (a duplicate), `theory-modeling/references/planning.md` item 5, `superimplement/references/completion.md` §3, `superintegrate/references/{protect,integrate,finish}.md`, `result-protection/SKILL.md`, `implement-task/SKILL.md`, `using-superra/SKILL.md` Stage table (pinned by `tests/harness-instruction-following/test_contract.py`), `CATEGORIES.md`, `README.md`.
-
-### Execution order
-
-01 first. Then 02, 05, 06 in parallel. 03 and 04 after 02. 07 after 06. 08 after 02, 03, 04, 06. 09 and 10 are postponed follow-ups.
 
 ## Critical Files
 
