@@ -821,10 +821,29 @@ def test_a_var_that_only_reaches_cmd_invalidates_the_step(tmp_path, monkeypatch)
     monkeypatch.setenv("REPRO_TEST_MODE", "slow")
     entry = proj.status().entry("mode-step")
     assert entry.status == "stale"
-    assert entry.reason == "the step definition changed"
+    assert entry.reason == "the resolved command changed"
 
     assert proj.run("build") == 0
     assert proj.read("output/mode.txt") == "slow\n"
+
+
+@needs_pytask
+def test_a_declaration_edit_outranks_the_resolved_half(tmp_path, monkeypatch):
+    proj = Project(tmp_path / "modeproj")
+    proj.write("superRA/config.yaml", MODE_CONFIG)
+    proj.write("superRA/01-mode/task.md", TASK_MODE)
+    proj.write("Code/mode.sh", 'mkdir -p output\necho "$1" > output/mode.txt\n')
+
+    monkeypatch.setenv("REPRO_TEST_MODE", "fast")
+    assert proj.run("build") == 0
+
+    proj.write(
+        "superRA/01-mode/task.md",
+        TASK_MODE.replace(
+            "    deps:\n", "    params:\n      seed: 7\n    deps:\n"
+        ),
+    )
+    assert proj.status().entry("mode-step").reason == "the step definition changed"
 
 
 @needs_pytask
@@ -842,6 +861,23 @@ def test_restoring_the_input_clears_a_failed_step(project):
     before = project.run_times()
     assert project.run("build") == 0
     assert project.run_times() == before
+
+
+@needs_pytask
+def test_a_dep_edit_after_a_cleared_failure_names_what_changed(project):
+    project.run("build")
+    original = project.read("Code/b.sh")
+    project.write("Code/b.sh", "echo boom >&2\nexit 3\n")
+    assert project.run("build") == 1
+
+    project.write("Code/b.sh", original)
+    assert project.states("canon")["build-b"] == "fresh"
+
+    project.write("Code/b.sh", original + "# edited\n")
+    entry = project.status().entry("build-b")
+    assert entry.status == "failed"
+    assert entry.reason.startswith("dependency Code/b.sh changed")
+    assert f"{STATE_DIRNAME}/logs/build-b.log" in entry.reason
 
 
 @needs_pytask

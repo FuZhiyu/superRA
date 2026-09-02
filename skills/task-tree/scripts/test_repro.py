@@ -493,6 +493,25 @@ class TestGraphConstruction:
             "Manifest.toml",
         ]
 
+    def test_env_deps_interpolate_variables(self, tmp_path):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text(
+            "reproduction:\n"
+            "  vars:\n"
+            "    SCRATCH: build/scratch\n"
+            "  env_deps:\n"
+            '    - "${SCRATCH}/env.lock"\n',
+            encoding="utf-8",
+        )
+        _write_repro_task(
+            plan / "01-load", "Load", "steps:\n  - name: load\n    cmd: true\n"
+        )
+        dep = _graph(plan).step("load").deps[0]
+        assert (dep.logical, dep.resolved) == (
+            "${SCRATCH}/env.lock",
+            "build/scratch/env.lock",
+        )
+
     def test_julia_deps_pull_in_their_include_closure(self, tmp_path):
         plan = _plan(tmp_path)
         code = tmp_path / "Code"
@@ -745,6 +764,69 @@ class TestFindings:
             "steps:\n  - name: load\n    runner: julia\n    script: Code/run.jl\n",
         )
         assert _has(_graph(plan), "error", "which config.yaml does not define")
+
+    @pytest.mark.parametrize(
+        "block, fragment",
+        [
+            ("steps:\n  - cmd: true\n", "step 'name' must be a slug, found None"),
+            (
+                "steps:\n  - name: load panel\n    cmd: true\n",
+                "step 'name' must be a slug, found 'load panel'",
+            ),
+            (
+                "steps:\n  - name: load\n    kind: verify\n    cmd: true\n",
+                "has kind 'verify'",
+            ),
+            (
+                "steps:\n  - name: load\n    cmd: true\n    deps: Code/load.jl\n",
+                "'deps' must be a list",
+            ),
+            (
+                "steps:\n  - name: load\n    cmd: true\n    outs: out/panel.parquet\n",
+                "'outs' must be a list",
+            ),
+            (
+                "steps:\n  - name: load\n    cmd: true\n"
+                "    outs:\n      - checksum: out/panel.sha256\n",
+                "'outs' entries are a path, or 'path:' with an optional 'sidecar:'",
+            ),
+            (
+                "steps:\n  - name: load\n    cmd: true\n"
+                "    params:\n      window: [1, 2]\n",
+                "'params' must be a flat mapping",
+            ),
+        ],
+    )
+    def test_structural_step_errors(self, tmp_path, block, fragment):
+        plan = _plan(tmp_path)
+        _write_repro_task(plan / "01-a", "A", block)
+        graph = _graph(plan)
+        assert _has(graph, "error", fragment)
+        assert graph.steps == []
+
+    def test_runner_template_without_a_script_placeholder(self, tmp_path):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text(
+            "reproduction:\n  runners:\n    julia: julia --project=.\n", encoding="utf-8"
+        )
+        _write_repro_task(
+            plan / "01-a",
+            "A",
+            "steps:\n  - name: load\n    runner: julia\n    script: Code/run.jl\n",
+        )
+        graph = _graph(plan)
+        assert _has(graph, "error", "runner template 'julia' must contain '{script}'")
+        assert graph.steps == []
+
+    def test_env_deps_unknown_variable_is_a_config_error(self, tmp_path):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text(
+            'reproduction:\n  env_deps:\n    - "${MISSING}/env.lock"\n', encoding="utf-8"
+        )
+        _write_repro_task(
+            plan / "01-a", "A", "steps:\n  - name: load\n    cmd: true\n"
+        )
+        assert _has(_graph(plan), "error", "references unknown variable ${MISSING}")
 
     def test_dep_that_is_neither_produced_nor_on_disk(self, tmp_path):
         plan = _plan(tmp_path)
