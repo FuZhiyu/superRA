@@ -206,49 +206,63 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
 
     Fires when the file is a dep or script of a registered step (including a
     Julia include closure), or lies under a configured `code_roots` directory.
-    Task files never trigger. Fails open: no task tree beside the file, no
-    reproduction config anywhere, or any graph-construction problem is
-    silence, never a block.
+    Task files never trigger. The graph used for matching is built with
+    `resolve_vars=False` (`_repro.build_graph`) — no `${VAR}` resolution, so no
+    `env:`/`shell:` evaluation and no subprocess for *any* edit, producer or
+    not; a dep/out/script that still references an unresolved `${VAR}` simply
+    matches nothing, which is fine since it cannot name a real producer file
+    edited in this turn. Built at most once per distinct plan_root, so a
+    multi-file apply_patch does not rebuild per file. Fails open: no task tree
+    beside the file, no reproduction config anywhere, or any
+    graph-construction problem is silence, never a block.
     """
     candidates = [p for p in file_paths if p.name != "task.md"]
     if not candidates:
         return []
 
     _ensure_scripts_on_path()
+
+    by_plan_root: dict[Path, list[Path]] = {}
+    for file_path in candidates:
+        plan_root = _repro_plan_root_for_file(file_path)
+        if plan_root is not None:
+            by_plan_root.setdefault(plan_root, []).append(file_path)
+
     feedback: list[str] = []
     session_key: str | None = None
 
-    for file_path in candidates:
-        plan_root = _repro_plan_root_for_file(file_path)
-        if plan_root is None:
-            continue
+    for plan_root, paths in by_plan_root.items():
         project_root = plan_root.parent
         try:
             import _repro
-            graph = _repro.build_graph(plan_root, project_root=project_root)
+            graph = _repro.build_graph(
+                plan_root, project_root=project_root, resolve_vars=False
+            )
         except Exception:
             continue
         if not graph.steps and not graph.config.code_roots:
             continue  # no reproduction config anywhere: nothing to match
-        try:
-            rel = file_path.resolve().relative_to(project_root.resolve())
-        except (ValueError, OSError):
-            continue
-        rel_str = _repro._norm(rel.as_posix())
-        owners = _repro_owning_steps(graph, rel_str)
-        if not owners and not _repro_under_code_root(graph.config.code_roots, rel_str):
-            continue
-        if session_key is None:
-            session_key = _repro_session_key(data)
-        marker = _repro_marker_path(project_root, session_key, rel_str)
-        if marker.exists():
-            continue
-        feedback.append(_repro_message(rel_str, owners))
-        try:
-            marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.touch()
-        except OSError:
-            pass
+
+        for file_path in paths:
+            try:
+                rel = file_path.resolve().relative_to(project_root.resolve())
+            except (ValueError, OSError):
+                continue
+            rel_str = _repro._norm(rel.as_posix())
+            owners = _repro_owning_steps(graph, rel_str)
+            if not owners and not _repro_under_code_root(graph.config.code_roots, rel_str):
+                continue
+            if session_key is None:
+                session_key = _repro_session_key(data)
+            marker = _repro_marker_path(project_root, session_key, rel_str)
+            if marker.exists():
+                continue
+            feedback.append(_repro_message(rel_str, owners))
+            try:
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.touch()
+            except OSError:
+                pass
 
     return feedback
 
@@ -279,8 +293,12 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
     """Clear reminder markers for files this task's `## Reproduction` section names.
 
     Runs only when the just-edited task currently declares the section, so an
-    ordinary task.md edit costs nothing extra. Best-effort: any problem reading
-    the task or building the graph is silence, never a block.
+    ordinary task.md edit costs nothing extra. `resolve_vars=False` (see
+    `_reproduction_reminder`) keeps this subprocess-free and consistent: a
+    marker is only ever set for a literal (non-`${VAR}`) path, so clearing
+    with the same resolution mode looks up the identical resolved path.
+    Best-effort: any problem reading the task or building the graph is
+    silence, never a block.
     """
     task_dir = plan_root if task_path == "" else plan_root / task_path
     try:
@@ -295,7 +313,9 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
         _, body = task_io.parse_frontmatter(text)
         if _repro.REPRO_SECTION not in task_io.parse_body_sections(body):
             return
-        graph = _repro.build_graph(plan_root, project_root=plan_root.parent)
+        graph = _repro.build_graph(
+            plan_root, project_root=plan_root.parent, resolve_vars=False
+        )
     except Exception:
         return
 
