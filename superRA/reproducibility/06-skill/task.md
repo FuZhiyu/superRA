@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: implemented
+status: approved
 depends_on: [01-section-contract]
 ---
 
@@ -50,9 +50,3 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 ## Review Notes
 
 Thorough pass; focuses: correctness, scope-fidelity. Covered: the four files under `skills/reproducibility/` line by line against the CLAUDE.md three-test gate and §Skill Prose Style, and every command, flag, tier, state, and schema claim against the landed contract, the landed parser, and the `02-runner` / `03-task-interface` objectives. Not covered: behavior on a real pipeline, which [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) owns.
-
-1. `[BLOCKING]` — This task file lost its planner-owned `## Objective` tail, its whole `## Details` section, and its `## Results` heading. The edit truncates the SKILL.md bullet mid-token at [task.md:11](task.md#L11), dropping three of the four gate specifications, the three reference-file bullets, the validation-criteria bullet, all three `## Details` bullets, and the `## Results` heading — the written results now sit inside `## Objective`. Both lost sections are planner-owned ([task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Task Anatomy: "Implementers read it but do not rewrite it"), and every downstream reader, the maturation fold, and any re-implementation address `## Results` by heading. Fix: restore `## Objective` and `## Details` verbatim from `git show dc4232ff:superRA/reproducibility/06-skill/task.md`, add the `## Results` heading back, and move the four written subsections under it.
-   → implemented: [task.md](task.md) — `## Objective` and `## Details` restored verbatim from `dc4232ff`; the four written subsections now sit under a `## Results` heading. Cause was a `str.partition("## Results")` split that cut at the first literal `## Results` inside the objective's gate bullet.
-
-2. `[ADVISORY]` — [graph-authoring.md:9](../../../skills/reproducibility/references/graph-authoring.md#L9): "A per-step pin drifts as soon as one step is edited." follows a complete instruction and states only why it holds; §Skill Prose Style deletes rationale clauses.
-   → implemented: [graph-authoring.md:9](../../../skills/reproducibility/references/graph-authoring.md#L9) — rationale clause deleted; the bullet is now the instruction alone.
