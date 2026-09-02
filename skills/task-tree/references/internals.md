@@ -291,15 +291,15 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | Script | Purpose |
 |---|---|
 | `cli.py` | Console entry point — routes `superra task *` and `superra dashboard *` sub-commands, and hands `superra repro *` to `repro_run.py` |
-| `task_read.py` | Context-aware task reading with ancestor chain, dependency status, and unresolved comments |
+| `task_read.py` | Context-aware task reading with ancestor chain, dependency status, unresolved comments, and a registered task's reproduction step states and derived task edges |
 | `task_comment.py` | Read and resolve task comments: `list`, `list-tree`, `resolve` |
 | `task_create.py` | Create a new task directory with template `task.md` |
 | `task_update.py` | Update frontmatter fields on an existing task |
 | `task_add_result.py` | Append a finding to a task's `## Results` section |
-| `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
+| `task_query.py` | Query the tree: `--tree` (canon-tier badge, `--tier` filter), `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
-| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; use `task status fix` to repair branch status fields |
+| `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |
 | `repro_run.py` | `superra repro` — the pytask bridge for `build`, plus stdlib `status`, `explain`, `dag`, and `tier` |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
