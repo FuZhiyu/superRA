@@ -374,6 +374,49 @@ class TestIncludeClosure:
         assert found == []
         assert warnings_out == []
 
+    def test_project_root_anchored_includes_resolve(self, tmp_path):
+        """DrWatson's `projectdir` and a variable repo root are the dominant idioms."""
+        code = tmp_path / "Code"
+        (code / "Sub").mkdir(parents=True)
+        (code / "Sub" / "run.jl").write_text(
+            'include(projectdir("Code", "helpers.jl"))\n'
+            'include(projectdir("Code/paths.jl"))\n'
+            'include(joinpath(projectdir(), "Code", "io.jl"))\n'
+            'include(joinpath(REPO_ROOT, "Code", "stats.jl"))\n',
+            encoding="utf-8",
+        )
+        for name in ("helpers.jl", "paths.jl", "io.jl", "stats.jl"):
+            (code / name).write_text("# leaf\n", encoding="utf-8")
+
+        found, warnings_out = include_closure(code / "Sub" / "run.jl", tmp_path)
+        assert found == [
+            "Code/helpers.jl",
+            "Code/io.jl",
+            "Code/paths.jl",
+            "Code/stats.jl",
+        ]
+        assert warnings_out == []
+
+    def test_variable_root_falls_back_to_the_including_directory(self, tmp_path):
+        code = tmp_path / "Code"
+        code.mkdir()
+        (code / "run.jl").write_text(
+            'include(joinpath(HERE, "helper.jl"))\n', encoding="utf-8"
+        )
+        (code / "helper.jl").write_text("# leaf\n", encoding="utf-8")
+        found, warnings_out = include_closure(code / "run.jl", tmp_path)
+        assert found == ["Code/helper.jl"]
+        assert warnings_out == []
+
+    def test_two_argument_include_warns(self, tmp_path):
+        """`Base.include(mod, path)` evaluates into a module; the path is not static."""
+        code = tmp_path / "Code"
+        code.mkdir()
+        (code / "a.jl").write_text("include(mod, path)\n", encoding="utf-8")
+        found, warnings_out = include_closure(code / "a.jl", tmp_path)
+        assert found == []
+        assert "not a static path" in warnings_out[0]
+
     def test_dynamic_include_warns(self, tmp_path):
         code = tmp_path / "Code"
         code.mkdir()
