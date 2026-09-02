@@ -113,6 +113,8 @@ A step's state also moves when a `${VAR}` resolves differently — including one
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 
+The dashboard's **Reproduction** view renders the same graph for review: swimlanes by owner task, columns by dependency depth, each step coloured by its state, with a click opening the step's command, files, and log tail. A task page carrying a `## Reproduction` section shows its steps' current state as a table above the declaration, and the section's comment gutter is where a researcher pins graph feedback.
+
 ## Comments
 
 Researchers pin comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (`using-superra/SKILL.md §Task Interface`), so use these only for the standalone read/resolve loop:

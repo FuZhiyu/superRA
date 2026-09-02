@@ -45,6 +45,14 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
+from _repro import build_graph, graph_to_dict
+from _repro_state import (
+    LOCK_FILENAME,
+    STATUSES,
+    ReproStateError,
+    compute_status,
+    runner_paths,
+)
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
@@ -408,10 +416,16 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     structural_parent_paths: set[str] = set()
     changed_paths: set[str] = set()
     artifact_changed_paths: set[str] = set()
+    repro_lock_changed = False
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
         name = fp.name
+
+        # A build rewrote the committed lock, so every step's freshness moved.
+        if name == LOCK_FILENAME:
+            repro_lock_changed = True
+            continue
 
         artifact_owner = artifacts.artifact_owner_for_change(
             state.plan_root, state.task_index, fp
@@ -445,6 +459,9 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
                 structural_parent_paths.add(parent_path)
         else:
             changed_paths.add(task_path)
+
+    if repro_lock_changed:
+        await _broadcast("repro-updated", "{}", state.wt_id)
 
     if structural_parent_paths:
         # A task dir was added or deleted: the tree shape changed. The
@@ -550,7 +567,17 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     if state is None:
         return
 
-    async for changes in watchfiles.awatch(state.plan_root, stop_event=stop_event):
+    # The committed reproduction lock sits at the project root, outside the
+    # watched plan root, so a build would otherwise be invisible here. Watch the
+    # file itself — cheap and non-recursive — when it already exists; a project
+    # that has never built has no freshness to push, and the Reproduction view
+    # re-fetches on open regardless.
+    watch_paths: list[Path] = [state.plan_root]
+    lock_file = Path(state.project_root) / LOCK_FILENAME
+    if lock_file.is_file():
+        watch_paths.append(lock_file)
+
+    async for changes in watchfiles.awatch(*watch_paths, stop_event=stop_event):
         # watchfiles already debounces (default 1600ms); the sleep adds a
         # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
@@ -1329,6 +1356,94 @@ async def kanban_view(request: Request):
     return HTMLResponse(content=template.render(all_tasks=all_tasks))
 
 
+# --- Routes: GET /api/repro/graph, GET /api/repro/status --------------------
+#
+# Two read-only payloads behind the Reproduction view: the graph the tasks
+# declare (`_repro.graph_to_dict`) and the freshness the committed lock records
+# (`_repro_state.compute_status(...).to_dict()`).  Neither creates
+# `.superra-repro/` — only `ensure_state_dir`, which the runner owns, does that,
+# so a project that has never built stays untouched.  Both run off the event
+# loop: building the graph resolves `${VAR}`, which runs any `shell:` var the
+# project configured, and computing status hashes files.
+#
+# The status payload carries each step's log tail so the node detail panel needs
+# no third route and the standalone export's snapshot of these two is complete.
+
+REPRO_LOG_TAIL_LINES = 20
+REPRO_LOG_TAIL_BYTES = 64 * 1024
+REPRO_TIERS = ("canon", "local", "all")
+
+
+def _repro_graph(state: WorktreeState):
+    """Build the graph over the worktree's already-walked tree."""
+    return build_graph(
+        state.plan_root,
+        project_root=Path(state.project_root),
+        root=state.root_task,
+    )
+
+
+def _repro_graph_payload(state: WorktreeState) -> dict:
+    return graph_to_dict(_repro_graph(state))
+
+
+def _repro_status_payload(state: WorktreeState, tier: str) -> dict:
+    """Runner state for every declared step, each with its log tail.
+
+    Degrades instead of failing when the lock cannot be read (Python < 3.11 has
+    no ``tomllib``): the payload keeps its shape with no step entries, names the
+    reason in ``unavailable``, and leaves the view to read every step as
+    ``unknown`` off the graph.
+    """
+    project_root = Path(state.project_root)
+    graph = _repro_graph(state)
+    paths = runner_paths(project_root)
+    findings = [f.to_dict() for f in graph.findings]
+    try:
+        report = compute_status(graph, paths, tier=tier)
+    except ReproStateError as exc:
+        summary = {name: 0 for name in STATUSES}
+        summary["total"] = 0
+        return {
+            "root": str(project_root),
+            "tier": tier,
+            "ok": False,
+            "summary": summary,
+            "steps": [],
+            "external_inputs": [],
+            "findings": findings,
+            "unavailable": str(exc),
+        }
+    payload = report.to_dict()
+    for entry in payload["steps"]:
+        # Address the log by step name rather than by the path the on-disk run
+        # record carries, so nothing this route reads decides what it opens.
+        entry["log_tail"] = _log_tail(
+            paths.log_file(entry["name"]), REPRO_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES
+        )
+    return payload
+
+
+@app.get("/api/repro/graph")
+async def repro_graph(request: Request):
+    """The reproduction graph the tree's `## Reproduction` sections declare."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_graph_payload, state)
+
+
+@app.get("/api/repro/status")
+async def repro_status(request: Request, tier: str = "all"):
+    """Per-step freshness at *tier* (`canon`, `local`, or `all`)."""
+    if tier not in REPRO_TIERS:
+        raise HTTPException(status_code=400, detail=f"Unknown tier: {tier}")
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_status_payload, state, tier)
+
+
 # --- Route: GET /files/{path} ----------------------------------------------
 
 @app.get("/files/{path:path}")
@@ -1973,6 +2088,12 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     # /kanban — the full board.
     kanban_tmpl = env.get_template("kanban.html")
     fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
+
+    # Reproduction view — a snapshot of the graph and of the freshness state at
+    # export time. The client asks for the whole tier and filters client-side,
+    # so one status fragment serves every tier the exported view can select.
+    fragments["/api/repro/graph"] = _repro_graph_payload(state)
+    fragments["/api/repro/status?tier=all"] = _repro_status_payload(state, "all")
 
     return fragments
 
@@ -2957,10 +3078,26 @@ def serve_background(
     return 1
 
 
-def _log_tail(log_path: Path, lines: int = 20) -> str:
-    """Return the last *lines* lines of the log file, or '' if unreadable."""
+def _log_tail(log_path: Path, lines: int = 20, max_bytes: int | None = None) -> str:
+    """Return the last *lines* lines of the log file, or '' if unreadable.
+
+    *max_bytes* reads only that much from the end of the file, so a caller
+    tailing a log it did not write (a build step's stdout can run to megabytes)
+    never pulls the whole thing into memory. The first line of a truncated read
+    may be a partial line and is dropped.
+    """
     try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
+        if max_bytes is None:
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+        else:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                size = handle.tell()
+                handle.seek(max(0, size - max_bytes))
+                chunk = handle.read()
+            text = chunk.decode("utf-8", errors="replace")
+            if size > max_bytes:
+                text = text.split("\n", 1)[-1]
     except OSError:
         return ""
     return "\n".join(text.splitlines()[-lines:])
