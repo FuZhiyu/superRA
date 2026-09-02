@@ -280,6 +280,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
 | `_task_validate.py` | Validation suite — one owner per validity rule, single message source; owns the shared `Finding` shape |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
+| `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering, tier editing |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
 | `_worktree_discovery.py` | Worktree discovery — enumerate git worktrees, identify those with a task root |
 
@@ -287,7 +288,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 
 | Script | Purpose |
 |---|---|
-| `cli.py` | Console entry point — routes `superra task *` and `superra dashboard *` sub-commands |
+| `cli.py` | Console entry point — routes `superra task *` and `superra dashboard *` sub-commands, and hands `superra repro *` to `repro_run.py` |
 | `task_read.py` | Context-aware task reading with ancestor chain, dependency status, and unresolved comments |
 | `task_comment.py` | Read and resolve task comments: `list`, `list-tree`, `resolve` |
 | `task_create.py` | Create a new task directory with template `task.md` |
@@ -297,6 +298,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; use `task status fix` to repair branch status fields |
+| `repro_run.py` | `superra repro` — the pytask bridge for `build`, plus stdlib `status`, `explain`, `dag`, and `tier` |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |
@@ -315,4 +317,5 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
+| `test_repro_runner.py` | Runner — hash cache, status classification, target selection, tier editing, and, when pytask is installed, build, rerun, and lock behavior |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

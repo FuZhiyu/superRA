@@ -71,6 +71,7 @@ Field-by-field anatomy and body-section ownership: `references/task-file-contrac
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Validate tree structure, fix status inconsistencies, diagnose orphaned `depends_on` entries | `references/commands.md §Diagnostics` |
+| Rebuild declared steps, report step freshness, set a task's reproduction tier | `references/commands.md §Reproduction` |
 | Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
 | Task companion-file classification, placement, reproducibility, promotion, and maturation | `../using-superra/references/task-companion-files.md` |
 | Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |

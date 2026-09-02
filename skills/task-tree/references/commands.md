@@ -81,6 +81,35 @@ superra task status propagate         # re-run parent status rollup after bulk e
 
 Findings are prefixed `[ERROR]` (blocking; tree inconsistent), `[WARNING]` (advisory), or `[INFO]`. After recovering from a raw `mv` / `git mv`, run the check before the next dispatch.
 
+## Reproduction
+
+`superra repro` runs the build graph the `## Reproduction` sections declare (schema: [task-file-contract.md](task-file-contract.md) §Reproduction Section).
+
+```bash
+superra repro status                      # every canon step's freshness; exits 1 unless all are fresh
+superra repro status --tier all --json    # the shape `task read` and the dashboard consume
+superra repro build                       # rebuild the stale canon steps
+superra repro build 02-merge -j 4         # a step name or a task path, plus its stale ancestors
+superra repro build --dry-run             # what would run, and why
+superra repro explain build-panel         # one step: state, changed nodes, upstream, log
+superra repro dag --mermaid               # the step graph
+superra repro tier 02-merge canon         # set a task's tier
+```
+
+`--tier` defaults to `canon` for `build` and `status`. An explicit build target overrides the tier, and any selection pulls the stale ancestors it needs.
+
+| State | Meaning |
+|---|---|
+| `fresh` | Every recorded input and output still matches. |
+| `stale` | A dep, an out, the step definition, or an upstream step changed. |
+| `missing` | Never built, or an out is gone. |
+| `failed` | The last run exited non-zero; the reason names its log. |
+| `external` | A dep no step produces is not on disk, so the step cannot run. |
+
+`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
+
+Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
+
 ## Comments
 
 Researchers pin comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (`using-superra/SKILL.md §Task Interface`), so use these only for the standalone read/resolve loop:

@@ -1,6 +1,6 @@
 ---
 title: "Build the `superra repro` Runner on pytask"
-status: not-started
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -25,3 +25,35 @@ Ship `superra repro`, the command that rebuilds stale steps of the graph from [0
 - Survey evidence for the design: pytask handled the Julia subprocess pattern, `--dry-run --explain` named the changed helper file, and `DirectoryNode` hashed files inside directories in the 2026-09-02 tool survey.
 
 ## Results
+
+`superra repro` ships with five subcommands — `build`, `status`, `explain`, `dag`, `tier` — over the graph [01-section-contract](../01-section-contract/task.md) built. Only `build` needs pytask.
+
+### What later tasks call
+
+- **[repro_run.py](../../../skills/task-tree/scripts/repro_run.py)** — the PEP 723 entry pinning `pytask>=0.6,<0.7`, `pytask-parallel`, and `pyyaml`. [cli.py](../../../skills/task-tree/scripts/cli.py) hands it every `repro` argument before argparse runs, so the flag surface has one owner and the `./superRA/superra` wrapper needed no change. When the running interpreter is short of what a subcommand needs, `main` re-execs the script under `uv run --script`, which provisions that block; `SUPERRA_REPRO_REEXEC` stops a loop.
+- **[_repro_state.py](../../../skills/task-tree/scripts/_repro_state.py)** — stdlib runner state. `compute_status(graph, paths, tier=…)` returns a `StatusReport` whose `to_dict()` is the `--json` contract [03-task-interface](../03-task-interface/task.md) and [04-dashboard-view](../04-dashboard-view/task.md) consume; `select_steps`, `render_dag`, `set_tier`, and `HashCache` are separately callable.
+
+`status`, `explain`, `dag`, and `tier` never import pytask, so the task CLI and the dashboard can show reproduction state on a machine that has never built.
+
+### The three decisions the engine bridge turned on
+
+- **Nodes are runner-owned and deliberately not `PPathNode`.** pytask derives a path node's lock id from its resolved path (`_pytask/lockfile.py`, `build_portable_node_id`), which would embed whatever `${OUT}` expanded to. `FileNode` keeps the logical path in `name` — the id pytask falls back to for a plain `PNode` — and hashes `resolved`, so the committed lock reads the same on every checkout. pytask creates a product's parent directory only for a `PPathNode`, so the step function does it instead.
+- **The task state is the constant `"1"`.** `TaskWithoutPath` hashes its function's source, and every generated step shares one function: that hash gives no granularity and would invalidate a whole project's graph on any runner-source edit. `SpecNode` supplies the granularity — one hash over `cmd`, `params`, and the logical dep and out lists, so a step-definition edit invalidates that step alone. It hashes the **logical** command, so switching `${OUT}` roots reports stale through the resolved files' hashes rather than through the spec.
+- **Status recomputes freshness from the committed lock, not from pytask.** pytask itself skips from the lock whenever one exists (`_pytask/state.py`, `has_node_changed`), so reading the same record applies the same rule without the engine — the reason `status --json` costs no pytask install. `pytask.build(tasks=…, paths=[])` with the cwd at the project root roots pytask there while collecting nothing from disk; the runner warns if pytask still roots elsewhere.
+
+### Behavior worth knowing
+
+- **Step states.** `fresh`, `stale`, `missing` (never built, or an out is gone), `failed` (last run exited non-zero), and `external` — a dep no step produces is not on disk, so the step cannot run. A fresh step downstream of a non-fresh one becomes `stale` with an upstream reason. `status` exits 1 unless every reported step is fresh, which is what the IMPLEMENT gate in [07-workflow-integration](../07-workflow-integration/task.md) can read.
+- **The state directory is `.superra-repro/`** at the project root — hash cache, per-step logs, per-step run records, check stamps — created and appended to `.gitignore` on the first command against a tree that declares steps, so a project with no graph stays untouched. One run record per step rather than one shared file keeps `-j` runs race-free.
+- **`-j N` runs the threads backend.** Steps are subprocesses, so the GIL is free while they run and no closure or cache has to survive pickling.
+- **A sidecar is hashed wherever its out appears** — as the producer's product and as any consumer's dep — so both sides agree on one state for one lock id and the large file is never read. The runner writes the sidecar after a successful run unless the step rewrote it during that run.
+- **`--dry-run` turns on pytask's `--explain`**, so it names what changed rather than only listing what would run.
+- **`--tier` (default `canon`) picks the default build and scopes `status`; an explicit target overrides it**, and any selection pulls the stale ancestors it needs whatever tier they carry.
+
+### Validation
+
+41 tests in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py) — 19 stdlib, 22 gated on pytask. The suite is 950 with pytask; on the pytask-free baseline command it is 928 passed and 22 skipped, up from the 909 baseline.
+
+Coverage follows the objective's list, plus: an out deleted by hand, a `params` edit invalidating one step, a failing step's log and its blocked descendants, `--force`, `--dry-run` writing nothing, `-j 2`, a sidecar-tracked out staying fresh after the out is hand-edited, tier-scoped reporting, `tier` inserting the key when absent, a tree with no steps leaving no state behind, and `cli.py` routing.
+
+Command surface in [commands.md](../../../skills/task-tree/references/commands.md) §Reproduction, scripts in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory, and a routing row in [SKILL.md](../../../skills/task-tree/SKILL.md).
