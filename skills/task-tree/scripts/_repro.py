@@ -841,6 +841,8 @@ def _build_step(
     config: ReproConfig,
     project_root: Path,
     warn: Callable[[str], None],
+    *,
+    strict_vars: bool = True,
 ) -> Step:
     if not isinstance(raw, dict):
         raise _StepError("each entry of 'steps' must be a mapping")
@@ -934,12 +936,15 @@ def _build_step(
             unknown_vars += unknown
         step.outs.append(Out(path=ref, sidecar=sidecar))
 
-    if unknown_vars:
+    if unknown_vars and strict_vars:
         missing = ", ".join(f"${{{v}}}" for v in sorted(set(unknown_vars)))
         raise _StepError(
             f"step {name!r} references unknown variable {missing}; "
             f"define it under reproduction.vars in {CONFIG_FILENAME}"
         )
+    # strict_vars=False (`resolve_vars=False` in build_graph): unresolved
+    # `${VAR}` references are left as literal placeholder text by `interpolate`
+    # rather than raised here — such a field simply matches no real file.
 
     step.deps = _expand_deps(step, config, project_root, warn)
     return step
@@ -1001,11 +1006,21 @@ def build_graph(
     root: Task | None = None,
     env: dict[str, str] | None = None,
     shell_runner: ShellRunner | None = None,
+    resolve_vars: bool = True,
 ) -> Graph:
     """Parse the tree into a validated reproduction graph.
 
     Every problem becomes a ``Finding`` on the returned graph; the walk never
     raises, so a partially broken tree still yields the steps that do parse.
+
+    ``resolve_vars=False`` skips ``reproduction.vars`` resolution entirely —
+    no ``env:``/``shell:`` evaluation, so no subprocess and no environment
+    lookups — for callers that only need `code_roots` and literal
+    (non-``${VAR}``) dep/script paths, such as the reminder hook's relevance
+    check. In that mode a dep, out, cmd, or script that still references an
+    unresolved ``${VAR}`` keeps the placeholder text (so it matches no real
+    file) instead of raising the usual unknown-variable finding; `code_roots`
+    is unaffected either way, since it is never `${VAR}`-interpolated.
     """
     plan_root = Path(plan_root)
     project_root = Path(project_root) if project_root else plan_root.resolve().parent
@@ -1024,11 +1039,14 @@ def build_graph(
     raw_config, config_errors = load_project_config(plan_root)
     for message in config_errors:
         _finding("", "error", message)
-    variables, var_errors = resolve_variables(
-        raw_config.get("vars"), project_root, env=env, shell_runner=shell_runner
-    )
-    for message in var_errors:
-        _finding("", "error", f"{CONFIG_FILENAME}: {message}")
+    if resolve_vars:
+        variables, var_errors = resolve_variables(
+            raw_config.get("vars"), project_root, env=env, shell_runner=shell_runner
+        )
+        for message in var_errors:
+            _finding("", "error", f"{CONFIG_FILENAME}: {message}")
+    else:
+        variables = {}
     runners = raw_config.get("runners") or {}
     if not isinstance(runners, dict):
         _finding("", "error", f"{CONFIG_FILENAME}: 'runners' must be a mapping")
@@ -1090,6 +1108,7 @@ def build_graph(
                     graph.config,
                     project_root,
                     lambda message, path=task.path: _finding(path, "warning", message),
+                    strict_vars=resolve_vars,
                 )
             except _StepError as exc:
                 _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
