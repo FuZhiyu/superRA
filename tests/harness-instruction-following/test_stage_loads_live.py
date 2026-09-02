@@ -71,10 +71,13 @@ def test_table_matches_manifest_stage_rows():
         by_stage["planning-review"].expected
         == "skills/superplan/references/planning-review.md"
     )
-    assert by_stage["protection"].expected_skills == ("result-protection",)
+    assert by_stage["protection"].expected_skills == (
+        "result-protection",
+        "reproducibility",
+    )
     assert by_stage["sync"].expected_skills == ("semantic-merge",)
     assert by_stage["integration"].expected_skills == ("refactor-and-integrate",)
-    # maturation is the positive multi-skill stage: task-tree + superplan always
+    # maturation is the other positive multi-skill stage: task-tree + superplan always
     # load; academic-writing is conditional ("prose-heavy maturation") so it is NOT a
     # guaranteed-load assertion.
     assert by_stage["maturation"].channel == CHANNEL_SKILL
@@ -84,6 +87,7 @@ def test_table_matches_manifest_stage_rows():
     assert "documentation" not in by_stage
     assert ALL_STAGE_SKILLS == {
         "result-protection",
+        "reproducibility",
         "semantic-merge",
         "refactor-and-integrate",
         "task-tree",
@@ -115,7 +119,7 @@ def test_stage_row_unknown_raises():
 def test_green_skill_stage_loaded_before_edit():
     row = stage_row("protection")
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("result-protection", 0)],
+        skill_tool_events=[("result-protection", 0), ("reproducibility", 1)],
         edit_event_indices=[3],
     )
     report = StageLoadReport()
@@ -130,7 +134,10 @@ def test_green_skill_stage_loaded_as_plugin_qualified_name():
     # the loads are real, so this must be green, not a false negative.
     row = stage_row("protection")
     evidence = evidence_from_hook_records(
-        skill_tool_events=[("superRA:result-protection", 0)],
+        skill_tool_events=[
+            ("superRA:result-protection", 0),
+            ("superRA:reproducibility", 1),
+        ],
         edit_event_indices=[3],
     )
     report = StageLoadReport()
@@ -142,13 +149,14 @@ def test_green_all_skill_stages_loaded_plugin_qualified():
     # The exact live-run shape: every stage skill recorded with the superRA:
     # prefix plus the always-loaded using-superra; all four stages must pass.
     for stage, qualified in (
-        ("protection", "superRA:result-protection"),
-        ("sync", "superRA:semantic-merge"),
-        ("integration", "superRA:refactor-and-integrate"),
+        ("protection", ("superRA:result-protection", "superRA:reproducibility")),
+        ("sync", ("superRA:semantic-merge",)),
+        ("integration", ("superRA:refactor-and-integrate",)),
     ):
         row = stage_row(stage)
+        events = [(name, index) for index, name in enumerate(qualified)]
         evidence = evidence_from_hook_records(
-            skill_tool_events=[(qualified, 0), ("superRA:using-superra", 1)],
+            skill_tool_events=[*events, ("superRA:using-superra", len(events))],
             edit_event_indices=[3],
         )
         report = StageLoadReport()
@@ -370,7 +378,7 @@ def test_evaluate_all_green_across_all_stages():
             read_tool_events=[(f"/p/{_PLANNING_REF}", 0)],
         ),
         "protection": evidence_from_hook_records(
-            skill_tool_events=[("result-protection", 0)],
+            skill_tool_events=[("result-protection", 0), ("reproducibility", 1)],
         ),
         "sync": evidence_from_hook_records(
             skill_tool_events=[("semantic-merge", 0)],

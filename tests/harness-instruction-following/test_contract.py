@@ -171,7 +171,7 @@ def test_skill_load_manifest_tables_match_contract():
     assert stage_loads == {
         "planning-review": ("skills/superplan/references/planning-review.md",),
         "implementation": (),
-        "protection": ("result-protection",),
+        "protection": ("result-protection", "reproducibility"),
         "sync": ("semantic-merge",),
         "integration": ("refactor-and-integrate",),
         "maturation": ("task-tree", "superplan", "academic-writing"),
