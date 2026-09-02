@@ -8,15 +8,19 @@
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
 calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
 In both cases it runs the same best-effort reconcile — validate the tree and
-propagate parent status. It does not write the dashboard; a static dashboard is
-produced only on explicit `superra dashboard export`. Always exits 0 — never
-blocks the agent. Validation warnings and non-fatal reconcile failures are
-injected through PostToolUse JSON on stdout; successful/ignored paths stay silent
-except in Codex empty-JSON mode, where no-feedback paths emit `{}` because
-Codex requires parseable hook JSON.
+propagate parent status. It also reminds, once per file per session, when an
+Edit/Write/apply_patch touches a file the reproduction graph tracks as a
+step's dep/script or a `code_roots` producer (see `_reproduction_reminder`).
+It does not write the dashboard; a static dashboard is produced only on
+explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
+Validation warnings and non-fatal reconcile failures are injected through
+PostToolUse JSON on stdout; successful/ignored paths stay silent except in
+Codex empty-JSON mode, where no-feedback paths emit `{}` because Codex
+requires parseable hook JSON.
 
 PostToolUse stdin format:
   {
+    "session_id": "...",
     "tool_name": "Edit" | "Write" | "Bash" | "apply_patch" | ...,
     "tool_input": {"file_path": "/abs/path/to/file", "command": "...", ...},
     "tool_response": {...}
@@ -25,10 +29,12 @@ PostToolUse stdin format:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import sys
+import time
 import warnings
 from pathlib import Path
 
@@ -38,6 +44,12 @@ LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 CODEX_EMPTY_JSON_ENV = "SUPERRA_TASK_HOOK_EMPTY_JSON"
 _CODEX_EMPTY_JSON_MODE = False
+
+# Reproduction reminder: a gitignored state dir, sibling of the task root, that
+# holds one empty marker file per (session, resolved producer path) already
+# reminded. `02-runner`'s own state directory is expected to reuse this name.
+REPRO_STATE_DIRNAME = ".superra-repro"
+REPRO_MARKER_SUBDIR = "hook-markers"
 
 
 def _scripts_dir() -> Path:
@@ -122,6 +134,197 @@ def _communicate_reminder(file_paths: list[Path]) -> list[str]:
         "meant for a user to read, make sure they follow `superRA:communicate` and its "
         "`references/markdown.md`; otherwise continue."
     ]
+
+
+def _repro_plan_root_for_file(file_path: Path) -> Path | None:
+    """Walk up from an edited file to the nearest task tree beside it.
+
+    A producer file (script, helper) usually lives beside the task tree, not
+    inside it, so this looks for a `superRA/`/`.plan/` *child* at each
+    ancestor level — unlike `_find_plan_root`, which expects the task tree
+    itself among the file's own ancestors. Never touches process cwd, so a
+    file resolves to the same project regardless of where the hook subprocess
+    was launched from.
+    """
+    current = file_path.parent
+    while True:
+        for dirname in TASK_ROOT_DIRNAMES:
+            candidate = current / dirname
+            if candidate.is_dir():
+                return candidate
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def _repro_session_key(data: dict) -> str:
+    """One key per session; a payload with no session id dedupes hourly instead.
+
+    Both Claude Code's and Codex's PostToolUse payloads carry `session_id`
+    (verified against Codex CLI 0.152.1's hook wire schema), so this is the
+    common case; the hourly fallback exists for a harness whose payload omits
+    it, so a marker still expires rather than suppressing forever.
+    """
+    session_id = data.get("session_id")
+    if session_id:
+        digest = hashlib.sha256(str(session_id).encode("utf-8")).hexdigest()[:16]
+        return f"session-{digest}"
+    return f"hour-{int(time.time() // 3600)}"
+
+
+def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str) -> Path:
+    digest = hashlib.sha256(resolved_path.encode("utf-8")).hexdigest()[:32]
+    return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
+
+
+def _repro_owning_steps(graph, rel: str) -> list[str]:
+    """Names of steps whose deps (declared, script, or Julia closure) reach rel."""
+    names = []
+    for step in graph.steps:
+        for dep in step.deps:
+            if rel == dep.resolved or rel.startswith(dep.resolved + "/"):
+                names.append(step.name)
+                break
+    return names
+
+
+def _repro_under_code_root(code_roots: list[str], rel: str) -> bool:
+    return any(rel == root or rel.startswith(root + "/") for root in code_roots)
+
+
+def _repro_message(rel: str, owners: list[str]) -> str:
+    owner_text = ", ".join(sorted(owners)) if owners else "none"
+    return (
+        f"Reproduction: {rel} changed (owning step(s): {owner_text}). Update the "
+        "step's deps/outs or register a new step, then run `superra repro status`."
+    )
+
+
+def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
+    """Remind once per file per session when an edit touches a producer input.
+
+    Fires when the file is a dep or script of a registered step (including a
+    Julia include closure), or lies under a configured `code_roots` directory.
+    Task files never trigger. The graph used for matching is built with
+    `resolve_vars=False` (`_repro.build_graph`) — no `${VAR}` resolution, so no
+    `env:`/`shell:` evaluation and no subprocess for *any* edit, producer or
+    not; a dep/out/script that still references an unresolved `${VAR}` simply
+    matches nothing, which is fine since it cannot name a real producer file
+    edited in this turn. Built at most once per distinct plan_root, so a
+    multi-file apply_patch does not rebuild per file. Fails open: no task tree
+    beside the file, no reproduction config anywhere, or any
+    graph-construction problem is silence, never a block.
+    """
+    candidates = [p for p in file_paths if p.name != "task.md"]
+    if not candidates:
+        return []
+
+    _ensure_scripts_on_path()
+
+    by_plan_root: dict[Path, list[Path]] = {}
+    for file_path in candidates:
+        plan_root = _repro_plan_root_for_file(file_path)
+        if plan_root is not None:
+            by_plan_root.setdefault(plan_root, []).append(file_path)
+
+    feedback: list[str] = []
+    session_key: str | None = None
+
+    for plan_root, paths in by_plan_root.items():
+        project_root = plan_root.parent
+        try:
+            import _repro
+            graph = _repro.build_graph(
+                plan_root, project_root=project_root, resolve_vars=False
+            )
+        except Exception:
+            continue
+        if not graph.steps and not graph.config.code_roots:
+            continue  # no reproduction config anywhere: nothing to match
+
+        for file_path in paths:
+            try:
+                rel = file_path.resolve().relative_to(project_root.resolve())
+            except (ValueError, OSError):
+                continue
+            rel_str = _repro._norm(rel.as_posix())
+            owners = _repro_owning_steps(graph, rel_str)
+            if not owners and not _repro_under_code_root(graph.config.code_roots, rel_str):
+                continue
+            if session_key is None:
+                session_key = _repro_session_key(data)
+            marker = _repro_marker_path(project_root, session_key, rel_str)
+            if marker.exists():
+                continue
+            feedback.append(_repro_message(rel_str, owners))
+            try:
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.touch()
+            except OSError:
+                pass
+
+    return feedback
+
+
+def _clear_repro_markers(project_root: Path, resolved_paths: set[str]) -> None:
+    """Remove reminder markers for resolved_paths, across every session key."""
+    base = project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR
+    if not base.is_dir():
+        return
+    digests = {
+        hashlib.sha256(p.encode("utf-8")).hexdigest()[:32] for p in resolved_paths
+    }
+    try:
+        session_dirs = [d for d in base.iterdir() if d.is_dir()]
+    except OSError:
+        return
+    for session_dir in session_dirs:
+        for digest in digests:
+            marker = session_dir / digest
+            if marker.exists():
+                try:
+                    marker.unlink()
+                except OSError:
+                    pass
+
+
+def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> None:
+    """Clear reminder markers for files this task's `## Reproduction` section names.
+
+    Runs only when the just-edited task currently declares the section, so an
+    ordinary task.md edit costs nothing extra. `resolve_vars=False` (see
+    `_reproduction_reminder`) keeps this subprocess-free and consistent: a
+    marker is only ever set for a literal (non-`${VAR}`) path, so clearing
+    with the same resolution mode looks up the identical resolved path.
+    Best-effort: any problem reading the task or building the graph is
+    silence, never a block.
+    """
+    task_dir = plan_root if task_path == "" else plan_root / task_path
+    try:
+        text = (task_dir / "task.md").read_text(encoding="utf-8")
+    except OSError:
+        return
+
+    _ensure_scripts_on_path()
+    try:
+        import _task_io as task_io
+        import _repro
+        _, body = task_io.parse_frontmatter(text)
+        if _repro.REPRO_SECTION not in task_io.parse_body_sections(body):
+            return
+        graph = _repro.build_graph(
+            plan_root, project_root=plan_root.parent, resolve_vars=False
+        )
+    except Exception:
+        return
+
+    resolved_paths = {
+        dep.resolved for step in graph.steps_for(task_path) for dep in step.deps
+    }
+    if not resolved_paths:
+        return
+    _clear_repro_markers(plan_root.parent, resolved_paths)
 
 
 def _feedback_json(feedback: list[str]) -> str:
@@ -462,14 +665,14 @@ def _handle_bash(data: dict) -> None:
 
 
 def _handle_edit_write(data: dict) -> None:
-    """Handle an Edit/Write: reconcile task.md edits and render-integrity-check
-    any .md edited under a task root.
+    """Handle an Edit/Write: reconcile task.md edits, render-integrity-check any
+    .md edited under a task root, and remind on a reproduction-producer edit.
 
-    Two branches that merge into one feedback emission: the task.md-only
-    reconcile (validate + status propagation) and the broader render-integrity
-    check that runs on any .md under a task root (including task.md). The cheap
-    .md-under-task-root gate short-circuits the common non-markdown edit before
-    any file read.
+    Three branches merge into one feedback emission: the task.md-only reconcile
+    (validate + status propagation), the broader render-integrity check that
+    runs on any .md under a task root (including task.md), and the
+    reproduction reminder — not gated to markdown or the task root, since a
+    producer script usually lives beside the task tree, not inside it.
     """
     tool_input = data.get("tool_input", {}) or {}
     file_path_str = tool_input.get("file_path", "")
@@ -477,30 +680,33 @@ def _handle_edit_write(data: dict) -> None:
         _exit_success()
 
     file_path = Path(file_path_str)
+    feedback: list[str] = []
 
-    # Cheap gate: only a .md under a task root is of interest to either branch.
-    if not _is_markdown_under_task_root(file_path):
-        _exit_success()
+    # Cheap gate: only a .md under a task root needs the communicate reminder,
+    # reconcile, and render-integrity check.
+    if _is_markdown_under_task_root(file_path):
+        feedback.extend(_communicate_reminder([file_path]))
 
-    feedback = _communicate_reminder([file_path])
+        # task.md-only branch: validate the tree and propagate parent status.
+        if file_path.name == "task.md":
+            _ensure_scripts_on_path()
+            import _task_io as task_io
+            plan_root = task_io._find_plan_root(file_path.parent)
+            if (
+                plan_root is not None
+                and not task_io.is_opaque_task_path(file_path.parent, plan_root)
+                and not task_io.has_symlink_task_component(file_path.parent, plan_root)
+            ):
+                task_path = str(file_path.parent.relative_to(plan_root))
+                if task_path == ".":
+                    task_path = ""
+                feedback.extend(_reconcile(plan_root, task_path=task_path))
+                _clear_reproduction_markers_for_task(plan_root, task_path)
 
-    # task.md-only branch: validate the tree and propagate parent status.
-    if file_path.name == "task.md":
-        _ensure_scripts_on_path()
-        import _task_io as task_io
-        plan_root = task_io._find_plan_root(file_path.parent)
-        if (
-            plan_root is not None
-            and not task_io.is_opaque_task_path(file_path.parent, plan_root)
-            and not task_io.has_symlink_task_component(file_path.parent, plan_root)
-        ):
-            task_path = str(file_path.parent.relative_to(plan_root))
-            if task_path == ".":
-                task_path = ""
-            feedback.extend(_reconcile(plan_root, task_path=task_path))
+        # Broader branch: render-integrity-check any .md under a task root.
+        feedback.extend(_markdown_integrity_feedback(file_path))
 
-    # Broader branch: render-integrity-check any .md under a task root.
-    feedback.extend(_markdown_integrity_feedback(file_path))
+    feedback.extend(_reproduction_reminder(data, [file_path]))
 
     _exit_success(feedback)
 
@@ -565,7 +771,8 @@ def _handle_apply_patch(data: dict) -> None:
         match = _task_path_from_file_path(file_path)
         if match is None:
             continue
-        plan_root, _task_path = match
+        plan_root, task_path = match
+        _clear_reproduction_markers_for_task(plan_root, task_path)
         resolved = plan_root.resolve()
         if resolved in seen:
             continue
@@ -573,6 +780,7 @@ def _handle_apply_patch(data: dict) -> None:
         roots.append(plan_root)
 
     feedback.extend(_communicate_reminder(edited_paths))
+    feedback.extend(_reproduction_reminder(data, edited_paths))
 
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))

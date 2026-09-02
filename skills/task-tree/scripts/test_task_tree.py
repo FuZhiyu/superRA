@@ -2944,6 +2944,324 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stdout == ""
 
+    # --- reproduction reminder (05-reminder-hook) ---
+
+    def _write_repro_config(self, plan_root: Path, code_roots: tuple[str, ...] = ()) -> None:
+        lines = ["reproduction:"]
+        if code_roots:
+            lines.append("  code_roots:")
+            lines.extend(f"    - {root}" for root in code_roots)
+        (plan_root / "config.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def _write_repro_task(self, task_dir: Path, block: str, title: str = "Pipeline") -> None:
+        task_dir.mkdir(parents=True, exist_ok=True)
+        text = (
+            "---\n"
+            f'title: "{title}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            "## Objective\n\nBuild the pipeline.\n\n"
+            f"## Reproduction\n\n```yaml\n{block.strip()}\n```\n"
+        )
+        (task_dir / "task.md").write_text(text, encoding="utf-8")
+
+    def test_reproduction_reminder_under_code_root(self, tmp_path):
+        """A file under a configured code_root reminds with no owning step."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_repro_config(plan_root, code_roots=["Code"])
+        helper = tmp_path / "Code" / "helper.jl"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# helper\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(helper)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Reproduction:" in context
+        assert "Code/helper.jl" in context
+        assert "owning step(s): none" in context
+        assert "superra repro status" in context
+
+    def test_reproduction_reminder_registered_dep(self, tmp_path):
+        """A declared step dep reminds and names the owning step."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        self._write_repro_task(
+            task_dir,
+            "tier: canon\n"
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n",
+        )
+        dep = tmp_path / "Scripts" / "build.jl"
+        dep.parent.mkdir(parents=True)
+        dep.write_text("# build\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(dep)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Reproduction:" in context
+        assert "Scripts/build.jl" in context
+        assert "build-panel" in context
+
+    def test_reproduction_reminder_silent_second_edit_same_session(self, tmp_path):
+        """A second edit of the same file in the same session stays silent."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        self._write_repro_task(
+            task_dir,
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n",
+        )
+        dep = tmp_path / "Scripts" / "build.jl"
+        dep.parent.mkdir(parents=True)
+        dep.write_text("# build\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(dep)},
+        }
+        first = self._run_hook_result(payload, cwd=tmp_path)
+        assert "Reproduction:" in json.loads(first.stdout)["hookSpecificOutput"]["additionalContext"]
+
+        second = self._run_hook_result(payload, cwd=tmp_path)
+        assert second.returncode == 0
+        assert second.stdout == ""
+
+    def test_reproduction_reminder_fires_again_after_section_edit(self, tmp_path):
+        """Editing the owning `## Reproduction` section clears the file's marker."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        block = (
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n"
+        )
+        self._write_repro_task(task_dir, block)
+        dep = tmp_path / "Scripts" / "build.jl"
+        dep.parent.mkdir(parents=True)
+        dep.write_text("# build\n", encoding="utf-8")
+
+        dep_payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(dep)},
+        }
+        first = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert "Reproduction:" in json.loads(first.stdout)["hookSpecificOutput"]["additionalContext"]
+
+        second = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert second.stdout == ""  # suppressed for the rest of the session
+
+        # Re-saving the task's Reproduction section clears the marker even
+        # when the section's content is unchanged — the edit itself triggers.
+        self._write_repro_task(task_dir, block, title="Pipeline (touched)")
+        task_payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        self._run_hook_result(task_payload, cwd=tmp_path)
+
+        third = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert third.returncode == 0
+        assert "Reproduction:" in json.loads(third.stdout)["hookSpecificOutput"]["additionalContext"]
+
+    def test_reproduction_reminder_silent_for_task_file(self, tmp_path):
+        """Task files never trigger the reproduction reminder."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        self._write_repro_task(
+            task_dir,
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n",
+        )
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        if result.stdout:
+            context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+            assert "Reproduction:" not in context
+
+    def test_reproduction_reminder_silent_without_config(self, tmp_path):
+        """No reproduction config or section anywhere: the reminder stays silent."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        _write_task_md(plan_root / "task.md", "Root", "not-started", objective="Root.")
+        code_file = tmp_path / "Code" / "anything.jl"
+        code_file.parent.mkdir(parents=True)
+        code_file.write_text("# nothing declared\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(code_file)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_reproduction_reminder_never_resolves_vars(self, tmp_path, monkeypatch):
+        """A configured `shell:`/`env:` var never runs for any edit (no subprocess).
+
+        Calls `_reproduction_reminder` in-process (not via subprocess) so a
+        monkeypatched `_repro.resolve_variables` sentinel can prove it is
+        never invoked, for both an irrelevant edit and a real producer edit.
+        """
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n"
+            "  vars:\n"
+            "    OUT:\n"
+            '      shell: "echo should-not-run"\n'
+            "  code_roots:\n"
+            "    - Code\n",
+            encoding="utf-8",
+        )
+        helper = tmp_path / "Code" / "helper.jl"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# helper\n", encoding="utf-8")
+        irrelevant = tmp_path / "README.md"
+        irrelevant.write_text("Nothing to do with reproduction.\n", encoding="utf-8")
+
+        import _repro
+        calls: list = []
+        monkeypatch.setattr(
+            _repro, "resolve_variables", lambda *a, **k: calls.append((a, k))
+        )
+
+        feedback = task_hook._reproduction_reminder({"session_id": "s1"}, [irrelevant])
+        assert feedback == []
+        assert calls == []
+
+        feedback = task_hook._reproduction_reminder({"session_id": "s2"}, [helper])
+        assert len(feedback) == 1
+        assert "Code/helper.jl" in feedback[0]
+        assert calls == []
+
+    def test_reproduction_reminder_builds_graph_once_per_plan_root(self, tmp_path, monkeypatch):
+        """A multi-file edit (one apply_patch) under one plan_root builds once."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_repro_config(plan_root, code_roots=["Code"])
+        a = tmp_path / "Code" / "a.jl"
+        b = tmp_path / "Code" / "b.jl"
+        a.parent.mkdir(parents=True)
+        a.write_text("# a\n", encoding="utf-8")
+        b.write_text("# b\n", encoding="utf-8")
+
+        import _repro
+        real_build_graph = _repro.build_graph
+        calls: list = []
+
+        def _counting_build_graph(*args, **kwargs):
+            calls.append((args, kwargs))
+            return real_build_graph(*args, **kwargs)
+
+        monkeypatch.setattr(_repro, "build_graph", _counting_build_graph)
+
+        feedback = task_hook._reproduction_reminder({"session_id": "s1"}, [a, b])
+        assert len(feedback) == 2
+        assert len(calls) == 1
+
+    def test_reproduction_reminder_cost_with_shell_var_and_julia_closure(self, tmp_path):
+        """Per-edit cost with a configured shell: var + Julia closure stays cheap.
+
+        Measures `_reproduction_reminder` directly (in-process, no subprocess
+        launch overhead) on a fixture shaped like the review's concern: a
+        `shell:`-resolved var (would cost a real subprocess if resolved) and a
+        `.jl` producer with a transitively-included helper. Records the timing
+        in `## Results` — it should track the "no config" baseline (tens of
+        ms, dominated by the tree walk), not add a per-shell-var subprocess
+        cost, since `resolve_vars=False` skips `shell:`/`env:` entirely.
+        """
+        import time as time_module
+
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n"
+            "  vars:\n"
+            "    OUT:\n"
+            '      shell: "echo /out"\n'
+            "  code_roots:\n"
+            "    - Code\n",
+            encoding="utf-8",
+        )
+        task_dir = plan_root / "01-pipeline"
+        self._write_repro_task(
+            task_dir,
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: julia Code/build.jl\n"
+            "    deps:\n"
+            "      - Code/build.jl\n"
+            "    outs:\n"
+            '      - "${OUT}/panel.parquet"\n',
+        )
+        (tmp_path / "Code").mkdir(parents=True)
+        (tmp_path / "Code" / "helper.jl").write_text("# helper\n", encoding="utf-8")
+        (tmp_path / "Code" / "build.jl").write_text(
+            'include(joinpath(@__DIR__, "helper.jl"))\n', encoding="utf-8"
+        )
+
+        # A handful of unrelated sibling tasks, so the tree walk is not trivial.
+        for i in range(2, 12):
+            self._write_repro_task(
+                plan_root / f"{i:02d}-other", "steps: []\n", title=f"Other {i}"
+            )
+
+        helper = tmp_path / "Code" / "helper.jl"
+        elapsed = []
+        for i in range(5):
+            t0 = time_module.perf_counter()
+            feedback = task_hook._reproduction_reminder(
+                {"session_id": f"s{i}"}, [helper]
+            )
+            elapsed.append(time_module.perf_counter() - t0)
+            assert len(feedback) == 1
+            assert "build-panel" in feedback[0]
+
+        avg_ms = 1000 * sum(elapsed) / len(elapsed)
+        # No subprocess ever runs for this path (resolve_vars=False), so this
+        # should be tree-walk-bound (tens of ms), never dominated by a shell
+        # round-trip (which alone measured ~12ms in the review that raised
+        # this finding, and would multiply per shell: var if it ran at all).
+        assert avg_ms < 200, f"reminder averaged {avg_ms:.1f}ms across 5 runs"
+
 # --- Revision-note stale-leak validation tests ---
 
 
