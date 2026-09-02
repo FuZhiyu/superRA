@@ -1,6 +1,6 @@
 ---
 title: "Surface Reproduction State in the Task CLI"
-status: implemented
+status: approved
 depends_on: [01-section-contract, 02-runner]
 ---
 
