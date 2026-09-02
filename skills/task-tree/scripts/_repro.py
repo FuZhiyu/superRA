@@ -583,8 +583,10 @@ def graph_to_dict(graph: Graph) -> dict:
 # Julia include closures
 # ---------------------------------------------------------------------------
 
-_INCLUDE_CALL_RE = re.compile(r"\binclude\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)")
+_INCLUDE_OPEN_RE = re.compile(r"\binclude\s*\(")
 _JULIA_STRING_RE = re.compile(r'^"((?:[^"\\]|\\.)*)"$')
+_JULIA_CALL_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_!]*)\((.*)\)$", re.DOTALL)
+_JULIA_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_!]*$")
 
 
 def _julia_source(text: str) -> str:
@@ -607,29 +609,89 @@ def _strip_comment_naive(line: str) -> str:
     return line
 
 
-def _include_target(arg: str) -> str | None:
-    """Resolve one ``include(...)`` argument to a path relative to the includer.
+def _include_args(text: str):
+    """Yield the argument text of each ``include(...)`` call, parens balanced."""
+    for match in _INCLUDE_OPEN_RE.finditer(text):
+        depth, index = 1, match.end()
+        while index < len(text) and depth:
+            depth += {"(": 1, ")": -1}.get(text[index], 0)
+            index += 1
+        if depth == 0:
+            yield text[match.end():index - 1]
 
-    Returns None when the argument is not a static string literal or a
-    ``joinpath`` of ``@__DIR__`` and string literals.
+
+def _call_args(text: str) -> list[str]:
+    """Split a call's argument list on its top-level commas."""
+    args: list[str] = []
+    depth = 0
+    current = ""
+    for char in text:
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        if char == "," and depth == 0:
+            args.append(current)
+            current = ""
+        else:
+            current += char
+    args.append(current)
+    return [arg for arg in (a.strip() for a in args) if arg]
+
+
+def _string_segments(parts: list[str]) -> list[str] | None:
+    """Every argument's string literal, or None when one is not a literal."""
+    segments: list[str] = []
+    for part in parts:
+        piece = _JULIA_STRING_RE.match(part)
+        if not piece:
+            return None
+        segments.append(piece.group(1))
+    return segments
+
+
+def _include_target(arg: str) -> list[tuple[str, str]] | None:
+    """Candidate ``(anchor, path)`` pairs for one ``include(...)`` argument.
+
+    The anchor is ``"dir"`` for a path relative to the including file and
+    ``"root"`` for one relative to the project root. Returns None when nothing
+    static can be read out of the argument.
     """
     arg = arg.strip()
     literal = _JULIA_STRING_RE.match(arg)
     if literal:
-        return literal.group(1)
-    if arg.startswith("joinpath(") and arg.endswith(")"):
-        segments: list[str] = []
-        for part in arg[len("joinpath("):-1].split(","):
-            part = part.strip()
-            if part == "@__DIR__":
-                segments.append(".")
-                continue
-            piece = _JULIA_STRING_RE.match(part)
-            if not piece:
-                return None
-            segments.append(piece.group(1))
-        return posixpath.join(*segments) if segments else None
-    return None
+        return [("dir", literal.group(1))]
+    call = _JULIA_CALL_RE.match(arg)
+    if not call:
+        return None
+    name, parts = call.group(1), _call_args(call.group(2))
+    if name == "projectdir":
+        segments = _string_segments(parts)
+        return [("root", posixpath.join(*segments))] if segments else None
+    if name != "joinpath" or not parts:
+        return None
+    head, rest = parts[0], parts[1:]
+    if head in ("@__DIR__", "@__dir__"):
+        segments = _string_segments(rest)
+        return [("dir", posixpath.join(*segments))] if segments else None
+    if head in ("projectdir()", "srcdir()", "scriptsdir()"):
+        segments = _string_segments(rest)
+        prefix = {"projectdir()": "", "srcdir()": "src", "scriptsdir()": "scripts"}[head]
+        if not segments:
+            return None
+        joined = posixpath.join(*segments)
+        return [("root", posixpath.join(prefix, joined) if prefix else joined)]
+    segments = _string_segments(parts)
+    if segments:
+        return [("dir", posixpath.join(*segments))]
+    # A variable root — `joinpath(REPO_ROOT, "Code", "x.jl")` is the common
+    # research-repo idiom, and the variable is nearly always the project root or
+    # the script's own directory. Offer both; the caller keeps the one on disk.
+    segments = _string_segments(rest)
+    if not _JULIA_NAME_RE.match(head) or not segments:
+        return None
+    joined = posixpath.join(*segments)
+    return [("root", joined), ("dir", joined)]
 
 
 def include_closure(
@@ -659,17 +721,18 @@ def include_closure(
             text = current.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        for match in _INCLUDE_CALL_RE.finditer(_julia_source(text)):
-            arg = match.group(1)
-            target = _include_target(arg)
-            if target is None:
+        for arg in _include_args(_julia_source(text)):
+            candidates = _include_target(arg)
+            if candidates is None:
                 warnings_out.append(
                     f"{_relative(current, project_root)}: "
                     f"include({arg.strip()}) is not a static path; declare it "
                     f"as a dep if the step reads it"
                 )
                 continue
-            child = (current.parent / target).resolve()
+            bases = {"dir": current.parent, "root": project_root}
+            paths = [(bases[anchor] / target).resolve() for anchor, target in candidates]
+            child = next((p for p in paths if p.is_file()), paths[0])
             rel = _relative(child, project_root)
             if not child.is_file():
                 warnings_out.append(

@@ -1,6 +1,6 @@
 ---
 title: "Define the `## Reproduction` Section Contract and Graph Model"
-status: approved
+status: implemented
 depends_on: []
 ---
 
@@ -46,9 +46,15 @@ The reproduction graph library and its contract are in place; [02-runner](../02-
 - **Structural step errors are `[ERROR]` findings too.** Beyond the findings the objective lists, a missing or non-slug `name`, an unknown `kind`, a step declaring neither `cmd` nor `runner` + `script`, an unknown step or section key, an undefined runner, a runner template without `{script}`, a non-list `deps` or `outs`, a malformed `outs` entry, and a non-flat `params` all report rather than crash the walk. The contract's §Validation lists all of them, since that is where an agent looks a rejection message up.
 - **`env_deps` are interpolated.** The objective scopes `${VAR}` to `cmd`, `deps`, `outs`, and `script`, and `env_deps` entries become deps of every step, so treating them as literal would have made `env_deps: ["${SCRATCH}/env.lock"]` a dep on a path that cannot exist. An unknown variable there is one `[ERROR]` against `config.yaml` rather than one per step.
 
+### The include closure resolves four forms, not one
+
+The [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) pilot found the first version blind on the idiom TreasuryGIV actually uses. Resolving only a string literal and `joinpath(@__DIR__, …)` left 56 of the pilot's 57 findings as unresolved-include warnings, because DrWatson projects write `include(projectdir("Code", "helpers.jl"))` and tests write `include(joinpath(REPO_ROOT, "Code", "x.jl"))`. An unresolved include is not a cosmetic warning: it drops the helper from the step's deps, so a helper edit stops invalidating the step that reads it — the property the closure exists to provide.
+
+`_include_target` now returns candidate `(anchor, path)` pairs and resolves, in addition to the two original forms, `projectdir("…")` / `srcdir` / `scriptsdir` against the project root, and `joinpath(<variable>, "…")` against the project root first and the including file second, keeping whichever candidate is on disk. Extraction also moved off the nested-parens regex onto a balanced-paren scan, so `include(joinpath(projectdir(), "Code", "io.jl"))` — two levels deep — is seen at all. Registering all 44 TreasuryGIV producers now leaves two warnings: `Base.include(mod, path)`, which is genuinely dynamic, and one derived task edge that contradicts a `depends_on` order.
+
 ### Validation
 
-92 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 967 passed / 28 skipped.
+95 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 1036 passed with pytask installed.
 
 Coverage follows the objective's list, plus: the subset parser agrees with `pyyaml` byte-for-byte on three fixture sections (`json.dumps(..., sort_keys=True)` equality), scalar typing included — the parser reimplements PyYAML's YAML 1.1 resolvers for null, bool, int, and float. The two resolvers it drops, sexagesimals and timestamps, and the three forms it rejects that `pyyaml` accepts (an unpaired quote in a plain scalar, an escaped `\"`, an escape outside the supported set) are listed in the contract's §The YAML subset.
 
