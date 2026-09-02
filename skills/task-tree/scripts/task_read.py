@@ -10,6 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
+from _repro import DEFAULT_TIER, REPRO_SECTION, build_graph
+from _repro_state import ReproStateError, compute_status, runner_paths
 from _task_io import (
     Task,
     autodetect_plan_root,
@@ -102,6 +104,56 @@ def _dep_tasks(target_task: Task, siblings: dict[str, Task]) -> list[tuple[str, 
 
 
 # ---------------------------------------------------------------------------
+# Reproduction helpers
+# ---------------------------------------------------------------------------
+
+def _reproduction_view(
+    plan_root: Path, target_task: Task, root: Task | None
+) -> dict | None:
+    """Return the task's owned-step states and derived task edges, or ``None``.
+
+    ``None`` means the task carries no ``## Reproduction`` section: such a task
+    owns no steps and cannot appear in any task-level edge (an edge needs a
+    producing and a consuming step), so there is nothing to compute and the
+    graph is never built — this is what keeps a read cheap on a tree with no
+    Reproduction sections at all.
+    """
+    if REPRO_SECTION not in parse_body_sections(target_task.body):
+        return None
+
+    project_root = plan_root.resolve().parent
+    tree = root if root is not None else walk_plan(plan_root)
+    graph = build_graph(plan_root, project_root=project_root, root=tree)
+
+    steps = sorted(graph.steps_for(target_task.path), key=lambda s: s.name)
+    states: dict[str, tuple[str, str]] = {}
+    unavailable: str | None = None
+    if steps:
+        try:
+            report = compute_status(graph, runner_paths(project_root), tier="all")
+        except ReproStateError as exc:
+            unavailable = str(exc)
+        else:
+            states = {e.step.name: (e.status, e.reason) for e in report.entries}
+
+    step_rows = []
+    for step in steps:
+        outs = [o.path.logical for o in step.outs]
+        if unavailable is not None:
+            status, reason = "unknown", f"runner unavailable: {unavailable}"
+        else:
+            status, reason = states[step.name]
+        step_rows.append({"name": step.name, "status": status, "reason": reason, "outs": outs})
+
+    return {
+        "tier": graph.tiers.get(target_task.path, DEFAULT_TIER),
+        "steps": step_rows,
+        "feeds_on": sorted({a for a, b in graph.task_edges if b == target_task.path}),
+        "feeds": sorted({b for a, b in graph.task_edges if a == target_task.path}),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Open-comment helpers
 # ---------------------------------------------------------------------------
 
@@ -191,12 +243,32 @@ def _render_frontmatter_readable(fm: dict) -> str:
     return "\n".join(lines)
 
 
+def _render_reproduction_human(repro: dict) -> list[str]:
+    """Render the ``=== Reproduction ===`` block from a `_reproduction_view` dict."""
+    lines = ["=== Reproduction ===\n", f"tier: {repro['tier']}"]
+    if repro["steps"]:
+        lines.append("steps:")
+        for row in repro["steps"]:
+            outs = ", ".join(row["outs"]) if row["outs"] else "(none)"
+            lines.append(
+                f"  - {row['name']}: {row['status']} — {row['reason']} [outs: {outs}]"
+            )
+    else:
+        lines.append("steps: (none)")
+    for task_path in repro["feeds_on"]:
+        lines.append(f"feeds on: {task_path}")
+    for task_path in repro["feeds"]:
+        lines.append(f"feeds: {task_path}")
+    return lines
+
+
 def render_human(
     ancestors: list[Task],
     target_task: Task,
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
     focused_tree: str = "",
+    repro: dict | None = None,
 ) -> str:
     parts: list[str] = []
 
@@ -263,6 +335,10 @@ def render_human(
             else:
                 parts.append(f"- {slug} (NOT FOUND)")
 
+    if repro is not None:
+        parts.append("")
+        parts.extend(_render_reproduction_human(repro))
+
     return "\n".join(parts)
 
 
@@ -276,6 +352,7 @@ def render_json(
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
     focused_tree: str = "",
+    repro: dict | None = None,
 ) -> str:
     fm, _ = parse_frontmatter(
         (target_task.dir_path / "task.md").read_text(encoding="utf-8")
@@ -307,6 +384,7 @@ def render_json(
         "effective_status": target_task.effective_status(),
         "depends_on": target_task.depends_on,
         "sections": {k: v.strip() for k, v in sections.items()},
+        "reproduction": repro,
     }
 
     deps_data = []
@@ -426,15 +504,18 @@ def main(argv: list[str] | None = None) -> None:
 
     # Build the focused tree (root → target spine, siblings, direct children).
     focused_tree = ""
+    root = None
     if show_ancestors:
         root = walk_plan(plan_root)
         focused_tree = format_focused_tree(root, target_task.path)
 
+    repro = _reproduction_view(plan_root, target_task, root)
+
     # Render
     if args.as_json:
-        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
+        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
     else:
-        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
+        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
 
 
 if __name__ == "__main__":

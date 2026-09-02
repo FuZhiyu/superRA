@@ -74,7 +74,7 @@ The PostToolUse hook still revalidates raw filesystem moves and keeps the same-p
 
 ```bash
 superra task check                    # validate full tree; prints findings grouped by task
-superra task check --category status  # limit to one category: status, dependency, rollup, sync-impact
+superra task check --category status  # limit to one category: status, dependency, rollup, sync-impact, reproduction
 superra task status fix               # repair branch status fields to match child rollups
 superra task status propagate         # re-run parent status rollup after bulk edits
 ```
@@ -98,6 +98,8 @@ superra repro tier 02-merge canon         # set a task's tier
 ```
 
 `--tier` defaults to `canon` for `build` and `status`. An explicit build target overrides the tier, and any selection pulls the stale ancestors it needs.
+
+`task read <path>` shows a registered task's owned-step states and derived `feeds` / `feeds on` task edges, computed the same way as `repro status --json` but without pytask. `task tree --tier canon|local` filters to one tier; a registered `canon` task always gets a `[canon]` badge.
 
 | State | Meaning |
 |---|---|
