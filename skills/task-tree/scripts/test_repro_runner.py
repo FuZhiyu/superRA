@@ -20,10 +20,12 @@ from _repro_state import (
     STATE_DIRNAME,
     HashCache,
     compute_status,
+    directory_dep_nodes,
     read_lock,
     render_dag,
     runner_paths,
     select_steps,
+    sidecar_targets,
 )
 
 HAS_PYTASK = importlib.util.find_spec("pytask") is not None
@@ -124,6 +126,58 @@ steps:
 """
 
 
+TASK_GEN = """\
+---
+title: "Gen"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Write a directory of parts.
+
+## Reproduction
+
+```yaml
+tier: canon
+steps:
+  - name: z-gen
+    cmd: sh Code/gen.sh
+    deps:
+      - Code/gen.sh
+    outs:
+      - "${OUT}/parts"
+```
+"""
+
+TASK_USE = """\
+---
+title: "Use"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Read one file out of that directory.
+
+## Reproduction
+
+```yaml
+tier: canon
+steps:
+  - name: a-use
+    cmd: sh Code/use.sh
+    deps:
+      - Code/use.sh
+      - "${OUT}/parts/a.txt"
+    outs:
+      - "${OUT}/used.txt"
+```
+"""
+
+
 class Project:
     """A fixture task tree plus the helpers the runner tests share."""
 
@@ -175,6 +229,22 @@ def project(tmp_path) -> Project:
     proj.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n")
     proj.write("Code/b.sh", "cat output/a.txt output/a.txt > output/b.txt\n")
     proj.write("Code/x.sh", "mkdir -p output\necho x > output/x.txt\n")
+    return proj
+
+
+@pytest.fixture
+def dir_project(tmp_path) -> Project:
+    """A producer whose out is a directory, and a consumer of one file inside it.
+
+    The step names put the consumer first alphabetically, which is the order an
+    unordered scheduler would run them in.
+    """
+    proj = Project(tmp_path / "dirproj")
+    proj.write("superRA/config.yaml", CONFIG)
+    proj.write("superRA/01-gen/task.md", TASK_GEN)
+    proj.write("superRA/02-use/task.md", TASK_USE)
+    proj.write("Code/gen.sh", "mkdir -p output/parts\necho v1 > output/parts/a.txt\n")
+    proj.write("Code/use.sh", "cat output/parts/a.txt > output/used.txt\n")
     return proj
 
 
@@ -636,3 +706,166 @@ def test_a_graph_error_blocks_the_build(project, capsys):
     )
     assert project.run("build", "--tier", "all") == 1
     assert "task check" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# Directory outs
+# ---------------------------------------------------------------------------
+
+def test_a_directory_out_becomes_a_dep_node_of_its_consumer(dir_project):
+    graph = dir_project.graph()
+    consumer = graph.step("a-use")
+    extra = directory_dep_nodes(graph, consumer, sidecar_targets(graph))
+    assert [node[0] for node in extra] == ["${OUT}/parts"]
+    assert directory_dep_nodes(graph, graph.step("z-gen"), {}) == []
+
+
+def test_the_generated_task_carries_the_directory_edge(dir_project):
+    graph = dir_project.graph()
+    tasks = repro_run.make_tasks(
+        graph, ["z-gen", "a-use"], dir_project.paths, HashCache()
+    )
+    consumer = next(task for task in tasks if task.name == "a-use")
+    assert "${OUT}/parts" in {node.name for node in consumer.depends_on["deps"]}
+
+
+@needs_pytask
+@pytest.mark.parametrize("jobs", ["1", "2"])
+def test_a_directory_out_orders_its_consumer(dir_project, jobs):
+    assert dir_project.run("build", "-j", jobs) == 0
+    assert dir_project.read("output/used.txt") == "v1\n"
+
+    dir_project.write(
+        "Code/gen.sh", "mkdir -p output/parts\necho v2 > output/parts/a.txt\n"
+    )
+    assert dir_project.run("build", "-j", jobs) == 0
+    assert dir_project.read("output/used.txt") == "v2\n"
+    assert dir_project.states("canon") == {"z-gen": "fresh", "a-use": "fresh"}
+
+
+# ---------------------------------------------------------------------------
+# Sidecars, resolved commands, and failure recovery
+# ---------------------------------------------------------------------------
+
+def _use_a_sidecar(project) -> None:
+    project.write(
+        "superRA/01-a/task.md",
+        TASK_A.replace(
+            '      - "${OUT}/a.txt"\n',
+            '      - path: "${OUT}/a.txt"\n        sidecar: "${OUT}/a.txt.sha256"\n',
+        ),
+    )
+
+
+@needs_pytask
+def test_deleting_a_sidecar_tracked_out_reports_missing_and_rebuilds_it(project):
+    _use_a_sidecar(project)
+    assert project.run("build", "build-a") == 0
+    (project.root / "output" / "a.txt").unlink()
+
+    entry = project.status().entry("build-a")
+    assert entry.status == "missing"
+    assert "${OUT}/a.txt" in entry.reason
+
+    assert project.run("build", "build-a") == 0
+    assert project.read("output/a.txt") == "hello\n"
+    assert project.states("canon")["build-a"] == "fresh"
+
+
+MODE_CONFIG = """\
+reproduction:
+  vars:
+    OUT: output
+    MODE:
+      env: REPRO_TEST_MODE
+"""
+
+TASK_MODE = """\
+---
+title: "Mode"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+A step whose only variable reaches `cmd`.
+
+## Reproduction
+
+```yaml
+tier: canon
+steps:
+  - name: mode-step
+    cmd: sh Code/mode.sh "${MODE}"
+    deps:
+      - Code/mode.sh
+    outs:
+      - "${OUT}/mode.txt"
+```
+"""
+
+
+@needs_pytask
+def test_a_var_that_only_reaches_cmd_invalidates_the_step(tmp_path, monkeypatch):
+    proj = Project(tmp_path / "modeproj")
+    proj.write("superRA/config.yaml", MODE_CONFIG)
+    proj.write("superRA/01-mode/task.md", TASK_MODE)
+    proj.write("Code/mode.sh", 'mkdir -p output\necho "$1" > output/mode.txt\n')
+
+    monkeypatch.setenv("REPRO_TEST_MODE", "fast")
+    assert proj.run("build") == 0
+    assert proj.read("output/mode.txt") == "fast\n"
+    assert proj.states("canon")["mode-step"] == "fresh"
+
+    monkeypatch.setenv("REPRO_TEST_MODE", "slow")
+    entry = proj.status().entry("mode-step")
+    assert entry.status == "stale"
+    assert entry.reason == "the step definition changed"
+
+    assert proj.run("build") == 0
+    assert proj.read("output/mode.txt") == "slow\n"
+
+
+@needs_pytask
+def test_restoring_the_input_clears_a_failed_step(project):
+    project.run("build")
+    original = project.read("Code/b.sh")
+    project.write("Code/b.sh", "echo boom >&2\nexit 3\n")
+    assert project.run("build") == 1
+    assert project.status().entry("build-b").status == "failed"
+
+    project.write("Code/b.sh", original)
+    assert project.states("canon")["build-b"] == "fresh"
+    assert project.run("status") == 0
+
+    before = project.run_times()
+    assert project.run("build") == 0
+    assert project.run_times() == before
+
+
+@needs_pytask
+def test_a_failing_step_reports_its_message_without_python_frames(project, capsys):
+    project.run("build", "build-a")
+    project.write("Code/b.sh", "exit 3\n")
+    capsys.readouterr()
+    assert project.run("build") == 1
+
+    out = capsys.readouterr().out
+    assert "StepFailed: step 'build-b' exited 3" in out
+    assert f"{STATE_DIRNAME}/logs/build-b.log" in out
+    assert "_run_step" not in out
+    assert "repro_run.py" not in out
+
+
+def test_the_reexec_message_names_the_missing_piece(monkeypatch, capsys):
+    monkeypatch.setattr(repro_run.shutil, "which", lambda _name: None)
+    monkeypatch.delenv(repro_run.REEXEC_ENV, raising=False)
+
+    assert repro_run._reexec([], "build") == 1
+    assert "needs pytask" in capsys.readouterr().err
+
+    assert repro_run._reexec([], "status") == 1
+    err = capsys.readouterr().err
+    assert "`superra repro status` needs Python 3.11+ (tomllib)" in err
+    assert "pytask" not in err

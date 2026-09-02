@@ -91,6 +91,7 @@ superra repro status --tier all --json    # the shape `task read` and the dashbo
 superra repro build                       # rebuild the stale canon steps
 superra repro build 02-merge -j 4         # a step name or a task path, plus its stale ancestors
 superra repro build --dry-run             # what would run, and why
+superra repro build --force               # run the selection even where nothing changed
 superra repro explain build-panel         # one step: state, changed nodes, upstream, log
 superra repro dag --mermaid               # the step graph
 superra repro tier 02-merge canon         # set a task's tier
@@ -103,10 +104,12 @@ superra repro tier 02-merge canon         # set a task's tier
 | `fresh` | Every recorded input and output still matches. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
 | `missing` | Never built, or an out is gone. |
-| `failed` | The last run exited non-zero; the reason names its log. |
+| `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restore the inputs and it reports `fresh` again. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
 `pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
+
+A step's state also moves when a `${VAR}` resolves differently — including one that reaches only `cmd`, such as a mode flag — so a rerun under a changed environment is reported rather than skipped. Lock ids stay in `${VAR}` form throughout.
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 

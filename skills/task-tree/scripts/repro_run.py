@@ -39,8 +39,10 @@ from _repro_state import (  # noqa: E402
     HashCache,
     ReproStateError,
     RunnerPaths,
+    Node,
     absolute,
     compute_status,
+    directory_dep_nodes,
     ensure_state_dir,
     format_explain,
     format_status,
@@ -72,11 +74,15 @@ class FileNode:
     Deliberately not a ``PPathNode``: pytask derives a path node's lock id from
     its resolved path, which would embed the author or branch a ``${VAR}``
     expanded to. Keeping the id in ``name`` keeps the committed lock portable.
+
+    ``must_exist`` is the out itself when a sidecar is hashed in its place, so
+    a deleted out is missing rather than fresh.
     """
 
     name: str
     resolved: Path
     cache: HashCache
+    must_exist: Path | None = None
     attributes: dict = field(default_factory=dict)
 
     @property
@@ -84,6 +90,8 @@ class FileNode:
         return hashlib.sha256(self.name.encode("utf-8")).hexdigest()
 
     def state(self) -> str | None:
+        if self.must_exist is not None and not self.must_exist.exists():
+            return None
         return self.cache.path_state(self.resolved)
 
     def load(self, is_product: bool = False) -> Path:  # noqa: ARG002
@@ -243,18 +251,17 @@ def make_tasks(
         if step is None:  # pragma: no cover - names come from the graph
             continue
         deps, products = step_nodes(step, tracked)
+        deps += directory_dep_nodes(graph, step, tracked)
         produces: dict[str, Any] = {}
         if products:
             key = "stamp" if step.kind == "check" else "outs"
-            produces[key] = [_node(logical, resolved, paths, cache) for logical, resolved in products]
+            produces[key] = [_node(node, paths, cache) for node in products]
         tasks.append(
             StepTask(
                 name=step.name,
                 function=_run_step(step, paths, cache),
                 depends_on={
-                    "deps": [
-                        _node(logical, resolved, paths, cache) for logical, resolved in deps
-                    ],
+                    "deps": [_node(node, paths, cache) for node in deps],
                     "spec": SpecNode(name=spec_node_id(step.name), value=spec_hash(step)),
                 },
                 produces=produces,
@@ -263,11 +270,15 @@ def make_tasks(
     return tasks
 
 
-def _node(logical: str, resolved: str, paths: RunnerPaths, cache: HashCache) -> FileNode:
+def _node(node: Node, paths: RunnerPaths, cache: HashCache) -> FileNode:
+    logical, hashed, must_exist = node
     return FileNode(
         name=logical,
-        resolved=absolute(paths.project_root, resolved),
+        resolved=absolute(paths.project_root, hashed),
         cache=cache,
+        must_exist=(
+            absolute(paths.project_root, must_exist) if must_exist else None
+        ),
     )
 
 
@@ -292,6 +303,13 @@ def run_build(
 ) -> int:
     """Hand the selected steps to pytask and return its exit code."""
     import pytask  # noqa: PLC0415 - the one import that needs the PEP 723 block
+
+    # A failed step's actionable line is `StepFailed: … see <log>`; the frames
+    # above it are this file's. pytask's own frame-suppression list takes the
+    # directory, and `show_traceback=False` would drop the message too.
+    scripts_dir = Path(__file__).resolve().parent
+    if scripts_dir not in pytask.Traceback.suppress:
+        pytask.Traceback.suppress += (scripts_dir,)
 
     cache = HashCache(paths.cache_file)
     tasks = make_tasks(graph, names, paths, cache)
@@ -369,21 +387,30 @@ def _unsupported_here(command: str) -> bool:
     return command in ("status", "explain") and not TOML_AVAILABLE
 
 
-def _reexec(argv: list[str]) -> int:
-    """Re-run this script under uv so its PEP 723 block supplies pytask."""
+def _missing_piece(command: str) -> str:
+    return "pytask" if command == "build" else "Python 3.11+ (tomllib)"
+
+
+def _reexec(argv: list[str], command: str) -> int:
+    """Re-run this script under uv, whose PEP 723 block supplies what is missing."""
+    missing = _missing_piece(command)
     if os.environ.get(REEXEC_ENV):
         print(
-            "Error: pytask is unavailable and the runner already re-execed; "
-            "install pytask>=0.6,<0.7 or make `uv` available on PATH.",
+            f"Error: {missing} is still unavailable after the runner re-execed; "
+            f"install it, or make `uv` available on PATH.",
             file=sys.stderr,
         )
         return 1
     uv = shutil.which("uv")
     if uv is None:
+        hint = (
+            "`pip install 'pytask>=0.6,<0.7' pytask-parallel`"
+            if command == "build"
+            else "run superRA on Python 3.11 or newer"
+        )
         print(
-            "Error: `superra repro build` needs pytask. Install `uv` (the runner "
-            "provisions pytask itself) or `pip install 'pytask>=0.6,<0.7' "
-            "pytask-parallel`.",
+            f"Error: `superra repro {command}` needs {missing}. Install `uv`, which "
+            f"lets the runner provision it, or {hint}.",
             file=sys.stderr,
         )
         return 1
@@ -399,7 +426,7 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
 
     if _unsupported_here(args.command):
-        sys.exit(_reexec(argv))
+        sys.exit(_reexec(argv, args.command))
 
     plan_root = resolve_plan_root_arg(args.plan_root)
     if plan_root is None:
