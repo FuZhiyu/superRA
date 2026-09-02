@@ -96,7 +96,7 @@ Commit figures to `attachments/` beside the task's `task.md` and embed relative 
 
 ## Reproduction Section
 
-`## Reproduction` declares the build steps a task owns. The build unit is a **step**, never a task: step-to-step edges are inferred from files, and task-level reproduction edges are derived from those, never declared. Frontmatter `depends_on` stays sibling-only orchestration and is unaffected.
+The build unit is a **step**, never a task: step-to-step edges are inferred from files, and task-level reproduction edges are derived from those, never declared. Frontmatter `depends_on` stays sibling-only orchestration and is unaffected.
 
 **The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
 
@@ -174,14 +174,15 @@ reproduction:
 | `env_deps` | Paths added to every step's deps. Machine-specific files — sysimages, caches — never belong here. |
 | `code_roots` | Directories the reminder hook watches for producer edits. |
 
-`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, and `script`. **Every node keeps its variable-form path as its id** alongside the path resolved for the invocation, so a committed lock never embeds an author or a branch, and switching roots reports stale honestly instead of rewriting ids.
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`; `code_roots` is read literally. **Every node keeps its variable-form path as its id** alongside the path resolved for the invocation, so a committed lock never embeds an author or a branch, and switching roots reports stale honestly instead of rewriting ids.
 
 ### The YAML subset
 
-Both the section block and `config.yaml` are read by a stdlib parser over a bounded subset, so the core stays dependency-free. `pyyaml`, when installed, parses the same text identically.
+Both the section block and `config.yaml` are read by a stdlib parser over a bounded subset. `pyyaml`, when installed, reads every accepted text to the same values, except for two resolvers the subset drops: a timestamp-shaped scalar (`1994-01-01`) becomes a date under `pyyaml` and a sexagesimal (`12:30`) becomes an integer, where the subset keeps both as strings.
 
 - **Accepted:** block mappings, block lists, inline lists of scalars, plain and quoted scalars, `#` comments.
 - **Rejected:** anchors, aliases, tags, multi-line (literal or folded) scalars, inline mappings, duplicate keys, tab indentation.
+- **Rejected here, accepted by `pyyaml`:** an unpaired `'` or `"` inside a plain scalar (`cmd: echo don't` — quote the whole scalar); an escaped `\"` inside a double-quoted scalar; any escape outside `\n`, `\t`, `\r`, `\\`, `\/`, `\0`, including `\uXXXX`.
 
 Inline lists are flow context, where YAML reserves `{`, `}`, `[`, `]`, and `,`: quote a `${VAR}` path there (`deps: ["${OUT}/panel.parquet"]`) or use a block list. Both parsers reject the unquoted form.
 
@@ -191,9 +192,13 @@ Julia deps carry their own closure: a `.jl` dep expands to every file it reaches
 
 Findings come back in the `Finding` shape shared with `task check`, under the `reproduction` category.
 
-| Severity | Condition |
-|---|---|
-| `[ERROR]` | Duplicate step name; two steps declaring the same out; a `check` step with outs; prose outside the fence; YAML outside the subset, in a section or in `config.yaml`; an unknown key, tier, or runner; a step that declares neither `cmd` nor `runner` + `script`; an unknown `${VAR}`. |
-| `[WARNING]` | A dep that neither exists on disk nor is produced by a step; a derived task edge that contradicts sibling `depends_on` order; an `include` that could not be resolved. |
+**`[ERROR]`**
+
+- **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
+- **Names and outs:** a missing or non-slug `name`; a duplicate step name; two steps declaring the same out.
+- **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
+- **Keys and config:** an unknown section, step, or `reproduction:` key; an unknown tier; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
+
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; a derived task edge that contradicts sibling `depends_on` order; an `include` that could not be resolved.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
