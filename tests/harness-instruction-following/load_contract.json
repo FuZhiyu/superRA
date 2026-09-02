@@ -13,7 +13,7 @@
       "id": "LC001",
       "area": "manifest-always-loaded",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L59-L67",
+        "skills/using-superra/SKILL.md#L6-L10",
         "skills/implement-task/SKILL.md#L10-L13",
         "skills/review-task/SKILL.md#L15-L18"
       ],
@@ -46,7 +46,7 @@
       "id": "LC002",
       "area": "manifest-stage-loads",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L67-L76"
+        "skills/using-superra/SKILL.md#L44-L51"
       ],
       "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or maturation.",
       "expected_evidence": [
@@ -76,7 +76,7 @@
       "id": "LC003",
       "area": "manifest-domain-loads",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L78-L85"
+        "skills/using-superra/SKILL.md#L55-L60"
       ],
       "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, or slide-design work.",
       "expected_evidence": [
@@ -105,7 +105,7 @@
       "id": "LC004",
       "area": "harness-adapter-routing",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L87-L100",
+        "skills/using-superra/SKILL.md#L62-L62",
         "skills/using-superra/references/codex-instructions.md#L64-L77"
       ],
       "trigger": "A loaded superRA instruction names Claude-oriented tools or Codex is the active harness.",
@@ -184,7 +184,7 @@
       "id": "LC007",
       "area": "stage-planning-review",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L72-L72",
+        "skills/using-superra/SKILL.md#L46-L46",
         "skills/superplan/references/planning-review.md#L1-L24",
         "skills/review-task/SKILL.md#L20-L20"
       ],
@@ -246,7 +246,7 @@
       "id": "LC009",
       "area": "stage-sync",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L74-L74",
+        "skills/using-superra/SKILL.md#L49-L49",
         "skills/semantic-merge/SKILL.md#L12-L20"
       ],
       "trigger": "Dispatch has Stage: sync, or semantic-merge is invoked directly.",
@@ -276,7 +276,7 @@
       "id": "LC010",
       "area": "stage-integration",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L75-L75",
+        "skills/using-superra/SKILL.md#L50-L50",
         "skills/refactor-and-integrate/SKILL.md#L16-L17",
         "skills/refactor-and-integrate/SKILL.md#L47-L58"
       ],
@@ -307,7 +307,7 @@
       "id": "LC023",
       "area": "stage-maturation",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L76-L76",
+        "skills/using-superra/SKILL.md#L51-L51",
         "skills/task-tree/SKILL.md",
         "skills/superplan/SKILL.md",
         "skills/academic-writing/SKILL.md"
@@ -339,7 +339,7 @@
       "id": "LC011",
       "area": "domain-econ-data-analysis",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L82-L82",
+        "skills/using-superra/SKILL.md#L57-L57",
         "skills/econ-data-analysis/SKILL.md#L11-L22",
         "skills/econ-data-analysis/SKILL.md#L130-L133"
       ],
@@ -370,7 +370,7 @@
       "id": "LC012",
       "area": "domain-theory-modeling",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L83-L83",
+        "skills/using-superra/SKILL.md#L58-L58",
         "skills/theory-modeling/SKILL.md#L11-L22"
       ],
       "trigger": "Task derives, solves, verifies, or proves mathematical/modeling content.",
@@ -400,7 +400,7 @@
       "id": "LC013",
       "area": "domain-academic-writing",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L84-L84",
+        "skills/using-superra/SKILL.md#L59-L59",
         "skills/academic-writing/SKILL.md#L58-L86"
       ],
       "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
@@ -430,7 +430,7 @@
       "id": "LC014",
       "area": "domain-slide-design",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L85-L85",
+        "skills/using-superra/SKILL.md#L60-L60",
         "skills/slide-design/SKILL.md#L11-L25",
         "skills/slide-design/SKILL.md#L86-L92"
       ],
@@ -461,7 +461,7 @@
       "id": "LC015",
       "area": "task-read-ancestor-context",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L40-L45",
+        "skills/using-superra/SKILL.md#L20-L22",
         "skills/task-tree/scripts/task_read.py#L29-L77",
         "skills/task-tree/scripts/task_read.py#L204-L217",
         "skills/task-tree/scripts/task_read.py#L286-L302",
@@ -495,7 +495,7 @@
       "id": "LC016",
       "area": "task-read-comments",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L44-L44",
+        "skills/using-superra/SKILL.md#L22-L22",
         "skills/task-tree/scripts/task_read.py#L104-L150",
         "skills/task-tree/scripts/task_read.py#L235-L255",
         "skills/task-tree/scripts/task_read.py#L331-L354",
@@ -743,7 +743,7 @@
       "severity": "major",
       "area": "stage-terminology",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L73-L73",
+        "skills/using-superra/SKILL.md#L48-L48",
         "skills/result-protection/SKILL.md#L16-L18",
         "skills/theory-modeling/SKILL.md#L17-L19",
         "skills/agent-orchestration/SKILL.md#L221-L224"
