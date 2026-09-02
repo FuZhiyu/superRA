@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: approved
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -46,6 +46,11 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 - Figures declare a deterministic `*_data.csv` beside the PNG and drift checks read the CSV: that repo's clean-room rerun found all seven PNGs byte-different from the baseline with the numbers identical ([detect-drift/task.md:138](/Users/zhiyufu/Dropbox/BondElasticity-Reproduction/.plan/detect-drift/task.md#L138)).
 - One interpreter pin, in the `runners` template rather than per step.
 - Frozen upstream artifacts stay boundary inputs with no producing step.
+
+### Lesson carried in from TreasuryGIV
+
+A drift pin reads the *published* root, not the mirror a rehearsal build writes. TreasuryGIV routes every canonical write to a per-author, per-branch sandbox unless an opt-in is set, so declaring a pin's deps as `${OUT}/...` would have had it compare the run's own fresh output against baselines set from the results of record — which is how an earlier version of that project's pin was silently set from one worktree's sandbox ([test/pooled_1986_baseline_results.jl:6-11](/Users/zhiyufu/Dropbox/research_projects/TreasuryGIV-code/test/pooled_1986_baseline_results.jl#L6-L11)).
+ `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet.
 
 ## Review Notes
 
