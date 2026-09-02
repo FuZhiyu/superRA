@@ -8,7 +8,7 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
 - **Root every path that moves with a `${VAR}`** from `superRA/config.yaml` — output roots, scratch, data shares — and keep literal repo-relative paths for what is committed.
 - **Pin the interpreter once**, in the `runners` template.
 - **Declare a figure's data, not only its picture.** PNG bytes vary with the renderer, so a byte difference on a figure is not evidence of a numeric change. Have the plotting script write a deterministic `*_data.csv` beside the image, declare both as outs, and point drift checks at the CSV.
-- **Give a `check` step the artifacts it reads as `deps`**, so a stale check surfaces beside the build it protects.
+- **Give a `check` step the artifacts it reads as `deps`**, so a stale check surfaces beside the build it protects. A pin on a published result reads the published root, not the mirror a rehearsal build writes — declare those paths, and set whatever the project uses to force that read, or the pin re-validates the run it exists to check.
 - **Stop at the boundary.** An input the project receives rather than builds — a licensed extract, a frozen upstream artifact, a hand-curated file — stays a dep with no producing step.
 
 Validate the section before building: `superra task check --category reproduction`.
