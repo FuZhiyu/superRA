@@ -29,13 +29,15 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 def _write_task_md(path: Path, title: str, status: str, **kwargs):
     """Write a task.md file (unified status format).
 
-    kwargs: depends_on, objective, results.
+    kwargs: depends_on, objective, results, reproduction (a ``## Reproduction``
+    YAML block body, fenced automatically).
     For legacy test scenarios, review_status and integration_status can be
     passed to produce old-format files.
     """
     depends_on = kwargs.get("depends_on", [])
     objective = kwargs.get("objective", "")
     results = kwargs.get("results", "")
+    reproduction = kwargs.get("reproduction", "")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
@@ -45,6 +47,8 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     body = f"## Objective\n\n{objective}\n"
     if results:
         body += f"\n## Results\n\n{results}\n"
+    if reproduction:
+        body += f"\n## Reproduction\n\n```yaml\n{reproduction.strip()}\n```\n"
 
     # Build frontmatter — include legacy fields only if explicitly passed
     fm_lines = [f'title: "{title}"', f"status: {status}"]

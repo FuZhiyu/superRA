@@ -10,6 +10,10 @@ Checks:
    from children.
 4. Sync-impact leak — advisory warning for any task still carrying a
    temporary ## Sync Impact section past Integrate closeout.
+5. Reproduction — the ## Reproduction section and config.yaml build-graph
+   contract (schema errors, duplicate outs, unknown ${VAR} refs); see
+   _repro.check_reproduction. Never-built steps are runner state, not a
+   finding, so a fresh clone still checks clean.
 
 Exit code 0 if clean, 1 if issues found.
 """
@@ -23,6 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _repro import check_reproduction
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -260,7 +265,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup", "sync-impact"],
+        choices=["status", "dependency", "rollup", "sync-impact", "reproduction"],
         help="Only run a specific check category",
     )
     return parser.parse_args(argv)
@@ -282,6 +287,8 @@ def run_checks(
         findings.extend(check_rollup_consistency(root))
     if category is None or category == "sync-impact":
         findings.extend(check_sync_impact(root))
+    if category is None or category == "reproduction":
+        findings.extend(check_reproduction(plan_root, root))
 
     return findings
 

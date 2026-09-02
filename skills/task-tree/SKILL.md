@@ -29,7 +29,8 @@ uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/super
 Run the committed `./superRA/superra` wrapper created above — contributors inside the superRA checkout substitute `uv run --script skills/task-tree/scripts/cli.py`. Every `superra …` example below and in the references denotes it:
 
 ```bash
-./superRA/superra task tree            # tree with status badges
+./superRA/superra task tree            # tree with status badges (canon reproduction tier marked too)
+./superRA/superra task tree --tier canon  # only canon-registered tasks
 ./superRA/superra task frontier        # dispatchable leaf tasks
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
