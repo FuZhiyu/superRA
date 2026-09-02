@@ -1,6 +1,6 @@
 ---
 title: "Wire the Graph into the PLAN / IMPLEMENT / INTEGRATE Workflow"
-status: implemented
+status: approved
 depends_on: [06-skill]
 ---
 
@@ -57,3 +57,19 @@ The harness failure is `test_contract.py::test_task_companion_contract_has_one_c
 
 - **The live smoke of the protection stage load did not run.** `stage_loads_live.py` needs `RUN_LIVE_HARNESS=1` and a live Claude SDK dispatch, which this dispatched session cannot provide. `LC008`'s `notes` field records that the `reproducibility` half of the row is not live-verified yet.
 - `[ADVISORY]` Most `skills/using-superra/SKILL.md#L…` anchors in `load_contract.json` point past that file's 64 lines and were already stale before this task; only LC008's own anchor was corrected. A stale-anchor sweep of that file is separate work.
+
+## Review Notes
+
+Thorough review; focuses: correctness, scope-fidelity. All findings are advisory — every objective bullet landed, the three surfaces agree with the skill's frontmatter, and `grep -rn "pipeline file"` is empty with no orphaned cross-reference among the remaining generic "pipeline" hits in `skills/`.
+
+1. **[ADVISORY, out of focus]** The workflow now names a command that does not exist yet. [cli.py](../../../skills/task-tree/scripts/cli.py) has no `repro` subcommand — [02-runner](../02-runner/task.md) builds it and is `not-started`. Merging this branch to main ahead of 02 and 03 leaves the IMPLEMENT completion gate ([completion.md:18](../../../skills/superimplement/references/completion.md#L18)) and Integrate step 1 ([integrate.md:9](../../../skills/superintegrate/references/integrate.md#L9)) pointing at an unknown subcommand. Fix: the orchestrator holds merge-back until the runner lands.
+
+2. **[ADVISORY]** The objective's live-smoke criterion is unmet and needs a seat that can produce it. `## Results` §Notes discloses this; the per-stage suite is classified `manual_live_claude` and dispatches against an installed plugin, so it cannot verify a manifest row that exists only on this branch. Fix: run it after merge-back, then drop the `reproducibility`-not-yet-verified caveat from `LC008.covered_by.notes` in [load_contract.json:242](../../../tests/harness-instruction-following/load_contract.json#L242).
+
+3. **[ADVISORY]** [finish.md:39](../../../skills/superintegrate/references/finish.md#L39) replaced the fallback rather than adding to it. The line was "Run the project pipeline **or targeted verification** on the final tree"; a project that declares no `## Reproduction` section now gets a build that does nothing and no instruction to verify anything else. The objective's wording — "run the graph as part of the protection suite" — is additive, and [integrate.md:9](../../../skills/superintegrate/references/integrate.md#L9) implements it that way. Fix: restore the fallback for a tree with no graph.
+
+4. **[ADVISORY]** The `build` / `status` command pair is spelled out at three workflow sites, only one of which points at its authority. [completion.md:18](../../../skills/superimplement/references/completion.md#L18) pairs its echo with `protect-and-completion.md` §The completion gate; [integrate.md:9](../../../skills/superintegrate/references/integrate.md#L9) and [finish.md:39](../../../skills/superintegrate/references/finish.md#L39) carry the commands alone, so a flag change has three sites to find. Fix: add the same pointer at both.
+
+5. **[ADVISORY]** [docs/site/04-utility-skills/task.md](../../../docs/site/04-utility-skills/task.md) still lists eight utility skills and omits `reproducibility`, while [README.md:14](../../../README.md#L14) now advertises the capability to the same reader. Outside the inventories `CLAUDE.md` §Skill Authoring Guidelines mandates, so this is a divergence to schedule rather than a gap in this task.
+
+6. **[ADVISORY]** LC008's anchor is now `#L48-L48` while LC007, LC009, LC010, and LC023 keep pre-existing `#L72`–`#L76` anchors into the same 64-line table. The implementer disclosed the staleness; recorded here so the sweep gets a task.
