@@ -10,6 +10,7 @@ message source.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from _task_io import (
@@ -21,6 +22,33 @@ from _task_io import (
     parse_frontmatter,
     parse_task,
 )
+
+
+@dataclass
+class Finding:
+    """A single diagnostic finding.
+
+    Lives here rather than in ``task_check`` so every validator that reports
+    severities — ``task_check``'s own checks and ``_repro``'s reproduction
+    checks — emits one shape without importing the CLI module.
+    """
+
+    task_path: str
+    category: str  # "status" | "dependency" | "rollup" | "sync-impact" | "reproduction"
+    severity: str  # "error" | "warning"
+    message: str
+
+    def to_text(self) -> str:
+        prefix = self.task_path or "(root)"
+        return f"[{self.severity.upper()}] [{self.category}] {prefix}: {self.message}"
+
+    def to_dict(self) -> dict:
+        return {
+            "task_path": self.task_path,
+            "category": self.category,
+            "severity": self.severity,
+            "message": self.message,
+        }
 
 
 def invalid_status_message(status: str) -> str:

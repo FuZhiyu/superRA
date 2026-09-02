@@ -26,6 +26,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Details`** — planner-owned, optional: planning findings, domain surveys, a suggested route. Implementers may deviate when another route satisfies `## Objective`; reviewers flag details only when they mislead, contradict the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
 - **`## Revision Notes`** — temporary update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Planner- or orchestrator-authored on an objective rewrite (`task-tree-design.md` §Objective rewrites on scope expansion); the implementer removes it once incorporated, in the same commit that sets `status: implemented` (`implement-task` §Execution) — whether or not review follows.
+- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register a step, and when to opt a task into `canon`, is discipline owned by the `reproducibility` skill.
 - **`## Review Notes`** — reviewer-owned. Present while any item remains: open `[BLOCKING]` findings at `revise`, or the tier/focus header and any un-actioned `[ADVISORY]` items at `approved`. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — temporary, integration-phase-only. Added by the sync author during `superintegrate` Sync to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
@@ -92,3 +93,107 @@ Any `## Results` riding higher than the task that produced a finding — a paren
 ### Figure Embedding
 
 Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/communicate/references/markdown.md` §Figures.
+
+## Reproduction Section
+
+`## Reproduction` declares the build steps a task owns. The build unit is a **step**, never a task: step-to-step edges are inferred from files, and task-level reproduction edges are derived from those, never declared. Frontmatter `depends_on` stays sibling-only orchestration and is unaffected.
+
+**The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
+
+```yaml
+tier: canon
+steps:
+  - name: build-panel
+    cmd: julia --project=. Code/build_panel.jl
+    deps:
+      - Code/build_panel.jl
+      - "${DATA}/crsp_monthly.parquet"
+    outs:
+      - "${OUT}/panel.parquet"
+  - name: check-panel
+    kind: check
+    cmd: julia --project=. test/check_panel.jl
+    deps: ["${OUT}/panel.parquet", test/check_panel.jl]
+```
+
+### Top-level keys
+
+| Key | Value |
+|---|---|
+| `tier` | `canon` or `local` (default `local`). `canon` opts the task's steps into the default build and into the completion gate; `local` registers them as allowed-stale. |
+| `steps` | List of step mappings. |
+
+### Step keys
+
+| Key | Value |
+|---|---|
+| `name` | Slug, unique across the whole tree. |
+| `cmd` | Shell string, run from the project root. Mutually exclusive with `runner`. |
+| `runner` + `script` | Expands a runner template from config; the script is added to `deps` automatically. |
+| `deps` | Files or directories the step reads. With `cmd`, list the script here. |
+| `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge. |
+| `kind` | `build` (default) or `check`. A `check` step declares no `outs` and reruns when its deps change. |
+| `params` | Flat mapping hashed into the step's state, so changing a value reruns the step. |
+
+Per-out sidecar tracking is a nested block item:
+
+```yaml
+outs:
+  - "${OUT}/intermediate.arrow"
+  - path: "${OUT}/very_large.arrow"
+    sidecar: "${OUT}/very_large.arrow.sha256"
+```
+
+The runner hashes the sidecar instead of the out. That is the trade-off: a very large intermediate costs one small read per check, and a hand-edit of the out itself goes unnoticed until the sidecar is rewritten.
+
+### Project config
+
+Project-wide reproduction settings live under the `reproduction:` key of `superRA/config.yaml`. Top-level keys of that file are namespaced by concern, so later configuration moves in beside `reproduction:` rather than into a second file.
+
+```yaml
+reproduction:
+  vars:
+    DATA: Data/derived
+    OUT:
+      shell: "Code/output_root.sh"
+    SCRATCH:
+      env: PROJECT_SCRATCH
+  runners:
+    julia: julia --project=. {script}
+  env_deps:
+    - Project.toml
+    - Manifest.toml
+  code_roots:
+    - Code
+```
+
+| Key | Value |
+|---|---|
+| `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
+| `runners` | Name → command template containing `{script}`. |
+| `env_deps` | Paths added to every step's deps. Machine-specific files — sysimages, caches — never belong here. |
+| `code_roots` | Directories the reminder hook watches for producer edits. |
+
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, and `script`. **Every node keeps its variable-form path as its id** alongside the path resolved for the invocation, so a committed lock never embeds an author or a branch, and switching roots reports stale honestly instead of rewriting ids.
+
+### The YAML subset
+
+Both the section block and `config.yaml` are read by a stdlib parser over a bounded subset, so the core stays dependency-free. `pyyaml`, when installed, parses the same text identically.
+
+- **Accepted:** block mappings, block lists, inline lists of scalars, plain and quoted scalars, `#` comments.
+- **Rejected:** anchors, aliases, tags, multi-line (literal or folded) scalars, inline mappings, duplicate keys, tab indentation.
+
+Inline lists are flow context, where YAML reserves `{`, `}`, `[`, `]`, and `,`: quote a `${VAR}` path there (`deps: ["${OUT}/panel.parquet"]`) or use a block list. Both parsers reject the unquoted form.
+
+Julia deps carry their own closure: a `.jl` dep expands to every file it reaches through `include("…")`, including `include(joinpath(@__DIR__, "…"))`, so helper edits invalidate the step without being listed. An include whose argument is not a static path is reported and left to be declared by hand.
+
+### Validation
+
+Findings come back in the `Finding` shape shared with `task check`, under the `reproduction` category.
+
+| Severity | Condition |
+|---|---|
+| `[ERROR]` | Duplicate step name; two steps declaring the same out; a `check` step with outs; prose outside the fence; YAML outside the subset, in a section or in `config.yaml`; an unknown key, tier, or runner; a step that declares neither `cmd` nor `runner` + `script`; an unknown `${VAR}`. |
+| `[WARNING]` | A dep that neither exists on disk nor is produced by a step; a derived task edge that contradicts sibling `depends_on` order; an `include` that could not be resolved. |
+
+An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.

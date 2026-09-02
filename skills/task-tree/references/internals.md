@@ -278,7 +278,8 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 |---|---|
 | `_artifacts.py` | Task-companion discovery, secure resolution, watcher ownership, MIME classification, and bounded standalone packing |
 | `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
-| `_task_validate.py` | Validation suite — one owner per validity rule, single message source |
+| `_task_validate.py` | Validation suite — one owner per validity rule, single message source; owns the shared `Finding` shape |
+| `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
 | `_worktree_discovery.py` | Worktree discovery — enumerate git worktrees, identify those with a task root |
 
@@ -313,4 +314,5 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `test_worktree_selector.py` | Worktree selector UI and live refresh |
 | `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
+| `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |
