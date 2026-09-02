@@ -991,7 +991,9 @@ def _expand_deps(
             _add(PathRef(logical=rel, resolved=rel))
 
     for raw in config.env_deps:
-        _add(PathRef(logical=_norm(raw), resolved=_norm(raw)))
+        # Unknown ${VAR}s here are reported once against config.yaml, not per step.
+        ref, _unknown = _path_ref(raw, config.variables)
+        _add(ref)
     return ordered
 
 
@@ -1057,6 +1059,17 @@ def build_graph(
         env_deps=[_norm(p) for p in _string_list(raw_config.get("env_deps"))],
         code_roots=[_norm(p) for p in _string_list(raw_config.get("code_roots"))],
     )
+    if resolve_vars:
+        for raw in graph.config.env_deps:
+            _, unknown = interpolate(raw, variables)
+            if unknown:
+                missing = ", ".join(f"${{{v}}}" for v in sorted(set(unknown)))
+                _finding(
+                    "",
+                    "error",
+                    f"{CONFIG_FILENAME}: env_deps entry {raw!r} references unknown "
+                    f"variable {missing}",
+                )
 
     tasks = _iter_tasks(tree)
     step_names: dict[str, str] = {}
