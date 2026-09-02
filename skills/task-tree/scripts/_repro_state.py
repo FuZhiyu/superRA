@@ -232,16 +232,79 @@ def sidecar_targets(graph: Graph) -> dict[str, str]:
     }
 
 
-def step_nodes(
-    step: Step, tracked: dict[str, str]
-) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """(deps, products) of a step as (lock id, resolved path to hash) pairs."""
-    deps = [(d.logical, tracked.get(d.logical, d.resolved)) for d in step.deps]
+Node = tuple[str, str, str | None]  # lock id, path to hash, path that must exist
+
+
+def step_nodes(step: Step, tracked: dict[str, str]) -> tuple[list[Node], list[Node]]:
+    """(deps, products) of a step as `Node` triples.
+
+    The third element is set only for a sidecar-tracked path: the sidecar
+    stands in for hashing, never for existence, so a deleted out still reports
+    missing.
+    """
+    deps = [
+        (d.logical, tracked.get(d.logical, d.resolved), _tracked_origin(d.logical, d.resolved, tracked))
+        for d in step.deps
+    ]
     if step.kind == "check":
         stamp = stamp_ref(step.name)
-        return deps, [(stamp, stamp)]
-    products = [(o.path.logical, (o.sidecar or o.path).resolved) for o in step.outs]
+        return deps, [(stamp, stamp, None)]
+    products = [
+        (o.path.logical, (o.sidecar or o.path).resolved, o.path.resolved if o.sidecar else None)
+        for o in step.outs
+    ]
     return deps, products
+
+
+def _tracked_origin(logical: str, resolved: str, tracked: dict[str, str]) -> str | None:
+    return resolved if logical in tracked else None
+
+
+def directory_dep_nodes(graph: Graph, step: Step, tracked: dict[str, str]) -> list[Node]:
+    """Nodes for the directory outs that cover this step's deps.
+
+    `_repro._producing_step` reads a dep below a directory out as produced by
+    that directory, and the status cascade follows the resulting `step_edges`.
+    The engine bridge sees only per-path nodes, so without these it would carry
+    no edge and could run the consumer first.
+    """
+    covering: list[tuple[str, Node]] = []
+    for owner in graph.steps:
+        if owner.name == step.name:
+            continue
+        for out in owner.outs:
+            covering.append(
+                (
+                    out.path.resolved,
+                    (
+                        out.path.logical,
+                        (out.sidecar or out.path).resolved,
+                        out.path.resolved if out.sidecar else None,
+                    ),
+                )
+            )
+    covering.sort(key=lambda entry: len(entry[0]), reverse=True)
+
+    declared = {d.logical for d in step.deps}
+    extra: list[Node] = []
+    for dep in step.deps:
+        for directory, node in covering:
+            if dep.resolved.startswith(directory + "/"):
+                if node[0] not in declared:
+                    declared.add(node[0])
+                    extra.append(node)
+                break
+    return extra
+
+
+def node_state(
+    cache: HashCache, project_root: Path, node: Node
+) -> str | None:
+    """State of a node: absent when its required path is gone, else its hash."""
+    _, hashed, must_exist = node
+    if must_exist is not None and not absolute(project_root, must_exist).exists():
+        return None
+    return path_state(cache, project_root, hashed)
 
 
 def path_state(cache: HashCache, project_root: Path, resolved: str) -> str | None:
@@ -262,9 +325,17 @@ def spec_node_id(step_name: str) -> str:
 
 
 def spec_hash(step: Step) -> str:
-    """Hash of everything about a step except its files' content."""
+    """Hash of everything about a step except its files' content.
+
+    The resolved command is in the payload as well as the logical one, so a
+    `${VAR}` that only ever reaches `cmd` — a mode flag, a seed — still moves
+    the step's state. Node *ids* stay logical; states have always tracked what
+    the invocation resolved to, so this reports a resolution change the same
+    way a switched `${OUT}` root does.
+    """
     payload = {
         "cmd": step.cmd_logical,
+        "cmd_resolved": step.cmd,
         "kind": step.kind,
         "params": {str(k): step.params[k] for k in sorted(step.params)},
         "deps": sorted(d.logical for d in step.deps),
@@ -478,21 +549,36 @@ def _classify(
         ]
         return result
 
-    if record.get("outcome") == "failed":
-        result.status = "failed"
-        result.reason = f"last run failed; see {result.log or paths.log_ref(step.name)}"
-        return result
-
     if entry is None:
         result.status = "missing"
         result.reason = "never built"
-        return result
+    else:
+        _compare(result, step, entry, paths, cache, tracked)
 
+    # A failed run is reported only while the step still has work to do. Once
+    # inputs are restored and everything matches the lock again, the tree is
+    # consistent and `build` correctly skips — so `status` says `fresh` rather
+    # than wedging on a record that no longer describes disk.
+    if result.status != "fresh" and record.get("outcome") == "failed":
+        result.status = "failed"
+        result.reason = f"last run failed; see {result.log or paths.log_ref(step.name)}"
+    return result
+
+
+def _compare(
+    result: StepStatus,
+    step: Step,
+    entry: LockEntry,
+    paths: RunnerPaths,
+    cache: HashCache,
+    tracked: dict[str, str],
+) -> None:
+    """Set *result* from the lock entry against what is on disk now."""
     deps, products = step_nodes(step, tracked)
     absent = [
-        logical
-        for logical, resolved in products
-        if path_state(cache, paths.project_root, resolved) is None
+        node[0]
+        for node in products
+        if node_state(cache, paths.project_root, node) is None
     ]
     if absent:
         result.status = "missing"
@@ -500,20 +586,20 @@ def _classify(
         result.changes = [
             Change(node=p, kind="output", change="missing") for p in absent
         ]
-        return result
+        return
 
     changes = _changed_nodes(step, entry, paths, cache, deps, products)
-    if changes:
-        result.status = "stale"
-        result.changes = changes
-        first = changes[0]
-        head = (
-            "the step definition changed"
-            if first.kind == "spec"
-            else f"{first.kind} {first.node} {first.change}"
-        )
-        result.reason = _plural(head, len(changes) - 1)
-    return result
+    if not changes:
+        return
+    result.status = "stale"
+    result.changes = changes
+    first = changes[0]
+    head = (
+        "the step definition changed"
+        if first.kind == "spec"
+        else f"{first.kind} {first.node} {first.change}"
+    )
+    result.reason = _plural(head, len(changes) - 1)
 
 
 def _changed_nodes(
@@ -521,8 +607,8 @@ def _changed_nodes(
     entry: LockEntry,
     paths: RunnerPaths,
     cache: HashCache,
-    deps: list[tuple[str, str]],
-    products: list[tuple[str, str]],
+    deps: list[Node],
+    products: list[Node],
 ) -> list[Change]:
     """Recorded node states that no longer match disk, in reporting order."""
     changes: list[Change] = []
@@ -530,23 +616,23 @@ def _changed_nodes(
     if entry.depends_on.get(spec_id) != spec_hash(step):
         changes.append(Change(node=spec_id, kind="spec", change="changed"))
 
-    for logical, resolved in deps:
-        recorded = entry.depends_on.get(logical)
+    for node in deps:
+        recorded = entry.depends_on.get(node[0])
         if recorded is None:
             continue  # a newly declared dep already moved the spec hash
-        current = path_state(cache, paths.project_root, resolved)
+        current = node_state(cache, paths.project_root, node)
         if current is None:
-            changes.append(Change(node=logical, kind="dependency", change="missing"))
+            changes.append(Change(node=node[0], kind="dependency", change="missing"))
         elif current != recorded:
-            changes.append(Change(node=logical, kind="dependency", change="changed"))
+            changes.append(Change(node=node[0], kind="dependency", change="changed"))
 
-    for logical, resolved in products:
-        recorded = entry.produces.get(logical)
+    for node in products:
+        recorded = entry.produces.get(node[0])
         if recorded is None:
             continue
-        current = path_state(cache, paths.project_root, resolved)
+        current = node_state(cache, paths.project_root, node)
         if current is not None and current != recorded:
-            changes.append(Change(node=logical, kind="output", change="changed"))
+            changes.append(Change(node=node[0], kind="output", change="changed"))
     return changes
 
 
@@ -845,9 +931,11 @@ __all__ = [
     "StepStatus",
     "TOML_AVAILABLE",
     "compute_status",
+    "directory_dep_nodes",
     "ensure_state_dir",
     "format_explain",
     "format_status",
+    "node_state",
     "path_state",
     "read_lock",
     "read_run_record",
