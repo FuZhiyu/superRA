@@ -324,18 +324,17 @@ def spec_node_id(step_name: str) -> str:
     return f"{step_name}::spec"
 
 
-def spec_hash(step: Step) -> str:
-    """Hash of everything about a step except its files' content.
+def spec_hashes(step: Step) -> tuple[str, str]:
+    """The two halves of a step's state: what was declared, and what it resolved to.
 
-    The resolved command is in the payload as well as the logical one, so a
-    `${VAR}` that only ever reaches `cmd` — a mode flag, a seed — still moves
-    the step's state. Node *ids* stay logical; states have always tracked what
-    the invocation resolved to, so this reports a resolution change the same
-    way a switched `${OUT}` root does.
+    A `${VAR}` that only ever reaches `cmd` — a mode flag, a seed, a switched
+    `${OUT}` root — moves the second half alone, so `status` can name the
+    resolution rather than accusing the author of editing the declaration.
+    Node *ids* stay logical; states have always tracked what the invocation
+    resolved to.
     """
-    payload = {
+    declared = {
         "cmd": step.cmd_logical,
-        "cmd_resolved": step.cmd,
         "kind": step.kind,
         "params": {str(k): step.params[k] for k in sorted(step.params)},
         "deps": sorted(d.logical for d in step.deps),
@@ -344,6 +343,15 @@ def spec_hash(step: Step) -> str:
             o.sidecar.logical for o in step.outs if o.sidecar is not None
         ),
     }
+    return _payload_hash(declared), _payload_hash({"cmd_resolved": step.cmd})
+
+
+def spec_hash(step: Step) -> str:
+    """Both halves as one node state, declared half first."""
+    return "{}:{}".format(*spec_hashes(step))
+
+
+def _payload_hash(payload: dict) -> str:
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
@@ -561,7 +569,10 @@ def _classify(
     # than wedging on a record that no longer describes disk.
     if result.status != "fresh" and record.get("outcome") == "failed":
         result.status = "failed"
-        result.reason = f"last run failed; see {result.log or paths.log_ref(step.name)}"
+        # Keep whatever moved since that run — a dep edited after the failure is
+        # the trigger a rerun answers to, and the log is where the last one died.
+        log_ref = result.log or paths.log_ref(step.name)
+        result.reason = f"{result.reason}; last run failed, see {log_ref}"
     return result
 
 
@@ -594,11 +605,14 @@ def _compare(
     result.status = "stale"
     result.changes = changes
     first = changes[0]
-    head = (
-        "the step definition changed"
-        if first.kind == "spec"
-        else f"{first.kind} {first.node} {first.change}"
-    )
+    if first.kind == "spec":
+        head = (
+            "the resolved command changed"
+            if first.change == "resolved"
+            else "the step definition changed"
+        )
+    else:
+        head = f"{first.kind} {first.node} {first.change}"
     result.reason = _plural(head, len(changes) - 1)
 
 
@@ -613,8 +627,21 @@ def _changed_nodes(
     """Recorded node states that no longer match disk, in reporting order."""
     changes: list[Change] = []
     spec_id = spec_node_id(step.name)
-    if entry.depends_on.get(spec_id) != spec_hash(step):
-        changes.append(Change(node=spec_id, kind="spec", change="changed"))
+    recorded_spec = entry.depends_on.get(spec_id)
+    declared, resolved = spec_hashes(step)
+    if recorded_spec != f"{declared}:{resolved}":
+        # Same declared half, different resolved half: a `${VAR}` moved, not the
+        # section. A lock written before the split has no declared half to match.
+        resolved_only = (
+            recorded_spec is not None and recorded_spec.split(":", 1)[0] == declared
+        )
+        changes.append(
+            Change(
+                node=spec_id,
+                kind="spec",
+                change="resolved" if resolved_only else "changed",
+            )
+        )
 
     for node in deps:
         recorded = entry.depends_on.get(node[0])
