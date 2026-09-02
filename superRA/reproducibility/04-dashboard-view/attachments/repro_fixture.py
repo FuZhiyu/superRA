@@ -6,6 +6,7 @@ pipeline, then driven into a state that puts all five step states plus a check
 step on screen at once:
 
   external  fetch-treasury reads a raw file that is not on disk
+  sidecar   lag-returns tracks its out through a companion hash file
   failed    bootstrap-se exits 1
   stale     fm.sh is touched after the build, so fama-macbeth and its
             descendants no longer match the lock
@@ -100,7 +101,8 @@ TASKS = {
     deps:
       - "${OUT}/panel_trimmed.csv"
     outs:
-      - "${OUT}/panel_lagged.csv"
+      - path: "${OUT}/panel_lagged.csv"
+        sidecar: "${OUT}/panel_lagged.csv.sha256"
   - name: check-panel
     kind: check
     runner: sh

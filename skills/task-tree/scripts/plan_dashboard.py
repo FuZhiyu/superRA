@@ -45,7 +45,7 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
-from _repro import build_graph, graph_to_dict
+from _repro import REPRO_SECTION, build_graph, graph_to_dict
 from _repro_state import (
     LOCK_FILENAME,
     STATUSES,
@@ -56,6 +56,7 @@ from _repro_state import (
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
+    parse_body_sections,
     _walk_children,
     collect_all_tasks,
     has_symlink_task_component,
@@ -417,6 +418,7 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     changed_paths: set[str] = set()
     artifact_changed_paths: set[str] = set()
     repro_lock_changed = False
+    repro_graph_changed = False
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
@@ -460,9 +462,6 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         else:
             changed_paths.add(task_path)
 
-    if repro_lock_changed:
-        await _broadcast("repro-updated", "{}", state.wt_id)
-
     if structural_parent_paths:
         # A task dir was added or deleted: the tree shape changed. The
         # master-detail client rebuilds its whole sidebar and restores
@@ -482,7 +481,14 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         any_children_changed = False
 
         for task_path in content_paths:
+            # Whether this edit can move the reproduction graph, decided before
+            # and after the reparse so both adding and removing a section
+            # counts. An edit to a task with no section on either side leaves
+            # the graph alone, and the view is not asked to refetch.
+            before = _declares_reproduction(_find_task(state, task_path))
             updated, children_changed = rebuild_state_task(state, task_path)
+            if before or _declares_reproduction(updated):
+                repro_graph_changed = True
             if children_changed:
                 # A task.md edit that changes this task's own child set is
                 # structural too — let the client rebuild the sidebar.
@@ -502,6 +508,9 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         if content_paths and state.root_task is not None:
             summary_html = _render_summary(state.root_task)
             await _broadcast("summary-updated", summary_html, state.wt_id)
+
+    if repro_lock_changed or repro_graph_changed:
+        await _broadcast("repro-updated", "{}", state.wt_id)
 
     # Companion changes never rebuild the task tree or active card. Emit one
     # bounded, current manifest for each owner so a Files view can refresh only
@@ -569,19 +578,43 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
 
     # The committed reproduction lock sits at the project root, outside the
     # watched plan root, so a build would otherwise be invisible here. Watch the
-    # file itself — cheap and non-recursive — when it already exists; a project
-    # that has never built has no freshness to push, and the Reproduction view
-    # re-fetches on open regardless.
-    watch_paths: list[Path] = [state.plan_root]
+    # file itself — cheap and non-recursive — but it does not exist until the
+    # project's first build, and a watch set is fixed for the life of an
+    # ``awatch``. So while the lock is absent, ask ``awatch`` to yield on its
+    # timeout as well: that tick is what notices the first build, announces it,
+    # and re-enters with the lock in the set. Once the lock is watched the tick
+    # is off and the loop is event-driven again.
     lock_file = Path(state.project_root) / LOCK_FILENAME
-    if lock_file.is_file():
-        watch_paths.append(lock_file)
 
-    async for changes in watchfiles.awatch(*watch_paths, stop_event=stop_event):
-        # watchfiles already debounces (default 1600ms); the sleep adds a
-        # short extra window so rapid back-to-back writes coalesce.
-        await asyncio.sleep(0.2)
-        await _rebuild_and_broadcast(state, changes)
+    while not stop_event.is_set():
+        watching_lock = lock_file.is_file()
+        watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
+        rearm = False
+        watcher = watchfiles.awatch(
+            *watch_paths, stop_event=stop_event, yield_on_timeout=not watching_lock
+        )
+        try:
+            async for changes in watcher:
+                if changes:
+                    # watchfiles already debounces (default 1600ms); the sleep
+                    # adds a short extra window so rapid back-to-back writes
+                    # coalesce.
+                    await asyncio.sleep(0.2)
+                    await _rebuild_and_broadcast(state, changes)
+                if not watching_lock and lock_file.is_file():
+                    # The first build just wrote the lock. Its write is not in
+                    # this watch set, so announce it here rather than waiting
+                    # for the second build.
+                    await _broadcast("repro-updated", "{}", state.wt_id)
+                    rearm = True
+                    break
+        finally:
+            # Close the generator explicitly: breaking out of the `async for`
+            # only suspends it, and leaving it to the garbage collector is what
+            # orphans the native fsevents thread (see this function's docstring).
+            await watcher.aclose()
+        if not rearm:
+            return
 
 
 # ---------------------------------------------------------------------------
@@ -1373,14 +1406,58 @@ REPRO_LOG_TAIL_LINES = 20
 REPRO_LOG_TAIL_BYTES = 64 * 1024
 REPRO_TIERS = ("canon", "local", "all")
 
+# How long one build may serve later requests. The view opens with two requests
+# milliseconds apart and each build resolves `reproduction.vars`, which the
+# project may point at a shell probe; the window is short so a var that reads
+# the environment is still re-resolved on the next repaint.
+REPRO_GRAPH_TTL = 2.0
+
+# worktree id -> (built at, tree signature, Graph)
+_repro_graph_cache: dict[str, tuple[float, tuple, object]] = {}
+
+
+def _declares_reproduction(task: Task | None) -> bool:
+    """True when *task*'s body carries a ``## Reproduction`` section."""
+    if task is None or not task.body:
+        return False
+    return REPRO_SECTION in parse_body_sections(task.body)
+
+
+def _repro_tree_signature(state: WorktreeState) -> tuple:
+    """Fingerprint of every file `build_graph` reads out of the tree."""
+    def _mtime(path: Path) -> int:
+        try:
+            return path.stat().st_mtime_ns
+        except OSError:
+            return -1
+
+    root = state.root_task
+    tasks = [root, *collect_all_tasks(root)] if root is not None else []
+    return (
+        str(state.plan_root),
+        _mtime(state.plan_root / "config.yaml"),
+        tuple((t.path, _mtime(t.dir_path / "task.md")) for t in tasks),
+    )
+
 
 def _repro_graph(state: WorktreeState):
-    """Build the graph over the worktree's already-walked tree."""
-    return build_graph(
+    """Build the graph over the worktree's already-walked tree, or reuse a
+    build made in the last `REPRO_GRAPH_TTL` seconds from the same files."""
+    signature = _repro_tree_signature(state)
+    cached = _repro_graph_cache.get(state.wt_id)
+    if (
+        cached is not None
+        and cached[1] == signature
+        and time.monotonic() - cached[0] < REPRO_GRAPH_TTL
+    ):
+        return cached[2]
+    graph = build_graph(
         state.plan_root,
         project_root=Path(state.project_root),
         root=state.root_task,
     )
+    _repro_graph_cache[state.wt_id] = (time.monotonic(), signature, graph)
+    return graph
 
 
 def _repro_graph_payload(state: WorktreeState) -> dict:
