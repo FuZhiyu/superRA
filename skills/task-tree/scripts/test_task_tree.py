@@ -16,9 +16,11 @@ import pytest
 SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+import _repro
 import _task_io
 import _task_validate
 from _task_io import parse_body_sections
+from _repro_state import ReproStateError
 import plan_dashboard
 import plan_migrate
 import task_add_result
@@ -1455,6 +1457,57 @@ class TestTaskQuery:
             task_query.render_dag(root, subtree_path="99-nonexistent")
         assert exc_info.value.code == 1
 
+    # --- Reproduction tier badge / filter ---
+
+    def _canon_and_plain(self, tmp_path):
+        """A canon-registered task alongside a plain, unregistered one."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        c = root_dir / "01-canon"
+        c.mkdir()
+        _write_task_md(
+            c / "task.md", "Canon Task", "not-started",
+            reproduction=(
+                "tier: canon\n"
+                "steps:\n"
+                "  - name: build\n"
+                "    cmd: sh build.sh\n"
+                "    outs: [output/x.txt]\n"
+            ),
+        )
+        p = root_dir / "02-plain"
+        p.mkdir()
+        _write_task_md(p / "task.md", "Plain Task", "not-started")
+        return root_dir
+
+    def test_tree_marks_canon_task_with_badge(self, tmp_path, capsys):
+        """`task tree` marks a canon-registered task with a `[canon]` badge."""
+        root_dir = self._canon_and_plain(tmp_path)
+        task_query.main(["--tree", "--plan-root", str(root_dir)])
+        out = capsys.readouterr().out
+        assert "01-canon: Canon Task [canon]" in out
+        assert "02-plain: Plain Task" in out
+        assert "02-plain: Plain Task [canon]" not in out
+
+    def test_tree_json_tier_field(self, tmp_path):
+        """`tree_to_json` carries `tier`, null for a task with no ## Reproduction."""
+        root_dir = self._canon_and_plain(tmp_path)
+        root = _task_io.walk_plan(root_dir)
+        graph = _repro.build_graph(root_dir, root=root, resolve_vars=False)
+        data = task_query.tree_to_json(root, graph=graph)
+        tiers = {child["path"]: child["tier"] for child in data["children"]}
+        assert tiers["01-canon"] == "canon"
+        assert tiers["02-plain"] is None
+
+    def test_tree_tier_filter_selects_only_that_tier(self, tmp_path, capsys):
+        """`--tier canon` hides tasks not registered at that tier."""
+        root_dir = self._canon_and_plain(tmp_path)
+        task_query.main(["--tree", "--tier", "canon", "--plan-root", str(root_dir)])
+        out = capsys.readouterr().out
+        assert "Canon Task" in out
+        assert "Plain Task" not in out
+
 
 # --- Migration tests ---
 
@@ -2207,6 +2260,130 @@ class TestTaskRead:
         for key in ("path", "title", "status", "effective_status",
                     "first_section", "sections"):
             assert key in root_anc
+
+
+class TestTaskReadReproduction:
+    """`task read`'s ``## Reproduction`` block: tier, step states, task edges."""
+
+    def _pipeline(self, tmp_path):
+        """Two-task pipeline: 01-build (canon) produces panel.parquet, which
+        02-estimate (local) consumes."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="Root.")
+        b = root / "01-build"
+        b.mkdir()
+        _write_task_md(
+            b / "task.md", "Build", "not-started", objective="Build panel.",
+            reproduction=(
+                "tier: canon\n"
+                "steps:\n"
+                "  - name: build-panel\n"
+                "    cmd: sh Code/build.sh\n"
+                "    deps: [Code/build.sh]\n"
+                "    outs: [output/panel.parquet]\n"
+            ),
+        )
+        e = root / "02-estimate"
+        e.mkdir()
+        _write_task_md(
+            e / "task.md", "Estimate", "not-started",
+            objective="Estimate model.", depends_on=["01-build"],
+            reproduction=(
+                "tier: local\n"
+                "steps:\n"
+                "  - name: fit-model\n"
+                "    cmd: sh Code/fit.sh\n"
+                "    deps: [output/panel.parquet]\n"
+                "    outs: [output/model.pkl]\n"
+            ),
+        )
+        (tmp_path / "Code").mkdir()
+        (tmp_path / "Code" / "build.sh").write_text("true\n", encoding="utf-8")
+        (tmp_path / "Code" / "fit.sh").write_text("true\n", encoding="utf-8")
+        return root
+
+    def test_no_reproduction_section_yields_no_block(self, plan_root):
+        """A task with no ``## Reproduction`` section: no block, JSON key is null."""
+        target = _task_io.parse_task(plan_root / "01-first" / "task.md", plan_root)
+        repro = task_read._reproduction_view(plan_root, target, None)
+        assert repro is None
+        human = task_read.render_human([], target, [], show_ancestors=False, repro=repro)
+        assert "Reproduction" not in human
+        data = json.loads(
+            task_read.render_json([], target, [], show_ancestors=False, repro=repro)
+        )
+        assert data["task"]["reproduction"] is None
+
+    def test_registered_task_shows_tier_and_never_built_step(self, tmp_path):
+        """A registered, never-built task shows its tier and a `missing` step."""
+        root = self._pipeline(tmp_path)
+        target = _task_io.parse_task(root / "01-build" / "task.md", root)
+        repro = task_read._reproduction_view(root, target, None)
+        assert repro["tier"] == "canon"
+        assert len(repro["steps"]) == 1
+        step = repro["steps"][0]
+        assert step["name"] == "build-panel"
+        assert step["status"] == "missing"
+        assert step["reason"] == "never built"
+        assert step["outs"] == ["output/panel.parquet"]
+        human = task_read.render_human([], target, [], show_ancestors=False, repro=repro)
+        assert "tier: canon" in human
+        assert "build-panel: missing — never built" in human
+
+    def test_task_edges_are_feeds_and_feeds_on(self, tmp_path):
+        """The producer shows `feeds:`; the consumer shows `feeds on:`."""
+        root = self._pipeline(tmp_path)
+        producer = _task_io.parse_task(root / "01-build" / "task.md", root)
+        consumer = _task_io.parse_task(root / "02-estimate" / "task.md", root)
+        producer_view = task_read._reproduction_view(root, producer, None)
+        consumer_view = task_read._reproduction_view(root, consumer, None)
+        assert producer_view["feeds"] == ["02-estimate"]
+        assert producer_view["feeds_on"] == []
+        assert consumer_view["feeds_on"] == ["01-build"]
+        assert consumer_view["feeds"] == []
+        human = task_read.render_human(
+            [], producer, [], show_ancestors=False, repro=producer_view
+        )
+        assert "feeds: 02-estimate" in human
+
+    def test_json_reproduction_shape(self, tmp_path):
+        """JSON reproduction carries tier/steps/feeds_on/feeds."""
+        root = self._pipeline(tmp_path)
+        target = _task_io.parse_task(root / "01-build" / "task.md", root)
+        repro = task_read._reproduction_view(root, target, None)
+        data = json.loads(
+            task_read.render_json([], target, [], show_ancestors=False, repro=repro)
+        )
+        rep = data["task"]["reproduction"]
+        assert rep["tier"] == "canon"
+        assert rep["steps"][0]["name"] == "build-panel"
+        assert rep["feeds"] == ["02-estimate"]
+
+    def test_degrades_when_runner_state_unavailable(self, tmp_path, monkeypatch):
+        """A `ReproStateError` from `compute_status` degrades every owned step to
+        `unknown` / `runner unavailable`, without touching task edges (which come
+        from the graph alone, not runner state)."""
+        root = self._pipeline(tmp_path)
+        target = _task_io.parse_task(root / "01-build" / "task.md", root)
+
+        def _boom(*args, **kwargs):
+            raise ReproStateError("reading pytask.lock needs Python 3.11+ (tomllib)")
+
+        monkeypatch.setattr(task_read, "compute_status", _boom)
+        repro = task_read._reproduction_view(root, target, None)
+        assert repro["steps"][0]["status"] == "unknown"
+        assert "runner unavailable" in repro["steps"][0]["reason"]
+        assert repro["feeds"] == ["02-estimate"]
+
+    def test_read_never_imports_pytask(self, tmp_path, monkeypatch):
+        """Block `import pytask` and confirm the reproduction view still computes
+        live state — `task read` must work on a machine without pytask."""
+        monkeypatch.setitem(sys.modules, "pytask", None)
+        root = self._pipeline(tmp_path)
+        target = _task_io.parse_task(root / "01-build" / "task.md", root)
+        repro = task_read._reproduction_view(root, target, None)
+        assert repro["steps"][0]["status"] == "missing"
 
 
 # --- task_hook tests ---
@@ -4182,6 +4359,86 @@ class TestTaskCheck:
         assert findings  # leak detected
         after = (root_dir / "01-a" / "task.md").read_text(encoding="utf-8")
         assert before == after, "task check must not mutate the tree"
+
+    # --- Reproduction category ---
+
+    def test_reproduction_clean_tree_no_findings(self, tmp_path):
+        """A tree with no ## Reproduction section yields no reproduction findings."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-a"
+        d.mkdir()
+        _write_task_md(d / "task.md", "A", "not-started")
+        findings = task_check.run_checks(root_dir, category="reproduction")
+        assert findings == []
+
+    def test_reproduction_category_detects_duplicate_out(self, tmp_path):
+        """Two steps declaring the same out is a reproduction [ERROR] finding."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-dup"
+        d.mkdir()
+        _write_task_md(
+            d / "task.md", "Dup", "not-started",
+            reproduction=(
+                "steps:\n"
+                "  - name: a\n"
+                "    cmd: sh a.sh\n"
+                "    outs: [output/x.txt]\n"
+                "  - name: b\n"
+                "    cmd: sh b.sh\n"
+                "    outs: [output/x.txt]\n"
+            ),
+        )
+        findings = task_check.run_checks(root_dir, category="reproduction")
+        assert any(
+            f.category == "reproduction" and f.severity == "error" for f in findings
+        )
+
+    def test_reproduction_runs_by_default(self, tmp_path):
+        """Running with no --category still includes reproduction findings."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-dup"
+        d.mkdir()
+        _write_task_md(
+            d / "task.md", "Dup", "not-started",
+            reproduction=(
+                "steps:\n"
+                "  - name: a\n"
+                "    cmd: sh a.sh\n"
+                "    outs: [output/x.txt]\n"
+                "  - name: b\n"
+                "    cmd: sh b.sh\n"
+                "    outs: [output/x.txt]\n"
+            ),
+        )
+        findings = task_check.run_checks(root_dir)
+        assert any(f.category == "reproduction" for f in findings)
+
+    def test_reproduction_never_built_step_checks_clean(self, tmp_path):
+        """A registered, never-built canon step is runner state, not a finding —
+        a fresh clone checks clean."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-build"
+        d.mkdir()
+        _write_task_md(
+            d / "task.md", "Build", "not-started",
+            reproduction=(
+                "tier: canon\n"
+                "steps:\n"
+                "  - name: build\n"
+                "    cmd: sh build.sh\n"
+                "    outs: [output/panel.parquet]\n"
+            ),
+        )
+        findings = task_check.run_checks(root_dir, category="reproduction")
+        assert findings == []
 
 
 # --- Status rollup propagation tests (from better-handoff, adapted for unified status) ---

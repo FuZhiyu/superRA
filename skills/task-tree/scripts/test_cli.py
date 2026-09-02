@@ -24,10 +24,13 @@ def _write_task_md(
     status: str = "not-started",
     results: str = "",
     depends_on: list[str] | None = None,
+    reproduction: str = "",
 ) -> None:
     body = "## Objective\n\nTest objective.\n"
     if results:
         body += f"\n## Results\n\n{results}\n"
+    if reproduction:
+        body += f"\n## Reproduction\n\n```yaml\n{reproduction.strip()}\n```\n"
     deps = depends_on or []
     deps_yaml = "\n" + "".join(f"  - {dep}\n" for dep in deps) if deps else " []"
     path.write_text(
@@ -109,6 +112,118 @@ def test_task_tree_autodetects_legacy_plan_when_superra_absent(
 
     data = json.loads(capsys.readouterr().out)
     assert data["title"] == "Legacy"
+
+
+def test_task_read_shows_reproduction_block_for_registered_task(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Root")
+    build = root / "01-build"
+    build.mkdir()
+    _write_task_md(
+        build / "task.md", "Build",
+        reproduction=(
+            "tier: canon\n"
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: sh build.sh\n"
+            "    outs: [output/panel.parquet]\n"
+        ),
+    )
+    monkeypatch.chdir(root)
+
+    cli.main(["task", "read", "01-build", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    rep = data["task"]["reproduction"]
+    assert rep["tier"] == "canon"
+    assert rep["steps"][0]["name"] == "build-panel"
+    assert rep["steps"][0]["status"] == "missing"
+
+
+def test_task_read_no_reproduction_block_for_unregistered_task(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(task_root)
+
+    cli.main(["task", "read", "01-first", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    assert data["task"]["reproduction"] is None
+
+
+def test_task_check_reproduction_category(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Root")
+    dup = root / "01-dup"
+    dup.mkdir()
+    _write_task_md(
+        dup / "task.md", "Dup",
+        reproduction=(
+            "steps:\n"
+            "  - name: a\n"
+            "    cmd: sh a.sh\n"
+            "    outs: [output/x.txt]\n"
+            "  - name: b\n"
+            "    cmd: sh b.sh\n"
+            "    outs: [output/x.txt]\n"
+        ),
+    )
+    monkeypatch.chdir(root)
+
+    with pytest.raises(SystemExit):
+        cli.main(["task", "check", "--category", "reproduction", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    assert data["ok"] is False
+    assert any(f["category"] == "reproduction" for f in data["findings"])
+
+
+def test_task_tree_tier_badge_and_filter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Root")
+    canon = root / "01-canon"
+    canon.mkdir()
+    _write_task_md(
+        canon / "task.md", "Canon Task",
+        reproduction=(
+            "tier: canon\n"
+            "steps:\n"
+            "  - name: build\n"
+            "    cmd: sh build.sh\n"
+            "    outs: [output/x.txt]\n"
+        ),
+    )
+    plain = root / "02-plain"
+    plain.mkdir()
+    _write_task_md(plain / "task.md", "Plain Task")
+    monkeypatch.chdir(root)
+
+    cli.main(["task", "tree"])
+    out = capsys.readouterr().out
+    assert "Canon Task [canon]" in out
+    assert "Plain Task" in out
+
+    cli.main(["task", "tree", "--tier", "canon"])
+    out = capsys.readouterr().out
+    assert "Canon Task" in out
+    assert "Plain Task" not in out
 
 
 def test_task_create_uses_autodetected_root_for_legacy_wrapper(
