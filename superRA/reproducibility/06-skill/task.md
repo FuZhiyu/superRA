@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: revise
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -8,9 +8,21 @@ depends_on: [01-section-contract]
 
 Write `skills/reproducibility/SKILL.md` and its references: the discipline agents follow to register, build, and review a reproduction graph. Mechanics stay in `task-tree` (contract, CLI, dashboard); this skill points to them and teaches behavior.
 
-- **SKILL.md** (utility category, standalone-usable): when to register a step (any maintained producer of a committed exhibit or canonical result; any task companion the results cite, at `tier: local`), the tier rule (canon is opted in, normally at Protect), how to build and read `repro status`, and gated checklist items for implementers and reviewers: `[BLOCKING]` every out a task's `## Results
+- **SKILL.md** (utility category, standalone-usable): when to register a step (any maintained producer of a committed exhibit or canonical result; any task companion the results cite, at `tier: local`), the tier rule (canon is opted in, normally at Protect), how to build and read `repro status`, and gated checklist items for implementers and reviewers: `[BLOCKING]` every out a task's `## Results` cites is produced by a registered step or declared external; `[BLOCKING]` `repro status --tier canon` is clean before `status: implemented` on a canon task; `[BLOCKING]` env deps and check steps declared per the contract; `[ADVISORY]` deps declared at file granularity, not whole directories, when the script reads a few files.
+- **`references/rerun-model.md`:** what agents must understand to predict reruns: content hashes, the size-and-mtime cache, early cutoff, why `touch` does nothing, why identical regeneration stops the cascade, include closures, env deps, machine-specific exclusions (sysimages), sidecar trade-offs, external inputs at the graph boundary, Dropbox behavior, and how to read an `explain`.
+- **`references/graph-authoring.md`:** how to declare steps from a script (read its I/O, name deps at file level, directories only for many-file outputs, `${VAR}` roots, per-file outs when scripts share a directory, check steps for drift tests), how to present a new or changed graph for review (dashboard Reproduction view, mermaid export in `## Results`), and how to act on graph comments.
+- **`references/protect-and-completion.md`:** the Protect step's reproduction choices (tier per affected task, check steps for selected drift tests, boundary inputs) and the completion-gate procedure (`repro build --tier canon`, then `repro status` clean, failures block the menu).
+- **Validation criteria:** each file passes the CLAUDE.md three-test gate line by line and the terse style; frontmatter description names the triggers; every command and finding name matches the contract and runner objectives. Behavioral verification is [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md), where agents follow this skill on a real pipeline; defects found there reopen this task.
 
-The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/reproducibility/SKILL.md) plus the three references the objective names, 1,440 words total. Behavior stays unverified until [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) runs an agent through it on a real pipeline.
+## Details
+
+- Load `skill-creator` and `superRA:communicate` before writing. Exemplars for the style: `skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`; a script-bearing utility skill: `skills/worktree-data-sync/SKILL.md`.
+- Commands, schema, and finding names come from [01-section-contract](../01-section-contract/task.md) and [02-runner](../02-runner/task.md); point at the contract, do not restate the schema.
+- BondElasticity lessons worth teaching (recorded in that repo's `.plan/`): lock paper-facing outputs, CSV companions for figures, never PNG hashes, one interpreter pin, boundary inputs.
+
+## Results
+
+The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/reproducibility/SKILL.md) plus the three references the objective names, 1,429 words total. Behavior stays unverified until [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) runs an agent through it on a real pipeline.
 
 ### What each file owns
 
@@ -40,5 +52,7 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 Thorough pass; focuses: correctness, scope-fidelity. Covered: the four files under `skills/reproducibility/` line by line against the CLAUDE.md three-test gate and §Skill Prose Style, and every command, flag, tier, state, and schema claim against the landed contract, the landed parser, and the `02-runner` / `03-task-interface` objectives. Not covered: behavior on a real pipeline, which [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) owns.
 
 1. `[BLOCKING]` — This task file lost its planner-owned `## Objective` tail, its whole `## Details` section, and its `## Results` heading. The edit truncates the SKILL.md bullet mid-token at [task.md:11](task.md#L11), dropping three of the four gate specifications, the three reference-file bullets, the validation-criteria bullet, all three `## Details` bullets, and the `## Results` heading — the written results now sit inside `## Objective`. Both lost sections are planner-owned ([task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Task Anatomy: "Implementers read it but do not rewrite it"), and every downstream reader, the maturation fold, and any re-implementation address `## Results` by heading. Fix: restore `## Objective` and `## Details` verbatim from `git show dc4232ff:superRA/reproducibility/06-skill/task.md`, add the `## Results` heading back, and move the four written subsections under it.
+   → implemented: [task.md](task.md) — `## Objective` and `## Details` restored verbatim from `dc4232ff`; the four written subsections now sit under a `## Results` heading. Cause was a `str.partition("## Results")` split that cut at the first literal `## Results` inside the objective's gate bullet.
 
 2. `[ADVISORY]` — [graph-authoring.md:9](../../../skills/reproducibility/references/graph-authoring.md#L9): "A per-step pin drifts as soon as one step is edited." follows a complete instruction and states only why it holds; §Skill Prose Style deletes rationale clauses.
+   → implemented: [graph-authoring.md:9](../../../skills/reproducibility/references/graph-authoring.md#L9) — rationale clause deleted; the bullet is now the instruction alone.
