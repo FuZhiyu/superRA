@@ -12,7 +12,9 @@ level — the wrapper sends `dashboard` straight to `plan_dashboard.py` so the
 web stack never lands on this task hot path. The in-process `dashboard` handler
 below stays the single home for the user-facing-surface translation;
 `plan_dashboard.py` delegates back to it when the wrapper routes `dashboard`
-there, so the translation has one home.
+there, so the translation has one home. `repro` forwards its arguments verbatim
+to `repro_run.py`, which owns that flag surface and re-execs itself under uv
+when a build needs the pytask its own PEP 723 block declares.
 """
 
 from __future__ import annotations
@@ -731,6 +733,14 @@ def build_parser() -> argparse.ArgumentParser:
     post_tool_use = hook_sub.add_parser("post-tool-use", help="Run the PostToolUse hook")
     _set_runner(post_tool_use, _run_hook)
 
+    # Registered for `superra --help` only: `main` hands every `repro` argument
+    # to repro_run.py before argparse runs, so the flag surface has one owner.
+    sub.add_parser(
+        "repro",
+        help="Build and inspect the reproduction graph (`superra repro --help`)",
+        add_help=False,
+    )
+
     wrapper = sub.add_parser("wrapper", help="Generate the resolver-carrying task-tree CLI wrapper")
     wrapper_sub = wrapper.add_subparsers(dest="wrapper_command", required=True)
     wrapper_init = wrapper_sub.add_parser(
@@ -754,6 +764,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "repro":
+        _module_main("repro_run", argv[1:])
+        return
     parser = build_parser()
     args = parser.parse_args(argv)
     runner = getattr(args, "runner", None)
