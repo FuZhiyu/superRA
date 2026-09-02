@@ -20,7 +20,6 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -33,33 +32,12 @@ from _task_io import (
     resolve_plan_root_arg,
     walk_plan,
 )
-from _task_validate import detect_cycles, invalid_status_message, validate_review_notes
-
-
-# ---------------------------------------------------------------------------
-# Finding data model
-# ---------------------------------------------------------------------------
-
-@dataclass
-class Finding:
-    """A single diagnostic finding."""
-
-    task_path: str
-    category: str  # "status" | "dependency" | "rollup" | "sync-impact"
-    severity: str  # "error" | "warning"
-    message: str
-
-    def to_text(self) -> str:
-        prefix = self.task_path or "(root)"
-        return f"[{self.severity.upper()}] [{self.category}] {prefix}: {self.message}"
-
-    def to_dict(self) -> dict:
-        return {
-            "task_path": self.task_path,
-            "category": self.category,
-            "severity": self.severity,
-            "message": self.message,
-        }
+from _task_validate import (
+    Finding,
+    detect_cycles,
+    invalid_status_message,
+    validate_review_notes,
+)
 
 
 # ---------------------------------------------------------------------------

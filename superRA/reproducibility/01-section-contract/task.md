@@ -1,6 +1,6 @@
 ---
 title: "Define the `## Reproduction` Section Contract and Graph Model"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -26,3 +26,29 @@ Specify the `## Reproduction` section and ship the shared library that turns a t
 - The frontmatter parser in `_task_io.py` (`_parse_yaml_value`, `_parse_yaml_list_continuation`) is the existing stdlib subset precedent; the comment sidecar chose JSON for the same reason ([_comments.py:179](../../../skills/task-tree/scripts/_comments.py#L179)). The section stays YAML because humans write and comment on it; the subset keeps the parser bounded.
 
 ## Results
+
+The reproduction graph library and its contract are in place; [02-runner](../02-runner/task.md) through [06-skill](../06-skill/task.md) can build on them without re-reading a task file.
+
+### What later tasks call
+
+[`_repro.py`](../../../skills/task-tree/scripts/_repro.py) is stdlib-only and never executes a build.
+
+- `build_graph(plan_root, *, project_root, root, env, shell_runner)` returns a `Graph` of `Step` / `Out` / `PathRef` / `ExternalInput` dataclasses plus `findings`. It never raises: one malformed task costs its own steps and nothing else.
+- `graph_to_dict(graph)` is the JSON shape the runner, `task read`, and the dashboard share.
+- `check_reproduction(plan_root, root)` returns the same findings for the `task check` `reproduction` category ([03-task-interface](../03-task-interface/task.md) wires it); pass the already-walked `root` to avoid a second tree walk.
+- `parse_yaml_subset` and `extract_repro_block` are separately callable, so the hook can read one section without building the tree.
+
+`Finding` moved from [task_check.py](../../../skills/task-tree/scripts/task_check.py) to [_task_validate.py](../../../skills/task-tree/scripts/_task_validate.py) so both validators emit one shape and `task check` can import `_repro` without a cycle. `task_check` re-exports it; no call site changed.
+
+### Two contract decisions the plan did not settle
+
+- **A `${VAR}` path inside an inline list must be quoted.** PyYAML rejects `deps: [${OUT}/panel.parquet]` outright — `{` is a reserved flow indicator — so accepting it would have broken the "pyyaml parses the same text identically" guarantee on the very form agents write most. The subset parser rejects it with a message naming the quoted fix; block lists are unaffected.
+- **Structural step errors are `[ERROR]` findings too.** Beyond the listed findings, a missing or non-slug `name`, a step declaring neither `cmd` nor `runner` + `script`, an unknown step or section key, an undefined runner, and a runner template without `{script}` all report rather than crash the walk.
+
+### Validation
+
+82 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 909, up from the 827 baseline.
+
+Coverage follows the objective's list, plus: the subset parser agrees with `pyyaml` byte-for-byte on three fixture sections (`json.dumps(..., sort_keys=True)` equality), scalar typing included — the parser reimplements PyYAML's YAML 1.1 resolvers for null, bool, int, and float, minus sexagesimals.
+
+Contract prose is [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Reproduction Section, with the section listed in §Task Anatomy and both new modules in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory.
