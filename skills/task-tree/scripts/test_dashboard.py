@@ -6528,3 +6528,476 @@ class TestServeBindHost:
 
         expected = plan_dashboard._dashboard_url(port, plan_root)
         assert opened == [expected]
+
+
+# ---------------------------------------------------------------------------
+# Reproduction view: the two API routes, the export snapshot, the page wiring,
+# and the client-side layout
+#
+# The routes are read-only projections of `_repro.graph_to_dict` and
+# `_repro_state.compute_status(...).to_dict()`; these tests pin the projection
+# the client depends on (including the dashboard-local `log_tail`) and the
+# invariant that reading them never creates runner state in the project.
+# ---------------------------------------------------------------------------
+
+REPRO_CONFIG = """\
+reproduction:
+  vars:
+    OUT: build
+  env_deps:
+    - env.lock
+"""
+
+REPRO_INGEST = """\
+---
+title: "Ingest"
+status: in-progress
+depends_on: []
+---
+
+## Objective
+
+Read the vendor extract.
+
+## Reproduction
+
+```yaml
+tier: canon
+steps:
+  - name: fetch-crsp
+    cmd: sh code/fetch.sh
+    deps:
+      - code/fetch.sh
+    outs:
+      - "${OUT}/crsp.csv"
+  - name: check-ingest
+    kind: check
+    cmd: sh code/check.sh
+    deps:
+      - "${OUT}/crsp.csv"
+```
+"""
+
+REPRO_PANEL = """\
+---
+title: "Panel"
+status: in-progress
+depends_on: []
+---
+
+## Objective
+
+Build the panel.
+
+## Reproduction
+
+```yaml
+tier: local
+steps:
+  - name: merge-panel
+    cmd: sh code/merge.sh
+    deps:
+      - "${OUT}/crsp.csv"
+      - code/merge.sh
+    outs:
+      - "${OUT}/panel.csv"
+```
+"""
+
+
+@pytest.fixture
+def repro_plan(tmp_path):
+    """A tree declaring three steps across two owner tasks: a canon pair (one a
+    check step) and a local step consuming the canon task's out, so the payload
+    carries a cross-task edge, both tiers, and both step kinds."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+    (root / "config.yaml").write_text(REPRO_CONFIG, encoding="utf-8")
+    _write_task_md(root / "task.md", "Repro Project", "in-progress",
+                   objective="Root.")
+    (root / "01-ingest").mkdir()
+    (root / "01-ingest" / "task.md").write_text(REPRO_INGEST, encoding="utf-8")
+    (root / "02-panel").mkdir()
+    (root / "02-panel" / "task.md").write_text(REPRO_PANEL, encoding="utf-8")
+    code = tmp_path / "code"
+    code.mkdir()
+    for name in ("fetch.sh", "check.sh", "merge.sh"):
+        (code / name).write_text("#!/bin/sh\n", encoding="utf-8")
+    (tmp_path / "env.lock").write_text("sh 5.2\n", encoding="utf-8")
+    return root
+
+
+def _repro_client(plan_root):
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    plan_dashboard.PLAN_ROOT = plan_root
+    return TestClient(plan_dashboard.app)
+
+
+class TestReproRoutes:
+    def test_graph_route_serves_the_declared_graph(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            body = c.get("/api/repro/graph").json()
+        assert [s["name"] for s in body["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert {t["path"]: t["tier"] for t in body["tasks"]} == {
+            "01-ingest": "canon", "02-panel": "local",
+        }
+        # Step edges are inferred from files, including across owner tasks.
+        assert {(e["from"], e["to"]) for e in body["step_edges"]} == {
+            ("fetch-crsp", "check-ingest"), ("fetch-crsp", "merge-panel"),
+        }
+        merge = [s for s in body["steps"] if s["name"] == "merge-panel"][0]
+        assert merge["task"] == "02-panel"
+        assert [o["path"]["logical"] for o in merge["outs"]] == ["${OUT}/panel.csv"]
+        assert [s["kind"] for s in body["steps"]] == ["build", "check", "build"]
+
+    def test_status_route_serves_the_runner_contract(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            body = c.get("/api/repro/status", params={"tier": "all"}).json()
+        assert body["tier"] == "all"
+        assert body["summary"] == {
+            "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "external": 0,
+            "total": 3,
+        }
+        assert body["ok"] is False
+        entry = body["steps"][0]
+        assert entry["name"] == "fetch-crsp"
+        assert entry["status"] == "missing" and entry["reason"] == "never built"
+        # The dashboard's own addition: the node detail panel's log tail rides
+        # the status payload, so the view needs no third route.
+        assert entry["log_tail"] == ""
+        for key in ("task", "tier", "kind", "cmd", "deps", "outs", "duration"):
+            assert key in entry
+
+    def test_status_route_scopes_to_a_tier(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            canon = c.get("/api/repro/status", params={"tier": "canon"}).json()
+            local = c.get("/api/repro/status", params={"tier": "local"}).json()
+        assert [s["name"] for s in canon["steps"]] == ["fetch-crsp", "check-ingest"]
+        assert [s["name"] for s in local["steps"]] == ["merge-panel"]
+
+    def test_status_route_rejects_an_unknown_tier(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            assert c.get("/api/repro/status", params={"tier": "canonn"}).status_code == 400
+
+    def test_status_route_carries_a_bounded_log_tail(self, repro_plan):
+        """The node detail panel reads the step's log through this payload, so a
+        chatty build step must not pull its whole log into the response."""
+        logs = repro_plan.parent / ".superra-repro" / "logs"
+        logs.mkdir(parents=True)
+        (logs / "fetch-crsp.log").write_text(
+            "\n".join(f"line {i}" for i in range(5000)), encoding="utf-8"
+        )
+        with _repro_client(repro_plan) as c:
+            body = c.get("/api/repro/status", params={"tier": "all"}).json()
+        tail = {s["name"]: s["log_tail"] for s in body["steps"]}
+        assert tail["fetch-crsp"].splitlines()[-1] == "line 4999"
+        assert len(tail["fetch-crsp"].splitlines()) == 20
+        assert tail["check-ingest"] == ""
+
+    def test_status_route_degrades_when_the_lock_cannot_be_read(
+        self, repro_plan, monkeypatch
+    ):
+        """Without `tomllib` (Python < 3.11) the runner cannot read the lock; the
+        payload keeps its shape and names the reason instead of failing."""
+        def _boom(*args, **kwargs):
+            raise plan_dashboard.ReproStateError("reading pytask.lock needs Python 3.11+")
+
+        monkeypatch.setattr(plan_dashboard, "compute_status", _boom)
+        with _repro_client(repro_plan) as c:
+            resp = c.get("/api/repro/status", params={"tier": "all"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["steps"] == [] and body["ok"] is False
+        assert body["summary"]["total"] == 0
+        assert "Python 3.11" in body["unavailable"]
+
+    def test_reading_the_routes_creates_no_runner_state(self, repro_plan):
+        """A dashboard GET must not write into the project: only `superra repro`
+        owns `.superra-repro/` and the `.gitignore` entry that comes with it."""
+        project_root = repro_plan.parent
+        with _repro_client(repro_plan) as c:
+            c.get("/api/repro/graph")
+            c.get("/api/repro/status", params={"tier": "all"})
+        assert not (project_root / ".superra-repro").exists()
+        assert not (project_root / ".gitignore").exists()
+
+    def test_tree_with_no_reproduction_sections_serves_empty_payloads(self, plan_root):
+        with _repro_client(plan_root) as c:
+            graph = c.get("/api/repro/graph").json()
+            status = c.get("/api/repro/status", params={"tier": "all"}).json()
+        assert graph["steps"] == [] and graph["tasks"] == [] and graph["findings"] == []
+        assert status["steps"] == [] and status["summary"]["total"] == 0
+        assert status["ok"] is True
+
+
+class TestLogTailBoundedRead:
+    def test_reads_only_the_tail_and_drops_the_partial_first_line(self, tmp_path):
+        log = tmp_path / "step.log"
+        log.write_text("aaaa\nbbbb\ncccc\n", encoding="utf-8")
+        assert plan_dashboard._log_tail(log, lines=10) == "aaaa\nbbbb\ncccc"
+        # 7 bytes back lands mid-'bbbb', so that fragment is dropped.
+        assert plan_dashboard._log_tail(log, lines=10, max_bytes=7) == "cccc"
+
+    def test_a_bound_larger_than_the_file_keeps_every_line(self, tmp_path):
+        log = tmp_path / "step.log"
+        log.write_text("aaaa\nbbbb\n", encoding="utf-8")
+        assert plan_dashboard._log_tail(log, lines=10, max_bytes=4096) == "aaaa\nbbbb"
+
+
+class TestReproExportSnapshot:
+    def _fragments(self, html):
+        match = re.search(r"var STANDALONE_FRAGMENTS = (\{.*?\});\n", html, re.S)
+        assert match, "standalone export carries no fragment map"
+        return json.loads(match.group(1))
+
+    def test_export_embeds_the_graph_and_status_snapshot(self, repro_plan):
+        fragments = self._fragments(
+            plan_dashboard.render_standalone_html(repro_plan)
+        )
+        graph = fragments["/api/repro/graph"]
+        # The client asks for the whole tier and filters client-side, so one
+        # status fragment has to serve every tier the exported view can select.
+        status = fragments["/api/repro/status?tier=all"]
+        assert [s["name"] for s in graph["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert [s["name"] for s in status["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert status["summary"]["missing"] == 3
+
+    def test_export_of_a_tree_with_no_steps_embeds_an_empty_snapshot(self, plan_root):
+        fragments = self._fragments(
+            plan_dashboard.render_standalone_html(plan_root)
+        )
+        assert fragments["/api/repro/graph"]["steps"] == []
+        assert fragments["/api/repro/status?tier=all"]["steps"] == []
+
+
+class TestReproViewWiring:
+    def test_page_carries_the_view_toggle_container_and_sse_sink(self):
+        assert 'id="btn-reproduction"' in BASE_HTML
+        assert "showView('reproduction')" in BASE_HTML
+        assert 'id="view-reproduction"' in BASE_HTML
+        assert 'sse-swap="repro-updated"' in BASE_HTML
+
+    def test_doc_mode_hides_the_toggle(self):
+        """A documentation tree declares no build steps."""
+        assert "html[data-doc-mode] #btn-reproduction { display: none !important; }" in BASE_HTML
+
+    def test_state_tokens_are_defined_in_both_themes(self):
+        light, dark = BASE_HTML.split('[data-theme="dark"]', 1)
+        for state in ("fresh", "stale", "missing", "failed", "external"):
+            for suffix in ("", "-t"):
+                token = f"--rp-{state}{suffix}:"
+                assert token in light, f"{token} missing from the light theme"
+                assert token in dark, f"{token} missing from the dark theme"
+
+
+class TestReproLockWatch:
+    """A build rewrites `pytask.lock` at the project root, outside the watched
+    plan root, so the watcher adds that one file and turns a change to it into
+    the `repro-updated` broadcast the view refreshes on."""
+
+    def _reset(self):
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_watchers.clear()
+        plan_dashboard._worktree_locks.clear()
+
+    def test_lock_change_broadcasts_repro_updated(self, tmp_path):
+        import watchfiles
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
+            "wt-a", root
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+
+        async def _test():
+            state = plan_dashboard._worktree_cache["wt-a"]
+            lock = tmp_path / "pytask.lock"
+            await plan_dashboard._rebuild_and_broadcast(
+                state, {(watchfiles.Change.modified, str(lock))}
+            )
+            assert not queue.empty()
+            assert "event: repro-updated" in queue.get_nowait()
+            # The lock is not a task file: no tree rebuild rode along with it.
+            assert queue.empty()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_watcher_adds_the_lock_only_when_it_exists(self, tmp_path, monkeypatch):
+        """`awatch` raises on a path that is not there, so a project that has
+        never built must not put its absent lock in the watch set."""
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
+            "wt-a", root
+        )
+        seen = []
+
+        def _fake_awatch(*paths, **kwargs):
+            seen.append(paths)
+
+            class _Empty:
+                def __aiter__(self):
+                    return self
+
+                async def __anext__(self):
+                    raise StopAsyncIteration
+
+            return _Empty()
+
+        import watchfiles
+        monkeypatch.setattr(watchfiles, "awatch", _fake_awatch)
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
+            )
+            assert seen == [(root,)]
+            (tmp_path / "pytask.lock").write_text("", encoding="utf-8")
+            loop.run_until_complete(
+                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
+            )
+            assert seen[1] == (root, tmp_path / "pytask.lock")
+        finally:
+            self._reset()
+            loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Reproduction layout (node-backed)
+#
+# The swimlane-and-column layout lives only in dashboard.js.  These tests run
+# the extracted layout function under node so the column assignment, the lane
+# grouping, and the determinism the objective asks for are exercised directly.
+# ---------------------------------------------------------------------------
+
+
+def _run_repro_node(harness_body):
+    defs = _extract_js_defs([
+        "RP_NODE_W", "RP_X0", "reproLayout", "reproBarycenter",
+    ])
+    proc = subprocess.run(
+        [_NODE, "-e", defs + "\n" + harness_body],
+        capture_output=True, text=True, timeout=20,
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+_RP_STEPS = (
+    "var steps=["
+    "  {name:'a',task:'01',kind:'build'},"
+    "  {name:'b',task:'01',kind:'build'},"
+    "  {name:'c',task:'02',kind:'build'},"
+    "  {name:'d',task:'02',kind:'build'}];"
+    "var edges=[{from:'a',to:'b'},{from:'b',to:'c'},{from:'b',to:'d'}];"
+)
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproLayoutClientLogic:
+    def test_columns_are_longest_path_depth(self):
+        out = _run_repro_node(
+            _RP_STEPS
+            + "var lay=reproLayout(steps, edges);"
+            "var xs={};for(var k in lay.pos) xs[k]=lay.pos[k].x;"
+            "console.log(JSON.stringify({xs: xs}));"
+        )
+        xs = out["xs"]
+        assert xs["a"] < xs["b"] < xs["c"]
+        assert xs["c"] == xs["d"]
+
+    def test_lanes_group_by_owner_task_in_first_appearance_order(self):
+        out = _run_repro_node(
+            _RP_STEPS
+            + "var lay=reproLayout(steps, edges);"
+            "console.log(JSON.stringify({"
+            "  lanes: lay.lanes.map(function(l){return l.task;}),"
+            "  aInLane0: lay.pos.a.y < lay.lanes[1].top,"
+            "  cInLane1: lay.pos.c.y >= lay.lanes[1].top}));"
+        )
+        assert out["lanes"] == ["01", "02"]
+        assert out["aInLane0"] and out["cInLane1"]
+
+    def test_steps_sharing_a_lane_and_column_stack_without_overlap(self):
+        out = _run_repro_node(
+            "var steps=[{name:'c',task:'02'},{name:'d',task:'02'}];"
+            "var lay=reproLayout(steps, []);"
+            "console.log(JSON.stringify({"
+            "  sameX: lay.pos.c.x === lay.pos.d.x,"
+            "  gap: Math.abs(lay.pos.c.y - lay.pos.d.y),"
+            "  lanes: lay.lanes.length}));"
+        )
+        assert out["sameX"] and out["lanes"] == 1
+        assert out["gap"] >= 46
+
+    def test_layout_is_deterministic_and_independent_of_edge_order(self):
+        out = _run_repro_node(
+            _RP_STEPS
+            + "var a=reproLayout(steps, edges);"
+            "var b=reproLayout(steps, edges.slice().reverse());"
+            "console.log(JSON.stringify({"
+            "  same: JSON.stringify(a.pos)===JSON.stringify(b.pos),"
+            "  size: [a.width===b.width, a.height===b.height]}));"
+        )
+        assert out["same"] and out["size"] == [True, True]
+
+    def test_a_cycle_still_places_every_step_at_a_real_coordinate(self):
+        out = _run_repro_node(
+            "var steps=[{name:'a',task:'01'},{name:'b',task:'01'},{name:'c',task:'01'}];"
+            "var edges=[{from:'a',to:'b'},{from:'b',to:'a'},{from:'b',to:'c'}];"
+            "var lay=reproLayout(steps, edges);"
+            "console.log(JSON.stringify({"
+            "  placed: Object.keys(lay.pos).sort(),"
+            "  finite: Object.keys(lay.pos).every(function(k){"
+            "    return isFinite(lay.pos[k].x) && isFinite(lay.pos[k].y);})}));"
+        )
+        assert out["placed"] == ["a", "b", "c"]
+        assert out["finite"]
+
+    def test_every_drawn_edge_points_rightward(self):
+        """Columns are longest-path depth, so a step always sits right of every
+        step it consumes — including where a shortcut skips a column."""
+        out = _run_repro_node(
+            "var steps=[{name:'a',task:'01'},{name:'b',task:'01'},"
+            "  {name:'c',task:'01'},{name:'t',task:'02'}];"
+            "var edges=[{from:'a',to:'t'},{from:'a',to:'b'},{from:'b',to:'c'},"
+            "  {from:'c',to:'t'}];"
+            "var lay=reproLayout(steps, edges);"
+            "console.log(JSON.stringify({"
+            "  rightward: lay.edges.every(function(e){"
+            "    return lay.pos[e.to].x > lay.pos[e.from].x;}),"
+            "  cols: ['a','b','c','t'].map(function(n){"
+            "    return (lay.pos[n].x - RP_X0) / (RP_NODE_W + RP_COL_GAP);})}));"
+        )
+        assert out["rightward"]
+        # t consumes c, so the a->t shortcut cannot pull it left of c's column.
+        assert out["cols"] == [0, 1, 2, 3]
+
+    def test_an_edge_to_a_filtered_out_step_is_dropped(self):
+        """The tier filter hides steps; an edge to a hidden step must not be
+        drawn to a node that is not on the canvas."""
+        out = _run_repro_node(
+            "var steps=[{name:'a',task:'01'}];"
+            "var lay=reproLayout(steps, [{from:'a',to:'hidden'}]);"
+            "console.log(JSON.stringify({edges: lay.edges.length}));"
+        )
+        assert out["edges"] == 0

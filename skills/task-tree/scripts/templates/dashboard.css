@@ -47,6 +47,23 @@
   --st-arch:   #e8e5df;  --st-arch-t: #67625a;  /* AA 4.81:1 (darkened from #9e9890) */
   --st-post:   #dde3ea;  --st-post-t: #4a5a6a;
 
+  /* Reproduction step states — a fixed status scale, never a series palette.
+     Each pair is a wash (`--rp-*`) the node is filled with plus an ink
+     (`--rp-*-t`) carrying the 3px state border and the state glyph; the node's
+     own label stays in --text so it reads at full contrast whatever the state.
+     Every node and legend row pairs the ink with a distinct glyph and the state
+     word, which is what carries the pairs a red-green reader cannot separate by
+     hue. Validated with dataviz/scripts/validate_palette.js against this
+     theme's --bg: the four chromatic inks clear the lightness band, the chroma
+     floor, the normal-vision floor (worst pair stale/fresh at 16.4) and 3:1
+     contrast, with CVD at 7.3 (protan, stale/fresh) — the 6-8 band the
+     glyph+label pairing licenses. */
+  --rp-fresh:    #dcefe4;  --rp-fresh-t:    #1f8a5f;
+  --rp-stale:    #faedd2;  --rp-stale-t:    #a87400;
+  --rp-missing:  #e8e5df;  --rp-missing-t:  #67625a;
+  --rp-failed:   #f7dbd5;  --rp-failed-t:   #8e2418;
+  --rp-external: #e8e0f4;  --rp-external-t: #5b3d8a;
+
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
 
@@ -95,6 +112,18 @@
   --st-arch:   #2a2925;  --st-arch-t: #959088;  /* AA 4.59:1 (lightened from #706b63) */
   --st-post:   #28323e;  --st-post-t: #8fa6bd;
 
+  /* Reproduction step states (dark) — the same five roles re-stepped for this
+     surface, not an automatic flip. The inks double as the glyph's own colour
+     on the wash, so they sit lighter than a mark-only palette would: they clear
+     the normal-vision floor (worst pair 16.0), the chroma floor and 3:1
+     contrast, sit at CVD 7.5 (deutan, failed/fresh), and land above the dark
+     mark band by that trade. */
+  --rp-fresh:    #16332b;  --rp-fresh-t:    #45cbb0;
+  --rp-stale:    #37301a;  --rp-stale-t:    #e5bb45;
+  --rp-missing:  #33312e;  --rp-missing-t:  #a09a92;
+  --rp-failed:   #3e201c;  --rp-failed-t:   #f2857a;
+  --rp-external: #2b2440;  --rp-external-t: #b49ae0;
+
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
 
@@ -134,6 +163,7 @@ html[data-doc-mode] .badge,
 html[data-doc-mode] .task-progress { display: none !important; }
 html[data-doc-mode] #summary-bar { display: none !important; }
 html[data-doc-mode] #btn-kanban { display: none !important; }
+html[data-doc-mode] #btn-reproduction { display: none !important; }
 html[data-doc-mode] .children-dag { display: none !important; }
 
 /* Residual tracker chrome a docs reader does not need (audit in the task
@@ -1545,6 +1575,353 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px 24px 60px;
+}
+
+/* ── Reproduction view ──
+   The build graph the `## Reproduction` sections declare: swimlanes by owner
+   task (a sticky label per lane), columns by dependency depth, edges drawn in
+   one SVG behind the nodes. Positions are computed in dashboard.js and written
+   as inline left/top, so the layout is deterministic for a given graph. */
+#view-reproduction:not(.hidden) {
+  /* Wider than the reading views: a layered graph is wide by construction, and
+     every column the page can show is a column the canvas need not scroll. */
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+.repro-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.repro-head strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-head);
+  color: var(--text);
+}
+.repro-hint {
+  font-size: var(--fs-meta);
+  color: var(--text-mute);
+}
+.repro-head-spacer { flex: 1; }
+
+/* Legend + per-state counts. Doubles as the legend the objective asks for:
+   every row is glyph + state word + count, so state never rides on hue alone. */
+.repro-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.repro-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-size: var(--fs-meta);
+  color: var(--text-mid);
+}
+.repro-legend-item .repro-glyph { font-size: var(--fs-body); line-height: 1; }
+.repro-legend-item .repro-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-mute);
+}
+.repro-legend-item.is-off { opacity: 0.45; }
+
+/* Parse/consistency findings. Hidden unless the graph reported some — a graph
+   with an [ERROR] finding is missing steps, so reviewing it silently would
+   mislead. */
+.repro-findings {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--rp-failed-t);
+  border-radius: 6px;
+  background: var(--bg-card);
+  font-size: var(--fs-meta);
+  color: var(--text-mid);
+}
+.repro-findings ul { margin: 6px 0 0; padding-left: 18px; }
+.repro-findings li { margin: 2px 0; }
+.repro-findings .repro-sev {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--rp-failed-t);
+  margin-right: 5px;
+}
+.repro-findings .repro-sev.is-warning { color: var(--rp-stale-t); }
+
+.repro-canvas {
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-alt);
+  padding: 10px 0;
+}
+.repro-plot { position: relative; }
+.repro-band {
+  position: absolute;
+  left: 0;
+  border-top: 1px solid var(--border-lt);
+}
+.repro-band:first-of-type { border-top: 0; }
+.repro-band.is-alt { background: var(--bg-hover); opacity: 0.5; }
+/* The lane label rides the horizontal scroll so the owner task stays named
+   however far right the graph runs: a sticky span inside a full-width row gives
+   it the travel to stay at the scrollport's left edge. */
+.repro-band-row {
+  position: absolute;
+  left: 0;
+  padding-top: 4px;
+  pointer-events: none;
+}
+.repro-band-label {
+  position: sticky;
+  left: 10px;
+  display: inline-block;
+  margin-left: 10px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--text-mid);
+  white-space: nowrap;
+  z-index: 2;
+}
+.repro-band-label .repro-band-path {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--text-mute);
+  margin-left: 6px;
+}
+.repro-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.repro-edges path {
+  fill: none;
+  stroke: var(--tree-line);
+  stroke-width: 1.5;
+}
+.repro-edges path.is-lit { stroke: var(--accent); stroke-width: 2; }
+
+.repro-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 6px 9px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+.repro-node:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.repro-node.is-selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+.repro-node.is-check { border-style: dashed; border-left-style: solid; }
+.repro-node-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.repro-node-state {
+  font-size: var(--fs-micro);
+  color: var(--text-mute);
+  white-space: nowrap;
+}
+.repro-glyph { flex: none; font-size: var(--fs-body); line-height: 1; }
+.repro-check-tag {
+  flex: none;
+  font-size: var(--fs-micro);
+  color: var(--text-mute);
+}
+
+/* State pairs. Fill is the wash, the 3px left border and the glyph the ink. */
+.rp-fresh    { background: var(--rp-fresh);    border-left-color: var(--rp-fresh-t); }
+.rp-stale    { background: var(--rp-stale);    border-left-color: var(--rp-stale-t); }
+.rp-missing  { background: var(--rp-missing);  border-left-color: var(--rp-missing-t); }
+.rp-failed   { background: var(--rp-failed);   border-left-color: var(--rp-failed-t); }
+.rp-external { background: var(--rp-external); border-left-color: var(--rp-external-t); }
+.rp-fresh    .repro-glyph, .repro-legend-item.rp-fresh    .repro-glyph { color: var(--rp-fresh-t); }
+.rp-stale    .repro-glyph, .repro-legend-item.rp-stale    .repro-glyph { color: var(--rp-stale-t); }
+.rp-missing  .repro-glyph, .repro-legend-item.rp-missing  .repro-glyph { color: var(--rp-missing-t); }
+.rp-failed   .repro-glyph, .repro-legend-item.rp-failed   .repro-glyph { color: var(--rp-failed-t); }
+.rp-external .repro-glyph, .repro-legend-item.rp-external .repro-glyph { color: var(--rp-external-t); }
+/* No lock to read (Python < 3.11): the node keeps the neutral card surface and
+   says so, rather than borrowing a state's colour. */
+.rp-unknown .repro-glyph, .repro-legend-item.rp-unknown .repro-glyph { color: var(--text-mute); }
+.repro-legend-item.rp-fresh, .repro-legend-item.rp-stale, .repro-legend-item.rp-missing,
+.repro-legend-item.rp-failed, .repro-legend-item.rp-external { border-left-width: 3px; }
+.repro-legend-item.rp-fresh    { border-left-color: var(--rp-fresh-t); }
+.repro-legend-item.rp-stale    { border-left-color: var(--rp-stale-t); }
+.repro-legend-item.rp-missing  { border-left-color: var(--rp-missing-t); }
+.repro-legend-item.rp-failed   { border-left-color: var(--rp-failed-t); }
+.repro-legend-item.rp-external { border-left-color: var(--rp-external-t); }
+.repro-legend-item.is-kind { border-style: dashed; }
+
+/* Node detail: command, files, owner task, reason, duration, log tail. */
+.repro-detail {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+.repro-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.repro-detail-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-emph);
+  color: var(--text);
+}
+.repro-detail dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+.repro-detail dt {
+  color: var(--text-mute);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-top: 2px;
+}
+.repro-detail dd { margin: 0; color: var(--text-mid); }
+.repro-detail dd code,
+.repro-detail dd .repro-path {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text);
+  word-break: break-all;
+}
+.repro-detail dd ul { margin: 0; padding-left: 16px; }
+.repro-detail .repro-log {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 5px;
+  background: var(--bg-alt);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-mid);
+  white-space: pre-wrap;
+}
+.repro-detail .repro-task-link {
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+.repro-detail .repro-task-link:hover { text-decoration: underline; }
+
+.repro-empty {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--text-mute);
+  font-size: var(--fs-body);
+}
+.repro-empty code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--text-mid);
+}
+
+/* ── Task-page step table ──
+   Prepended to the `## Reproduction` section's rendered body, above the raw
+   YAML block. Injected after renderMarkdown has already wrapped the section's
+   commentable blocks, so it adds no block and the comment anchors of the YAML
+   fence are untouched. */
+.repro-steps { margin-bottom: 10px; }
+.repro-steps table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-meta);
+}
+.repro-steps th {
+  text-align: left;
+  font-family: var(--font-text);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 8px 4px 0;
+}
+.repro-steps td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--border-lt);
+  vertical-align: top;
+  color: var(--text-mid);
+}
+.repro-steps .repro-step-name {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.repro-steps .repro-step-name:hover { text-decoration: underline; }
+.repro-steps .repro-step-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+}
+.repro-steps .repro-outs {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--text-mute);
+  word-break: break-all;
 }
 
 /* ── Tree View ── */

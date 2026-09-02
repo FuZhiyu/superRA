@@ -116,6 +116,7 @@
             onclick="openSearchPalette()">Find</button>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
+    <button class="hc-btn" id="btn-reproduction" onclick="showView('reproduction')">Reproduction</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
   </div>
 </div>
@@ -156,6 +157,9 @@
   {% if not standalone %}
   {#- Hidden element to catch full-reload SSE events -#}
   <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
+  {#- A build rewrote the reproduction lock: refresh the freshness the
+      Reproduction view and the task-page step table show. -#}
+  <div id="sse-repro-updated" sse-swap="repro-updated" hx-swap="none" style="display:none;"></div>
   {% endif %}
 
   {#- Master-detail workspace: persistent sidebar nav-tree + drill-down main panel.
@@ -205,6 +209,12 @@
   </div>
 
   <div id="view-kanban" class="kanban hidden"></div>
+
+  {#- Reproduction view: the build graph the `## Reproduction` sections declare,
+      laid out in swimlanes by owner task and columns by dependency depth, with
+      each step coloured by the freshness `superra repro status` reports.
+      Rendered client-side from /api/repro/graph + /api/repro/status. -#}
+  <div id="view-reproduction" class="repro-view hidden"></div>
 </div>
 
 <script>
