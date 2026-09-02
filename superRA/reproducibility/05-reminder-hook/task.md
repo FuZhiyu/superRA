@@ -1,6 +1,6 @@
 ---
 title: "PostToolUse Reminder When a Producer Changes Without Its Step"
-status: implemented
+status: revise
 depends_on: [01-section-contract]
 ---
 
@@ -52,3 +52,15 @@ Neither `superRA/config.yaml` nor `02-runner` exist yet, so there's no establish
 Pre-existing and unrelated: `tests/hooks/test-codex-hooks.sh`'s "Codex manifest command executes task PostToolUse hook" case fails on `main` before this change too (asserts a Communicate-reminder string that commit `447f0ef1` already updated in the pytest suite but not in this shell test). Not touched here — one concern per commit.
 
 Docs: [internals.md](../../../skills/task-tree/references/internals.md) §Hook Architecture gets a "Reproduction reminder" paragraph and the `task_hook.py` Script Inventory row is updated.
+
+## Review Notes
+
+Tier: quick. Focus: correctness.
+
+1. **[BLOCKING]** Evidence gap on the per-edit cost claim. [`_reproduction_reminder`](../../../skills/task-tree/scripts/task_hook.py#L204) calls `_repro.build_graph` ([task_hook.py:228](../../../skills/task-tree/scripts/task_hook.py#L228)) for every candidate file *before* the relevance short-circuit at [task_hook.py:231](../../../skills/task-tree/scripts/task_hook.py#L231) — so the build always runs when a task tree sits beside the edited file, regardless of whether that file matches anything. `build_graph` unconditionally resolves `reproduction.vars` ([_repro.py:1027](../../../skills/task-tree/scripts/_repro.py#L1027)), and a `shell:`-typed var spawns a real subprocess via `_default_shell_runner` ([_repro.py:700-706](../../../skills/task-tree/scripts/_repro.py#L700-L706)) — I measured ~12ms per shell invocation locally. Once a project (the planned TreasuryGIV/BondElasticity pilots) configures a `shell:` var, that command reruns on every Edit/Write/apply_patch anywhere in the project, not only on producer-file edits. §Fail-open / performance's "acceptable... for a non-blocking hook that now runs on every edit" is measured only on this repo's real tree with no reproduction config at all (the cheapest possible case — I independently reproduced ~27ms there); it doesn't cover the configured-vars/shell or Julia-include-closure case the feature is built for, so the claim's evidence doesn't support its own generality. Separately, [`_handle_apply_patch`](../../../skills/task-tree/scripts/task_hook.py#L728) passes the whole edited-file list to `_reproduction_reminder` in one call ([task_hook.py:763](../../../skills/task-tree/scripts/task_hook.py#L763)), but that function's loop rebuilds the graph once per candidate file even when several share the same `plan_root` ([task_hook.py:754](../../../skills/task-tree/scripts/task_hook.py#L754) resolves `plan_root` per file with no cache) — an avoidable N× multiplier for a multi-file Codex patch.
+   - Fix: cheaply establish relevance (e.g. does any candidate path fall under a `code_roots` prefix or a declared dep, read without full var/shell resolution) before paying for `build_graph`, and/or build the graph once per distinct `plan_root` per hook invocation rather than per candidate file.
+
+2. **[ADVISORY]** Unsourced version claim in [internals.md](../../../skills/task-tree/references/internals.md) §Hook Architecture: "Claude Code and Codex CLI ≥0.148 both do" [carry `session_id`]. This task's own verification, here and at [task_hook.py:165](../../../skills/task-tree/scripts/task_hook.py#L165), only confirms Codex CLI 0.152.1 (I independently re-confirmed `session_id` is a `required` field of the embedded `post-tool-use.command.input` JSON schema in that binary) — nothing establishes `0.148` as the actual floor.
+   - Fix: cite the source for `0.148`, or soften internals.md to match what was verified (0.152.1).
+
+3. **[ADVISORY, informational]** The `.superra-repro` naming coupling with `02-runner` (§State directory) is recorded only in `internals.md`, not in `02-runner/task.md` — a subagent dispatched to 02-runner isn't pointed there by the Skill-Load Manifest. This didn't drift in practice: 02-runner has since been implemented and independently landed on `.superra-repro/` too. No action needed now; a one-line cross-reference in `02-runner/task.md` would remove the reliance on both sides separately reading `internals.md`.
