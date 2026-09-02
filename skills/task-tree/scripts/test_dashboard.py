@@ -6777,6 +6777,31 @@ class TestReproExportSnapshot:
         assert fragments["/api/repro/status?tier=all"]["steps"] == []
 
 
+def _extract_css_tokens(css_text):
+    """{theme: {token: hex}} for the `--rp-*` custom properties of both themes."""
+    light_src, dark_src = css_text.split('[data-theme="dark"]', 1)
+    pattern = re.compile(r"(--rp-[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})")
+    return {
+        "light": dict(pattern.findall(light_src)),
+        "dark": dict(pattern.findall(dark_src)),
+    }
+
+
+def _wcag_contrast(fg, bg):
+    """WCAG 2.x contrast ratio between two `#rrggbb` colours."""
+    def _luminance(value):
+        channels = []
+        for i in (1, 3, 5):
+            c = int(value[i:i + 2], 16) / 255
+            channels.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
+        r, g, b = channels
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    a, b = _luminance(fg), _luminance(bg)
+    lo, hi = sorted((a, b))
+    return (hi + 0.05) / (lo + 0.05)
+
+
 class TestReproViewWiring:
     def test_page_carries_the_view_toggle_container_and_sse_sink(self):
         assert 'id="btn-reproduction"' in BASE_HTML
@@ -6795,6 +6820,20 @@ class TestReproViewWiring:
                 token = f"--rp-{state}{suffix}:"
                 assert token in light, f"{token} missing from the light theme"
                 assert token in dark, f"{token} missing from the dark theme"
+        assert "--rp-ink-2:" in light and "--rp-ink-2:" in dark
+
+    def test_text_on_a_state_wash_clears_aa(self):
+        """The node's state word, the legend count and the check tag sit on the
+        wash, where the chrome's --text-mid / --text-mute are not AA; the
+        accessibility argument for the palette's CVD warn band rests on that
+        word being readable."""
+        css = _extract_css_tokens(BASE_HTML)
+        for theme in ("light", "dark"):
+            ink = css[theme]["--rp-ink-2"]
+            for state in ("fresh", "stale", "missing", "failed", "external"):
+                wash = css[theme][f"--rp-{state}"]
+                ratio = _wcag_contrast(ink, wash)
+                assert ratio >= 4.5, f"{theme} {state}: --rp-ink-2 on the wash is {ratio:.2f}"
 
 
 class TestReproLockWatch:
@@ -6839,43 +6878,112 @@ class TestReproLockWatch:
             self._reset()
             loop.close()
 
-    def test_watcher_adds_the_lock_only_when_it_exists(self, tmp_path, monkeypatch):
-        """`awatch` raises on a path that is not there, so a project that has
-        never built must not put its absent lock in the watch set."""
-        self._reset()
+    def _stub_awatch(self, monkeypatch, batches_per_session):
+        """Replace `awatch` with sessions yielding the given change batches.
+
+        Records the watch set and the `yield_on_timeout` flag of each session,
+        and tracks that every session is closed — leaving one suspended is what
+        orphans the native fsevents thread.
+        """
+        sessions = []
+
+        def _fake_awatch(*paths, **kwargs):
+            index = len(sessions)
+            record = {
+                "paths": paths,
+                "yield_on_timeout": kwargs.get("yield_on_timeout"),
+                "closed": False,
+            }
+            sessions.append(record)
+
+            async def _gen():
+                for batch in (
+                    batches_per_session[index]
+                    if index < len(batches_per_session)
+                    else []
+                ):
+                    yield batch() if callable(batch) else batch
+
+            class _Session:
+                """Forwards to the generator, recording that it was closed."""
+
+                def __init__(self, agen):
+                    self._agen = agen
+
+                def __aiter__(self):
+                    return self._agen.__aiter__()
+
+                async def aclose(self):
+                    record["closed"] = True
+                    await self._agen.aclose()
+
+            return _Session(_gen())
+
+        import watchfiles
+        monkeypatch.setattr(watchfiles, "awatch", _fake_awatch)
+        return sessions
+
+    def _seed(self, tmp_path):
         root = tmp_path / "superRA"
         root.mkdir()
         _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
         plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
             "wt-a", root
         )
-        seen = []
+        return root
 
-        def _fake_awatch(*paths, **kwargs):
-            seen.append(paths)
-
-            class _Empty:
-                def __aiter__(self):
-                    return self
-
-                async def __anext__(self):
-                    raise StopAsyncIteration
-
-            return _Empty()
-
-        import watchfiles
-        monkeypatch.setattr(watchfiles, "awatch", _fake_awatch)
+    def test_watcher_adds_the_lock_only_when_it_exists(self, tmp_path, monkeypatch):
+        """`awatch` raises on a path that is not there, so a project that has
+        never built must not put its absent lock in the watch set."""
+        self._reset()
+        root = self._seed(tmp_path)
+        sessions = self._stub_awatch(monkeypatch, [[], []])
         loop = asyncio.new_event_loop()
         try:
             loop.run_until_complete(
                 plan_dashboard._watch_worktree("wt-a", asyncio.Event())
             )
-            assert seen == [(root,)]
+            assert sessions[0]["paths"] == (root,)
+            # No lock to watch: the session ticks so its arrival is noticed.
+            assert sessions[0]["yield_on_timeout"] is True
             (tmp_path / "pytask.lock").write_text("", encoding="utf-8")
             loop.run_until_complete(
                 plan_dashboard._watch_worktree("wt-a", asyncio.Event())
             )
-            assert seen[1] == (root, tmp_path / "pytask.lock")
+            assert sessions[1]["paths"] == (root, tmp_path / "pytask.lock")
+            # Watching the lock is event-driven; no tick needed.
+            assert sessions[1]["yield_on_timeout"] is False
+            assert all(s["closed"] for s in sessions)
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_a_projects_first_build_re_arms_the_watch_and_pushes(self, tmp_path, monkeypatch):
+        """The lock does not exist until the first build, and a watch set is
+        fixed for the life of an `awatch`: the tick that notices the new file
+        has to announce that build itself, then re-enter watching it."""
+        self._reset()
+        root = self._seed(tmp_path)
+        lock = tmp_path / "pytask.lock"
+
+        def _first_build():
+            lock.write_text("", encoding="utf-8")
+            return set()          # a timeout tick carries no changes
+
+        sessions = self._stub_awatch(monkeypatch, [[_first_build], []])
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
+            )
+            assert len(sessions) == 2
+            assert sessions[0]["paths"] == (root,)
+            assert sessions[1]["paths"] == (root, lock)
+            assert all(s["closed"] for s in sessions)
+            assert not queue.empty()
+            assert "event: repro-updated" in queue.get_nowait()
         finally:
             self._reset()
             loop.close()
@@ -7001,3 +7109,235 @@ class TestReproLayoutClientLogic:
             "console.log(JSON.stringify({edges: lay.edges.length}));"
         )
         assert out["edges"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Reproduction findings + empty-state copy (node-backed)
+#
+# No steps has two causes that read alike and mean opposite things: nothing was
+# declared, or what was declared failed to load. These pin that the findings
+# reach the reader either way, and that the strip's own sentence stays true of
+# the severities it is summarising.
+# ---------------------------------------------------------------------------
+
+
+def _run_repro_render_node(harness_body):
+    defs = _extract_js_defs([
+        "REPRO_STATES", "RP_NODE_W", "RP_X0", "reproLayout", "reproBarycenter",
+        "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
+        "reproLegendHTML", "reproFindingsHTML", "reproBandsHTML", "reproEdgesHTML",
+        "reproNodesHTML", "reproNodeId", "reproDuration", "reproOutLabel",
+        "escapeHtml", "escapeAttr",
+    ])
+    # drawReproView writes into a container and rebinds handlers; the harness
+    # supplies just enough DOM and module state for the pure render path.
+    shim = (
+        "var _reproTier='all', _reproSelected='', _reproData=null, pathTitles={};\n"
+        "var document={getElementById:function(){return null;}};\n"
+        "function reproBindHead(){}\n"
+        "function renderReproDetail(){}\n"
+    )
+    body = _extract_js_defs(["drawReproView"])
+    proc = subprocess.run(
+        [_NODE, "-e", shim + defs + "\n" + body + "\n" + harness_body],
+        capture_output=True, text=True, timeout=20,
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproFindingsRendering:
+    def test_a_graph_that_failed_to_load_shows_its_errors_not_an_empty_state(self):
+        """A section that was declared and did not load must not read as a tree
+        where nobody declared one — the error is the whole explanation."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:''};"
+            "var data={graph:{steps:[],findings:[{severity:'error',task_path:'01-a',"
+            "  message:\"## Reproduction: step 'onlystep' names runner 'sh', which\"}]},"
+            "  status:{steps:[],findings:[{severity:'error',task_path:'01-a',"
+            "  message:\"## Reproduction: step 'onlystep' names runner 'sh', which\"}]}};"
+            "drawReproView(box, data);"
+            "console.log(JSON.stringify({"
+            "  strip: box.innerHTML.indexOf('repro-findings')>=0,"
+            "  message: box.innerHTML.indexOf('names runner')>=0,"
+            "  claimsNothingDeclared: box.innerHTML.indexOf('No task declares')>=0}));"
+        )
+        assert out["strip"] and out["message"]
+        assert not out["claimsNothingDeclared"]
+
+    def test_a_tree_with_no_section_still_says_nothing_is_declared(self):
+        out = _run_repro_render_node(
+            "var box={innerHTML:''};"
+            "drawReproView(box, {graph:{steps:[],findings:[]},status:{steps:[],findings:[]}});"
+            "console.log(JSON.stringify({"
+            "  claimsNothingDeclared: box.innerHTML.indexOf('No task declares')>=0,"
+            "  strip: box.innerHTML.indexOf('repro-findings')>=0}));"
+        )
+        assert out["claimsNothingDeclared"] and not out["strip"]
+
+    def test_the_strip_does_not_claim_a_warning_hid_a_step(self):
+        """`_repro`'s warnings name steps that are drawn — a missing external
+        input, a `depends_on` ordering conflict — so the strip must not say
+        their steps are absent."""
+        out = _run_repro_render_node(
+            "var html=reproFindingsHTML([{severity:'warning',task_path:'01-a',"
+            "  message:'depends on X, which no step produces'}]);"
+            "console.log(JSON.stringify({html: html}));"
+        )
+        assert "1 warning" in out["html"]
+        assert "are drawn" in out["html"]
+        assert "did not load" not in out["html"]
+
+    def test_the_strip_counts_each_severity_separately(self):
+        out = _run_repro_render_node(
+            "var html=reproFindingsHTML(["
+            "  {severity:'error',message:'a'},{severity:'error',message:'b'},"
+            "  {severity:'warning',message:'c'}]);"
+            "console.log(JSON.stringify({html: html}));"
+        )
+        assert "2 errors" in out["html"] and "1 warning" in out["html"]
+
+    def test_a_sidecar_tracked_out_names_the_file_the_runner_hashes(self):
+        out = _run_repro_render_node(
+            "console.log(JSON.stringify({"
+            "  plain: reproOutLabel({path:{logical:'${OUT}/panel.csv'},sidecar:null}),"
+            "  tracked: reproOutLabel({path:{logical:'${OUT}/big.bin'},"
+            "    sidecar:{logical:'${OUT}/big.sha'}})}));"
+        )
+        assert out["plain"] == "${OUT}/panel.csv"
+        assert out["tracked"] == "${OUT}/big.bin (hashed via ${OUT}/big.sha)"
+
+
+# ---------------------------------------------------------------------------
+# Reproduction graph reuse
+#
+# Each build resolves `reproduction.vars`, which a project may point at a shell
+# probe (`git rev-parse`, a conda prefix). The view opens with two requests, so
+# the pair has to cost one resolution, and a task edit has to cost a new one.
+# ---------------------------------------------------------------------------
+
+PROBE_CONFIG = """\
+reproduction:
+  vars:
+    OUT:
+      shell: "sh code/probe.sh"
+"""
+
+
+@pytest.fixture
+def probe_plan(tmp_path):
+    root = tmp_path / "superRA"
+    root.mkdir()
+    (root / "config.yaml").write_text(PROBE_CONFIG, encoding="utf-8")
+    _write_task_md(root / "task.md", "Probe Project", "in-progress", objective="Root.")
+    (root / "01-ingest").mkdir()
+    (root / "01-ingest" / "task.md").write_text(REPRO_INGEST, encoding="utf-8")
+    code = tmp_path / "code"
+    code.mkdir()
+    (code / "probe.sh").write_text(
+        'echo run >> "$(dirname "$0")/../probe.count"\necho build\n', encoding="utf-8"
+    )
+    for name in ("fetch.sh", "check.sh"):
+        (code / name).write_text("#!/bin/sh\n", encoding="utf-8")
+    return root
+
+
+def _probe_runs(plan_root):
+    counter = plan_root.parent / "probe.count"
+    return len(counter.read_text().split()) if counter.is_file() else 0
+
+
+class TestReproGraphReuse:
+    def test_opening_the_view_resolves_vars_once(self, probe_plan):
+        plan_dashboard._repro_graph_cache.clear()
+        with _repro_client(probe_plan) as c:
+            assert c.get("/api/repro/graph").status_code == 200
+            assert c.get("/api/repro/status", params={"tier": "all"}).status_code == 200
+        assert _probe_runs(probe_plan) == 1
+
+    def test_a_task_edit_resolves_them_again(self, probe_plan):
+        plan_dashboard._repro_graph_cache.clear()
+        with _repro_client(probe_plan) as c:
+            c.get("/api/repro/graph")
+            task = probe_plan / "01-ingest" / "task.md"
+            task.write_text(task.read_text() + "\n<!-- edited -->\n", encoding="utf-8")
+            plan_dashboard.rebuild_worktree_state(plan_dashboard._launch_wt_id)
+            c.get("/api/repro/graph")
+        assert _probe_runs(probe_plan) == 2
+
+    def test_the_cache_expires(self, probe_plan, monkeypatch):
+        """The graph also depends on the environment the vars read, which no
+        file signature sees, so a reused build is short-lived."""
+        plan_dashboard._repro_graph_cache.clear()
+        monkeypatch.setattr(plan_dashboard, "REPRO_GRAPH_TTL", 0.0)
+        with _repro_client(probe_plan) as c:
+            c.get("/api/repro/graph")
+            c.get("/api/repro/graph")
+        assert _probe_runs(probe_plan) == 2
+
+
+class TestReproGraphChangeBroadcast:
+    """A `## Reproduction` edit moves the graph and the view must refetch; an
+    edit to a task that declares none must not make it refetch."""
+
+    def _reset(self):
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_watchers.clear()
+        plan_dashboard._worktree_locks.clear()
+
+    def _run(self, plan_root, edited_rel, new_text):
+        import watchfiles
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
+            "wt-a", plan_root
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+        plan_dashboard._jinja_env = None
+        edited = plan_root / edited_rel
+        edited.write_text(new_text, encoding="utf-8")
+
+        async def _test():
+            state = plan_dashboard._worktree_cache["wt-a"]
+            await plan_dashboard._rebuild_and_broadcast(
+                state, {(watchfiles.Change.modified, str(edited))}
+            )
+            events = []
+            while not queue.empty():
+                events.append(queue.get_nowait())
+            return events
+
+        try:
+            return loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            plan_dashboard._jinja_env = None
+            loop.close()
+
+    def test_an_edit_to_a_declaring_task_asks_the_view_to_refetch(self, repro_plan):
+        events = self._run(
+            repro_plan, "01-ingest/task.md",
+            REPRO_INGEST.replace("sh code/fetch.sh", "sh code/fetch.sh --full"),
+        )
+        assert any("event: repro-updated" in e for e in events)
+
+    def test_removing_the_section_also_asks_it_to_refetch(self, repro_plan):
+        events = self._run(
+            repro_plan, "01-ingest/task.md",
+            '---\ntitle: "Ingest"\nstatus: in-progress\ndepends_on: []\n---\n\n'
+            "## Objective\n\nNo longer declares steps.\n",
+        )
+        assert any("event: repro-updated" in e for e in events)
+
+    def test_an_edit_elsewhere_leaves_the_view_alone(self, repro_plan):
+        events = self._run(
+            repro_plan, "task.md",
+            '---\ntitle: "Repro Project"\nstatus: in-progress\ndepends_on: []\n---\n\n'
+            "## Objective\n\nRoot, reworded.\n",
+        )
+        assert events, "the sidebar row should still have been swapped"
+        assert not any("event: repro-updated" in e for e in events)

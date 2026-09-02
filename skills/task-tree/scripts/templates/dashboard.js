@@ -1072,10 +1072,19 @@ function renderReproView(force) {
 
 function drawReproView(container, data) {
   var all = data.graph.steps || [];
+  var findings = data.status.findings || data.graph.findings || [];
   if (!all.length) {
-    container.innerHTML = reproHeadHTML(false)
-      + '<div class="repro-empty">No task declares a <code>## Reproduction</code> section.'
-      + '<br>Add one to register the files a task builds — see <code>superra repro status</code>.</div>';
+    /* No steps has two causes that read alike and mean opposite things: nothing
+       was declared, or what was declared failed to load. The findings say
+       which, so they are rendered here rather than only beside a drawn graph. */
+    var errored = findings.some(function(f) { return f.severity === 'error'; });
+    container.innerHTML = reproHeadHTML(false) + reproFindingsHTML(findings)
+      + '<div class="repro-empty">'
+      + (errored
+        ? 'No step loaded. Every declared step is named by an error above.'
+        : 'No task declares a <code>## Reproduction</code> section.'
+          + '<br>Add one to register the files a task builds — see <code>superra repro status</code>.')
+      + '</div>';
     reproBindHead(container);
     return;
   }
@@ -1086,7 +1095,7 @@ function drawReproView(container, data) {
     _reproSelected = '';
   }
   var html = reproHeadHTML(true) + reproLegendHTML(steps, byName, data.status)
-    + reproFindingsHTML(data.status.findings || data.graph.findings || []);
+    + reproFindingsHTML(findings);
   if (!steps.length) {
     container.innerHTML = html
       + '<div class="repro-empty">No step is registered at tier <code>'
@@ -1158,9 +1167,15 @@ function reproFindingsHTML(findings) {
       + (f.task_path ? '<code>' + escapeHtml(f.task_path) + '</code> ' : '')
       + escapeHtml(f.message) + '</li>';
   }).join('');
-  return '<div class="repro-findings">' + findings.length
-    + ' graph finding' + (findings.length === 1 ? '' : 's')
-    + ' — steps they name are missing from this view.<ul>' + rows + '</ul></div>';
+  var errors = findings.filter(function(f) { return f.severity === 'error'; }).length;
+  var warnings = findings.length - errors;
+  var parts = [];
+  if (errors) parts.push(errors + ' error' + (errors === 1 ? '' : 's')
+    + ' — the steps they name did not load, so this view does not show them');
+  if (warnings) parts.push(warnings + ' warning' + (warnings === 1 ? '' : 's')
+    + ' — the steps they name are drawn, but the graph is inconsistent');
+  return '<div class="repro-findings">' + escapeHtml(parts.join('; ')) + '.<ul>'
+    + rows + '</ul></div>';
 }
 
 function reproBandsHTML(lay) {
@@ -1257,7 +1272,7 @@ function renderReproDetail(name) {
     + '</button>');
   rows += reproDetailRow('Tier', escapeHtml(step.tier) + (step.kind === 'check' ? ' · check step' : ''));
   rows += reproDetailRow('Deps', reproPathList((step.deps || []).map(function(d) { return d.logical; })));
-  rows += reproDetailRow('Outs', reproPathList((step.outs || []).map(function(o) { return o.path.logical; })));
+  rows += reproDetailRow('Outs', reproPathList((step.outs || []).map(reproOutLabel)));
   if (entry && entry.duration != null) {
     rows += reproDetailRow('Last run', reproDuration(entry.duration)
       + (entry.last_run ? ', ' + new Date(entry.last_run * 1000).toLocaleString() : ''));
@@ -1271,6 +1286,13 @@ function renderReproDetail(name) {
 
 function reproDetailRow(label, valueHtml) {
   return '<dt>' + label + '</dt><dd>' + valueHtml + '</dd>';
+}
+
+/* An out's logical path, naming the sidecar when one stands in for it: the
+   runner hashes the sidecar instead, so a large intermediate reading fresh is
+   only explicable with the substitution on screen. */
+function reproOutLabel(out) {
+  return out.path.logical + (out.sidecar ? ' (hashed via ' + out.sidecar.logical + ')' : '');
 }
 
 function reproPathList(paths) {
@@ -1312,7 +1334,7 @@ function renderReproStepTable(renderedMd, taskPath) {
     var rows = steps.map(function(s) {
       var entry = byName[s.name];
       var state = reproStateOf(entry);
-      var outs = (s.outs || []).map(function(o) { return o.path.logical; }).join(', ');
+      var outs = (s.outs || []).map(reproOutLabel).join(', ');
       return '<tr><td><button class="repro-step-name" type="button" data-step="'
         + escapeAttr(s.name) + '">' + escapeHtml(s.name) + '</button>'
         + (s.kind === 'check' ? ' <span class="repro-check-tag">✓</span>' : '') + '</td>'
@@ -3832,8 +3854,6 @@ function onTaskUpdate(path) {
     if (path !== activePath && parentPath(path) === activePath) {
       loadChildrenDag(activePath);
     }
-    if (currentView === 'reproduction') renderReproView(true);
-    else _reproData = null;
   }, 0);
 }
 

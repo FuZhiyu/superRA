@@ -58,6 +58,13 @@
      floor, the normal-vision floor (worst pair stale/fresh at 16.4) and 3:1
      contrast, with CVD at 7.3 (protan, stale/fresh) — the 6-8 band the
      glyph+label pairing licenses. */
+  /* Secondary ink for text sitting ON a wash (the state word, the legend
+     count). The chrome's --text-mid / --text-mute are AA against --bg /
+     --bg-alt / --bg-card, not against these washes, where they fall to 4.28.
+     This step clears 4.5:1 on all five (worst: failed, 4.96) while staying
+     clearly recessive to --text, which reads 10.9-12.4 there. */
+  --rp-ink-2:    #635d57;
+
   --rp-fresh:    #dcefe4;  --rp-fresh-t:    #1f8a5f;
   --rp-stale:    #faedd2;  --rp-stale-t:    #a87400;
   --rp-missing:  #e8e5df;  --rp-missing-t:  #67625a;
@@ -118,6 +125,9 @@
      the normal-vision floor (worst pair 16.0), the chroma floor and 3:1
      contrast, sit at CVD 7.5 (deutan, failed/fresh), and land above the dark
      mark band by that trade. */
+  /* Worst on this theme's washes: missing, 5.12:1. */
+  --rp-ink-2:    #a8a29a;
+
   --rp-fresh:    #16332b;  --rp-fresh-t:    #45cbb0;
   --rp-stale:    #37301a;  --rp-stale-t:    #e5bb45;
   --rp-missing:  #33312e;  --rp-missing-t:  #a09a92;
@@ -1625,13 +1635,13 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   border: 1px solid var(--border);
   background: var(--bg-card);
   font-size: var(--fs-meta);
-  color: var(--text-mid);
+  color: var(--text);
 }
 .repro-legend-item .repro-glyph { font-size: var(--fs-body); line-height: 1; }
 .repro-legend-item .repro-count {
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
-  color: var(--text-mute);
+  color: var(--rp-ink-2);
 }
 .repro-legend-item.is-off { opacity: 0.45; }
 
@@ -1757,14 +1767,15 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 }
 .repro-node-state {
   font-size: var(--fs-micro);
-  color: var(--text-mute);
+  color: var(--rp-ink-2);
   white-space: nowrap;
 }
 .repro-glyph { flex: none; font-size: var(--fs-body); line-height: 1; }
+/* Rides a node's wash beside the step name, so it takes the on-wash ink too. */
 .repro-check-tag {
   flex: none;
   font-size: var(--fs-micro);
-  color: var(--text-mute);
+  color: var(--rp-ink-2);
 }
 
 /* State pairs. Fill is the wash, the 3px left border and the glyph the ink. */
@@ -1909,6 +1920,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 }
 .repro-steps .repro-step-name:hover { text-decoration: underline; }
 .repro-steps .repro-step-state {
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   gap: 4px;
