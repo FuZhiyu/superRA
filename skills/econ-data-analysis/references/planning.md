@@ -72,18 +72,6 @@ Every data-analysis plan includes sensitivity analysis tasks.
 
 ---
 
-## Pipeline File (Reproducibility Requirement)
+## Reproducibility
 
-More than one script: the plan's file-structure section carries a pipeline file — one entry point running every script in dependency order, failing fast on errors. Update it whenever a script is added.
-
-```bash
-# run_all.sh
-#!/bin/bash
-set -e
-python Code/01_clean_data.py
-python Code/02_construct_variables.py
-python Code/03_analysis.py
-python Code/04_robustness.py
-```
-
-Julia equivalent: a `pipeline.jl` that `include`s each script in order.
+Every script producing a maintained output is planned as a `## Reproduction` step: `superRA:reproducibility`.

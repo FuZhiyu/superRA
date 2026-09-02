@@ -127,7 +127,7 @@ Every theory/modeling plan includes explicit verification tasks.
 
 4. **Tie verification to renderable outputs.** Equations, tables, or figures for a human reader route through `superRA:communicate`, not a separate formatting path.
 
-5. **Keep reproducibility explicit.** More than one script or notebook: include a pipeline entry point so symbolic and numerical outputs rerun from source.
+5. **Keep reproducibility explicit.** Each script or notebook producing a kept symbolic or numerical output is planned as a `## Reproduction` step: `superRA:reproducibility`.
 
 ---
 

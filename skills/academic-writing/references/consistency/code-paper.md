@@ -19,7 +19,7 @@ Code-paper inconsistencies come in four patterns:
 
 ### Map paper tables / figures → code
 
-Assemble the mapping before auditing: per table, figure, and in-text summary statistic, which code file and which output file produce it. A missing mapping (no file comments, no README, no pipeline file) is itself blocking — the paper is not reproducibly linked to its code.
+Assemble the mapping before auditing: per table, figure, and in-text summary statistic, which code file and which output file produce it. The reproduction graph is that mapping where the project declares one — `superra repro dag`. A missing mapping (no graph, no file comments, no README) is itself blocking — the paper is not reproducibly linked to its code.
 
 ### Methodology match
 

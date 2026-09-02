@@ -85,6 +85,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
+| Reproduction-graph discipline — what earns a step, tiering, the rerun model, boundary inputs, check steps, graph review, Protect and completion duties | `reproducibility` |
+| Reproduction-graph mechanics — `## Reproduction` schema and parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, producer reminder hook | `task-tree` (`references/task-file-contract.md` §Reproduction Section) |
 | Universal task read/edit interface — read a task with injected context, edit mechanics, per-role ownership | `using-superra` (§Task Interface) and each role skill's §Self-Check |
 | Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `academic-writing` |
 | Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
@@ -130,7 +132,7 @@ What each agent loads in a session. This section documents the architecture for 
 | Domain skill(s) per the manifest | manifest | Typical |
 | Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |
 
-Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contract.md`, or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `agent-orchestration` is never subagent-loaded.
+Outside `Stage: maturation`, subagents never load `task-tree` or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `task-file-contract.md` §Reproduction Section is the second exception: `reproducibility` routes there for the section schema, so any subagent registering a step reads that section. `agent-orchestration` is never subagent-loaded.
 
 ## Skill Authoring Guidelines
 

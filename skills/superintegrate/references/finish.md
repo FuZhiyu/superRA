@@ -36,7 +36,7 @@ git pull
 git merge --ff-only <analysis-branch>
 ```
 
-Run the project pipeline or targeted verification on the final tree; investigate any failure before cleanup.
+Run `superra repro build --tier canon` and confirm a clean `superra repro status --tier canon` on the final tree; investigate any failure before cleanup.
 
 ## Step 3: Cleanup
 
