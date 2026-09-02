@@ -436,7 +436,9 @@ function showView(view) {
   document.getElementById('btn-' + view).classList.add('active');
   document.getElementById('workspace').classList.toggle('hidden', view !== 'workspace');
   document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
+  document.getElementById('view-reproduction').classList.toggle('hidden', view !== 'reproduction');
   if (view === 'kanban') renderKanbanView();
+  if (view === 'reproduction') renderReproView(false);
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -690,6 +692,7 @@ function toggleSection(toggleEl, event) {
         renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
         renderedMd.dataset.rendered = 'true';
       }
+      if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
     }
     if (preview) preview.style.display = 'none';
 
@@ -876,6 +879,500 @@ async function renderKanbanView() {
   } catch(e) {
     container.innerHTML = '<p style="color:var(--st-rev-t)">Kanban render error: ' + e.message + '</p>';
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Reproduction view — reviewing the build graph the task tree declares
+   ──────────────────────────────────────────────────────────────────────
+   Two payloads back this view: /api/repro/graph (what the `## Reproduction`
+   sections declare) and /api/repro/status?tier=all (what the committed lock
+   says each step's freshness is, plus its log tail). Both are fetched once and
+   cached here; the tier filter, the node detail panel and the task-page step
+   table all read the same cached pair, so switching tiers or opening a task
+   costs no request. The whole tier is always fetched so the standalone export
+   embeds one snapshot that serves every tier the exported view can select.
+
+   Nodes come from the graph and take their state from the status payload, so
+   the graph still renders when the runner cannot read the lock (Python < 3.11
+   has no tomllib) — every step then reads `unknown` under a banner.
+   ════════════════════════════════════════════════════════════════════════ */
+
+var REPRO_SECTION = 'Reproduction';
+
+/* Every state ships its glyph and its word beside the colour: the palette's
+   own comment names the pairs a red-green reader cannot separate by hue. */
+var REPRO_STATES = [
+  { key: 'fresh',    glyph: '●' },
+  { key: 'stale',    glyph: '◐' },
+  { key: 'missing',  glyph: '○' },
+  { key: 'failed',   glyph: '✕' },
+  { key: 'external', glyph: '⊘' }
+];
+var REPRO_GLYPHS = {};
+REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
+
+/* Layout metrics (px). Columns are dependency depth, rows stack within an
+   owner-task lane. */
+var RP_NODE_W = 172, RP_NODE_H = 46, RP_COL_GAP = 52, RP_ROW_GAP = 8;
+var RP_X0 = 14, RP_LANE_TOP = 26, RP_LANE_BOTTOM = 12;
+
+var _reproData = null;      /* { graph, status } */
+var _reproPending = null;   /* in-flight load */
+var _reproLoadSeq = 0;
+var _reproTier = 'all';
+var _reproSelected = '';
+
+/* Fetch both payloads, or hand back what is already loaded. A forced load never
+   adopts a request issued before the change that forced it (a build's SSE
+   arrives while an earlier fetch is still open), and only the newest load may
+   install its result. */
+async function loadReproData(force) {
+  if (_reproData && !force) return _reproData;
+  if (_reproPending && !force) return _reproPending;
+  var seq = ++_reproLoadSeq;
+  var pending = (async function() {
+    var g = await fetch(wtUrl('/api/repro/graph'));
+    var s = await fetch(wtUrl('/api/repro/status?tier=all'));
+    if (!g.ok || !s.ok) throw new Error('reproduction data unavailable');
+    var loaded = { graph: await g.json(), status: await s.json() };
+    if (seq === _reproLoadSeq) _reproData = loaded;
+    return loaded;
+  })();
+  _reproPending = pending;
+  try { return await pending; } finally { if (_reproPending === pending) _reproPending = null; }
+}
+
+/* step name -> its status entry, for the states the graph's nodes wear. */
+function reproStatusIndex(data) {
+  var byName = {};
+  (data.status.steps || []).forEach(function(e) { byName[e.name] = e; });
+  return byName;
+}
+
+function reproStateOf(entry) { return entry ? entry.status : 'unknown'; }
+
+function reproTaskTitle(path) {
+  if (path === '') return pathTitles[''] || 'Root';
+  return pathTitles[path] || path.split('/').pop();
+}
+
+/* ── Layered layout ──
+   Columns are longest-path depth over the step edges (cycle-safe: whatever a
+   Kahn pass cannot place lands in one trailing column). Rows are per owner-task
+   lane, ordered inside each column by the mean row of the step's predecessors
+   so edges stay short, broken by name. Lanes follow the order the tasks appear
+   in, and both ordering passes break ties on the step name, so the same graph
+   lays out identically every time and reordering its edges moves nothing. */
+function reproLayout(steps, edges) {
+  var byName = {};
+  steps.forEach(function(s) { byName[s.name] = s; });
+  var preds = {}, succs = {}, indeg = {};
+  steps.forEach(function(s) { preds[s.name] = []; succs[s.name] = []; indeg[s.name] = 0; });
+  var kept = [];
+  edges.forEach(function(e) {
+    if (!byName[e.from] || !byName[e.to] || e.from === e.to) return;
+    if (preds[e.to].indexOf(e.from) !== -1) return;   /* one edge per pair */
+    preds[e.to].push(e.from);
+    succs[e.from].push(e.to);
+    indeg[e.to]++;
+    kept.push(e);
+  });
+
+  var layer = {}, queue = [], placed = 0;
+  steps.forEach(function(s) { if (indeg[s.name] === 0) { layer[s.name] = 0; queue.push(s.name); } });
+  queue.sort();
+  while (queue.length) {
+    var n = queue.shift();
+    placed++;
+    succs[n].slice().sort().forEach(function(m) {
+      layer[m] = Math.max(layer[m] === undefined ? 0 : layer[m], layer[n] + 1);
+      if (--indeg[m] === 0) queue.push(m);
+    });
+  }
+  var maxLayer = 0;
+  steps.forEach(function(s) { if (layer[s.name] !== undefined) maxLayer = Math.max(maxLayer, layer[s.name]); });
+  if (placed < steps.length) {
+    /* A cycle: park everything the pass could not place in one trailing column
+       rather than looping. The graph loader reports the cycle as a finding. */
+    steps.forEach(function(s) { if (layer[s.name] === undefined) layer[s.name] = maxLayer + 1; });
+    maxLayer++;
+  }
+
+  /* Lanes in task order, then the per-(lane, column) buckets. */
+  var laneOrder = [], laneOf = {};
+  steps.forEach(function(s) {
+    if (laneOf[s.task] === undefined) { laneOf[s.task] = laneOrder.length; laneOrder.push(s.task); }
+  });
+  var buckets = {};   /* "lane|col" -> [step names] */
+  steps.forEach(function(s) {
+    var key = laneOf[s.task] + '|' + layer[s.name];
+    (buckets[key] = buckets[key] || []).push(s.name);
+  });
+
+  var row = {};
+  var laneRows = laneOrder.map(function() { return 0; });
+  for (var col = 0; col <= maxLayer; col++) {
+    for (var li = 0; li < laneOrder.length; li++) {
+      var bucket = buckets[li + '|' + col];
+      if (!bucket) continue;
+      bucket.sort(function(a, b) {
+        var ba = reproBarycenter(preds[a], row), bb = reproBarycenter(preds[b], row);
+        if (ba !== bb) return ba - bb;
+        return a < b ? -1 : 1;
+      });
+      bucket.forEach(function(name, i) { row[name] = i; });
+      laneRows[li] = Math.max(laneRows[li], bucket.length);
+    }
+  }
+
+  var lanes = [], y = 0;
+  laneOrder.forEach(function(task, li) {
+    var h = RP_LANE_TOP + laneRows[li] * RP_NODE_H + (laneRows[li] - 1) * RP_ROW_GAP + RP_LANE_BOTTOM;
+    lanes.push({ task: task, top: y, height: h });
+    y += h;
+  });
+
+  var pos = {};
+  steps.forEach(function(s) {
+    var lane = lanes[laneOf[s.task]];
+    pos[s.name] = {
+      x: RP_X0 + layer[s.name] * (RP_NODE_W + RP_COL_GAP),
+      y: lane.top + RP_LANE_TOP + row[s.name] * (RP_NODE_H + RP_ROW_GAP)
+    };
+  });
+
+  return {
+    pos: pos, lanes: lanes, edges: kept,
+    width: RP_X0 * 2 + (maxLayer + 1) * RP_NODE_W + maxLayer * RP_COL_GAP,
+    height: y
+  };
+}
+
+function reproBarycenter(parents, row) {
+  var seen = 0, total = 0;
+  parents.forEach(function(p) { if (row[p] !== undefined) { total += row[p]; seen++; } });
+  return seen ? total / seen : -1;
+}
+
+/* ── Render ── */
+
+function renderReproView(force) {
+  var container = document.getElementById('view-reproduction');
+  if (!container) return;
+  if (!_reproData || force) {
+    container.innerHTML = '<div class="repro-empty">Loading the reproduction graph…</div>';
+  }
+  loadReproData(force).then(function(data) {
+    drawReproView(container, data);
+  }).catch(function(e) {
+    container.innerHTML = '<div class="repro-empty">Could not load the reproduction graph: '
+      + escapeHtml(e.message) + '</div>';
+  });
+}
+
+function drawReproView(container, data) {
+  var all = data.graph.steps || [];
+  var findings = data.status.findings || data.graph.findings || [];
+  if (!all.length) {
+    /* No steps has two causes that read alike and mean opposite things: nothing
+       was declared, or what was declared failed to load. The findings say
+       which, so they are rendered here rather than only beside a drawn graph. */
+    var errored = findings.some(function(f) { return f.severity === 'error'; });
+    container.innerHTML = reproHeadHTML(false) + reproFindingsHTML(findings)
+      + '<div class="repro-empty">'
+      + (errored
+        ? 'No step loaded. Every declared step is named by an error above.'
+        : 'No task declares a <code>## Reproduction</code> section.'
+          + '<br>Add one to register the files a task builds — see <code>superra repro status</code>.')
+      + '</div>';
+    reproBindHead(container);
+    return;
+  }
+  var byName = reproStatusIndex(data);
+  var steps = all.filter(function(s) { return _reproTier === 'all' || s.tier === _reproTier; });
+  /* A selection the tier filter just hid keeps no detail panel open. */
+  if (_reproSelected && !steps.some(function(s) { return s.name === _reproSelected; })) {
+    _reproSelected = '';
+  }
+  var html = reproHeadHTML(true) + reproLegendHTML(steps, byName, data.status)
+    + reproFindingsHTML(findings);
+  if (!steps.length) {
+    container.innerHTML = html
+      + '<div class="repro-empty">No step is registered at tier <code>'
+      + escapeHtml(_reproTier) + '</code>.</div>';
+    reproBindHead(container);
+    return;
+  }
+  var lay = reproLayout(steps, data.graph.step_edges || []);
+  html += '<div class="repro-canvas"><div class="repro-plot" style="width:' + lay.width
+    + 'px;height:' + lay.height + 'px">'
+    + reproBandsHTML(lay) + reproEdgesHTML(lay) + reproNodesHTML(steps, byName, lay)
+    + '</div></div><div id="repro-detail"></div>';
+  container.innerHTML = html;
+  container.onclick = onReproClick;
+  reproBindHead(container);
+  renderReproDetail(_reproSelected);
+}
+
+function reproHeadHTML(withFilter) {
+  var opts = ['all', 'canon', 'local'].map(function(t) {
+    return '<option value="' + t + '"' + (t === _reproTier ? ' selected' : '') + '>'
+      + (t === 'all' ? 'All tiers' : t) + '</option>';
+  }).join('');
+  return '<div class="repro-head"><strong>Reproduction</strong>'
+    + '<span class="repro-hint">— click a step for its command, files, and log</span>'
+    + '<span class="repro-head-spacer"></span>'
+    + (withFilter ? '<select class="hc-select" id="repro-tier">' + opts + '</select>' : '')
+    + '<button class="hc-btn" id="repro-refresh" type="button">Refresh</button></div>';
+}
+
+function reproBindHead(container) {
+  var sel = container.querySelector('#repro-tier');
+  if (sel) sel.onchange = function() { _reproTier = this.value; drawReproView(container, _reproData); };
+  var btn = container.querySelector('#repro-refresh');
+  if (btn) btn.onclick = function() { renderReproView(true); };
+}
+
+function reproLegendHTML(steps, byName, status) {
+  var counts = {}, checks = 0;
+  steps.forEach(function(s) {
+    var st = reproStateOf(byName[s.name]);
+    counts[st] = (counts[st] || 0) + 1;
+    if (s.kind === 'check') checks++;
+  });
+  var items = REPRO_STATES.map(function(s) {
+    var n = counts[s.key] || 0;
+    return '<span class="repro-legend-item rp-' + s.key + (n ? '' : ' is-off') + '">'
+      + '<span class="repro-glyph">' + s.glyph + '</span>' + s.key
+      + '<span class="repro-count">' + n + '</span></span>';
+  });
+  if (counts.unknown) {
+    items.push('<span class="repro-legend-item rp-unknown"><span class="repro-glyph">?</span>unknown'
+      + '<span class="repro-count">' + counts.unknown + '</span></span>');
+  }
+  items.push('<span class="repro-legend-item is-kind' + (checks ? '' : ' is-off') + '">'
+    + '<span class="repro-glyph">✓</span>check step<span class="repro-count">' + checks + '</span></span>');
+  var banner = status.unavailable
+    ? '<div class="repro-findings">Runner state is unavailable, so every step reads <code>unknown</code>: '
+      + escapeHtml(status.unavailable) + '</div>'
+    : '';
+  return '<div class="repro-legend">' + items.join('') + '</div>' + banner;
+}
+
+function reproFindingsHTML(findings) {
+  if (!findings || !findings.length) return '';
+  var rows = findings.map(function(f) {
+    return '<li><span class="repro-sev' + (f.severity === 'warning' ? ' is-warning' : '') + '">['
+      + escapeHtml(String(f.severity).toUpperCase()) + ']</span>'
+      + (f.task_path ? '<code>' + escapeHtml(f.task_path) + '</code> ' : '')
+      + escapeHtml(f.message) + '</li>';
+  }).join('');
+  var errors = findings.filter(function(f) { return f.severity === 'error'; }).length;
+  var warnings = findings.length - errors;
+  var parts = [];
+  if (errors) parts.push(errors + ' error' + (errors === 1 ? '' : 's')
+    + ' — the steps they name did not load, so this view does not show them');
+  if (warnings) parts.push(warnings + ' warning' + (warnings === 1 ? '' : 's')
+    + ' — the steps they name are drawn, but the graph is inconsistent');
+  return '<div class="repro-findings">' + escapeHtml(parts.join('; ')) + '.<ul>'
+    + rows + '</ul></div>';
+}
+
+function reproBandsHTML(lay) {
+  return lay.lanes.map(function(lane, i) {
+    return '<div class="repro-band' + (i % 2 ? ' is-alt' : '') + '" style="top:' + lane.top
+      + 'px;height:' + lane.height + 'px;width:' + lay.width + 'px"></div>';
+  }).join('') + lay.lanes.map(function(lane) {
+    /* The label is a sticky child of a full-width row so it rides the canvas's
+       horizontal scroll and keeps naming its lane however far right the graph
+       runs. */
+    return '<div class="repro-band-row" style="top:' + lane.top + 'px;width:' + lay.width
+      + 'px"><span class="repro-band-label">' + escapeHtml(reproTaskTitle(lane.task))
+      + (lane.task ? '<span class="repro-band-path">' + escapeHtml(lane.task) + '</span>' : '')
+      + '</span></div>';
+  }).join('');
+}
+
+function reproEdgesHTML(lay) {
+  var paths = lay.edges.map(function(e) {
+    var a = lay.pos[e.from], b = lay.pos[e.to];
+    if (!a || !b) return '';
+    var x1 = a.x + RP_NODE_W, y1 = a.y + RP_NODE_H / 2, x2 = b.x, y2 = b.y + RP_NODE_H / 2;
+    var c = Math.max(24, (x2 - x1) * 0.45);
+    return '<path d="M' + x1 + ',' + y1 + ' C' + (x1 + c) + ',' + y1 + ' ' + (x2 - c) + ',' + y2
+      + ' ' + x2 + ',' + y2 + '" data-from="' + escapeAttr(e.from) + '" data-to="'
+      + escapeAttr(e.to) + '"></path>';
+  }).join('');
+  return '<svg class="repro-edges" width="' + lay.width + '" height="' + lay.height
+    + '" aria-hidden="true">' + paths + '</svg>';
+}
+
+function reproNodesHTML(steps, byName, lay) {
+  return steps.map(function(s) {
+    var p = lay.pos[s.name];
+    var st = reproStateOf(byName[s.name]);
+    var entry = byName[s.name];
+    var meta = st + (entry && entry.duration != null ? ' · ' + reproDuration(entry.duration) : '');
+    return '<button class="repro-node rp-' + st + (s.kind === 'check' ? ' is-check' : '')
+      + (s.name === _reproSelected ? ' is-selected' : '')
+      + '" data-step="' + escapeAttr(s.name) + '" id="' + reproNodeId(s.name) + '"'
+      + ' style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + RP_NODE_W + 'px;height:' + RP_NODE_H + 'px">'
+      + '<span class="repro-node-name"><span class="repro-glyph">'
+      + (REPRO_GLYPHS[st] || '?') + '</span>' + escapeHtml(s.name)
+      + (s.kind === 'check' ? '<span class="repro-check-tag">✓</span>' : '') + '</span>'
+      + '<span class="repro-node-state">' + escapeHtml(meta) + '</span></button>';
+  }).join('');
+}
+
+function reproNodeId(name) {
+  return 'repro-node-' + name.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function reproDuration(seconds) {
+  if (seconds == null) return '';
+  if (seconds < 1) return Math.round(seconds * 1000) + 'ms';
+  if (seconds < 60) return seconds.toFixed(1) + 's';
+  return Math.floor(seconds / 60) + 'm' + Math.round(seconds % 60) + 's';
+}
+
+function onReproClick(event) {
+  var node = event.target.closest('.repro-node');
+  if (node && node.dataset.step) { selectReproStep(node.dataset.step); return; }
+  var link = event.target.closest('.repro-task-link');
+  if (link && link.dataset.path !== undefined) revealTask(link.dataset.path);
+}
+
+function selectReproStep(name) {
+  _reproSelected = name;
+  var container = document.getElementById('view-reproduction');
+  if (!container) return;
+  container.querySelectorAll('.repro-node').forEach(function(n) {
+    n.classList.toggle('is-selected', n.dataset.step === name);
+  });
+  container.querySelectorAll('.repro-edges path').forEach(function(p) {
+    p.classList.toggle('is-lit', p.dataset.from === name || p.dataset.to === name);
+  });
+  renderReproDetail(name);
+}
+
+function renderReproDetail(name) {
+  var host = document.getElementById('repro-detail');
+  if (!host) return;
+  if (!name || !_reproData) { host.innerHTML = ''; return; }
+  var step = (_reproData.graph.steps || []).filter(function(s) { return s.name === name; })[0];
+  if (!step) { host.innerHTML = ''; return; }
+  var entry = reproStatusIndex(_reproData)[name];
+  var state = reproStateOf(entry);
+  var rows = '';
+  rows += reproDetailRow('State', '<span class="repro-glyph">' + (REPRO_GLYPHS[state] || '?')
+    + '</span> ' + escapeHtml(state) + (entry ? ' — ' + escapeHtml(entry.reason) : ''));
+  rows += reproDetailRow('Command', '<code>' + escapeHtml(step.cmd_logical || step.cmd) + '</code>');
+  rows += reproDetailRow('Owner task', '<button class="repro-task-link" type="button" data-path="'
+    + escapeAttr(step.task) + '">' + escapeHtml(reproTaskTitle(step.task))
+    + '</button>');
+  rows += reproDetailRow('Tier', escapeHtml(step.tier) + (step.kind === 'check' ? ' · check step' : ''));
+  rows += reproDetailRow('Deps', reproPathList((step.deps || []).map(function(d) { return d.logical; })));
+  rows += reproDetailRow('Outs', reproPathList((step.outs || []).map(reproOutLabel)));
+  if (entry && entry.duration != null) {
+    rows += reproDetailRow('Last run', reproDuration(entry.duration)
+      + (entry.last_run ? ', ' + new Date(entry.last_run * 1000).toLocaleString() : ''));
+  }
+  var log = entry && entry.log_tail
+    ? '<pre class="repro-log">' + escapeHtml(entry.log_tail) + '</pre>' : '';
+  host.innerHTML = '<div class="repro-detail"><div class="repro-detail-head">'
+    + '<span class="repro-detail-name">' + escapeHtml(name) + '</span></div>'
+    + '<dl>' + rows + '</dl>' + log + '</div>';
+}
+
+function reproDetailRow(label, valueHtml) {
+  return '<dt>' + label + '</dt><dd>' + valueHtml + '</dd>';
+}
+
+/* An out's logical path, naming the sidecar when one stands in for it: the
+   runner hashes the sidecar instead, so a large intermediate reading fresh is
+   only explicable with the substitution on screen. */
+function reproOutLabel(out) {
+  return out.path.logical + (out.sidecar ? ' (hashed via ' + out.sidecar.logical + ')' : '');
+}
+
+function reproPathList(paths) {
+  if (!paths.length) return '<span class="repro-path">—</span>';
+  return '<ul>' + paths.map(function(p) {
+    return '<li><span class="repro-path">' + escapeHtml(p) + '</span></li>';
+  }).join('') + '</ul>';
+}
+
+/* Open the Reproduction view on one step — the target of a task-page step row.
+   A step the current tier filter hides widens the filter rather than landing on
+   a canvas the step is not on. */
+function revealReproStep(name) {
+  loadReproData(false).then(function(data) {
+    var step = (data.graph.steps || []).filter(function(s) { return s.name === name; })[0];
+    if (step && _reproTier !== 'all' && step.tier !== _reproTier) _reproTier = 'all';
+    _reproSelected = name;
+    showView('reproduction');
+    var tries = 0;
+    var settle = function() {
+      var node = document.getElementById(reproNodeId(name));
+      if (node) node.scrollIntoView({ block: 'nearest', inline: 'center' });
+      else if (tries++ < 20) setTimeout(settle, 25);
+    };
+    setTimeout(settle, 0);
+  }).catch(function() { /* no graph payload: the table row is inert */ });
+}
+
+/* ── Task-page step table ──
+   Prepended to the rendered `## Reproduction` body, above the raw YAML block.
+   renderMarkdown has already wrapped that body's commentable blocks, so a table
+   added here shifts no block index and the YAML fence keeps its comments. */
+function renderReproStepTable(renderedMd, taskPath) {
+  loadReproData(false).then(function(data) {
+    if (!renderedMd.isConnected) return;
+    var steps = (data.graph.steps || []).filter(function(s) { return s.task === taskPath; });
+    if (!steps.length) return;
+    var byName = reproStatusIndex(data);
+    var rows = steps.map(function(s) {
+      var entry = byName[s.name];
+      var state = reproStateOf(entry);
+      var outs = (s.outs || []).map(reproOutLabel).join(', ');
+      return '<tr><td><button class="repro-step-name" type="button" data-step="'
+        + escapeAttr(s.name) + '">' + escapeHtml(s.name) + '</button>'
+        + (s.kind === 'check' ? ' <span class="repro-check-tag">✓</span>' : '') + '</td>'
+        + '<td><span class="repro-step-state rp-' + state + '"><span class="repro-glyph">'
+        + (REPRO_GLYPHS[state] || '?') + '</span>' + escapeHtml(state) + '</span></td>'
+        + '<td>' + escapeHtml(entry ? entry.reason : 'runner state unavailable') + '</td>'
+        + '<td class="repro-outs">' + escapeHtml(outs || '—') + '</td></tr>';
+    }).join('');
+    var old = renderedMd.querySelector(':scope > .repro-steps');
+    if (old) old.remove();
+    var host = document.createElement('div');
+    host.className = 'repro-steps';
+    host.innerHTML = '<table><thead><tr><th>Step</th><th>State</th><th>Reason</th><th>Outs</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    host.onclick = function(event) {
+      var btn = event.target.closest('.repro-step-name');
+      if (btn && btn.dataset.step) revealReproStep(btn.dataset.step);
+    };
+    renderedMd.insertBefore(host, renderedMd.firstChild);
+  }).catch(function() { /* no graph payload: the raw YAML block still stands */ });
+}
+
+/* Re-run every step table already on the active card (a build moved the lock). */
+function refreshReproStepTables() {
+  document.querySelectorAll(
+    '#active-node [data-section="' + REPRO_SECTION + '"] .rendered-md[data-rendered]'
+  ).forEach(function(el) {
+    var node = el.closest('.task-node');
+    renderReproStepTable(el, node ? node.dataset.path : '');
+  });
+}
+
+/* A build rewrote the lock: drop the cached payloads and repaint whatever is
+   showing them. */
+function onReproUpdated() {
+  _reproData = null;
+  if (currentView === 'reproduction') renderReproView(true);
+  else loadReproData(true).then(refreshReproStepTables).catch(function() {});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -2043,6 +2540,7 @@ function revealCardSection(wrapper, taskPath) {
       renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
       renderedMd.dataset.rendered = 'true';
     }
+    if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
   }
 }
 
@@ -3369,6 +3867,7 @@ function onTaskUpdate(path) {
    structural edits and never crosses worktrees. */
 async function onFullReload() {
   var wanted = activePath;
+  var priorView = currentView;
   /* Capture the open branches before the rebuild wipes them, so the tree
      reopens where the user left it instead of folding back to the root. */
   var expanded = getExpandedNavPaths();
@@ -3392,6 +3891,11 @@ async function onFullReload() {
   }
   setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
+  /* setActive forces Workspace; a reload is a server signal, not a navigation,
+     so put the reader back on the view they were reading. */
+  if (priorView !== 'workspace') showView(priorView);
+  if (currentView === 'reproduction') renderReproView(true);
+  else _reproData = null;
 }
 
 /* Nearest still-present path at or above `path`, by walking up until a nav row
@@ -3717,6 +4221,14 @@ initWorktreeSelectorRefresh();
 var fullReloadEl = document.getElementById('sse-full-reload');
 if (fullReloadEl) {
   fullReloadEl.addEventListener('htmx:sseBeforeMessage', function() { onFullReload(); });
+}
+
+/* ── SSE repro-updated: a build rewrote the committed lock ──
+   Same hx-swap="none" trigger-only pattern as full-reload; the payload is empty
+   because the client re-fetches both reproduction payloads itself. */
+var reproUpdatedEl = document.getElementById('sse-repro-updated');
+if (reproUpdatedEl) {
+  reproUpdatedEl.addEventListener('htmx:sseBeforeMessage', function() { onReproUpdated(); });
 }
 
 /* ── Comment UI functions ── */
