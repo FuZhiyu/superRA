@@ -6878,6 +6878,45 @@ class TestReproLockWatch:
             self._reset()
             loop.close()
 
+    def test_config_change_broadcasts_repro_updated(self, tmp_path):
+        """`superRA/config.yaml` is neither a task file nor the lock, but its
+        `reproduction:` block shapes every step, so an edit refreshes the view."""
+        import watchfiles
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        (root / "config.yaml").write_text("reproduction:\n  runners:\n    sh: sh {script}\n")
+        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
+            "wt-a", root
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+
+        async def _test():
+            state = plan_dashboard._worktree_cache["wt-a"]
+            await plan_dashboard._rebuild_and_broadcast(
+                state, {(watchfiles.Change.modified, str(root / "config.yaml"))}
+            )
+            assert not queue.empty()
+            assert "event: repro-updated" in queue.get_nowait()
+            assert queue.empty()
+            # A config.yaml elsewhere in the tree is an ordinary file.
+            nested = root / "child"
+            nested.mkdir()
+            await plan_dashboard._rebuild_and_broadcast(
+                state, {(watchfiles.Change.added, str(nested / "config.yaml"))}
+            )
+            assert queue.empty()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
     def _stub_awatch(self, monkeypatch, batches_per_session):
         """Replace `awatch` with sessions yielding the given change batches.
 

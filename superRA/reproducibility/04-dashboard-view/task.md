@@ -1,6 +1,6 @@
 ---
 title: "Dashboard Reproduction View for Reviewing the Graph"
-status: approved
+status: implemented
 depends_on: [01-section-contract, 02-runner]
 ---
 
@@ -94,3 +94,4 @@ Recorded in [reproduction-view-light.png](attachments/reproduction-view-light.pn
 Re-review at thorough tier on correctness and scope-fidelity, narrowed to the six findings. All six are fixed and verified live; one new advisory follows from the change to finding 3.
 
 1. **[ADVISORY] A `config.yaml` edit no longer reaches an open view.** Narrowing the refetch trigger to task files that declare a section ([plan_dashboard.py:488-490](../../../skills/task-tree/scripts/plan_dashboard.py#L488-L490)) leaves `superRA/config.yaml` outside it: [plan_dashboard.py:439](../../../skills/task-tree/scripts/plan_dashboard.py#L439) skips every name but `task.md` and `comments.yaml`, so a config edit broadcasts nothing. Measured on the 17-step fixture with the view open — renaming the `sh` runner made the server serve `steps: []`, and the view sat on all 17 stale nodes with 0 requests to `/api/repro/*` and no sign anything had moved. Before this commit no config trigger existed either, but any unrelated task edit refreshed the view incidentally, and that path is now gone. `Refresh` and reopening both recover. Treating a `config.yaml` change like the lock change — one more name in the same loop — closes it.
+   → implemented: a `config.yaml` edit at the plan root now sets the graph-changed flag in [plan_dashboard.py](../../../skills/task-tree/scripts/plan_dashboard.py) `_rebuild_and_broadcast` and broadcasts `repro-updated`; the graph cache already fingerprints that file, so the refetch rebuilds. Test `test_config_change_broadcasts_repro_updated`, red with the fix reverted.
