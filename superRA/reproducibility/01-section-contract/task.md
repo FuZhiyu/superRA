@@ -1,6 +1,6 @@
 ---
 title: "Define the `## Reproduction` Section Contract and Graph Model"
-status: approved
+status: implemented
 depends_on: []
 ---
 
@@ -50,11 +50,11 @@ The reproduction graph library and its contract are in place; [02-runner](../02-
 
 The [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) pilot found the first version blind on the idiom TreasuryGIV actually uses. Resolving only a string literal and `joinpath(@__DIR__, …)` left 56 of the pilot's 57 findings as unresolved-include warnings, because DrWatson projects write `include(projectdir("Code", "helpers.jl"))` and tests write `include(joinpath(REPO_ROOT, "Code", "x.jl"))`. An unresolved include is not a cosmetic warning: it drops the helper from the step's deps, so a helper edit stops invalidating the step that reads it — the property the closure exists to provide.
 
-`_include_target` now returns candidate `(anchor, path)` pairs and resolves, in addition to the two original forms, `projectdir("…")` / `srcdir` / `scriptsdir` against the project root, and `joinpath(<variable>, "…")` against the project root first and the including file second, keeping whichever candidate is on disk. Extraction also moved off the nested-parens regex onto a balanced-paren scan, so `include(joinpath(projectdir(), "Code", "io.jl"))` — two levels deep — is seen at all. Registering all 44 TreasuryGIV producers now leaves two warnings: `Base.include(mod, path)`, which is genuinely dynamic, and one derived task edge that contradicts a `depends_on` order.
+`_include_target` now returns candidate `(anchor, path)` pairs and resolves, in addition to the two original forms, `projectdir("…")` / `srcdir("…")` / `scriptsdir("…")` — as direct include arguments and as the head of a `joinpath` — against the project root, and `joinpath(<variable>, "…")` against the project root first and the including file second, keeping whichever candidate is on disk and warning when both exist. Extraction also moved off the nested-parens regex onto a balanced-paren scan, so `include(joinpath(projectdir(), "Code", "io.jl"))` — two levels deep — is seen at all. Registering all 44 TreasuryGIV producers now leaves two warnings: `Base.include(mod, path)`, which is genuinely dynamic, and one derived task edge that contradicts a `depends_on` order.
 
 ### Validation
 
-95 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 1036 passed with pytask installed.
+97 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 1040 passed with pytask installed.
 
 Coverage follows the objective's list, plus: the subset parser agrees with `pyyaml` byte-for-byte on three fixture sections (`json.dumps(..., sort_keys=True)` equality), scalar typing included — the parser reimplements PyYAML's YAML 1.1 resolvers for null, bool, int, and float. The two resolvers it drops, sexagesimals and timestamps, and the three forms it rejects that `pyyaml` accepts (an unpaired quote in a plain scalar, an escaped `\"`, an escape outside the supported set) are listed in the contract's §The YAML subset.
 
@@ -65,7 +65,10 @@ Contract prose is [task-file-contract.md](../../../skills/task-tree/references/t
 Thorough pass; focuses: correctness, scope-fidelity, instruction gate. Covered: the include-closure change line by line, its behaviour on all 339 `include(...)` calls in the TreasuryGIV checkout, and the contract prose it changed. Not covered: the rest of the library, unchanged in this range.
 
 1. **[ADVISORY]** [task.md:53](task.md#L53) says `projectdir` / `srcdir` / `scriptsdir` anchor at the project root, but only `projectdir("…")` resolves as a direct include argument: [_repro.py:668](../../../skills/task-tree/scripts/_repro.py#L668) branches on `name == "projectdir"` alone, so `_include_target('srcdir("model.jl")')` returns `None` and the include is reported as not-static. `srcdir()` / `scriptsdir()` resolve only as the head of a `joinpath`. Either narrow the sentence to `projectdir("…")`, or add the two names to that branch — `include(srcdir("x.jl"))` is the more common DrWatson spelling of the two.
+   → implemented: [_repro.py:668](../../../skills/task-tree/scripts/_repro.py#L668) now branches on `name in ("projectdir", "srcdir", "scriptsdir")`, so all three resolve as direct include arguments against the project root, matching the sentence as written. Red-green test: [test_srcdir_and_scriptsdir_resolve_as_direct_include_arguments](../../../skills/task-tree/scripts/test_repro.py#L424).
 
 2. **[ADVISORY]** [task-file-contract.md:189](../../../skills/task-tree/references/task-file-contract.md#L189) enumerates the resolved forms and drops `joinpath(@__DIR__, "…")`, which the previous sentence named. It is neither "`joinpath` of string literals" nor the `joinpath(<variable>, …)` case — [_repro.py:674-676](../../../skills/task-tree/scripts/_repro.py#L674-L676) resolves it against the including file only, with no project-root candidate — so the list an agent reads to decide what to declare by hand is now missing the commonest Julia idiom. Name it.
+   → implemented: [task-file-contract.md:189](../../../skills/task-tree/references/task-file-contract.md#L189) now names `joinpath(@__DIR__, "…")` explicitly and adds `srcdir("…")` / `scriptsdir("…")` alongside `projectdir("…")`.
 
 3. **[ADVISORY]** The variable-root tie-break is silent. [_repro.py:735](../../../skills/task-tree/scripts/_repro.py#L735) keeps the project-root candidate whenever it is a file, so `joinpath(SHARE, "Code", "x.jl")` binds to `<root>/Code/x.jl` if one exists there, with no warning and a wrong dep. Nothing resolves wrongly in TreasuryGIV today — its 15 variable-root includes produce 0 cases where both candidates are files — but a warning when both exist would close the one path where the closure can misattribute without a signal.
+   → implemented: [include_closure](../../../skills/task-tree/scripts/_repro.py#L737-L744) now warns and names both candidate paths when more than one resolves to an existing file, keeping the project-root candidate as before. Red-green test: [test_variable_root_ambiguity_warns](../../../skills/task-tree/scripts/test_repro.py#L411).
