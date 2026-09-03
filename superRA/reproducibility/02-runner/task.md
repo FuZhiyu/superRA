@@ -50,6 +50,7 @@ Ship `superra repro`, the command that rebuilds stale steps of the graph from [0
 - **A dep below a directory out gets that directory as a node.** The graph infers the edge by prefix, but per-path nodes alone would leave the engine free to run the consumer first, so `make_tasks` adds the covering directory to the consumer's deps.
 - **`--dry-run` turns on pytask's `--explain`**, so it names what changed rather than only listing what would run.
 - **`--tier` (default `canon`) picks the default build and scopes `status`; an explicit target overrides it**, and any selection pulls the stale ancestors it needs whatever tier they carry.
+- **`--force` applies to the whole selection, ancestors included.** pytask takes it as a session flag, so `repro build <step> --force` reruns every ancestor pulled in with the target even when all of them are fresh — in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) forcing one figure step reran five upstream estimation steps and cost a 40-minute rebuild. Scoping the flag to the named targets needs per-task invalidation rather than the session flag, and is not implemented.
 
 ### Validation
 
