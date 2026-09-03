@@ -46,3 +46,21 @@ Give superRA projects one reproduction graph that agents author inside the task 
 - [CLAUDE.md](../../CLAUDE.md) — ownership table and the instruction gate every skill edit passes
 
 ## Results
+
+superRA projects now carry one reproduction graph inside the task tree, and TreasuryGIV runs on it: `superra repro build --tier canon` rebuilds only what changed, the dashboard shows the graph for review, and the workflow keeps it current. Each line points at the task that holds the detail.
+
+- **Contract and library.** A `## Reproduction` section whose body is one YAML block registers a task's steps; the library parses the bounded subset, builds the graph, derives task edges, and expands Julia `include` closures. [01-section-contract](01-section-contract/task.md)
+- **Runner.** `superra repro build | status | explain | dag | tier` over pytask 0.6, with a size-and-mtime hash cache, logical `${VAR}` lock ids, check steps, and sidecars; only `build` needs pytask. [02-runner](02-runner/task.md)
+- **CLI surfaces.** `task read` shows a task's steps and derived edges, `task check` validates the graph, `task tree` badges canon tasks. [03-task-interface](03-task-interface/task.md)
+- **Dashboard.** A Reproduction view in swimlanes by owner task with per-step state, refreshed on lock, section, and config edits, commented through the section's gutter. [04-dashboard-view](04-dashboard-view/task.md)
+- **Reminder hook.** A producer edit without a step update draws one PostToolUse reminder per session. [05-reminder-hook](05-reminder-hook/task.md)
+- **Discipline.** The `reproducibility` skill: rerun model, graph authoring, Protect and completion duties. [06-skill](06-skill/task.md)
+- **Workflow wiring.** The graph replaces the pipeline-file requirement at PLAN, IMPLEMENT, and INTEGRATE, and the `protection` stage loads the skill. [07-workflow-integration](07-workflow-integration/task.md)
+- **Pilot.** TreasuryGIV registered 49 steps in 21 tasks with canon narrowed to the internal master deck; the pilot fixed the include resolver and added two authoring rules. [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md)
+
+### Open for the next round
+
+- The BondElasticity migration ([09-pilot-bondelasticity](09-pilot-bondelasticity/task.md)) and `repro trace` ([10-trace](10-trace/task.md)) stay postponed.
+- A check step takes its owning task's tier, so a drift pin can sit outside the default build; whether `kind: check` should carry its own tier is recorded in [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md) §Open questions.
+- `repro build <step> --force` reruns the target's whole ancestor closure; scoping it needs per-task invalidation ([02-runner](02-runner/task.md)).
+- The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
