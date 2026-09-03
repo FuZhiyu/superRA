@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: approved
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -49,15 +49,16 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 
 ### Lessons carried in from TreasuryGIV
 
-**Outs are the artifacts a consumer reads; a write stamp is never one.** Every canonical TreasuryGIV directory carries a `provenance.toml` that `publish_dir` rewrites in place with a fresh UTC timestamp, so declaring the directory as one out made every rerun change that out's bytes: re-running `baseline-estimates` on unchanged inputs reported all seven of its directory outs as changed and restaled 36 downstream steps, destroying the early cutoff the graph exists for. The registration now names the data files per directory and leaves the stamp undeclared — 32 directory outs became 293 per-file ones. A PDF exhibit that embeds its own creation date is the same class, harmless only because it sits at a leaf.
+**Outs are the artifacts a consumer reads; a write stamp is never one.** A directory out whose producer restamps a file in place restaled 36 downstream steps on an otherwise unchanged rerun. `graph-authoring.md` §Declare from the script now carries the rule on the `outs` bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
-A drift pin reads the *published* root, not the mirror a rehearsal build writes. TreasuryGIV routes every canonical write to a per-author, per-branch sandbox unless an opt-in is set, so declaring a pin's deps as `${OUT}/...` would have had it compare the run's own fresh output against baselines set from the results of record — which is how an earlier version of that project's pin was silently set from one worktree's sandbox ([test/pooled_1986_baseline_results.jl:6-11](/Users/zhiyufu/Dropbox/research_projects/TreasuryGIV-code/test/pooled_1986_baseline_results.jl#L6-L11)).
- `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet.
+**A drift pin declares the published root, not a rehearsal mirror.** A project with an opt-in publish path has two roots, and a pin declared against the wrong one can be silently set from one worktree's sandbox. `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
 ## Review Notes
 
 Thorough pass; focuses: correctness, scope-fidelity, instruction gate. Covered: the two rules this range added to [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) against the CLAUDE.md three-test gate and against the runner's behaviour, and the `## Results` prose. Both rules pass the gate. Not covered: the rest of the skill, approved earlier and unchanged.
 
 1. **[ADVISORY]** [task.md:55](task.md#L55) starts with a stray leading space and no blank line before it, so "`graph-authoring.md` §Declare from the script now carries the rule…" renders as a continuation of the pin sentence above it. Give it a blank line, and bold the lead of [task.md:54](task.md#L54) the way [task.md:52](task.md#L52) is bolded — the two lessons are siblings.
+   → implemented: rewrote both lessons as bolded sibling paragraphs at [task.md:52-54](task.md#L52-L54), each closed by its own blank line.
 
 2. **[ADVISORY]** [task.md:52](task.md#L52) and [task.md:54](task.md#L54) restate the linked TreasuryGIV record fact for fact — `publish_dir`, the seven directory outs, the 36 restaled steps, 32 directory outs to 293 per-file ones, the sandbox-set pin. What this task owns is why each rule landed in the skill and where it sits; the incident belongs to the pilot record. Cut to the rule, the one number that motivates it, and the link.
+   → implemented: cut both paragraphs at [task.md:52-54](task.md#L52-L54) to the rule, the one motivating number (36 restaled steps) or the two-roots fact, and a link to [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model for the incident detail.
