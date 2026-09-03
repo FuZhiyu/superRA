@@ -1,6 +1,6 @@
 ---
 title: "Build the `superra repro` Runner on pytask"
-status: approved
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -8,7 +8,7 @@ depends_on: [01-section-contract]
 
 Ship `superra repro`, the command that rebuilds stale steps of the graph from [01-section-contract](../01-section-contract/task.md) and reports why.
 
-- **Commands:** `build [targets] [--tier canon|local|all] [-j N] [--force] [--dry-run]`, `status [--json] [--tier]`, `explain <step>`, `dag [--mermaid]`, `tier <task-path> canon|local`. A target is a step name or a task path (all its steps); building a target includes its stale ancestors. Default tier for `build` and `status` is `canon`.
+- **Commands:** `build [targets] [--tier canon|local|all] [-j N] [--force] [--dry-run]`, `status [--json] [--tier]`, `explain <step>`, `dag [--mermaid]`, `tier <task-path> canon|local`. A target is a step name or a task path (all its steps); building a target includes its ancestors. Default tier for `build` and `status` is `canon`.
 - **Engine bridge:** generate one pytask task per step in memory and run `pytask.build(tasks=…)`; never write `task_*.py` into the project. Each step depends on a hashed `PythonNode` of its resolved spec (cmd, params, resolved deps and outs) so editing one step invalidates only that step. File and directory nodes are runner-owned `PNode` classes whose id is the logical (variable-form) path and whose hashing uses the resolved path, so the lock never embeds an author or branch. The pytask root is the project root; `pytask.lock` is committed there; the per-machine hash cache, per-step logs, and check-step stamps live in one gitignored directory that `repro` creates and adds to `.gitignore` on first run.
 - **Hash cache:** file state is the content hash, looked up in a persistent cache keyed on size and mtime_ns (no inode). A cache hit costs one `stat`; a miss rehashes. Sidecar-tracked outs hash the sidecar.
 - **Execution:** each step runs from the project root with the resolved `cmd`, stdout and stderr to `<logs>/<step>.log`, duration recorded; `-j` uses `pytask-parallel`. `check` steps rerun when their deps change and record a stamp on success. A failing step stops its descendants, reports the log path, and exits non-zero.
@@ -49,7 +49,7 @@ Ship `superra repro`, the command that rebuilds stale steps of the graph from [0
 - **A sidecar is hashed wherever its out appears** — as the producer's product and as any consumer's dep — so both sides agree on one state for one lock id and the large file is never read. It stands in for hashing, never for existence: a `Node` triple carries the out's own path, so a deleted out reports `missing` and rebuilds on one extra `stat`. The runner writes the sidecar after a successful run unless the step rewrote it during that run.
 - **A dep below a directory out gets that directory as a node.** The graph infers the edge by prefix, but per-path nodes alone would leave the engine free to run the consumer first, so `make_tasks` adds the covering directory to the consumer's deps.
 - **`--dry-run` turns on pytask's `--explain`**, so it names what changed rather than only listing what would run.
-- **`--tier` (default `canon`) picks the default build and scopes `status`; an explicit target overrides it**, and any selection pulls the stale ancestors it needs whatever tier they carry.
+- **`--tier` (default `canon`) picks the default build and scopes `status`; an explicit target overrides it**, and any selection pulls the ancestors it needs whatever tier they carry — pytask itself skips the fresh ones.
 - **`--force` applies to the whole selection, ancestors included.** pytask takes it as a session flag, so `repro build <step> --force` reruns every ancestor pulled in with the target even when all of them are fresh — in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) forcing one figure step reran five upstream estimation steps and cost a 40-minute rebuild. Scoping the flag to the named targets needs per-task invalidation rather than the session flag, and is not implemented.
 
 ### Validation
@@ -65,3 +65,4 @@ Command surface in [commands.md](../../../skills/task-tree/references/commands.m
 Quick pass; focuses: correctness. Covered: the one bullet this range added and the `--force` wiring behind it. Not covered: the rest of the runner, approved earlier and unchanged.
 
 1. **[ADVISORY]** [task.md:11](task.md#L11) and [task.md:52](task.md#L52) both say a selection pulls its *stale* ancestors. [select_steps](../../../skills/task-tree/scripts/_repro_state.py#L749-L759) walks the full upstream closure and pytask skips the fresh ones, which is exactly why the new `--force` bullet reads as a surprise. Drop "stale" from both.
+   → implemented: dropped "stale" at [task.md:11](task.md#L11) and [task.md:52](task.md#L52); the latter now says pytask skips the fresh ancestors, which is what makes the `--force` bullet a surprise.
