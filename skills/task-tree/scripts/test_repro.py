@@ -408,6 +408,37 @@ class TestIncludeClosure:
         assert found == ["Code/helper.jl"]
         assert warnings_out == []
 
+    def test_variable_root_ambiguity_warns(self, tmp_path):
+        """Both a project-root and an including-directory candidate existing is ambiguous."""
+        code = tmp_path / "Code"
+        code.mkdir()
+        (tmp_path / "helper.jl").write_text("# root-relative leaf\n", encoding="utf-8")
+        (code / "helper.jl").write_text("# dir-relative leaf\n", encoding="utf-8")
+        (code / "run.jl").write_text(
+            'include(joinpath(SHARE, "helper.jl"))\n', encoding="utf-8"
+        )
+        found, warnings_out = include_closure(code / "run.jl", tmp_path)
+        assert found == ["helper.jl"]
+        assert "matches both helper.jl and Code/helper.jl" in warnings_out[0]
+
+    def test_srcdir_and_scriptsdir_resolve_as_direct_include_arguments(self, tmp_path):
+        """DrWatson's `srcdir`/`scriptsdir` resolve as direct calls, not only inside `joinpath`."""
+        code = tmp_path / "Code"
+        code.mkdir()
+        (tmp_path / "src").mkdir()
+        (tmp_path / "scripts").mkdir()
+        (code / "run.jl").write_text(
+            'include(srcdir("model.jl"))\n'
+            'include(scriptsdir("run_estimates.jl"))\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "src" / "model.jl").write_text("# leaf\n", encoding="utf-8")
+        (tmp_path / "scripts" / "run_estimates.jl").write_text("# leaf\n", encoding="utf-8")
+
+        found, warnings_out = include_closure(code / "run.jl", tmp_path)
+        assert found == ["scripts/run_estimates.jl", "src/model.jl"]
+        assert warnings_out == []
+
     def test_two_argument_include_warns(self, tmp_path):
         """`Base.include(mod, path)` evaluates into a module; the path is not static."""
         code = tmp_path / "Code"
