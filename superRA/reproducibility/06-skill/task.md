@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: implemented
+status: approved
 depends_on: [01-section-contract]
 ---
 
@@ -56,4 +56,8 @@ A drift pin reads the *published* root, not the mirror a rehearsal build writes.
 
 ## Review Notes
 
-Thorough pass; focuses: correctness, scope-fidelity. Covered: the four files under `skills/reproducibility/` line by line against the CLAUDE.md three-test gate and §Skill Prose Style, and every command, flag, tier, state, and schema claim against the landed contract, the landed parser, and the `02-runner` / `03-task-interface` objectives. Not covered: behavior on a real pipeline, which [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) owns.
+Thorough pass; focuses: correctness, scope-fidelity, instruction gate. Covered: the two rules this range added to [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) against the CLAUDE.md three-test gate and against the runner's behaviour, and the `## Results` prose. Both rules pass the gate. Not covered: the rest of the skill, approved earlier and unchanged.
+
+1. **[ADVISORY]** [task.md:55](task.md#L55) starts with a stray leading space and no blank line before it, so "`graph-authoring.md` §Declare from the script now carries the rule…" renders as a continuation of the pin sentence above it. Give it a blank line, and bold the lead of [task.md:54](task.md#L54) the way [task.md:52](task.md#L52) is bolded — the two lessons are siblings.
+
+2. **[ADVISORY]** [task.md:52](task.md#L52) and [task.md:54](task.md#L54) restate the linked TreasuryGIV record fact for fact — `publish_dir`, the seven directory outs, the 36 restaled steps, 32 directory outs to 293 per-file ones, the sandbox-set pin. What this task owns is why each rule landed in the skill and where it sits; the incident belongs to the pilot record. Cut to the rule, the one number that motivates it, and the link.

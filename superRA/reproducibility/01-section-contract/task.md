@@ -1,6 +1,6 @@
 ---
 title: "Define the `## Reproduction` Section Contract and Graph Model"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -59,3 +59,13 @@ The [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) pilot found the firs
 Coverage follows the objective's list, plus: the subset parser agrees with `pyyaml` byte-for-byte on three fixture sections (`json.dumps(..., sort_keys=True)` equality), scalar typing included — the parser reimplements PyYAML's YAML 1.1 resolvers for null, bool, int, and float. The two resolvers it drops, sexagesimals and timestamps, and the three forms it rejects that `pyyaml` accepts (an unpaired quote in a plain scalar, an escaped `\"`, an escape outside the supported set) are listed in the contract's §The YAML subset.
 
 Contract prose is [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Reproduction Section, with the section listed in §Task Anatomy and both new modules in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory.
+
+## Review Notes
+
+Thorough pass; focuses: correctness, scope-fidelity, instruction gate. Covered: the include-closure change line by line, its behaviour on all 339 `include(...)` calls in the TreasuryGIV checkout, and the contract prose it changed. Not covered: the rest of the library, unchanged in this range.
+
+1. **[ADVISORY]** [task.md:53](task.md#L53) says `projectdir` / `srcdir` / `scriptsdir` anchor at the project root, but only `projectdir("…")` resolves as a direct include argument: [_repro.py:668](../../../skills/task-tree/scripts/_repro.py#L668) branches on `name == "projectdir"` alone, so `_include_target('srcdir("model.jl")')` returns `None` and the include is reported as not-static. `srcdir()` / `scriptsdir()` resolve only as the head of a `joinpath`. Either narrow the sentence to `projectdir("…")`, or add the two names to that branch — `include(srcdir("x.jl"))` is the more common DrWatson spelling of the two.
+
+2. **[ADVISORY]** [task-file-contract.md:189](../../../skills/task-tree/references/task-file-contract.md#L189) enumerates the resolved forms and drops `joinpath(@__DIR__, "…")`, which the previous sentence named. It is neither "`joinpath` of string literals" nor the `joinpath(<variable>, …)` case — [_repro.py:674-676](../../../skills/task-tree/scripts/_repro.py#L674-L676) resolves it against the including file only, with no project-root candidate — so the list an agent reads to decide what to declare by hand is now missing the commonest Julia idiom. Name it.
+
+3. **[ADVISORY]** The variable-root tie-break is silent. [_repro.py:735](../../../skills/task-tree/scripts/_repro.py#L735) keeps the project-root candidate whenever it is a file, so `joinpath(SHARE, "Code", "x.jl")` binds to `<root>/Code/x.jl` if one exists there, with no warning and a wrong dep. Nothing resolves wrongly in TreasuryGIV today — its 15 variable-root includes produce 0 cases where both candidates are files — but a warning when both exist would close the one path where the closure can misattribute without a signal.
