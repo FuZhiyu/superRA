@@ -47,7 +47,9 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 - One interpreter pin, in the `runners` template rather than per step.
 - Frozen upstream artifacts stay boundary inputs with no producing step.
 
-### Lesson carried in from TreasuryGIV
+### Lessons carried in from TreasuryGIV
+
+**Outs are the artifacts a consumer reads; a write stamp is never one.** Every canonical TreasuryGIV directory carries a `provenance.toml` that `publish_dir` rewrites in place with a fresh UTC timestamp, so declaring the directory as one out made every rerun change that out's bytes: re-running `baseline-estimates` on unchanged inputs reported all seven of its directory outs as changed and restaled 36 downstream steps, destroying the early cutoff the graph exists for. The registration now names the data files per directory and leaves the stamp undeclared — 32 directory outs became 293 per-file ones. A PDF exhibit that embeds its own creation date is the same class, harmless only because it sits at a leaf.
 
 A drift pin reads the *published* root, not the mirror a rehearsal build writes. TreasuryGIV routes every canonical write to a per-author, per-branch sandbox unless an opt-in is set, so declaring a pin's deps as `${OUT}/...` would have had it compare the run's own fresh output against baselines set from the results of record — which is how an earlier version of that project's pin was silently set from one worktree's sandbox ([test/pooled_1986_baseline_results.jl:6-11](/Users/zhiyufu/Dropbox/research_projects/TreasuryGIV-code/test/pooled_1986_baseline_results.jl#L6-L11)).
  `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet.
