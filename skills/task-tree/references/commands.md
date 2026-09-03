@@ -91,7 +91,7 @@ superra repro status --tier all --json    # the shape `task read` and the dashbo
 superra repro build                       # rebuild the stale canon steps
 superra repro build 02-merge -j 4         # a step name or a task path, plus its stale ancestors
 superra repro build --dry-run             # what would run, and why
-superra repro build --force               # run the selection even where nothing changed
+superra repro build --force               # rerun the whole selection, ancestors included, unchanged or not
 superra repro explain build-panel         # one step: state, changed nodes, upstream, log
 superra repro dag --mermaid               # the step graph
 superra repro tier 02-merge canon         # set a task's tier
