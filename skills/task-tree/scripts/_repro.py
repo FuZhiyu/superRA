@@ -665,9 +665,13 @@ def _include_target(arg: str) -> list[tuple[str, str]] | None:
     if not call:
         return None
     name, parts = call.group(1), _call_args(call.group(2))
-    if name == "projectdir":
+    if name in ("projectdir", "srcdir", "scriptsdir"):
         segments = _string_segments(parts)
-        return [("root", posixpath.join(*segments))] if segments else None
+        if not segments:
+            return None
+        prefix = {"projectdir": "", "srcdir": "src", "scriptsdir": "scripts"}[name]
+        joined = posixpath.join(*segments)
+        return [("root", posixpath.join(prefix, joined) if prefix else joined)]
     if name != "joinpath" or not parts:
         return None
     head, rest = parts[0], parts[1:]
@@ -732,7 +736,14 @@ def include_closure(
                 continue
             bases = {"dir": current.parent, "root": project_root}
             paths = [(bases[anchor] / target).resolve() for anchor, target in candidates]
-            child = next((p for p in paths if p.is_file()), paths[0])
+            existing = [p for p in paths if p.is_file()]
+            if len(existing) > 1:
+                warnings_out.append(
+                    f"{_relative(current, project_root)}: include({arg.strip()}) "
+                    f"matches both {_relative(existing[0], project_root)} and "
+                    f"{_relative(existing[1], project_root)}; using the first"
+                )
+            child = existing[0] if existing else paths[0]
             rel = _relative(child, project_root)
             if not child.is_file():
                 warnings_out.append(
