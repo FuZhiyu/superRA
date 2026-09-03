@@ -186,7 +186,7 @@ Both the section block and `config.yaml` are read by a stdlib parser over a boun
 
 Inline lists are flow context, where YAML reserves `{`, `}`, `[`, `]`, and `,`: quote a `${VAR}` path there (`deps: ["${OUT}/panel.parquet"]`) or use a block list. Both parsers reject the unquoted form.
 
-Julia deps carry their own closure: a `.jl` dep expands to every file it reaches through `include("…")`, including `include(joinpath(@__DIR__, "…"))`, so helper edits invalidate the step without being listed. An include whose argument is not a static path is reported and left to be declared by hand.
+Julia deps carry their own closure: a `.jl` dep expands to every file it reaches through `include`, so helper edits invalidate the step without being listed. Resolved forms are a string literal, `joinpath` of string literals, DrWatson's `projectdir("…")`, and `joinpath(<variable>, "…")` — a variable root resolves against the project root, then against the including file, keeping whichever is on disk. An include whose argument is not a static path is reported and left to be declared by hand.
 
 ### Validation
 
