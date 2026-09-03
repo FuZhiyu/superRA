@@ -4,6 +4,7 @@
 
 Open the producer and list what it opens: its real reads are `deps`, its real writes are `outs`.
 
+- **Outs are the artifacts a consumer reads.** A write stamp, a run log, or anything else whose bytes move on an identical rerun is never an out — a directory out that swallows one restales the whole tail on every build. An exhibit that embeds its own creation date is the same class at the leaf, where nothing downstream reads it.
 - **Name files.** Use a directory entry only when the file names are generated or the count is large; two scripts writing into one directory declare per-file outs, or they collide on the duplicate-out error.
 - **Root every path that moves with a `${VAR}`** from `superRA/config.yaml` — output roots, scratch, data shares — and keep literal repo-relative paths for what is committed.
 - **Pin the interpreter once**, in the `runners` template.
