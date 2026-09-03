@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: implemented
+status: approved
 depends_on: [01-section-contract]
 ---
 
@@ -52,13 +52,3 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 **Outs are the artifacts a consumer reads; a write stamp is never one.** A directory out whose producer restamps a file in place restaled 36 downstream steps on an otherwise unchanged rerun. `graph-authoring.md` §Declare from the script now carries the rule on the `outs` bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
 **A drift pin declares the published root, not a rehearsal mirror.** A project with an opt-in publish path has two roots, and a pin declared against the wrong one can be silently set from one worktree's sandbox. `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
-
-## Review Notes
-
-Thorough pass; focuses: correctness, scope-fidelity, instruction gate. Covered: the two rules this range added to [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) against the CLAUDE.md three-test gate and against the runner's behaviour, and the `## Results` prose. Both rules pass the gate. Not covered: the rest of the skill, approved earlier and unchanged.
-
-1. **[ADVISORY]** [task.md:55](task.md#L55) starts with a stray leading space and no blank line before it, so "`graph-authoring.md` §Declare from the script now carries the rule…" renders as a continuation of the pin sentence above it. Give it a blank line, and bold the lead of [task.md:54](task.md#L54) the way [task.md:52](task.md#L52) is bolded — the two lessons are siblings.
-   → implemented: rewrote both lessons as bolded sibling paragraphs at [task.md:52-54](task.md#L52-L54), each closed by its own blank line.
-
-2. **[ADVISORY]** [task.md:52](task.md#L52) and [task.md:54](task.md#L54) restate the linked TreasuryGIV record fact for fact — `publish_dir`, the seven directory outs, the 36 restaled steps, 32 directory outs to 293 per-file ones, the sandbox-set pin. What this task owns is why each rule landed in the skill and where it sits; the incident belongs to the pilot record. Cut to the rule, the one number that motivates it, and the link.
-   → implemented: cut both paragraphs at [task.md:52-54](task.md#L52-L54) to the rule, the one motivating number (36 restaled steps) or the two-roots fact, and a link to [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model for the incident detail.

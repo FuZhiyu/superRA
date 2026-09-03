@@ -1,6 +1,6 @@
 ---
 title: "Build the `superra repro` Runner on pytask"
-status: implemented
+status: approved
 depends_on: [01-section-contract]
 ---
 
@@ -59,10 +59,3 @@ Ship `superra repro`, the command that rebuilds stale steps of the graph from [0
 Coverage follows the objective's list, plus: an out deleted by hand, a `params` edit invalidating one step, a failing step's log and its blocked descendants, `--force`, `--dry-run` writing nothing, `-j 2`, a sidecar-tracked out staying fresh after the out is hand-edited, tier-scoped reporting, `tier` inserting the key when absent, a tree with no steps leaving no state behind, and `cli.py` routing. The review round added red-green cover for each of its findings: a directory out ordering its consumer at `-j 1` and `-j 2` (plus two deterministic structural tests), a deleted sidecar-tracked out, a `${VAR}` that reaches only `cmd`, a restored input clearing a `failed` step, a failure message carrying no Python frames, and the re-exec message naming what is missing. Each of the six fails with its fix reverted. The advisory round added two more: a dep edited after a cleared failure naming that dep rather than only the log, and a declaration edit still reading as a declaration edit once the spec state is split in two — the first reddens with its fix reverted, the second guards the split against misclassifying.
 
 Command surface in [commands.md](../../../skills/task-tree/references/commands.md) §Reproduction, scripts in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory, and a routing row in [SKILL.md](../../../skills/task-tree/SKILL.md).
-
-## Review Notes
-
-Quick pass; focuses: correctness. Covered: the one bullet this range added and the `--force` wiring behind it. Not covered: the rest of the runner, approved earlier and unchanged.
-
-1. **[ADVISORY]** [task.md:11](task.md#L11) and [task.md:52](task.md#L52) both say a selection pulls its *stale* ancestors. [select_steps](../../../skills/task-tree/scripts/_repro_state.py#L749-L759) walks the full upstream closure and pytask skips the fresh ones, which is exactly why the new `--force` bullet reads as a surprise. Drop "stale" from both.
-   → implemented: dropped "stale" at [task.md:11](task.md#L11) and [task.md:52](task.md#L52); the latter now says pytask skips the fresh ancestors, which is what makes the `--force` bullet a surprise.
