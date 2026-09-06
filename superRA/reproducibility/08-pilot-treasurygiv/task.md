@@ -24,6 +24,8 @@ Adopt the graph in TreasuryGIV and use it to verify the runner, the dashboard, a
 
 ## Results
 
+Follow-up: [2026-09-06 small-pilot design feedback](attachments/2026-09-06-small-pilot-design-feedback.md) records a separate two-step adoption test, measured discovery latency, and proposed skill improvements.
+
 The graph is adopted in TreasuryGIV and it works: 49 steps across 21 task files, a full sandbox
 build that completes, and make-like reruns — one `superra repro build --tier all` after a
 declaration fix reran 4 steps and skipped 44 as unchanged, the 48 of 49 steps that ever build (the
