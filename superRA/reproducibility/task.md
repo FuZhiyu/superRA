@@ -1,22 +1,22 @@
 ---
 title: "Reproducibility: Task-Declared Build Graph with Make-Like Reruns"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
 ## Objective
 
-Give superRA projects one reproduction graph that agents author inside the task tree, a runner that rebuilds only what changed, a dashboard view the researcher reviews and comments on, and workflow duties that keep the graph current. Prove it on TreasuryGIV, then BondElasticity.
+Give superRA projects one reproduction graph that agents author inside the task tree, a runner that rebuilds only what changed, a dashboard view the researcher reviews and comments on, and workflow duties that verify claimed results and selected protection checks. Prove it on TreasuryGIV, then BondElasticity.
 
 ### Context
 
 - **Engine: pytask 0.6.** Steps are generated in memory from task files and executed through `pytask.build(tasks=...)`; no `task_*.py` files exist in a project. pytask supplies sha256 content hashing with no size cap, early cutoff within a run, `--dry-run --explain`, the portable TOML `pytask.lock`, and `pytask-parallel`.
-- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers the task; `tier: canon` opts its steps into the default build, `tier: local` (the default) registers them as allowed-stale. Project-wide config (variables, runner templates, env deps, code roots) lives under a `reproduction:` key in `superRA/config.yaml`, a new general superRA project-config file that later work may extend with other scattered configuration. The YAML in both places is a bounded subset the stdlib parser reads. Schema: [01-section-contract](01-section-contract/task.md).
+- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers the task; `tier: required` opts its steps into the default build and completion checks; `tier: on-demand` (the default) registers them for explicit execution. Accept `canon` and `local` as legacy input aliases. Project-wide config (variables, runner templates, env deps, code roots) lives under a `reproduction:` key in `superRA/config.yaml`. The YAML in both places is a bounded subset the stdlib parser reads. Schema: [01-section-contract](01-section-contract/task.md); compatibility and scoped verification: [11-scoped-verification](11-scoped-verification/task.md).
 - **Build unit is a step, never a task.** Step-to-step edges are inferred from files. Task `depends_on` stays sibling-only orchestration; task-level reproduction dependencies are derived from step files for display and consistency checks, never declared.
 - **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
-- **The committed lock keys nodes by logical path.** Lock ids are the variable-form paths (`${OUT}/…`) so they do not embed an author or branch; hashing happens on the paths resolved for the invocation. Switching roots therefore reports stale honestly and never rewrites ids.
+- **The committed lock keys nodes by logical path.** Lock ids are the variable-form paths (`${OUT}/…`) so they do not embed an author or branch; hashing happens on the paths resolved for the invocation. Root changes invalidate through changed content or resolved commands; equal-content relocation alone preserves freshness.
 - **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The new `reproducibility` utility skill owns the discipline: when to register, tiers, the hashing model agents must understand, boundary inputs, check steps, graph review, and the Protect / completion duties.
-- **Enforcement:** instructions, a `task check` category, the IMPLEMENT completion gate on `repro status --tier canon`, and a PostToolUse reminder hook.
+- **Enforcement:** instructions, a `task check` category, scoped verification before claiming a result, the IMPLEMENT completion gate on required producers and selected protection checks, and a PostToolUse reminder hook.
 - **Detection:** agents declare deps/outs in v1; the loader adds Julia `include` closures and configured env deps. A file-open tracer is a postponed follow-up.
 - **Pilots:** TreasuryGIV first (orchestrator steps only; upstream construction as external inputs; sandbox-rooted builds), BondElasticity after.
 
@@ -61,6 +61,6 @@ superRA projects now carry one reproduction graph inside the task tree, and Trea
 ### Open for the next round
 
 - The BondElasticity migration ([09-pilot-bondelasticity](09-pilot-bondelasticity/task.md)) and `repro trace` ([10-trace](10-trace/task.md)) stay postponed.
-- A check step takes its owning task's tier, so a drift pin can sit outside the default build; whether `kind: check` should carry its own tier is recorded in [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md) §Open questions.
+- [Scoped verification and adoption](11-scoped-verification/task.md) implements the accepted tier names, check coverage, and pilot improvements. The delivered runner still uses the legacy names until that task lands.
 - `repro build <step> --force` reruns the target's whole ancestor closure; scoping it needs per-task invalidation ([02-runner](02-runner/task.md)).
 - The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
