@@ -335,6 +335,82 @@ def test_status_reports_only_the_requested_tier(project):
     assert set(project.states("all")) == {"build-a", "build-b", "check-b", "build-x"}
 
 
+@pytest.mark.parametrize("legacy,current", [("canon", "required"), ("local", "on-demand")])
+def test_tier_aliases_select_the_same_steps(project, legacy, current):
+    assert select_steps(project.graph(), [], legacy) == select_steps(project.graph(), [], current)
+    assert project.states(legacy) == project.states(current)
+
+
+@needs_pytask
+def test_renaming_tiers_preserves_a_built_lock(project):
+    assert project.run("build", "--tier", "all") == 0
+    lock = project.paths.lock_file.read_bytes()
+    times = project.run_times()
+    for task in ("01-a", "02-b", "03-x"):
+        path = f"superRA/{task}/task.md"
+        project.write(path, project.read(path).replace("tier: canon", "tier: required").replace("tier: local", "tier: on-demand"))
+    assert all(state == "fresh" for state in project.states().values())
+    assert project.run("build", "--tier", "all") == 0
+    assert project.paths.lock_file.read_bytes() == lock
+    assert project.run_times() == times
+
+
+@needs_pytask
+def test_scoped_status_verifies_on_demand_work_without_unrelated_steps(project, capsys):
+    assert project.run("status", "03-x") == 1
+    assert project.run("build", "03-x") == 0
+    capsys.readouterr()
+    assert project.run("status", "03-x", "--json") == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["targets"] == ["03-x"]
+    assert [step["name"] for step in report["steps"]] == ["build-x"]
+    assert project.states()["build-a"] == "missing"
+
+
+def test_scoped_status_includes_ancestors_across_tiers(project, capsys):
+    assert project.run("tier", "01-a", "on-demand") == 0
+    capsys.readouterr()
+    assert project.run("status", "check-b", "--json") == 1
+    report = json.loads(capsys.readouterr().out)
+    assert {step["name"] for step in report["steps"]} == {"build-a", "build-b", "check-b"}
+    assert report["summary"]["total"] == 3
+
+
+def test_scoped_status_rejects_an_unknown_target(project, capsys):
+    assert project.run("status", "unregistered") == 1
+    assert "no step or task matches unregistered" in capsys.readouterr().err
+
+
+@needs_pytask
+def test_selected_check_only_task_blocks_required_completion(project):
+    project.write("superRA/04-check/task.md", '''---
+title: Selected protection
+status: not-started
+---
+
+## Objective
+
+Protect a.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: protect-a
+    kind: check
+    cmd: 'false'
+    deps:
+      - "${OUT}/a.txt"
+```
+''')
+    assert project.run("build") == 0
+    assert project.status().ok
+    assert project.run("tier", "04-check", "required") == 0
+    assert not project.status().ok
+    assert project.run("build") == 1
+    assert project.states()["protect-a"] == "failed"
+
+
 # ---------------------------------------------------------------------------
 # Target selection
 # ---------------------------------------------------------------------------
@@ -372,14 +448,14 @@ def test_an_unknown_target_is_reported(project):
 
 def test_tier_replaces_the_existing_key(project):
     assert project.run("tier", "01-a", "local") == 0
-    assert "tier: local" in project.read("superRA/01-a/task.md")
-    assert project.graph().tiers["01-a"] == "local"
+    assert "tier: on-demand" in project.read("superRA/01-a/task.md")
+    assert project.graph().tiers["01-a"] == "on-demand"
 
 
 def test_tier_inserts_the_key_when_absent(project):
     project.write("superRA/01-a/task.md", TASK_A.replace("tier: canon\n", ""))
     assert project.run("tier", "01-a", "canon") == 0
-    assert project.graph().tiers["01-a"] == "canon"
+    assert project.graph().tiers["01-a"] == "required"
 
 
 def test_tier_rejects_a_task_without_a_reproduction_section(project):
@@ -403,7 +479,7 @@ def test_dag_text_lists_steps_and_edges(project):
 def test_dag_mermaid_renders_a_flowchart(project):
     text = render_dag(project.graph(), mermaid=True)
     assert text.startswith("graph LR")
-    assert 'build-a["build-a"]:::canon' in text
+    assert 'build-a["build-a"]:::required' in text
     assert "build-a -->|a.txt| build-b" in text
 
 
@@ -622,7 +698,7 @@ def test_status_json_matches_the_documented_shape(project, capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["ok"] is True
-    assert payload["tier"] == "canon"
+    assert payload["tier"] == "required"
     assert payload["root"] == str(project.root)
     assert payload["summary"]["total"] == 3
     assert payload["summary"]["fresh"] == 3

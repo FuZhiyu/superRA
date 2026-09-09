@@ -27,7 +27,7 @@ Prompt:
     surviving task files down to terse is part of the job: load
     `superRA:communicate` and its `references/rewrite.md`; that bar applies to
     every section you touch, not only new writes. A fold moves the folded task's
-    `## Reproduction` steps into the target task's section; no canon step
+    `## Reproduction` steps into the target task's section; no required step
     disappears with a removed directory.
     Land recoverable commits per affected subtree.
 ```

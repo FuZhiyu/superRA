@@ -4,8 +4,8 @@
 
 Fold three reproduction decisions into the protection proposal the researcher answers (`skills/superintegrate/references/protect.md` step 3):
 
-- **Tier per affected task.** Every task owning a producer of a kept result goes `canon`; the rest stay `local`.
-- **A `kind: check` step for each drift test the researcher selects.**
+- **Required tasks.** Include tasks owning kept-result producers and tasks owning selected protection checks, including check-only tasks. Other tasks stay `on-demand`. Use `superra repro tier <task-path> required`.
+- **A `kind: check` step for each drift test the researcher selects.** A file-consumer edge alone does not select a protection check.
 - **The boundary.** Name the inputs the project receives rather than rebuilds, and get the researcher's agreement that they are not reproducible here.
 
 Record all three in the `integrate(protect)` commit body.
@@ -15,12 +15,14 @@ Record all three in the `integrate(protect)` commit body.
 Run at the IMPLEMENT phase exit, once every task is approved:
 
 ```bash
-superra repro build --tier canon
-superra repro status --tier canon
+superra repro build --tier required
+superra repro status --tier required
 ```
 
-The gate passes when the build completes and the status that follows reports no `stale`, `missing`, or `failed` step. A failure blocks the completion menu — fix it rather than reporting around it:
+Verify that the selection covers kept results and selected protection checks. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. On-demand claims require their own [scoped verification](../SKILL.md#build-and-status).
 
-- **A step failed** — its log path is in `superra repro explain <step>`; that failure is the work, not a graph defect.
+A failure blocks the completion menu:
+
+- **A step failed** — inspect the log from `superra repro explain <step>` to distinguish producer, environment, and declaration failures.
 - **The build succeeded and status is still dirty** — `rerun-model.md` §Diagnosing a surprise.
-- **A canon task cites an output no step produces** — the gate found the real gap. Register the producer.
+- **A kept result has no producer** — register it or identify its agreed external-input boundary.

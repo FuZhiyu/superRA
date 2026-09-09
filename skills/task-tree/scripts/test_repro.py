@@ -498,7 +498,7 @@ class TestGraphConstruction:
         _write_repro_task(
             plan / "01-load", "Load", "tier: canon\nsteps:\n  - name: load\n    cmd: true\n"
         )
-        assert _graph(plan).tiers == {"01-load": "canon"}
+        assert _graph(plan).tiers == {"01-load": "required"}
 
     def test_variables_resolve_in_cmd_deps_and_outs(self, tmp_path):
         plan = _plan(tmp_path)

@@ -1115,7 +1115,7 @@ function drawReproView(container, data) {
 }
 
 function reproHeadHTML(withFilter) {
-  var opts = ['all', 'canon', 'local'].map(function(t) {
+  var opts = ['all', 'required', 'on-demand'].map(function(t) {
     return '<option value="' + t + '"' + (t === _reproTier ? ' selected' : '') + '>'
       + (t === 'all' ? 'All tiers' : t) + '</option>';
   }).join('');

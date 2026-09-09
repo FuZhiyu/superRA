@@ -140,7 +140,7 @@ def test_task_read_shows_reproduction_block_for_registered_task(
 
     data = json.loads(capsys.readouterr().out)
     rep = data["task"]["reproduction"]
-    assert rep["tier"] == "canon"
+    assert rep["tier"] == "required"
     assert rep["steps"][0]["name"] == "build-panel"
     assert rep["steps"][0]["status"] == "missing"
 
@@ -217,7 +217,7 @@ def test_task_tree_tier_badge_and_filter(
 
     cli.main(["task", "tree"])
     out = capsys.readouterr().out
-    assert "Canon Task [canon]" in out
+    assert "Canon Task [required]" in out
     assert "Plain Task" in out
 
     cli.main(["task", "tree", "--tier", "canon"])

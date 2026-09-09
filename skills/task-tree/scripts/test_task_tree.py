@@ -1482,13 +1482,13 @@ class TestTaskQuery:
         return root_dir
 
     def test_tree_marks_canon_task_with_badge(self, tmp_path, capsys):
-        """`task tree` marks a canon-registered task with a `[canon]` badge."""
+        """`task tree` marks a canon-registered task with a `[required]` badge."""
         root_dir = self._canon_and_plain(tmp_path)
         task_query.main(["--tree", "--plan-root", str(root_dir)])
         out = capsys.readouterr().out
-        assert "01-canon: Canon Task [canon]" in out
+        assert "01-canon: Canon Task [required]" in out
         assert "02-plain: Plain Task" in out
-        assert "02-plain: Plain Task [canon]" not in out
+        assert "02-plain: Plain Task [required]" not in out
 
     def test_tree_json_tier_field(self, tmp_path):
         """`tree_to_json` carries `tier`, null for a task with no ## Reproduction."""
@@ -1497,7 +1497,7 @@ class TestTaskQuery:
         graph = _repro.build_graph(root_dir, root=root, resolve_vars=False)
         data = task_query.tree_to_json(root, graph=graph)
         tiers = {child["path"]: child["tier"] for child in data["children"]}
-        assert tiers["01-canon"] == "canon"
+        assert tiers["01-canon"] == "required"
         assert tiers["02-plain"] is None
 
     def test_tree_tier_filter_selects_only_that_tier(self, tmp_path, capsys):
@@ -2320,7 +2320,7 @@ class TestTaskReadReproduction:
         root = self._pipeline(tmp_path)
         target = _task_io.parse_task(root / "01-build" / "task.md", root)
         repro = task_read._reproduction_view(root, target, None)
-        assert repro["tier"] == "canon"
+        assert repro["tier"] == "required"
         assert len(repro["steps"]) == 1
         step = repro["steps"][0]
         assert step["name"] == "build-panel"
@@ -2328,7 +2328,7 @@ class TestTaskReadReproduction:
         assert step["reason"] == "never built"
         assert step["outs"] == ["output/panel.parquet"]
         human = task_read.render_human([], target, [], show_ancestors=False, repro=repro)
-        assert "tier: canon" in human
+        assert "tier: required" in human
         assert "build-panel: missing — never built" in human
 
     def test_task_edges_are_feeds_and_feeds_on(self, tmp_path):
@@ -2356,7 +2356,7 @@ class TestTaskReadReproduction:
             task_read.render_json([], target, [], show_ancestors=False, repro=repro)
         )
         rep = data["task"]["reproduction"]
-        assert rep["tier"] == "canon"
+        assert rep["tier"] == "required"
         assert rep["steps"][0]["name"] == "build-panel"
         assert rep["feeds"] == ["02-estimate"]
 

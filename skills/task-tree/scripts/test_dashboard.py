@@ -6642,7 +6642,7 @@ class TestReproRoutes:
             "fetch-crsp", "check-ingest", "merge-panel",
         ]
         assert {t["path"]: t["tier"] for t in body["tasks"]} == {
-            "01-ingest": "canon", "02-panel": "local",
+            "01-ingest": "required", "02-panel": "on-demand",
         }
         # Step edges are inferred from files, including across owner tasks.
         assert {(e["from"], e["to"]) for e in body["step_edges"]} == {
@@ -6675,6 +6675,12 @@ class TestReproRoutes:
         with _repro_client(repro_plan) as c:
             canon = c.get("/api/repro/status", params={"tier": "canon"}).json()
             local = c.get("/api/repro/status", params={"tier": "local"}).json()
+            required = c.get("/api/repro/status", params={"tier": "required"}).json()
+            on_demand = c.get("/api/repro/status", params={"tier": "on-demand"}).json()
+        assert canon == required
+        assert local == on_demand
+        assert required["tier"] == "required"
+        assert on_demand["tier"] == "on-demand"
         assert [s["name"] for s in canon["steps"]] == ["fetch-crsp", "check-ingest"]
         assert [s["name"] for s in local["steps"]] == ["merge-panel"]
 

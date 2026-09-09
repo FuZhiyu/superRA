@@ -32,8 +32,10 @@ CONFIG_FILENAME = "config.yaml"
 CONFIG_KEY = "reproduction"
 CATEGORY = "reproduction"
 
-TIERS = ("canon", "local")
-DEFAULT_TIER = "local"
+TIERS = ("required", "on-demand")
+TIER_ALIASES = {"canon": "required", "local": "on-demand"}
+TIER_INPUTS = (*TIERS, *TIER_ALIASES)
+DEFAULT_TIER = "on-demand"
 STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("tier", "steps")
@@ -42,6 +44,10 @@ CONFIG_KEYS = ("vars", "runners", "env_deps", "code_roots")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def normalize_tier(tier: str) -> str:
+    return TIER_ALIASES.get(tier, tier) if isinstance(tier, str) else tier
 
 
 # ---------------------------------------------------------------------------
@@ -1172,7 +1178,7 @@ def build_graph(
                     f"## {REPRO_SECTION}: unknown key {key!r}; "
                     f"expected one of {list(SECTION_KEYS)}",
                 )
-        tier = document.get("tier") or DEFAULT_TIER
+        tier = normalize_tier(document.get("tier") or DEFAULT_TIER)
         if tier not in TIERS:
             _finding(
                 task.path,

@@ -541,7 +541,7 @@ def build_parser() -> argparse.ArgumentParser:
     tree.add_argument("--status", help="Filter by effective status")
     tree.add_argument(
         "--tier",
-        choices=["canon", "local"],
+        choices=_load("_repro").TIER_INPUTS,
         help="Filter to tasks registered at this reproduction tier",
     )
     tree.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")

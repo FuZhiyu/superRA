@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _repro import Graph, build_graph
+from _repro import TIER_INPUTS, Graph, build_graph, normalize_tier
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
@@ -49,7 +49,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--status", help="Filter by status")
     parser.add_argument(
         "--tier",
-        choices=["canon", "local"],
+        choices=TIER_INPUTS,
         help="With --tree, filter to tasks registered at this reproduction tier",
     )
     parser.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
@@ -57,9 +57,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _tier_badge(task: Task, graph: Graph | None) -> str:
-    """Return `` [canon]`` for a task registered at the canon tier, else ``""``."""
-    if graph is not None and graph.tiers.get(task.path) == "canon":
-        return " [canon]"
+    """Badge tasks selected for the default reproduction build."""
+    if graph is not None and graph.tiers.get(task.path) == "required":
+        return " [required]"
     return ""
 
 
@@ -72,7 +72,7 @@ def print_tree(
     tier_filter: str | None = None,
 ) -> None:
     """Print an indented tree with status icons and, when *graph* is given,
-    a ``[canon]`` badge — filterable by *tier_filter* (``graph.tiers[task.path]``)
+    a ``[required]`` badge — filterable by *tier_filter* (``graph.tiers[task.path]``)
     alongside the existing *status_filter*."""
     effective = task.effective_status()
     icon = STATUS_ICONS.get(effective, "?")
@@ -240,7 +240,7 @@ def _find_subtask(task: Task, path: str) -> Task | None:
 def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
     """Serialize the task tree to a JSON-compatible dict.
 
-    ``tier`` is the reproduction tier (``"canon"`` / ``"local"``) when *graph*
+    ``tier`` is the reproduction tier (``"required"`` / ``"on-demand"``) when *graph*
     is given and the task registers a ``## Reproduction`` section, else
     ``None``.
     """
@@ -265,6 +265,7 @@ def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    args.tier = normalize_tier(args.tier)
     plan_root = Path(args.plan_root) if args.plan_root else autodetect_plan_root(Path.cwd())
     if plan_root is None:
         print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
