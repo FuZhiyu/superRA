@@ -45,7 +45,7 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
-from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
+from _repro import CONFIG_FILENAME, REPRO_SECTION, TIER_INPUTS, build_graph, graph_to_dict, normalize_tier
 from _repro_state import (
     LOCK_FILENAME,
     STATUSES,
@@ -1410,7 +1410,7 @@ async def kanban_view(request: Request):
 
 REPRO_LOG_TAIL_LINES = 20
 REPRO_LOG_TAIL_BYTES = 64 * 1024
-REPRO_TIERS = ("canon", "local", "all")
+REPRO_TIERS = (*TIER_INPUTS, "all")
 
 # How long one build may serve later requests. The view opens with two requests
 # milliseconds apart and each build resolves `reproduction.vars`, which the
@@ -1518,9 +1518,10 @@ async def repro_graph(request: Request):
 
 @app.get("/api/repro/status")
 async def repro_status(request: Request, tier: str = "all"):
-    """Per-step freshness at *tier* (`canon`, `local`, or `all`)."""
+    """Per-step freshness at a reproduction tier, accepting legacy aliases."""
     if tier not in REPRO_TIERS:
         raise HTTPException(status_code=400, detail=f"Unknown tier: {tier}")
+    tier = normalize_tier(tier)
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")

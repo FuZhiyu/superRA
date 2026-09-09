@@ -26,7 +26,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Details`** — planner-owned, optional: planning findings, domain surveys, a suggested route. Implementers may deviate when another route satisfies `## Objective`; reviewers flag details only when they mislead, contradict the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
 - **`## Revision Notes`** — temporary update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Planner- or orchestrator-authored on an objective rewrite (`task-tree-design.md` §Objective rewrites on scope expansion); the implementer removes it once incorporated, in the same commit that sets `status: implemented` (`implement-task` §Execution) — whether or not review follows.
-- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register a step, and when to opt a task into `canon`, is discipline owned by the `reproducibility` skill.
+- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register a step, and when to opt a task into `required`, is discipline owned by the `reproducibility` skill.
 - **`## Review Notes`** — reviewer-owned. Present while any item remains: open `[BLOCKING]` findings at `revise`, or the tier/focus header and any un-actioned `[ADVISORY]` items at `approved`. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — temporary, integration-phase-only. Added by the sync author during `superintegrate` Sync to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
@@ -101,7 +101,7 @@ The build unit is a **step**, never a task: step-to-step edges are inferred from
 **The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
 
 ```yaml
-tier: canon
+tier: required
 steps:
   - name: build-panel
     cmd: julia --project=. Code/build_panel.jl
@@ -120,7 +120,7 @@ steps:
 
 | Key | Value |
 |---|---|
-| `tier` | `canon` or `local` (default `local`). `canon` opts the task's steps into the default build and into the completion gate; `local` registers them as allowed-stale. |
+| `tier` | `required` or `on-demand` (default `on-demand`). `required` selects the task's steps for the default build and completion gate; `on-demand` registers them for explicit execution. Legacy `canon` and `local` values remain accepted aliases; readers normalize them, and tier mutations write the new names. |
 | `steps` | List of step mappings. |
 
 ### Step keys
@@ -174,7 +174,7 @@ reproduction:
 | `env_deps` | Paths added to every step's deps. Machine-specific files — sysimages, caches — never belong here. |
 | `code_roots` | Directories the reminder hook watches for producer edits. |
 
-`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`; `code_roots` is read literally. **Every node keeps its variable-form path as its id** alongside the path resolved for the invocation, so a committed lock never embeds an author or a branch, and switching roots reports stale honestly instead of rewriting ids.
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`; `code_roots` is read literally. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness. Tier names do not enter the lock's step-spec hash.
 
 ### The YAML subset
 

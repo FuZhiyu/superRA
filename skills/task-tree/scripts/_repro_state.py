@@ -26,11 +26,11 @@ from pathlib import Path
 from typing import Iterable
 
 if __package__:
-    from ._repro import REPRO_SECTION, Graph, Step
+    from ._repro import REPRO_SECTION, TIERS, Graph, Step, normalize_tier
     from ._task_io import parse_body_sections, resolve_path
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
-    from _repro import REPRO_SECTION, Graph, Step
+    from _repro import REPRO_SECTION, TIERS, Graph, Step, normalize_tier
     from _task_io import parse_body_sections, resolve_path
 
 try:  # Python 3.11+
@@ -456,9 +456,13 @@ class StatusReport:
     tier: str
     graph: Graph
     entries: list[StepStatus] = field(default_factory=list)
+    targets: list[str] = field(default_factory=list)
+    selected: set[str] | None = None
 
     @property
     def reported(self) -> list[StepStatus]:
+        if self.selected is not None:
+            return [e for e in self.entries if e.step.name in self.selected]
         if self.tier == "all":
             return self.entries
         return [e for e in self.entries if e.step.tier == self.tier]
@@ -494,6 +498,7 @@ class StatusReport:
         return {
             "root": str(self.project_root),
             "tier": self.tier,
+            "targets": self.targets,
             "ok": self.ok,
             "summary": summary,
             "steps": [e.to_dict() for e in reported],
@@ -506,19 +511,31 @@ def compute_status(
     graph: Graph,
     paths: RunnerPaths,
     *,
-    tier: str = "canon",
+    tier: str = "required",
+    targets: Iterable[str] = (),
     cache: HashCache | None = None,
 ) -> StatusReport:
-    """Classify every step, then report the ones in *tier*.
+    """Classify every step, then report the tier or explicit target closure.
 
-    Every step is classified because a canon step's freshness depends on its
+    Every step is classified because a required step's freshness depends on its
     upstream steps whatever tier they carry.
     """
+    tier = normalize_tier(tier)
+    targets = list(targets)
+    selected = None
+    if targets:
+        names, unknown = select_steps(graph, targets, tier)
+        if unknown:
+            raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
+        selected = set(names)
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
     tracked = sidecar_targets(graph)
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
-    report = StatusReport(project_root=paths.project_root, tier=tier, graph=graph)
+    report = StatusReport(
+        project_root=paths.project_root, tier=tier, graph=graph,
+        targets=targets, selected=selected,
+    )
 
     for step in graph.steps:
         report.entries.append(
@@ -724,6 +741,7 @@ def select_steps(
     Ancestors of every selection come along so a target can be built from a
     cold tree; the tier filter only chooses the default selection.
     """
+    tier = normalize_tier(tier)
     targets = [t for t in targets if t]
     unknown: list[str] = []
     selected: set[str] = set()
@@ -777,7 +795,7 @@ _MARKS = {
 def format_status(report: StatusReport) -> str:
     entries = report.reported
     if not entries:
-        return f"No steps registered at tier {report.tier}."
+        return f"No steps registered at tier {report.tier}; no result verified."
     width = max(len(e.step.name) for e in entries)
     lines = []
     for entry in sorted(entries, key=lambda e: e.step.name):
@@ -792,7 +810,11 @@ def format_status(report: StatusReport) -> str:
         if any(e.status == name for e in entries)
     )
     lines.append("")
-    lines.append(f"{len(entries)} step(s) at tier {report.tier}: {counts}")
+    scope = (
+        f"for {', '.join(report.targets)} (including producer ancestors)"
+        if report.targets else f"at tier {report.tier}"
+    )
+    lines.append(f"{len(entries)} step(s) {scope}: {counts}")
     missing = [e for e in report.external_inputs if not e.exists]
     if missing:
         lines.append("")
@@ -884,8 +906,8 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
         label = via.rsplit("/", 1)[-1]
         lines.append(f"    {_MERMAID_ID_RE.sub('_', src)} -->|{label}| {_MERMAID_ID_RE.sub('_', dst)}")
     lines.append("")
-    lines.append("    classDef canon fill:#c8e6c9,stroke:#43a047,color:#1b5e20")
-    lines.append("    classDef local fill:#e0e0e0,stroke:#999,color:#333")
+    lines.append("    classDef required fill:#c8e6c9,stroke:#43a047,color:#1b5e20")
+    lines.append("    classDef on-demand fill:#e0e0e0,stroke:#999,color:#333")
     lines.append("    classDef check fill:#bbdefb,stroke:#1976d2,color:#0d47a1")
     return "\n".join(lines)
 
@@ -896,6 +918,9 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
 
 def set_tier(plan_root: Path, task_path: str, tier: str) -> str:
     """Set the ``tier`` key of a task's ``## Reproduction`` block."""
+    tier = normalize_tier(tier)
+    if tier not in TIERS:
+        raise ReproStateError(f"unknown tier: {tier}")
     task_file = resolve_path(plan_root, task_path) / "task.md"
     if not task_file.is_file():
         raise ReproStateError(f"task not found: {task_path}")

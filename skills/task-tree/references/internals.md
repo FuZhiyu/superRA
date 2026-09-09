@@ -300,7 +300,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `task_create.py` | Create a new task directory with template `task.md` |
 | `task_update.py` | Update frontmatter fields on an existing task |
 | `task_add_result.py` | Append a finding to a task's `## Results` section |
-| `task_query.py` | Query the tree: `--tree` (canon-tier badge, `--tier` filter), `--frontier`, `--dag`, `--json` |
+| `task_query.py` | Query the tree: `--tree` (required-tier badge, `--tier` filter), `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |

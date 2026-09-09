@@ -86,20 +86,21 @@ Findings are prefixed `[ERROR]` (blocking; tree inconsistent), `[WARNING]` (advi
 `superra repro` runs the build graph the `## Reproduction` sections declare (schema: [task-file-contract.md](task-file-contract.md) §Reproduction Section).
 
 ```bash
-superra repro status                      # every canon step's freshness; exits 1 unless all are fresh
+superra repro status                      # every required step's freshness; exits 1 unless all are fresh
+superra repro status 02-merge check-panel # explicit tasks/steps and their producer ancestors
 superra repro status --tier all --json    # the shape `task read` and the dashboard consume
-superra repro build                       # rebuild the stale canon steps
+superra repro build                       # rebuild the stale required steps
 superra repro build 02-merge -j 4         # a step name or a task path, plus its stale ancestors
 superra repro build --dry-run             # what would run, and why
 superra repro build --force               # rerun the whole selection, ancestors included, unchanged or not
 superra repro explain build-panel         # one step: state, changed nodes, upstream, log
 superra repro dag --mermaid               # the step graph
-superra repro tier 02-merge canon         # set a task's tier
+superra repro tier 02-merge required      # set a task's tier
 ```
 
-`--tier` defaults to `canon` for `build` and `status`. An explicit build target overrides the tier, and any selection pulls the stale ancestors it needs.
+`--tier` defaults to `required` for `build` and `status`; `on-demand` and `all` are also accepted. Legacy `canon` / `local` arguments alias `required` / `on-demand`. Explicit task or step targets override the tier for both commands and include producer ancestors across tiers; task targets include descendant tasks. Unknown targets fail. Status JSON records `targets` and reports the selected steps; an empty default selection returns success but explicitly verifies no result.
 
-`task read <path>` shows a registered task's owned-step states and derived `feeds` / `feeds on` task edges, computed the same way as `repro status --json` but without pytask. `task tree --tier canon|local` filters to one tier; a registered `canon` task always gets a `[canon]` badge.
+`task read <path>` shows a registered task's owned-step states and derived `feeds` / `feeds on` task edges, computed the same way as `repro status --json` but without pytask. `task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge.
 
 | State | Meaning |
 |---|---|

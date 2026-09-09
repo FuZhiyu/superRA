@@ -36,7 +36,7 @@ git pull
 git merge --ff-only <analysis-branch>
 ```
 
-Run `superra repro build --tier canon` and confirm a clean `superra repro status --tier canon` on the final tree (`../../reproducibility/references/protect-and-completion.md` §The completion gate); on a tree that declares no `## Reproduction` section, run targeted verification instead. Investigate any failure before cleanup.
+Run `superra repro build --tier required` and confirm a clean `superra repro status --tier required` on the final tree (`../../reproducibility/references/protect-and-completion.md` §The completion gate); on a tree that declares no `## Reproduction` section, run targeted verification instead. Investigate any failure before cleanup.
 
 ## Step 3: Cleanup
 

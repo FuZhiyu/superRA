@@ -15,7 +15,7 @@ After every task is `approved`, walk all three checks against actual command out
 2. **Results recorded?** Read the completed task files. Fails in either direction against `communicate`: missing, thin, or status-report-only results for substantive work; results that restate an artifact, diff, commit body, or child task instead of pointing at it.
 
 3. **Reproducibility verification.**
-   - `superra repro build --tier canon`, then a clean `superra repro status --tier canon` (`../../reproducibility/references/protect-and-completion.md` §The completion gate).
+   - `superra repro build --tier required`, then a clean `superra repro status --tier required` (`../../reproducibility/references/protect-and-completion.md` §The completion gate).
    - Outputs exist and came from committed code, not ad-hoc REPL state.
    - Retained task companions are committed and pass `../../using-superra/references/task-companion-files.md`.
 

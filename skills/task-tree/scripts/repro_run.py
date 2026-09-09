@@ -33,7 +33,7 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _repro import Graph, Out, Step, build_graph  # noqa: E402
+from _repro import TIER_INPUTS, Graph, Out, Step, build_graph, normalize_tier  # noqa: E402
 from _repro_state import (  # noqa: E402
     TOML_AVAILABLE,
     HashCache,
@@ -60,7 +60,7 @@ from _repro_state import (  # noqa: E402
 from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
-TIERS = ("canon", "local", "all")
+TIERS = (*TIER_INPUTS, "all")
 
 
 # ---------------------------------------------------------------------------
@@ -359,13 +359,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     build = sub.add_parser("build", help="Rebuild stale steps")
     build.add_argument("targets", nargs="*", help="Step names or task paths")
-    build.add_argument("--tier", choices=TIERS, default="canon")
+    build.add_argument("--tier", choices=TIERS, default="required")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
     build.add_argument("--force", action="store_true", help="Run even when nothing changed")
     build.add_argument("--dry-run", action="store_true", help="Report what would run")
 
     status = sub.add_parser("status", help="Report each step's freshness")
-    status.add_argument("--tier", choices=TIERS, default="canon")
+    status.add_argument("targets", nargs="*", help="Step names or task paths, with producer ancestors")
+    status.add_argument("--tier", choices=TIERS, default="required")
     status.add_argument("--json", action="store_true", dest="as_json")
 
     explain = sub.add_parser("explain", help="Explain one step's state")
@@ -376,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     tier = sub.add_parser("tier", help="Set a task's reproduction tier")
     tier.add_argument("task_path")
-    tier.add_argument("tier", choices=("canon", "local"))
+    tier.add_argument("tier", choices=TIER_INPUTS)
     return parser
 
 
@@ -465,6 +466,7 @@ def main(argv: list[str] | None = None) -> None:
             for finding in errors:
                 print(f"  {finding.to_text()}", file=sys.stderr)
             sys.exit(1)
+        args.tier = normalize_tier(args.tier)
         names, unknown = select_steps(graph, args.targets, args.tier)
         if unknown:
             print(
@@ -487,7 +489,8 @@ def main(argv: list[str] | None = None) -> None:
 
     try:
         report = compute_status(
-            graph, paths, tier="all" if args.command == "explain" else args.tier
+            graph, paths, tier="all" if args.command == "explain" else args.tier,
+            targets=args.targets if args.command == "status" else (),
         )
         if args.command == "explain":
             print(format_explain(report, args.step))
