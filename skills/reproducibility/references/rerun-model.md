@@ -7,7 +7,7 @@ Predict what a change reruns before running it, and read a state you did not exp
 - **Changed content, never a timestamp.** `touch` reruns nothing, and restoring a file's original bytes makes its consumers fresh again.
 - **Declared helper changes invalidate their consumers.** Julia `.jl` deps also expand through statically resolved `include` paths; declare unresolved includes and other languages' helpers explicitly.
 - **A `cmd` or `params` edit invalidates its step.** A root change invalidates through changed file content or resolved command text; relocation to identical bytes alone preserves freshness. Each step's spec is hashed separately.
-- **An `env_deps` content change invalidates every step.**
+- **Explicit `env_deps` invalidate every step when their content changes.** Environment-file handling defaults to [agent judgment](../SKILL.md#environment-changes).
 - **Replacing an external input restales its consumers.** The boundary is hashed like everything else, so a redelivered vendor extract shows as stale downstream even when no repo file changed.
 
 ## What stops a cascade
