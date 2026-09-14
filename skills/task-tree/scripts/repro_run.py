@@ -46,6 +46,7 @@ from _repro_state import (  # noqa: E402
     ensure_state_dir,
     format_explain,
     format_status,
+    read_run_record,
     render_dag,
     runner_paths,
     select_steps,
@@ -132,8 +133,9 @@ class SpecNode:
 class StepTask:
     """One reproduction step as a pytask task.
 
-    ``state`` is a constant: upgrading the runner must not invalidate a
-    project's whole graph, and ``SpecNode`` already carries what changed.
+    The stable state keeps runner upgrades from invalidating project work.
+    Forced targets advertise a transient change, cleared after execution so
+    the successful lock retains the stable state. Each task owns its flag.
     """
 
     name: str
@@ -143,13 +145,25 @@ class StepTask:
     markers: list = field(default_factory=list)
     report_sections: list = field(default_factory=list)
     attributes: dict = field(default_factory=dict)
+    force_pending: bool = False
+
+    def __post_init__(self) -> None:
+        command = self.function
+
+        # pytask-parallel calls function directly, bypassing execute.
+        def execute(**kwargs: Any) -> Any:
+            result = command(**kwargs)
+            self.force_pending = False
+            return result
+
+        self.function = execute
 
     @property
     def signature(self) -> str:
         return hashlib.sha256(f"step:{self.name}".encode()).hexdigest()
 
     def state(self) -> str | None:
-        return "1"
+        return "forced" if self.force_pending else "1"
 
     def execute(self, **kwargs: Any) -> Any:
         return self.function(**kwargs)
@@ -163,7 +177,9 @@ class StepFailed(RuntimeError):
 # Execution
 # ---------------------------------------------------------------------------
 
-def _run_step(step: Step, paths: RunnerPaths, cache: HashCache) -> Callable[..., None]:
+def _run_step(
+    step: Step, paths: RunnerPaths, cache: HashCache, *, forced: bool = False
+) -> Callable[..., None]:
     """Build the callable pytask executes for *step*."""
 
     def _execute(deps, spec):  # noqa: ARG001 - pytask injects both by name
@@ -198,6 +214,7 @@ def _run_step(step: Step, paths: RunnerPaths, cache: HashCache) -> Callable[...,
         duration = time.time() - started
         record = {
             "outcome": "success" if completed.returncode == 0 else "failed",
+            "forced": forced,
             "exit_code": completed.returncode,
             "duration": duration,
             "ended_at": time.time(),
@@ -241,7 +258,8 @@ def _mtime(path: Path) -> int | None:
 
 
 def make_tasks(
-    graph: Graph, names: list[str], paths: RunnerPaths, cache: HashCache
+    graph: Graph, names: list[str], paths: RunnerPaths, cache: HashCache,
+    *, force_names: set[str] | None = None,
 ) -> list[StepTask]:
     """One in-memory pytask task per selected step."""
     tracked = sidecar_targets(graph)
@@ -250,6 +268,10 @@ def make_tasks(
         step = graph.step(name)
         if step is None:  # pragma: no cover - names come from the graph
             continue
+        record = read_run_record(paths, name)
+        forced = name in (force_names or ()) or (
+            record.get("outcome") == "failed" and record.get("forced", False)
+        )
         deps, products = step_nodes(step, tracked)
         deps += directory_dep_nodes(graph, step, tracked)
         produces: dict[str, Any] = {}
@@ -259,7 +281,8 @@ def make_tasks(
         tasks.append(
             StepTask(
                 name=step.name,
-                function=_run_step(step, paths, cache),
+                function=_run_step(step, paths, cache, forced=forced),
+                force_pending=forced,
                 depends_on={
                     "deps": [_node(node, paths, cache) for node in deps],
                     "spec": SpecNode(name=spec_node_id(step.name), value=spec_hash(step)),
@@ -298,7 +321,8 @@ def run_build(
     names: list[str],
     *,
     n_workers: int = 1,
-    force: bool = False,
+    force_all: bool = False,
+    force_names: list[str] | None = None,
     dry_run: bool = False,
 ) -> int:
     """Hand the selected steps to pytask and return its exit code."""
@@ -312,7 +336,8 @@ def run_build(
         pytask.Traceback.suppress += (scripts_dir,)
 
     cache = HashCache(paths.cache_file)
-    tasks = make_tasks(graph, names, paths, cache)
+    forced = set(names if force_all else (force_names or ()))
+    tasks = make_tasks(graph, names, paths, cache, force_names=forced)
     options: dict[str, Any] = {}
     if n_workers > 1:
         # Threads, not processes: steps are subprocesses, so the GIL is free
@@ -324,7 +349,7 @@ def run_build(
         session = pytask.build(
             tasks=tasks,
             paths=[],
-            force=force,
+            force=False,
             dry_run=dry_run,
             explain=dry_run,
             **options,
@@ -361,7 +386,9 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("targets", nargs="*", help="Step names or task paths")
     build.add_argument("--tier", choices=TIERS, default="required")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
-    build.add_argument("--force", action="store_true", help="Run even when nothing changed")
+    force = build.add_mutually_exclusive_group()
+    force.add_argument("--force", action="store_true", help="Force direct targets; rebuild ancestors only if stale")
+    force.add_argument("--force-all", action="store_true", help="Force targets and all their producer ancestors")
     build.add_argument("--dry-run", action="store_true", help="Report what would run")
 
     status = sub.add_parser("status", help="Report each step's freshness")
@@ -476,13 +503,18 @@ def main(argv: list[str] | None = None) -> None:
         if not names:
             print(f"No steps registered at tier {args.tier}.")
             return
+        force_names = (
+            select_steps(graph, args.targets, args.tier, include_ancestors=False)[0]
+            if args.force else []
+        )
         sys.exit(
             run_build(
                 graph,
                 paths,
                 names,
                 n_workers=max(1, args.jobs),
-                force=args.force,
+                force_all=args.force_all,
+                force_names=force_names,
                 dry_run=args.dry_run,
             )
         )

@@ -42,6 +42,8 @@ superra repro status <task-or-step> <selected-check>
 
 A task target includes its own steps and descendant tasks; producer ancestors are included across tiers. A check already included by the task target needs no separate argument. An empty selection verifies no result.
 
+**Choose the forced scope:** `build <target> --force` reruns the selected targets, rebuilding ancestors only when stale or missing; `--force-all` reruns their entire producer chain. For every registered step, use `build --tier all --force-all`. Preview either mode with `--dry-run`.
+
 **State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness records agreement with the last successful build; numerical validity rests on the checks. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit the updated `pytask.lock` with the work.
 
 A step still stale after its own successful build is a diagnosis, not a rerun: `superra repro explain <step>` and `references/rerun-model.md`.
@@ -49,8 +51,6 @@ A step still stale after its own successful build is a diagnosis, not a rerun: `
 ## Environment Changes
 
 Keep project and lockfiles versioned but outside graph dependencies by default. Compare their Git diffs against the last successful run when judging reruns or investigating reproduction failures; choose affected producers and checks from the changes. A fresh graph does not establish that an environment change is harmless.
-
-An ordinary build skips fresh steps. To rerun them, use `build <target> --force`; this also forces its producer ancestors, so inspect the selection with `--dry-run` first.
 
 ## Gates
 

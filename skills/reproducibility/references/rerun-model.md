@@ -4,7 +4,7 @@ Predict what a change reruns before running it, and read a state you did not exp
 
 ## What makes a step rerun
 
-- **Changed content, never a timestamp.** `touch` reruns nothing, and restoring a file's original bytes makes its consumers fresh again.
+- **Changed content, never a timestamp.** `touch` reruns nothing, and restoring a file's original bytes clears content-based invalidation. A failed forced rerun still requires a successful retry.
 - **Declared helper changes invalidate their consumers.** Julia `.jl` deps also expand through statically resolved `include` paths; declare unresolved includes and other languages' helpers explicitly.
 - **A `cmd` or `params` edit invalidates its step.** A root change invalidates through changed file content or resolved command text; relocation to identical bytes alone preserves freshness. Each step's spec is hashed separately.
 - **Explicit `env_deps` invalidate every step when their content changes.** Environment-file handling defaults to [agent judgment](../SKILL.md#environment-changes).
