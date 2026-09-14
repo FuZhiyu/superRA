@@ -10,8 +10,8 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
 - **Resolve paths without starting the analysis environment.** Adoption measurements: [pilot-acceptance.md](pilot-acceptance.md).
 - **Bind declared paths to execution.** Pass paths to the producer or assert agreement with its runtime routing, including sandbox preference. A lightweight resolver must share that routing or be checked against it after branch and input-availability changes.
 - **Pin the interpreter once**, in the `runners` template.
-- **Declare a figure's data, not only its picture.** PNG bytes vary with the renderer, so a byte difference on a figure is not evidence of a numeric change. Have the plotting script write a deterministic `*_data.csv` beside the image, declare both as outs, and point drift checks at the CSV.
-- **Give a `check` step the artifacts it reads as `deps`.** A published-result pin reads the published root; a rehearsal mirror would validate the run against itself.
+- **Check a figure's numerical data.** For selected numerical checks, use deterministic artifacts capturing the plotted values. Reuse existing artifacts or project-native formats; write a companion only when that evidence is missing.
+- **Read the published root for published-result checks.**
 - **Stop at the boundary.** An input the project receives rather than builds — a licensed extract, a frozen upstream artifact, a hand-curated file — stays a dep with no producing step.
 
 Validate the section before building: `superra task check --category reproduction`.

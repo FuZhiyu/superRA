@@ -14,7 +14,7 @@ Predict what a change reruns before running it, and read a state you did not exp
 
 **Identical regeneration.** A rerun that rewrites its out byte-for-byte leaves the descendants fresh, so a comment-only edit to a producer costs one step instead of the whole tail.
 
-Volatile bytes defeat that cutoff when the producer reruns; they do not by themselves make a just-built output stale. Sort before writing and keep run timestamps out of tracked outs — for figures, the deterministic companion in `graph-authoring.md`.
+Volatile bytes defeat that cutoff when the producer reruns; they do not by themselves make a just-built output stale. Sort before writing and keep run timestamps out of tracked outs — figure checks: [graph authoring](graph-authoring.md).
 
 ## Cache and sidecars
 
@@ -31,5 +31,5 @@ Sidecar tracking (contract §Reproduction Section) is for one measurably slow in
 | An out you did not edit | Check concurrent writers, synchronization, and path routing; test determinism by comparing repeated outputs. |
 | A dep under a directory you declared | Check whether the changed file is an actual input; narrow the directory when it includes unrelated files. |
 | A file you did not know the step read | The include closure or `env_deps` reached it — correct, if the script really reads it. |
-| Nothing, yet the step is stale | The step's own spec changed: `cmd`, `params`, or a `${VAR}` that now resolves elsewhere. |
+| An upstream step is stale | Follow that producer with `superra repro explain <producer>`. |
 | `external` on a generated file | Confirm the boundary: retrieve an agreed saved input, or register an in-scope producer. |

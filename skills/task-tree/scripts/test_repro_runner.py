@@ -26,7 +26,6 @@ from _repro_state import (
     render_dag,
     runner_paths,
     select_steps,
-    sidecar_targets,
 )
 
 HAS_PYTASK = importlib.util.find_spec("pytask") is not None
@@ -380,6 +379,34 @@ def test_scoped_status_includes_ancestors_across_tiers(project, capsys):
 def test_scoped_status_rejects_an_unknown_target(project, capsys):
     assert project.run("status", "unregistered") == 1
     assert "no step or task matches unregistered" in capsys.readouterr().err
+
+
+@needs_pytask
+@pytest.mark.parametrize("targets", [[], ["check-b"]])
+def test_scoped_status_hashes_only_selected_ancestors(project, targets):
+    assert project.run("build", "--tier", "all") == 0
+    assert project.run("tier", "01-a", "on-demand") == 0
+
+    class RecordingCache(HashCache):
+        def __init__(self):
+            super().__init__()
+            self.visited = set()
+
+        def path_state(self, path):
+            self.visited.add(path.relative_to(project.root).as_posix())
+            return super().path_state(path)
+
+    cache = RecordingCache()
+    report = compute_status(project.graph(), project.paths, targets=targets, cache=cache)
+    assert report.ok
+    assert {e.step.name for e in report.entries} == {"build-a", "build-b", "check-b"}
+    assert {"Code/a.sh", "output/a.txt", "output/b.txt"} <= cache.visited
+    assert not {"Code/x.sh", "output/x.txt"} & cache.visited
+    assert cache.full_reads > 0
+
+    all_cache = RecordingCache()
+    compute_status(project.graph(), project.paths, tier="all", cache=all_cache)
+    assert {"Code/x.sh", "output/x.txt"} <= all_cache.visited
 
 
 @needs_pytask
@@ -878,12 +905,68 @@ def test_a_graph_error_blocks_the_build(project, capsys):
 # Directory outs
 # ---------------------------------------------------------------------------
 
+@needs_pytask
+@pytest.mark.parametrize("jobs", ["1", "2"])
+@pytest.mark.parametrize("sidecar", [False, True])
+def test_path_aliases_share_producer_nodes(project, jobs, sidecar):
+    if sidecar:
+        _use_a_sidecar(project)
+    project.write("superRA/01-a/task.md", project.read("superRA/01-a/task.md").replace(
+        "name: build-a", "name: z-producer"
+    ))
+    project.write("superRA/02-b/task.md", TASK_B.replace(
+        "name: build-b", "name: a-consumer"
+    ).replace('      - "${OUT}/a.txt"', '      - output/a.txt'))
+    assert project.run("build", "check-b", "-j", jobs) == 0
+    assert project.read("output/b.txt") == "hello\nhello\n"
+    assert project.status().ok
+    lock = read_lock(project.paths.lock_file)
+    assert "${OUT}/a.txt" in lock["a-consumer"].depends_on
+    assert "output/a.txt" not in lock["a-consumer"].depends_on
+    before = project.run_times()
+    assert project.run("build", "check-b", "-j", jobs) == 0
+    assert project.run_times() == before
+
+    project.write("Code/a.sh", "mkdir -p output\necho changed > output/a.txt\n")
+    assert project.run("build", "check-b", "-j", jobs) == 0
+    assert project.read("output/b.txt") == "changed\nchanged\n"
+    assert project.status().ok
+    if sidecar:
+        project.write("output/a.txt", "untracked bytes\n")
+        before = project.run_times()
+        assert project.status().ok
+        assert project.run("build", "check-b", "-j", jobs) == 0
+        assert project.run_times() == before
+
+
+@needs_pytask
+def test_legacy_alias_lock_requires_only_affected_consumer_rebuild(project):
+    project.write("superRA/02-b/task.md", TASK_B.replace(
+        '      - "${OUT}/a.txt"', '      - output/a.txt'
+    ))
+    assert project.run("build") == 0
+    # Earlier runners recorded the consumer's own spelling for this file.
+    blocks = project.paths.lock_file.read_text().split("[[task]]")
+    blocks = [
+        block.replace('"${OUT}/a.txt"', '"output/a.txt"')
+        if 'id = "build-b"' in block else block
+        for block in blocks
+    ]
+    project.paths.lock_file.write_text("[[task]]".join(blocks))
+    assert "output/a.txt" in read_lock(project.paths.lock_file)["build-b"].depends_on
+    assert project.status().entry("build-b").status == "stale"
+    before = project.run_times()
+    assert project.run("build") == 0
+    assert {name for name, time in project.run_times().items() if before[name] != time} == {"build-b"}
+    assert project.status().ok
+
+
 def test_a_directory_out_becomes_a_dep_node_of_its_consumer(dir_project):
     graph = dir_project.graph()
     consumer = graph.step("a-use")
-    extra = directory_dep_nodes(graph, consumer, sidecar_targets(graph))
+    extra = directory_dep_nodes(graph, consumer)
     assert [node[0] for node in extra] == ["${OUT}/parts"]
-    assert directory_dep_nodes(graph, graph.step("z-gen"), {}) == []
+    assert directory_dep_nodes(graph, graph.step("z-gen")) == []
 
 
 def test_the_generated_task_carries_the_directory_edge(dir_project):

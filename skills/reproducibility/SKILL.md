@@ -20,7 +20,7 @@ Section schema, config keys, and validation findings: `skills/task-tree/referenc
 
 - **A maintained producer of a committed exhibit or a canonical result** — the script behind a table, figure, estimate, or dataset that the manuscript, the slides, or another task's `## Results` cites.
 - **A task companion the results cite** — a script under a task's `attachments/` that produced a number in that task's `## Results`, at `tier: on-demand`.
-- **A drift test or validation script** — as a `kind: check` step over the artifacts it reads.
+- **A drift test or validation script** — as a `kind: check` step over the artifacts it reads; `[BLOCKING]` for drift tests protecting registered outs.
 
 Leave unregistered: exploration that produced no cited number, anything regenerated per machine, and the boundary inputs a project receives rather than builds (`references/graph-authoring.md`).
 
@@ -56,5 +56,4 @@ Keep project and lockfiles versioned but outside graph dependencies by default. 
 
 - `[BLOCKING]` Every out a task's `## Results` cites is produced by a registered step or declared as an external input.
 - `[BLOCKING]` Before claiming a result reproduces, its scoped build succeeds and every step reported by the matching status is `fresh`.
-- `[BLOCKING]` Every drift test protecting a registered out is a `kind: check` step.
 - `[ADVISORY]` A step whose script reads a few named files declares those files, not their directory.

@@ -51,7 +51,7 @@ from _repro_state import (  # noqa: E402
     runner_paths,
     select_steps,
     set_tier,
-    sidecar_targets,
+    output_nodes,
     spec_hash,
     spec_node_id,
     stamp_ref,
@@ -262,7 +262,7 @@ def make_tasks(
     *, force_names: set[str] | None = None,
 ) -> list[StepTask]:
     """One in-memory pytask task per selected step."""
-    tracked = sidecar_targets(graph)
+    outputs = output_nodes(graph)
     tasks = []
     for name in names:
         step = graph.step(name)
@@ -272,8 +272,8 @@ def make_tasks(
         forced = name in (force_names or ()) or (
             record.get("outcome") == "failed" and record.get("forced", False)
         )
-        deps, products = step_nodes(step, tracked)
-        deps += directory_dep_nodes(graph, step, tracked)
+        deps, products = step_nodes(step, outputs)
+        deps += directory_dep_nodes(graph, step)
         produces: dict[str, Any] = {}
         if products:
             key = "stamp" if step.kind == "check" else "outs"

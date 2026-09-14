@@ -116,7 +116,7 @@ superra repro tier 02-merge required      # set a task's tier
 
 `pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
 
-A step's state also moves when a `${VAR}` resolves differently — including one that reaches only `cmd`, such as a mode flag — so a rerun under a changed environment is reported rather than skipped. Lock ids stay in `${VAR}` form throughout.
+Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/rerun-model.md#what-makes-a-step-rerun).
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 
