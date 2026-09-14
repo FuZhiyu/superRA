@@ -12,7 +12,7 @@ Use a disposable fixture or isolated copies for perturbations. Record reported s
 | Unchanged build | Neither step executes. |
 | Timestamp-only change | Neither step executes. |
 | Producer or included-helper edit | Its consumer is invalidated; the expected code executes. |
-| Environment lockfile edit | Both steps are invalidated. |
+| Undeclared environment-file edit | Neither step executes automatically; apply [environment-change judgment](../SKILL.md#environment-changes). |
 | Missing output | The producer recreates it. |
 | Identical regeneration | The downstream check skips if its own deps are unchanged. |
 | Corrupted output | The numerical check rejects the altered value when run against it directly; a graph build may repair the output before checking it. |

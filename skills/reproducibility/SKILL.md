@@ -1,6 +1,6 @@
 ---
 name: reproducibility
-description: Register and verify task-declared reproduction graphs. Use when producing or citing maintained outputs, adopting reproduction with a bounded pilot, selecting protection checks, or diagnosing reruns and stale state.
+description: Register and verify task-declared reproduction graphs. Use when producing or citing maintained outputs, adopting reproduction with a bounded pilot, selecting protection checks, or judging reruns after code, data, or environment changes.
 ---
 
 # Reproducibility
@@ -46,9 +46,15 @@ A task target includes its own steps and descendant tasks; producer ancestors ar
 
 A step still stale after its own successful build is a diagnosis, not a rerun: `superra repro explain <step>` and `references/rerun-model.md`.
 
+## Environment Changes
+
+Keep project and lockfiles versioned but outside graph dependencies by default. Compare their Git diffs against the last successful run when judging reruns or investigating reproduction failures; choose affected producers and checks from the changes. A fresh graph does not establish that an environment change is harmless.
+
+An ordinary build skips fresh steps. To rerun them, use `build <target> --force`; this also forces its producer ancestors, so inspect the selection with `--dry-run` first.
+
 ## Gates
 
 - `[BLOCKING]` Every out a task's `## Results` cites is produced by a registered step or declared as an external input.
 - `[BLOCKING]` Before claiming a result reproduces, its scoped build succeeds and every step reported by the matching status is `fresh`.
-- `[BLOCKING]` Environment lockfiles are declared as `env_deps`, and every drift test protecting a registered out is a `kind: check` step.
+- `[BLOCKING]` Every drift test protecting a registered out is a `kind: check` step.
 - `[ADVISORY]` A step whose script reads a few named files declares those files, not their directory.
