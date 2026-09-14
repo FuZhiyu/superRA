@@ -216,51 +216,36 @@ class HashCache:
         self._dirty = False
 
 
-def sidecar_targets(graph: Graph) -> dict[str, str]:
-    """Logical out path -> the resolved path the runner hashes in its place.
-
-    A sidecar-tracked out is hashed through its sidecar wherever it appears —
-    as its producer's product and as any consumer's dep — so producer and
-    consumer agree on one state for one lock id, and the large file is never
-    read.
-    """
-    return {
-        out.path.logical: out.sidecar.resolved
-        for step in graph.steps
-        for out in step.outs
-        if out.sidecar is not None
-    }
-
-
 Node = tuple[str, str, str | None]  # lock id, path to hash, path that must exist
 
 
-def step_nodes(step: Step, tracked: dict[str, str]) -> tuple[list[Node], list[Node]]:
-    """(deps, products) of a step as `Node` triples.
+def output_nodes(graph: Graph) -> dict[str, Node]:
+    """Resolved output paths mapped to their producer's portable node identity.
 
-    The third element is set only for a sidecar-tracked path: the sidecar
-    stands in for hashing, never for existence, so a deleted out still reports
-    missing.
+    Consumers reuse that identity and its sidecar even when their declarations
+    spell the same resolved path differently.
     """
-    deps = [
-        (d.logical, tracked.get(d.logical, d.resolved), _tracked_origin(d.logical, d.resolved, tracked))
-        for d in step.deps
-    ]
+    return {
+        out.path.resolved: (
+            out.path.logical,
+            (out.sidecar or out.path).resolved,
+            out.path.resolved if out.sidecar else None,
+        )
+        for step in graph.steps
+        for out in step.outs
+    }
+
+
+def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[Node]]:
+    """(deps, products) with producer identities and sidecar existence checks."""
+    deps = [outputs.get(d.resolved, (d.logical, d.resolved, None)) for d in step.deps]
     if step.kind == "check":
         stamp = stamp_ref(step.name)
         return deps, [(stamp, stamp, None)]
-    products = [
-        (o.path.logical, (o.sidecar or o.path).resolved, o.path.resolved if o.sidecar else None)
-        for o in step.outs
-    ]
-    return deps, products
+    return deps, [outputs[o.path.resolved] for o in step.outs]
 
 
-def _tracked_origin(logical: str, resolved: str, tracked: dict[str, str]) -> str | None:
-    return resolved if logical in tracked else None
-
-
-def directory_dep_nodes(graph: Graph, step: Step, tracked: dict[str, str]) -> list[Node]:
+def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
     """Nodes for the directory outs that cover this step's deps.
 
     `_repro._producing_step` reads a dep below a directory out as produced by
@@ -515,22 +500,17 @@ def compute_status(
     targets: Iterable[str] = (),
     cache: HashCache | None = None,
 ) -> StatusReport:
-    """Classify every step, then report the tier or explicit target closure.
-
-    Every step is classified because a required step's freshness depends on its
-    upstream steps whatever tier they carry.
-    """
+    """Classify the selected closure, including ancestors across tiers."""
     tier = normalize_tier(tier)
     targets = list(targets)
-    selected = None
-    if targets:
-        names, unknown = select_steps(graph, targets, tier)
-        if unknown:
-            raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
-        selected = set(names)
+    names, unknown = select_steps(graph, targets, tier)
+    if unknown:
+        raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
+    needed = set(names)
+    selected = needed if targets else None
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
-    tracked = sidecar_targets(graph)
+    outputs = output_nodes(graph)
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
     report = StatusReport(
         project_root=paths.project_root, tier=tier, graph=graph,
@@ -538,9 +518,11 @@ def compute_status(
     )
 
     for step in graph.steps:
+        if step.name not in needed:
+            continue
         report.entries.append(
             _classify(
-                step, lock.get(step.name), paths, cache, tracked, missing_external
+                step, lock.get(step.name), paths, cache, outputs, missing_external
             )
         )
     _cascade(report, graph)
@@ -553,7 +535,7 @@ def _classify(
     entry: LockEntry | None,
     paths: RunnerPaths,
     cache: HashCache,
-    tracked: dict[str, str],
+    outputs: dict[str, Node],
     missing_external: set[str],
 ) -> StepStatus:
     result = StepStatus(step=step)
@@ -578,7 +560,7 @@ def _classify(
         result.status = "missing"
         result.reason = "never built"
     else:
-        _compare(result, step, entry, paths, cache, tracked)
+        _compare(result, step, entry, paths, cache, outputs)
 
     # Restoring inputs can clear an ordinary failure. A forced failure must be
     # retried even with unchanged bytes: it invalidates the cached success.
@@ -601,10 +583,10 @@ def _compare(
     entry: LockEntry,
     paths: RunnerPaths,
     cache: HashCache,
-    tracked: dict[str, str],
+    outputs: dict[str, Node],
 ) -> None:
     """Set *result* from the lock entry against what is on disk now."""
-    deps, products = step_nodes(step, tracked)
+    deps, products = step_nodes(step, outputs)
     absent = [
         node[0]
         for node in products
@@ -665,6 +647,10 @@ def _changed_nodes(
     for node in deps:
         recorded = entry.depends_on.get(node[0])
         if recorded is None:
+            if recorded_spec == f"{declared}:{resolved}":
+                # A runner identity correction can change the key without a
+                # declaration edit. Require the engine to record the new key.
+                changes.append(Change(node=node[0], kind="dependency", change="added"))
             continue  # a newly declared dep already moved the spec hash
         current = node_state(cache, paths.project_root, node)
         if current is None:
@@ -999,7 +985,7 @@ __all__ = [
     "read_run_record",
     "render_dag",
     "runner_paths",
-    "sidecar_targets",
+    "output_nodes",
     "select_steps",
     "set_tier",
     "spec_hash",
