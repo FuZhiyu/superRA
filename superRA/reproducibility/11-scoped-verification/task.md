@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -44,3 +44,16 @@ The runner verifies explicit task/step targets, and the skill requires evidence 
 - The force change passed **208 reproduction/core/CLI tests**, including 70 runner tests. Shell fixtures verify exact executed steps for target/task/tier scopes, stale ancestors with identical regeneration, full-graph reruns, parallel execution, dry-run evidence preservation, and retry after a failed forced check. Skill, Markdown, and task-tree validation passed.
 
 Self-review completed; independent review has not run.
+## Review Notes
+
+Tier: thorough. Focus: design, correctness, scope-fidelity. Scope: the current reproducibility skill and all four references, with schema, runner, and workflow call sites; not limited to the recent force-mode changes.
+
+1. **[BLOCKING] Resolved-path aliases lose their producer edge in the execution graph.** [Graph linking](../../../skills/task-tree/scripts/_repro.py#L1261) recognizes a producer by its resolved out, but [runner nodes](../../../skills/task-tree/scripts/repro_run.py#L296) retain each declaration's logical spelling as their [identity](../../../skills/task-tree/scripts/repro_run.py#L89). The [extra dependency bridge](../../../skills/task-tree/scripts/_repro_state.py#L292) covers directory descendants only, leaving exact-file aliases disconnected. Valid declarations can therefore pass graph validation and select the right ancestors while failing to build in dependency order.
+   - Smallest tested case: config `OUT: out`; step `z-producer` runs `printf 7 > out/value.txt` with out `${OUT}/value.txt`; `a-check` runs `test -s out/value.txt` with dep `out/value.txt`. Both paths name the same file. The graph reports `z-producer → a-check`, but a cold build targeting `a-check` exits **1** with `NodeNotFoundError: 'a-check' requires missing node 'out/value.txt'`. Serial and two-worker builds both failed; only the producer's execution record existed. Disposable fixtures used pytask 0.6.0 and a local project config to isolate their locks.
+   - **Proposal:** make resolved-equivalent producer/consumer declarations share execution dependency identity while preserving portable logical lock IDs. Cover both serial and parallel cold builds, plus a producer update followed by a selected check. A declaration-level rejection with an actionable canonical spelling is a smaller fallback; the current silently disconnected graph is unacceptable.
+
+2. **[ADVISORY] Scoped status still hashes unrelated built artifacts.** [Selection is calculated before classification](../../../skills/task-tree/scripts/_repro_state.py#L526), but [classification walks every step](../../../skills/task-tree/scripts/_repro_state.py#L540). In a built three-step fixture, `status a-check` reported only its producer and check while a fresh `HashCache` also read `unrelated.input` and `out/unrelated.txt`. Thus an explicit small scope can still read a large unrelated dataset on a cache miss, or stat all unrelated files on a warm run. This finding concerns hashing, independently of shell-variable discovery; the fixture used a literal variable and no shell resolver.
+   - **Proposal:** classify and hash only the selected closure, preserving full evaluation for full-graph consumers. The existing ancestor selection already supplies cross-tier dependencies. This would remove unrelated artifact hashing without claiming to eliminate global config resolution or graph-discovery costs.
+
+3. **[ADVISORY] The diagnosis table assigns an upstream-only stale state to the step's own specification.** [The no-changed-node row](../../../skills/reproducibility/references/rerun-model.md#L34) says the step's own spec changed. A targeted fixture changed only the producer command after a successful build: its check had no changed nodes and `explain check` reported `upstream step 'producer' is stale`; the actual spec change appeared as `producer::spec` on the producer. The table can send diagnosis toward editing a correct check declaration.
+   - **Proposal:** route an upstream-only reason to that producer's explanation, and identify own-spec changes from the explicit spec/resolved-command reason the runner reports.
