@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: implemented
+status: in-progress
 depends_on:  []
 ---
 
@@ -10,11 +10,13 @@ Make reproduction verification cover the claimed result and its selected checks,
 
 - **Tier compatibility:** use `required` and `on-demand` in declarations, commands, and displays; accept `canon` and `local` as input aliases. New steps default to `on-demand`; default build/status select `required`. Preserve existing declarations and lock validity without a bulk migration.
 - **Scoped evidence:** build and status accept the same explicit task/step targets and include their producer ancestors across tiers. A claim names the verified steps and saved-input boundary; an empty default selection cannot certify an on-demand result. Freshness, numerical validity, and end-to-end reproduction remain distinct claims.
+- **Forced reruns:** `build <target> --force` forces only explicitly selected steps; producer ancestors follow ordinary freshness rules. `--force-all` forces the selected targets and their ancestor closure. Without explicit targets, the chosen tier supplies the targets; `build --tier all --force-all` reruns every registered step. Both modes support an accurate, non-executing `--dry-run` and preserve normal freshness after execution.
 - **Protection coverage:** tasks owning selected protection checks are `required`, including check-only tasks. Keep task-level tiers; do not infer that every downstream consumer is a selected protection check.
 - **Authoring:** keep stable repo-relative paths and run selection in the task, shared roots and execution settings in config. Require declared paths to agree with runtime reads/writes. Use the existing path/config schema and cheap discovery.
 - **Environment changes:** omit environment files from graph dependencies by default. Agents use Git diffs to judge reruns and investigate reproduction failures. Add no environment flag, assessment record, or runner-specific configuration; preserve existing explicitly configured `env_deps` as an opt-in.
 - **Adoption and diagnosis:** provide a bounded one-producer/one-check pilot and a reusable acceptance recipe, used for adoption or mechanism changes. Diagnose changed outputs from evidence; preserve intentional saved-input boundaries and content-equivalent relocation semantics.
 - **Validation:** demonstrate an unbuilt on-demand target fails scoped status; an unrelated stale task does not block it; selected protection checks block required completion on failure; legacy and new tiers select equivalent work without invalidating the lock. Exercise CLI and dashboard tier surfaces and the two-step pilot's unchanged/timestamp/helper/missing-output/identical-output/corruption/restoration cases, recording actual execution and unchanged-command latency. Environment-file edits alone skip all steps when those files are undeclared; explicit `env_deps` retain their invalidation behavior.
+- **Force validation:** test a fresh target, stale upstream input, task and tier selection across tiers, complete reruns, and both dry-run modes. Verify actual execution and a fresh status afterward; unrelated steps remain outside explicit target closures.
 
 ## Details
 
