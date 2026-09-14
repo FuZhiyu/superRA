@@ -61,6 +61,5 @@ superRA projects now carry one reproduction graph inside the task tree, and Trea
 ### Open for the next round
 
 - The BondElasticity migration ([09-pilot-bondelasticity](09-pilot-bondelasticity/task.md)) and `repro trace` ([10-trace](10-trace/task.md)) stay postponed.
-- [Scoped verification and adoption](11-scoped-verification/task.md) implements the accepted tier names, check coverage, and pilot improvements; independent review is pending.
-- `repro build <step> --force` reruns the target's whole ancestor closure; scoping it needs per-task invalidation ([02-runner](02-runner/task.md)).
+- [Scoped verification and adoption](11-scoped-verification/task.md) implements the accepted tier names, check coverage, pilot improvements, and separate targeted/complete forced reruns; independent review is pending.
 - The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.

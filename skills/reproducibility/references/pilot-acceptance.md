@@ -10,6 +10,7 @@ Use a disposable fixture or isolated copies for perturbations. Record reported s
 |---|---|
 | First build | Declared outputs exist; producer and numerical check succeed; scoped status is fresh. |
 | Unchanged build | Neither step executes. |
+| Force the fresh check | `--force` executes only the check; `--force-all` executes producer and check. Both dry-run previews leave build evidence unchanged. |
 | Timestamp-only change | Neither step executes. |
 | Producer or included-helper edit | Its consumer is invalidated; the expected code executes. |
 | Undeclared environment-file edit | Neither step executes automatically; apply [environment-change judgment](../SKILL.md#environment-changes). |

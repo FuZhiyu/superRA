@@ -92,13 +92,17 @@ superra repro status --tier all --json    # the shape `task read` and the dashbo
 superra repro build                       # rebuild the stale required steps
 superra repro build 02-merge -j 4         # a step name or a task path, plus its stale ancestors
 superra repro build --dry-run             # what would run, and why
-superra repro build --force               # rerun the whole selection, ancestors included, unchanged or not
+superra repro build check-panel --force   # force the target; rebuild ancestors only when stale or missing
+superra repro build check-panel --force-all # force the target and every producer ancestor
+superra repro build --tier all --force-all # rerun every registered step
 superra repro explain build-panel         # one step: state, changed nodes, upstream, log
 superra repro dag --mermaid               # the step graph
 superra repro tier 02-merge required      # set a task's tier
 ```
 
 `--tier` defaults to `required` for `build` and `status`; `on-demand` and `all` are also accepted. Legacy `canon` / `local` arguments alias `required` / `on-demand`. Explicit task or step targets override the tier for both commands and include producer ancestors across tiers; task targets include descendant tasks. Unknown targets fail. Status JSON records `targets` and reports the selected steps; an empty default selection returns success but explicitly verifies no result.
+
+`--force` and `--force-all` are mutually exclusive. Without explicit targets, `--force` forces the tier's steps; `--force-all` also forces their ancestors across tiers. Add `--dry-run` to preview either selection without executing or changing build evidence; downstream execution remains conditional on regenerated content.
 
 `task read <path>` shows a registered task's owned-step states and derived `feeds` / `feeds on` task edges, computed the same way as `repro status --json` but without pytask. `task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge.
 
@@ -107,7 +111,7 @@ superra repro tier 02-merge required      # set a task's tier
 | `fresh` | Every recorded input and output still matches. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
 | `missing` | Never built, or an out is gone. |
-| `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restore the inputs and it reports `fresh` again. |
+| `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
 `pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.

@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: in-progress
+status: implemented
 depends_on:  []
 ---
 
@@ -38,6 +38,9 @@ The runner verifies explicit task/step targets, and the skill requires evidence 
 - A disposable two-step shell pilot passed first build, unchanged build, timestamp-only change, producer/helper edits, explicitly configured environment-dependency changes, missing output, identical-output suppression, direct corruption rejection, and restoration. Producer/helper edits made both steps report stale, but only the producer executed after identical regeneration. The saved input retained its original bytes and both steps finished fresh.
 - In that tiny fixture, median unchanged CLI status/build times over three warm invocations were **0.054 s / 0.338 s**. Graph construction took **0.0012 s** and warm state computation **0.00085 s**; there were no shell resolvers. These observations validate the simple fixture, not a TreasuryGIV speedup. TreasuryGIV's dynamic branch/sandbox routing and revised resolver latency remain unmeasured in this change.
 - [Pilot acceptance](../../../skills/reproducibility/references/pilot-acceptance.md) owns the reusable adoption matrix. The authoring instructions keep stable paths in the task, resolve shared dynamic roots cheaply, and bind declarations to runtime routing.
-- [Environment changes](../../../skills/reproducibility/SKILL.md#environment-changes) use Git-based agent judgment; the default config example omits environment dependencies. A script-level fixture verified that editing each of `Project.toml`, `Manifest.toml`, `pyproject.toml`, and `uv.lock` left all steps fresh and executed none when undeclared. Explicitly configuring `Manifest.toml` as `env_deps` still invalidated every step after an edit. No runner code or environment-assessment machinery was added.
+- [Environment changes](../../../skills/reproducibility/SKILL.md#environment-changes) use Git-based agent judgment; the default config example omits environment dependencies. A script-level fixture verified that editing each of `Project.toml`, `Manifest.toml`, `pyproject.toml`, and `uv.lock` left all steps fresh and executed none when undeclared. Explicitly configuring `Manifest.toml` as `env_deps` still invalidated every step after an edit. Environment handling added no runner logic or assessment machinery.
+
+- Forced reruns now distinguish direct targets (`--force`) from the full producer closure (`--force-all`); `--tier all --force-all` executes every registered step. Transient per-step invalidation preserves successful locks and works with parallel execution. A failed forced run is retained in the existing run record and retried by ordinary builds even when declared inputs are unchanged.
+- The force change passed **208 reproduction/core/CLI tests**, including 70 runner tests. Shell fixtures verify exact executed steps for target/task/tier scopes, stale ancestors with identical regeneration, full-graph reruns, parallel execution, dry-run evidence preservation, and retry after a failed forced check. Skill, Markdown, and task-tree validation passed.
 
 Self-review completed; independent review has not run.

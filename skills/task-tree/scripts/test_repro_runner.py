@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -626,6 +627,95 @@ def test_force_reruns_a_fresh_step(project):
     before = project.run_times()
     assert project.run("build", "--force") == 0
     assert project.run_times()["build-a"] != before["build-a"]
+
+
+@needs_pytask
+@pytest.mark.parametrize("flag,expected", [
+    ("--force", {"check-b"}),
+    ("--force-all", {"build-a", "build-b", "check-b"}),
+])
+def test_force_scope_preserves_freshness_and_unrelated_steps(project, flag, expected):
+    assert project.run("build", "--tier", "all") == 0
+    before = project.run_times()
+    assert project.run("build", "check-b", flag, "-j", "2") == 0
+    after = project.run_times()
+    assert {name for name in after if before[name] != after[name]} == expected
+    assert all(state == "fresh" for state in project.states().values())
+    assert project.run("build", "--tier", "all") == 0
+    assert project.run_times() == after
+
+
+@needs_pytask
+def test_targeted_force_rebuilds_stale_ancestors_normally(project):
+    assert project.run("build") == 0
+    before = project.run_times()
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# same output\n")
+    assert project.run("build", "check-b", "--force") == 0
+    after = project.run_times()
+    assert {name for name in after if before[name] != after[name]} == {"build-a", "check-b"}
+    assert project.status().ok
+
+
+@needs_pytask
+@pytest.mark.parametrize("target", [[], ["02-b"]])
+def test_force_task_or_tier_does_not_force_other_tier_ancestors(project, target):
+    assert project.run("tier", "01-a", "on-demand") == 0
+    assert project.run("build", "--tier", "all") == 0
+    before = project.run_times()
+    assert project.run("build", *target, "--force") == 0
+    after = project.run_times()
+    assert {name for name in after if before[name] != after[name]} == {"build-b", "check-b"}
+
+
+@needs_pytask
+def test_force_all_can_rerun_every_registered_step(project):
+    assert project.run("build", "--tier", "all") == 0
+    before = project.run_times()
+    assert project.run("build", "--tier", "all", "--force-all", "-j", "2") == 0
+    after = project.run_times()
+    assert all(before[name] != after[name] for name in before)
+    assert all(state == "fresh" for state in project.states().values())
+
+
+@needs_pytask
+@pytest.mark.parametrize("flag", ["--force", "--force-all"])
+def test_force_dry_run_does_not_change_build_evidence(project, flag, capsys):
+    assert project.run("build", "--tier", "all") == 0
+    before = project.run_times()
+    lock = project.paths.lock_file.read_bytes()
+    capsys.readouterr()
+    assert project.run("build", "check-b", flag, "--dry-run") == 0
+    output = capsys.readouterr().out
+    count = 1 if flag == "--force" else 3
+    assert re.search(rf"\b{count}\s+Would be executed", output)
+    assert project.run_times() == before
+    assert project.paths.lock_file.read_bytes() == lock
+    assert all(state == "fresh" for state in project.states().values())
+
+
+def test_force_modes_are_mutually_exclusive(project):
+    assert project.run("build", "--force", "--force-all") == 2
+
+
+@needs_pytask
+@pytest.mark.parametrize("flag", ["--force", "--force-all"])
+def test_failed_forced_check_cannot_reuse_cached_success(project, monkeypatch, flag):
+    project.write("Code/check.sh", 'test "$CHECK_OK" = yes\n')
+    project.write("superRA/02-b/task.md", TASK_B.replace(
+        "cmd: test -s output/b.txt", "cmd: sh Code/check.sh"
+    ).replace(
+        '    deps:\n      - "${OUT}/b.txt"',
+        '    deps:\n      - Code/check.sh\n      - "${OUT}/b.txt"',
+    ))
+    monkeypatch.setenv("CHECK_OK", "yes")
+    assert project.run("build") == 0
+    monkeypatch.setenv("CHECK_OK", "no")
+    assert project.run("build", "check-b", flag) == 1
+    assert project.states()["check-b"] == "failed"
+    assert project.run("build") == 1
+    monkeypatch.setenv("CHECK_OK", "yes")
+    assert project.run("build") == 0
+    assert project.status().ok
 
 
 @needs_pytask

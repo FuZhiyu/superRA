@@ -580,11 +580,13 @@ def _classify(
     else:
         _compare(result, step, entry, paths, cache, tracked)
 
-    # A failed run is reported only while the step still has work to do. Once
-    # inputs are restored and everything matches the lock again, the tree is
-    # consistent and `build` correctly skips — so `status` says `fresh` rather
-    # than wedging on a record that no longer describes disk.
-    if result.status != "fresh" and record.get("outcome") == "failed":
+    # Restoring inputs can clear an ordinary failure. A forced failure must be
+    # retried even with unchanged bytes: it invalidates the cached success.
+    if record.get("outcome") == "failed" and (
+        result.status != "fresh" or record.get("forced", False)
+    ):
+        if result.status == "fresh":
+            result.reason = "forced rerun required"
         result.status = "failed"
         # Keep whatever moved since that run — a dep edited after the failure is
         # the trigger a rerun answers to, and the log is where the last one died.
@@ -733,13 +735,14 @@ def _plural(head: str, extra: int) -> str:
 # ---------------------------------------------------------------------------
 
 def select_steps(
-    graph: Graph, targets: Iterable[str], tier: str
+    graph: Graph, targets: Iterable[str], tier: str, *, include_ancestors: bool = True
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
     A target is a step name or a task path (that task and its descendants).
-    Ancestors of every selection come along so a target can be built from a
-    cold tree; the tier filter only chooses the default selection.
+    Ancestors come along by default so a target can be built from a cold tree.
+    Excluding them identifies the direct targets for selective forcing.
+    The tier filter only chooses the default selection.
     """
     tier = normalize_tier(tier)
     targets = [t for t in targets if t]
@@ -763,6 +766,9 @@ def select_steps(
         selected = {
             s.name for s in graph.steps if tier == "all" or s.tier == tier
         }
+
+    if not include_ancestors:
+        return [s.name for s in graph.steps if s.name in selected], unknown
 
     upstream: dict[str, list[str]] = {s.name: [] for s in graph.steps}
     for src, dst, _ in graph.step_edges:
