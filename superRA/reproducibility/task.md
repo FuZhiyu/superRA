@@ -1,6 +1,6 @@
 ---
 title: "Reproducibility: Task-Declared Build Graph with Make-Like Reruns"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -58,8 +58,9 @@ superRA projects now carry one reproduction graph inside the task tree, and Trea
 - **Workflow wiring.** The graph replaces the pipeline-file requirement at PLAN, IMPLEMENT, and INTEGRATE, and the `protection` stage loads the skill. [07-workflow-integration](07-workflow-integration/task.md)
 - **Pilot.** TreasuryGIV registered 49 steps in 21 tasks with canon narrowed to the internal master deck; the pilot fixed the include resolver and added two authoring rules. [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md)
 
+- **Scoped verification and adoption.** Clear tier names, selected checks, bounded pilots, and separate targeted/complete forced reruns, with producer identity shared across path aliases and hashing limited to selected work. Both Astra/high reviews approved the fixes. [11-scoped-verification](11-scoped-verification/task.md)
+
 ### Open for the next round
 
 - The BondElasticity migration ([09-pilot-bondelasticity](09-pilot-bondelasticity/task.md)) and `repro trace` ([10-trace](10-trace/task.md)) stay postponed.
-- [Scoped verification and adoption](11-scoped-verification/task.md) implements the accepted tier names, check coverage, pilot improvements, and separate targeted/complete forced reruns; two thorough independent reviews returned REVISE; all six fixes are implemented and await narrow re-review.
 - The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.

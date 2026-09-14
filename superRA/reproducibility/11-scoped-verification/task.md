@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: implemented
+status: approved
 depends_on:  []
 ---
 
@@ -45,19 +45,4 @@ The runner verifies explicit task/step targets, and the skill requires evidence 
 
 - Review fixes passed **923 reproduction, CLI, task-tree, and dashboard tests**, including 77 runner tests. Six new alias/scope cases failed before the fixes and passed afterward; an additional fixture verifies that old alias locks rebuild only their affected consumer. Producer identity and sidecar state are shared across equivalent paths, and scoped status hashes only selected steps and ancestors. Clarity fixes remove duplicated rules and stale guidance, and permit existing numerical artifacts for figure checks. Skill, Markdown, and task validation passed.
 
-Two independent Astra/high reviews at thorough tier returned REVISE: design/correctness and instruction clarity/CLAUDE.md compliance. All six accepted findings are implemented and awaiting narrow re-review.
-
-## Review Notes
-
-Tier: thorough. Focus: design, correctness, instruction clarity, CLAUDE.md compliance, scope-fidelity. Scope: the complete current reproducibility skill and all four references at `0988bd6c`, plus relevant schema, command, runner, and workflow callers. Both independent passes returned REVISE.
-
-Orchestrator disposition: accept all six findings below. The two reports' shared diagnosis finding is consolidated into item 5. The researcher authorized all six fixes; implementation annotations below identify the changes for re-review.
-
-2. **[BLOCKING] Remove the remaining unconditional relocation promise.** [Command reference:119](../../../skills/task-tree/references/commands.md#L119) says a different `${VAR}` resolution moves step state, while [rerun model:9](../../../skills/reproducibility/references/rerun-model.md#L9) correctly preserves freshness for equal-byte relocation with an unchanged command. [The spec hash:337–346](../../../skills/task-tree/scripts/_repro_state.py#L337-L346) uses logical node paths and resolved command text, not resolved file paths; [node comparison:665–681](../../../skills/task-tree/scripts/_repro_state.py#L665-L681) checks their content. An agent following the command reference can promise a rebuild that will skip. Replace the contradictory paragraph with a pointer to the owning rerun rule.
-   - → implemented: [Command guidance](../../../skills/task-tree/references/commands.md#L119) points to the owning content/command-based relocation rule.
-
-3. **[BLOCKING] Merge repeated instructions at their existing owners.** [The check-step rule:23](../../../skills/reproducibility/SKILL.md#L23) is repeated in [the gate:59](../../../skills/reproducibility/SKILL.md#L59). [Graph authoring:5](../../../skills/reproducibility/references/graph-authoring.md#L5) already maps actual reads to `deps`; [line 14's first sentence](../../../skills/reproducibility/references/graph-authoring.md#L14) repeats that mapping for checks. These fail [CLAUDE.md's same-file-restatement gate](../../../CLAUDE.md#L48-L56), which makes the finding blocking independently of runtime correctness. Keep the check gate once, preserving its narrower blocking scope and the broader registration rule; remove line 14's repeated first sentence while retaining its distinct published-root instruction.
-   - → implemented: [Check registration](../../../skills/reproducibility/SKILL.md#L23) carries its blocking scope once; [graph authoring](../../../skills/reproducibility/references/graph-authoring.md#L14) retains only the distinct published-root instruction.
-
-6. **[ADVISORY] Allow existing numerical artifacts for figures.** [Graph authoring:13](../../../skills/reproducibility/references/graph-authoring.md#L13) unconditionally requires the plotting script to create a new `*_data.csv` beside every image. A plot already reading a maintained numerical artifact gains a duplicate output and producer edit solely to satisfy this format prescription. Require a deterministic numerical artifact for selected numerical checks, allowing an existing input or project-native format; create a companion only when that evidence is missing.
-   - → implemented: [Figure guidance](../../../skills/reproducibility/references/graph-authoring.md#L13) permits existing artifacts and project-native formats capturing plotted values; companions are required only when that evidence is missing.
+Both independent Astra/high reviewers approved their fixes on narrow re-review: design/correctness verified alias identity, scoped hashing, and diagnosis with nine targeted tests; instruction clarity/CLAUDE.md compliance confirmed relocation guidance, deduplication, and figure-artifact flexibility. All six findings are resolved.
