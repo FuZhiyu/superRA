@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -44,3 +44,15 @@ The runner verifies explicit task/step targets, and the skill requires evidence 
 - The force change passed **208 reproduction/core/CLI tests**, including 70 runner tests. Shell fixtures verify exact executed steps for target/task/tier scopes, stale ancestors with identical regeneration, full-graph reruns, parallel execution, dry-run evidence preservation, and retry after a failed forced check. Skill, Markdown, and task-tree validation passed.
 
 Self-review completed; independent review has not run.
+
+## Review Notes
+
+Tier: thorough. Focus: instruction clarity, CLAUDE.md compliance, scope-fidelity. Scope: the current full reproducibility skill and all four references at `0988bd6c`, plus schema, command, and workflow callers; `bedda94e..0988bd6c` supplies recent-change context. Runner correctness has a separate review.
+
+1. **[BLOCKING] Remove the remaining unconditional relocation promise.** [Command reference:119](../../../skills/task-tree/references/commands.md#L119) says a different `${VAR}` resolution moves step state, while [rerun model:9](../../../skills/reproducibility/references/rerun-model.md#L9) correctly preserves freshness for equal-byte relocation with an unchanged command. [The spec hash:337–346](../../../skills/task-tree/scripts/_repro_state.py#L337-L346) uses logical node paths and resolved command text, not resolved file paths; [node comparison:665–681](../../../skills/task-tree/scripts/_repro_state.py#L665-L681) checks their content. An agent following the command reference can promise a rebuild that will skip. Replace the contradictory paragraph with a pointer to the owning rerun rule.
+
+2. **[BLOCKING] Merge repeated instructions at their existing owners.** [The check-step rule:23](../../../skills/reproducibility/SKILL.md#L23) is repeated in [the gate:59](../../../skills/reproducibility/SKILL.md#L59). [Graph authoring:5](../../../skills/reproducibility/references/graph-authoring.md#L5) already maps actual reads to `deps`; [line 14's first sentence](../../../skills/reproducibility/references/graph-authoring.md#L14) repeats that mapping for checks. These fail [CLAUDE.md's same-file-restatement gate](../../../CLAUDE.md#L48-L56), which makes the finding blocking independently of runtime correctness. Keep the check gate once, preserving its narrower blocking scope and the broader registration rule; remove line 14's repeated first sentence while retaining its distinct published-root instruction.
+
+3. **[ADVISORY] Diagnose the reported reason before guessing a spec change.** [Rerun diagnosis:34](../../../skills/reproducibility/references/rerun-model.md#L34) maps no named changed node to an own-spec change. A targeted script using [the cascade](../../../skills/task-tree/scripts/_repro_state.py#L685-L703) and [explain formatter](../../../skills/task-tree/scripts/_repro_state.py#L836-L866) produced `check [stale] upstream step 'producer' is stale`, with no changed-node list and an explicit upstream reason. Own-spec changes instead receive a named spec entry in [the comparison](../../../skills/task-tree/scripts/_repro_state.py#L648-L663). The CLI already supplies the correct explanation, limiting the impact, but the table can send investigation toward an unchanged downstream declaration. Replace this row with an instruction to follow the reason and upstream chain.
+
+4. **[ADVISORY] Allow existing numerical artifacts for figures.** [Graph authoring:13](../../../skills/reproducibility/references/graph-authoring.md#L13) unconditionally requires the plotting script to create a new `*_data.csv` beside every image. A plot already reading a maintained numerical artifact gains a duplicate output and producer edit solely to satisfy this format prescription. Require a deterministic numerical artifact for selected numerical checks, allowing an existing input or project-native format; create a companion only when that evidence is missing.
