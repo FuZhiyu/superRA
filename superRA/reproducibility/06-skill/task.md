@@ -59,4 +59,4 @@ The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its re
 
 A temporary three-step pipeline (estimation, plotting, table formatting) exercised the live runner with separate presentation helpers. Five scenarios passed: warm builds and unrelated code edits ran no steps; a plotting-helper edit ran only plotting; changed estimates ran all three steps; a comment-only estimation edit ran estimation alone. Every scenario ended fresh, and both consumer outputs contained the changed estimate.
 
-The existing [runner tests](../../../skills/task-tree/scripts/test_repro_runner.py) for identical regeneration and unchanged-content touches also passed (2 passed). No independent review has run on this guidance change.
+The existing [runner tests](../../../skills/task-tree/scripts/test_repro_runner.py) for identical regeneration and unchanged-content touches also passed (2 passed).
