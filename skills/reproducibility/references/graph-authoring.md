@@ -1,5 +1,11 @@
 # Graph Authoring
 
+## Isolate meaningful recomputation
+
+- **Split stages at reusable artifacts.** Separate expensive computation from independently changing presentation; save estimates for plotting to consume. Choose step boundaries by useful recomputation savings, not one step per function.
+- **Separate helpers by consumer set.** Split modules when unrelated helpers couple independent consumers; separate functions within one file still share a file-level dependency. Import or include the needed modules directly instead of a shared entry point that loads them all.
+- **Connect stages through consumed artifacts.** Declare upstream code as a downstream dependency only when that downstream step reads or executes it; provenance alone does not require a code dependency.
+
 ## Declare from the script, not from memory
 
 Open the producer and list what it opens: its real reads are `deps`, its real writes are `outs`.
