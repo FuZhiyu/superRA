@@ -1587,11 +1587,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   padding: 20px 24px 60px;
 }
 
-/* ── Reproduction view ──
-   The build graph the `## Reproduction` sections declare: swimlanes by owner
-   task (a sticky label per lane), columns by dependency depth, edges drawn in
-   one SVG behind the nodes. Positions are computed in dashboard.js and written
-   as inline left/top, so the layout is deterministic for a given graph. */
+/* ── Reproduction view: task overview, bounded graph, and step inspector ── */
 #view-reproduction:not(.hidden) {
   /* Wider than the reading views: a layered graph is wide by construction, and
      every column the page can show is a column the canvas need not scroll. */
@@ -1617,6 +1613,118 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   color: var(--text-mute);
 }
 .repro-head-spacer { flex: 1; }
+
+.repro-controls, .repro-modes, .repro-viewport-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.repro-controls > label, .repro-picker > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-meta);
+}
+.repro-search-label { flex: 1 1 260px; }
+.repro-controls input[type="search"] {
+  min-width: 0;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+}
+.repro-picker { flex: 0 1 100%; min-width: 0; }
+.repro-picker > summary, .repro-step-list > summary, .repro-boundaries summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: var(--fs-meta);
+  overflow-wrap: anywhere;
+}
+.repro-root-options {
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+}
+.repro-root-options label { display: block; padding: 6px; overflow-wrap: anywhere; }
+.repro-root-options label[hidden] { display: none; }
+.repro-root-options code, .repro-task-row code {
+  display: block;
+  color: var(--text-mute);
+  font-size: var(--fs-micro);
+  overflow-wrap: anywhere;
+}
+.repro-scope { margin-bottom: 12px; font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.repro-task-row > summary, .repro-task-leaf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border-lt);
+  background: var(--bg-card);
+  font-size: var(--fs-meta);
+}
+.repro-task-row > summary { cursor: pointer; }
+.repro-task-row > summary > span:first-child::before { content: "▸ "; }
+.repro-task-row[open] > summary > span:first-child::before { content: "▾ "; }
+.repro-task-row > div:not(.repro-task-leaf) { margin-left: 14px; border-left: 1px solid var(--border); }
+.repro-task-row strong { overflow-wrap: anywhere; }
+.repro-search-items, .repro-step-list[open] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.repro-search-items { max-height: 320px; overflow: auto; margin: 10px 0; }
+.repro-search-items .hc-btn, .repro-step-list .hc-btn, .repro-boundaries .hc-btn {
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.repro-workbench { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.repro-workbench:has(#repro-detail:not(:empty)) { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
+.repro-graph-region, #repro-detail { min-width: 0; }
+#repro-detail:empty { display: none; }
+#repro-detail { max-height: 70vh; overflow: auto; }
+#repro-detail .repro-detail { margin-top: 0; }
+.repro-detail-name, .repro-detail dd { min-width: 0; overflow-wrap: anywhere; }
+.repro-viewport-controls { margin-top: 10px; }
+.repro-boundaries { margin: 12px 0; font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.repro-boundaries details > div { padding: 4px 0; }
+.repro-plot.is-zoomed-out .repro-node-state { visibility: hidden; }
+#view-reproduction :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .repro-workbench:has(#repro-detail:not(:empty)) { grid-template-columns: minmax(0, 1fr); }
+  #repro-detail:not(:empty) {
+    position: fixed;
+    inset: auto 12px 12px;
+    z-index: 100;
+    max-height: 55vh;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+  }
+}
+@media (max-width: 620px) {
+  #view-reproduction:not(.hidden) { padding: 12px 12px 40px; }
+  .repro-task-row > summary, .repro-task-leaf { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .repro-task-row > summary > span:nth-child(2), .repro-task-leaf > span:nth-child(2) { grid-column: 1; }
+  .repro-task-row > summary > button, .repro-task-leaf > button { grid-column: 2; grid-row: 1 / span 2; }
+  .repro-task-row > div:not(.repro-task-leaf) { margin-left: 6px; }
+  .repro-controls > label { flex-wrap: wrap; }
+  #view-reproduction .hc-btn { min-height: 40px; }
+  .repro-detail dl { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Legend + per-state counts. Doubles as the legend the objective asks for:
    every row is glyph + state word + count, so state never rides on hue alone. */
@@ -1670,14 +1778,17 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 
 .repro-canvas {
   position: relative;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
+  height: clamp(320px, 60vh, 720px);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--bg-alt);
-  padding: 10px 0;
+  padding: 0;
 }
-.repro-plot { position: relative; }
+.repro-plot { position: absolute; transform-origin: 0 0; }
 .repro-band {
   position: absolute;
   left: 0;
