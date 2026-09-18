@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: implemented
+status: approved
 depends_on: [01-section-contract]
 ---
 
