@@ -1,6 +1,6 @@
 ---
 title: "Author the `reproducibility` Utility Skill"
-status: revise
+status: implemented
 depends_on: [01-section-contract]
 ---
 
@@ -8,10 +8,10 @@ depends_on: [01-section-contract]
 
 Write `skills/reproducibility/SKILL.md` and its references: the discipline agents follow to register, build, and review a reproduction graph. Mechanics stay in `task-tree` (contract, CLI, dashboard); this skill points to them and teaches behavior.
 
-- **SKILL.md** (utility category, standalone-usable): when to register a step (any maintained producer of a committed exhibit or canonical result; any task companion the results cite, at `tier: local`), the tier rule (canon is opted in, normally at Protect), how to build and read `repro status`, and gated checklist items for implementers and reviewers: `[BLOCKING]` every out a task's `## Results` cites is produced by a registered step or declared external; `[BLOCKING]` `repro status --tier canon` is clean before `status: implemented` on a canon task; `[BLOCKING]` env deps and check steps declared per the contract; `[ADVISORY]` deps declared at file granularity, not whole directories, when the script reads a few files.
+- **SKILL.md** (utility category, standalone-usable): registration, required/on-demand tiers, scoped build/status verification, environment-change judgment, and the reproduction gates.
 - **`references/rerun-model.md`:** what agents must understand to predict reruns: content hashes, the size-and-mtime cache, early cutoff, why `touch` does nothing, why identical regeneration stops the cascade, include closures, env deps, machine-specific exclusions (sysimages), sidecar trade-offs, external inputs at the graph boundary, Dropbox behavior, and how to read an `explain`.
 - **`references/graph-authoring.md`:** how to declare steps from a script (read its I/O, name deps at file level, directories only for many-file outputs, `${VAR}` roots, per-file outs when scripts share a directory, check steps for drift tests), how to separate producer stages and helper modules to isolate meaningful recomputation without requiring one file or step per function, how to present a new or changed graph for review (dashboard Reproduction view, mermaid export in `## Results`), and how to act on graph comments.
-- **`references/protect-and-completion.md`:** the Protect step's reproduction choices (tier per affected task, check steps for selected drift tests, boundary inputs) and the completion-gate procedure (`repro build --tier canon`, then `repro status` clean, failures block the menu).
+- **`references/protect-and-completion.md`:** the Protect step's reproduction choices (tier per affected task, check steps for selected drift tests, boundary inputs) and completion verification scoped to required producers and selected checks.
 - **Validation criteria:** each file passes the CLAUDE.md three-test gate line by line and the terse style; frontmatter description names the triggers; every command and finding name matches the contract and runner objectives. Behavioral verification is [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md), where agents follow this skill on a real pipeline; defects found there reopen this task. Verify dependency separation with a small pipeline: a presentation-only edit leaves estimation and independent consumers unexecuted, while changed estimates rerun their consumers.
 
 ## Details
@@ -22,12 +22,12 @@ Write `skills/reproducibility/SKILL.md` and its references: the discipline agent
 
 ## Results
 
-The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/reproducibility/SKILL.md) plus the three references the objective names, 1,429 words total. Behavior stays unverified until [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) runs an agent through it on a real pipeline.
+The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its references define graph-authoring and verification discipline. Real-pipeline findings are recorded in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md); scoped verification and tier updates are recorded in [11-scoped-verification](../11-scoped-verification/task.md).
 
 ### What each file owns
 
-- [SKILL.md](../../../skills/reproducibility/SKILL.md) — what gets a step, the tier opt-in and its timing, `build` / `status` as the evidence a result reproduces, and the objective's four gates.
-- [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) — declaring steps from a script's real I/O (file granularity, `${VAR}` roots, one interpreter pin, figure data companions, `check` deps, the boundary), and presenting a graph for the researcher's canon/boundary decisions.
+- [SKILL.md](../../../skills/reproducibility/SKILL.md) — what gets a step, the tier opt-in and its timing, `build` / `status` as the evidence a result reproduces, and the reproduction gates.
+- [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) — declaring steps from a script's real I/O (file granularity, `${VAR}` roots, one interpreter pin, figure data companions, `check` deps, the boundary), and presenting a graph for the researcher's required-tier/boundary decisions.
 - [rerun-model.md](../../../skills/reproducibility/references/rerun-model.md) — the five things that rerun a step, identical regeneration as the cascade stopper, the size-and-mtime cache under Dropbox, and a five-row table for reading `explain`.
 - [protect-and-completion.md](../../../skills/reproducibility/references/protect-and-completion.md) — the three Protect decisions folded into the researcher proposal, and the completion-gate commands with failure triage.
 
@@ -53,6 +53,10 @@ The `reproducibility` skill is written and packaged: [SKILL.md](../../../skills/
 
 **A drift pin declares the published root, not a rehearsal mirror.** A project with an opt-in publish path has two roots, and a pin declared against the wrong one can be silently set from one worktree's sandbox. `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
-## Revision Notes
+### Dependency boundaries
 
-Reopened for dependency-boundary guidance in graph authoring. Existing workflow consumers remain valid: this adds authoring discipline without changing the graph contract or runner.
+[Graph authoring](../../../skills/reproducibility/references/graph-authoring.md#isolate-meaningful-recomputation) covers stage boundaries, helper-module separation, and artifact dependencies between stages.
+
+A temporary three-step pipeline (estimation, plotting, table formatting) exercised the live runner with separate presentation helpers. Five scenarios passed: warm builds and unrelated code edits ran no steps; a plotting-helper edit ran only plotting; changed estimates ran all three steps; a comment-only estimation edit ran estimation alone. Every scenario ended fresh, and both consumer outputs contained the changed estimate.
+
+The existing [runner tests](../../../skills/task-tree/scripts/test_repro_runner.py) for identical regeneration and unchanged-content touches also passed (2 passed). No independent review has run on this guidance change.
