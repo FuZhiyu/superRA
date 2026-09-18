@@ -7037,15 +7037,14 @@ class TestReproLockWatch:
 # ---------------------------------------------------------------------------
 # Reproduction layout (node-backed)
 #
-# The swimlane-and-column layout lives only in dashboard.js.  These tests run
-# the extracted layout function under node so the column assignment, the lane
-# grouping, and the determinism the objective asks for are exercised directly.
+# The depth-column layout lives in dashboard.js. These tests exercise column
+# assignment, non-overlap, and deterministic placement under Node.
 # ---------------------------------------------------------------------------
 
 
 def _run_repro_node(harness_body):
     defs = _extract_js_defs([
-        "RP_NODE_W", "RP_X0", "reproLayout", "reproBarycenter",
+        "RP_NODE_W", "RP_X0", "reproLayout",
     ])
     proc = subprocess.run(
         [_NODE, "-e", defs + "\n" + harness_body],
@@ -7078,19 +7077,18 @@ class TestReproLayoutClientLogic:
         assert xs["a"] < xs["b"] < xs["c"]
         assert xs["c"] == xs["d"]
 
-    def test_lanes_group_by_owner_task_in_first_appearance_order(self):
+    def test_layout_does_not_force_owner_tasks_into_separate_lanes(self):
         out = _run_repro_node(
             _RP_STEPS
             + "var lay=reproLayout(steps, edges);"
             "console.log(JSON.stringify({"
             "  lanes: lay.lanes.map(function(l){return l.task;}),"
-            "  aInLane0: lay.pos.a.y < lay.lanes[1].top,"
-            "  cInLane1: lay.pos.c.y >= lay.lanes[1].top}));"
+            "  sameRow: lay.pos.a.y === lay.pos.c.y}));"
         )
-        assert out["lanes"] == ["01", "02"]
-        assert out["aInLane0"] and out["cInLane1"]
+        assert out["lanes"] == []
+        assert out["sameRow"]
 
-    def test_steps_sharing_a_lane_and_column_stack_without_overlap(self):
+    def test_steps_sharing_a_column_stack_without_overlap(self):
         out = _run_repro_node(
             "var steps=[{name:'c',task:'02'},{name:'d',task:'02'}];"
             "var lay=reproLayout(steps, []);"
@@ -7099,7 +7097,7 @@ class TestReproLayoutClientLogic:
             "  gap: Math.abs(lay.pos.c.y - lay.pos.d.y),"
             "  lanes: lay.lanes.length}));"
         )
-        assert out["sameX"] and out["lanes"] == 1
+        assert out["sameX"] and out["lanes"] == 0
         assert out["gap"] >= 46
 
     def test_layout_is_deterministic_and_independent_of_edge_order(self):
@@ -7168,8 +7166,10 @@ class TestReproLayoutClientLogic:
 
 def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
-        "REPRO_STATES", "RP_NODE_W", "RP_X0", "reproLayout", "reproBarycenter",
+        "REPRO_STATES", "RP_NODE_W", "RP_X0", "reproLayout",
         "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
+        "reproProject", "reproMatches", "reproWithin", "reproButton",
+        "reproControlsHTML", "reproTasks", "reproOverviewHTML",
         "reproLegendHTML", "reproFindingsHTML", "reproBandsHTML", "reproEdgesHTML",
         "reproNodesHTML", "reproNodeId", "reproDuration", "reproOutLabel",
         "escapeHtml", "escapeAttr",
@@ -7178,7 +7178,10 @@ def _run_repro_render_node(harness_body):
     # supplies just enough DOM and module state for the pure render path.
     shim = (
         "var _reproTier='all', _reproSelected='', _reproData=null, pathTitles={};\n"
+        "var window={}; var _reproNav={roots:[],tier:'all',mode:'scope',view:'overview'};\n"
+        "var _reproContext=[], _reproNotice='';\n"
         "var document={getElementById:function(){return null;}};\n"
+        "function onReproClick(){}\n"
         "function reproBindHead(){}\n"
         "function renderReproDetail(){}\n"
     )
@@ -7197,7 +7200,7 @@ class TestReproFindingsRendering:
         """A section that was declared and did not load must not read as a tree
         where nobody declared one — the error is the whole explanation."""
         out = _run_repro_render_node(
-            "var box={innerHTML:''};"
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
             "var data={graph:{steps:[],findings:[{severity:'error',task_path:'01-a',"
             "  message:\"## Reproduction: step 'onlystep' names runner 'sh', which\"}]},"
             "  status:{steps:[],findings:[{severity:'error',task_path:'01-a',"
@@ -7213,7 +7216,7 @@ class TestReproFindingsRendering:
 
     def test_a_tree_with_no_section_still_says_nothing_is_declared(self):
         out = _run_repro_render_node(
-            "var box={innerHTML:''};"
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
             "drawReproView(box, {graph:{steps:[],findings:[]},status:{steps:[],findings:[]}});"
             "console.log(JSON.stringify({"
             "  claimsNothingDeclared: box.innerHTML.indexOf('No task declares')>=0,"
@@ -7386,3 +7389,102 @@ class TestReproGraphChangeBroadcast:
         )
         assert events, "the sidebar row should still have been swapped"
         assert not any("event: repro-updated" in e for e in events)
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproNavigationRepair:
+    def run_client(self, body):
+        defs = _extract_js_defs([
+            "onReproClick", "reproNavigate", "reproRoots", "reproWithin",
+            "reproProject", "reproMatches", "reproHash", "reproReadHash",
+            "revealReproStep", "selectReproStep", "reproNodeId", "initRouter",
+        ])
+        shim = r"""
+const assert = require('node:assert/strict');
+var activePath='analysis', ACTIVE_WT='fixture', restoring=false;
+var location={hash:'#/analysis'}, history={
+  pushState:function(s,t,url){location.hash=url;},
+  replaceState:function(s,t,url){location.hash=url;}
+};
+var _reproNav={roots:[],tier:'all',view:'overview',mode:'scope',anchor:'',selected:''};
+var _reproTier='all', _reproSelected='', _reproContext=[];
+var _reproInspectorClosed=false, _reproFitNext=false;
+var _reproViewport={x:0,y:0,zoom:1};
+var _reproData={graph:{steps:[
+  {name:'input',task:'other',tier:'on-demand'},
+  {name:'result',task:'analysis',tier:'required'}
+],step_edges:[{from:'input',to:'result'}]},status:{steps:[]}};
+var drawn=null, opened='', selected='', transformed=0;
+var box={querySelectorAll:function(){return [];},focus:function(){}};
+var document={getElementById:function(){return box;},
+  querySelector:function(){return {clientWidth:800,clientHeight:500};}};
+function drawReproView(){drawn=reproProject(_reproData.graph,_reproNav,_reproContext);}
+function showView(view){opened=view;}
+function renderReproDetail(name){selected=name;}
+function loadReproData(){return Promise.resolve(_reproData);}
+function reproTransform(){transformed++;}
+function parseHash(){return 'analysis';}
+function parseArtifactHash(){return '';}
+function setActive(path){activePath=path;}
+function click(action,value){onReproClick({preventDefault:function(){},target:{closest:function(selector){
+  return selector==='[data-rp-action]' ? {dataset:{rpAction:action,value:value||''}} : null;
+}}});}
+"""
+        proc = subprocess.run(
+            [_NODE, "-e", shim + defs + "\n(async function(){" + body +
+             "\n})().catch(e=>{console.error(e);process.exit(1)});"],
+            capture_output=True, text=True, timeout=20,
+        )
+        assert proc.returncode == 0, proc.stderr
+
+    def test_explore_select_trace_and_clear_are_connected(self):
+        self.run_client("""
+click('explore','analysis');
+assert.equal(_reproNav.view,'graph');
+assert.deepEqual(drawn.steps.map(s=>s.name),['result']);
+click('select','result');
+assert.equal(selected,'result');
+click('mode','upstream');
+assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
+assert.equal(_reproNav.anchor,'result');
+click('clear');
+assert.equal(_reproNav.selected,'');
+assert.deepEqual(_reproNav.roots,[]);
+""")
+
+    def test_task_link_opens_out_of_scope_step_and_inspector(self):
+        self.run_client("""
+_reproNav.roots=['analysis']; _reproNav.tier=_reproTier='required';
+await revealReproStep('input');
+assert.equal(opened,'reproduction');
+assert.equal(_reproNav.view,'graph');
+assert.equal(_reproNav.mode,'nearby');
+assert.equal(_reproNav.selected,'input');
+assert.equal(_reproNav.tier,'all');
+assert.deepEqual(_reproNav.roots,['analysis','other']);
+assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
+""")
+
+    def test_reload_preserves_scoped_reproduction_hash(self):
+        self.run_client("""
+var wanted={roots:['analysis'],tier:'required',view:'graph',mode:'upstream',anchor:'result',selected:'result'};
+location.hash='#/analysis?repro='+encodeURIComponent(JSON.stringify(wanted));
+initRouter();
+assert.deepEqual(_reproNav,wanted);
+assert.equal(opened,'reproduction');
+assert.ok(location.hash.includes('?repro='));
+""")
+
+    def test_zoom_and_inspector_close_preserve_selection(self):
+        self.run_client("""
+click('select','result');
+click('zoom-in');
+assert.equal(_reproViewport.zoom,1.25);
+assert.equal(_reproViewport.x,-100);
+assert.equal(transformed,1);
+click('close-detail');
+assert.equal(_reproInspectorClosed,true);
+assert.equal(_reproSelected,'result');
+click('select','result');
+assert.equal(_reproInspectorClosed,false);
+""")

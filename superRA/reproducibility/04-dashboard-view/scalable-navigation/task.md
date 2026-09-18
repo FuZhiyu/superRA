@@ -1,6 +1,6 @@
 ---
 title: "Navigate Reproduction Graphs by Subtree, Tier, and Dependency"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 
@@ -23,4 +23,10 @@ Make the Reproduction view usable for locating a result, tracing its dependencie
 
 ## Results
 
-The [UI design](attachments/design.md) records the planning contract, based on the shipped view and the researcher's request for scalable navigation with subtree/tier filtering. Task-overview entry and the 500-step target are planner defaults, pending any further preference. Implementation has not started.
+The partial Reproduction redesign has matching [layout styles](../../../../skills/task-tree/scripts/templates/dashboard.css) and [control handlers](../../../../skills/task-tree/scripts/templates/dashboard.js). The repair covers the task overview, subtree picker, search results, bounded pan/zoom canvas, responsive inspector, graph controls, task-page step links, and scoped navigation on reload and Back/Forward.
+
+The [dashboard tests](../../../../skills/task-tree/scripts/test_dashboard.py) and [state-preservation tests](../../../../skills/task-tree/scripts/tests/test_state_preservation.py) passed: 419 passed, 4 skipped. Added Node-based cases exercise Explore/select/trace/clear, out-of-scope step links, scoped reload, zoom, and inspector dismissal. JavaScript syntax, CSS parsing, and diff checks passed.
+
+The installed Claude plugin serving the [heterogeneity dashboard](https://home-studio.tail7992bc.ts.net:8444/?wt=heterogeneity-reproduction) received both repaired assets. HTTP retrieval confirmed byte-for-byte agreement with the checkout and cache version `0137f92dcd03`. Original installed assets are backed up under `/Users/zhiyufu/.cache/superra-dashboard-mismatch-backup-20260917/`.
+
+The full scalable-navigation contract remains in progress. Browser visual verification could not run: computer-use access reported no available browser and no Chrome/Safari window. The 500-step performance pass, full live/offline interaction journeys, and visual evidence required by the objective remain outstanding; passing unit and route tests does not establish those checks.
