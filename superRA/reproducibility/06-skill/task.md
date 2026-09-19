@@ -10,7 +10,7 @@ Write `skills/reproducibility/SKILL.md` and its references: the discipline agent
 
 - **SKILL.md** (utility category, standalone-usable): registration, required/on-demand tiers, scoped build/status verification, environment-change judgment, and the reproduction gates.
 - **`references/rerun-model.md`:** what agents must understand to predict reruns: content hashes, the size-and-mtime cache, early cutoff, why `touch` does nothing, why identical regeneration stops the cascade, include closures, env deps, machine-specific exclusions (sysimages), sidecar trade-offs, external inputs at the graph boundary, Dropbox behavior, and how to read an `explain`.
-- **`references/graph-authoring.md`:** how to declare steps from a script (read its I/O, name deps at file level, directories only for many-file outputs, `${VAR}` roots, per-file outs when scripts share a directory, check steps for drift tests), how to separate producer stages and helper modules to isolate meaningful recomputation without requiring one file or step per function, how to present a new or changed graph for review (dashboard Reproduction view, mermaid export in `## Results`), and how to act on graph comments.
+- **`references/graph-authoring.md`:** how to declare steps from a script (read its I/O, name deps at file level, directories only for many-file outputs, `${VAR}` roots, per-file outs when scripts share a directory, check steps for drift tests), how to separate producer stages and helper modules to isolate meaningful recomputation without requiring one file or step per function, how to present a new or changed graph for review (dashboard DAG navigator), and how to act on graph comments.
 - **`references/protect-and-completion.md`:** the Protect step's reproduction choices (tier per affected task, check steps for selected drift tests, boundary inputs) and completion verification scoped to required producers and selected checks.
 - **Validation criteria:** each file passes the CLAUDE.md three-test gate line by line and the terse style; frontmatter description names the triggers; every command and finding name matches the contract and runner objectives. Behavioral verification is [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md), where agents follow this skill on a real pipeline; defects found there reopen this task. Verify dependency separation with a small pipeline: a presentation-only edit leaves estimation and independent consumers unexecuted, while changed estimates rerun their consumers.
 
@@ -21,6 +21,8 @@ Write `skills/reproducibility/SKILL.md` and its references: the discipline agent
 - BondElasticity lessons worth teaching (recorded in that repo's `.plan/`): lock paper-facing outputs, CSV companions for figures, never PNG hashes, one interpreter pin, boundary inputs.
 
 ## Results
+Graph review uses the dashboard DAG navigator; embedding a Mermaid export in task results is optional.
+
 
 The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its references define graph-authoring and verification discipline. Real-pipeline findings are recorded in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md); scoped verification and tier updates are recorded in [11-scoped-verification](../11-scoped-verification/task.md).
 
