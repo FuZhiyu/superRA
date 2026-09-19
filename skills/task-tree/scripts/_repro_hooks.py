@@ -31,6 +31,15 @@ def pytask_execute_task_setup(session, task):
             task.attributes["superra_attempt"] = True
             supersede(paths, step.name)
         return
+    previous = read_lock(paths.lock_file).get(step.name)
+    if previous and any(value.startswith('saved-input:') for value in previous.depends_on.values()):
+        # Metadata may appear after a scoped build. Reuse its full-byte evidence
+        # without rewriting the successful lock into a sidecar-based baseline.
+        local = compute_status(graph, paths, targets=[f'{step.task_path or "."}#{step.name}'],
+                               tier='all', cache=task.attributes['superra_cache'],
+                               completed_locks=session.config.get('_superra_completed', {})).entry(step.name)
+        if local and local.status == 'fresh':
+            raise SkippedUnchanged
     ledger = read_ledger(paths)
     if step.name not in ledger['steps']:
         return

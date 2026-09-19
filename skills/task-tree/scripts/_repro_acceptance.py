@@ -85,12 +85,14 @@ def lock_state(entry):
     return {'deps': entry.depends_on, 'products': entry.produces} if entry else None
 
 
-def current_state(graph, step, paths, cache=None):
+def current_state(graph, step, paths, cache=None, *, recorded=True):
     cache = cache or HashCache()
     deps, products = step_nodes(step, output_nodes(graph))
     deps += directory_dep_nodes(graph, step)
+    entry = read_lock(paths.lock_file).get(step.name) if recorded else None
+    prior = entry.depends_on if entry else {}
     state = {
-        'deps': {node[0]: dependency_state(cache, paths.project_root, node) for node in deps},
+        'deps': {node[0]: dependency_state(cache, paths.project_root, node, prior.get(node[0])) for node in deps},
         'products': {node[0]: node_state(cache, paths.project_root, node) for node in products},
         'outputs': {out.path.logical: cache.path_state(absolute(paths.project_root, out.path.resolved)) for out in step.outs},
     }
@@ -126,7 +128,7 @@ def source_snapshots(step, paths, state):
 
 
 def capture_receipt(graph, step, paths, before):
-    state = current_state(graph, step, paths)
+    state = current_state(graph, step, paths, recorded=False)
     if state['deps'] != before['deps']:
         raise ReproStateError(f'{step.name}: dependencies changed during execution; rerun')
     if any(value is None for group in state.values() for value in group.values()):

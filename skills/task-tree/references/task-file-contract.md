@@ -164,7 +164,7 @@ outs:
     sidecar: "${OUT}/very_large.arrow.sha256"
 ```
 
-Within the selected producer chain, the runner hashes the sidecar instead of the out; a hand-edit of the out goes unnoticed until the sidecar is rewritten. Saved-input boundaries additionally track actual bytes. An absent upstream sidecar does not block an existing artifact: the dependency uses an explicit `saved-input:<digest>` state until sidecar metadata becomes available. Producer products still require their declared sidecars. Reviewed acceptance checks actual output and saved-input digests; arbitrary unchanged sidecar text cannot establish equality.
+Within the selected producer chain, the runner hashes the sidecar instead of the out; a hand-edit of the out goes unnoticed until the sidecar is rewritten. Saved-input boundaries additionally track actual bytes. An absent upstream sidecar does not block an existing artifact: the dependency retains an explicit `saved-input:<digest>` baseline until the consumer executes again; newly available metadata alone does not invalidate unchanged bytes. Producer products still require their declared sidecars. Reviewed acceptance checks actual output and saved-input digests; arbitrary unchanged sidecar text cannot establish equality.
 
 ### Project config
 

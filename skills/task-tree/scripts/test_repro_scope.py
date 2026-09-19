@@ -163,6 +163,26 @@ def test_saved_sidecar_artifact_without_metadata(project):
 
 
 @needs_pytask
+@pytest.mark.parametrize('upstream', [False, True])
+def test_new_sidecar_preserves_unchanged_saved_byte_evidence(project, upstream):
+    from test_repro_runner import _use_a_sidecar
+    _use_a_sidecar(project)
+    project.write('output/a.txt', 'hello\n')
+    assert project.run('build', '02-b') == 0
+    before = project.run_times()
+    assert project.run('build', '01-a') == 0
+    assert project.run('status', '02-b', '--upstream') == 0
+    lock = project.paths.lock_file.read_bytes()
+    args = ('02-b', '--upstream') if upstream else ('02-b',)
+    assert project.run('build', *args) == 0
+    assert project.run_times()['build-b'] == before['build-b']
+    assert project.paths.lock_file.read_bytes() == lock
+    assert project.run('build', '02-b', '--force') == 0
+    assert project.run_times()['build-b'] != before['build-b']
+    assert project.run('status', '02-b', '--upstream') == 0
+
+
+@needs_pytask
 def test_saved_directory_without_sidecar(dir_project):
     path = 'superRA/01-gen/task.md'
     dir_project.write(path, dir_project.read(path).replace(

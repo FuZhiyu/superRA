@@ -292,9 +292,9 @@ def node_state(
     return path_state(cache, project_root, hashed)
 
 
-def dependency_state(cache: HashCache, project_root: Path, node: Node) -> str | None:
+def dependency_state(cache: HashCache, project_root: Path, node: Node, recorded: str | None = None) -> str | None:
     """A saved artifact remains usable when its producer's sidecar is absent."""
-    value = node_state(cache, project_root, node)
+    value = None if recorded and recorded.startswith('saved-input:') else node_state(cache, project_root, node)
     if value is None and node[2] is not None:
         digest = cache.path_state(absolute(project_root, node[2]))
         if digest is not None:
@@ -695,7 +695,7 @@ def _changed_nodes(
                 # declaration edit. Require the engine to record the new key.
                 changes.append(Change(node=node[0], kind="dependency", change="added"))
             continue  # a newly declared dep already moved the spec hash
-        current = dependency_state(cache, paths.project_root, node)
+        current = dependency_state(cache, paths.project_root, node, recorded)
         if current is None:
             changes.append(Change(node=node[0], kind="dependency", change="missing"))
         elif current != recorded:
