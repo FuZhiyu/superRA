@@ -1,7 +1,7 @@
 {
   "machine": "macOS-27.0-arm64-arm-64bit",
-  "live": "http://127.0.0.1:62761",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-qvn5jkh1/superRA",
+  "live": "http://127.0.0.1:50565",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-0v7b0mmn/superRA",
   "browser": "153.0.8010.48",
   "counts": {
     "steps": 500,
@@ -11,23 +11,23 @@
   "initialZoom": 1,
   "timingsMs": {
     "search": [
-      0.5,
-      0.09999999403953552,
+      0.7999999821186066,
+      0.19999998807907104,
       0.10000002384185791,
-      0.20000001788139343,
+      0.19999998807907104,
       0.19999998807907104
     ],
     "filter": [
-      5.299999982118607,
-      2.2999999821186066,
-      2.2999999821186066,
-      2.199999988079071,
-      3.100000023841858
+      6.4000000059604645,
+      3.5,
+      2.5,
+      3,
+      3.300000011920929
     ],
     "full": [
-      91.40000000596046,
-      92.2000000178814,
-      87.5
+      98.5,
+      98.89999997615814,
+      93.7000000178814
     ]
   },
   "sharedReaderAndHistory": true,
@@ -57,6 +57,11 @@
     "cycleEdges": 0,
     "components": 2,
     "isolatedCards": 4
+  },
+  "responsivePanes": {
+    "side": true,
+    "portraitBottom": true,
+    "sidebarWidth": 712.0
   },
   "errors": []
 }

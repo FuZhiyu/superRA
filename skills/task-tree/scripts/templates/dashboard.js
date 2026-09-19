@@ -442,6 +442,7 @@ function showView(view) {
   document.getElementById('dag-reader-controls').classList.toggle('hidden', view !== 'reproduction');
   if (view === 'kanban') renderKanbanView();
   if (view === 'reproduction') {
+    reproSizeWorkspace();
     if (!_reproEntered) { _reproNav.roots = activePath ? [parentPath(activePath) || ''] : []; _reproEntered = true; }
     if (!restoring && location.hash !== reproHash()) history.pushState({wt: ACTIVE_WT}, '', reproHash());
     if(previousView==='workspace'&&!_reproSelected&&activePath&&(!_reproNav.roots.length||_reproNav.roots.some(function(r){return reproWithin(activePath,r);}))) {var ancestor=parentPath(activePath),expanded=new Set(_reproNav.expanded||[]);while(ancestor){expanded.add(ancestor);ancestor=parentPath(ancestor);}_reproNav.expanded=Array.from(expanded);}
@@ -595,7 +596,6 @@ function onSearchPaletteKeydown(event) {
 }
 
 function openSearchPalette() {
-  if(currentView==='reproduction'&&innerWidth<=1000)reproSetReader(false);
   var backdrop = document.getElementById('search-palette-backdrop');
   var palette = document.getElementById('search-palette');
   var input = document.getElementById('search-palette-input');
@@ -927,7 +927,7 @@ REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
 var _reproTier = 'all', _reproSelected = '';
 var _reproNav = { roots: [], tier: 'all', view: 'graph', mode: 'scope', anchor: '', selected: '', expanded: [] };
-var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = true, _reproLegacyReveal = false;
+var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = false, _reproLegacyReveal = false;
 var _reproContext = [], _reproNotice = '', _reproLayoutCache = null;
 var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
 var _reproInspectorClosed = false, _reproFitNext = true;
@@ -1371,9 +1371,9 @@ function reproLogicalBoundaryHTML(model){
   return '<details class="repro-boundaries" open><summary>Inherited logical prerequisites outside this view</summary>'+model.logicalBoundary.map(function(e){return '<div>'+reproButton(reproTaskTitle(e.from),'task',e.from)+' → '+reproButton(reproTaskTitle(e.to),'task',e.to)+'<p>'+escapeHtml(e.declaration)+' · Applies to scoped descendant work.</p></div>';}).join('')+'</details>';
 }
 function reproReaderControls(){
-  var toggle=document.getElementById('repro-preview-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);}
+  var toggle=document.getElementById('repro-preview-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show preview':'Hide preview';toggle.title=_reproReaderClosed?'Show task preview':'Hide task preview';}
   var selection=document.getElementById('repro-selection');if(selection){selection.textContent=_reproSelected||reproTaskTitle(activePath);selection.title=_reproSelected||activePath;}
-  var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Focus subtree','focus',activePath)+reproButton(_reproReaderFull?'Back to graph':'Read full width','full-reader')+reproButton('Close preview','close-reader');
+  var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Focus subtree','focus',activePath)+reproButton((_reproReaderFull||_reproReaderCompact)?'Back to graph':'Read full width','full-reader')+reproButton('Hide preview','close-reader');
   if(host&&_reproData){var edges=(_reproData.graph.dependencies&&_reproData.graph.dependencies.edges||[]).filter(function(e){return e.from===activePath||e.to===activePath;});
     if(edges.length)host.innerHTML+='<details class="rp-task-deps"><summary>Task dependencies ('+edges.length+')</summary>'+edges.map(function(e){var other=e.to===activePath?e.from:e.to;return '<div>'+reproButton((e.to===activePath?'Prerequisite: ':'Dependent: ')+reproTaskTitle(other),'task',other)+reproEvidenceHTML(e.evidence||[])+'</div>';}).join('')+'</details>';
   }
@@ -1402,9 +1402,38 @@ function reproSelectTask(path){
   document.querySelectorAll('.rp-task').forEach(function(n){n.classList.toggle('is-selected',n.dataset.task===path);});
 }
 
+var _reproReaderPreference=null, _reproReaderSizes={side:420,bottom:300}, _reproReaderPlacement='side', _reproReaderCompact=false;
+function reproPaneBounds(){
+  var ws=document.getElementById('workspace'),width=ws.clientWidth,height=ws.clientHeight,side=width>=1100;
+  var min=side?300:Math.min(220,Math.max(160,height*.3));
+  return {placement:side?'side':'bottom',split:side?height>=320:height>=(width<=620?620:570),automatic:side?height>=420:height>=650,min:Math.round(min),max:Math.round(Math.max(min,side?width-530:height-(width<=620?390:340)-10))};
+}
+function reproPersistReader(){try{localStorage.setItem('dashboard-dag-preview',JSON.stringify({visible:_reproReaderPreference,side:_reproReaderSizes.side,bottom:_reproReaderSizes.bottom}));}catch(e){}}
 function reproSizeWorkspace() {
   var workspace=document.getElementById('workspace');
-  if(currentView==='reproduction'&&workspace)workspace.style.setProperty('--dag-top',Math.max(0,workspace.getBoundingClientRect().top)+'px');
+  if(currentView!=='reproduction'||!workspace)return;
+  workspace.style.setProperty('--dag-top',Math.max(0,workspace.getBoundingClientRect().top)+'px');
+  var bounds=reproPaneBounds();_reproReaderPlacement=bounds.placement;
+  _reproReaderClosed=!_reproReaderFull&&(_reproReaderPreference===null?!bounds.automatic:!_reproReaderPreference);
+  _reproReaderCompact=!_reproReaderClosed&&!_reproReaderFull&&!bounds.split;
+  workspace.classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
+  workspace.classList.toggle('dag-reader-bottom',bounds.placement==='bottom');
+  workspace.classList.toggle('dag-reader-closed',_reproReaderClosed);
+  var size=Math.max(bounds.min,Math.min(bounds.max,_reproReaderSizes[bounds.placement]));
+  workspace.style.setProperty('--dag-preview-size',size+'px');
+  var divider=document.getElementById('dag-preview-resizer');
+  if(divider){divider.setAttribute('aria-orientation',bounds.placement==='side'?'vertical':'horizontal');divider.setAttribute('aria-label',bounds.placement==='side'?'Resize task preview width':'Resize task preview height');divider.setAttribute('aria-valuemin',String(bounds.min));divider.setAttribute('aria-valuemax',String(bounds.max));divider.setAttribute('aria-valuenow',String(Math.round(size)));}
+  reproReaderControls();
+}
+function initReproReader(){
+  try{var saved=JSON.parse(localStorage.getItem('dashboard-dag-preview'));if(saved){if(typeof saved.visible==='boolean')_reproReaderPreference=saved.visible;['side','bottom'].forEach(function(key){if(Number.isFinite(saved[key])&&saved[key]>=120)_reproReaderSizes[key]=saved[key];});}}catch(e){}
+  var divider=document.getElementById('dag-preview-resizer'),ws=document.getElementById('workspace'),drag=null;
+  if(!divider)return;
+  function update(value){var bounds=reproPaneBounds();_reproReaderSizes[bounds.placement]=Math.max(bounds.min,Math.min(bounds.max,Math.round(value)));reproSizeWorkspace();}
+  function move(e){if(!drag||e.pointerId!==drag.id)return;if(reproPaneBounds().placement!==drag.placement){finish(e);return;}update(drag.size+(drag.placement==='side'?drag.x-e.clientX:drag.y-e.clientY));}
+  function finish(e){if(!drag)return;drag=null;ws.classList.remove('dag-resizing');try{divider.releasePointerCapture(e.pointerId);}catch(error){}window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);reproPersistReader();}
+  divider.addEventListener('pointerdown',function(e){if(e.button!==0)return;e.preventDefault();divider.focus({preventScroll:true});drag={id:e.pointerId,x:e.clientX,y:e.clientY,size:Number(divider.getAttribute('aria-valuenow')),placement:_reproReaderPlacement};ws.classList.add('dag-resizing');try{divider.setPointerCapture(e.pointerId);}catch(error){}window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);});
+  divider.addEventListener('keydown',function(e){var bounds=reproPaneBounds(),step=e.shiftKey?48:16,value=Number(divider.getAttribute('aria-valuenow')),increase=bounds.placement==='side'?'ArrowLeft':'ArrowUp',decrease=bounds.placement==='side'?'ArrowRight':'ArrowDown';if(e.key===increase)value+=step;else if(e.key===decrease)value-=step;else if(e.key==='Home')value=bounds.min;else if(e.key==='End')value=bounds.max;else return;e.preventDefault();update(value);reproPersistReader();});
 }
 window.addEventListener('resize',reproSizeWorkspace);
 new ResizeObserver(reproSizeWorkspace).observe(document.querySelector('.header'));
@@ -1415,11 +1444,11 @@ document.addEventListener('pointerdown',function(e){
   if(results&&!results.contains(e.target)&&e.target.id!=='repro-search'){results.innerHTML='';var search=document.getElementById('repro-search');if(search)search.oninput=function(){reproRenderSearch(false);};}
 });
 function reproSetReader(open) {
-  _reproReaderClosed=!open;
+  _reproReaderPreference=!!open;_reproReaderClosed=!open;reproPersistReader();
   var workspace=document.getElementById('workspace');
   workspace.classList.toggle('dag-reader-closed',!open);
   if(!open){_reproReaderFull=false;workspace.classList.remove('dag-full-reader');}
-  reproReaderControls();
+  reproSizeWorkspace();
   if(!open){var toggle=document.getElementById('repro-preview-toggle');if(toggle)toggle.focus({preventScroll:true});}
 }
 function reproBindHead(container) {
@@ -1592,7 +1621,7 @@ function onReproClick(event) {
     else if (action === 'remove-root') reproNavigate({roots:_reproNav.roots.filter(function(r){return r!==value;})},true);
     else if (action === 'add-scope') { reproRenderSearch(true,true); document.getElementById('repro-search').oninput=function(){reproRenderSearch(true,true);}; document.getElementById('repro-search').focus(); }
     else if (action === 'scope-add') reproNavigate({roots:_reproNav.roots.concat([value])},true);
-    else if (action === 'full-reader') { _reproReaderFull=!_reproReaderFull; document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull); reproReaderControls(); }
+    else if (action === 'full-reader') { if(_reproReaderCompact){reproSetReader(false);return;} _reproReaderFull=!_reproReaderFull; document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull); reproSizeWorkspace();var readerFocus=_reproReaderClosed?document.getElementById('repro-preview-toggle'):document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(readerFocus)readerFocus.focus({preventScroll:true}); }
     else if (action === 'close-reader') reproSetReader(false);
     else if (action === 'reader') reproSetReader(_reproReaderClosed);
     else if (action === 'declaration') reproOpenDeclaration();
@@ -3529,7 +3558,7 @@ function showTreeAndExpand(path) { return revealTask(path); }
    --sidebar-width custom property; the sidebar slides via transform so pin and
    reveal stay smooth. Pin state + chosen width persist in localStorage.
    ════════════════════════════════════════════════════════════════════════ */
-var SB_WIDTH_MIN = 200, SB_WIDTH_MAX = 480, SB_WIDTH_DEFAULT = 280;
+var SB_WIDTH_MIN = 200, SB_WIDTH_DEFAULT = 280;
 var SB_NARROW = 860;                 /* px: below this the sidebar is a drawer */
 /* px: a touch device in landscape needs at least this much width to carry the
    side-by-side pinned layout; below it (or in portrait) touch falls to drawer. */
@@ -3590,9 +3619,9 @@ function renderSidebarWidth(w) {
 function sidebarWidthMax() {
   var ws = workspaceEl();
   if (ws && ws.classList.contains('sb-drawer')) {
-    return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.floor(window.innerWidth * 0.86)));
+    return Math.max(SB_WIDTH_MIN, Math.floor(window.innerWidth * 0.86));
   }
-  return SB_WIDTH_MAX;
+  return Math.max(SB_WIDTH_MIN,window.innerWidth-360);
 }
 
 function clampSidebarWidth(w) {
@@ -3698,7 +3727,7 @@ function initSidebarChrome() {
     var savedPin = localStorage.getItem('dashboard-sidebar-pinned');
     if (savedPin !== null) sbPinned = savedPin === '1';
     var savedW = parseInt(localStorage.getItem('dashboard-sidebar-width'), 10);
-    if (!isNaN(savedW)) sbWidth = clampSidebarWidth(savedW);
+    if (!isNaN(savedW)) sbWidth = Math.max(SB_WIDTH_MIN,savedW);
   } catch (e) {}
   applySidebarWidth(sbWidth);
   applySidebarMode();
@@ -3784,10 +3813,11 @@ function initSidebarResizer() {
   rz.addEventListener('keydown', function(ev) {
     var step = ev.shiftKey ? 48 : 16;
     var next = null;
-    if (ev.key === 'ArrowLeft')       next = sbWidth - step;
-    else if (ev.key === 'ArrowRight') next = sbWidth + step;
+    var shown=Number(rz.getAttribute('aria-valuenow'));
+    if (ev.key === 'ArrowLeft')       next = shown - step;
+    else if (ev.key === 'ArrowRight') next = shown + step;
     else if (ev.key === 'Home')       next = SB_WIDTH_MIN;
-    else if (ev.key === 'End')        next = SB_WIDTH_MAX;
+    else if (ev.key === 'End')        next = sidebarWidthMax();
     if (next === null) return;
     ev.preventDefault();
     revealSidebar();
@@ -3892,7 +3922,6 @@ function toggleSearchSheet() {
 }
 
 function openSearchSheet() {
-  if(currentView==='reproduction'&&innerWidth<=1000)reproSetReader(false);
   var sheet = document.getElementById('search-sheet');
   var backdrop = document.getElementById('search-sheet-backdrop');
   var body = document.getElementById('search-sheet-body');
@@ -4572,15 +4601,14 @@ function switchWorktree(token) {
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
 async function applyWorktree(wtId, path, artifactPath) {
-  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerClosed:document.getElementById('workspace').classList.contains('dag-reader-closed'),readerFull:_reproReaderFull,readerWidth:document.querySelector('.detail-panel').style.width,context:_reproContext.slice(),inspectorClosed:_reproInspectorClosed,notice:_reproNotice};
+  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,context:_reproContext.slice(),inspectorClosed:_reproInspectorClosed,notice:_reproNotice};
   ACTIVE_WT = wtId || '';
   var remembered=_reproWorktrees[ACTIVE_WT];
   _reproNav=remembered?remembered.nav:{roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
   _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
-  _reproReaderFull=!!(remembered&&remembered.readerFull);
-  _reproReaderClosed=remembered?remembered.readerClosed:true;
-  document.querySelector('.detail-panel').style.width=remembered?remembered.readerWidth:'';
-  document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);
+  _reproReaderFull=!!(remembered&&remembered.readerFull&&_reproReaderPreference!==false);
+  reproSizeWorkspace();
+  document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
   document.getElementById('workspace').classList.toggle('dag-reader-closed',_reproReaderClosed);
   _reproEntered=!!remembered;_reproSelected=_reproNav.selected;_reproTier=_reproNav.tier;
   _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproContext=remembered?remembered.context:[];_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproFitNext=!remembered;
@@ -5105,6 +5133,7 @@ function deleteComment(taskPath, commentId) {
    highlight lands on a real row (deep hashes still lazy-load their ancestors
    inside updateSidebar). Sidebar load is awaited but best-effort. */
 document.addEventListener('DOMContentLoaded', async function() {
+  initReproReader();
   initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
   initSidebarEvents();
   initSearchSheet();       /* phone search/filter sheet close-on-selection wiring */

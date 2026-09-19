@@ -92,12 +92,16 @@ def menu(page, title):
     page.locator('.rp-menu > summary').filter(has_text=title).click()
 
 
-@pytest.mark.parametrize('width,height', [(1372, 768), (1030, 768), (390, 844)])
+@pytest.mark.parametrize('width,height', [(1372, 768), (1030, 768), (390, 844), (820, 1180)])
 def test_preview_selection_full_reader_and_canvas_space(browser, workspace, width, height):
     page = browser.new_page(viewport={'width': width, 'height': height})
     errors = []
     page.on('pageerror', lambda exc: errors.append(str(exc)))
     enter(page, workspace['url'])
+    assert page.locator('#task-preview').is_visible(), page.evaluate('({height:document.getElementById("workspace").clientHeight,bounds:reproPaneBounds()})')
+    graph=page.locator('#view-reproduction').bounding_box();reader=page.locator('#task-preview').bounding_box()
+    assert (reader['x'] >= graph['x']+graph['width']) if width>=1100 else (reader['y'] >= graph['y']+graph['height'])
+    page.click('#repro-preview-toggle')
     assert not page.locator('#task-preview').is_visible()
     box = page.locator('.repro-canvas').bounding_box()
     assert box['height'] >= height * .45
@@ -131,6 +135,7 @@ def test_preview_selection_full_reader_and_canvas_space(browser, workspace, widt
 def test_wheel_pinch_safari_gestures_and_keyboard_recovery(browser, workspace):
     page = browser.new_page(viewport={'width': 1030, 'height': 768})
     enter(page, workspace['url'])
+    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
     canvas = page.locator('.repro-canvas')
     before = viewport(page)
     box = canvas.bounding_box()
@@ -205,9 +210,8 @@ def test_menus_scope_removal_and_offline_preview(browser, workspace):
     page.route('http://**/*', lambda route: route.abort())
     page.route('https://**/*', lambda route: route.abort())
     enter(page, workspace['export'], {'roots': [], 'selected': 'step-0-0', 'view': 'graph'})
-    assert not page.locator('#task-preview').is_visible()
+    assert page.locator('#task-preview').is_visible()
     assert page.locator('.repro-node.is-selected').count() == 1
-    page.click('#repro-preview-toggle')
     assert page.locator('#task-preview').is_visible()
     assert 'step-0-0' in page.locator('#repro-detail').inner_text()
     page.locator('[data-rp-action=declaration]').click()
@@ -235,7 +239,7 @@ def test_diagnostics_stay_inside_graph_with_preview_open_or_closed(browser, work
     page.route('**/api/repro/graph*', with_findings)
     enter(page, workspace['url'])
     for preview in (False, True):
-        if preview:
+        if page.locator('#task-preview').is_visible()!=preview:
             page.click('#repro-preview-toggle')
         summary = page.locator('.rp-diagnostics > summary')
         assert 'graph blocked' in summary.inner_text()
@@ -254,6 +258,7 @@ def test_diagnostics_stay_inside_graph_with_preview_open_or_closed(browser, work
 def test_branch_expansion_counts_bounds_anchor_and_history(browser, workspace):
     page = browser.new_page(viewport={'width': 1372, 'height': 768})
     enter(page, workspace['url'])
+    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
     page.locator('.rp-task-title[data-value="analysis-1"]').click()
     page.locator('[data-rp-action=fold][data-value="analysis-1"]').click()
     page.locator('.rp-task-title[data-value="analysis-0"]').click()
@@ -308,9 +313,8 @@ def test_branch_expansion_counts_bounds_anchor_and_history(browser, workspace):
 def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, workspace):
     page = browser.new_page(viewport={'width': 1440, 'height': 1000})
     enter(page, workspace['url'])
-    page.click('#repro-preview-toggle')
-    # Native resizing stores an inline pixel width. Keep that state when narrowing the viewport.
-    page.locator('#task-preview').evaluate('(e)=>e.style.width="600px"')
+    page.locator('#dag-preview-resizer').focus()
+    page.keyboard.press('Shift+ArrowLeft')
     page.set_viewport_size({'width': 390, 'height': 844})
     for selector in ('#task-preview', '[data-rp-action=close-reader]', '.repro-controls > .rp-menu > summary'):
         for box in page.locator(selector).all():
@@ -327,6 +331,7 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
 def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace):
     page = browser.new_page(viewport={'width': 1372, 'height': 900})
     enter(page, workspace['url'])
+    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
     page.evaluate("""() => {
       const ids=['heterogeneity','treasury','elasticity','paper','downstream'];
       const titles=['Heterogeneity estimates','Treasury bounds','Elasticity estimates','Reproduce paper','Publish results'];
@@ -374,6 +379,7 @@ def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes
     routing_fixture = run_path(str(Path(__file__).with_name("navigation_browser.py")))["routing_fixture"]
     page = browser.new_page(viewport={'width': 1440, 'height': 1000})
     enter(page, workspace['url'])
+    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
     page.evaluate("""graph => {
       _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
@@ -396,3 +402,93 @@ def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes
     page.evaluate("drawReproView(document.getElementById('view-reproduction'),_reproData)")
     assert headings.all_text_contents() == ['Dependency group 1', 'Dependency group 2', 'No connections in this view']
     page.close()
+
+
+@pytest.mark.parametrize('width,height,axis', [(1440,900,'width'), (820,1180,'height')])
+def test_preview_divider_drag_keyboard_and_persisted_orientation_sizes(browser, workspace, width, height, axis):
+    page=browser.new_page(viewport={'width':width,'height':height})
+    enter(page,workspace['url'])
+    divider=page.locator('#dag-preview-resizer');reader=page.locator('#task-preview')
+    assert divider.get_attribute('aria-orientation') == ('vertical' if axis=='width' else 'horizontal')
+    before=reader.bounding_box()[axis];position=viewport(page);box=divider.bounding_box()
+    x,y=box['x']+box['width']/2,box['y']+box['height']/2
+    page.mouse.move(x,y);page.mouse.down();page.mouse.move(x-80 if axis=='width' else x,y-80 if axis=='height' else y,steps=8);page.mouse.up()
+    assert reader.bounding_box()[axis] == pytest.approx(before+80,abs=1)
+    assert viewport(page)==position
+    divider.focus();divider.press('Home')
+    assert reader.bounding_box()[axis] == pytest.approx(float(divider.get_attribute('aria-valuemin')),abs=1)
+    divider.press('End')
+    assert reader.bounding_box()[axis] == pytest.approx(float(divider.get_attribute('aria-valuemax')),abs=1)
+    divider.press('ArrowRight' if axis=='width' else 'ArrowDown')
+    preferred=reader.bounding_box()[axis]
+    page.set_viewport_size({'width':390,'height':844} if axis=='width' else {'width':1440,'height':900})
+    page.reload();page.wait_for_selector('.rp-task')
+    page.set_viewport_size({'width':width,'height':height})
+    page.wait_for_timeout(100)
+    assert reader.bounding_box()[axis] == pytest.approx(preferred,abs=1)
+    page.click('#btn-workspace')
+    assert not divider.is_visible()
+    assert page.locator('#task-preview').evaluate('(e)=>getComputedStyle(e).position')!='fixed'
+    page.click('#btn-reproduction')
+    assert reader.bounding_box()[axis] == pytest.approx(preferred,abs=1)
+    page.close()
+
+
+def test_preview_manual_visibility_short_window_and_full_reader_recovery(browser, workspace):
+    page=browser.new_page(viewport={'width':1440,'height':400})
+    enter(page,workspace['url'])
+    assert not page.locator('#task-preview').is_visible()
+    page.set_viewport_size({'width':1440,'height':900});page.wait_for_timeout(100)
+    assert page.locator('#task-preview').is_visible()
+    page.locator('[data-rp-action=full-reader]').click()
+    page.set_viewport_size({'width':390,'height':500});page.wait_for_timeout(100)
+    assert page.locator('#task-preview').is_visible()
+    assert not page.locator('#view-reproduction').is_visible()
+    page.locator('[data-rp-action=full-reader]').click()
+    # Explicit opening in a short portrait window still provides a reachable hide control.
+    page.locator('#repro-preview-toggle').click()
+    assert page.locator('#task-preview').is_visible()
+    assert not page.locator('#view-reproduction').is_visible()
+    reader=page.locator('#task-preview').bounding_box()
+    assert reader['y']+reader['height']<=500
+    assert page.locator('[data-rp-action=full-reader]').inner_text()=='Back to graph'
+    page.locator('[data-rp-action=close-reader]').click()
+    page.set_viewport_size({'width':1440,'height':900});page.reload();page.wait_for_selector('.rp-task')
+    assert not page.locator('#task-preview').is_visible()
+    page.set_viewport_size({'width':820,'height':1180});page.wait_for_timeout(100)
+    assert not page.locator('#task-preview').is_visible()
+    page.click('#repro-preview-toggle');page.reload();page.wait_for_selector('.rp-task')
+    assert page.locator('#task-preview').is_visible()
+    page.close()
+
+
+def test_sidebar_can_read_long_titles_and_restore_large_preference_after_narrow_reload(browser, workspace):
+    page=browser.new_page(viewport={'width':1440,'height':900})
+    enter(page,workspace['url']);page.click('#btn-workspace')
+    divider=page.locator('#sidebar-resizer');box=divider.bounding_box()
+    page.mouse.move(box['x']+box['width']/2,box['y']+80);page.mouse.down();page.mouse.move(700,box['y']+80,steps=10);page.mouse.up()
+    assert float(divider.get_attribute('aria-valuenow'))>680
+    preferred=page.evaluate('sbWidth')
+    divider.focus();divider.press('End')
+    assert float(divider.get_attribute('aria-valuenow'))==1080
+    assert page.locator('#task-preview').bounding_box()['width']>=360
+    page.evaluate('applySidebarWidth('+str(preferred)+');persistSidebarWidth()')
+    page.set_viewport_size({'width':980,'height':900});page.reload();page.wait_for_selector('#sidebar-resizer')
+    assert float(divider.get_attribute('aria-valuenow'))==620
+    assert page.evaluate('sbWidth')==preferred
+    page.set_viewport_size({'width':1440,'height':900});page.wait_for_timeout(100)
+    assert float(divider.get_attribute('aria-valuenow'))==preferred
+    page.close()
+
+
+def test_bottom_preview_divider_accepts_touch_drag(browser, workspace):
+    context=browser.new_context(viewport={'width':820,'height':1180},is_mobile=True,has_touch=True)
+    page=context.new_page();enter(page,workspace['url'])
+    divider=page.locator('#dag-preview-resizer');box=divider.bounding_box();before=page.locator('#task-preview').bounding_box()['height']
+    x,y=box['x']+box['width']/2,box['y']+box['height']/2;cdp=context.new_cdp_session(page)
+    cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
+    for delta in range(10,61,10):cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y-delta}]})
+    cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+    assert page.locator('#task-preview').bounding_box()['height']==pytest.approx(before+60,abs=2)
+    assert divider.evaluate('(e)=>getComputedStyle(e).touchAction')=='none'
+    context.close()

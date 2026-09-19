@@ -39,7 +39,7 @@ def fixture(base):
             steps.append({'name': f'step-{k:03}', 'cmd': f'echo {k}', 'deps': deps, 'outs': [f'out/{k}.txt']})
         import yaml
         tier = 'required' if i % 2 else 'on-demand'
-        text = f'---\ntitle: Analysis {i % 3}\nstatus: in-progress\n---\n\n## Objective\n\nRead {owner}.\n\n## Reproduction\n\n```yaml\n'
+        text = f'---\ntitle: Analysis {i % 3} — Long-horizon heterogeneity estimates and research verification\nstatus: in-progress\n---\n\n## Objective\n\nRead {owner}.\n\n## Reproduction\n\n```yaml\n'
         (path / 'task.md').write_text(text + yaml.safe_dump({'tier': tier, 'steps': steps}, sort_keys=False) + '```\n')
     return root
 
@@ -217,13 +217,14 @@ def run(evidence, snapshot=None):
                     page.keyboard.press('Enter')
                     assert page.locator('#repro-preview-toggle').evaluate('(e)=>e===document.activeElement')
                     page.locator('[data-rp-action=reader]').click()
-                    # Real drag of the native reader resize handle.
+                    # Drag the accessible divider beside the reading pane.
                     reader = page.locator('.detail-panel')
                     box = reader.bounding_box()
                     before = box['width']
-                    page.mouse.move(box['x']+box['width']-8, box['y']+box['height']-8)
+                    divider=page.locator('#dag-preview-resizer').bounding_box()
+                    page.mouse.move(divider['x']+divider['width']/2, divider['y']+divider['height']/2)
                     page.mouse.down()
-                    page.mouse.move(box['x']+box['width']-98, box['y']+box['height']-8, steps=10)
+                    page.mouse.move(divider['x']-90, divider['y']+divider['height']/2, steps=10)
                     page.mouse.up()
                     after = reader.bounding_box()['width']
                     assert abs(after-before) > 40, (before, after)
@@ -240,14 +241,20 @@ def run(evidence, snapshot=None):
                     dashboard._worktree_cache['alternate'] = dashboard._build_worktree_state('alternate', alternate)
                     original = page.evaluate('ACTIVE_WT')
                     saved = page.evaluate('JSON.stringify(_reproNav)')
+                    page.locator('[data-rp-action=full-reader]').click()
                     page.evaluate("async () => {await applyWorktree('alternate','');showView('reproduction');}")
                     page.wait_for_function('_reproData && _reproData.graph.steps.length === 0')
                     page.evaluate("showView('workspace');setActive('archived');showView('reproduction')")
                     page.wait_for_function("document.getElementById('repro-notice').innerText.includes('archived')")
                     assert page.locator('[data-task=archived]').count() == 0
+                    assert page.locator('#task-preview').is_visible()
+                    page.locator('[data-rp-action=close-reader]').click()
                     page.evaluate('(wt)=>applyWorktree(wt,"group-4/task-9")', original)
                     page.wait_for_function('_reproData && _reproData.graph.steps.length === 500')
                     assert page.evaluate('JSON.stringify(_reproNav)') == saved
+                    assert not reader.is_visible()
+                    assert page.locator('#view-reproduction').is_visible()
+                    open_preview(page)
                     assert abs(reader.bounding_box()['width']-after) < 2
                     results['worktreeIsolation'] = True
                 if snapshot:
@@ -300,10 +307,10 @@ def run(evidence, snapshot=None):
                     phone.goto(export.as_uri())
                     phone.locator('#btn-reproduction').tap()
                     phone.wait_for_selector('.rp-task')
-                    assert not phone.locator('#task-preview').is_visible()
+                    assert phone.locator('#task-preview').is_visible()
                     phone.locator('#repro-search').tap();phone.locator('#repro-search').fill('step-499')
                     phone.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').tap()
-                    phone.locator('#repro-preview-toggle').tap()
+                    open_preview(phone)
                     phone.locator('[data-rp-action=declaration]').tap()
                     phone.wait_for_selector('#active-node [data-section="Reproduction"] .rendered-md[data-rendered]')
                     phone.locator('[data-rp-action=full-reader]').tap()
@@ -328,6 +335,7 @@ def run(evidence, snapshot=None):
                 routing.goto(results['live'])
                 routing.click('#btn-reproduction')
                 routing.wait_for_selector('.rp-task')
+                if routing.locator('#task-preview').is_visible(): routing.locator('#repro-preview-toggle').click()
                 for kind in ('cycle', 'fan', 'components'):
                     routing.evaluate("""graph => {
                         _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
@@ -340,6 +348,22 @@ def run(evidence, snapshot=None):
                     routing.locator('.theme-toggle').click()
                     results[f'routing-{kind}'] = routing.evaluate('({nodes:_reproLayoutCache.layout.model.nodes.length,edges:_reproLayoutCache.layout.edges.length,cycleEdges:_reproLayoutCache.layout.edges.filter(e=>e.cycle).length,components:_reproLayoutCache.layout.bands.filter(b=>!b.parent&&!b.isolated).length,isolatedCards:_reproLayoutCache.layout.bands.filter(b=>!b.parent&&b.isolated).reduce((n,b)=>n+b.ids.length,0)})')
                 routing.close()
+                panes=browser.new_page(viewport={'width':1440,'height':900})
+                panes.goto(results['live']);panes.click('#btn-reproduction');panes.wait_for_selector('.rp-task')
+                panes.evaluate('document.fonts.ready')
+                assert panes.locator('#task-preview').is_visible()
+                panes.screenshot(path=str(evidence / 'dag-preview-side.png'),full_page=True,animations='disabled')
+                panes.set_viewport_size({'width':390,'height':844})
+                panes.wait_for_function("document.getElementById('workspace').classList.contains('dag-reader-bottom')")
+                assert panes.locator('#task-preview').is_visible()
+                panes.screenshot(path=str(evidence / 'dag-preview-bottom.png'),full_page=True,animations='disabled')
+                panes.set_viewport_size({'width':1440,'height':900});panes.click('#btn-workspace')
+                panes.locator('#sidebar-resizer').focus()
+                for _ in range(9): panes.keyboard.press('Shift+ArrowRight')
+                assert float(panes.locator('#sidebar-resizer').get_attribute('aria-valuenow'))>480
+                panes.screenshot(path=str(evidence / 'tree-wide-sidebar.png'),full_page=True,animations='disabled')
+                results['responsivePanes']={'side':True,'portraitBottom':True,'sidebarWidth':float(panes.locator('#sidebar-resizer').get_attribute('aria-valuenow'))}
+                panes.close()
                 results['errors'] = errors
                 assert not errors, errors
                 browser.close()
