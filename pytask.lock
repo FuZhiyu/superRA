@@ -19,12 +19,12 @@ state = "1"
 "skills/task-tree/scripts/cli.py" = "1d030d0f298faf6116cb9bd269bae8ff362f04d1fd0d4f66326e2fabf7e99412"
 "skills/task-tree/scripts/plan_dashboard.py" = "4ab854faa0c218c225ab5320c91c5b66decbf1eab773ed027cedcbde4ce90e10"
 "skills/task-tree/scripts/task_comment.py" = "43ba7ca6675619ebd7cd74f5778c7c8a46bf851916112d3a8ce7528f2652f188"
-"skills/task-tree/scripts/templates" = "dir:0c7818926589537d0ce1ce4fb36cb7b3fcdbe70e16c92d2d84134252b43ef5db"
-"skills/task-tree/scripts/tests/navigation_browser.py" = "c261d6cf6c10047df73522895ce858c4698de57a19231fc80e4d3c828e17c107"
+"skills/task-tree/scripts/templates" = "dir:b92569d9df987cbf91bc014711d01efce77d377b41214f897fe1697f780ebf3e"
+"skills/task-tree/scripts/tests/navigation_browser.py" = "12988e649f77ec3648c88dbe1acfce93fa8ad28c4f5685938abfc62ded36e4e7"
 "skills/task-tree/scripts/vendor" = "dir:fac8922a7772de8e5d3d8249da931ee75116b494bcf60c56c1b3c8eff9e4ebc5"
 
 [task.produces]
-"superRA/reproducibility/04-dashboard-view/scalable-navigation/dag-design/attachments/browser" = "dir:ce71488d04199f1c02b3a4fefec70f6455fb6d23a12e5e341ac45c81658418ee"
+"superRA/reproducibility/04-dashboard-view/scalable-navigation/dag-design/attachments/browser" = "dir:532453443cec191509b3d8dfc30410b3e558b99d764eb08334a60318f54eaa80"
 
 [[task]]
 id = "dashboard-dag-design-interaction-check"
@@ -45,11 +45,11 @@ state = "1"
 "skills/task-tree/scripts/cli.py" = "1d030d0f298faf6116cb9bd269bae8ff362f04d1fd0d4f66326e2fabf7e99412"
 "skills/task-tree/scripts/plan_dashboard.py" = "4ab854faa0c218c225ab5320c91c5b66decbf1eab773ed027cedcbde4ce90e10"
 "skills/task-tree/scripts/task_comment.py" = "43ba7ca6675619ebd7cd74f5778c7c8a46bf851916112d3a8ce7528f2652f188"
-"skills/task-tree/scripts/templates" = "dir:0c7818926589537d0ce1ce4fb36cb7b3fcdbe70e16c92d2d84134252b43ef5db"
+"skills/task-tree/scripts/templates" = "dir:b92569d9df987cbf91bc014711d01efce77d377b41214f897fe1697f780ebf3e"
 "skills/task-tree/scripts/test_dashboard.py" = "a07024465b666dfec3aa05379320c0a9353e901559a67bc4420eee3c2de5bac5"
-"skills/task-tree/scripts/tests/navigation_browser.py" = "c261d6cf6c10047df73522895ce858c4698de57a19231fc80e4d3c828e17c107"
-"skills/task-tree/scripts/tests/test_dag_workspace_browser.py" = "716d4dcf72181ec1378ba994d9f23d3c1efa4e7eef6fcdfb313ac146e949debd"
-"skills/task-tree/scripts/tests/test_navigation_projection.py" = "cfdb5d2e806030af8a8581287039413f4c47236335a900adc4be5f6eb80c1eac"
+"skills/task-tree/scripts/tests/navigation_browser.py" = "12988e649f77ec3648c88dbe1acfce93fa8ad28c4f5685938abfc62ded36e4e7"
+"skills/task-tree/scripts/tests/test_dag_workspace_browser.py" = "460b72f2a7361cdd2bdf3d31c6a925656be31c961ea40b47e6791457b4dc3c83"
+"skills/task-tree/scripts/tests/test_navigation_projection.py" = "7a556eb5b8be9c42840f9144cbac5dfdd9651c1a153d0508e61eefa4245e2908"
 "skills/task-tree/scripts/vendor" = "dir:fac8922a7772de8e5d3d8249da931ee75116b494bcf60c56c1b3c8eff9e4ebc5"
 
 [task.produces]

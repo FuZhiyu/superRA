@@ -1,7 +1,7 @@
 {
-  "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
-  "live": "http://127.0.0.1:60558",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-9ppg87qf/superRA",
+  "machine": "macOS-27.0-arm64-arm-64bit",
+  "live": "http://127.0.0.1:62761",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-qvn5jkh1/superRA",
   "browser": "153.0.8010.48",
   "counts": {
     "steps": 500,
@@ -13,21 +13,21 @@
     "search": [
       0.5,
       0.09999999403953552,
-      0.09999999403953552,
-      0.19999998807907104,
-      0.30000001192092896
+      0.10000002384185791,
+      0.20000001788139343,
+      0.19999998807907104
     ],
     "filter": [
-      5.600000023841858,
+      5.299999982118607,
+      2.2999999821186066,
+      2.2999999821186066,
       2.199999988079071,
-      2.7000000178813934,
-      2.9000000059604645,
-      2.899999976158142
+      3.100000023841858
     ],
     "full": [
-      78.90000000596046,
-      79.59999999403954,
-      75.5
+      91.40000000596046,
+      92.2000000178814,
+      87.5
     ]
   },
   "sharedReaderAndHistory": true,
@@ -40,12 +40,23 @@
   "routing-cycle": {
     "nodes": 5,
     "edges": 7,
-    "cycleEdges": 6
+    "cycleEdges": 6,
+    "components": 1,
+    "isolatedCards": 0
   },
   "routing-fan": {
     "nodes": 5,
     "edges": 7,
-    "cycleEdges": 0
+    "cycleEdges": 0,
+    "components": 1,
+    "isolatedCards": 0
+  },
+  "routing-components": {
+    "nodes": 9,
+    "edges": 3,
+    "cycleEdges": 0,
+    "components": 2,
+    "isolatedCards": 4
   },
   "errors": []
 }
