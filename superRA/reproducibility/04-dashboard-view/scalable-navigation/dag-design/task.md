@@ -1,18 +1,19 @@
 ---
-title: Clean, Intuitive DAG Workspace
-status: implemented
+title: Unified Tree and Graph Workspace
+status: in-progress
 depends_on: []
 ---
 
 ## Objective
 
-Remake the DAG workspace into a clean, intuitive interface consistent with the rest of the dashboard, verified on the [Treasury dashboard](http://localhost:8996/?wt=v05-compatibility#/04-treasury-market-bound?repro=%7B%22roots%22%3A%5B%5D%2C%22view%22%3A%22graph%22%7D).
+Unify Tree and Graph navigation around one search, task/status filter, selection, and task reader. Remove Board. Tree prioritizes task reading with a hideable sidebar; Graph prioritizes the map with hideable details.
 
 - Give the graph most of the viewport. Use the dashboard's existing typography, warm neutral surfaces, borders, spacing, and accent palette; keep controls compact and clearly grouped, with secondary options and diagnostic details progressively disclosed.
 - Show the task preview by default when the viewport has useful space: beside the graph in wide windows, below it in narrow, tall windows. Use a real layout split rather than an overlay. Provide an obvious hide/show control consistent with the tree sidebar and a draggable, keyboard-accessible divider for width or height. Remember explicit visibility and preferred dimensions; window resizing must not override a manual hide. Keep graph navigation and selection stable through resizing, closing, reopening, orientation changes, and full-width reading.
 - Support two-finger touchpad scrolling in both axes to pan and pinch to zoom around the pointer, including Safari gestures and Chromium control-wheel events. Keep drag panning, accessible zoom buttons, fit, and keyboard recovery; prevent unintended page zoom or scroll while handling canvas gestures.
 - Use one project map with an always-visible Project overview action, global search, and local task chevrons. Overview collapses all groups and fits the map; selection preserves graph contents and viewport. Folding a selected step's ancestor preserves selection and details, with a Contains selected step indicator and Show in graph recovery.
-- Remove trace modes, subtree/tier filters, scope controls, and expansion-depth controls. Normalize legacy links to the full map while preserving meaningful task/step selection and expansion. Keep URL history, worktree isolation, and offline navigation.
+- Provide one shared Filter panel with task checkboxes and status choices, visible active-filter summaries, and Clear filters recovery. Hidden tasks hide descendants; status matches retain ancestor context. Search opens tasks, steps, and files without changing filters. Switching layouts preserves selection, reader content/scroll, and filter state; each layout retains its own expansion and pane preference. Remove Board UI and runtime/export support.
+- Remove trace modes, reproduction-tier filters, scope controls, and expansion-depth controls. Normalize legacy links to the full map while preserving meaningful task/step selection and expansion. Keep URL history, worktree isolation, and offline navigation.
 - Support relative Markdown step links using `task.md#step-<name>` and same-task `#step-<name>`, with the declaration's existing name as identity. Reveal/select the exact step and validate its owner; report broken references. Dashboard sharing uses `?step=<name>`, and rendered step rows expose the anchor.
 - Bundle file connections by endpoint pair; retain every file in arrow evidence and grouped Uses/Used by lists.
 - Make each dependency arrow independently traceable. Avoid shared line segments that imply a common bus, false connection, or enclosing box; provide distinct routes and readable arrowheads, with source/destination highlighting on hover and keyboard focus. Verify collapsed top-level tasks and the expanded heterogeneity branch without changing dependency semantics.
@@ -26,7 +27,7 @@ Remake the DAG workspace into a clean, intuitive interface consistent with the r
 
 - Responsive panes: choose the side/bottom breakpoint from usable graph and reading widths; for very short windows, avoid opening a pane that leaves neither area useful. Persist manual visibility separately from automatic placement, and remember side width and bottom height separately so rotating/resizing does not destroy the preferred sizes. Match tree-sidebar divider and hide-control affordances, including accessible labels and keyboard actions. Test fresh defaults, manual hide/reopen, reload, wide/portrait/short viewports, both drag axes, bounds, and tree/DAG switching.
 
-- The existing navigation task owns the functional model. This temporary child owns the substantial visual and interaction redesign on that same runtime surface; the general dashboard task does not own DAG-specific presentation.
+- This child owns the shared navigation controls and the different Tree/Graph pane priorities on the existing workspace runtime.
 - Initial Safari review at roughly 1030 × 768 showed controls wrapping to several rows, expanded diagnostic prose above the graph, and a reader consuming about one third of the workspace. The graph starts near the bottom edge. Chrome at 1372 × 768 has the same hierarchy problem.
 - Runtime owners: [dashboard.js](../../../../../skills/task-tree/scripts/templates/dashboard.js), [dashboard.css](../../../../../skills/task-tree/scripts/templates/dashboard.css), and [base.html](../../../../../skills/task-tree/scripts/templates/base.html). Port 8996 serves the temporary navigation checkout; the research dashboard on port 8653 serves this development checkout.
 - Execution: main-agent implementation and self-review in interactive mode. No generated runtime assets.
@@ -89,12 +90,4 @@ steps:
 
 ## Results
 
-The [graph navigator](../../../../../skills/task-tree/scripts/templates/dashboard.js) uses one project map with Project overview, global search, local chevrons, and persistent selection. Trace modes, scope controls, tier filtering, expansion-depth controls, and the duplicate step list are removed. Legacy URLs normalize to the full map; folding retains selected-step details and a containing-task indicator. Show in graph restores the step. Selection and refresh preserve the camera; Back/Forward uses one history entry per navigation.
-
-- **Step citations:** [the contract](../../../../../skills/task-tree/references/task-file-contract.md#step-references) defines relative and same-task links. Live and offline links reveal the declared step, reject wrong owners, and expose matching rendered anchors. [Link checks](../../../../../skills/task-tree/scripts/test_step_links.py) cover missing targets, wrong owners, code examples, and task moves.
-- **Connections:** one arrow per visible endpoint pair retains every file. Uses and Used by appear before technical file lists, grouping related-step links and their file evidence.
-- **Verification:** 391 dashboard/link tests passed. The registered interaction check passed 40 tests, including live/offline step links, legacy URLs, overview, folding, history, grouped evidence, responsive panes, gestures, and layout projection. The [500-step browser fixture](../../../../../skills/task-tree/scripts/tests/navigation_browser.py) passed with 1,494 file connections, worktree isolation, live updates, removal recovery, and offline navigation. [Recorded browser results](attachments/browser/browser-results.json) and [desktop evidence](attachments/browser/dag-desktop.png) identify the environment and timings. Native Safari and physical trackpad gestures were unavailable; Chrome exercises the platform event handlers.
-- **Reproduction:** scoped builds of `dashboard-dag-design-browser` and `dashboard-dag-design-interaction-check` succeeded; matching status reports both fresh. Their outputs and [lock](../../../../../pytask.lock) record actual execution.
-- **Research view:** a session-only read-only snapshot of the [research dashboard](http://localhost:8653/?wt=heterogeneity-reproduction) exercised its legacy construction URL, peer-preserving selection, overview/reveal, and phone width with 92 steps and 274 file connections. Research data and declarations were unchanged. Port 8653 serves this checkout's updated source; the separate port 8996 dashboard was restored after correcting the launch directory.
-
-Independent review has not run.
+The prior map simplification and step-link support are implemented. The approved revision now unifies Tree/Graph controls and selection, adds explicit task/status filtering, and removes Board. Implementation and fresh verification are in progress.

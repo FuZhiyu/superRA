@@ -1,6 +1,14 @@
-# Project map navigation
+# Unified Tree and Graph navigation
 
-The graph is one map of the active project. Only explicit task expansion changes the level of detail; selecting or inspecting never filters nodes.
+Tree and Graph share search, task/status filters, task/step selection, and one reader. Tree prioritizes the task with a hideable navigation sidebar; Graph prioritizes the map with hideable details. Board is removed. Selecting or inspecting never changes filters.
+
+## Shared controls
+
+- One search finds tasks, steps, output files, and task text; results open in the current layout. Hidden results remain searchable and open in the reader with a Hidden by filters notice.
+- One Filter panel offers task checkboxes and task-status choices. Hiding a task hides descendants; status filtering retains ancestors as context. Active filters remain visible with Clear filters recovery.
+- Switching layouts preserves filters, selection, reader content and scroll. Each layout retains its expansion and pane preferences. Tree shows steps beneath their owners.
+- Uses/Used by keeps connections to hidden tasks discoverable and labels them Hidden from navigation.
+- Filter and selection state survive links, history, reload, and worktree switching.
 
 ## Navigation
 
@@ -28,7 +36,7 @@ Step citations use relative Markdown links to `task.md#step-<name>` or same-task
 - Overview is available from deep legacy URLs, selected steps, and collapsed groups.
 - Selection preserves siblings, nodes, camera position, and unrelated expansions.
 - Folding retains selected-step details; Show in graph restores the step.
-- Search reaches any task/step across tiers; no trace/scope/filter controls remain.
+- Search reaches any task/step across tiers without changing filters; task/status filters apply identically to Tree and Graph. No trace/scope/tier controls remain.
 - Grouped arrows and Uses/Used by preserve all evidence.
 - Relative, same-task, shared, invalid, and offline step links behave consistently.
 - Existing comments, history, refresh, responsive reader sizing, dark mode, keyboard/touch input, logical-only tasks, and error visibility remain intact.
