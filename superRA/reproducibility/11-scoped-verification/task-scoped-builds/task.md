@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-Implement one task/step selection contract for reproduction build, status, and preview: execute only the selected steps by default, expand to upstream producers explicitly, and report scoped success separately from upstream freshness. The [CLI and evidence design](attachments/design.md) defines the contract and identifies the remaining researcher preferences to settle before implementation.
+Implement one task/step selection contract for reproduction build, status, and preview: execute only the selected steps by default using existing upstream inputs, expand to upstream producers explicitly, and report scoped success separately from upstream freshness. The [CLI and evidence design](attachments/design.md) defines the contract; existing boundary inputs require neither an override nor successful-build evidence.
 
 - Preserve the complete declared graph, step identities, and existing successful-run evidence. A run boundary never rewrites dependencies or accepts a stale producer as fresh.
 - Cover the CLI, engine bridge, scoped evidence, task-reader/dashboard reporting, workflow loads and completion gates, documentation, and migration under the design's ownership map. Register executable support for retained results by default, including interactive work and initially unconfigured trees.

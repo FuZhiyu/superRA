@@ -8,7 +8,7 @@ The researcher selected task/step targets, task-scoped execution without a scope
 
 Canonical selectors are bare task paths and `task#step`. During migration, existing bare step names remain accepted only when unambiguous.
 
-One preference remains open: whether unverified saved inputs require `--use-existing`. The specification below recommends that override. Settle this preference before implementation; no runner behavior has changed at planning time.
+Task-scoped execution uses existing upstream inputs without an override or successful-build baseline. It records unverified provenance when appropriate. These scope, selector, and saved-input choices are settled; implementation has not started.
 
 ## Selection determines the execution boundary
 
@@ -45,9 +45,9 @@ Expansion crosses tiers but adds only actual producer ancestors, never all steps
 
 ## Saved-input reuse does not certify the producer
 
-For an out-of-scope registered producer, inspect the consumed artifact against trustworthy successful output evidence. An existing artifact matching that evidence is usable even when its producer is stale or its last execution failed. Producer state remains unchanged. Unproduced external inputs retain the existing declared-boundary behavior.
+Use existing artifacts from out-of-scope producers by default, including when their producer is stale or failed, their bytes differ from the last successful output, or no successful-build record exists. Available successful output evidence informs provenance reporting, not permission to execute. Producer state remains unchanged. Unproduced external inputs retain the existing declared-boundary behavior.
 
-Missing inputs block the scoped run and name their producer. Changed output bytes or an unavailable successful baseline require the explicit `--use-existing` override. It authorizes the present bytes of the reported boundary artifacts for this invocation only; preview lists them. It never blesses the producer, clears a failure, bypasses missing files, or serves as reviewed acceptance. The successful consumer receipt records that provenance as unverified. Ordinary later builds may reuse that consumer execution while its exact inputs remain unchanged; they must not silently authorize different boundary bytes.
+Missing inputs block the scoped run and name their producer; existing inputs require no `--use-existing` flag or approval gate. Preview and execution reports identify the boundary files and whether they match successful output evidence, differ from it, or lack it. The consumer receipt records the bytes actually used and their provenance. Reuse never certifies the producer, clears its failure, or serves as reviewed acceptance. Changed boundary bytes invalidate selected consumers and are used by their next scoped rebuild without an extra override. Content validity remains the responsibility of the selected producers and checks; even a partially written upstream artifact may be attempted, with failures reported by those steps.
 
 Hash the actual consumed artifacts when establishing the boundary. A sidecar alone cannot prove that a failed producer left its output intact. Reuse trustworthy recorded full digests where available; preserve efficient warm hashing. Record producer identity, logical/resolved input paths, content fingerprints, and baseline/provenance classification with execution evidence. Detect boundary changes during execution and withhold a successful receipt. No mandatory copy of large datasets is introduced.
 
@@ -91,7 +91,8 @@ Use disposable shell-step fixtures; assert commands actually executed as well as
 | --- | --- |
 | Task, nested task, umbrella, qualified step, mixed/overlapping targets | Exact selection; no implicit upstream or downstream execution; ambiguous/invalid/empty selection diagnostics |
 | B/C selected; A stale or failed; successful saved A output intact | B/C execute as needed; A untouched; local status passes and upstream status exposes A |
-| Missing, changed, or unverified boundary; failed A partially overwrites an output | No silent expansion or reuse; explicit override records exact bytes and unverified provenance |
+| Missing boundary | Block and name the missing input/producer; no automatic scope expansion |
+| Changed or unverified boundary; failed A partially overwrites an output | Attempt selected work with existing bytes without an override; record provenance, invalidate affected consumers, and preserve producer failure; selected checks may reject the content |
 | Boundary mutation during a run; sidecar-backed input | No false successful receipt or trust based solely on a sidecar |
 | A/C selected with B omitted | C consumes saved B; diagnostics retain the omitted producer; no accidental B execution |
 | Scope, upstream expansion, force, and both together | Exact executed sets across tiers; force never expands scope by itself |
