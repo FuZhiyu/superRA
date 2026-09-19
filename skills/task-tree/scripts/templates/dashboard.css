@@ -1809,73 +1809,47 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-legend-item.rp-external { border-left-color: var(--rp-external-t); }
 .repro-legend-item.is-kind { border-style: dashed; }
 
-/* Node detail: command, files, owner task, reason, duration, log tail. */
-.repro-detail {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--bg-card);
-  box-shadow: var(--shadow-sm);
-}
-.repro-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-.repro-detail-name {
-  font-family: var(--font-mono);
-  font-size: var(--fs-emph);
-  color: var(--text);
-}
-.repro-detail dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 14px;
-  margin: 0;
-  font-size: var(--fs-meta);
-}
-.repro-detail dt {
-  color: var(--text-mute);
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding-top: 2px;
-}
-.repro-detail dd { margin: 0; color: var(--text-mid); }
-.repro-detail dd code,
-.repro-detail dd .repro-path {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  color: var(--text);
-  word-break: break-all;
-}
-.repro-detail dd ul { margin: 0; padding-left: 16px; }
-.repro-detail .repro-log {
-  margin: 8px 0 0;
-  padding: 8px 10px;
-  max-height: 220px;
-  overflow: auto;
-  border-radius: 5px;
-  background: var(--bg-alt);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  color: var(--text-mid);
-  white-space: pre-wrap;
-}
-.repro-detail .repro-task-link {
-  color: var(--accent);
-  cursor: pointer;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-}
-.repro-detail .repro-task-link:hover { text-decoration: underline; }
+/* Steps and task prose occupy the same reader, with the task breadcrumb retained. */
+.step-reading #active-node, .step-reading #children-dag { display:none; }
+.repro-detail { max-width:720px;margin:0 auto;padding:0 0 24px; color:var(--text); font-family:var(--font-text); font-size:var(--fs-body); line-height:1.55; }
+.repro-detail-context, .repro-detail-actions, .repro-section-head { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+.repro-detail-context { padding:4px 0 18px;color:var(--text-mute);font-size:var(--fs-meta); }
+.repro-detail-context .hc-btn { border:0;background:none;padding-left:0;color:var(--accent); }
+.repro-detail-head { margin-bottom:16px; }
+.repro-detail-title { font-family:var(--font-display);font-size:var(--fs-title);font-weight:600;line-height:1.25;margin:0 0 8px;overflow-wrap:anywhere; }
+.repro-detail-name { display:block;font-family:var(--font-mono);font-size:var(--fs-meta);color:var(--text-mute);overflow-wrap:anywhere; }
+.repro-status-line { display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--text-mid);margin-bottom:16px;overflow-wrap:anywhere; }
+.repro-status-line .repro-step-state { padding:3px 8px;border-radius:4px; }
+.repro-detail-actions { justify-content:flex-start;padding-bottom:20px;border-bottom:1px solid var(--border); }
+.repro-detail h3 { font:600 var(--fs-emph) var(--font-text);margin:0; }
+.repro-detail h3 span, .repro-disclosure summary > span { color:var(--text-mute);font-size:var(--fs-meta);font-weight:400;margin-left:6px; }
+.repro-detail h4 { font:600 var(--fs-body) var(--font-text);margin:0 0 8px; }
+.repro-detail-section { padding:20px 0;border-bottom:1px solid var(--border-lt); }
+.repro-detail .repro-hint { color:var(--text-mute);font-size:var(--fs-meta);margin:6px 0 10px; }
+.repro-files { list-style:none;padding:0;margin:10px 0 0; }
+.repro-files li { padding:10px 12px;background:var(--bg-card);border:1px solid var(--border-lt);border-radius:5px;margin:6px 0;overflow-wrap:anywhere; }
+.repro-file-name { font:500 var(--fs-body) var(--font-mono); }
+.repro-file-name a { color:var(--accent);text-decoration:none; }
+.repro-file-name a:hover { text-decoration:underline; }
+.repro-file-dir { color:var(--text-mute);font:var(--fs-meta)/1.6 var(--font-mono);margin-top:4px; }
+.repro-file-note { color:var(--text-mid);font-size:var(--fs-meta);margin-top:6px; }
+.repro-command, .repro-log { background:var(--bg-alt);border:1px solid var(--border-lt);border-radius:5px;padding:12px;margin:10px 0 0;font:var(--fs-meta)/1.7 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere; }
+.repro-command code { font:inherit; }
+.repro-copy-status { font-size:var(--fs-meta);color:var(--text-mid); }
+.repro-disclosure { border-bottom:1px solid var(--border-lt);padding:0; }
+.repro-detail-section > .repro-disclosure { border-bottom:0; }
+.repro-disclosure > summary { cursor:pointer;padding:14px 0;font-weight:500;color:var(--text); }
+.repro-disclosure > summary:hover { color:var(--accent); }
+.repro-disclosure-body { padding:0 0 16px;min-width:0; }
+.repro-disclosure-body > section + section { margin-top:20px; }
+.repro-detail .repro-related { margin-bottom:12px; }
+.repro-detail .repro-related .hc-btn { border:0;background:none;color:var(--accent);padding-left:0; }
+.repro-detail .repro-related ul { margin:4px 0;padding-left:16px;color:var(--text-mid); }
+.repro-detail .repro-path { font:var(--fs-meta)/1.6 var(--font-mono);overflow-wrap:anywhere; }
+.repro-detail .repro-log { max-height:240px;overflow:auto; }
+.repro-params { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:8px;margin:0;overflow-wrap:anywhere; }
+.repro-params dd { margin:0; }
+.repro-steps tr.is-selected { background:var(--accent-soft);outline:1px solid var(--accent);outline-offset:-1px; }
 
 .repro-empty {
   padding: 28px 20px;

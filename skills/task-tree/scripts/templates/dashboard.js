@@ -1477,14 +1477,18 @@ function reproReaderControls(){
   if(host)host.parentElement.style.setProperty('--dag-reader-offset',(host.offsetHeight+12+parseFloat(getComputedStyle(host.parentElement).paddingTop||0))+'px');
 }
 async function reproOpenDeclaration() {
-  reproSetReader(true);
-  _reproReaderFull=true;
-  document.getElementById('workspace').classList.add('dag-full-reader');reproReaderControls();
-  var path=activePath,node=document.querySelector('#active-node .task-node');
-  if(!node||node.dataset.path!==path)await loadActiveNode(path);
+  var selected=_reproSelected;
+  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeSteps();
+  if(location.hash!==reproHash())history.pushState({wt:ACTIVE_WT},'',reproHash());
+  if(currentView==='reproduction'){
+    reproSetReader(true);_reproReaderFull=true;
+    document.getElementById('workspace').classList.add('dag-full-reader');reproReaderControls();
+  }
+  var path=activePath;
+  await loadActiveNode(path);
   if(activePath!==path)return;
   var section=document.querySelector('#active-node [data-section="Reproduction"]');
-  if(section){var content=section.querySelector('.section-content');if(content&&!content.classList.contains('open'))toggleSection(section.querySelector('.section-toggle'),{stopPropagation:function(){}});section.scrollIntoView({block:'start'});}
+  if(section){var content=section.querySelector('.section-content');if(content&&!content.classList.contains('open'))toggleSection(section.querySelector('.section-toggle'),{stopPropagation:function(){}});section.scrollIntoView({block:'start'});var row=document.getElementById('step-'+selected);if(row)row.classList.add('is-selected');}
 }
 function reproFocus(path) {
   loadReproData(false).then(function(){
@@ -1705,11 +1709,12 @@ function onReproClick(event) {
     if(action==='task')reproSelectTask(value);
     else if(action==='find-task'||action==='focus'||action==='explore')reproFocus(value);
     else if(action==='overview'||action==='clear'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
-    else if(action==='show-selected'){if(_reproSelected)revealReproStep(_reproSelected);else reproFocus(activePath);}
+    else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
     else if(action==='reader')reproSetReader(_reproReaderClosed);
     else if(action==='declaration')reproOpenDeclaration();
+    else if(action==='copy-command')reproCopyCommand(control);
     else if(action==='fold'){
       var expanded=new Set(_reproNav.expanded||[]);_reproPreserve='task:'+value;
       if(expanded.has(value))expanded.delete(value);else expanded.add(value);
@@ -1768,47 +1773,74 @@ function selectReproStep(name) {
     p.classList.toggle('is-lit', !!edge&&edge.evidence.some(function(r){return (r.from||r.producer)===name||(r.to||r.consumer)===name;}));
   });
   renderReproDetail(name);
+  syncTreeSteps();
+  var reader=document.getElementById('task-preview');if(reader)reader.scrollTop=0;
+  var heading=document.querySelector('.repro-detail-title');if(heading)heading.focus({preventScroll:true});
 
 }
 
+function reproFileList(files) {
+  if (!files.length) return '<p class="repro-hint">No files declared.</p>';
+  return '<ul class="repro-files">' + files.map(function(file) {
+    var ref=file.path||file, logical=ref.logical||'', resolved=ref.resolved||logical;
+    var slash=logical.lastIndexOf('/'), leaf=logical.slice(slash+1), dir=logical.slice(0,slash+1);
+    var href=REPO_FILE_BASE?repoFileHref(resolved):vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved);
+    var link='<a href="'+escapeAttr(href)+'" target="_blank"'+(window.LOCAL_OPEN&&!REPO_FILE_BASE?' data-open-path="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
+    return '<li><div class="repro-file-name">'+link+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
+      +(file.note?'<div class="repro-file-note">'+escapeHtml(file.note)+'</div>':'')+'</li>';
+  }).join('')+'</ul>';
+}
+function reproDisclosure(key, label, content, open) {
+  return '<details class="repro-disclosure" data-detail-section="'+key+'"'+(open?' open':'')+'><summary>'+label+'</summary><div class="repro-disclosure-body">'+content+'</div></details>';
+}
 function renderReproDetail(name) {
-  var host = document.getElementById('repro-detail');
-  if (!host) return;
-  if (!name || !_reproData || _reproInspectorClosed) { host.innerHTML = ''; return; }
-  var step = (_reproData.graph.steps || []).filter(function(s) { return s.name === name; })[0];
-  if (!step) { host.innerHTML = ''; return; }
-  var entry = reproStatusIndex(_reproData)[name];
-  var state = reproStateOf(entry);
-  var rows = '';
-  rows += reproDetailRow('State', '<span class="repro-glyph">' + (REPRO_GLYPHS[state] || '?')
-    + '</span> ' + escapeHtml(state) + (entry ? ' — ' + escapeHtml(entry.reason) : ''));
-  if (entry && entry.local_status && entry.local_status !== state) rows += reproDetailRow('For saved inputs', escapeHtml(entry.local_status) + ' — ' + escapeHtml(entry.local_reason || ''));
-  if (entry && entry.boundary_inputs && entry.boundary_inputs.length) rows += reproDetailRow('Saved input evidence', entry.boundary_inputs.map(function(b) { return '<div>' + escapeHtml(b.logical) + ' — ' + escapeHtml(b.provenance) + ' (' + escapeHtml(b.producer) + ')</div>'; }).join(''));
-  rows += reproDetailRow('Owner task', '<button class="repro-task-link" type="button" data-path="'
-    + escapeAttr(step.task) + '">' + escapeHtml(reproTaskTitle(step.task))
-    + '</button>');
-  if (entry && entry.acceptance) rows += reproDetailRow('Reviewed evidence', '<details><summary>' + escapeHtml(entry.acceptance.reason || 'Reviewed unchanged output') + '</summary><pre>' + escapeHtml(Object.keys(entry.acceptance.evidence||{}).join('\n')) + '</pre></details>');
-  var related = reproProject(_reproData.graph,_reproNav,[]);
-  ['incoming','outgoing'].forEach(function(direction){
-    var connections={};(related[direction][name]||[]).forEach(function(e){var other=direction==='incoming'?e.from:e.to;(connections[other]||(connections[other]=[])).push(e.via);});
-    rows+=reproDetailRow(direction==='incoming'?'Uses':'Used by',Object.keys(connections).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+(!workspaceTaskMatches(related.byName[other].task)?'<span class="repro-hint">Hidden from navigation</span>':'')+reproPathList(Array.from(new Set(connections[other])))+'</div>';}).join('')||'—');
+  var host=document.getElementById('repro-detail');
+  if(!host)return;
+  var step=_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===name;});
+  var visible=!!step&&!_reproInspectorClosed;
+  document.getElementById('task-preview').classList.toggle('step-reading',visible);
+  if(!visible){host.innerHTML='';host.removeAttribute('data-step');return;}
+  var same=host.dataset.step===name, previousState=host.dataset.state, opened=new Set(Array.from(host.querySelectorAll('details[open]')).map(function(el){return el.dataset.detailSection;}));
+  var entry=reproStatusIndex(_reproData)[name], state=reproStateOf(entry), related=reproProject(_reproData.graph,_reproNav,[]);
+  var external={};(_reproData.graph.external_inputs||[]).filter(function(e){return (e.consumers||[]).indexOf(name)!==-1;}).forEach(function(e){external[e.logical]=e;});
+  var inputs=(step.deps||[]).map(function(d){
+    var origins=(step.dependency_origins&&step.dependency_origins[d.logical]||[]).map(function(o){return typeof o==='string'?o:({declared:'Declared input',script:'Script',include:'Included source',environment:'Environment'}[o.kind]||o.kind)+(o.via?' via '+o.via:'');});
+    if(external[d.logical])origins.push(external[d.logical].exists?'External input · available':'External input · missing');
+    return {path:d,note:origins.join(' · ')};
   });
-  rows += reproDetailRow('Command', '<code>' + escapeHtml(step.cmd_logical || step.cmd) + '</code>');
-  rows += reproDetailRow('Tier', escapeHtml(step.tier) + (step.kind === 'check' ? ' · check step' : ''));
-  rows += reproDetailRow('Input files', reproPathList((step.deps || []).map(function(d) { var origins=(step.dependency_origins && step.dependency_origins[d.logical] || []).map(function(o){return typeof o==='string'?o:({declared:'Declared input',script:'Script',include:'Included source',environment:'Environment'}[o.kind]||o.kind)+(o.via?' via '+o.via:'');}).join(', ');return d.logical+(origins?' · '+origins:''); })));
-  var external=(_reproData.graph.external_inputs||[]).filter(function(e){return JSON.stringify(e).indexOf(name)>=0;});
-  if(external.length) rows += reproDetailRow('External inputs','<pre>'+escapeHtml(JSON.stringify(external,null,2))+'</pre>');
-  rows += reproDetailRow('Output files', reproPathList((step.outs || []).map(reproOutLabel)));
-  if (entry && entry.duration != null) {
-    rows += reproDetailRow('Last run', reproDuration(entry.duration)
-      + (entry.last_run ? ', ' + new Date(entry.last_run * 1000).toLocaleString() : ''));
-  }
-  var log = entry && entry.log_tail
-    ? '<pre class="repro-log">' + escapeHtml(entry.log_tail) + '</pre>' : '';
-  host.innerHTML = '<div class="repro-detail"><div class="repro-detail-head">'
-    + '<span class="repro-detail-name">' + escapeHtml(name) + '</span>'
-    + reproButton('Open declaration','declaration') + reproButton('Close', 'close-detail') + '</div>'
-    + '<dl>' + rows + '</dl>' + log + '</div>';
+  var outs=(step.outs||[]).map(function(o){return {path:o.path,note:o.sidecar?'Freshness checked via '+o.sidecar.logical:''};});
+  var connections=['incoming','outgoing'].map(function(direction){
+    var grouped={};(related[direction][name]||[]).forEach(function(e){var other=direction==='incoming'?e.from:e.to;(grouped[other]||(grouped[other]=[])).push(e.via);});
+    return '<section><h4>'+(direction==='incoming'?'Uses':'Used by')+'</h4>'+(Object.keys(grouped).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+(!workspaceTaskMatches(related.byName[other].task)?'<span class="repro-hint">Hidden from navigation</span>':'')+reproPathList(Array.from(new Set(grouped[other])))+'</div>';}).join('')||'<p class="repro-hint">No connected steps.</p>')+'</section>';
+  }).join('');
+  var evidence='';
+  if(entry&&entry.local_status&&entry.local_status!==state)evidence+='<p><strong>For saved inputs: '+escapeHtml(entry.local_status)+'</strong> — '+escapeHtml(entry.local_reason||'')+'</p>';
+  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,note:b.provenance+' · '+b.producer};}));
+  if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>'+reproPathList(Object.keys(entry.acceptance.evidence||{}));
+  if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
+  else if(entry&&entry.duration!=null)evidence+='<p>Duration: '+reproDuration(entry.duration)+'</p>';
+  if(entry&&entry.log_tail)evidence+='<h4>Run log</h4><pre class="repro-log">'+escapeHtml(entry.log_tail)+'</pre>';
+  var command=step.cmd||step.cmd_logical||'', declared=step.cmd_logical||command;
+  var code=escapeHtml(command);if(window.hljs&&hljs.getLanguage('bash'))code=hljs.highlight(command,{language:'bash',ignoreIllegals:true}).value;
+  var title=name.replace(/[-_]+/g,' ');title=title.charAt(0).toUpperCase()+title.slice(1);
+  host.dataset.step=name;host.dataset.state=state;
+  host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+' · '+escapeHtml(step.tier)+'</span></div>'
+    +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
+    +'<div class="repro-status-line"><span class="repro-step-state rp-'+state+'"><span class="repro-glyph">'+(REPRO_GLYPHS[state]||'?')+'</span> '+escapeHtml(state)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'
+    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
+    +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
+    +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
+    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproFileList(outs.slice(0,3))+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3)),opened.has('outputs')):'')+'</section>'
+    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>',reproFileList(inputs),opened.has('inputs'))
+    +reproDisclosure('connections','Connected steps <span>'+new Set((related.incoming[name]||[]).map(function(e){return e.from;}).concat((related.outgoing[name]||[]).map(function(e){return e.to;}))).size+'</span>',connections,opened.has('connections'))
+    +(Object.keys(step.params||{}).length?reproDisclosure('params','Parameters','<dl class="repro-params">'+Object.keys(step.params).map(function(key){return reproDetailRow(escapeHtml(key),'<code>'+escapeHtml(JSON.stringify(step.params[key]))+'</code>');}).join('')+'</dl>',opened.has('params')):'')
+    +(evidence?reproDisclosure('evidence','Run & evidence',evidence,opened.has('evidence')||(state==='failed'&&(!same||previousState!=='failed'))):'')+'</article>';
+}
+async function reproCopyCommand(button) {
+  var step=_reproData&&_reproData.graph.steps.find(function(s){return s.name===_reproSelected;});if(!step)return;
+  var message=document.querySelector('#repro-detail .repro-copy-status');
+  try{await navigator.clipboard.writeText(step.cmd||step.cmd_logical||'');button.textContent='Copied';if(message)message.textContent='Command copied.';}
+  catch(e){if(message)message.textContent='Could not copy. Select the command text to copy it.';}
 }
 
 function reproDetailRow(label, valueHtml) {
@@ -2301,7 +2333,8 @@ async function loadActiveNode(path) {
     if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);
   } catch (e) {
     if (token !== loadActiveNode._token) return;
-    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + escapeHtml(e.message) + '</p><button type="button" class="hc-btn" id="retry-task-load">Retry</button>';
+    region.querySelector('#retry-task-load').onclick=function(){loadActiveNode(path);};
     setTabTitle('');   /* same card/tab agreement as the not-ok branch above */
   }
 }

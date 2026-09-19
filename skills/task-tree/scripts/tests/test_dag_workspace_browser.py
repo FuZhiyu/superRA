@@ -490,6 +490,7 @@ def test_step_markdown_links_shared_urls_and_wrong_owner(browser, workspace, sur
     page.wait_for_selector('#repro-node-step-0-0')
     assert page.evaluate('_reproSelected') == 'step-0-0'
     assert page.locator('.rp-task[data-task="analysis-3"]').count() == 1
+    page.locator('#repro-detail [data-rp-action=task]').click()
     page.get_by_role('link', name='Other step', exact=True).click()
     page.wait_for_selector('#repro-node-step-1-2')
     assert page.evaluate('_reproSelected') == 'step-1-2'
@@ -510,6 +511,7 @@ def test_connection_details_group_files_without_losing_evidence(browser, workspa
     page = browser.new_page(viewport={'width': 1372, 'height': 900})
     enter(page, workspace['url'], {'expanded': ['analysis-0'], 'selected': 'step-0-0'})
     page.evaluate("_reproData.graph.step_edges.push({from:'step-0-0',to:'step-0-1',via:'out/extra.txt'});drawReproView(document.getElementById('view-reproduction'),_reproData)")
+    page.locator('[data-detail-section=connections] > summary').click()
     links = page.locator('#repro-detail [data-rp-action=related][data-value="step-0-1"]')
     assert links.count() == 1
     evidence = links.locator('..').inner_text()
@@ -685,4 +687,115 @@ def test_selection_during_live_refresh_is_not_replaced(browser, workspace):
     assert page.evaluate('activePath') == 'analysis-1'
     assert page.evaluate('_reproSelected') == 'step-1-2'
     assert page.evaluate('currentView') == 'reproduction'
+    page.close()
+
+
+@pytest.mark.parametrize('surface', ['url', 'export'])
+def test_step_reader_tree_history_command_and_task_return(browser, workspace, surface):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    errors = []
+    page.on('pageerror', lambda exc: errors.append(str(exc)))
+    page.goto(workspace[surface] + '#/analysis-0')
+    page.get_by_role('link', name='Own step', exact=True).click()
+    page.wait_for_selector('.repro-detail-title')
+    assert not page.locator('#active-node').is_visible()
+    assert page.locator('#crumbs').is_visible()
+    assert page.locator('.repro-command').inner_text() == 'echo step-0-0'
+    assert page.locator('.repro-file-name a').first.inner_text() == '0-0.txt'
+    page.evaluate("window.copiedCommand='';Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedCommand=value;}}})")
+    page.get_by_role('button', name='Copy command', exact=True).click()
+    page.wait_for_function("copiedCommand==='echo step-0-0'")
+    page.locator('[data-detail-section=connections] > summary').click()
+    page.locator('[data-rp-action=related][data-value="step-0-1"]').click()
+    page.wait_for_function("_reproSelected==='step-0-1'")
+    assert page.locator('[data-tree-step="step-0-1"]').get_attribute('aria-current') == 'true'
+    page.go_back()
+    page.wait_for_function("_reproSelected==='step-0-0'")
+    page.reload()
+    page.wait_for_selector('.repro-detail-title')
+    assert not page.locator('#active-node').is_visible()
+    page.locator('#repro-detail [data-rp-action=show-selected]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    assert page.evaluate('currentView') == 'reproduction'
+    page.locator('#repro-detail [data-rp-action=task]').click()
+    page.wait_for_selector('#active-node .active-node-title')
+    assert page.evaluate('_reproSelected') == ''
+    assert page.locator('#repro-detail').is_hidden()
+    assert 'Load error' not in page.locator('#active-node').inner_text()
+    assert not errors
+    page.close()
+
+
+@pytest.mark.parametrize('width,theme', [(390, 'light'), (1440, 'dark')])
+def test_step_reader_evidence_disclosure_and_file_metadata(browser, workspace, width, theme):
+    page = browser.new_page(viewport={'width': width, 'height': 900})
+    enter(page, workspace['url'], {'selected': 'step-0-0', 'expanded': ['analysis-0']})
+    page.evaluate("""() => {
+      document.documentElement.dataset.theme = '""" + theme + """';
+      const s=_reproData.graph.steps.find(s=>s.name==='step-0-0');
+      s.cmd='python "script with spaces.py" --input data.csv';s.cmd_logical='${PYTHON} "script with spaces.py" --input data.csv';
+      s.deps=[{logical:'data/source.csv',resolved:'data/source.csv'}];
+      s.outs=Array.from({length:5},(_,i)=>({path:{logical:'out/result-'+i+'.csv',resolved:'out/result-'+i+'.csv'}}));
+      s.outs[0].sidecar={logical:'out/result-0.hash'};
+      s.params={window:4};
+      _reproData.graph.external_inputs=[{logical:'data/source.csv',resolved:'data/source.csv',consumers:['step-0-0'],exists:false}];
+      const entry=_reproData.status.steps.find(s=>s.name==='step-0-0');
+      Object.assign(entry,{status:'failed',reason:'Command failed',log_tail:'Traceback: missing source.csv',last_run:1700000000,duration:2});
+      renderReproDetail('step-0-0');
+    }""")
+    assert page.locator('[data-detail-section=evidence]').get_attribute('open') is not None
+    assert 'missing source.csv' in page.locator('.repro-log').inner_text()
+    assert page.locator('.repro-file-name:visible').count() == 3
+    page.locator('[data-detail-section=outputs] > summary').click()
+    assert page.locator('.repro-file-name:visible').count() == 5
+    assert 'result-0.hash' in page.locator('.repro-file-note').first.inner_text()
+    page.locator('[data-detail-section=inputs] > summary').click()
+    assert 'External input · missing' in page.locator('[data-detail-section=inputs]').inner_text()
+    assert 'consumers' not in page.locator('#repro-detail').inner_text()
+    page.evaluate("renderReproDetail('step-0-0')")
+    assert page.locator('[data-detail-section=inputs]').get_attribute('open') is not None
+    # Reviewed reuse retains the actual execution log and date.
+    page.evaluate("""() => {
+      const s=_reproData.graph.steps.find(s=>s.name==='step-0-0');s.kind='check';
+      s.dependency_origins={'data/source.csv':[{kind:'declared'}]};
+      const entry=_reproData.status.steps.find(s=>s.name==='step-0-0');
+      Object.assign(entry,{status:'fresh',reason:'up to date',log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit',evidence:{'review.md':'digest'}}});
+      renderReproDetail('step-0-0');
+    }""")
+    assert 'fresh' in page.locator('.repro-status-line').inner_text()
+    assert 'Check step' in page.locator('.repro-detail-context').inner_text()
+    evidence = page.locator('[data-detail-section=evidence]').inner_text()
+    assert 'Reviewed documentation-only edit' in evidence and 'review.md' in evidence
+    assert 'Actual execution log' in evidence and 'Last run' in evidence
+    assert 'Declared input' in page.locator('[data-detail-section=inputs]').inner_text()
+    assert '[object Object]' not in page.locator('#repro-detail').inner_text()
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    page.close()
+
+
+def test_task_load_failure_has_retry_without_losing_navigation(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    page.route('**/node/analysis-0*', lambda route: route.abort())
+    page.goto(workspace['url'] + '#/analysis-0')
+    page.wait_for_selector('#retry-task-load')
+    assert page.evaluate('activePath') == 'analysis-0'
+    page.unroute('**/node/analysis-0*')
+    page.get_by_role('button', name='Retry', exact=True).click()
+    page.wait_for_selector('#active-node .active-node-title')
+    assert 'Load error' not in page.locator('#active-node').inner_text()
+    page.close()
+
+
+@pytest.mark.parametrize('width,height', [(1372, 900), (390, 600)])
+def test_show_step_in_graph_after_reading_declaration(browser, workspace, width, height):
+    page = browser.new_page(viewport={'width': width, 'height': height})
+    page.goto(workspace['url'] + '#/analysis-0')
+    page.get_by_role('link', name='Own step', exact=True).click()
+    page.locator('[data-rp-action=declaration]').click()
+    page.wait_for_selector('#active-node tr.is-selected')
+    page.get_by_role('link', name='Own step', exact=True).click()
+    page.locator('#repro-detail [data-rp-action=show-selected]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    assert page.locator('.repro-canvas').is_visible()
+    assert page.evaluate('_reproSelected') == 'step-0-0'
     page.close()
