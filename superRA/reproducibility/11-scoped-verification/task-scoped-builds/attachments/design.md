@@ -8,7 +8,7 @@ The researcher selected task/step targets, task-scoped execution without a scope
 
 Canonical selectors are bare task paths and `task#step`. During migration, existing bare step names remain accepted only when unambiguous.
 
-Task-scoped execution uses existing upstream inputs without an override or successful-build baseline. It records unverified provenance when appropriate. These scope, selector, and saved-input choices are settled; implementation has not started.
+Task-scoped execution uses existing upstream inputs without an override or successful-build baseline. It records unverified provenance when appropriate. These scope, selector, and saved-input choices are settled.
 
 ## Selection determines the execution boundary
 
@@ -59,6 +59,12 @@ Successful local execution updates only steps actually run. Preserve existing su
 
 Changing a boundary artifact invalidates its selected consumers. Editing an out-of-scope producer without changing its saved output does not invalidate local execution evidence. If that producer later succeeds with identical bytes, full-chain status can become fresh without rerunning downstream steps. Existing reviewed acceptance retains its stronger evidence requirements; saved-input reuse cannot manufacture acceptance.
 
+## Concurrent task work does not invalidate unrelated execution
+
+Freeze the selected step set for an invocation. Check the selected execution contract before execution and before recording success: step commands/specifications, resolved input/output paths, and producer ownership relevant to consumed or written artifacts. Adding unrelated tasks, changing workflow statuses or prose, or editing unused config entries must not abort running work. New steps outside the frozen selection wait for the next invocation.
+
+Retain full graph validation at invocation start. During a build, changes that alter the frozen contract or create conflicting ownership of its artifacts reject affected execution evidence with a specific reason; unrelated graph changes do not retroactively invalidate that run. Guard actual input bytes during execution independently. Keep the acceptance preview/apply transaction's own consistency checks; a narrower build guard cannot authorize stale acceptance.
+
 ## Registration and workflow integration
 
 The reproduction skill owns result coverage: executable producers and supporting checks for retained task results are registered by default, or referenced when already registered. The requirement includes unchanged scripts used for new results and task companions, with coverage to an agreed external-input boundary. Preserve exclusions for uncited scratch work and machine-specific artifacts. Registration does not promote steps to `required`.
@@ -94,6 +100,7 @@ Use disposable shell-step fixtures; assert commands actually executed as well as
 | Missing boundary | Block and name the missing input/producer; no automatic scope expansion |
 | Changed or unverified boundary; failed A partially overwrites an output | Attempt selected work with existing bytes without an override; record provenance, invalidate affected consumers, and preserve producer failure; selected checks may reject the content |
 | Boundary mutation during a run; sidecar-backed input | No false successful receipt or trust based solely on a sidecar |
+| Concurrent unrelated task creation/status/config edit versus selected command/path/ownership edit | Unrelated edits preserve the run; relevant changes prevent a false successful receipt and identify the changed contract |
 | A/C selected with B omitted | C consumes saved B; diagnostics retain the omitted producer; no accidental B execution |
 | Scope, upstream expansion, force, and both together | Exact executed sets across tiers; force never expands scope by itself |
 | Fresh repeat, upstream code-only edit, input change, identical upstream regeneration | Correct local/full status distinction and unchanged-output cutoff |
