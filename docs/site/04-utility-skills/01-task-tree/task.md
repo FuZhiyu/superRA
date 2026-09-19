@@ -12,9 +12,9 @@ You ask the agent to plan and work a project, and you want it to know what is ac
 
 A bare agent keeps project state in the conversation — which steps are done, which are blocked, what the last run found — and that state evaporates when the session ends. The next session reconstructs it from scrollback and scattered TODOs, and gets it wrong in costly ways: a finished step gets redone, a task starts on an input its dependency never produced, or a load-bearing result is forgotten because it lived in a message that scrolled off.
 
-The task tree makes the filesystem the single source of truth instead. Every task is a directory holding a `task.md` with its objective, status, dependencies, and (once done) its results. Nesting a directory nests the task; a task depends only on its siblings, by directory name. There is no database — the tree you see is the directory tree, and git versions it alongside your code, so a fresh agent (or you, a week later) resumes from the files alone.
+The task tree makes the filesystem the single source of truth instead. Every task is a directory holding a `task.md` with its objective, status, dependencies, and (once done) its results. Nesting a directory nests the task. Consumed outputs infer prerequisites automatically; sibling names in `depends_on` add logical prerequisites such as a methodology decision. There is no database — the tree you see is the directory tree, and git versions it alongside your code, so a fresh agent (or you, a week later) resumes from the files alone.
 
-From that structure the agent computes answers you can ask for in plain language: "show me the tree" (whole tree with rollup status), "what can I start now?" (the **frontier** — leaf tasks whose dependencies are all satisfied and that are not yet done, ready to dispatch with no ordering call), "what's blocking the merge?" (the sibling dependency graph), "open the dashboard" (live browser view of tree, frontier, DAG, and kanban).
+From that structure the agent computes answers you can ask for in plain language: "show me the tree" (whole tree with rollup status), "what can I start now?" (the **frontier** — actionable tasks and parent-owned steps whose prerequisites are satisfied), "what's blocking the merge?" (the effective dependency graph), "open the dashboard" (live browser view of tree, frontier, DAG, and kanban).
 
 ## What the agent runs, and what you can run yourself
 
@@ -32,7 +32,7 @@ The agent edits task files continuously as the work moves — flipping a status,
 
 ### Set a field by hand; move a task with the CLI
 
-The split between editing a file directly and reaching for a command is worth knowing. Setting one field — marking a task `not-started`, fixing a typo in an objective — is a direct edit to that `task.md`, and the hook revalidates from there. Anything *structural* goes through the CLI instead. `task move` carries the whole task directory to its new home and rewrites every dependency link that pointed at it; a raw `mv` would move the files but leave those links pointing at the old path, so the tree would still compile but its dependencies would silently dangle. Use the command for moves and renames, edit the file directly for everything else.
+The split between editing a file directly and reaching for a command is worth knowing. Setting one field — marking a task `not-started`, fixing a typo in an objective — is a direct edit to that `task.md`, and the hook revalidates from there. Anything *structural* goes through the CLI instead. `task move` carries the task directory, repairs links, and validates the resulting dependency graph before writing. Cross-parent moves report logical edges that cannot survive the move; inferred relationships follow their producers and consumers. Use the command for moves and renames, edit the file directly for everything else.
 
 This page is the conceptual top of the task-tree subtree. The operational detail lives one level down, each on its own page:
 

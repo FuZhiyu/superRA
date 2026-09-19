@@ -1,6 +1,6 @@
 ---
 title: "Wire the Graph into the PLAN / IMPLEMENT / INTEGRATE Workflow"
-status: not-started
+status: implemented
 depends_on:
   - 01-section-contract
   - 02-runner

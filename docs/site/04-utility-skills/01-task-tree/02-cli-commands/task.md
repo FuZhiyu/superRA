@@ -14,11 +14,11 @@ Inspect state and pull up one task:
 
 ```bash
 ./superRA/superra task tree                      # the whole tree with status badges
-./superRA/superra task frontier                  # leaf tasks ready to dispatch now
+./superRA/superra task frontier                  # ready tasks and parent-owned work
 ./superRA/superra task read 01-data/02-merge     # one task with its full inherited context
 ```
 
-`task read` is what dispatch uses: it prints the file plus the ancestor chain, the status of depended-on siblings, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
+`task read` is what dispatch uses: it prints the file plus the ancestor chain, effective prerequisites with their evidence, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
 
 Scope or restructure work:
 
@@ -26,12 +26,12 @@ Scope or restructure work:
 ./superRA/superra task create 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Drop obs before 2000, require non-missing returns." \
-  --depends-on 02-merge
+  --depends-on 01-sample-design
 
 ./superRA/superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 ```
 
-Use `task move`, not a raw `mv`: it carries markdown links and sibling `depends_on` edges through the rename so nothing dangles.
+Use `task move` for relocation and renaming: it repairs links and preflights the effective graph. A cross-parent move warns about logical edges it must drop; inferred edges are recomputed.
 
 Comments steer a task without editing its body; a pinned note surfaces inline on the next `task read` and on the dashboard:
 
@@ -46,5 +46,15 @@ After any bulk change or raw filesystem edit, confirm the tree is still consiste
 ./superRA/superra task check       # audit status, dependency integrity, cycles
 ./superRA/superra task status fix  # repair branch statuses to match child rollups
 ```
+
+For reproduction work, ask the agent to explain the effects of a change before rebuilding:
+
+```bash
+./superRA/superra repro impact Code/helpers.jl --json
+./superRA/superra repro explain build-panel --json
+./superRA/superra repro accept build-panel --json  # preview only
+```
+
+Acceptance requires an exact review with recorded evidence. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview, apply, and revoke.
 
 The DAG view (`task dag <subtree>`, Mermaid output) and the [dashboard](#/04-utility-skills/01-task-tree/04-dashboard) round out the surface. Every flag, bulk status operation, result-append command, and migration tool is in [skills/task-tree/references/commands.md](skills/task-tree/references/commands.md).

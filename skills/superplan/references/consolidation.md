@@ -14,7 +14,7 @@ Structure-level cleanup, distinct from:
 Standalone bar: at least two symptoms below, after ad-hoc additions, scope pivots, or multi-session interactive work. Integration bar: one surviving update task or action-verb parent — an approved update task is already in the state to be folded (`task-tree-design.md` §Update-Task Lifecycle). Default is folding scaffolding into its durable owner; justify *keeping* a piece, not folding it.
 
 - Two tasks with substantially overlapping objectives, outputs, or edit surfaces
-- Tasks that read another task's output without declaring `depends_on`
+- Missing prerequisites in the effective dependency graph
 - Objectives superseded by another task's results or a scope change
 - Tasks too large (should split) or too small (should merge with a sibling)
 - A parent with a single child where the parent adds no meaningful context
@@ -28,7 +28,7 @@ Standalone bar: at least two symptoms below, after ad-hoc additions, scope pivot
 Read every `task.md` and build a structural picture:
 
 1. **Run `superra task tree` and `superra task dag`** for structure, status distribution, dependency graph.
-2. **Map each task's scope:** objective, `depends_on`, status, and whether it is temporary update scaffolding or a durable owner.
+2. **Map each task's scope:** objective, effective prerequisites and their provenance, status, and whether it is temporary update scaffolding or a durable owner.
 3. **Build a relationship matrix.** Per task pair: shared inputs, shared outputs, sequential logic, overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via `task-tree-design.md` §Placing Work in the Existing Tree.
 4. **Identify and classify issues** from the table below, applying `task-tree-design.md` §Update-Task Lifecycle whole-tree: any task whose purpose is to improve an existing task or artifact folds back by default — **Merge** into the task it modified, or **Mature/Rename** when it has become the durable owner of a concern. The open question is which fold, not whether to fold.
 
@@ -41,7 +41,7 @@ Each action sets the altitude the affected task lands at in the durable owner �
 | Two or more tasks with overlapping objectives, outputs, or edit surfaces | **Merge** | Combine into one task; or, when several tasks cluster on one concern with distinct deliverables, fold them into a single parent concern with the survivors as children (N-way merge into a subtree). |
 | An update task that improves an existing task or artifact | **Merge** | Fold the surviving result into the task it modifies and remove the update-task directory (create-then-merge lifecycle). |
 | An action-verb task whose validated result is now the stable owner of a concern | **Mature/Rename** | Rewrite it as the durable concern it now owns and optionally rename the directory to the stable concern name. |
-| Task A reads task B's output but no `depends_on` declared | **Link** | Add the missing dependency. |
+| A prerequisite is absent from the effective graph | **Link** | Correct missing producer/input declarations, or add a logical prerequisite. |
 | Objective superseded by another task's results or a scope change | **Prune** | Delete the stale task directory, or rewrite the durable owner when the scope belongs there. |
 | Task too large for independent execution and review | **Split** | Create subtasks under the current task. |
 | Task too small to justify its own contract, results record, and verdict | **Merge** | Absorb into a sibling or parent. |
@@ -58,11 +58,11 @@ Each action sets the altitude the affected task lands at in the durable owner �
 
 **Mature/Rename:** rewrite an action-verb task as the durable current-state concern it now owns; rename the directory when the slug still names the update episode. Distil its `## Results` to the altitude the durable home warrants — a matured reader-facing narrative where the work's narrative lives, a pointer when the task's own output *is* a document (one source of truth). Rewrite the scope-defining objective detail and repoint sibling `depends_on` references affected by the rename. Use where an action parent should survive as the concern itself; otherwise Merge into the existing durable owner.
 
-**Link:** update `depends_on` via `superra task dep add` / `superra task dep remove`. Objective rewrite only when the dependency changes the task's scope.
+**Link:** follow [Task Dependencies](build-and-review.md#task-dependencies); use `superra task dep add` / `superra task dep remove` for logical declarations. Objective rewrite only when the dependency changes the task's scope.
 
 **Prune:** delete the task directory. Update siblings whose `depends_on` referenced it. Had dependents: reassess whether their objectives still make sense.
 
-**Split:** create subtask directories under the too-large task. Move objective content into the subtasks; rewrite the parent's objective as a framing summary. Parent status becomes the rollup of its new children.
+**Split:** create subtask directories under the too-large task. Move child-owned objective content into the subtasks; preserve parent-owned steps per the [hierarchy contract](../../task-tree/references/task-file-contract.md#effective-dependencies). Parent status becomes the rollup of its new children.
 
 **Flatten:** absorb the single child's `task.md` content into the parent's, remove the child directory, repoint sibling `depends_on` that pointed to the child.
 
@@ -94,7 +94,8 @@ Proposed changes:
    source file; 02 just applies filters that belong in the same task.
 2. [Prune] "04-old-approach" — superseded by 05-revised-approach; no other task
    depends on it.
-3. [Link] "06-regression" depends on "03-merge" but does not declare it.
+3. [Link] "06-regression" needs the sample-design decision in "03-method";
+   declare that logical prerequisite.
 
 Proposed tree after consolidation:
 <text sketch>
@@ -109,7 +110,7 @@ Standalone: wait for explicit approval.
 Choices come from Protect during INTEGRATE (edits land before the combined review) or from the approved proposal standalone. Mechanics are the same:
 
 1. **Apply changes** with the task-tree CLI (`superra task create` / `rename` / `dep add` / `dep remove`) plus direct edits for objective rewrites, in dependency order: links and restructures first, then merges and splits, then prunes last — so `depends_on` references are repointed before their targets disappear. Status cascading follows each action's rule in §Action Details.
-2. **Verify** with `superra task tree` and `superra task dag`: no cycles, no broken `depends_on`, no orphans, structure matches the approved proposal.
+2. **Verify** with `superra task check`, `superra task tree`, and `superra task dag`: no invalid effective dependencies or orphans; structure matches the approved proposal.
 3. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist — consolidation strands references in objectives and results. Remove stale delta prose once the objective carries the current contract.
 4. **Commit recoverably** — all changed task files in one commit titled `plan: consolidate task tree — <summary>` standalone, or the `integrate(mature): …` series owned by Mature & Consolidate.
 
