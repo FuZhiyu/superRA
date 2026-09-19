@@ -11,7 +11,7 @@ user-invocable: true
 - **Task** — an immediate subdirectory of a task directory or the rootless `./superRA` forest that contains `task.md`. `attachments/` is always an asset container, never a task. A leaf task has no child task directories.
 - **Filesystem hierarchy is the task hierarchy.** `walk_plan()` discovers children by scanning subdirectories.
 - Retained files are companions, not task nodes — classification, placement, and lifecycle in `../using-superra/references/task-companion-files.md`.
-- **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
+- **Logical prerequisites use sibling directory names in `depends_on`.** The [effective dependencies](references/task-file-contract.md#effective-dependencies) govern ordering, readiness, and validation.
 - **Parent status rolls up** from children automatically — `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded.
 - **DAG order vs. display order.** The dependency DAG controls execution order; numeric directory prefixes (`01-load`, `02-merge`) control display order only. Independent.
 
@@ -31,7 +31,7 @@ Run the committed `./superRA/superra` wrapper created above — contributors ins
 ```bash
 ./superRA/superra task tree            # tree with status badges (required reproduction tier marked too)
 ./superRA/superra task tree --tier required  # only required-registered tasks
-./superRA/superra task frontier        # dispatchable leaf tasks
+./superRA/superra task frontier        # ready tasks and actionable parent-owned steps
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
 ./superRA/superra dashboard --no-open  # idempotent; starts or reuses a server and prints this worktree's scoped URL
@@ -46,7 +46,7 @@ Run the committed `./superRA/superra` wrapper created above — contributors ins
 title: "Merge with Fund Characteristics"
 status: not-started
 depends_on:
-  - 01-load-raw-data
+  - 01-sample-design
 ---
 
 ## Objective
@@ -72,7 +72,7 @@ Field-by-field anatomy and body-section ownership: `references/task-file-contrac
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Validate tree structure, fix status inconsistencies, diagnose orphaned `depends_on` entries | `references/commands.md §Diagnostics` |
-| Rebuild declared steps, report step freshness, set a task's reproduction tier | `references/commands.md §Reproduction` |
+| Rebuild steps, inspect change impact, accept reviewed results, or set reproduction tiers | [commands.md §Reproduction](references/commands.md#reproduction) |
 | Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
 | Task companion-file classification, placement, reproducibility, promotion, and maturation | `../using-superra/references/task-companion-files.md` |
 | Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |

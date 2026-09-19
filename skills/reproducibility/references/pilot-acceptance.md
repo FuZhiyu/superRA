@@ -2,7 +2,7 @@
 
 Start with one producer and one meaningful `kind: check` in an `on-demand` task, with a named saved-input boundary. Keep upstream reconstruction and promotion outside that pilot unless requested. Follow [graph authoring](graph-authoring.md) and [scoped verification](../SKILL.md#build-and-status).
 
-## Acceptance Recipe
+## Verification Recipe
 
 Use a disposable fixture or isolated copies for perturbations. Record reported state and actual execution separately: descendants can report stale before an upstream rebuild, then skip after identical regeneration.
 
@@ -14,6 +14,7 @@ Use a disposable fixture or isolated copies for perturbations. Record reported s
 | Timestamp-only change | Neither step executes. |
 | Producer or included-helper edit | Its consumer is invalidated; the expected code executes. |
 | Undeclared environment-file edit | Neither step executes automatically; apply [environment-change judgment](../SKILL.md#environment-changes). |
+| Reviewed harmless edit | Exact acceptance makes the consumer fresh without changing its successful lock or last-run evidence; ordinary build skips it, forced verification executes it. |
 | Missing output | The producer recreates it. |
 | Identical regeneration | The downstream check skips if its own deps are unchanged. |
 | Corrupted output | The numerical check rejects the altered value when run against it directly; a graph build may repair the output before checking it. |

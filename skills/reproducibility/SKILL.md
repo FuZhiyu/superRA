@@ -1,6 +1,6 @@
 ---
 name: reproducibility
-description: Register and verify task-declared reproduction graphs. Use when producing or citing maintained outputs, adopting reproduction with a bounded pilot, selecting protection checks, or judging reruns after code, data, or environment changes.
+description: Register and verify task-declared reproduction graphs. Use when producing or citing maintained outputs, adopting reproduction with a bounded pilot, selecting protection checks, or judging reruns or evidence-backed reuse after code, data, or environment changes.
 ---
 
 # Reproducibility
@@ -12,7 +12,7 @@ Section schema, config keys, and validation findings: `skills/task-tree/referenc
 | Reference | Load when |
 |---|---|
 | `references/graph-authoring.md` | Declaring or changing steps, or presenting a graph for review. |
-| `references/rerun-model.md` | Predicting what a change reruns, or diagnosing a state you did not expect. |
+| [rerun-model.md](references/rerun-model.md) | Predicting reruns, diagnosing state, or reviewing stale results for acceptance. |
 | `references/protect-and-completion.md` | At `Stage: protection`, or at the IMPLEMENT completion gate. |
 | [pilot-acceptance.md](references/pilot-acceptance.md) | Adopting reproduction or changing its discovery/rerun mechanism. |
 
@@ -44,7 +44,7 @@ A task target includes its own steps and descendant tasks; producer ancestors ar
 
 **Choose the forced scope:** `build <target> --force` reruns the selected targets, rebuilding ancestors only when stale or missing; `--force-all` reruns their entire producer chain. For every registered step, use `build --tier all --force-all`. Preview either mode with `--dry-run`.
 
-**State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness records agreement with the last successful build; numerical validity rests on the checks. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit the updated `pytask.lock` with the work.
+**State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness covers successful execution or [reviewed acceptance](references/rerun-model.md#reviewed-acceptance); distinguish executed steps and checks from accepted results. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit changed execution or acceptance records with the work.
 
 A step still stale after its own successful build is a diagnosis, not a rerun: `superra repro explain <step>` and `references/rerun-model.md`.
 

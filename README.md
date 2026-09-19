@@ -1,6 +1,6 @@
 # superRA
 
-> ⚠️ **Breaking change (0.4.0):** the dedicated implementer/reviewer agents are retired — roles are now skills, independent review is triggered rather than scheduled, and interactive execution is the default. Existing projects and task trees keep working with nothing to migrate; stale Codex named-agent installs from earlier versions are detected in-session and cleaned up with your confirmation. See [RELEASE-NOTES](RELEASE-NOTES.md) for the full 0.4.0 entry and history.
+> **0.5.0 is unreleased.** The reproduction upgrade combines file-derived and logical task dependencies. Existing reproduction graphs need a cycle audit before upgrading; see [Upgrading](#upgrading) and [release notes](RELEASE-NOTES.md#050---unreleased).
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
@@ -71,7 +71,11 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-0.4.0 retires the dedicated role agents in favor of role skills; existing projects and task trees keep working with nothing to migrate. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
+For the unreleased 0.5.0 upgrade, ask the agent to audit an isolated copy of your project with `superra task check` before resuming work. File-derived prerequisites and authored logical prerequisites form one graph; a cycle is rejected even when individual build steps are acyclic. Correct erroneous declarations or task boundaries while preserving real input dependencies. Projects without reproduction declarations retain their logical dependency behavior; adding a child to a task does not require moving its existing steps.
+
+Use `repro impact` to inspect change scope. Reviewed acceptance can keep unaffected results fresh without rerunning them; it records the reason and evidence separately from actual execution. Forced verification still runs its selected steps. The [reproducibility skill](skills/reproducibility/SKILL.md) owns that distinction. The dashboard upgrade uses Tree and DAG as alternative navigators with one task reader; expanding tasks exposes their steps. UI and existing-project compatibility checks remain release prerequisites.
+
+0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
 
 ## Contributing
 

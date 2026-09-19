@@ -9,12 +9,17 @@ The reproduction upgrade: task-declared build steps, content-based reruns, and a
 - Reproduction sections register producers and checks with required/on-demand tiers; the runner rebuilds changed work and records execution state.
 - The dashboard exposes reproduction steps, freshness, file dependencies, and task ownership; workflow skills register and verify maintained results.
 
+### Changed
+
+- **One effective dependency graph.** File-derived prerequisites and explicit logical prerequisites jointly govern task development. Combined cycles, including cycles introduced by grouping acyclic steps, block dispatch and builds. Existing reproduction projects need a `task check` audit and may need declaration or ownership repairs. Logical prerequisites do not add file inputs or unrelated producers to targeted script replay.
+- **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. The frontier exposes actionable parent-owned work without waiting on its own child-status rollup. Archived subtrees leave the active graph, with warnings for their downstream consumers.
+- **Reviewed reuse.** `repro impact` explains affected consumers; `repro accept` previews an exact selection and records reasons and evidence for unchanged results. Valid acceptance reads as `fresh` and satisfies routine completion while preserving the successful lock and last actual run. Forced verification executes its selected targets; acceptance never claims the check or producer ran again.
+- Workflow guidance uses effective dependencies for planning, consolidation, and downstream invalidation, and narrows shared helper/configuration dependencies before considering acceptance.
+
 ### In preparation
 
-- One effective task dependency DAG combines inferred reproduction dependencies with explicit logical prerequisites. Cycles in the combined graph will require correcting declarations or task boundaries.
-- The dashboard redesign expands one hierarchical graph between task, step, and mixed views, with readable navigation and dependency provenance. Tasks may retain their own steps when subtasks are added.
-- Dependency-impact inspection and reviewed acceptance will reduce unnecessary rebuilds. Accepted results count as fresh while preserving reasons, evidence, and the last actual execution record.
-- Existing-project compatibility and workflow migration checks remain required before release. These planned changes are not yet implemented.
+- The dashboard workspace offers Tree and DAG as alternative navigators sharing task selection, the reader, comments, and attachments. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
+- UI validation and existing-project compatibility evidence remain required before release. The development version does not imply publication.
 
 ### Release Prep
 
