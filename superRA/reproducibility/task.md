@@ -53,7 +53,7 @@ The [design](attachments/v05-design.md) records the researcher decisions and the
 
 The Claude, marketplace, and Codex plugin manifests are at 0.5.0; [release notes](../../RELEASE-NOTES.md) mark it unreleased and distinguish existing reproduction features from planned changes. The interrupted UI experiment was removed from runtime source. The following results document the earlier implementation and do not certify the 0.5 contract.
 
-Planning verification passed: task-tree structural checks, Markdown render checks, local-link checks for the new design/tasks, plugin packaging checks, and synchronized-version checks. Independent design review returned APPROVE after stale inherited contracts and the logical-only dashboard empty-state requirement were corrected. Runtime implementation remains queued on the effective-graph task.
+Planning verification passed: task-tree structural checks, Markdown render checks, local-link checks for the new design/tasks, plugin packaging checks, and synchronized-version checks. Independent design review returned APPROVE after stale inherited contracts and the logical-only dashboard empty-state requirement were corrected. The subsequent archived-task refinement excludes archived work and warns active downstreams; it received structural and Markdown self-checks without another independent pass. Runtime implementation remains queued on the effective-graph task.
 
 ### Earlier implementation evidence
 

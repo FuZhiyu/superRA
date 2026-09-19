@@ -10,6 +10,7 @@ Ship the effective dependency graph and its task-tooling consumers under the [0.
 
 - Support parent-owned steps and nested task groups, including adding a child without changing existing step identities or freshness. Expose blocked parent-owned work without a parent/child readiness deadlock.
 - Preserve dependency provenance and diagnose step, sibling-group, mixed-source, and parent-boundary cycles. Filtering, explicit build targets, or incomplete parsing must not bypass invalidity.
+- Apply the [archived-task rule](../../attachments/v05-design.md#archived-tasks-leave-the-active-graph): exclude archived work from the active graph and warn its active downstream dependents.
 - Make dependency-changing CLI operations preflight the proposed effective graph; retain readable diagnostics for direct file edits. Preserve no-reproduction compatibility and resolved-path matching without introducing recursive imports or repeated shell probes.
 - Own the dependency-related schema/CLI reference updates and the graph portion of the [verification matrix](../../attachments/v05-design.md#verification-and-upgrade). Exercise public commands against realistic temporary trees, not just private graph functions.
 
