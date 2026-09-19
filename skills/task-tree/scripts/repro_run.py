@@ -203,6 +203,9 @@ def _run_step(
         from _repro_acceptance import current_state
         if graph is not None and attributes is not None:
             attributes["superra_before"] = current_state(graph, step, paths)
+            from _repro_scope import boundary_inputs
+            attributes["superra_before"]['boundary_inputs'] = boundary_inputs(
+                graph, graph._execution_names, paths, consumers={step.name})
         must_retry = forced or bool((attributes or {}).get("superra_retry_required"))
         started = time.time()
         write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started})
@@ -330,7 +333,6 @@ def run_build(
     names: list[str],
     *,
     n_workers: int = 1,
-    force_all: bool = False,
     force_names: list[str] | None = None,
     dry_run: bool = False,
 ) -> int:
@@ -344,12 +346,23 @@ def run_build(
     if scripts_dir not in pytask.Traceback.suppress:
         pytask.Traceback.suppress += (scripts_dir,)
 
-    from _repro_acceptance import bind_sources, check_sources
-    if not hasattr(graph, "_acceptance_sources") and graph.dependencies:
-        bind_sources(graph, graph.dependencies.tasks[""].dir_path)
+    from _repro_acceptance import check_sources
+    from _repro_scope import BuildGuard, boundary_inputs
+    graph._execution_names = frozenset(names)
+    if graph.dependencies:
+        signature = getattr(graph, '_acceptance_sources', (None, None))[1]
+        graph._build_guard = BuildGuard(graph, graph.dependencies.tasks[""].dir_path, names, signature)
     check_sources(graph)
     cache = HashCache(paths.cache_file)
-    forced = set(names if force_all else (force_names or ()))
+    boundary = boundary_inputs(graph, names, paths, cache)
+    print('Execution scope: ' + ', '.join(names))
+    for item in boundary:
+        print(f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)")
+    missing = [item for item in boundary if item['digest'] is None]
+    if missing:
+        raise ReproStateError('missing saved inputs: ' + ', '.join(f"{b['logical']} (producer {b['producer']})" for b in missing)
+                              + '; select the producer or use --upstream')
+    forced = set(force_names or ())
     tasks = make_tasks(graph, names, paths, cache, force_names=forced)
     options: dict[str, Any] = {}
     if n_workers > 1:
@@ -403,17 +416,18 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     build = sub.add_parser("build", help="Rebuild stale steps")
-    build.add_argument("targets", nargs="*", help="Step names or task paths")
-    build.add_argument("--tier", choices=TIERS, default="required")
+    build.add_argument("targets", nargs="*", help="Task paths (including descendants) or task#step selectors")
+    build.add_argument("--tier", choices=TIERS)
+    build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
-    force = build.add_mutually_exclusive_group()
-    force.add_argument("--force", action="store_true", help="Force direct targets; rebuild ancestors only if stale")
-    force.add_argument("--force-all", action="store_true", help="Force targets and all their producer ancestors")
+    build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
+    build.add_argument("--force-all", action="store_true", help=argparse.SUPPRESS)
     build.add_argument("--dry-run", action="store_true", help="Report what would run")
 
     status = sub.add_parser("status", help="Report each step's freshness")
-    status.add_argument("targets", nargs="*", help="Step names or task paths, with producer ancestors")
-    status.add_argument("--tier", choices=TIERS, default="required")
+    status.add_argument("targets", nargs="*", help="Task paths or task#step selectors; saved inputs outside scope")
+    status.add_argument("--tier", choices=TIERS)
+    status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
     explain = sub.add_parser("explain", help="Explain one step's state")
@@ -492,6 +506,12 @@ def _reexec(argv: list[str], command: str) -> int:
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     args = build_parser().parse_args(argv)
+    if args.command in ('build', 'status'):
+        if args.targets and args.tier is not None:
+            build_parser().error('explicit targets and --tier are mutually exclusive')
+        args.tier = args.tier or 'required'
+    if getattr(args, 'force_all', False):
+        build_parser().error('--force-all is retired; use --upstream --force')
 
     if _unsupported_here(args.command):
         sys.exit(_reexec(argv, args.command))
@@ -559,7 +579,11 @@ def main(argv: list[str] | None = None) -> None:
                 print(f"  {finding.to_text()}", file=sys.stderr)
             sys.exit(1)
         args.tier = normalize_tier(args.tier)
-        names, unknown = select_steps(graph, args.targets, args.tier)
+        try:
+            names, unknown = select_steps(graph, args.targets, args.tier, include_ancestors=args.upstream)
+        except ReproStateError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
         if unknown:
             print(
                 f"Error: no step or task matches {', '.join(unknown)}", file=sys.stderr
@@ -568,17 +592,13 @@ def main(argv: list[str] | None = None) -> None:
         if not names:
             print(f"No steps registered at tier {args.tier}.")
             return
-        force_names = (
-            select_steps(graph, args.targets, args.tier, include_ancestors=False)[0]
-            if args.force else []
-        )
+        force_names = names if args.force else []
         try:
             result = run_build(
                 graph,
                 paths,
                 names,
                 n_workers=max(1, args.jobs),
-                force_all=args.force_all,
                 force_names=force_names,
                 dry_run=args.dry_run,
             )
@@ -588,9 +608,18 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(result)
 
     try:
+        explain_targets = ()
+        if args.command == 'explain':
+            matches, unknown = select_steps(graph, [args.step], 'all')
+            if unknown or len(matches) != 1:
+                raise ReproStateError(f"unknown step or non-single-step target {args.step!r}")
+            args.step = matches[0]
+            step = graph.step(args.step)
+            explain_targets = [f'{step.task_path or "."}#{step.name}']
         report = compute_status(
             graph, paths, tier="all" if args.command == "explain" else args.tier,
-            targets=args.targets if args.command == "status" else (),
+            targets=args.targets if args.command == "status" else explain_targets,
+            upstream=args.upstream if args.command == 'status' else True,
         )
         if args.command == "explain":
             from _repro_acceptance import inspect_baseline

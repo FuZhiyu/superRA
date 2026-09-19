@@ -26,8 +26,6 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 `## Objective` is the contract. `## Details` is information, not contract — deviate when a better route satisfies the objective; list material deviations in `## Results`: what you skipped, what you did, why the objective still holds.
 
-**Register the producer you touch.** A task that adds or changes a maintained producer updates its `## Reproduction` step in the same commit (`superRA:reproducibility`).
-
 `## Revision Notes`, if present, is the delta since you last touched this task — read it before executing, then remove the section once incorporated. It does not survive past `status: implemented`, whether or not review follows.
 
 Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Results`, independent `status:`, task-local evidence.

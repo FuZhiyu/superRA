@@ -1,6 +1,6 @@
 ---
 name: reproducibility
-description: Register and verify task-declared reproduction graphs. Use when producing or citing maintained outputs, adopting reproduction with a bounded pilot, selecting protection checks, or judging reruns or evidence-backed reuse after code, data, or environment changes.
+description: Register and verify task-declared reproduction graphs. Use when planning, producing, changing, or reviewing retained results that depend on executable steps, adopting reproduction, selecting protection checks, or judging reruns or evidence-backed reuse.
 ---
 
 # Reproducibility
@@ -17,6 +17,8 @@ Section schema, config keys, and validation findings: `skills/task-tree/referenc
 | [pilot-acceptance.md](references/pilot-acceptance.md) | Adopting reproduction or changing its discovery/rerun mechanism. |
 
 ## What Gets a Step
+
+**Register executable support before recording retained results.** Reuse existing registered producers/checks or declare them in their owning tasks, including unchanged scripts used for new findings. Cover the producer chain to the agreed external-input boundary; update declarations with result, input, or ownership changes in the same commit.
 
 - **A maintained producer of a committed exhibit or a canonical result** — the script behind a table, figure, estimate, or dataset that the manuscript, the slides, or another task's `## Results` cites.
 - **A task companion the results cite** — a script under a task's `attachments/` that produced a number in that task's `## Results`, at `tier: on-demand`.
@@ -36,13 +38,15 @@ Legacy `canon` / `local` declarations and arguments remain accepted aliases. Use
 **Verify the claimed result's scope**, including its selected checks, using the same targets:
 
 ```bash
-superra repro build <task-or-step> <selected-check>
-superra repro status <task-or-step> <selected-check>
+superra repro build <task> '<check-task>#<check-step>'
+superra repro status <task> '<check-task>#<check-step>'
 ```
 
-A task target includes its own steps and descendant tasks; producer ancestors are included across tiers. A check already included by the task target needs no separate argument. An empty selection verifies no result.
+A task target includes its own steps and descendant tasks; `task#step` selects one step. Multiple targets select their union. A check already included by the task target needs no separate argument. An empty selection verifies no result.
 
-**Choose the forced scope:** `build <target> --force` reruns the selected targets, rebuilding ancestors only when stale or missing; `--force-all` reruns their entire producer chain. For every registered step, use `build --tier all --force-all`. Preview either mode with `--dry-run`.
+**Use saved inputs outside the selection.** Existing files are usable regardless of upstream freshness or successful-build evidence; missing inputs block. Report their provenance without certifying their producers. Add `--upstream` to build/status for the producer chain, across tiers.
+
+**Force within scope:** `--force` reruns every selected step; combine with `--upstream` for a full-chain rerun. For every registered step, use `build --tier all --force`. Preview with `--dry-run`.
 
 **State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness covers successful execution or [reviewed acceptance](references/rerun-model.md#reviewed-acceptance); distinguish executed steps and checks from accepted results. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit changed execution or acceptance records with the work.
 
@@ -54,6 +58,6 @@ Keep project and lockfiles versioned but outside graph dependencies by default. 
 
 ## Gates
 
-- `[BLOCKING]` Every out a task's `## Results` cites is produced by a registered step or declared as an external input.
+- `[BLOCKING]` Retained results satisfy §What Gets a Step, including executable findings recorded without a separate output file.
 - `[BLOCKING]` Before claiming a result reproduces, its scoped build succeeds and every step reported by the matching status is `fresh`.
 - `[ADVISORY]` A step whose script reads a few named files declares those files, not their directory.

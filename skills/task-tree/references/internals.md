@@ -303,6 +303,7 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `_task_validate.py` | Validation suite — one owner per validity rule, single message source; owns the shared `Finding` shape |
 | `_task_dependencies.py` | Pure hierarchical dependency composition, provenance, cycles, task ordering and readiness |
 | `_repro_acceptance.py` | Exact-state acceptance, successful receipts, impact, and mutation coordination |
+| `_repro_scope.py` | Saved-input provenance, byte-level boundary evidence, and selected execution-contract guards |
 | `_repro_hooks.py` | Optional pytask setup/teardown integration for reuse and verified receipts |
 | `_task_snapshot.py` | Mutation preflight and parent-step freshness adapters |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
