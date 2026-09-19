@@ -1,6 +1,24 @@
 # superRA Release Notes
 
-## [Unreleased]
+## [0.5.0] - Unreleased
+
+The reproduction upgrade: task-declared build steps, content-based reruns, and a dashboard for inspecting how research outputs are produced.
+
+### Added
+
+- Reproduction sections register producers and checks with required/on-demand tiers; the runner rebuilds changed work and records execution state.
+- The dashboard exposes reproduction steps, freshness, file dependencies, and task ownership; workflow skills register and verify maintained results.
+
+### In preparation
+
+- One effective task dependency DAG combines inferred reproduction dependencies with explicit logical prerequisites. Cycles in the combined graph will require correcting declarations or task boundaries.
+- The dashboard redesign expands one hierarchical graph between task, step, and mixed views, with readable navigation and dependency provenance. Tasks may retain their own steps when subtasks are added.
+- Dependency-impact inspection and reviewed acceptance will reduce unnecessary rebuilds. Accepted results count as fresh while preserving reasons, evidence, and the last actual execution record.
+- Existing-project compatibility and workflow migration checks remain required before release. These planned changes are not yet implemented.
+
+### Release Prep
+
+- Claude plugin, marketplace, and Codex plugin manifests are synchronized at `0.5.0` through `scripts/bump-version.sh`; no release tag or publication is implied.
 
 ### Fixed
 
