@@ -1,11 +1,11 @@
 <style>
-#sra-nav-preview{--sra-bg:light-dark(#faf9f6,#171b20);--sra-paper:light-dark(#ffffff,#23282f);--sra-ink:light-dark(#252a32,#e6e9ef);--sra-muted:light-dark(#626873,#b2bbc9);--sra-line:light-dark(#d6dae0,#48515f);--sra-active:light-dark(#e6edf8,#2d415e);--sra-accent:light-dark(#315f9c,#a0c5ff);font-family:system-ui,sans-serif;color:var(--sra-ink);background:var(--sra-bg);border:1px solid var(--sra-line);border-radius:10px;overflow:hidden}
+#sra-nav-preview{--sra-bg:light-dark(#faf9f6,#171b20);--sra-paper:light-dark(#ffffff,#23282f);--sra-ink:light-dark(#252a32,#e6e9ef);--sra-muted:light-dark(#626873,#b2bbc9);--sra-line:light-dark(#d6dae0,#48515f);--sra-active:light-dark(#f7e9e2,#49352c);--sra-accent:light-dark(#aa4328,#efb295);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--sra-ink);background:var(--sra-bg);border:1px solid var(--sra-line);border-radius:10px;overflow:hidden}
 #sra-nav-preview *{box-sizing:border-box}
 #sra-nav-preview button{font:inherit;color:inherit;background:var(--sra-paper);border:1px solid var(--sra-line);border-radius:6px;padding:7px 10px;cursor:pointer}
 #sra-nav-preview button:disabled{opacity:.5;cursor:default}
 #sra-nav-preview button[aria-pressed=true]{background:var(--sra-active);color:var(--sra-accent)}
 #sra-nav-preview .sra-top{padding:14px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;border-bottom:1px solid var(--sra-line)}
-#sra-nav-preview .sra-brand{font-weight:500;margin-right:auto}
+#sra-nav-preview .sra-brand{font-family:Georgia,serif;font-weight:500;margin-right:auto}
 #sra-nav-preview .sra-subtle{color:var(--sra-muted)}
 #sra-nav-preview .sra-switch{display:flex;gap:4px}
 #sra-nav-preview .sra-shell{display:grid;grid-template-columns:minmax(0,1fr) 280px;min-height:425px}
@@ -44,7 +44,7 @@
 @media(max-width:430px){#sra-nav-preview .sra-flow{grid-template-columns:1fr;gap:30px}#sra-nav-preview .sra-node-head button{min-height:44px}#sra-nav-preview .sra-tools button{min-height:44px}}
 </style>
 <div id="sra-nav-preview" aria-label="Task navigation design preview">
-  <header class="sra-top"><span class="sra-brand">superRA <span class="sra-subtle">/ Heterogeneity</span></span><span class="sra-subtle">Design preview · example tasks</span><div class="sra-switch"><button type="button" data-mode="tree" aria-pressed="false">Tree</button><button type="button" data-mode="dag" aria-pressed="true">DAG</button></div></header>
+  <header class="sra-top"><span class="sra-brand">The Bound — Demand Elasticity Bounds</span><span class="sra-subtle">Design preview · example tasks</span><div class="sra-switch"><button type="button" data-mode="tree" aria-pressed="false">Tree</button><button type="button" data-mode="dag" aria-pressed="true">DAG</button></div></header>
   <div class="sra-shell"><section class="sra-nav" aria-label="Task navigator"><div class="sra-tools"></div><div class="sra-canvas"></div></section><aside class="sra-reader" aria-label="Selected task"></aside></div>
   <div class="sra-footer" role="status" aria-live="polite">Scope: Project · Selected: Estimate heterogeneity</div>
 </div>
