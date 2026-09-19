@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: revise
+status: implemented
 depends_on: []
 ---
 

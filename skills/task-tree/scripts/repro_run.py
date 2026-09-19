@@ -207,7 +207,7 @@ def _run_step(
 
         from _repro_acceptance import current_state
         if graph is not None and attributes is not None:
-            attributes["superra_before"] = current_state(graph, step, paths)
+            attributes["superra_before"] = current_state(graph, step, paths, recorded=False)
             from _repro_scope import boundary_inputs
             attributes["superra_before"]['boundary_inputs'] = boundary_inputs(
                 graph, graph._execution_names, paths, consumers={step.name})
