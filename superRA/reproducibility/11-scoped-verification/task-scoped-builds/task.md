@@ -1,6 +1,6 @@
 ---
 title: "Build selected tasks against saved inputs by default"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -117,9 +117,3 @@ The [reproducibility skill](../../../../skills/reproducibility/SKILL.md#what-get
 - [Behavioral regressions](../../../../skills/task-tree/scripts/test_repro_scope.py) exercise missing/unverified/changed saved inputs, failed upstream, sidecar byte changes, target unions and collisions, force/preview, frozen selection, and concurrent unrelated/relevant edits with one and two workers. Full-byte boundary receipts are local evidence; a missing sidecar baseline causes the selected consumer to rerun without rebuilding its producer.
 
 The design is hand-authored from the researcher discussion and code inspection. Independent review found two sidecar-boundary issues and a dependent metadata-transition gap; their fixes and regression evidence are ready for narrow re-review; the separate dashboard redesign is outside this change.
-
-## Review Notes
-
-Tier: thorough. Focus: correctness, scope-fidelity.
-
-1. **[BLOCKING] Restoring missing sidecar metadata invalidates unchanged saved-input evidence.** The [dependency fallback](../../../../skills/task-tree/scripts/_repro_state.py#L295-L302) records `saved-input:<digest>` while a sidecar is absent, then returns the sidecar hash after the producer runs. Reproduced by building B from saved A bytes without a sidecar, then building A with identical bytes: B becomes stale despite its unchanged boundary digest and reruns unnecessarily. Preserve dependency equivalence across that metadata transition in build and status, as required by the [identical upstream regeneration contract](attachments/design.md#scoped-freshness-and-upstream-freshness-are-separate-facts). This is a dependent gap in the missing-sidecar fix; the original missing-sidecar and acceptance failures are fixed. → implemented: [metadata-transition regressions](../../../../skills/task-tree/scripts/test_repro_scope.py#L167) preserve full-byte status and unchanged successful locks after an identical producer build, for scoped and upstream execution. Forced execution still runs and records current canonical state. The registered check passes 175 tests.
