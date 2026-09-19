@@ -1,6 +1,6 @@
 ---
 title: "Build selected tasks against saved inputs by default"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -117,3 +117,10 @@ The [reproducibility skill](../../../../skills/reproducibility/SKILL.md#what-get
 - [Behavioral regressions](../../../../skills/task-tree/scripts/test_repro_scope.py) exercise missing/unverified/changed saved inputs, failed upstream, sidecar byte changes, target unions and collisions, force/preview, frozen selection, and concurrent unrelated/relevant edits with one and two workers. Full-byte boundary receipts are local evidence; a missing sidecar baseline causes the selected consumer to rerun without rebuilding its producer.
 
 The design is hand-authored from the researcher discussion and code inspection. Independent correctness review is requested; the separate dashboard redesign is outside this change.
+
+## Review Notes
+
+Tier: thorough. Focus: correctness, scope-fidelity.
+
+1. **[BLOCKING] Reviewed acceptance hides changed saved-input bytes.** [Acceptance application](../../../../skills/task-tree/scripts/_repro_acceptance.py#L225-L230) restores `fresh` after the boundary receipt has identified changed bytes; [acceptance validation](../../../../skills/task-tree/scripts/_repro_acceptance.py#L187-L193) compares sidecar-backed dependency state without the actual saved-input digest. Reproduced by building a sidecar-backed A → B chain, building B scoped to establish its boundary receipt, accepting a harmless B script edit, then changing A's saved output without its sidecar: scoped B status returns `ok: true` with `boundary: changed`. Preserve boundary invalidation through acceptance, validate the actual reviewed input bytes, and cover status/build agreement with a regression.
+2. **[BLOCKING] Existing saved inputs require an out-of-scope sidecar.** [Engine dependency construction](../../../../skills/task-tree/scripts/repro_run.py#L285-L299) still uses the producer's [sidecar node](../../../../skills/task-tree/scripts/_repro_state.py#L222-L241) at the scoped boundary. With A declaring a sidecar, A's output present, and no prior build or sidecar, `repro build 02-b` reports the input as unverified but fails with `NodeNotFoundError` before executing B. Execute and assess boundary dependencies from the saved artifact bytes without requiring or rebuilding the producer's sidecar; cover missing-sidecar inputs in matching build/status tests.
