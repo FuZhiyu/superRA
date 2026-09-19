@@ -1,6 +1,6 @@
 ---
 title: Unified Tree and Graph Workspace
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -12,7 +12,7 @@ Unify Tree and Graph navigation around one search, task/status filter, selection
 - Show the task preview by default when the viewport has useful space: beside the graph in wide windows, below it in narrow, tall windows. Use a real layout split rather than an overlay. Provide an obvious hide/show control consistent with the tree sidebar and a draggable, keyboard-accessible divider for width or height. Remember explicit visibility and preferred dimensions; window resizing must not override a manual hide. Keep graph navigation and selection stable through resizing, closing, reopening, orientation changes, and full-width reading.
 - Support two-finger touchpad scrolling in both axes to pan and pinch to zoom around the pointer, including Safari gestures and Chromium control-wheel events. Keep drag panning, accessible zoom buttons, fit, and keyboard recovery; prevent unintended page zoom or scroll while handling canvas gestures.
 - Use one project map with an always-visible Project overview action, global search, and local task chevrons. Overview collapses all groups and fits the map; selection preserves graph contents and viewport. Folding a selected step's ancestor preserves selection and details, with a Contains selected step indicator and Show in graph recovery.
-- Provide one shared Filter panel with task checkboxes and status choices, visible active-filter summaries, and Clear filters recovery. Hidden tasks hide descendants; status matches retain ancestor context. Search opens tasks, steps, and files without changing filters. Switching layouts preserves selection, reader content/scroll, and filter state; each layout retains its own expansion and pane preference. Remove Board UI and runtime/export support.
+- Provide one shared Filter panel with a visibly nested, collapsible task checklist, Select all, Deselect all, partial-selection indicators, and status choices, visible active-filter summaries, and Clear filters recovery. Hidden tasks hide descendants; status matches retain ancestor context. Search opens tasks, steps, and files without changing filters. Switching layouts preserves selection, reader content/scroll, and filter state; each layout retains its own expansion and pane preference. Remove Board UI and runtime/export support.
 - Remove trace modes, reproduction-tier filters, scope controls, and expansion-depth controls. Normalize legacy links to the full map while preserving meaningful task/step selection and expansion. Keep URL history, worktree isolation, and offline navigation.
 - Support relative Markdown step links using `task.md#step-<name>` and same-task `#step-<name>`, with the declaration's existing name as identity. Reveal/select the exact step and validate its owner; report broken references. Dashboard sharing uses `?step=<name>`, and rendered step rows expose the anchor.
 - Bundle file connections by endpoint pair; retain every file in arrow evidence and grouped Uses/Used by lists.
@@ -92,4 +92,12 @@ steps:
 
 ## Results
 
-The prior map simplification and step-link support are implemented. The approved revision now unifies Tree/Graph controls and selection, adds explicit task/status filtering, and removes Board. Implementation and fresh verification are in progress.
+Tree and Graph use one search, task/status filter, selection, and reader in the [dashboard runtime](../../../../../skills/task-tree/scripts/templates/dashboard.js). Board and its live/export route are removed. Tree prioritizes task reading with a hideable sidebar; Graph prioritizes the map with hideable details. Each layout retains its pane preference, and switching layouts preserves the open document and selected step.
+
+- **Filtering:** the [task checklist](attachments/browser/workspace-filter-tree.png) has visible hierarchy guides, independent folding, branch checkboxes, partial-selection indicators, Select all, and Deselect all. Task and status choices apply to both layouts, retain matching descendants' ancestors, and survive URLs, history, and worktree switching. [Phone evidence](attachments/browser/workspace-filter-phone.png) shows a scrolling task list with controls kept outside it.
+- **Navigation:** global search finds tasks, steps, output files, and task text. Hidden results open without changing filters; the reader labels the hidden selection. Tree lists steps beneath their owner, and Markdown step links preserve the current layout. Uses/Used by retains hidden connections. A live-refresh regression check verifies that background refresh cannot replace a newer selection.
+- **Verification:** 386 dashboard checks passed across the suite and the separately rerun tier-route check. The registered interaction check passed 48 tests covering live/offline links, shared filters, nested and archived tasks, folding, select/deselect all, pane priorities, refresh, history, gestures, and responsive layout. The [500-step browser fixture](../../../../../skills/task-tree/scripts/tests/navigation_browser.py) passed with 1,494 file connections, comments, worktree isolation, and offline navigation; [recorded results](attachments/browser/browser-results.json) identify timings and environment. Native Safari and physical trackpad gestures were unavailable; Chrome exercised the platform event handlers.
+- **Reproduction:** builds of `dashboard-dag-design-browser` and `dashboard-dag-design-interaction-check` succeeded; matching status reported both fresh. Their outputs and [lock](../../../../../pytask.lock) record actual execution against this shared checkout. Concurrent reproduction-engine changes belong to another session and are excluded from this UI commit.
+- **Live dashboard:** [port 8653](http://localhost:8653/?wt=heterogeneity-reproduction) serves the updated development source and task-status index; the removed Board route returns 404. Research declarations and data were unchanged.
+
+Independent review has not run.

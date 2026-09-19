@@ -1395,20 +1395,6 @@ async def children_graph(request: Request, root: str):
     return _children_graph_payload(sub_root, graph)
 
 
-# --- Route: GET /kanban ------------------------------------------------------
-
-@app.get("/kanban", response_class=HTMLResponse)
-async def kanban_view(request: Request):
-    """Render the kanban board partial."""
-    state = await resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.get_template("kanban.html")
-    all_tasks = collect_all_tasks(state.root_task)
-    return HTMLResponse(content=template.render(all_tasks=all_tasks))
-
-
 # --- Routes: GET /api/repro/graph, GET /api/repro/status --------------------
 #
 # Two read-only payloads behind the Reproduction view: the graph the tasks
@@ -2138,7 +2124,7 @@ async def export_subtree(request: Request, root: str = ""):
 # ---------------------------------------------------------------------------
 # The `generate` subcommand renders the SAME base.html template the live server
 # serves, in standalone mode: every fragment the live client fetches (/nav,
-# /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban) is
+# /nav/<path>, /node/<path>, /api/children-graph?root=<path>) is
 # pre-rendered here with the identical Jinja partials/render helpers and
 # embedded inline, and base.html's standalone fetch shim resolves the client's
 # fetch() calls from that embedded map. There is exactly one dashboard source
@@ -2149,7 +2135,7 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     """Pre-render every server fragment the standalone client fetches.
 
     Mirrors the live routes (/nav, /nav/<path>, /node/<path>,
-    /api/children-graph?root=<path>, /kanban) byte-for-byte (JSON fragments
+    /api/children-graph?root=<path>) byte-for-byte (JSON fragments
     value-for-value) by reusing the same render helpers, keyed by the exact URL
     the client requests so base.html's standaloneFetch resolves them offline.
     Takes the render state explicitly via *state* (its ``root_task`` and
@@ -2184,10 +2170,6 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
         fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task, graph)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
-
-    # /kanban — the full board.
-    kanban_tmpl = env.get_template("kanban.html")
-    fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
 
     # Reproduction view — a snapshot of the graph and of the freshness state at
     # export time. The client asks for the whole tier and filters client-side,
@@ -2496,6 +2478,7 @@ def _build_search_index(root_task: Task, all_tasks: list[Task]) -> list[dict[str
             "path": task.path,
             "slug": task.slug,
             "title": task.title or "",
+            "status": task.status,
             "text": _search_text(task.body),
         })
     return index
@@ -2530,7 +2513,7 @@ def render_standalone_html(
     bare root basename so a tree nested below the repo root keeps its leading
     path.  Empty falls back to the basename (a tree at the repo root, e.g.
     ``superRA``).  *doc_mode* (opt-in) renders the tree as documentation: task-workflow
-    chrome (status badges, summary stats/progress, kanban toggle, children
+    chrome (status badges, summary stats/progress, layout toggle, children
     dependency view) is suppressed, and a genuine body file link resolves
     repo-root-relative (the doc authoring contract) rather than against the doc
     node's dir.  *doc_local_links* names basenames the build emits beside the

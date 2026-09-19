@@ -232,7 +232,7 @@ class TestServerRoutes:
         assert 'id="children-dag"' in text
         # Workspace/Kanban toggle; the standalone DAG button is removed.
         assert 'id="btn-workspace"' in text
-        assert 'id="btn-kanban"' in text
+        assert 'id="btn-kanban"' not in text
         assert 'id="btn-dag"' not in text
 
     def test_dag_returns_mermaid(self, client):
@@ -1982,22 +1982,11 @@ class TestTouchPolish:
         assert "-webkit-tap-highlight-color: transparent;" in BASE_HTML
         assert ".task-row:active" in BASE_HTML
 
-    def test_phone_search_sheet_present(self):
-        """The phone search/filter sheet, its trigger, and the JS that adopts the
-        existing #search-box / #filter-status into it are all present."""
-        assert 'id="search-sheet"' in BASE_HTML
-        assert 'id="search-trigger"' in BASE_HTML
-        assert 'id="search-sheet-backdrop"' in BASE_HTML
-        assert "function toggleSearchSheet" in BASE_HTML
-        assert "function openSearchSheet" in BASE_HTML
-        assert "function closeSearchSheet" in BASE_HTML
-        # The sheet adopts the live elements rather than duplicating inputs.
-        assert 'id="search-host"' in BASE_HTML
-        assert "body.appendChild(host)" in BASE_HTML
-
-    def test_search_sheet_closed_by_navigation(self):
-        """A navigation selection closes the sheet alongside the drawer."""
-        assert "closeSearchSheet();" in BASE_HTML
+    def test_shared_filter_controls_present(self):
+        assert 'id="workspace-filter"' in BASE_HTML
+        assert 'id="filter-trigger"' in BASE_HTML
+        assert 'id="search-box"' not in BASE_HTML
+        assert 'id="filter-status"' not in BASE_HTML
 
     def test_content_safe_area_insets(self):
         """The detail panel and the bottom sheet pad past the home indicator /
@@ -2012,20 +2001,19 @@ class TestTouchPolish:
         assert "overscroll-behavior-x: contain;" in BASE_HTML
         coarse = BASE_HTML.split("@media (pointer: coarse)", 1)[1]
         assert "mask-image: linear-gradient(to right" in coarse
-        assert "scroll-snap-type: x proximity;" in coarse
 
     def test_served_page_carries_polish_primitives(self, client):
         """The polish primitives survive the live render (server path): markup
         stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
-        assert 'id="search-sheet"' in text
+        assert 'id="workspace-filter"' in text
         assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
         assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', text)
         css = client.get("/static/dashboard.css").text
         assert "@media (pointer: coarse)" in css
         assert "-webkit-tap-highlight-color: transparent;" in css
         js = client.get("/static/dashboard.js").text
-        assert "function toggleSearchSheet" in js
+        assert "function openWorkspaceFilter" in js
 
 
 def _have_chromium() -> bool:
@@ -2121,7 +2109,7 @@ class TestTouchPolishRendered:
                     pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
                     pg.wait_for_timeout(300)
                     trig = pg.locator("#search-trigger").is_visible()
-                    inline = pg.locator("#search-box").is_visible()
+                    inline = pg.locator("#btn-find").is_visible()
                     ctx.close()
                     assert not trig, f"trigger visible on iPad {w}x{h} (should be inline only)"
                     assert inline, f"inline search hidden on iPad {w}x{h}"
@@ -2132,11 +2120,11 @@ class TestTouchPolishRendered:
                 pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
                 pg.wait_for_timeout(300)
                 trig = pg.locator("#search-trigger").is_visible()
-                inline = pg.locator("#search-box").is_visible()
+                inline = pg.locator("#btn-find").is_visible()
                 ctx.close()
                 b.close()
-            assert trig, "trigger hidden on iPhone (should be shown)"
-            assert not inline, "inline search visible on iPhone (should be in sheet/hidden)"
+            assert not trig, "retired trigger visible on iPhone"
+            assert inline, "shared search hidden on iPhone"
         finally:
             self._stop(t)
 
@@ -3820,7 +3808,7 @@ class TestDashboard:
         assert "/nav" in html
         assert "/node/01-first" in html
         assert "/api/children-graph?root=02-second" in html
-        assert "/kanban" in html
+        assert 'id="view-kanban"' not in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
 
@@ -3942,7 +3930,8 @@ class TestDashboard:
         with TestClient(plan_dashboard.app) as c:
             assert fragments["/nav"] == c.get("/nav").text
             assert fragments["/node/01-first"] == c.get("/node/01-first").text
-            assert fragments["/kanban"] == c.get("/kanban").text
+            assert "/kanban" not in fragments
+            assert c.get("/kanban").status_code == 404
             assert (
                 fragments["/api/children-graph?root=02-second"]
                 == c.get("/api/children-graph", params={"root": "02-second"}).json()
@@ -4450,7 +4439,6 @@ class TestDocMode:
         for selector in (
             "html[data-doc-mode] .badge",
             "html[data-doc-mode] #summary-bar",
-            "html[data-doc-mode] #btn-kanban",
             "html[data-doc-mode] .children-dag",
         ):
             assert selector in html, f"missing doc-mode rule: {selector}"
@@ -4869,23 +4857,6 @@ class TestServerSideEscaping:
         assert "<script>alert(2)</script>" not in html
         assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
 
-    def test_kanban_card_escaped_with_no_interpolated_onclick(self, adv_client):
-        """The kanban card title is literal text, and the card is wired via a
-        data-path attribute + delegated handler rather than an inline onclick
-        built by interpolating the task path."""
-        html = adv_client.get("/kanban").text
-        assert "<script>alert(2)</script>" not in html
-        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
-        assert 'onclick="revealTask(' not in html
-        assert 'data-path="01-adversarial"' in html
-
-    def test_active_node_card_assembly_delegates_to_kanban_handler(self):
-        """onKanbanCardClick reads the card's data-path (delegated), mirroring
-        onChildCardClick's escaped-attribute + delegation pattern."""
-        src = BASE_HTML
-        assert "function onKanbanCardClick(event)" in src
-        assert "card.dataset.path" in src
-
     def test_comment_anchor_selectors_use_css_escape(self):
         """A `"` in a `##` header used to throw out of querySelector and abort
         comment loading for the whole task; CSS.escape guards both
@@ -4944,7 +4915,7 @@ class TestServerSideEscaping:
         # escaped by the client's escapeHtml at display time, per
         # TestClientSearch — not asserted here).
         escaped_leaf_title = "\\u0026lt;script\\u0026gt;alert(2)\\u0026lt;/script\\u0026gt;"
-        assert html.count(escaped_leaf_title) == 2  # kanban card, nav row
+        assert html.count(escaped_leaf_title) == 1  # nav row
 
         # The children-graph payload's title field is single JSON-escaped —
         # still script-safe with no HTML-escape round trip.
@@ -5010,7 +4981,7 @@ class TestClientSearch:
         assert "function runSearch" in src
         assert "function scoreSearchRecord" in src
         # chooseSearchResult navigates through the same setActive router.
-        assert "setActive(rec.path" in src
+        assert "reproSelectTask(rec.path" in src
 
     def test_search_keyboard_affordances(self):
         """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
@@ -5147,7 +5118,7 @@ class TestMasterDetailPartials:
 
     def test_existing_routes_unaffected(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
-            for route in ("/", "/dag", "/kanban"):
+            for route in ("/", "/dag"):
                 assert c.get(route).status_code == 200
 
 
@@ -7048,7 +7019,7 @@ def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
         "REPRO_STATES", "REPRO_GLYPHS",
         "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
-        "reproProject", "reproMatches", "reproWithin", "reproButton",
+        "reproProject", "reproMatches", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
         "reproControlsHTML", "reproTasks", "reproLogicalBoundaryHTML", "reproHierarchy", "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
         "onReproClick", "reproNavigate", "reproRoots", "reproHash", "reproBoundaryHTML",
@@ -7057,10 +7028,11 @@ def _run_repro_render_node(harness_body):
     # drawReproView writes into a container and rebinds handlers; the harness
     # supplies just enough DOM and module state for the pure render path.
     shim = (
+        "var _workspaceFilters={statuses:[],tasks:null};\n"
         "var _reproTier='all', _reproSelected='', _reproData=null, pathTitles={};\n"
         "var window={}; var _reproNav={roots:[],tier:'all',mode:'scope',view:'overview'};\n"
         "var _reproContext=[], _reproNotice='', _reproLayoutCache=null, _reproFitNext=true, _reproPreserve='';\n"
-        "var activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
+        "var activeArtifactPath='',currentView='reproduction',activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
         "var history={pushState:function(s,t,url){location.hash=url;}};\n"
         "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
         "function reproReaderControls(){}\n"
@@ -7302,12 +7274,15 @@ class TestReproNavigationRepair:
     def run_client(self, body):
         defs = _extract_js_defs([
             "onReproClick", "reproNavigate", "reproRoots", "reproWithin",
-            "reproProject", "reproMatches", "reproHash", "reproReadHash",
+            "reproProject", "reproMatches", "reproHash", "reproReadHash", "normalizeWorkspaceFilters",
             "revealReproStep", "selectReproStep", "reproNodeId", "initRouter", "reproRevealOwner", "parentPath", "reproFocus", "reproZoomAt",
         ])
         shim = r"""
 const assert = require('node:assert/strict');
-var activePath='analysis', ACTIVE_WT='fixture', restoring=false;
+var activeArtifactPath='',activePath='analysis', ACTIVE_WT='fixture', restoring=false;
+var _workspaceFilters={statuses:[],tasks:null};
+function applyWorkspaceFilters(){}
+function syncTreeSteps(){}
 var location={hash:'#/analysis'}, history={
   pushState:function(s,t,url){location.hash=url;},
   replaceState:function(s,t,url){location.hash=url;}
@@ -7325,7 +7300,7 @@ var box={querySelectorAll:function(){return [];},querySelector:function(){return
 var document={getElementById:function(){return box;},
   querySelector:function(){return {clientWidth:800,clientHeight:500};}};
 function drawReproView(){drawn=reproProject(_reproData.graph,_reproNav,_reproContext);}
-function showView(view){opened=view;}
+function showView(view){opened=view;currentView=view;}
 function renderReproDetail(name){selected=name;}
 function loadReproData(){return Promise.resolve(_reproData);}
 function reproTransform(){transformed++;}
