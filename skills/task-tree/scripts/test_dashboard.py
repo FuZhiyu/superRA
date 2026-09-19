@@ -7166,12 +7166,13 @@ class TestReproLayoutClientLogic:
 
 def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
-        "REPRO_STATES", "RP_NODE_W", "RP_X0", "reproLayout",
+        "REPRO_STATES", "REPRO_GLYPHS", "RP_NODE_W", "RP_X0", "reproLayout",
         "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
         "reproProject", "reproMatches", "reproWithin", "reproButton",
         "reproControlsHTML", "reproTasks", "reproOverviewHTML",
         "reproLegendHTML", "reproFindingsHTML", "reproBandsHTML", "reproEdgesHTML",
         "reproNodesHTML", "reproNodeId", "reproDuration", "reproOutLabel",
+        "onReproClick", "reproNavigate", "reproRoots", "reproHash", "reproBoundaryHTML",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness
@@ -7179,9 +7180,13 @@ def _run_repro_render_node(harness_body):
     shim = (
         "var _reproTier='all', _reproSelected='', _reproData=null, pathTitles={};\n"
         "var window={}; var _reproNav={roots:[],tier:'all',mode:'scope',view:'overview'};\n"
-        "var _reproContext=[], _reproNotice='';\n"
-        "var document={getElementById:function(){return null;}};\n"
-        "function onReproClick(){}\n"
+        "var _reproContext=[], _reproNotice='', _reproLayoutCache=null, _reproFitNext=true;\n"
+        "var activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
+        "var history={pushState:function(s,t,url){location.hash=url;}};\n"
+        "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
+        "function reproBindViewport(){}\n"
+        "function reproFit(){}\n"
+        "function reproTransform(){}\n"
         "function reproBindHead(){}\n"
         "function renderReproDetail(){}\n"
     )
@@ -7196,6 +7201,24 @@ def _run_repro_render_node(harness_body):
 
 @pytest.mark.skipif(_NODE is None, reason="node not available")
 class TestReproFindingsRendering:
+    def test_explore_renders_cross_task_file_dependencies(self, repro_plan):
+        with _repro_client(repro_plan) as client:
+            graph = client.get("/api/repro/graph").json()
+        edge = next(e for e in graph["step_edges"] if e["to"] == "merge-panel")
+        owner = next(s["task"] for s in graph["steps"] if s["name"] == "merge-panel")
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "_reproData={graph:" + json.dumps(graph) + ",status:{steps:[],findings:[]}};"
+            "drawReproView(box,_reproData);"
+            "box.onclick({preventDefault:function(){},target:{closest:function(){"
+            "return {dataset:{rpAction:'explore',value:" + json.dumps(owner) + "}};}}});"
+            "console.log(JSON.stringify({html:box.innerHTML}));"
+        )
+        assert 'class="repro-canvas"' in out["html"]
+        assert 'data-step="merge-panel"' in out["html"]
+        assert "Reveal " + edge["from"] in out["html"]
+        assert edge["via"] in out["html"]
+
     def test_a_graph_that_failed_to_load_shows_its_errors_not_an_empty_state(self):
         """A section that was declared and did not load must not read as a tree
         where nobody declared one — the error is the whole explanation."""
