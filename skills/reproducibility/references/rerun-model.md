@@ -14,6 +14,8 @@ Predict what a change reruns before running it, and read a state you did not exp
 
 **Identical regeneration.** A rerun that rewrites its out byte-for-byte leaves the descendants fresh, so a comment-only edit to a producer costs one step instead of the whole tail.
 
+[Reviewed acceptance](#reviewed-acceptance) can also stop upstream uncertainty; independently changed downstream inputs still require work.
+
 Volatile bytes defeat that cutoff when the producer reruns; they do not by themselves make a just-built output stale. Sort before writing and keep run timestamps out of tracked outs — figure checks: [graph authoring](graph-authoring.md).
 
 ## Cache and sidecars
@@ -24,7 +26,7 @@ Sidecar tracking (contract §Reproduction Section) is for one measurably slow in
 
 ## Diagnosing a surprise
 
-`superra repro explain <step>` names the node that changed.
+`superra repro impact <path...>` identifies affected consumers and why the file is tracked; `superra repro explain <step> --json` separates own changes from upstream uncertainty and exposes verified baseline diffs when available. Impact predicts invalidation, not changed output values.
 
 | It names | Read it as |
 |---|---|
@@ -33,3 +35,13 @@ Sidecar tracking (contract §Reproduction Section) is for one measurably slow in
 | A file you did not know the step read | The include closure or `env_deps` reached it — correct, if the script really reads it. |
 | An upstream step is stale | Follow that producer with `superra repro explain <producer>`. |
 | `external` on a generated file | Confirm the boundary: retrieve an agreed saved input, or register an in-scope producer. |
+
+## Reviewed acceptance
+
+**Inspect before accepting.** Follow the changed inputs/specification, verified baseline diff, and include/import path for each affected consumer. Reduce recurring fan-out through [module or artifact boundaries](graph-authoring.md#isolate-meaningful-recomputation) when within scope.
+
+**Justify every changed item.** Cite inspected code, call sites, or a focused check establishing that the selected consumer's behavior and outputs remain unchanged. Split batches when only some consumers are unaffected. Missing historical source text permits other documented evidence; unchanged output files alone do not establish equivalence.
+
+**Rerun uncertain effects.** Changed analytical specifications, changed assertions, or insufficient evidence require execution of the affected producer/check.
+
+**Preview the exact selection, then apply it with evidence**, using [the acceptance commands](../../task-tree/references/commands.md#reviewed-acceptance).

@@ -63,7 +63,7 @@ Size each task for independent execution and review.
 - The split artificially decomposes one logical operation.
 - The children would edit the same files or reload the same context — one edit surface is one task, however many concerns it serves.
 
-`depends_on` records prerequisite order among sibling review units; it does not justify a split. Choose the split for review value, then add dependencies for execution order. A branch may be serial, parallel, or mixed.
+Choose splits for review value, then follow [Task Dependencies](build-and-review.md#task-dependencies) for ordering. A branch may be serial, parallel, or mixed.
 
 **Right-sizing test:** success criteria in one sentence — right size. Review would be trivial — too small. Description needs three paragraphs — may need splitting. Two siblings whose success criteria read naturally as one sentence together — one task.
 
@@ -93,7 +93,7 @@ Rewrite the owning `## Objective` as the current-state contract for the full wid
 
 The rewrite trims as well as adds: re-run the rejection test over every carried-forward line, deleting what the widened concern no longer makes rejectable and what the new scope made redundant. A folded-in researcher decision is stated as the current contract, never as a dated "per user decision" note — git carries the date.
 
-Simple changes: reopen the owning or affected tasks and rewrite objectives with revision notes. Flip a directly widened `approved` task to `revise` so it re-enters the frontier; reset transitive downstream dependents whose inputs or assumptions shift to `not-started` by orchestrator judgment. Complex changes: create a temporary child under the durable home so implementation and review get their own evidence trail.
+Simple changes: reopen the owning or affected tasks and rewrite objectives with revision notes. Flip a directly widened `approved` task to `revise` so it re-enters the frontier; use the [effective dependency snapshot](../../task-tree/references/commands.md#reproduction) to identify transitive downstream dependents and reset those whose inputs or assumptions shift to `not-started` by orchestrator judgment. Complex changes: create a temporary child under the durable home so implementation and review get their own evidence trail.
 
 ### Parent and sibling context
 

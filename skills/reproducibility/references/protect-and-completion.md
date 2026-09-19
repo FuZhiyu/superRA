@@ -19,7 +19,7 @@ superra repro build --tier required
 superra repro status --tier required
 ```
 
-Verify that the selection covers kept results and selected protection checks. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. On-demand claims require their own [scoped verification](../SKILL.md#build-and-status).
+Verify that the selection covers kept results and selected protection checks. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-model.md#reviewed-acceptance). On-demand claims require their own [scoped verification](../SKILL.md#build-and-status).
 
 A failure blocks the completion menu:
 
