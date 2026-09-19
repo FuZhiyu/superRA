@@ -42,6 +42,7 @@ from _repro_state import (  # noqa: E402
     Node,
     absolute,
     compute_status,
+    dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
     format_explain,
@@ -84,6 +85,7 @@ class FileNode:
     resolved: Path
     cache: HashCache
     must_exist: Path | None = None
+    saved_input: bool = False
     attributes: dict = field(default_factory=dict)
 
     @property
@@ -91,6 +93,9 @@ class FileNode:
         return hashlib.sha256(self.name.encode("utf-8")).hexdigest()
 
     def state(self) -> str | None:
+        if self.saved_input:
+            node = (self.name, str(self.resolved), str(self.must_exist) if self.must_exist else None)
+            return dependency_state(self.cache, Path('.'), node)
         if self.must_exist is not None and not self.must_exist.exists():
             return None
         return self.cache.path_state(self.resolved)
@@ -272,6 +277,7 @@ def make_tasks(
 ) -> list[StepTask]:
     """One in-memory pytask task per selected step."""
     outputs = output_nodes(graph)
+    selected_products = {out.path.logical for step in graph.steps if step.name in names for out in step.outs}
     tasks = []
     for name in names:
         step = graph.step(name)
@@ -296,7 +302,7 @@ def make_tasks(
                 attributes=attributes,
                 force_pending=forced,
                 depends_on={
-                    "deps": [_node(node, paths, cache) for node in deps],
+                    "deps": [_node(node, paths, cache, saved_input=node[0] not in selected_products) for node in deps],
                     "spec": SpecNode(name=spec_node_id(step.name), value=spec_hash(step)),
                 },
                 produces=produces,
@@ -305,12 +311,13 @@ def make_tasks(
     return tasks
 
 
-def _node(node: Node, paths: RunnerPaths, cache: HashCache) -> FileNode:
+def _node(node: Node, paths: RunnerPaths, cache: HashCache, *, saved_input=False) -> FileNode:
     logical, hashed, must_exist = node
     return FileNode(
         name=logical,
         resolved=absolute(paths.project_root, hashed),
         cache=cache,
+        saved_input=saved_input,
         must_exist=(
             absolute(paths.project_root, must_exist) if must_exist else None
         ),
