@@ -178,7 +178,8 @@ class StepFailed(RuntimeError):
 # ---------------------------------------------------------------------------
 
 def _run_step(
-    step: Step, paths: RunnerPaths, cache: HashCache, *, forced: bool = False
+    step: Step, paths: RunnerPaths, cache: HashCache, *, forced: bool = False,
+    graph: Graph | None = None, attributes: dict | None = None
 ) -> Callable[..., None]:
     """Build the callable pytask executes for *step*."""
 
@@ -199,7 +200,12 @@ def _run_step(
             if out.sidecar is not None
         }
 
+        from _repro_acceptance import current_state
+        if graph is not None and attributes is not None:
+            attributes["superra_before"] = current_state(graph, step, paths)
+        must_retry = forced or bool((attributes or {}).get("superra_retry_required"))
         started = time.time()
+        write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started})
         with log_path.open("w", encoding="utf-8") as log:
             log.write(f"$ {step.cmd}\n")
             log.flush()
@@ -213,8 +219,8 @@ def _run_step(
             )
         duration = time.time() - started
         record = {
-            "outcome": "success" if completed.returncode == 0 else "failed",
-            "forced": forced,
+            "outcome": "pending" if completed.returncode == 0 else "failed",
+            "forced": must_retry,
             "exit_code": completed.returncode,
             "duration": duration,
             "ended_at": time.time(),
@@ -270,7 +276,8 @@ def make_tasks(
             continue
         record = read_run_record(paths, name)
         forced = name in (force_names or ()) or (
-            record.get("outcome") == "failed" and record.get("forced", False)
+            record.get("outcome") in ("running", "pending")
+            or (record.get("outcome") == "failed" and record.get("forced", False))
         )
         deps, products = step_nodes(step, outputs)
         deps += directory_dep_nodes(graph, step)
@@ -278,10 +285,12 @@ def make_tasks(
         if products:
             key = "stamp" if step.kind == "check" else "outs"
             produces[key] = [_node(node, paths, cache) for node in products]
+        attributes = {"superra": (graph, paths, step), "superra_cache": cache}
         tasks.append(
             StepTask(
                 name=step.name,
-                function=_run_step(step, paths, cache, forced=forced),
+                function=_run_step(step, paths, cache, forced=forced, graph=graph, attributes=attributes),
+                attributes=attributes,
                 force_pending=forced,
                 depends_on={
                     "deps": [_node(node, paths, cache) for node in deps],
@@ -335,6 +344,10 @@ def run_build(
     if scripts_dir not in pytask.Traceback.suppress:
         pytask.Traceback.suppress += (scripts_dir,)
 
+    from _repro_acceptance import bind_sources, check_sources
+    if not hasattr(graph, "_acceptance_sources") and graph.dependencies:
+        bind_sources(graph, graph.dependencies.tasks[""].dir_path)
+    check_sources(graph)
     cache = HashCache(paths.cache_file)
     forced = set(names if force_all else (force_names or ()))
     tasks = make_tasks(graph, names, paths, cache, force_names=forced)
@@ -345,15 +358,22 @@ def run_build(
         # share one hash cache.
         options["n_workers"] = n_workers
         options["parallel_backend"] = "threads"
-    with _in_directory(paths.project_root):
-        session = pytask.build(
-            tasks=tasks,
-            paths=[],
-            force=False,
-            dry_run=dry_run,
-            explain=dry_run,
-            **options,
+    from _repro_acceptance import mutation_lock
+    with mutation_lock(paths), _in_directory(paths.project_root):
+        # pytask 0.6's API does not run the hook_module CLI callback.
+        from _pytask.pluginmanager import get_plugin_manager, storage
+        from _pytask.build import normalize_programmatic_config
+        from _pytask.cli import DEFAULTS_FROM_CLI
+        import _repro_hooks
+        manager = get_plugin_manager()
+        manager.register(_repro_hooks)
+        storage.store(manager)
+        config = normalize_programmatic_config(
+            dict(tasks=tasks, paths=[], force=False, dry_run=dry_run,
+                 explain=dry_run, **options),
+            command="build", defaults_from_cli=DEFAULTS_FROM_CLI,
         )
+        session = pytask.build(**config)
     cache.flush()
     root = session.config.get("root")
     if root is not None and Path(root).resolve() != paths.project_root.resolve():
@@ -398,6 +418,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     explain = sub.add_parser("explain", help="Explain one step's state")
     explain.add_argument("step")
+    explain.add_argument("--json", action="store_true", dest="as_json")
+
+    impact = sub.add_parser("impact", help="Inspect conservative dependency fan-out")
+    impact.add_argument("paths", nargs="+")
+    impact.add_argument("--scope", action="append", default=[])
+    impact.add_argument("--json", action="store_true", dest="as_json")
+
+    accept = sub.add_parser("accept", help="Preview or apply exact-state reviewed acceptance")
+    accept.add_argument("targets", nargs="+")
+    accept.add_argument("--reason", default="")
+    accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE")
+    accept.add_argument("--evidence", action="append", default=[], metavar="FILE")
+    mode = accept.add_mutually_exclusive_group()
+    mode.add_argument("--apply", metavar="PREVIEW_TOKEN")
+    mode.add_argument("--dry-run", action="store_true")
+    accept.add_argument("--json", action="store_true", dest="as_json")
+
+    revoke = sub.add_parser("revoke", help="Revoke selected step acceptances")
+    revoke.add_argument("targets", nargs="+")
+    revoke.add_argument("--json", action="store_true", dest="as_json")
 
     dag = sub.add_parser("dag", help="Render the step graph")
     dag.add_argument("--mermaid", action="store_true")
@@ -412,7 +452,7 @@ def _unsupported_here(command: str) -> bool:
     """Whether the running interpreter is short of what this subcommand needs."""
     if command == "build":
         return importlib.util.find_spec("pytask") is None
-    return command in ("status", "explain") and not TOML_AVAILABLE
+    return command in ("status", "explain", "accept", "revoke") and not TOML_AVAILABLE
 
 
 def _missing_piece(command: str) -> str:
@@ -474,7 +514,11 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
         return
 
+    from _repro_acceptance import bind_sources, source_signature
+    signature = source_signature(plan_root) if args.command in ("build", "accept") else None
     graph = build_graph(plan_root, project_root=project_root)
+    if signature is not None:
+        bind_sources(graph, plan_root, signature)
 
     if args.command == "dag":
         print(render_dag(graph, mermaid=args.mermaid))
@@ -482,6 +526,27 @@ def main(argv: list[str] | None = None) -> None:
 
     if graph.steps:
         ensure_state_dir(paths)
+
+    if args.command in ("impact", "accept", "revoke"):
+        from _repro_acceptance import accept, impact, revoke
+        try:
+            if args.command == "impact":
+                result = impact(graph, paths, args.paths, args.scope)
+            elif args.command == "revoke":
+                result = revoke(graph, paths, args.targets)
+            else:
+                reviews = {}
+                for item in args.review:
+                    node, sep, rationale = item.partition("=")
+                    if not sep or not rationale.strip():
+                        raise ReproStateError("--review expects NODE=RATIONALE")
+                    reviews[node] = rationale
+                result = accept(graph, paths, args.targets, args.reason, reviews, args.evidence, args.apply)
+            print(json.dumps(result, indent=2))
+            return
+        except ReproStateError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     if args.command == "build":
         errors = [f for f in graph.findings if f.severity == "error"]
@@ -507,8 +572,8 @@ def main(argv: list[str] | None = None) -> None:
             select_steps(graph, args.targets, args.tier, include_ancestors=False)[0]
             if args.force else []
         )
-        sys.exit(
-            run_build(
+        try:
+            result = run_build(
                 graph,
                 paths,
                 names,
@@ -517,7 +582,10 @@ def main(argv: list[str] | None = None) -> None:
                 force_names=force_names,
                 dry_run=args.dry_run,
             )
-        )
+        except ReproStateError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(result)
 
     try:
         report = compute_status(
@@ -525,7 +593,16 @@ def main(argv: list[str] | None = None) -> None:
             targets=args.targets if args.command == "status" else (),
         )
         if args.command == "explain":
-            print(format_explain(report, args.step))
+            from _repro_acceptance import inspect_baseline
+            entry = report.entry(args.step)
+            if entry is None:
+                raise ReproStateError(f"unknown step {args.step!r}")
+            details = inspect_baseline(graph, entry.step, paths)
+            if args.as_json:
+                print(json.dumps(dict(entry.to_dict(), baseline=details), indent=2))
+            else:
+                print(format_explain(report, args.step))
+                print("  baseline: " + json.dumps(details, indent=2))
             return
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)

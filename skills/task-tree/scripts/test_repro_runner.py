@@ -829,7 +829,7 @@ def test_status_json_matches_the_documented_shape(project, capsys):
     step = next(s for s in payload["steps"] if s["name"] == "build-b")
     assert set(step) == {
         "name", "task", "tier", "kind", "cmd", "status", "reason", "changes",
-        "duration", "last_run", "log", "deps", "outs",
+        "duration", "last_run", "log", "deps", "outs", "acceptance",
     }
     assert step["task"] == "02-b"
     assert step["status"] == "fresh"

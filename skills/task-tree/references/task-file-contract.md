@@ -156,7 +156,7 @@ outs:
     sidecar: "${OUT}/very_large.arrow.sha256"
 ```
 
-The runner hashes the sidecar instead of the out. That is the trade-off: a very large intermediate costs one small read per check, and a hand-edit of the out itself goes unnoticed until the sidecar is rewritten.
+The runner hashes the sidecar instead of the out. That is the trade-off: a very large intermediate costs one small read per check, and a hand-edit of the out itself goes unnoticed until the sidecar is rewritten. Reviewed acceptance additionally checks the actual output digest against a verified successful baseline; arbitrary unchanged sidecar text cannot establish output equality.
 
 ### Project config
 
@@ -212,3 +212,23 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 **`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
+
+### Acceptance and successful baseline records
+
+The project-root `repro-acceptance.json` is committed separately from `pytask.lock`. Its version-1 object has `version: 1` and a `steps` mapping by stable step name. Each record contains:
+
+| Field | Binding |
+| --- | --- |
+| `id` | SHA-256 of the canonical JSON record excluding `id` |
+| `baseline` | Successful lock dependency/product maps, verified actual output digests, receipt identity, step specification, and actual-run metadata |
+| `state` | Reviewed dependency/specification hashes, engine product hashes, and actual output fingerprints |
+| `upstream` | Direct upstream acceptance ids on which this decision relies |
+| `reason`, `reviews` | Overall rationale and a rationale for every changed dependency/specification node |
+| `evidence` | Existing evidence-file references mapped to their content hashes at review time |
+| `recorded_at`, `actor` | Recording time and available local account name |
+
+A record applies only to its exact successful baseline, reviewed state, and upstream acceptance identities. Invalid graphs, missing inputs/products, changed output bytes, and unsuccessful executions cannot be covered. Acceptance does not change workflow task statuses, successful lock entries, check stamps, or actual-run metadata. The status vocabulary remains `fresh`, `stale`, `missing`, `failed`, and `external`.
+
+Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After engine product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. Dependencies must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Accepted records embed baseline identities and output digests, preserving reuse after local cache loss. Raw source snapshots remain local and never enter the committed ledger or status payload; absent historical source text and execution logs remain unavailable.
+
+Older normal-output lock entries supply successful output hashes even without source snapshots. `explain` labels those diffs unavailable. Older sidecar locks supply only sidecar hashes, so acceptance requires a verified receipt for the actual output bytes. Check acceptance retains the existing successful stamp; deleting the stamp requires rerunning the check.

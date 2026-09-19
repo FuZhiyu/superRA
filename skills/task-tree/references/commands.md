@@ -97,7 +97,8 @@ superra repro build --dry-run             # what would run, and why
 superra repro build check-panel --force   # force the target; rebuild ancestors only when stale or missing
 superra repro build check-panel --force-all # force the target and every producer ancestor
 superra repro build --tier all --force-all # rerun every registered step
-superra repro explain build-panel         # one step: state, changed nodes, upstream, log
+superra repro explain build-panel --json  # own changes, verified baseline diffs, acceptance, actual run
+superra repro impact Code/helpers.jl --scope 02-merge --json # includes affected steps outside scope
 superra repro dag --mermaid               # the step graph
 superra repro tier 02-merge required      # set a task's tier
 ```
@@ -110,13 +111,37 @@ superra repro tier 02-merge required      # set a task's tier
 
 | State | Meaning |
 |---|---|
-| `fresh` | Every recorded input and output still matches. |
+| `fresh` | Inputs and outputs match the successful build, or a valid exact-state acceptance covers the changes. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
 | `missing` | Never built, or an out is gone. |
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
-`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
+`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
+
+### Reviewed acceptance
+
+`impact <path...> [--scope <task-or-step>]` reports direct consumers with script/declared/include/environment origins, affected descendants, and connecting files. Repeat `--scope` for multiple selections; `in_scope: false` keeps outside effects visible. This predicts invalidation; unchanged regenerated outputs can stop execution downstream.
+
+`accept <step-or-task...>` previews an exact step list. A task expands to its owned and descendant steps; producer ancestors and downstream consumers are not implicitly accepted. Supply a rationale for each `changes[].node`, a summary reason, and existing project-relative evidence files (optional `#anchor` references):
+
+```bash
+superra repro accept build-panel --json
+superra repro accept build-panel --reason 'Comment-only helper edit' \
+  --review 'Code/helpers.jl=Only documentation changed; the executed function is identical' \
+  --evidence superRA/02-merge/attachments/review.md --json
+# Repeat those arguments with the token returned by the complete preview:
+superra repro accept build-panel --reason 'Comment-only helper edit' \
+  --review 'Code/helpers.jl=Only documentation changed; the executed function is identical' \
+  --evidence superRA/02-merge/attachments/review.md --apply <preview-token> --json
+superra repro revoke build-panel --json
+```
+
+Preview is the default; `--dry-run` is its explicit alias. The token binds selection, current hashes, baseline, review coverage, evidence-file bytes, and the preceding ledger. Apply rechecks these and writes all selected records atomically. It requires a valid graph, a successful baseline, existing inputs/outputs, output equality, and fresh upstream producers; a selected upstream acceptance may satisfy a downstream one in the same batch. Missing/uncovered evidence, concurrent changes, and failed or interrupted runs reject the operation.
+
+Commit the project-root `repro-acceptance.json` with the reviewed source change. Valid records make ordinary builds and status `fresh`; `explain` and JSON `acceptance` retain the reason, item reviews, evidence hashes, actor, and recording time. Last actual execution metadata and `pytask.lock` remain unchanged. Forced execution bypasses acceptance within the existing target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes only the selected records; dependent acceptances bound to them become ineffective.
+
+`explain --json` reports verified successful-source snapshots when available, including dirty-checkout runs. Historical text that was not captured is explicitly unavailable; other documented evidence can still support acceptance. Legacy sidecar outputs without a verified full-output digest need one successful run of that step before acceptance. See [the record contract](task-file-contract.md#acceptance-and-successful-baseline-records).
 
 Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/rerun-model.md#what-makes-a-step-rerun).
 
