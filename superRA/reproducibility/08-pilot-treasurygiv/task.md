@@ -1,6 +1,6 @@
 ---
-title: "Validate Reproduction on Registered Research Projects"
-status: not-started
+title: "TreasuryGIV Adoption Pilot (Closed)"
+status: archived
 depends_on:
   - 02-runner
   - 03-task-interface
@@ -11,19 +11,11 @@ depends_on:
 
 ## Objective
 
-Maintain real-project evidence that the reproduction graph, runner, dashboard, and agent protocol work together. Use the supplied ElasticityBound heterogeneity project for the 0.5 update; TreasuryGIV supplies the historical adoption baseline. Each project's own task tree holds its durable research changes; this task records plugin findings and links their evidence.
-
-- Complete the [0.5 compatibility update](v05-compatibility/task.md) in an isolated worktree seeded under the project's data conventions. Use a current source worktree; historical pilot paths are evidence locations, not an implicit writable target.
-- Preserve output routing, upstream-input boundaries, existing result meaning, and selected protection checks. Keep generated results in the branch sandbox; published paper/slide exhibits and the active researcher worktree remain outside the pilot's write scope.
-- Keep the existing in-process orchestrator as a fallback and verify its maintained producer coverage against the declared graph where that fallback is still used.
-- Land plugin defects in their owning implementation tasks rather than relying on project-specific workarounds. Historical adoption results do not certify the 0.5 behavior.
+Record what the 2026-09 TreasuryGIV adoption pilot taught the reproduction graph, runner, dashboard, and agent protocol. The pilot is closed: real-project use now supplies ongoing evidence, and plugin defects land in their owning implementation tasks. TreasuryGIV's own task tree holds its durable research changes.
 
 ## Details
 
 - Facts from the 2026-09-02 exploration of TreasuryGIV: full run ~9 min with the sysimage, 68% estimation; `publish_artifact` stamps in place without staging, so presence of `provenance.toml` does not prove a complete output; Dropbox Smart Sync once reverted in-flight writes, so the share must stay "always keep on this device"; the sysimage is machine-specific and must not be a dep.
-- Historical TreasuryGIV placement: `code-infrastructure-change` owns its orchestrator and output convention. The current heterogeneity pilot needs placement in its own project's task tree before project edits.
-- Reference I/O map per step: the exploration report in this session; re-derive from the scripts, the report is not committed.
-- Seeding never-built work from canonical outputs remains out of scope. Reviewed reuse after a successful baseline is covered by the 0.5 compatibility child.
 
 ## Results
 

@@ -84,9 +84,8 @@ The protocol belongs in the reproduction skill's existing authoring/rerun/comple
 | Subsequent dep/spec/output edit, revoke, missing file, failed force, concurrent change | Acceptance cannot hide staleness/failure or install a stale decision |
 | Forced build, parallel build, dry-run, older lock | Correct scope and engine behavior; no fake successful execution or unintended descendant skipping |
 | Live dashboard and offline export | Task/step/mixed views agree; accepted evidence, invalid graphs, scope, and selection survive navigation and refresh |
-| Existing registered project | Audit, repair task boundaries/declarations, and demonstrate ordinary/forced builds and focused acceptance in an isolated worktree |
 
-The 0.5.0 manifests identify the development release. Publication waits for the runtime, UI, workflow, and compatibility work; the version bump does not assert that planned behavior has shipped. Existing approvals document the earlier implementation, not verification of these changes. BondElasticity migration and file-open tracing remain postponed.
+The 0.5.0 manifests identify the development release. Publication waits for the runtime, UI, and workflow work; the version bump does not assert that planned behavior has shipped. Existing approvals document the earlier implementation, not verification of these changes. File-open tracing remains postponed; real-project use replaces a dedicated compatibility pilot.
 
 ## Decision basis
 

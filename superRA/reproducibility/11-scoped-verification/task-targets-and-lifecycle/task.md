@@ -1,6 +1,6 @@
 ---
 title: "Replace tiers with task targets and define step retirement"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 
@@ -19,7 +19,8 @@ Use task targets and their producer dependencies to express completion work, rem
 
 The researcher accepted dropping tiers after identifying final task targets as the source of required work. This is a follow-up to [task-scoped builds](../task-scoped-builds/task.md), whose approved runtime still supports tiers.
 
-- Unsettled CLI boundary: a no-target build/status may use a configured default task target or require an explicit target. Select one before changing no-target behavior; do not replace tiers with an inferred default set.
+- No-target `build` / `status` require an explicit target; `.` selects every registered step. No configured or inferred default set replaces tiers, so an accidental full rebuild needs a deliberate `.`.
+- Retired inputs fail with an actionable message, following the `--force-all` precedent: `--tier` and `repro tier` name the target-based replacement. A `tier:` key in an existing section is a `[WARNING]` and is otherwise ignored; tier never entered the step spec hash, so dropping it preserves every successful lock.
 - Migration must address existing tier declarations, flags, and links without silently changing their meaning or discarding successful evidence.
 - Current registration owner: [reproducibility §What Gets a Step](../../../../skills/reproducibility/SKILL.md#what-gets-a-step). Its exclusion based on a cited number should cover retained results generally, including qualitative findings.
 - Current cleanup coverage: [integration maturation](../../../../skills/superintegrate/references/mature-consolidate.md) preserves steps during task folds. General step retirement and archive/deletion handling need an explicit owning rule; cleanup must not leave a needed producer undeclared merely because its old output still exists.

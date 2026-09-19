@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](attachments/v05-design.md): one hierarchical dependency model, selective content-based rebuilds, reviewed acceptance as fresh, and task/step dashboard views. Verify the upgrade on an isolated existing project; BondElasticity remains postponed.
+Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](attachments/v05-design.md): one hierarchical dependency model, selective content-based rebuilds, reviewed acceptance as fresh, and task/step dashboard views. Real-project use supplies the compatibility evidence; no pilot task remains.
 
 ### Context
 
@@ -18,7 +18,7 @@ Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](att
 - **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The new `reproducibility` utility skill owns the discipline: when to register or retire steps, the hashing model agents must understand, boundary inputs, check steps, graph review, and the Protect / completion duties.
 - **Enforcement:** instructions, a `task check` category, scoped verification before claiming a result, the IMPLEMENT completion gate on named deliverable targets, their producers, and selected protection checks, and a PostToolUse reminder hook.
 - **Detection:** agents declare deps/outs in v1; the loader adds Julia `include` closures and configured env deps. A file-open tracer is a postponed follow-up.
-- **Pilots:** TreasuryGIV first (orchestrator steps only; upstream construction as external inputs; sandbox-rooted builds), BondElasticity after.
+- **Pilots are closed.** The archived [TreasuryGIV pilot](08-pilot-treasurygiv/task.md) keeps the adoption lessons; the BondElasticity migration and the 0.5 compatibility pilot were dropped in favor of real-project use.
 
 ### Constraints
 
@@ -49,7 +49,7 @@ Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](att
 
 ### 0.5 planning and release preparation
 
-The [design](attachments/v05-design.md) records the researcher decisions and the implementation contract. Work stays with its existing owners: [effective graph](01-section-contract/unified-dependencies/task.md), [impact and acceptance](02-runner/reviewed-acceptance/task.md), [dashboard navigation](04-dashboard-view/scalable-navigation/task.md), [workflow guidance](07-workflow-integration/unified-dependency-workflow/task.md), and [compatibility evidence](08-pilot-treasurygiv/v05-compatibility/task.md).
+The [design](attachments/v05-design.md) records the researcher decisions and the implementation contract. Work stays with its existing owners: [effective graph](01-section-contract/unified-dependencies/task.md), [impact and acceptance](02-runner/reviewed-acceptance/task.md), [dashboard navigation](04-dashboard-view/scalable-navigation/task.md), and [workflow guidance](07-workflow-integration/unified-dependency-workflow/task.md).
 
 The Claude, marketplace, and Codex plugin manifests are at 0.5.0; [release notes](../../RELEASE-NOTES.md) mark it unreleased and distinguish existing reproduction features from planned changes. The interrupted UI experiment was removed from runtime source. The following results document the earlier implementation and do not certify the 0.5 contract.
 
@@ -72,5 +72,5 @@ superRA projects now carry one reproduction graph inside the task tree, and Trea
 
 ### Open for the next round
 
-- The BondElasticity migration ([09-pilot-bondelasticity](09-pilot-bondelasticity/task.md)) and `repro trace` ([10-trace](10-trace/task.md)) stay postponed.
+- `repro trace` ([10-trace](10-trace/task.md)) stays postponed.
 - The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
