@@ -1815,7 +1815,7 @@ function renderReproDetail(name) {
   }).join('');
   var evidence='';
   if(entry&&entry.local_status&&entry.local_status!==state)evidence+='<p><strong>For saved inputs: '+escapeHtml(entry.local_status)+'</strong> — '+escapeHtml(entry.local_reason||'')+'</p>';
-  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,note:b.provenance+' · '+b.producer};}));
+  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}));
   if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>'+reproPathList(Object.keys(entry.acceptance.evidence||{}));
   if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
   else if(entry&&entry.duration!=null)evidence+='<p>Duration: '+reproDuration(entry.duration)+'</p>';
