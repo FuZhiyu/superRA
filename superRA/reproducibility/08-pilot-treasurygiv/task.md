@@ -1,5 +1,5 @@
 ---
-title: "Pilot: Register and Build the TreasuryGIV Pipeline"
+title: "Validate Reproduction on Registered Research Projects"
 status: not-started
 depends_on:
   - 02-runner
@@ -11,7 +11,7 @@ depends_on:
 
 ## Objective
 
-Maintain real-project evidence that the reproduction graph, runner, dashboard, and agent protocol work together in TreasuryGIV. The project's own task tree holds its durable research changes; this task records plugin findings and links their evidence.
+Maintain real-project evidence that the reproduction graph, runner, dashboard, and agent protocol work together. Use the supplied ElasticityBound heterogeneity project for the 0.5 update; TreasuryGIV supplies the historical adoption baseline. Each project's own task tree holds its durable research changes; this task records plugin findings and links their evidence.
 
 - Complete the [0.5 compatibility update](v05-compatibility/task.md) in an isolated worktree seeded under the project's data conventions. Use a current source worktree; historical pilot paths are evidence locations, not an implicit writable target.
 - Preserve output routing, upstream-input boundaries, existing result meaning, and selected protection checks. Keep generated results in the branch sandbox; published paper/slide exhibits and the active researcher worktree remain outside the pilot's write scope.
@@ -21,7 +21,7 @@ Maintain real-project evidence that the reproduction graph, runner, dashboard, a
 ## Details
 
 - Facts from the 2026-09-02 exploration of TreasuryGIV: full run ~9 min with the sysimage, 68% estimation; `publish_artifact` stamps in place without staging, so presence of `provenance.toml` does not prove a complete output; Dropbox Smart Sync once reverted in-flight writes, so the share must stay "always keep on this device"; the sysimage is machine-specific and must not be a dep.
-- The TreasuryGIV task tree already has `code-infrastructure-change` as the home of the orchestrator and output convention; plan the pilot there through `superplan` in that repo (a child such as `reproduction-graph`) before registering steps.
+- Historical TreasuryGIV placement: `code-infrastructure-change` owns its orchestrator and output convention. The current heterogeneity pilot needs placement in its own project's task tree before project edits.
 - Reference I/O map per step: the exploration report in this session; re-derive from the scripts, the report is not committed.
 - Seeding never-built work from canonical outputs remains out of scope. Reviewed reuse after a successful baseline is covered by the 0.5 compatibility child.
 

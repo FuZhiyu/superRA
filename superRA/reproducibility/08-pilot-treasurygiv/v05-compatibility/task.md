@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-Verify the [0.5 contract](../../attachments/v05-design.md#verification-and-upgrade) on an isolated current TreasuryGIV project/worktree, including the heterogeneity reproduction pipeline when available. Record compatibility findings and land plugin defects in their owning implementation tasks.
+Verify the [0.5 contract](../../attachments/v05-design.md#verification-and-upgrade) on an isolated copy of the current ElasticityBound heterogeneity project served by the researcher's supplied dashboard. Record compatibility findings and land plugin defects in their owning implementation tasks.
 
 - Audit the combined dependency graph before building. Repair genuine logical/declaration errors or task-boundary cycles explicitly, preserving true data dependencies, stable step IDs, declared outputs, and result meaning. Parent-owned steps do not need relocation simply because a task has children.
 - Measure direct and transitive impact of representative edits to shared specifications/helpers. Refactor a bounded example by consumer/module or derived configuration artifact and verify selective rebuilding without changing results.
