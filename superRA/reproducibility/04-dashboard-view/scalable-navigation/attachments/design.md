@@ -62,12 +62,12 @@ These are layout regions, not fixed pixel dimensions. On narrow screens, the ins
 | Graph mode | Visible step set |
 | --- | --- |
 | Scope | Matching task hierarchy and steps at the chosen expansion; used when entering DAG or focusing a subtree |
-| Nearby | Selected step and its immediate producers and consumers; used when opening a search result or task-page step link |
-| Upstream | Selected step and all producer ancestors |
-| Downstream | Selected step and all consumer descendants |
+| Nearby | Trace anchor and its immediate producers and consumers; used when opening a search result or task-page step link |
+| Upstream | Trace anchor and all producer ancestors |
+| Downstream | Trace anchor and all consumer descendants |
 | Both | Union of upstream and downstream; excludes unrelated siblings |
 
-Tracing modes require a selected step. Selecting a node opens its inspector and highlights its incident edges without moving nodes or recomputing the layout. `Trace from here` explicitly changes the tracing anchor; `Center selected` changes only the viewport. The tracing anchor remains named in the mode controls when selection moves elsewhere.
+Starting a trace requires a selected step; an ongoing trace derives its node set from the stored anchor, independently of task/step selection. Selecting a node opens its inspector and highlights its incident edges without moving nodes or recomputing the layout. `Trace from here` explicitly changes the tracing anchor; `Center selected` changes only the viewport. The tracing anchor remains named in the mode controls when selection moves elsewhere. Folding projects the traced node set through the current containers without clearing the trace or reopening a folded group. Returning to Scope ends tracing; scope changes and removal of the anchor follow the recovery rules below.
 
 Provide drag/touch panning, zoom controls, Fit, and Center selected. Scope changes fit the new view once. Selection, inspection, and status refresh never auto-fit. Zooming out simplifies secondary labels; it does not shrink the inspector or its readable text. Full names remain available through selection and the searchable step list. Selection stays visible when inspection changes the available canvas width.
 
@@ -105,6 +105,7 @@ Native controls expose search results, filter selection, step selection, related
 | Tree → DAG → select a peer → expand a child → select a step → Open declaration → Back | Shared selection and task reader; selection and expansion do not rescope; reader uses existing comments; return restores graph state |
 | Existing task-page child DAG, logical-only task, archived task, and legacy reproduction link | All dependency entry points use the shared graph; logical-only tasks remain selectable; archived scope explains exclusion; old links preserve their meaningful state |
 | Independently expand nested and peer groups; fold an ancestor of the selected step; reopen; focus; switch Tree/DAG | One-level expansion, stable anchor, preserved nested expansion choices, explicit selection fallback, and independent scope/navigation state |
+| Start a trace, select another task, fold the anchor's ancestor, and reopen it | Trace anchor and mode persist independently of selection; folded containers represent the same traced set without forced reopening |
 | Add two scopes, select an outside-scope task, and use Up one level | Flat search replaces duplicate tree selection; inspection does not mutate scope; Up is enabled only for a single scope root, while Whole project remains available for a union |
 | Nested tasks, overlapping selected roots, repeated titles, and mixed tiers | Subtree union and tier intersection produce exact, deduplicated counts; own steps on non-leaf tasks remain selectable; similarly prefixed sibling paths do not match |
 | Required result with an on-demand producer outside the selected subtree | Scope mode names the hidden dependency; upstream mode shows the complete chain with out-of-scope labels and separate counts |
