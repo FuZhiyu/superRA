@@ -1,20 +1,23 @@
 ---
 title: "Build the `superra repro` Runner on pytask"
-status: approved
-depends_on: [01-section-contract]
+status: not-started
+depends_on:
+  - 01-section-contract
 ---
 
 ## Objective
 
 Ship `superra repro`, the command that rebuilds stale steps of the graph from [01-section-contract](../01-section-contract/task.md) and reports why.
 
-- **Commands:** `build [targets] [--tier canon|local|all] [-j N] [--force] [--dry-run]`, `status [--json] [--tier]`, `explain <step>`, `dag [--mermaid]`, `tier <task-path> canon|local`. A target is a step name or a task path (all its steps); building a target includes its ancestors. Default tier for `build` and `status` is `canon`.
+- **Commands:** preserve build/status/explain/dag/tier and the [scoped verification contract](../11-scoped-verification/task.md). Tiers are `required` (build/status default), `on-demand`, and `all`, with legacy aliases accepted. Explicit targets select their real producer closure; `--force` reruns direct targets and `--force-all` reruns the closure. The 0.5 child adds impact/accept/revoke.
 - **Engine bridge:** generate one pytask task per step in memory and run `pytask.build(tasks=…)`; never write `task_*.py` into the project. Each step depends on a hashed `PythonNode` of its resolved spec (cmd, params, resolved deps and outs) so editing one step invalidates only that step. File and directory nodes are runner-owned `PNode` classes whose id is the logical (variable-form) path and whose hashing uses the resolved path, so the lock never embeds an author or branch. The pytask root is the project root; `pytask.lock` is committed there; the per-machine hash cache, per-step logs, and check-step stamps live in one gitignored directory that `repro` creates and adds to `.gitignore` on first run.
 - **Hash cache:** file state is the content hash, looked up in a persistent cache keyed on size and mtime_ns (no inode). A cache hit costs one `stat`; a miss rehashes. Sidecar-tracked outs hash the sidecar.
 - **Execution:** each step runs from the project root with the resolved `cmd`, stdout and stderr to `<logs>/<step>.log`, duration recorded; `-j` uses `pytask-parallel`. `check` steps rerun when their deps change and record a stamp on success. A failing step stops its descendants, reports the log path, and exits non-zero.
 - **Status and explain:** per step, one of `fresh` / `stale` / `missing` / `failed` / `external` with the triggering reason (which dep or out changed, or "never built"), owner task, tier, last duration. `--json` is the contract the dashboard and `task read` consume.
 - **Entry script:** a PEP 723 script under `skills/task-tree/scripts/` pinning `pytask>=0.6,<0.7`, `pytask-parallel`, and `pyyaml`; `cli.py` dispatches `repro` to it so the `./superRA/superra` wrapper needs no change. Every other `superra` command keeps working without pytask installed.
 - **Validation criteria:** pytest suite (pytask available via `uv run --with`) on a fixture tree with shell-script steps: first build runs all; second is a no-op; `touch` with identical bytes is a no-op; a dep edit reruns exactly the affected chain; a step edit that regenerates identical bytes does not cascade; deleting an out reports `missing` and rebuilds it; `-k`-style target selection pulls stale ancestors; `--json` matches the documented shape; the cache file is used (second `status` performs no full-file reads, asserted through a counter or a large fixture timing).
+
+- **0.5 reuse:** implement [impact and reviewed acceptance](reviewed-acceptance/task.md) while preserving successful-run evidence and the existing status vocabulary.
 
 ## Details
 

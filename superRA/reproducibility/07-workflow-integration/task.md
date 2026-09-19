@@ -1,22 +1,20 @@
 ---
 title: "Wire the Graph into the PLAN / IMPLEMENT / INTEGRATE Workflow"
-status: approved
-depends_on: [06-skill]
+status: not-started
+depends_on:
+  - 01-section-contract
+  - 02-runner
+  - 06-skill
 ---
 
 ## Objective
 
-Replace the linear "pipeline file" requirement with the reproduction graph across the workflow skills, and register the new skill in every inventory, without restating what [06-skill](../06-skill/task.md) owns.
+Keep reproduction integrated into planning, implementation, protection, and completion through the owning skills and public guidance. Complete the [0.5 workflow update](unified-dependency-workflow/task.md) without duplicating the graph/runner mechanics.
 
-- `superplan/references/build-and-review.md`: the artifact pipeline is planned as `## Reproduction` sections (the planner seeds expected outs; implementers fill deps); self-review item 3 checks the graph, not a pipeline file.
-- `econ-data-analysis/references/planning.md` §Pipeline File and `theory-modeling/references/planning.md` item 5: delete the duplicated requirement, point to the skill.
-- `superimplement/references/completion.md` §3 and `superimplement/SKILL.md` blocker wording: reproducibility verification is `repro build --tier canon` followed by a clean `repro status`.
-- `superintegrate/references/protect.md`: configuring reproduction is a Protect step (tier per affected task, check steps for selected drift tests, boundary inputs), recorded in the `integrate(protect)` commit; `integrate.md` step 1 and 8 and `finish.md` step 2 run the graph as part of the protection suite; `mature-consolidate.md` moves `## Reproduction` sections with folds and never drops a canon step.
-- `result-protection/SKILL.md`: graph coverage plus the committed lock is a listed protection mechanism.
-- `implement-task/SKILL.md`: one duty line for registering or updating steps when a task adds or changes a producer.
-- `using-superra/SKILL.md`: the `protection` Stage row also loads `reproducibility`; §Task Interface gains one line: a tree with reproduction config loads `superRA:reproducibility` before producing a maintained output. Update `tests/harness-instruction-following/test_contract.py` and `load_contract.json` for the new stage load.
-- `skills/CATEGORIES.md`, `README.md`, and the `CLAUDE.md` ownership table (mechanics → `task-tree`, discipline → `reproducibility`).
-- **Validation criteria:** every edited line passes the three-test gate; `grep -rn "pipeline file" skills/` returns only pointers; the harness contract tests pass; one live smoke of the protection stage load.
+- Planning uses one effective dependency model and declares expected maintained outputs; implementation fills actual inputs and producers. Workflow readers consume authoritative task tooling rather than rebuilding dependency logic in prose.
+- Protection and completion cover required kept results and selected checks, with targeted verification for on-demand claims and reviewed acceptance treated as fresh under the [0.5 design](../attachments/v05-design.md).
+- Maturation preserves reproduction ownership, logical identities, and evidence when tasks are folded or moved. Task hierarchy may contain both own steps and child tasks.
+- Keep skill inventories, harness load contracts, README, and relevant docs-site sources consistent. Verify edited instruction paths with realistic harness or script-level evidence.
 
 ## Details
 

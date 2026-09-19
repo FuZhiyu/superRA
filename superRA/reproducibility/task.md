@@ -6,13 +6,13 @@ depends_on: []
 
 ## Objective
 
-Give superRA projects one reproduction graph that agents author inside the task tree, a runner that rebuilds only what changed, a dashboard view the researcher reviews and comments on, and workflow duties that verify claimed results and selected protection checks. Prove it on TreasuryGIV, then BondElasticity.
+Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](attachments/v05-design.md): one hierarchical dependency model, selective content-based rebuilds, reviewed acceptance as fresh, and task/step dashboard views. Verify the upgrade on an isolated existing project; BondElasticity remains postponed.
 
 ### Context
 
 - **Engine: pytask 0.6.** Steps are generated in memory from task files and executed through `pytask.build(tasks=...)`; no `task_*.py` files exist in a project. pytask supplies sha256 content hashing with no size cap, early cutoff within a run, `--dry-run --explain`, the portable TOML `pytask.lock`, and `pytask-parallel`.
 - **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers the task; `tier: required` opts its steps into the default build and completion checks; `tier: on-demand` (the default) registers them for explicit execution. Accept `canon` and `local` as legacy input aliases. Project-wide config (variables, runner templates, env deps, code roots) lives under a `reproduction:` key in `superRA/config.yaml`. The YAML in both places is a bounded subset the stdlib parser reads. Schema: [01-section-contract](01-section-contract/task.md); compatibility and scoped verification: [11-scoped-verification](11-scoped-verification/task.md).
-- **Build unit is a step, never a task.** Step-to-step edges are inferred from files. Task `depends_on` stays sibling-only orchestration; task-level reproduction dependencies are derived from step files for display and consistency checks, never declared.
+- **Dependency contract:** the [0.5 design](attachments/v05-design.md#one-task-dag-combines-both-sources-of-dependency) governs inferred and logical edges, hierarchy, validation, and task readiness. Steps remain the execution units; inferred task prerequisites are never duplicated in frontmatter.
 - **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
 - **The committed lock keys nodes by logical path.** Lock ids are the variable-form paths (`${OUT}/…`) so they do not embed an author or branch; hashing happens on the paths resolved for the invocation. Root changes invalidate through changed content or resolved commands; equal-content relocation alone preserves freshness.
 - **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The new `reproducibility` utility skill owns the discipline: when to register, tiers, the hashing model agents must understand, boundary inputs, check steps, graph review, and the Protect / completion duties.
@@ -47,12 +47,22 @@ Give superRA projects one reproduction graph that agents author inside the task 
 
 ## Results
 
+### 0.5 planning and release preparation
+
+The [design](attachments/v05-design.md) records the researcher decisions and the implementation contract. Work stays with its existing owners: [effective graph](01-section-contract/unified-dependencies/task.md), [impact and acceptance](02-runner/reviewed-acceptance/task.md), [dashboard navigation](04-dashboard-view/scalable-navigation/task.md), [workflow guidance](07-workflow-integration/unified-dependency-workflow/task.md), and [compatibility evidence](08-pilot-treasurygiv/v05-compatibility/task.md).
+
+The Claude, marketplace, and Codex plugin manifests are at 0.5.0; [release notes](../../RELEASE-NOTES.md) mark it unreleased and distinguish existing reproduction features from planned changes. The interrupted UI experiment was removed from runtime source. The following results document the earlier implementation and do not certify the 0.5 contract.
+
+Planning verification passed: task-tree structural checks, Markdown render checks, local-link checks for the new design/tasks, plugin packaging checks, and synchronized-version checks. Independent design review returned APPROVE after stale inherited contracts and the logical-only dashboard empty-state requirement were corrected. Runtime implementation remains queued on the effective-graph task.
+
+### Earlier implementation evidence
+
 superRA projects now carry one reproduction graph inside the task tree, and TreasuryGIV runs on it: `superra repro build --tier canon` rebuilds only what changed, the dashboard shows the graph for review, and the workflow keeps it current. Each line points at the task that holds the detail.
 
 - **Contract and library.** A `## Reproduction` section whose body is one YAML block registers a task's steps; the library parses the bounded subset, builds the graph, derives task edges, and expands Julia `include` closures. [01-section-contract](01-section-contract/task.md)
 - **Runner.** `superra repro build | status | explain | dag | tier` over pytask 0.6, with a size-and-mtime hash cache, logical `${VAR}` lock ids, check steps, and sidecars; only `build` needs pytask. [02-runner](02-runner/task.md)
 - **CLI surfaces.** `task read` shows a task's steps and derived edges, `task check` validates the graph, `task tree` badges canon tasks. [03-task-interface](03-task-interface/task.md)
-- **Dashboard.** A Reproduction view in swimlanes by owner task with per-step state, refreshed on lock, section, and config edits, commented through the section's gutter. [04-dashboard-view](04-dashboard-view/task.md)
+- **Dashboard.** A Reproduction view with per-step state and task-section comments; scalable grouping and navigation remain in progress. [04-dashboard-view](04-dashboard-view/task.md)
 - **Reminder hook.** A producer edit without a step update draws one PostToolUse reminder per session. [05-reminder-hook](05-reminder-hook/task.md)
 - **Discipline.** The `reproducibility` skill: rerun model, graph authoring, Protect and completion duties. [06-skill](06-skill/task.md)
 - **Workflow wiring.** The graph replaces the pipeline-file requirement at PLAN, IMPLEMENT, and INTEGRATE, and the `protection` stage loads the skill. [07-workflow-integration](07-workflow-integration/task.md)
