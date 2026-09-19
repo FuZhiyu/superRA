@@ -177,7 +177,8 @@ def run(evidence, snapshot=None):
                     logs.mkdir(parents=True, exist_ok=True)
                     (logs / 'step-499.log').write_text('Last actual run log\n')
                     page.evaluate("onReproUpdated()")
-                    page.wait_for_function("document.getElementById('repro-detail').innerText.includes('Last actual run log')")
+                    page.wait_for_function("document.getElementById('repro-detail').textContent.includes('Last actual run log')")
+                    page.locator('[data-detail-section=evidence] > summary').click()
                     assert page.evaluate('JSON.stringify(_reproLayoutCache.layout.pos)') == positions
                     assert canvas.evaluate('(e)=>e===document.querySelector(".repro-canvas")')
                     assert 'Last actual run log' in page.locator('#repro-detail').inner_text(), page.evaluate('({selected:_reproSelected,detail:document.getElementById("repro-detail").innerText,errors:window.__errors})')
@@ -192,14 +193,14 @@ def run(evidence, snapshot=None):
                     page.click('#btn-workspace')
                     assert page.evaluate('activePath') == 'group-4/task-9'
                     page.click('#btn-reproduction')
-                    assert page.evaluate('_reproSelected') == 'step-499'
+                    assert page.evaluate('_reproSelected') == ''
                     page.go_back()
                     page.wait_for_function('currentView === "workspace"')
                     page.go_forward()
                     page.wait_for_function('currentView === "reproduction"')
                     results['sharedReaderAndHistory'] = True
                     # Existing comment UI, persisted and read through the CLI.
-                    page.locator('[data-rp-action=declaration]').click()
+                    page.locator('[data-rp-action=full-reader]').click()
                     page.wait_for_selector('#active-node [data-section="Reproduction"] .comment-gutter-btn')
                     page.locator('#active-node [data-section="Reproduction"] .comment-gutter-btn').first.click()
                     page.locator('.comment-form textarea').fill('Check this dependency chain.')

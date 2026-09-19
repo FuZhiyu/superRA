@@ -7298,7 +7298,7 @@ var _reproData={graph:{steps:[
 var drawn=null, opened='', selected='', transformed=0;
 var box={querySelectorAll:function(){return [];},querySelector:function(){return null;},classList:{remove:function(){}},focus:function(){}};
 var document={getElementById:function(){return box;},
-  querySelector:function(){return {clientWidth:800,clientHeight:500};}};
+  querySelector:function(){return {clientWidth:800,clientHeight:500,focus:function(){}};}};
 function drawReproView(){drawn=reproProject(_reproData.graph,_reproNav,_reproContext);}
 function showView(view){opened=view;currentView=view;}
 function renderReproDetail(name){selected=name;}

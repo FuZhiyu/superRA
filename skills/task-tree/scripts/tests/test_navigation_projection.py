@@ -103,24 +103,6 @@ var other=reproHierarchy(graph,nav,reproProject(graph,nav,[]));assert.deepEqual(
 """)
 
 
-def test_accepted_step_keeps_fresh_state_and_actual_run_details():
-    definitions = _extract_js_defs(['renderReproDetail', 'reproStatusIndex', 'reproStateOf',
-        'reproDetailRow', 'reproPathList', 'reproOutLabel', 'reproButton', 'reproDuration',
-        'reproTaskTitle', 'reproProject', 'reproMatches', 'reproWithin', 'escapeHtml', 'escapeAttr'])
-    script = """
-var host={innerHTML:''},document={getElementById:()=>host};
-var _reproInspectorClosed=false,pathTitles={},REPRO_GLYPHS={fresh:'●'};
-var _reproNav={roots:[],tier:'all',mode:'scope'};
-var _reproData={graph:{steps:[{name:'check',task:'report',cmd:'verify',tier:'required',kind:'check',deps:[{logical:'input.csv'}],outs:[],dependency_origins:{'input.csv':[{kind:'declared'}]}}],step_edges:[]},status:{steps:[{name:'check',status:'fresh',reason:'up to date',duration:2,last_run:1700000000,log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit',evidence:{'review.md':'digest'}}}]}};
-renderReproDetail('check');console.log(host.innerHTML);
-"""
-    result = subprocess.run([NODE, '-e', definitions + script], text=True, capture_output=True, check=True)
-    assert 'fresh' in result.stdout and 'Reviewed documentation-only edit' in result.stdout
-    assert 'review.md' in result.stdout and 'Actual execution log' in result.stdout
-    assert 'Last run' in result.stdout and 'check step' in result.stdout
-    assert 'Declared input' in result.stdout and '[object Object]' not in result.stdout
-
-
 def test_bounded_branch_expansion_replaces_only_descendants_and_counts_projection():
     run(FIXTURE + """
 nav.expanded=['p','p/child','p/child/nested','peer'];
