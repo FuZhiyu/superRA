@@ -4,6 +4,7 @@
 
 - **Split stages at reusable artifacts.** Separate expensive computation from independently changing presentation; save estimates for plotting to consume. Choose step boundaries by useful recomputation savings, not one step per function.
 - **Separate helpers by consumer set.** Split modules when unrelated helpers couple independent consumers; separate functions within one file still share a file-level dependency. Import or include the needed modules directly instead of a shared entry point that loads them all.
+- **Derive configuration per consumer.** A cheap producer can emit deterministic artifacts from shared settings; unchanged consumer-specific bytes stop the cascade.
 - **Connect stages through consumed artifacts.** Declare upstream code as a downstream dependency only when that downstream step reads or executes it; provenance alone does not require a code dependency.
 
 ## Declare from the script, not from memory
@@ -20,14 +21,14 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
 - **Read the published root for published-result checks.**
 - **Stop at the boundary.** An input the project receives rather than builds — a licensed extract, a frozen upstream artifact, a hand-curated file — stays a dep with no producing step.
 
-Validate the section before building: `superra task check --category reproduction`.
+Validate declarations and the effective dependency graph before building: `superra task check`. Repair genuine task-boundary cycles by correcting declarations or ownership; retain true consumed-artifact edges. [Dependency and hierarchy contract](../../task-tree/references/task-file-contract.md#effective-dependencies).
 
 ## Presenting a graph for review
 
 Present a new or restructured graph for the researcher's decisions on required work and the input boundary. Apply the coverage rule in [protect-and-completion.md](protect-and-completion.md) when selecting tasks.
 
 - Export the graph into `## Results` with `superra repro dag --mermaid`.
-- Point at the dashboard Reproduction view for the interactive pass — node states, per-step detail, and the comment gutter on the section.
+- Use the dashboard DAG navigator for task/step expansion and evidence; graph comments use the shared task reader's Reproduction section.
 
 ## Acting on graph comments
 

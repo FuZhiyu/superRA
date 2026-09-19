@@ -25,9 +25,9 @@ Ordered, but re-entry is normal — §Resuming Work.
 
 There is no durable workflow-stage to look up. The frontmatter field set is closed and INTEGRATE keeps no stage marker, so task `status` plus the git log *are* the state — "which phase are we in" is read from statuses and commits, never a file field. Resuming is status-driven and mixed state is normal:
 
-- **Tree not all-approved** → implementation work remains. Resume on the frontier in the current execution mode: `superra task frontier` lists every actionable leaf with its status — `not-started` / `in-progress` to implement, `implemented` awaiting an approval decision (§Deciding on Review), `revise` to fix.
+- **Tree not all-approved** → implementation work remains. Resume on the frontier in the current execution mode: `superra task frontier` lists actionable leaves and parent-owned steps with their context — `not-started` / `in-progress` to implement, `implemented` awaiting an approval decision (§Deciding on Review), `revise` to fix.
 
-On a replan, a directly widened `approved` task flips to `revise` and its `depends_on` dependents reset to `not-started` (`superplan/references/task-tree-design.md` §Objective rewrites on scope expansion owns the rule); unrelated approved tasks stay approved. The reset tasks reappear on `task frontier`.
+On a replan, apply [scope-expansion invalidation](../../superplan/references/task-tree-design.md#objective-rewrites-on-scope-expansion), then recompute the frontier.
 
 ## Changes of the Task Tree
 

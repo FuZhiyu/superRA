@@ -19,7 +19,7 @@ not-started → in-progress → implemented → approved
 
 A skipped review does not park a task: whoever orchestrates verifies the work and sets `approved`. `implemented` means the approval decision is still open — a review is running, or one is owed and deferred.
 
-The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (treated as resolved so dependents can proceed); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
+The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (removed with its subtree from the active graph; downstream consumers receive warnings); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
 
 | Status | What it means for you |
 |---|---|
@@ -33,7 +33,9 @@ The two statuses that are yours to set are scope decisions: tell the agent to dr
 
 A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded. One leaf flips and every ancestor updates.
 
-The **frontier** is what to work on next: the leaf tasks ready to dispatch right now — `not-started` (or an interrupted `in-progress`) with every `depends_on` sibling already `approved`. Ask "what's ready next?" and the agent reads the frontier; as tasks reach `approved`, the work they blocked enters it.
+The **frontier** is what to work on next. It uses both inferred file dependencies and logical prerequisites: `implemented`, `approved`, and `revise` prerequisites permit downstream development; `not-started`, `in-progress`, and `postponed` block it. It also exposes parent-owned steps needed by a child, without making the child wait for its own parent's rolled-up completion. Ask "what's ready next?" and the agent reads this shared graph.
+
+Task readiness does not certify an output. Reproduction freshness and selected checks provide that separate evidence; reviewed acceptance can establish freshness while preserving the last actual execution record.
 
 The authoritative contract — transition ownership, the exact rollup algorithm, and edge cases — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).
 
@@ -42,7 +44,7 @@ The authoritative contract — transition ownership, the exact rollup algorithm,
 The agent runs these under the hood; run them yourself to look at the frontier or fix stored statuses directly:
 
 ```bash
-./superRA/superra task frontier      # leaf tasks ready to dispatch now
+./superRA/superra task frontier      # ready tasks and parent-owned work
 ./superRA/superra task status fix    # recompute rollups from the leaves
 ```
 
