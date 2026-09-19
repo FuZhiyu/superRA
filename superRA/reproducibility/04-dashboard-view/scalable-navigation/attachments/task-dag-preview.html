@@ -1,0 +1,82 @@
+<style>
+#sra-nav-preview{--sra-bg:light-dark(#faf9f6,#171b20);--sra-paper:light-dark(#ffffff,#23282f);--sra-ink:light-dark(#252a32,#e6e9ef);--sra-muted:light-dark(#626873,#b2bbc9);--sra-line:light-dark(#d6dae0,#48515f);--sra-active:light-dark(#e6edf8,#2d415e);--sra-accent:light-dark(#315f9c,#a0c5ff);font-family:system-ui,sans-serif;color:var(--sra-ink);background:var(--sra-bg);border:1px solid var(--sra-line);border-radius:10px;overflow:hidden}
+#sra-nav-preview *{box-sizing:border-box}
+#sra-nav-preview button{font:inherit;color:inherit;background:var(--sra-paper);border:1px solid var(--sra-line);border-radius:6px;padding:7px 10px;cursor:pointer}
+#sra-nav-preview button:disabled{opacity:.5;cursor:default}
+#sra-nav-preview button[aria-pressed=true]{background:var(--sra-active);color:var(--sra-accent)}
+#sra-nav-preview .sra-top{padding:14px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;border-bottom:1px solid var(--sra-line)}
+#sra-nav-preview .sra-brand{font-weight:500;margin-right:auto}
+#sra-nav-preview .sra-subtle{color:var(--sra-muted)}
+#sra-nav-preview .sra-switch{display:flex;gap:4px}
+#sra-nav-preview .sra-shell{display:grid;grid-template-columns:minmax(0,1fr) 280px;min-height:425px}
+#sra-nav-preview .sra-nav{min-width:0}
+#sra-nav-preview .sra-tools{padding:12px 16px;border-bottom:1px solid var(--sra-line);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#sra-nav-preview .sra-tools span{margin-right:auto}
+#sra-nav-preview .sra-canvas{position:relative;min-height:315px;padding:26px 16px}
+#sra-nav-preview .sra-flow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);align-items:center;gap:28px;position:relative}
+#sra-nav-preview .sra-flow.sra-focused{grid-template-columns:minmax(0,1fr);max-width:340px;margin:auto}
+#sra-nav-preview .sra-node{background:var(--sra-paper);border:1px solid var(--sra-line);border-radius:7px;min-width:0;position:relative}
+#sra-nav-preview .sra-node.sra-selected{border-color:var(--sra-accent);box-shadow:0 0 0 1px var(--sra-accent)}
+#sra-nav-preview .sra-node-head{display:flex;align-items:flex-start;padding:5px;gap:2px;position:relative;z-index:2}
+#sra-nav-preview .sra-node-head .sra-select{border:0;background:transparent;text-align:left;flex:1;min-width:0;overflow-wrap:anywhere;padding:8px 5px}
+#sra-nav-preview .sra-node-head .sra-expand{border:0;background:transparent;padding:7px;flex-shrink:0}
+#sra-nav-preview .sra-kind{display:block;color:var(--sra-muted);margin-top:5px}
+#sra-nav-preview .sra-children{padding:16px 12px;display:flex;flex-direction:column;gap:28px;border-top:1px solid var(--sra-line);background:var(--sra-bg);border-radius:0 0 7px 7px}
+#sra-nav-preview .sra-reader{padding:20px;border-left:1px solid var(--sra-line);background:var(--sra-paper);min-width:0;overflow-wrap:anywhere}
+#sra-nav-preview .sra-reader h3{font:inherit;font-weight:500;margin:5px 0 16px}
+#sra-nav-preview .sra-reader h4{font:inherit;font-weight:500;margin:22px 0 8px}
+#sra-nav-preview .sra-reader p{margin:0 0 12px}
+#sra-nav-preview .sra-reader code{overflow-wrap:anywhere}
+#sra-nav-preview .sra-reader-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+#sra-nav-preview .sra-tree{padding:18px}
+#sra-nav-preview .sra-tree-children{padding-left:20px;border-left:1px solid var(--sra-line);margin-left:14px}
+#sra-nav-preview .sra-tree-row{display:flex;gap:3px;align-items:center;padding:3px 0}
+#sra-nav-preview .sra-tree-row button{border:0;background:transparent;text-align:left}
+#sra-nav-preview .sra-tree-row .sra-selected{background:var(--sra-active);color:var(--sra-accent)}
+#sra-nav-preview .sra-edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;color:var(--sra-muted)}
+#sra-nav-preview .sra-footer{padding:10px 18px;border-top:1px solid var(--sra-line);color:var(--sra-muted)}
+#sra-nav-preview[data-reader=bottom] .sra-shell{grid-template-columns:1fr}
+#sra-nav-preview[data-reader=bottom] .sra-reader{border-left:0;border-top:1px solid var(--sra-line)}
+#sra-nav-preview[data-full=true] .sra-shell{grid-template-columns:1fr}
+#sra-nav-preview[data-full=true] .sra-nav{display:none}
+#sra-nav-preview[data-full=true] .sra-reader{border-left:0}
+@media(max-width:760px){#sra-nav-preview .sra-shell{grid-template-columns:1fr}#sra-nav-preview .sra-reader{border-left:0;border-top:1px solid var(--sra-line)}}
+@media(max-width:430px){#sra-nav-preview .sra-flow{grid-template-columns:1fr;gap:30px}#sra-nav-preview .sra-node-head button{min-height:44px}#sra-nav-preview .sra-tools button{min-height:44px}}
+</style>
+<div id="sra-nav-preview" aria-label="Task navigation design preview">
+  <header class="sra-top"><span class="sra-brand">superRA <span class="sra-subtle">/ Heterogeneity</span></span><span class="sra-subtle">Design preview · example tasks</span><div class="sra-switch"><button type="button" data-mode="tree" aria-pressed="false">Tree</button><button type="button" data-mode="dag" aria-pressed="true">DAG</button></div></header>
+  <div class="sra-shell"><section class="sra-nav" aria-label="Task navigator"><div class="sra-tools"></div><div class="sra-canvas"></div></section><aside class="sra-reader" aria-label="Selected task"></aside></div>
+  <div class="sra-footer" role="status" aria-live="polite">Scope: Project · Selected: Estimate heterogeneity</div>
+</div>
+<script>
+(function(){
+const root=document.getElementById('sra-nav-preview');
+const nodes={
+ project:{title:'Project',children:['sources','analysis','paper'],text:'Estimate and report heterogeneity across sources.'},
+ sources:{title:'Prepare sources',children:['pull','panel'],parent:'project',text:'Build the source panel used by the estimation tasks.'},
+ pull:{title:'Load inputs',kind:'step',parent:'sources',file:'Data/source.csv',text:'Read the versioned source data.',state:'Fresh'},
+ panel:{title:'Build panel',kind:'step',parent:'sources',file:'Output/panel.arrow',text:'Construct a panel with consistent entity and date identifiers.',state:'Fresh'},
+ analysis:{title:'Estimate heterogeneity',children:['estimate','report'],parent:'project',text:'Estimate heterogeneity from the prepared panel and produce a reusable summary.'},
+ estimate:{title:'Estimate',children:['fit'],parent:'analysis',text:'Run the maintained specification against the source panel.'},
+ fit:{title:'Fit model',kind:'step',parent:'estimate',file:'Output/estimates.csv',text:'Estimate the model and save its coefficients.',state:'Stale'},
+ report:{title:'Summarize results',children:['table'],parent:'analysis',text:'Render a table from saved estimates.'},
+ table:{title:'Render table',kind:'step',parent:'report',file:'Tables/summary.tex',text:'Format the saved estimates for the results table.',state:'Fresh'},
+ paper:{title:'Write results',children:['exhibit'],parent:'project',text:'Prepare the final exhibit from the reviewed table.'},
+ exhibit:{title:'Prepare exhibit',kind:'step',parent:'paper',file:'Figures/exhibit.pdf',text:'Render the final exhibit.',state:'Fresh'}
+};
+const edges=[['pull','panel'],['panel','fit'],['fit','table'],['table','exhibit']];
+const state={mode:'dag',scope:'project',selected:'analysis',expanded:new Set(['analysis']),tree:new Set(['analysis']),full:false,reader:'side'};
+function action(label,attrs){return '<button type="button" '+attrs+'>'+label+'</button>';}
+function within(id,parent){while(id){if(id===parent)return true;id=nodes[id].parent;}return false;}
+function count(id){return nodes[id].kind?1:(nodes[id].children||[]).reduce((n,c)=>n+count(c),0);}
+function card(id){const n=nodes[id],open=state.expanded.has(id),has=!!n.children?.length;return '<div class="sra-node'+(state.selected===id?' sra-selected':'')+'" data-node="'+id+'"><div class="sra-node-head">'+action(n.title+'<span class="sra-kind">'+(n.kind?n.state+' · Step':count(id)+' steps')+'</span>','class="sra-select" data-select="'+id+'"')+(has?action(open?'▾':'▸','class="sra-expand" data-expand="'+id+'" aria-expanded="'+open+'" aria-label="'+(open?'Fold ':'Expand ')+n.title+'"'):'')+'</div>'+(has&&open?'<div class="sra-children">'+n.children.map(card).join('')+'</div>':'')+'</div>';}
+function tree(id){const n=nodes[id];if(n.kind)return '';const children=(n.children||[]).filter(c=>!nodes[c].kind),open=state.tree.has(id);return '<div class="sra-tree-row">'+(children.length?action(open?'▾':'▸','data-tree="'+id+'" aria-expanded="'+open+'" aria-label="'+(open?'Fold ':'Expand ')+n.title+'"'):'')+action(n.title,'data-select="'+id+'" class="'+(owner(state.selected)===id?'sra-selected':'')+'"')+'</div>'+(open?'<div class="sra-tree-children">'+children.map(tree).join('')+'</div>':'');}
+function owner(id){return nodes[id].kind?nodes[id].parent:id;}
+function visible(id){while(id&&!root.querySelector('[data-node="'+id+'"]'))id=nodes[id].parent;return id;}
+function drawEdges(){const canvas=root.querySelector('.sra-canvas'),svg=canvas.querySelector('svg');if(!svg)return;const box=canvas.getBoundingClientRect();svg.setAttribute('viewBox','0 0 '+box.width+' '+box.height);const pairs=new Map();for(const [s,t] of edges){const a=visible(s),b=visible(t);if(a&&b&&a!==b&&!within(a,b)&&!within(b,a))pairs.set(a+':'+b,[a,b]);}let html='<defs><marker id="sra-arrow-preview" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>';for(const [a,b] of pairs.values()){const ar=canvas.querySelector('[data-node="'+a+'"]').getBoundingClientRect(),br=canvas.querySelector('[data-node="'+b+'"]').getBoundingClientRect();let x1,y1,x2,y2,d;if(br.left>=ar.right-2){x1=ar.right-box.left;y1=(ar.top+ar.bottom)/2-box.top;x2=br.left-box.left;y2=(br.top+br.bottom)/2-box.top;const mid=(x1+x2)/2;d='M'+x1+' '+y1+' C'+mid+' '+y1+' '+mid+' '+y2+' '+x2+' '+y2;}else{x1=(ar.left+ar.right)/2-box.left;y1=ar.bottom-box.top;x2=(br.left+br.right)/2-box.left;y2=br.top-box.top;d='M'+x1+' '+y1+' L'+x2+' '+y2;}html+='<path d="'+d+'" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#sra-arrow-preview)"/>';}svg.innerHTML=html;}
+function render(){root.dataset.reader=state.reader;root.dataset.full=state.full;root.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===state.mode)));const n=nodes[state.selected],task=nodes[owner(state.selected)];root.querySelector('.sra-tools').innerHTML='<span>Scope: '+nodes[state.scope].title+'</span>'+(state.mode==='dag'?action('Up one level','data-up '+(state.scope==='project'?'disabled':''))+action('Expand one level','data-level')+action('Collapse all','data-collapse'):'');const canvas=root.querySelector('.sra-canvas');canvas.innerHTML=state.mode==='tree'?'<nav class="sra-tree" aria-label="Tasks">'+nodes.project.children.map(tree).join('')+'</nav>':'<div class="sra-flow '+(state.scope!=='project'?'sra-focused':'')+'">'+(state.scope==='project'?nodes.project.children:[state.scope]).map(card).join('')+'</div><svg class="sra-edges" aria-label="Dependencies between the visible tasks and steps"></svg>';root.querySelector('.sra-reader').innerHTML='<span class="sra-subtle">'+(n.kind?'Step in '+task.title:'Selected task')+'</span><h3>'+n.title+'</h3><p class="sra-subtle">'+(n.kind?n.state:'In progress · '+count(state.selected)+' reproduction steps')+'</p><h4>'+(n.kind?'What it produces':'Objective')+'</h4><p>'+n.text+'</p>'+(n.file?'<code>'+n.file+'</code>':'<h4>Reproduction</h4><p>'+count(state.selected)+' steps in this task and its descendants.</p>')+'<div class="sra-reader-actions">'+action('Focus subtree','data-focus')+action(state.full?'Back to graph':'Read full width','data-full')+'</div>';root.querySelector('.sra-footer').textContent='Scope: '+nodes[state.scope].title+' · Selected: '+n.title;requestAnimationFrame(drawEdges);}
+root.addEventListener('click',function(e){const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.mode){state.mode=d.mode;state.full=false;let p=nodes[owner(state.selected)].parent;while(p&&p!=='project'){state.tree.add(p);state.expanded.add(p);p=nodes[p].parent;}}else if(d.select){state.selected=d.select;}else if(d.expand){if(state.expanded.has(d.expand)){state.expanded.delete(d.expand);if(state.selected!==d.expand&&within(state.selected,d.expand))state.selected=d.expand;}else state.expanded.add(d.expand);}else if(d.tree){state.tree.has(d.tree)?state.tree.delete(d.tree):state.tree.add(d.tree);}else if('focus'in d){state.scope=owner(state.selected);state.expanded.add(state.scope);state.mode='dag';state.full=false;}else if('up'in d){state.scope=nodes[state.scope].parent||'project';}else if('collapse'in d){state.expanded.clear();if(state.scope==='project'){let p=state.selected;while(nodes[p].parent&&nodes[p].parent!=='project')p=nodes[p].parent;state.selected=p;}else state.selected=state.scope;}else if('level'in d){const ids=Array.from(root.querySelectorAll('[data-node]')).map(el=>el.dataset.node);ids.forEach(id=>{if(nodes[id].children)state.expanded.add(id);});}else if('full'in d){state.full=!state.full;}render();});
+render();new ResizeObserver(drawEdges).observe(root);
+if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:render});tweak.addSelect(state,'reader',{label:'Reader placement',options:[{label:'Beside graph',value:'side'},{label:'Below graph',value:'bottom'}]});}
+})();
+</script>
