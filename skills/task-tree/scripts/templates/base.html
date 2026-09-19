@@ -114,9 +114,9 @@
     <button class="hc-btn" id="btn-find" type="button"
             aria-haspopup="dialog" title="Search tasks and pages (/ or Ctrl-K)"
             onclick="openSearchPalette()">Find</button>
-    <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
+    <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Tree</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
-    <button class="hc-btn" id="btn-reproduction" onclick="showView('reproduction')">Reproduction</button>
+    <button class="hc-btn" id="btn-reproduction" onclick="showView('reproduction')">DAG</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
   </div>
 </div>
@@ -198,7 +198,10 @@
             aria-label="Resize sidebar" aria-valuemin="200" aria-valuemax="480"
             aria-valuenow="280" aria-controls="nav-tree"></button>
     <div class="sidebar-rail" id="sidebar-rail" aria-hidden="true"></div>
+    <div id="view-reproduction" class="repro-view hidden"></div>
     <main class="detail-panel">
+      <div id="dag-reader-controls" class="hidden" onclick="onReproClick(event)"></div>
+      <aside id="repro-detail" aria-label="Step details" onclick="onReproClick(event)"></aside>
       <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
       <div id="active-node" class="active-node"></div>
       <div id="children-dag" class="children-dag"></div>
@@ -214,7 +217,6 @@
       laid out in swimlanes by owner task and columns by dependency depth, with
       each step coloured by the freshness `superra repro status` reports.
       Rendered client-side from /api/repro/graph + /api/repro/status. -#}
-  <div id="view-reproduction" class="repro-view hidden"></div>
 </div>
 
 <script>
