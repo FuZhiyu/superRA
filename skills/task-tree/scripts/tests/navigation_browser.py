@@ -44,6 +44,18 @@ def fixture(base):
     return root
 
 
+def click_graph_action(page, selector):
+    control = page.locator(selector)
+    if not control.is_visible():
+        control.locator('xpath=ancestor::details[contains(@class,"rp-menu")][1]').locator(':scope > summary').click()
+    control.click()
+
+
+def open_preview(page):
+    if not page.locator('#task-preview').is_visible():
+        page.locator('#repro-preview-toggle').click()
+
+
 def run(evidence, snapshot=None):
     evidence.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='navigation-') as directory:
@@ -104,7 +116,7 @@ def run(evidence, snapshot=None):
                     assert page.locator('.repro-node').count() == 20
                     page.evaluate("selectReproStep('step-010')")
                     assert page.evaluate('activePath') == 'group-0/task-1'
-                    page.locator('[data-rp-action=mode][data-value=upstream]').click()
+                    click_graph_action(page, '[data-rp-action=mode][data-value=upstream]')
                     assert page.evaluate('_reproNav.anchor') == 'step-010'
                     page.evaluate("reproSelectTask('group-1')")
                     page.evaluate("document.querySelector('[data-rp-action=fold][data-value=\"group-0\"]').click()")
@@ -112,22 +124,23 @@ def run(evidence, snapshot=None):
                     assert page.locator('.repro-node').count() == 0
                     page.evaluate("document.querySelector('[data-rp-action=fold][data-value=\"group-0\"]').click()")
                     assert page.locator('[data-task="group-0/task-1"].rp-expanded').count() == 1
-                    page.locator('[data-rp-action=mode][data-value=scope]').click()
+                    click_graph_action(page, '[data-rp-action=mode][data-value=scope]')
                     page.evaluate("reproFocus('group-0')")
                     page.wait_for_function('_reproNav.roots[0] === "group-0"')
-                    page.locator('[data-rp-action=add-scope]').click()
+                    click_graph_action(page, '[data-rp-action=add-scope]')
                     page.fill('#repro-search', 'group-1')
                     page.locator('[data-rp-action=scope-add][data-value="group-1"]').click()
                     assert page.locator('[data-rp-action=up]').is_disabled()
                     page.evaluate("reproSelectTask('group-4')")
                     assert page.evaluate('_reproNav.roots') == ['group-0', 'group-1']
-                    page.locator('[data-rp-action=clear]').click()
+                    click_graph_action(page, '[data-rp-action=clear]')
                     # Repeated pure UI timings after both payloads are loaded.
                     results['timingsMs'] = page.evaluate('''(() => {let r={search:[],filter:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();document.getElementById('repro-search').value='step-499';reproRenderSearch(false);r.search.push(performance.now()-t);t=performance.now();reproNavigate({roots:['group-'+i]},true);r.filter.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
                     assert max(results['timingsMs']['search']) < 200
                     assert max(results['timingsMs']['filter']) < 200
                     assert max(results['timingsMs']['full']) < 2000
                     page.evaluate("revealReproStep('step-499')")
+                    open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     page.wait_for_function("_reproSelected==='step-499'")
                     positions = page.evaluate('JSON.stringify(_reproLayoutCache.layout.pos)')
@@ -142,6 +155,7 @@ def run(evidence, snapshot=None):
                     assert 'Last actual run log' in page.locator('#repro-detail').inner_text(), page.evaluate('({selected:_reproSelected,detail:document.getElementById("repro-detail").innerText,errors:window.__errors})')
                     link = page.url
                     page.reload()
+                    open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     assert page.evaluate('_reproSelected') == 'step-499'
                     page.locator('[data-rp-action=declaration]').click()
@@ -174,6 +188,7 @@ def run(evidence, snapshot=None):
                     page.keyboard.type('step-499')
                     page.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').focus()
                     page.keyboard.press('Enter')
+                    open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     page.locator('[data-rp-action=declaration]').focus()
                     page.keyboard.press('Enter')
@@ -181,15 +196,15 @@ def run(evidence, snapshot=None):
                     page.locator('[data-rp-action=full-reader]').click()
                     page.locator('[data-rp-action=close-reader]').focus()
                     page.keyboard.press('Enter')
-                    assert page.locator('#repro-node-step-499').evaluate('(e)=>e===document.activeElement')
+                    assert page.locator('#repro-preview-toggle').evaluate('(e)=>e===document.activeElement')
                     page.locator('[data-rp-action=reader]').click()
                     # Real drag of the native reader resize handle.
                     reader = page.locator('.detail-panel')
                     box = reader.bounding_box()
                     before = box['width']
-                    page.mouse.move(box['x']+box['width']-3, box['y']+box['height']-3)
+                    page.mouse.move(box['x']+box['width']-8, box['y']+box['height']-8)
                     page.mouse.down()
-                    page.mouse.move(box['x']+box['width']-93, box['y']+box['height']-3, steps=10)
+                    page.mouse.move(box['x']+box['width']-98, box['y']+box['height']-8, steps=10)
                     page.mouse.up()
                     after = reader.bounding_box()['width']
                     assert abs(after-before) > 40, (before, after)
@@ -219,6 +234,7 @@ def run(evidence, snapshot=None):
                 if snapshot:
                     page.fill('#repro-search', 'intermediary-build-factors-and-panel')
                     page.locator('#repro-search-results [data-rp-action=open]').first.click()
+                    open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     assert page.locator('.repro-findings').count() == 1
                     assert 'cycle' in page.locator('.repro-findings').inner_text()
@@ -254,6 +270,7 @@ def run(evidence, snapshot=None):
                     page.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').click()
                     page.wait_for_function("_reproSelected==='step-499'")
                     assert page.evaluate('activePath') == 'group-4/task-9'
+                    open_preview(page)
                     page.locator('[data-rp-action=declaration]').click()
                     page.wait_for_selector('#active-node [data-section="Reproduction"]')
                 results['offline'] = True
@@ -264,9 +281,10 @@ def run(evidence, snapshot=None):
                     phone.goto(export.as_uri())
                     phone.locator('#btn-reproduction').tap()
                     phone.wait_for_selector('.rp-task')
-                    phone.locator('[data-rp-action=close-reader]').tap()
+                    assert not phone.locator('#task-preview').is_visible()
                     phone.locator('#repro-search').tap();phone.locator('#repro-search').fill('step-499')
                     phone.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').tap()
+                    phone.locator('#repro-preview-toggle').tap()
                     phone.locator('[data-rp-action=declaration]').tap()
                     phone.wait_for_selector('#active-node [data-section="Reproduction"] .rendered-md[data-rendered]')
                     phone.locator('[data-rp-action=full-reader]').tap()
