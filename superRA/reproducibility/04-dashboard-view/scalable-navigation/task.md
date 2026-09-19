@@ -1,6 +1,6 @@
 ---
 title: "Integrate Task Navigation and Expandable Dependencies"
-status: approved
+status: revise
 depends_on: []
 ---
 
