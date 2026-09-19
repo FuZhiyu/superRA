@@ -36,3 +36,9 @@ Explore's cross-subtree dependency display crashed because it called `.join()` o
 The installed Claude plugin serving the [heterogeneity dashboard](https://home-studio.tail7992bc.ts.net:8444/?wt=heterogeneity-reproduction) received the Explore fix. HTTP retrieval confirmed byte-for-byte JavaScript agreement with the checkout and cache version `98c6417744dd`. A Node render check using the live graph (96 steps, 296 file edges) exercised Explore for all 54 subtree scopes. The preceding installed JavaScript is backed up at `/Users/zhiyufu/.cache/superra-dashboard-explore-backup-20260918.js`.
 
 The full scalable-navigation contract remains in progress. Browser visual verification could not run: computer-use access reported no available browser and no Chrome/Safari window. The 500-step performance pass, full live/offline interaction journeys, and visual evidence required by the objective remain outstanding; passing unit and route tests does not establish those checks.
+
+## Review Notes
+
+Planning design review: shared navigation state and expansion/folding journeys.
+
+1. **[BLOCKING] Define tracing by its anchor after selection changes.** [Folding](attachments/design.md#L35) selects the folded task when its selected step becomes hidden and preserves the trace anchor, but the [mode table and prerequisite](attachments/design.md#L62-L70) define tracing around the selected step and require one to remain selected. The required fold journey therefore has no consistent tracing state; selecting a different task while tracing has the same conflict. Define a selected step as the prerequisite for starting a trace, derive an existing trace's node set from its stored anchor, and specify that folding projects that set through current containers without clearing the trace or reopening the group. Add an acceptance journey that starts a trace, selects a task, folds the anchor's ancestor, and reopens it while preserving the anchor and mode.
