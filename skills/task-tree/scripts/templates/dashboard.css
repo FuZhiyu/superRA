@@ -2570,15 +2570,15 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .dag-mode .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
 
 /* Task DAG shares the existing reader; the canvas owns the remaining viewport. */
-.workspace.dag-mode { display:flex;gap:0;align-items:stretch;height:calc(100vh - var(--dag-top, 100px));height:calc(100dvh - var(--dag-top, 100px));min-height:320px;overflow:hidden; }
+.workspace.dag-mode { display:flex;gap:0;align-items:stretch;height:calc(100vh - var(--dag-top, 100px));height:calc(100dvh - var(--dag-top, 100px));min-height:0;overflow:hidden; }
 .workspace.dag-mode > .sidebar-spacer,.workspace.dag-mode > .nav-tree,.workspace.dag-mode > .sidebar-resizer,.workspace.dag-mode > .sidebar-rail { display:none; }
 #view-reproduction:not(.hidden) { display:flex;flex:1;flex-direction:column;min-width:0;max-width:none;margin:0;padding:14px 20px 8px;box-sizing:border-box; }
-.dag-mode > .detail-panel { flex:0 0 auto;width:36%;min-width:300px;max-width:65%;resize:horizontal;overflow:auto;scroll-padding-top:var(--dag-reader-offset,100px);border-left:1px solid var(--border);padding:16px;box-sizing:border-box; }
+.dag-mode > .detail-panel { position:relative;flex:0 0 var(--dag-preview-size,420px);width:var(--dag-preview-size,420px);height:auto;min-width:0;min-height:0;max-width:none;resize:none;overflow:auto;scroll-padding-top:var(--dag-reader-offset,100px);border-left:1px solid var(--border);padding:16px;box-sizing:border-box; }
 #dag-reader-controls { position:sticky;top:0;z-index:8;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:8px 0;background:var(--bg);border-bottom:1px solid var(--border-lt); }
 #repro-detail { max-height:none;overflow:visible;position:static; }
 .dag-mode #children-dag,.workspace:not(.dag-mode) #repro-detail { display:none; }
 .dag-mode.dag-full-reader > .repro-view,.dag-mode.dag-reader-closed > .detail-panel { display:none !important; }
-.dag-mode.dag-full-reader > .detail-panel { width:100%;max-width:100%;flex:1;resize:none; }
+.dag-mode.dag-full-reader > .detail-panel { width:100%;height:100%;max-width:100%;flex:1;resize:none; }
 .dag-mode .hc-btn,.dag-mode .hc-select { background:var(--bg-card);color:var(--text); }
 .dag-mode .hc-btn.active { color:var(--accent);background:var(--accent-soft);border-color:var(--accent); }
 .dag-mode .hc-btn:disabled { opacity:.45;cursor:default; }
@@ -2665,8 +2665,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #repro-detail pre { max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere; }
 #repro-detail .hc-btn { height:auto;min-height:28px;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;text-align:left; }
 @media(max-width:1000px) {
-  .dag-mode > .detail-panel { position:fixed;z-index:80;inset:auto 12px 12px;width:auto !important;max-width:none;max-height:60vh;resize:none;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md); }
-  .dag-mode.dag-full-reader > .detail-panel { inset:80px 8px 8px;width:auto !important;max-height:none; }
   .repro-gesture-hint { display:none; }
 }
 @media(max-width:620px) {
@@ -2722,3 +2720,22 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 
 .rp-component-label { position:absolute;z-index:1;display:flex;align-items:center;gap:16px;height:24px;color:var(--text-mute);font:11px var(--font-mono);letter-spacing:.03em;pointer-events:none;white-space:nowrap; }
 .rp-component-label::after { content:"";height:1px;flex:1;background:var(--border);opacity:.6; }
+
+/* The DAG reader is a real pane; its divider follows the sidebar affordance. */
+.dag-preview-resizer { display:none; }
+.dag-mode > .dag-preview-resizer { display:block;position:relative;flex:0 0 10px;border:0;padding:0;background:var(--bg);cursor:col-resize;touch-action:none;z-index:15; }
+.dag-preview-resizer::after { content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:var(--border); }
+.dag-preview-resizer::before { content:"";position:absolute;left:2px;top:calc(50% - 18px);width:6px;height:36px;border-radius:3px;background:var(--text-mute);z-index:1; }
+.dag-preview-resizer:hover::after,.dag-preview-resizer:focus-visible::after,.dag-resizing > .dag-preview-resizer::after { background:var(--accent); }
+.dag-preview-resizer:focus-visible { outline:2px solid var(--accent);outline-offset:-2px; }
+.dag-mode.dag-reader-bottom { flex-direction:column; }
+.dag-mode.dag-reader-bottom > .detail-panel { width:100%;height:var(--dag-preview-size,300px);border-left:0;border-top:1px solid var(--border); }
+.dag-mode.dag-reader-bottom > .dag-preview-resizer { cursor:row-resize; }
+.dag-reader-bottom > .dag-preview-resizer::after { left:0;right:0;top:4px;bottom:auto;width:auto;height:2px; }
+.dag-reader-bottom > .dag-preview-resizer::before { left:calc(50% - 18px);top:2px;width:36px;height:6px; }
+.dag-mode.dag-reader-closed > .dag-preview-resizer,.dag-mode.dag-full-reader > .dag-preview-resizer { display:none; }
+.dag-mode.dag-reader-bottom.dag-full-reader > .detail-panel { height:100%; }
+.dag-mode > .repro-view { min-height:0;overflow-y:auto;overscroll-behavior:contain; }
+.dag-reader-bottom .repro-stage { min-height:100px; }
+.dag-resizing { user-select:none; }
+@media(pointer:coarse) { .dag-mode > .dag-preview-resizer { flex-basis:20px; } .dag-preview-resizer::after { left:9px; } .dag-preview-resizer::before { left:7px; } .dag-reader-bottom > .dag-preview-resizer::after { left:0;top:9px; } .dag-reader-bottom > .dag-preview-resizer::before { left:calc(50% - 18px);top:7px; } }
