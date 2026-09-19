@@ -61,7 +61,7 @@ Tracing follows real step edges across subtree and tier boundaries. Steps outsid
 
 Every drawn step-to-step edge corresponds to a declared/inferred edge from the payload. Never replace a path through hidden steps with an unlabeled direct edge. External boundary files are labeled as inputs, not fabricated executable steps. The inspector lists external inputs with their available state evidence.
 
-Use compact left-to-right dependency layout with directional arrows and identifiable owner-task labels. Ownership must not force every task into a full-width lane. Route long edges around node boxes, including a first-to-last shortcut across a chain. Disconnected components remain distinct. Stable identifiers and deterministic tie-breaking preserve layout for unchanged topology.
+Group steps in compact, collapsible owner-task containers with task titles and freshness counts. Large scopes start with task summaries; a selected step opens its owner. Expanded containers retain step-level dependency arrows; collapsed connections summarize ownership relationships and never imply an executable task DAG. Keep task return paths legal when the step graph is acyclic. Use directional arrows and readable initial zoom; Fit remains an explicit whole-graph overview. Route long edges around node boxes, including a first-to-last shortcut across a chain. Disconnected components remain distinct. Stable identifiers and deterministic tie-breaking preserve layout for unchanged topology.
 
 ### Inspection stays beside the selected step
 

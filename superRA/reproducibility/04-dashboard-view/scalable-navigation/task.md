@@ -9,6 +9,7 @@ depends_on: []
 Make the Reproduction view usable for locating a result, tracing its dependencies, and inspecting execution state in projects with 500 steps across 50 owner tasks.
 
 - Implement the [interaction contract and acceptance checks](attachments/design.md): task overview, combined subtree/tier filtering, focused step graphs, persistent inspection, and navigation recovery.
+- Group step cards by owner task with collapsible summaries, readable initial zoom, routed directional edges, and selection that remains visible beside the inspector. Validate against the heterogeneity graph as well as synthetic fixtures.
 - Preserve the parent's data, task-comment, and standalone-export contracts. Keep this change within dashboard presentation and navigation; reproduction declarations, execution, and freshness semantics remain unchanged.
 - Validate graph semantics with deterministic fixtures and navigation with browser interactions, including live updates and an offline export. Record the exercised environment and visual evidence alongside the results.
 
