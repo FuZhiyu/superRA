@@ -147,6 +147,90 @@ def test_sidecar_does_not_hide_saved_input_change(project):
 
 
 @needs_pytask
+def test_saved_sidecar_artifact_without_metadata(project):
+    from test_repro_runner import _use_a_sidecar
+    _use_a_sidecar(project)
+    project.write('output/a.txt', 'saved without a build record\n')
+    assert project.run('build', '02-b') == 0
+    assert project.run('status', '02-b') == 0
+    report = compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True)
+    assert report.entry('build-b').local_status == 'fresh'
+    assert not report.ok
+    before = project.run_times()
+    assert project.run('build', '02-b') == 0
+    assert project.run_times() == before
+    assert not (project.root / 'output/a.txt.sha256').exists()
+
+
+@needs_pytask
+def test_saved_directory_without_sidecar(dir_project):
+    path = 'superRA/01-gen/task.md'
+    dir_project.write(path, dir_project.read(path).replace(
+        '      - "${OUT}/parts"', '      - path: "${OUT}/parts"\n        sidecar: "${OUT}/parts.sha256"'))
+    dir_project.write('output/parts/a.txt', 'saved directory\n')
+    assert dir_project.run('build', '02-use') == 0
+    assert dir_project.run('status', '02-use') == 0
+    assert dir_project.read('output/used.txt') == 'saved directory\n'
+    assert set(dir_project.run_times()) == {'a-use'}
+
+
+@needs_pytask
+@pytest.mark.parametrize('drop_receipt', [False, True])
+def test_acceptance_cannot_hide_changed_saved_bytes(project, drop_receipt):
+    from test_repro_runner import _use_a_sidecar
+    from test_repro_acceptance import review
+    _use_a_sidecar(project)
+    assert project.run('build') == 0
+    assert project.run('build', '02-b') == 0
+    project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
+    review(project, ['build-b'])
+    if drop_receipt:
+        receipt_path(project.paths, 'build-b').unlink()
+    assert project.run('status', '02-b') == 0
+    project.write('output/a.txt', 'changed with unchanged sidecar\n')
+    assert project.run('status', '02-b') == 1
+    assert project.run('status', '02-b', '--upstream') == 1
+    before = project.run_times()
+    assert project.run('build', '02-b') == 0
+    assert project.run_times()['build-a'] == before['build-a']
+    assert project.read('output/b.txt') == 'changed with unchanged sidecar\n' * 2
+
+
+@needs_pytask
+def test_batch_acceptance_tracks_inputs_between_accepted_steps(project):
+    from test_repro_runner import _use_a_sidecar
+    from test_repro_acceptance import review
+    _use_a_sidecar(project)
+    assert project.run('build') == 0
+    for script in ['Code/a.sh', 'Code/b.sh']:
+        project.write(script, project.read(script) + '# harmless\n')
+    review(project, ['build-a', 'build-b'])
+    assert project.run('status', '02-b') == 0
+    project.write('output/a.txt', 'changed after batch acceptance\n')
+    assert project.run('status', '02-b') == 1
+
+
+@needs_pytask
+@pytest.mark.parametrize('accepted', [False, True])
+def test_saved_input_evidence_follows_logical_path_relocation(project, accepted):
+    import shutil
+    from test_repro_runner import _use_a_sidecar
+    from test_repro_acceptance import review
+    _use_a_sidecar(project)
+    assert project.run('build') == 0
+    assert project.run('build', '02-b') == 0
+    if accepted:
+        project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
+        review(project, ['build-b'])
+    shutil.copytree(project.root / 'output', project.root / 'relocated')
+    project.write('superRA/config.yaml', project.read('superRA/config.yaml').replace('OUT: output', 'OUT: relocated'))
+    assert project.run('status', '02-b') == 0
+    project.write('relocated/a.txt', 'new bytes with old sidecar\n')
+    assert project.run('status', '02-b') == 1
+    assert project.run('status', '02-b', '--upstream') == 1
+
+
+@needs_pytask
 def test_partial_selection_leaves_intervening_producer_untouched(project):
     assert project.run('build') == 0
     before = project.run_times()

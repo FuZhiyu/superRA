@@ -63,17 +63,25 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
             or {key: state.get(key) for key in ('deps', 'products')} != lock_state(lock)):
         receipt = {}
     recorded = receipt.get('boundary_inputs', [])
+    from _repro_acceptance import read_ledger
+    accepted = read_ledger(paths)['steps'].get(entry.step.name, {})
+    if accepted.get('baseline', {}).get('lock') == lock_state(lock):
+        recorded = accepted.get('boundary_inputs', accepted.get('baseline', {}).get('boundary_inputs', recorded))
     entry.boundary_inputs = recorded
-    verified_paths = {item['resolved'] for item in recorded}
+    verified_paths = {item['logical'] for item in recorded}
     if lock is not None:
         for item in boundary:
-            if item['sidecar'] and item['resolved'] not in verified_paths:
+            if item['sidecar'] and item['logical'] not in verified_paths:
                 entry.changes.append(Change(item['logical'], 'boundary', 'unverified'))
                 if entry.status == 'fresh':
                     entry.status = 'stale'
                     entry.reason = f"saved input {item['logical']} needs a full-byte baseline"
+    current_paths = {dep.logical: dep.resolved for dep in entry.step.deps}
     for item in recorded:
-        current = cache.path_state(absolute(paths.project_root, item['resolved']))
+        resolved = current_paths.get(item['logical'])
+        if resolved is None:
+            continue  # Removing a declared dependency already changes the spec.
+        current = cache.path_state(absolute(paths.project_root, resolved))
         if current == item['digest']:
             continue
         entry.changes.append(Change(item['logical'], 'boundary', 'missing' if current is None else 'changed'))
