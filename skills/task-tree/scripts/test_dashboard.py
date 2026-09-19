@@ -7065,6 +7065,7 @@ def _run_repro_render_node(harness_body):
         "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
         "function reproReaderControls(){}\n"
         "function reproBindViewport(){}\n"
+        "function reproSizeWorkspace(){}\n"
         "function reproFit(){}\n"
         "function reproTransform(){}\n"
         "function reproBindHead(){}\n"
@@ -7299,7 +7300,7 @@ class TestReproNavigationRepair:
         defs = _extract_js_defs([
             "onReproClick", "reproNavigate", "reproRoots", "reproWithin",
             "reproProject", "reproMatches", "reproHash", "reproReadHash",
-            "revealReproStep", "selectReproStep", "reproNodeId", "initRouter", "reproRevealOwner", "parentPath", "reproFocus",
+            "revealReproStep", "selectReproStep", "reproNodeId", "initRouter", "reproRevealOwner", "parentPath", "reproFocus", "reproZoomAt",
         ])
         shim = r"""
 const assert = require('node:assert/strict');
@@ -7331,7 +7332,7 @@ function parseHash(){return 'analysis';}
 function parseArtifactHash(){return '';}
 function setActive(path){activePath=path;}
 function click(action,value){onReproClick({preventDefault:function(){},target:{closest:function(selector){
-  return selector==='[data-rp-action]' ? {dataset:{rpAction:action,value:value||''}} : null;
+  return selector==='[data-rp-action]' ? {dataset:{rpAction:action,value:value||''},closest:function(){return null;}} : null;
 }}});}
 """
         proc = subprocess.run(

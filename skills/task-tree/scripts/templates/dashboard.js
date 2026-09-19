@@ -436,6 +436,7 @@ function showView(view) {
   var workspace = document.getElementById('workspace');
   workspace.classList.toggle('hidden', view === 'kanban');
   workspace.classList.toggle('dag-mode', view === 'reproduction');
+  workspace.classList.toggle('dag-reader-closed', _reproReaderClosed);
   document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
   document.getElementById('view-reproduction').classList.toggle('hidden', view !== 'reproduction');
   document.getElementById('dag-reader-controls').classList.toggle('hidden', view !== 'reproduction');
@@ -594,7 +595,7 @@ function onSearchPaletteKeydown(event) {
 }
 
 function openSearchPalette() {
-  if(currentView==='reproduction'&&innerWidth<=1000)document.getElementById('workspace').classList.add('dag-reader-closed');
+  if(currentView==='reproduction'&&innerWidth<=1000)reproSetReader(false);
   var backdrop = document.getElementById('search-palette-backdrop');
   var palette = document.getElementById('search-palette');
   var input = document.getElementById('search-palette-input');
@@ -926,7 +927,7 @@ REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
 var _reproTier = 'all', _reproSelected = '';
 var _reproNav = { roots: [], tier: 'all', view: 'graph', mode: 'scope', anchor: '', selected: '', expanded: [] };
-var _reproEntered = false, _reproReaderFull = false, _reproLegacyReveal = false;
+var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = true, _reproLegacyReveal = false;
 var _reproContext = [], _reproNotice = '', _reproLayoutCache = null;
 var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
 var _reproInspectorClosed = false, _reproFitNext = true;
@@ -1080,8 +1081,8 @@ function renderReproView(force) {
       + escapeHtml(e.message) + '</div>';
   });
 }
-function reproButton(label, action, value) {
-  return '<button type="button" class="hc-btn" data-rp-action="' + action + '" data-value="'
+function reproButton(label, action, value, accessibleLabel) {
+  return '<button type="button" class="hc-btn"'+(accessibleLabel?' aria-label="'+escapeAttr(accessibleLabel)+'"':'')+' data-rp-action="' + action + '" data-value="'
     + escapeAttr(value || '') + '">' + escapeHtml(label) + '</button>';
 }
 function reproTasks(graph) {
@@ -1155,6 +1156,46 @@ function reproHierarchy(graph, nav, project) {
   return {nodes:nodes,edges:edges,reps:reps,taskReps:taskReps,logicalBoundary:logical.filter(function(e){return needed.has(e.to)&&(!taskReps[e.from]||!taskReps[e.to]);})};
 }
 
+function reproBranchExpansion(graph, nav, context, path, depth) {
+  var project=reproProject(graph,nav,context), current=reproHierarchy(graph,nav,project);
+  var visible=current.nodes.some(function(n){return n.type==='task'&&n.task===path&&!n.outside;})
+    || (path===''&&!nav.roots.length);
+  var levels=depth==='all'?Infinity:Number(depth), base=path?path.split('/').length:0;
+  var expanded=(nav.expanded||[]).filter(function(p){return !reproWithin(p,path);});
+  reproTasks(graph).forEach(function(p){
+    var relative=(p?p.split('/').length:0)-base;
+    if(reproWithin(p,path)&&relative<levels)expanded.push(p);
+  });
+  var candidate=reproHierarchy(graph,Object.assign({},nav,{expanded:expanded}),project);
+  var branch=candidate.nodes.filter(function(n){return reproWithin(n.type==='task'?n.task:n.step.task,path);});
+  return {visible:visible,expanded:expanded,total:candidate.nodes.length,
+    tasks:branch.filter(function(n){return n.type==='task';}).length,
+    steps:branch.filter(function(n){return n.type==='step';}).length};
+}
+function reproCloseGraphDetail() {
+  var host=document.getElementById('repro-edge-detail');if(!host||!host.firstChild)return;
+  var branch=!!host.querySelector('#repro-branch-depth');host.innerHTML='';
+  var target=branch?document.getElementById('repro-options-toggle'):document.querySelector('.repro-canvas');
+  if(target)target.focus({preventScroll:true});
+}
+function reproBranchPanel(path, selectedDepth, focus) {
+  var host=document.getElementById('repro-edge-detail');
+  host.innerHTML='<h3>Expand branch</h3><p class="rp-branch-title">'+escapeHtml(reproTaskTitle(path))+'</p><p class="rp-branch-path">'+escapeHtml(path||'Whole project')+'</p><label class="rp-branch-depth">Show up to <select class="hc-select" id="repro-branch-depth"><option value="1">1 level</option><option value="2" selected>2 levels</option><option value="3">3 levels</option><option value="all">All levels</option></select></label><p id="repro-branch-count" role="status"></p><p class="repro-hint">Each level shows its own steps and child tasks. Choosing fewer levels folds deeper tasks.</p><div class="rp-branch-actions"><button class="hc-btn" id="repro-branch-apply" data-rp-action="branch-apply" data-value="'+escapeAttr(path)+'">Apply</button>'+reproButton('Cancel','close-edge')+'</div>';
+  var depth=document.getElementById('repro-branch-depth');depth.value=selectedDepth||'2';
+  function preview(){
+    var plan=reproBranchExpansion(_reproData.graph,_reproNav,_reproContext,path,depth.value);
+    var count=plan.tasks+plan.steps, info=document.getElementById('repro-branch-count'), apply=document.getElementById('repro-branch-apply');
+    if(!plan.visible){
+      info.innerHTML='This task is hidden or outside the current scope. '+reproButton('Focus selected task','focus',path);
+      apply.disabled=true;depth.disabled=true;
+    } else {
+      info.textContent=count+' cards in this branch · '+plan.tasks+' tasks + '+plan.steps+' steps'+(plan.total!==count?' · '+plan.total+' cards in the graph':'');
+      apply.textContent='Apply · '+count+' cards';
+    }
+  }
+  depth.onchange=preview;preview();if(focus!==false){var target=depth.disabled?host.querySelector('[data-rp-action=focus]'):depth;target.focus({preventScroll:true});}
+}
+
 /* Each hierarchy boundary receives independent rank columns and routing gutters.
    Variable-size children reserve their entire box, including descendants. */
 function reproHierarchyLayout(model) {
@@ -1209,20 +1250,27 @@ function reproGraphHTML(lay,statuses) {
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
     if(n.type==='step') {var st=reproStateOf(statuses[n.id]);return '<button class="repro-node rp-'+st+(n.id===_reproSelected?' is-selected':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'" id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state">'+(REPRO_GLYPHS[st]||'?')+' '+st+(n.step.kind==='check'?' · check':'')+(!reproMatches(n.step,_reproNav)?' · Outside scope':'')+'</span></button>';}
     var counts={};n.steps.forEach(function(s){var st=reproStateOf(statuses[s.name]);counts[st]=(counts[st]||0)+1;});
-    return '<section class="rp-task'+(n.expanded&&n.expandable?' rp-expanded':'')+(n.task===activePath?' is-selected':'')+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task):'')+'<button class="rp-task-title" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span></div><div class="rp-task-meta">'+escapeHtml(n.task||'Project root')+(n.outside?' · Outside scope':'')+'<br>'+n.steps.length+' steps · '+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ')+'</div></section>';
+    var summary=(n.outside?'Outside scope · ':'')+n.steps.length+' steps'+(n.steps.length?' · ':'')+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ');
+    return '<section class="rp-task'+(n.expanded&&n.expandable?' rp-expanded':'')+(n.task===activePath?' is-selected':'')+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button></div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+escapeHtml(summary)+'</span></div></section>';
   }).join('');return html;
 }
 function reproHeadHTML() {
-  return '<div class="repro-head"><strong>Dependencies</strong><span class="repro-head-spacer"></span>'+reproButton('Whole project','clear')+reproButton('Refresh','refresh')+'</div>';
+  var scope=_reproNav.roots.length===1?reproTaskTitle(_reproNav.roots[0]):_reproNav.roots.length+' subtrees';
+  return '<div class="repro-head"><div class="repro-heading"><strong>Dependencies</strong><span class="repro-scope" title="'+escapeAttr(_reproNav.roots.join(' ∪ '))+'">'+escapeHtml(_reproNav.roots.length?scope:'Whole project')+'</span></div><button type="button" class="hc-btn" id="repro-preview-toggle" data-rp-action="reader" aria-controls="task-preview" aria-expanded="false">Task preview</button></div>';
 }
 function reproControlsHTML(data,project) {
   var opts=['all','required','on-demand'].map(function(t){return '<option value="'+t+'"'+(t===_reproTier?' selected':'')+'>'+(t==='all'?'All tiers':t)+'</option>';}).join('');
-  return '<div class="repro-scope" aria-live="polite">Scope: '+(_reproNav.roots.length?_reproNav.roots.map(function(r){return reproButton((reproTaskTitle(r))+' · '+(r||'Project')+' ×','remove-root',r);}).join(' ∪ '):'Whole project')+' · '+project.matches.length+' matching steps · '+project.steps.filter(function(s){return !reproMatches(s,_reproNav);}).length+' outside-scope context steps</div><div class="repro-controls"><button class="hc-btn" data-rp-action="up"'+(_reproNav.roots.length!==1?' disabled':'')+'>Up one level</button>'+reproButton('Add scope','add-scope')+'<label>Tier <select id="repro-tier" class="hc-select">'+opts+'</select></label><label class="repro-search-label">Search <input id="repro-search" type="search" placeholder="Step, task, or output"></label>'+reproButton('Search whole project','search-all')+'</div><div id="repro-search-results"></div><div class="repro-modes">'+reproButton('Expand one level','expand-level')+reproButton('Collapse all','collapse')+'<details><summary>More</summary>'+reproButton('Expand all steps','expand-all')+'</details>'+['scope','nearby','upstream','downstream','both'].map(function(m){return '<button class="hc-btn'+(_reproNav.mode===m?' active':'')+'" data-rp-action="mode" data-value="'+m+'"'+(m!=='scope'&&!_reproSelected&&!_reproNav.anchor?' disabled':'')+'>'+m+'</button>';}).join('')+(_reproNav.anchor?'<span>Tracing from '+escapeHtml(_reproNav.anchor)+'</span>':'')+'</div>';
+  var modes=['scope','nearby','upstream','downstream','both'].map(function(m){return '<button class="hc-btn'+(_reproNav.mode===m?' active':'')+'" data-rp-action="mode" data-value="'+m+'"'+(m!=='scope'&&!_reproSelected&&!_reproNav.anchor?' disabled':'')+'>'+m.charAt(0).toUpperCase()+m.slice(1)+'</button>';}).join('');
+  return '<div class="repro-controls"><label class="repro-search-label"><span class="sr-only">Search dependencies</span><input id="repro-search" type="search" placeholder="Find task, step, or output…" autocomplete="off"></label><label><span class="sr-only">Tier</span><select id="repro-tier" class="hc-select">'+opts+'</select></label><details class="rp-menu" data-rp-menu="trace"><summary>Trace'+(_reproNav.mode==='scope'?'':' · '+escapeHtml(_reproNav.mode))+'</summary><div class="rp-menu-body">'+modes+(_reproNav.anchor?'<p>From '+escapeHtml(_reproNav.anchor)+'</p>':'<p>Select a step to trace its dependencies.</p>')+'</div></details><details class="rp-menu" data-rp-menu="options"><summary id="repro-options-toggle">Graph options</summary><div class="rp-menu-body">'+reproButton('Expand one level','expand-level')+reproButton('Collapse all','collapse')+reproButton('Expand selected branch…','expand-branch')+'<hr><button class="hc-btn" data-rp-action="up"'+(_reproNav.roots.length!==1?' disabled':'')+'>Up one level</button>'+reproButton('Whole project','clear')+reproButton('Focus selected task','focus-selected')+reproButton('Add scope','add-scope')+(_reproNav.roots.length?'<hr>'+_reproNav.roots.map(function(root){return reproButton('Remove scope: '+reproTaskTitle(root),'remove-root',root);}).join(''):'')+reproButton('Search whole project','search-all')+reproButton('Refresh status','refresh')+'</div></details></div><div id="repro-search-results"></div>';
 }
 function drawReproView(container,data) {
   if(!container||!data)return;
   (data.graph.dependencies && data.graph.dependencies.tasks || []).forEach(function(t){pathTitles[t.path]=t.title;});
   var focused=document.activeElement,focusId=focused&&focused.id;
+  var openMenu=container.querySelector('.rp-menu[open]');
+  var menuKey=openMenu&&openMenu.dataset.rpMenu;
+  var branchApply=container.querySelector('#repro-branch-apply');
+  var branchPanel=branchApply?{path:branchApply.dataset.value,depth:container.querySelector('#repro-branch-depth').value}:null;
   var project=reproProject(data.graph,_reproNav,_reproContext),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
   if(_reproSelected&&!project.byName[_reproSelected]){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
   if(_reproNav.anchor&&!project.byName[_reproNav.anchor]){_reproNav.anchor='';_reproNav.mode='scope';project=reproProject(data.graph,_reproNav,[]);}
@@ -1237,11 +1285,26 @@ function drawReproView(container,data) {
   _reproLayoutCache={signature:signature,layout:lay};
   var findings=(data.graph.findings||[]).concat(data.status.findings||[]).filter(function(f,i,a){return a.findIndex(function(o){return JSON.stringify(o)===JSON.stringify(f);})===i;});
   var notice=missing.length?'Selected subtree was removed or archived: '+missing.join(', ')+'. Use Whole project to recover.':archived?'Selected task is archived and excluded from the active DAG.':!model.taskReps[activePath]&&activePath?'Selected task is outside the current scope. Focus subtree to include it.':'';
-  container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)+(window.STANDALONE?'<p class="repro-hint">Exported status snapshot</p>':'')+reproLegendHTML(project.matches,statuses,data.status)+(findings.length?'<details class="rp-diagnostics" open><summary>Graph diagnostics — inspect declarations</summary>'+reproFindingsHTML(findings)+'</details>':'')+'<p id="repro-notice" role="status">'+escapeHtml(notice||_reproNotice)+'</p>'+(!model.nodes.length?'<p class="repro-empty">'+(paths.length?'No tasks or steps match these filters. Use Whole project to recover.':'No active tasks in this tree.')+'</p>':'')+'<div class="repro-canvas" tabindex="0" aria-label="Dependency graph; drag to pan or use the step list"><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div><div class="repro-viewport-controls">'+reproButton('−','zoom-out')+'<span id="repro-zoom"></span>'+reproButton('+','zoom-in')+reproButton('Fit overview','fit')+reproButton('Center selected','center')+reproButton('Show reader','reader')+'</div>'+reproBoundaryHTML(project)+reproLogicalBoundaryHTML(model)+'<details class="repro-step-list"><summary>Step list ('+project.steps.length+')</summary>'+project.steps.map(function(s){return reproButton(s.name+' · '+reproTaskTitle(s.task),'open',s.name);}).join('')+'</details><div id="repro-edge-detail"></div>';
+  var errors=findings.filter(function(f){return f.severity==='error';}).length;
+  var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
+  var outside=project.steps.filter(function(s){return !reproMatches(s,_reproNav);}).length;
+  container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
+    +'<div class="repro-summary"><span>'+project.matches.length+' steps'+(outside?' · '+outside+' outside scope':'')+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>State legend</summary><div class="rp-menu-body">'+reproLegendHTML(project.matches,statuses,data.status)+'</div></details>'
+    +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
+    +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+'</div>'
+    +'<p id="repro-notice" role="status">'+escapeHtml(notice||_reproNotice)+'</p>'
+    +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
+    +(!model.nodes.length?'<p class="repro-empty">'+(paths.length?'No tasks or steps match these filters. Use Whole project in Graph options to recover.':'No active tasks in this tree.')+'</p>':'')
+    +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+reproButton('Center selected','center')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-edge-detail"></div></div>'
+    +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span><details class="rp-menu rp-footer-menu" data-rp-menu="steps"><summary>Step list · '+project.steps.length+'</summary><div class="rp-menu-body repro-step-list">'+project.steps.map(function(s){return reproButton(s.name+' · '+reproTaskTitle(s.task),'open',s.name);}).join('')+'</div></details>'
+    +((project.boundary.length||model.logicalBoundary.length)?'<details class="rp-menu rp-footer-menu" data-rp-menu="boundaries"><summary>Outside dependencies</summary><div class="rp-menu-body">'+reproBoundaryHTML(project)+reproLogicalBoundaryHTML(model)+'</div></details>':'')+'</div>';
+
   if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
   container.onclick=onReproClick;
-  container.onkeydown=function(e){if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
-  reproBindHead(container);reproBindViewport(container);renderReproDetail(_reproSelected);reproReaderControls();
+  container.onkeydown=function(e){if(e.key==='Escape'){container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});document.getElementById('repro-search-results').innerHTML='';document.getElementById('repro-search').oninput=function(){reproRenderSearch(false);};reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
+  reproBindHead(container);reproBindViewport(container);renderReproDetail(_reproSelected);reproReaderControls();reproSizeWorkspace();
+  if(branchPanel)reproBranchPanel(branchPanel.path,branchPanel.depth,false);
+  if(menuKey){var menu=container.querySelector('[data-rp-menu="'+menuKey+'"]');if(menu)menu.open=true;}
   if(_reproFitNext){_reproViewport={x:12,y:12,zoom:1};_reproFitNext=false;}reproTransform();
   if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
 }
@@ -1254,12 +1317,16 @@ function reproLogicalBoundaryHTML(model){
   return '<details class="repro-boundaries" open><summary>Inherited logical prerequisites outside this view</summary>'+model.logicalBoundary.map(function(e){return '<div>'+reproButton(reproTaskTitle(e.from),'task',e.from)+' → '+reproButton(reproTaskTitle(e.to),'task',e.to)+'<p>'+escapeHtml(e.declaration)+' · Applies to scoped descendant work.</p></div>';}).join('')+'</details>';
 }
 function reproReaderControls(){
-  var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Focus subtree','focus',activePath)+reproButton(_reproReaderFull?'Back to graph':'Read full width','full-reader')+reproButton('Close reader','close-reader');
+  var toggle=document.getElementById('repro-preview-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);}
+  var selection=document.getElementById('repro-selection');if(selection){selection.textContent=_reproSelected||reproTaskTitle(activePath);selection.title=_reproSelected||activePath;}
+  var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Focus subtree','focus',activePath)+reproButton(_reproReaderFull?'Back to graph':'Read full width','full-reader')+reproButton('Close preview','close-reader');
   if(host&&_reproData){var edges=(_reproData.graph.dependencies&&_reproData.graph.dependencies.edges||[]).filter(function(e){return e.from===activePath||e.to===activePath;});
     if(edges.length)host.innerHTML+='<details class="rp-task-deps"><summary>Task dependencies ('+edges.length+')</summary>'+edges.map(function(e){var other=e.to===activePath?e.from:e.to;return '<div>'+reproButton((e.to===activePath?'Prerequisite: ':'Dependent: ')+reproTaskTitle(other),'task',other)+reproEvidenceHTML(e.evidence||[])+'</div>';}).join('')+'</details>';
   }
+  if(host)host.parentElement.style.setProperty('--dag-reader-offset',(host.offsetHeight+12+parseFloat(getComputedStyle(host.parentElement).paddingTop||0))+'px');
 }
 async function reproOpenDeclaration() {
+  reproSetReader(true);
   _reproReaderFull=true;
   document.getElementById('workspace').classList.add('dag-full-reader');reproReaderControls();
   var path=activePath,node=document.querySelector('#active-node .task-node');
@@ -1269,27 +1336,49 @@ async function reproOpenDeclaration() {
   if(section){var content=section.querySelector('.section-content');if(content&&!content.classList.contains('open'))toggleSection(section.querySelector('.section-toggle'),{stopPropagation:function(){}});section.scrollIntoView({block:'start'});}
 }
 function reproFocus(path){
-  loadReproData(false).then(function(){showView('reproduction');reproNavigate({roots:path?[path]:[],mode:'scope',anchor:''},true);});
+  loadReproData(false).then(function(){if(currentView!=='reproduction')showView('reproduction');reproNavigate({roots:path?[path]:[],mode:'scope',anchor:''},true);});
 }
 function reproRevealOwner(path){
   var expanded=new Set(_reproNav.expanded||[]);var p=path;expanded.add(p);while(p){p=parentPath(p);expanded.add(p);}_reproNav.expanded=Array.from(expanded);
 }
 function reproSelectTask(path){
   _reproNav.selected='';_reproSelected='';_reproInspectorClosed=false;
-  document.getElementById('workspace').classList.remove('dag-reader-closed');
   setActive(path);renderReproDetail('');reproReaderControls();
   var notice=document.getElementById('repro-notice');if(notice)notice.textContent=_reproNav.roots.length&&!_reproNav.roots.some(function(r){return reproWithin(path,r);})?'Selected task is outside scope. Focus subtree to include it.':'';
   document.querySelectorAll('.rp-task').forEach(function(n){n.classList.toggle('is-selected',n.dataset.task===path);});
 }
 
+function reproSizeWorkspace() {
+  var workspace=document.getElementById('workspace');
+  if(currentView==='reproduction'&&workspace)workspace.style.setProperty('--dag-top',Math.max(0,workspace.getBoundingClientRect().top)+'px');
+}
+window.addEventListener('resize',reproSizeWorkspace);
+new ResizeObserver(reproSizeWorkspace).observe(document.querySelector('.header'));
+document.addEventListener('pointerdown',function(e){
+  if(currentView!=='reproduction')return;
+  document.querySelectorAll('#view-reproduction .rp-menu[open]').forEach(function(menu){if(!menu.contains(e.target))menu.open=false;});
+  var results=document.getElementById('repro-search-results');
+  if(results&&!results.contains(e.target)&&e.target.id!=='repro-search'){results.innerHTML='';var search=document.getElementById('repro-search');if(search)search.oninput=function(){reproRenderSearch(false);};}
+});
+function reproSetReader(open) {
+  _reproReaderClosed=!open;
+  var workspace=document.getElementById('workspace');
+  workspace.classList.toggle('dag-reader-closed',!open);
+  if(!open){_reproReaderFull=false;workspace.classList.remove('dag-full-reader');}
+  reproReaderControls();
+  if(!open){var toggle=document.getElementById('repro-preview-toggle');if(toggle)toggle.focus({preventScroll:true});}
+}
 function reproBindHead(container) {
   var tier=container.querySelector('#repro-tier');if(tier)tier.onchange=function(){reproNavigate({tier:this.value},true);};
   var search=container.querySelector('#repro-search');if(search)search.oninput=function(){reproRenderSearch(false);};
+  container.querySelectorAll('.rp-menu').forEach(function(menu){menu.ontoggle=function(){if(menu.open)container.querySelectorAll('.rp-menu').forEach(function(other){if(other!==menu)other.open=false;});};});
 }
 function reproRenderSearch(whole,addScope) {
-  var query=document.getElementById('repro-search').value, steps=_reproData.graph.steps.filter(function(s){return whole||reproMatches(s,_reproNav);});
+  var query=document.getElementById('repro-search').value;
+  if(!query.trim()&&!whole&&!addScope){document.getElementById('repro-search-results').innerHTML='';return;}
+  var steps=_reproData.graph.steps.filter(function(s){return whole||reproMatches(s,_reproNav);});
   var found=addScope?[]:reproSearch(steps,query), tasks=reproTasks(_reproData.graph).filter(function(p){return (whole||addScope||!_reproNav.roots.length||_reproNav.roots.some(function(r){return reproWithin(p,r);}))&&(p+' '+reproTaskTitle(p)).toLowerCase().indexOf(query.toLowerCase())>=0;});
-  document.getElementById('repro-search-results').innerHTML='<details open><summary>'+(found.length+tasks.length)+' results'+(whole?' across whole project':' in scope')+'</summary><div class="repro-search-items">'+tasks.map(function(p){return reproButton(reproTaskTitle(p)+' · '+(p||'Project root'),addScope?'scope-add':'task',p);}).join('')+found.map(function(s){return reproButton(s.name+' · '+s.task+' · '+(s.outs||[]).map(reproOutLabel).join(', '),'open',s.name);}).join('')+'</div></details>';
+  document.getElementById('repro-search-results').innerHTML='<details open><summary>'+(addScope?'Add scope · ':'')+(found.length+tasks.length)+' results'+(whole?' across whole project':' in scope')+'</summary><div class="repro-search-items">'+tasks.map(function(p){return reproButton(reproTaskTitle(p)+' · '+(p||'Project root'),addScope?'scope-add':'task',p);}).join('')+found.map(function(s){return reproButton(s.name+' · '+s.task+' · '+(s.outs||[]).map(reproOutLabel).join(', '),'open',s.name);}).join('')+'</div></details>';
 }
 function reproBoundaryHTML(project) {
   var groups = {};
@@ -1326,22 +1415,54 @@ function reproCenter() {
   _reproViewport.y = canvas.clientHeight / 2 - (pos.y + Math.min(pos.height,108) / 2) * _reproViewport.zoom;
   reproTransform();
 }
+function reproZoomAt(canvas, zoom, x, y) {
+  zoom=Math.max(0.05,Math.min(3,zoom));
+  var ratio=zoom/_reproViewport.zoom;
+  _reproViewport.x=x-(x-_reproViewport.x)*ratio;
+  _reproViewport.y=y-(y-_reproViewport.y)*ratio;
+  _reproViewport.zoom=zoom;reproTransform();
+}
 function reproBindViewport(container) {
   var canvas = container.querySelector('.repro-canvas');
-  if (!canvas) return;
-  var drag = null;
+  if (!canvas || canvas._rpBound) return;
+  canvas._rpBound=true;
+  var drag=null, gesture=null;
+  function point(e) {
+    var rect=canvas.getBoundingClientRect();
+    return {x:Number.isFinite(e.clientX)?e.clientX-rect.left:canvas.clientWidth/2,
+      y:Number.isFinite(e.clientY)?e.clientY-rect.top:canvas.clientHeight/2};
+  }
+  canvas.addEventListener('wheel',function(e){
+    e.preventDefault();
+    if(gesture)return;
+    var unit=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
+    if(e.ctrlKey){var at=point(e);reproZoomAt(canvas,_reproViewport.zoom*Math.exp(-e.deltaY*unit*0.01),at.x,at.y);}
+    else{_reproViewport.x-=e.deltaX*unit;_reproViewport.y-=e.deltaY*unit;reproTransform();}
+  },{passive:false});
+  canvas.addEventListener('gesturestart',function(e){
+    e.preventDefault();gesture={zoom:_reproViewport.zoom,scale:e.scale||1};drag=null;
+  },{passive:false});
+  canvas.addEventListener('gesturechange',function(e){
+    e.preventDefault();if(!gesture)return;
+    var at=point(e);reproZoomAt(canvas,gesture.zoom*e.scale/gesture.scale,at.x,at.y);
+  },{passive:false});
+  canvas.addEventListener('gestureend',function(e){e.preventDefault();gesture=null;},{passive:false});
   canvas.onpointerdown = function(e) {
-    if (e.target.closest('button')) return;
-    drag = { x: e.clientX, y: e.clientY, panX: _reproViewport.x, panY: _reproViewport.y };
-    canvas.setPointerCapture(e.pointerId);
+    if(e.button!==0||e.target.closest('button, [data-rp-action]'))return;
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,panX:_reproViewport.x,panY:_reproViewport.y};
+    canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});canvas.classList.add('is-panning');
   };
-  canvas.onpointermove = function(e) { if (drag) {
-    _reproViewport.x = drag.panX + e.clientX - drag.x; _reproViewport.y = drag.panY + e.clientY - drag.y; reproTransform();
-  } };
-  canvas.onpointerup = canvas.onpointercancel = function() { drag = null; };
-  canvas.onkeydown = function(e) {
-    var offsets = { ArrowLeft: [40,0], ArrowRight: [-40,0], ArrowUp: [0,40], ArrowDown: [0,-40] };
-    if (e.target === canvas && offsets[e.key]) { e.preventDefault(); _reproViewport.x += offsets[e.key][0]; _reproViewport.y += offsets[e.key][1]; reproTransform(); }
+  canvas.onpointermove=function(e){if(drag&&drag.id===e.pointerId){
+    _reproViewport.x=drag.panX+e.clientX-drag.x;_reproViewport.y=drag.panY+e.clientY-drag.y;reproTransform();
+  }};
+  canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=function(){drag=null;canvas.classList.remove('is-panning');};
+  canvas.onkeydown=function(e){
+    if(e.target!==canvas)return;
+    var offsets={ArrowLeft:[40,0],ArrowRight:[-40,0],ArrowUp:[0,40],ArrowDown:[0,-40]};
+    if(offsets[e.key]){e.preventDefault();_reproViewport.x+=offsets[e.key][0];_reproViewport.y+=offsets[e.key][1];reproTransform();}
+    else if(['+','=','-'].indexOf(e.key)>=0){e.preventDefault();reproZoomAt(canvas,_reproViewport.zoom*(e.key==='-'?0.8:1.25),canvas.clientWidth/2,canvas.clientHeight/2);}
+    else if(e.key==='0'){e.preventDefault();reproFit();}
+    else if(e.key.toLowerCase()==='c'){e.preventDefault();reproCenter();}
   };
 }
 
@@ -1358,10 +1479,6 @@ function reproLegendHTML(steps, byName, status) {
       + '<span class="repro-glyph">' + s.glyph + '</span>' + s.key
       + '<span class="repro-count">' + n + '</span></span>';
   });
-  if (counts.unknown) {
-    items.push('<span class="repro-legend-item rp-unknown"><span class="repro-glyph">?</span>unknown'
-      + '<span class="repro-count">' + counts.unknown + '</span></span>');
-  }
   items.push('<span class="repro-legend-item is-kind' + (checks ? '' : ' is-off') + '">'
     + '<span class="repro-glyph">✓</span>check step<span class="repro-count">' + checks + '</span></span>');
   var banner = status.unavailable
@@ -1406,15 +1523,24 @@ function onReproClick(event) {
   if (control) {
     event.preventDefault();
     var action = control.dataset.rpAction, value = control.dataset.value;
+    var menu=control.closest('.rp-menu');if(menu)menu.open=false;
+    if(['task','open','scope-add'].indexOf(action)>=0){var results=document.getElementById('repro-search-results');if(results)results.innerHTML='';}
     if (action === 'task') reproSelectTask(value);
+    else if (action === 'focus-selected') reproFocus(activePath);
+    else if (action === 'expand-branch') reproBranchPanel(activePath);
+    else if (action === 'branch-apply') {
+      var depth=document.getElementById('repro-branch-depth').value;
+      var plan=reproBranchExpansion(_reproData.graph,_reproNav,_reproContext,value,depth);
+      if(plan.visible){reproCloseGraphDetail();_reproPreserve='task:'+value;reproNavigate({expanded:plan.expanded},false);document.getElementById('repro-options-toggle').focus({preventScroll:true});}
+    }
     else if (action === 'focus' || action === 'explore') reproFocus(value);
     else if (action === 'up' && _reproNav.roots.length === 1) reproNavigate({roots:[parentPath(_reproNav.roots[0]) || ''],mode:'scope',anchor:''},true);
     else if (action === 'remove-root') reproNavigate({roots:_reproNav.roots.filter(function(r){return r!==value;})},true);
     else if (action === 'add-scope') { reproRenderSearch(true,true); document.getElementById('repro-search').oninput=function(){reproRenderSearch(true,true);}; document.getElementById('repro-search').focus(); }
     else if (action === 'scope-add') reproNavigate({roots:_reproNav.roots.concat([value])},true);
     else if (action === 'full-reader') { _reproReaderFull=!_reproReaderFull; document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull); reproReaderControls(); }
-    else if (action === 'close-reader') { document.getElementById('workspace').classList.add('dag-reader-closed'); var selected=document.getElementById(reproNodeId(_reproSelected));if(selected)selected.focus({preventScroll:true}); }
-    else if (action === 'reader') document.getElementById('workspace').classList.remove('dag-reader-closed');
+    else if (action === 'close-reader') reproSetReader(false);
+    else if (action === 'reader') reproSetReader(_reproReaderClosed);
     else if (action === 'declaration') reproOpenDeclaration();
     else if (action === 'fold') {
       var expanded=new Set(_reproNav.expanded||[]);_reproPreserve='task:'+value;
@@ -1424,15 +1550,15 @@ function onReproClick(event) {
         if((step&&reproWithin(step.task,value))||(activePath!==value&&reproWithin(activePath,value))){_reproNotice='Selected step is inside folded '+reproTaskTitle(value)+'. Task selected; trace anchor retained.';reproSelectTask(value);}
       } else expanded.add(value);
       reproNavigate({expanded:Array.from(expanded)},false);
-    } else if (action === 'expand-level' || action === 'expand-all' || action === 'collapse') {
+    } else if (action === 'expand-level' || action === 'collapse') {
       var expanded=new Set(action==='collapse'?[]:_reproNav.expanded||[]);
       if(action==='collapse'&&_reproSelected){var selected=_reproData.graph.steps.find(function(s){return s.name===_reproSelected;});if(selected){var root=_reproNav.roots.find(function(r){return reproWithin(selected.task,r);})||selected.task.split('/')[0];_reproNotice='Selected step is inside folded '+reproTaskTitle(root)+'. Task selected; trace anchor retained.';reproSelectTask(root);}}
-      if(action==='expand-all')reproTasks(_reproData.graph).forEach(function(p){expanded.add(p);});
       if(action==='expand-level')_reproLayoutCache.layout.model.nodes.forEach(function(n){if(n.type==='task'&&n.expandable)expanded.add(n.task);});
       reproNavigate({expanded:Array.from(expanded)},false);
     } else if (action === 'edge') {
       var edge=_reproLayoutCache.layout.edges[Number(value)],host=document.getElementById('repro-edge-detail');
-      host.innerHTML='<h3>'+escapeHtml(edge.from+' → '+edge.to)+'</h3>'+reproEvidenceHTML(edge.evidence);
+      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(edge.from+' → '+edge.to)+'</h3>'+reproEvidenceHTML(edge.evidence);
+    } else if(action==='close-edge'){reproCloseGraphDetail();
     } else if (action === 'clear') reproNavigate({roots:[],tier:'all',mode:'scope',anchor:'',selected:''},true);
     else if (action === 'refresh') renderReproView(true);
     else if (action === 'search-all') reproRenderSearch(true);
@@ -1451,12 +1577,7 @@ function onReproClick(event) {
     else if (action === 'zoom-in' || action === 'zoom-out') {
       var canvas = document.querySelector('#view-reproduction .repro-canvas');
       if (canvas) {
-        var oldZoom = _reproViewport.zoom;
-        var zoom = Math.max(0.05, Math.min(3, oldZoom * (action === 'zoom-in' ? 1.25 : 0.8)));
-        _reproViewport.x = canvas.clientWidth / 2 - (canvas.clientWidth / 2 - _reproViewport.x) * zoom / oldZoom;
-        _reproViewport.y = canvas.clientHeight / 2 - (canvas.clientHeight / 2 - _reproViewport.y) * zoom / oldZoom;
-        _reproViewport.zoom = zoom;
-        reproTransform();
+        reproZoomAt(canvas,_reproViewport.zoom*(action==='zoom-in'?1.25:0.8),canvas.clientWidth/2,canvas.clientHeight/2);
       }
     } else if (action === 'close-detail') {
       _reproInspectorClosed = true;
@@ -1476,7 +1597,6 @@ function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
   _reproSelected = name;
   _reproNav.selected = name;
-  document.getElementById('workspace').classList.remove('dag-reader-closed');
   setActive(step.task);reproReaderControls();
   _reproInspectorClosed = false;
   if (location.hash !== reproHash()) history.pushState({ wt: ACTIVE_WT }, '', reproHash());
@@ -3718,7 +3838,7 @@ function toggleSearchSheet() {
 }
 
 function openSearchSheet() {
-  if(currentView==='reproduction'&&innerWidth<=1000)document.getElementById('workspace').classList.add('dag-reader-closed');
+  if(currentView==='reproduction'&&innerWidth<=1000)reproSetReader(false);
   var sheet = document.getElementById('search-sheet');
   var backdrop = document.getElementById('search-sheet-backdrop');
   var body = document.getElementById('search-sheet-body');
@@ -4404,9 +4524,10 @@ async function applyWorktree(wtId, path, artifactPath) {
   _reproNav=remembered?remembered.nav:{roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
   _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
   _reproReaderFull=!!(remembered&&remembered.readerFull);
+  _reproReaderClosed=remembered?remembered.readerClosed:true;
   document.querySelector('.detail-panel').style.width=remembered?remembered.readerWidth:'';
   document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);
-  document.getElementById('workspace').classList.toggle('dag-reader-closed',!!(remembered&&remembered.readerClosed));
+  document.getElementById('workspace').classList.toggle('dag-reader-closed',_reproReaderClosed);
   _reproEntered=!!remembered;_reproSelected=_reproNav.selected;_reproTier=_reproNav.tier;
   _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproContext=remembered?remembered.context:[];_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproFitNext=!remembered;
   /* Children panels are per-worktree data — a cache entry from the worktree

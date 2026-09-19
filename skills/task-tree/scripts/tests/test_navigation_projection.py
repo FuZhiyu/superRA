@@ -16,7 +16,7 @@ pytestmark = pytest.mark.skipif(not NODE, reason='Node required')
 
 def run(body):
     definitions = _extract_js_defs(['reproWithin', 'reproRoots', 'reproMatches', 'reproProject',
-        'reproHierarchy', 'reproHierarchyLayout', 'reproTasks', 'reproTaskTitle', 'parentPath'])
+        'reproHierarchy', 'reproHierarchyLayout', 'reproBranchExpansion', 'reproTasks', 'reproTaskTitle', 'parentPath'])
     source = "const assert=require('node:assert/strict');var pathTitles={};\n" + definitions + '\n' + body
     result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
     assert result.returncode == 0, result.stderr
@@ -119,3 +119,25 @@ renderReproDetail('check');console.log(host.innerHTML);
     assert 'review.md' in result.stdout and 'Actual execution log' in result.stdout
     assert 'Last run' in result.stdout and 'check step' in result.stdout
     assert 'Declared input' in result.stdout and '[object Object]' not in result.stdout
+
+
+def test_bounded_branch_expansion_replaces_only_descendants_and_counts_projection():
+    run(FIXTURE + """
+nav.expanded=['p','p/child','p/child/nested','peer'];
+const original=JSON.stringify(nav), plan=depth=>reproBranchExpansion(graph,nav,[],'p',depth);
+const one=plan('1'), two=plan('2'), all=plan('all');
+assert.equal(one.visible,true);
+assert.deepEqual(one.expanded,['peer','p']);
+assert.deepEqual(two.expanded,['peer','p','p/child']);
+assert.deepEqual([one.tasks+one.steps,two.tasks+two.steps,all.tasks+all.steps],[4,6,7]);
+assert.equal(JSON.stringify(nav),original);
+nav.expanded=[];
+assert.equal(reproBranchExpansion(graph,nav,[],'p/child','2').visible,false);
+nav.roots=['p'];
+assert.equal(reproBranchExpansion(graph,nav,[],'peer','2').visible,false);
+nav.tier='required';
+assert.equal(plan('1').steps,1);
+nav.mode='upstream';nav.anchor='nested';
+assert.equal(plan('all').steps,3); // trace follows the on-demand producer, omits report
+assert.equal(nav.anchor,'nested');
+""")
