@@ -1,0 +1,41 @@
+{
+  "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "live": "http://127.0.0.1:61943",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-eqeersll/superRA",
+  "browser": "153.0.8010.48",
+  "counts": {
+    "steps": 500,
+    "tasks": 51,
+    "edges": 1494
+  },
+  "initialZoom": 1,
+  "timingsMs": {
+    "search": [
+      0.5999999940395355,
+      0.20000000298023224,
+      0.10000000894069672,
+      0.10000000894069672,
+      0.09999999403953552
+    ],
+    "filter": [
+      4.700000002980232,
+      2.199999988079071,
+      1.3999999910593033,
+      1.2000000029802322,
+      1.2000000029802322
+    ],
+    "full": [
+      25.099999994039536,
+      23.399999991059303,
+      23
+    ]
+  },
+  "sharedReaderAndHistory": true,
+  "commentRoundTrip": true,
+  "keyboardAndResize": true,
+  "worktreeIsolation": true,
+  "legacyAndRemovalRecovery": true,
+  "offline": true,
+  "touchNavigationAndPan": true,
+  "errors": []
+}

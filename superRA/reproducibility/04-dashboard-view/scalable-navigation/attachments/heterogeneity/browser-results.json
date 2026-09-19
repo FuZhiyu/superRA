@@ -1,0 +1,15 @@
+{
+  "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "live": "http://127.0.0.1:62014",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-oouqbp25/superRA",
+  "browser": "153.0.8010.48",
+  "counts": {
+    "steps": 89,
+    "tasks": 251,
+    "edges": 283
+  },
+  "initialZoom": 1,
+  "realGraphMixedInspection": true,
+  "offline": true,
+  "errors": []
+}

@@ -1,0 +1,82 @@
+lock-version = "1"
+
+[[task]]
+id = "dashboard-navigation-browser"
+state = "1"
+
+[task.depends_on]
+"dashboard-navigation-browser::spec" = "a371ac061781e7e1e343f775b1bf07da97af4296e144018baab2b7fb092722c8:cda437161bbae33f737c6fc60d6128285f2cb6cb8872897857228a2e9ee9670d"
+"skills/task-tree/scripts/_artifacts.py" = "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e"
+"skills/task-tree/scripts/_comments.py" = "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a"
+"skills/task-tree/scripts/_repro.py" = "bd8aa0cf1feab0a58e190f39cf7e6f707c1ae0205718ba4071a891d9719bd6c3"
+"skills/task-tree/scripts/_repro_acceptance.py" = "45efe0a055a161ff2de396fec0160057c761fc2beabd8ac157d6372fa522fd82"
+"skills/task-tree/scripts/_repro_state.py" = "b0f4a67a9e8a5374e1cc06cb8930353e63642418db1fb353630b8b2966f360b5"
+"skills/task-tree/scripts/_task_dependencies.py" = "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f"
+"skills/task-tree/scripts/_task_io.py" = "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e"
+"skills/task-tree/scripts/_task_snapshot.py" = "f077d2dbbe2ae2fab0c589f86609719423fe208f1676f929fd37aa35e3cbac71"
+"skills/task-tree/scripts/_task_validate.py" = "1071c882ca485f10c5b4a1897cac3a7abf903e91e2e8aac450be96a6737cfdbd"
+"skills/task-tree/scripts/_worktree_discovery.py" = "0a7a9adbf9f9edf6063ba20faac991d4ffb631e2322f8c9203c71114401d9e2b"
+"skills/task-tree/scripts/cli.py" = "1d030d0f298faf6116cb9bd269bae8ff362f04d1fd0d4f66326e2fabf7e99412"
+"skills/task-tree/scripts/plan_dashboard.py" = "4ab854faa0c218c225ab5320c91c5b66decbf1eab773ed027cedcbde4ce90e10"
+"skills/task-tree/scripts/task_comment.py" = "43ba7ca6675619ebd7cd74f5778c7c8a46bf851916112d3a8ce7528f2652f188"
+"skills/task-tree/scripts/templates" = "dir:e8f9169301d9f4d5d89f621b51472a08a1518952ced6ad4b7b1224f7785744b3"
+"skills/task-tree/scripts/tests/navigation_browser.py" = "ee278a7a52febabcf1c3d721dc133ac1abe0ff1b6413819e47fbd85d7b071b4e"
+"skills/task-tree/scripts/vendor" = "dir:fac8922a7772de8e5d3d8249da931ee75116b494bcf60c56c1b3c8eff9e4ebc5"
+
+[task.produces]
+"superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/browser" = "dir:02868e6d316d6730934d4138a60e75cfca05fac9a741d923e957405c3279dfc6"
+
+[[task]]
+id = "dashboard-navigation-heterogeneity"
+state = "1"
+
+[task.depends_on]
+"dashboard-navigation-heterogeneity::spec" = "9c1c25c4ecc5b99f9debb97496e57a26cfc1fdd0dbbb04684fa27d78d4fa3b8c:0137fe3e0759bf9cd2886c003d6edf9ecf4abee5d0c65c5d10c37206f43207ec"
+"skills/task-tree/scripts/_artifacts.py" = "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e"
+"skills/task-tree/scripts/_comments.py" = "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a"
+"skills/task-tree/scripts/_repro.py" = "bd8aa0cf1feab0a58e190f39cf7e6f707c1ae0205718ba4071a891d9719bd6c3"
+"skills/task-tree/scripts/_repro_acceptance.py" = "45efe0a055a161ff2de396fec0160057c761fc2beabd8ac157d6372fa522fd82"
+"skills/task-tree/scripts/_repro_state.py" = "b0f4a67a9e8a5374e1cc06cb8930353e63642418db1fb353630b8b2966f360b5"
+"skills/task-tree/scripts/_task_dependencies.py" = "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f"
+"skills/task-tree/scripts/_task_io.py" = "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e"
+"skills/task-tree/scripts/_task_snapshot.py" = "f077d2dbbe2ae2fab0c589f86609719423fe208f1676f929fd37aa35e3cbac71"
+"skills/task-tree/scripts/_task_validate.py" = "1071c882ca485f10c5b4a1897cac3a7abf903e91e2e8aac450be96a6737cfdbd"
+"skills/task-tree/scripts/_worktree_discovery.py" = "0a7a9adbf9f9edf6063ba20faac991d4ffb631e2322f8c9203c71114401d9e2b"
+"skills/task-tree/scripts/cli.py" = "1d030d0f298faf6116cb9bd269bae8ff362f04d1fd0d4f66326e2fabf7e99412"
+"skills/task-tree/scripts/plan_dashboard.py" = "4ab854faa0c218c225ab5320c91c5b66decbf1eab773ed027cedcbde4ce90e10"
+"skills/task-tree/scripts/task_comment.py" = "43ba7ca6675619ebd7cd74f5778c7c8a46bf851916112d3a8ce7528f2652f188"
+"skills/task-tree/scripts/templates" = "dir:e8f9169301d9f4d5d89f621b51472a08a1518952ced6ad4b7b1224f7785744b3"
+"skills/task-tree/scripts/tests/navigation_browser.py" = "ee278a7a52febabcf1c3d721dc133ac1abe0ff1b6413819e47fbd85d7b071b4e"
+"skills/task-tree/scripts/vendor" = "dir:fac8922a7772de8e5d3d8249da931ee75116b494bcf60c56c1b3c8eff9e4ebc5"
+"superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json" = "135cd860c757f6d1e45ffe5e77331b2303068a1fdb8d4abcc000e14bca67c5ec"
+
+[task.produces]
+"superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity" = "dir:369ff2149a9e067d18b8da47e33c4419a8d175ec2f99393763ed4964c44c20a6"
+
+[[task]]
+id = "dashboard-navigation-projection-check"
+state = "1"
+
+[task.depends_on]
+"dashboard-navigation-projection-check::spec" = "444d92a5523c7ecf2d6d6ed63ce4e567942d6a08e8719266bd704cf1ce3d05c3:32bebb34f77605d83950d9626a29f0c9284c84798dd6f965f3930c17373427b4"
+"skills/task-tree/scripts/_artifacts.py" = "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e"
+"skills/task-tree/scripts/_comments.py" = "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a"
+"skills/task-tree/scripts/_repro.py" = "bd8aa0cf1feab0a58e190f39cf7e6f707c1ae0205718ba4071a891d9719bd6c3"
+"skills/task-tree/scripts/_repro_acceptance.py" = "45efe0a055a161ff2de396fec0160057c761fc2beabd8ac157d6372fa522fd82"
+"skills/task-tree/scripts/_repro_state.py" = "b0f4a67a9e8a5374e1cc06cb8930353e63642418db1fb353630b8b2966f360b5"
+"skills/task-tree/scripts/_task_dependencies.py" = "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f"
+"skills/task-tree/scripts/_task_io.py" = "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e"
+"skills/task-tree/scripts/_task_snapshot.py" = "f077d2dbbe2ae2fab0c589f86609719423fe208f1676f929fd37aa35e3cbac71"
+"skills/task-tree/scripts/_task_validate.py" = "1071c882ca485f10c5b4a1897cac3a7abf903e91e2e8aac450be96a6737cfdbd"
+"skills/task-tree/scripts/_worktree_discovery.py" = "0a7a9adbf9f9edf6063ba20faac991d4ffb631e2322f8c9203c71114401d9e2b"
+"skills/task-tree/scripts/cli.py" = "1d030d0f298faf6116cb9bd269bae8ff362f04d1fd0d4f66326e2fabf7e99412"
+"skills/task-tree/scripts/plan_dashboard.py" = "4ab854faa0c218c225ab5320c91c5b66decbf1eab773ed027cedcbde4ce90e10"
+"skills/task-tree/scripts/task_comment.py" = "43ba7ca6675619ebd7cd74f5778c7c8a46bf851916112d3a8ce7528f2652f188"
+"skills/task-tree/scripts/templates" = "dir:e8f9169301d9f4d5d89f621b51472a08a1518952ced6ad4b7b1224f7785744b3"
+"skills/task-tree/scripts/test_dashboard.py" = "98cdc2e7dd4f404e47347a14d96f82ff9b673b9c9d905adc9dc9e50981204559"
+"skills/task-tree/scripts/tests/navigation_browser.py" = "ee278a7a52febabcf1c3d721dc133ac1abe0ff1b6413819e47fbd85d7b071b4e"
+"skills/task-tree/scripts/tests/test_navigation_projection.py" = "7862ea9f20d15b64ca875bcf127ccce13b59c5768e854072d5bdbd15ea4d4ff4"
+"skills/task-tree/scripts/vendor" = "dir:fac8922a7772de8e5d3d8249da931ee75116b494bcf60c56c1b3c8eff9e4ebc5"
+
+[task.produces]
+".superra-repro/stamps/dashboard-navigation-projection-check.stamp" = "784503bbff6a42162c4e764fe7c038597e33ca96a63662a32f82a8a938a74752"

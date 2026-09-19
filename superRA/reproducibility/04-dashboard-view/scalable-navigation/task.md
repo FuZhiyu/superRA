@@ -1,6 +1,6 @@
 ---
 title: "Integrate Task Navigation and Expandable Dependencies"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -24,16 +24,91 @@ Integrate task reading and dependency inspection into one workspace, with Tree a
 - **Interaction preview:** [Tree/DAG example](attachments/task-dag-preview.html) is a hand-authored design companion for selection, branch expansion, scope, and reader placement. Its small example graph illustrates interactions; the design contract and runtime verification requirements remain authoritative.
 - **Status impact:** this child reopens its ancestors through normal rollup. No sibling input or reproduction schema changes, so existing sibling approvals stand.
 
-## Revision Notes
+## Reproduction
 
-The 0.5 contract replaces separate task summaries and step dependencies with one expandable hierarchy. The researcher further selected Tree and DAG as alternative task navigators, replacing the separate Reproduction destination and duplicate tree. Earlier task-return allowances are invalid between disjoint groups; parent/child internal edges remain valid. The graph and runner parent prerequisites must land before the UI can verify the new payloads.
+```yaml
+tier: on-demand
+steps:
+  - name: dashboard-navigation-browser
+    cmd: uv run --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python skills/task-tree/scripts/tests/navigation_browser.py --evidence superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/browser
+    deps:
+      - skills/task-tree/scripts/tests/navigation_browser.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/templates
+      - skills/task-tree/scripts/vendor
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/task_comment.py
+    outs:
+      - superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/browser
+  - name: dashboard-navigation-heterogeneity
+    cmd: uv run --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python skills/task-tree/scripts/tests/navigation_browser.py --evidence superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity --graph-snapshot superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json
+    deps:
+      - superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json
+      - skills/task-tree/scripts/tests/navigation_browser.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/templates
+      - skills/task-tree/scripts/vendor
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/task_comment.py
+    outs:
+      - superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity
+  - name: dashboard-navigation-projection-check
+    kind: check
+    cmd: uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/tests/test_navigation_projection.py -q
+    deps:
+      - skills/task-tree/scripts/tests/test_navigation_projection.py
+      - skills/task-tree/scripts/test_dashboard.py
+      - skills/task-tree/scripts/tests/navigation_browser.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/templates
+      - skills/task-tree/scripts/vendor
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/task_comment.py
+```
 
 ## Results
 
-The partial Reproduction redesign has matching [layout styles](../../../../skills/task-tree/scripts/templates/dashboard.css) and [control handlers](../../../../skills/task-tree/scripts/templates/dashboard.js). The repair covers the task overview, subtree picker, search results, bounded pan/zoom canvas, responsive inspector, graph controls, task-page step links, and scoped navigation on reload and Back/Forward.
+- [The workspace DAG](../../../../skills/task-tree/scripts/templates/dashboard.js) uses the shared task reader and comments, independently folded task containers, scoped search, cross-filter traces, and logical/file edge evidence. [Projection regressions](../../../../skills/task-tree/scripts/tests/test_navigation_projection.py) cover parent setup → child → parent report, inherited logical prerequisites, nested folding, chain shortcuts, disconnected components, fan-out, and cyclic graph inspection.
+- [The browser harness](../../../../skills/task-tree/scripts/tests/navigation_browser.py) exercises 500 steps across 50 owner tasks plus the project root, with 1,494 file edges. The registered on-demand producer records repeated timings and environment information in [browser-results.json](attachments/browser/browser-results.json), with live and offline navigation, shared comment round-trip, keyboard/touch control, actual reader resizing, worktree isolation, legacy-link recovery, archived-task exclusion, and removal updates over SSE. Chrome is an external execution prerequisite; the harness creates disposable synthetic projects and an isolated browser profile.
+- The researcher authorized local graph-only capture of the heterogeneity project. The [sanitized boundary snapshot](attachments/heterogeneity-input.json) retains 89 steps, 251 active tasks, and 283 file edges, including the existing combined task cycle. [The capture utility](../../../../skills/task-tree/scripts/tests/navigation_snapshot.py) removes task prose, comments, attachments, commands, logs, and acceptance prose before rendering. The separate on-demand producer uses this frozen input; its [browser record](attachments/heterogeneity/browser-results.json) covers live/offline rendering and responsive inspection.
+  - Source: the isolated heterogeneity compatibility worktree, captured with `navigation_snapshot.py --source <isolated-project>/superRA --output superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json`. This input is a metadata boundary fixture, not a copy of research results.
 
-Explore's cross-subtree dependency display crashed because it called `.join()` on the API's scalar `via` file path. The renderer now displays that path directly. A [regression test](../../../../skills/task-tree/scripts/test_dashboard.py) feeds the graph API response through the actual Explore handler and HTML renderer; it reproduced the TypeError before the fix and passes afterward. The dashboard and [state-preservation tests](../../../../skills/task-tree/scripts/tests/test_state_preservation.py) passed: 424 passed. JavaScript syntax and diff checks passed.
+- Verification: dashboard, state-preservation, and projection suites passed **422 tests, 4 skipped**. The scoped browser producers completed successfully and reported **fresh**. On Chrome 153.0.8010.48 / macOS ARM64, repeated loaded-payload maxima were **0.6 ms search**, **4.7 ms scope filtering**, and **25.1 ms full expansion**; initial scale was 100%. Light/dark desktop, tablet, and 390 px phone checks found no page-level horizontal overflow. The retained real-project image omits research prose and execution content.
 
-The installed Claude plugin serving the [heterogeneity dashboard](https://home-studio.tail7992bc.ts.net:8444/?wt=heterogeneity-reproduction) received the Explore fix. HTTP retrieval confirmed byte-for-byte JavaScript agreement with the checkout and cache version `98c6417744dd`. A Node render check using the live graph (96 steps, 296 file edges) exercised Explore for all 54 subtree scopes. The preceding installed JavaScript is backed up at `/Users/zhiyufu/.cache/superra-dashboard-explore-backup-20260918.js`.
+![Collapsed task DAG at readable scale, beside the shared task reader.](attachments/browser/dag-desktop.png)
 
-The full scalable-navigation contract remains in progress. Browser visual verification could not run: computer-use access reported no available browser and no Chrome/Safari window. The 500-step performance pass, full live/offline interaction journeys, and visual evidence required by the objective remain outstanding; passing unit and route tests does not establish those checks.
+Source: [registered browser producer](../../../../skills/task-tree/scripts/tests/navigation_browser.py).
+
+![The real dependency neighborhood remains inspectable while its global cycle diagnosis stays visible.](attachments/heterogeneity/dag-real-step.png)
+
+Source: the registered metadata-only browser producer and [sanitized boundary input](attachments/heterogeneity-input.json).
