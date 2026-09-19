@@ -147,7 +147,7 @@ Root relocation and command-resolution changes follow the [rerun model](../../re
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 
-The dashboard's **Reproduction** view renders the same graph for review: swimlanes by owner task, columns by dependency depth, each step coloured by its state, with a click opening the step's command, files, and log tail. A task page carrying a `## Reproduction` section shows its steps' current state as a table above the declaration, and the section's comment gutter is where a researcher pins graph feedback.
+The dashboard's **DAG** navigator shares the Tree navigator's task reader and comments. Expand task containers one level to inspect steps and dependency evidence; selection, expansion, and subtree focus are independent. The task preview starts hidden; toggle it to inspect the selected step's command, files, freshness reason, reviewed evidence, and last actual run. A task page carrying a `## Reproduction` section shows its steps' current state as a table above the declaration, and the section's comment gutter is where a researcher pins graph feedback.
 
 ## Comments
 
