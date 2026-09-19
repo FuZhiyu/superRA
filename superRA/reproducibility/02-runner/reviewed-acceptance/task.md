@@ -1,6 +1,6 @@
 ---
 title: "Reuse Reviewed Results Without Unnecessary Rebuilds"
-status: implemented
+status: approved
 depends_on: []
 ---
 

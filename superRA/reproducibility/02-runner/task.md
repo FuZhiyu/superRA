@@ -1,6 +1,6 @@
 ---
 title: "Build the `superra repro` Runner on pytask"
-status: implemented
+status: approved
 depends_on:
   - 01-section-contract
 ---
