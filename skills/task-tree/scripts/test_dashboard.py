@@ -7049,7 +7049,7 @@ def _run_repro_render_node(harness_body):
         "REPRO_STATES", "REPRO_GLYPHS",
         "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
         "reproProject", "reproMatches", "reproWithin", "reproButton",
-        "reproControlsHTML", "reproTasks", "reproLogicalBoundaryHTML", "reproHierarchy", "reproHierarchyLayout", "reproGraphHTML", "parentPath",
+        "reproControlsHTML", "reproTasks", "reproLogicalBoundaryHTML", "reproHierarchy", "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
         "onReproClick", "reproNavigate", "reproRoots", "reproHash", "reproBoundaryHTML",
         "escapeHtml", "escapeAttr",
@@ -7065,6 +7065,7 @@ def _run_repro_render_node(harness_body):
         "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
         "function reproReaderControls(){}\n"
         "function reproBindViewport(){}\n"
+        "function reproBindEdges(){}\n"
         "function reproSizeWorkspace(){}\n"
         "function reproFit(){}\n"
         "function reproTransform(){}\n"

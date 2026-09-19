@@ -56,6 +56,21 @@ def open_preview(page):
         page.locator('#repro-preview-toggle').click()
 
 
+def routing_fixture(kind):
+    """Small topology fixtures keep routing readable in retained screenshots."""
+    if kind == 'cycle':
+        ids = ['heterogeneity', 'treasury', 'elasticity', 'paper', 'downstream']
+        titles = ['Heterogeneity estimates', 'Treasury bounds', 'Elasticity estimates', 'Reproduce paper', 'Publish results']
+        pairs = [(0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 0), (3, 4)]
+    else:
+        ids = ['data', 'methods', 'estimates', 'verification', 'manuscript']
+        titles = ['Build research data', 'Methods', 'Estimate heterogeneity', 'Verification checks', 'Manuscript exhibits']
+        pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (2, 3), (2, 4), (3, 4)]
+    return {'steps': [{'name': name, 'task': name, 'tier': 'required', 'kind': 'command'} for name in ids],
+            'step_edges': [{'from': ids[a], 'to': ids[b], 'via': 'output.csv'} for a, b in pairs],
+            'dependencies': {'tasks': [{'path': name, 'title': title, 'status': 'in-progress'} for name, title in zip(ids, titles)], 'boundaries': {}}}
+
+
 def run(evidence, snapshot=None):
     evidence.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='navigation-') as directory:
@@ -305,6 +320,22 @@ def run(evidence, snapshot=None):
                     phone.screenshot(path=str(evidence / 'dag-touch.png'), full_page=True)
                     results['touchNavigationAndPan'] = True
                     touch.close()
+                routing = browser.new_page(viewport={'width': 1440, 'height': 900})
+                routing.goto(results['live'])
+                routing.click('#btn-reproduction')
+                routing.wait_for_selector('.rp-task')
+                for kind in ('cycle', 'fan'):
+                    routing.evaluate("""graph => {
+                        _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+                        _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
+                    }""", routing_fixture(kind))
+                    routing.locator('[data-rp-action=fit]').click()
+                    routing.screenshot(path=str(evidence / f'dag-routing-{kind}.png'), full_page=True, animations='disabled')
+                    routing.locator('.theme-toggle').click()
+                    routing.screenshot(path=str(evidence / f'dag-routing-{kind}-dark.png'), full_page=True, animations='disabled')
+                    routing.locator('.theme-toggle').click()
+                    results[f'routing-{kind}'] = routing.evaluate('({nodes:_reproLayoutCache.layout.model.nodes.length,edges:_reproLayoutCache.layout.edges.length,cycleEdges:_reproLayoutCache.layout.edges.filter(e=>e.cycle).length})')
+                routing.close()
                 results['errors'] = errors
                 assert not errors, errors
                 browser.close()

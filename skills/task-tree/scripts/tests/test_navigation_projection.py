@@ -141,3 +141,82 @@ nav.mode='upstream';nav.anchor='nested';
 assert.equal(plan('all').steps,3); // trace follows the on-demand producer, omits report
 assert.equal(nav.anchor,'nested');
 """)
+
+
+ROUTE_GEOMETRY = """
+function assertDistinct(l){
+ const segments=[];
+ for(const [edge,e] of l.edges.entries())for(let j=1;j<e.points.length;j++){
+   const a=e.points[j-1],b=e.points[j];assert(a[0]===b[0]||a[1]===b[1]);
+   if(a[0]!==b[0]||a[1]!==b[1])segments.push({edge,a,b,h:a[1]===b[1]});
+ }
+ for(let i=0;i<segments.length;i++)for(let j=i+1;j<segments.length;j++){
+   const a=segments[i],b=segments[j];if(a.edge===b.edge||a.h!==b.h)continue;
+   const axis=a.h?0:1,fixed=1-axis;
+   if(Math.abs(a.a[fixed]-b.a[fixed])>1e-7)continue;
+   const overlap=Math.min(Math.max(a.a[axis],a.b[axis]),Math.max(b.a[axis],b.b[axis]))-Math.max(Math.min(a.a[axis],a.b[axis]),Math.min(b.a[axis],b.b[axis]));
+   assert(overlap<=1e-7,`Shared route: ${l.edges[a.edge].from} → ${l.edges[a.edge].to} / ${l.edges[b.edge].from} → ${l.edges[b.edge].to}`);
+ }
+}
+"""
+
+
+def test_cycle_members_have_distinct_ranks_without_absorbing_downstream_nodes():
+    run(ROUTE_GEOMETRY + """
+const ids=['heterogeneity','treasury','elasticity','paper','downstream','isolated'];
+const pairs=[['heterogeneity','treasury'],['heterogeneity','elasticity'],['heterogeneity','paper'],['treasury','paper'],['elasticity','paper'],['paper','heterogeneity'],['paper','downstream']];
+const model={nodes:ids.map(id=>({id,type:'task',parent:null,children:[]})),edges:pairs.map(([from,to])=>({from,to,evidence:[{from,to}]}))};
+const l=reproHierarchyLayout(model);assertDistinct(l);
+assert.equal(new Set(ids.slice(0,4).map(id=>l.pos[id].x)).size,4);
+assert(l.pos.heterogeneity.x<l.pos.treasury.x&&l.pos.treasury.x<l.pos.paper.x);
+assert(l.pos.downstream.x>l.pos.paper.x);
+assert.equal(l.edges.filter(e=>e.cycle).length,6);
+assert(!model.nodes.find(n=>n.id==='downstream').cycle);
+assert(!model.nodes.find(n=>n.id==='isolated').cycle);
+assert(l.edges.slice(0,6).every(e=>e.cycleKind==='Task-group cycle'));
+assert.deepEqual(l.edges.map(e=>[e.from,e.to]),pairs);
+""")
+
+
+def test_nested_lanes_and_ports_do_not_share_segments():
+    run(ROUTE_GEOMETRY + """
+const tasks=['p','p/a','p/b','p/c','q'];
+const steps=Array.from({length:30},(_,i)=>({name:'s'+i,task:tasks[1+i%3],tier:'required'}));
+const edges=[];for(let i=1;i<30;i++)for(let j=Math.max(0,i-3);j<i;j++)edges.push({from:'s'+j,to:'s'+i,via:'out'+j});
+const graph={steps,step_edges:edges,dependencies:{tasks:tasks.map(path=>({path,title:path})),boundaries:{}}};
+const nav={roots:[],tier:'all',mode:'scope',expanded:tasks};
+const m=reproHierarchy(graph,nav,reproProject(graph,nav,[])),l=reproHierarchyLayout(m);assertDistinct(l);
+assert.equal(l.edges.length,edges.length);
+""")
+
+
+def test_step_cycle_label_and_short_adjacent_routes():
+    run(ROUTE_GEOMETRY + """
+const make=edges=>({nodes:['a','b','c','d'].map(id=>({id,type:'step',parent:null,children:[]})),edges:edges.map(([from,to])=>({from,to,evidence:[]}))});
+let l=reproHierarchyLayout(make([['a','b'],['a','c'],['a','d'],['b','c'],['c','d']]));assertDistinct(l);
+assert(l.edges.every(e=>!e.cycle));
+assert(l.edges.find(e=>e.from==='a'&&e.to==='b').points.length<=4);
+l=reproHierarchyLayout(make([['a','b'],['b','a'],['b','c']]));assertDistinct(l);
+assert.equal(l.edges.filter(e=>e.cycleKind==='Step cycle').length,2);
+assert.equal(l.model.nodes.filter(n=>n.cycle).length,2);
+""")
+
+
+def test_dense_fan_in_reserves_readable_ports_inside_target_card():
+    run(ROUTE_GEOMETRY + """
+const ids=Array.from({length:20},(_,i)=>'producer-'+i).concat('target');
+const model={nodes:ids.map(id=>({id,type:'step',parent:null,children:[]})),edges:ids.slice(0,-1).map(from=>({from,to:'target',evidence:[]}))};
+const l=reproHierarchyLayout(model);assertDistinct(l);
+const ports=l.edges.map(e=>e.points.at(-1)[1]).sort((a,b)=>a-b),box=l.pos.target;
+assert(ports[0]>box.y&&ports.at(-1)<box.y+box.height);
+assert(ports.every((y,i)=>!i||y-ports[i-1]>=7));
+""")
+
+
+def test_logical_connection_to_an_expanded_descendant_has_valid_route():
+    run(ROUTE_GEOMETRY + """
+const child={id:'child',type:'task',parent:'parent',children:[]};
+const model={nodes:[{id:'parent',type:'task',parent:null,children:[child]},child],edges:[{from:'parent',to:'child',evidence:[{kind:'logical'}]}]};
+const l=reproHierarchyLayout(model);assertDistinct(l);
+assert.equal(l.edges.length,1);assert(l.edges[0].points.every(p=>p.every(Number.isFinite)));
+""")
