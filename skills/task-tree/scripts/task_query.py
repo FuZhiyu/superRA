@@ -10,13 +10,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import frontier_rows
 from _repro import TIER_INPUTS, Graph, build_graph, normalize_tier
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
     autodetect_plan_root,
-    collect_all_tasks,
-    compute_frontier,
     parse_body_sections,
     walk_plan,
 )
@@ -177,7 +176,7 @@ def _sanitize_mermaid_id(slug: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "_", slug)
 
 
-def render_dag(task: Task, subtree_path: str = "") -> str:
+def render_dag(task: Task, subtree_path: str = "", graph: Graph | None = None) -> str:
     """Render a Mermaid DAG of sibling dependencies within a subtree."""
     if subtree_path:
         target = _find_subtask(task, subtree_path)
@@ -186,6 +185,20 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
             sys.exit(1)
     else:
         target = task
+
+    if graph is not None:
+        view = graph.dependencies.boundaries.get(target.path, {"nodes": [], "edges": []})
+        lines = ["graph LR"]
+        ids = {node: f"n{i}" for i, node in enumerate(view["nodes"])}
+        for node, node_id in ids.items():
+            label = node.replace('"', "'")
+            lines.append(f'    {node_id}["{label}"]')
+        for edge in view["edges"]:
+            kinds = ", ".join(sorted({e["kind"] for e in edge["evidence"]}))
+            lines.append(f'    {ids[edge["from"]]} -->|{kinds}| {ids[edge["to"]]}')
+        for finding in graph.findings:
+            lines.append("    %% " + finding.to_text().replace("\n", " "))
+        return "\n".join(lines)
 
     if not target.children:
         return "graph LR\n    %% no children"
@@ -251,6 +264,9 @@ def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
         "status": task.status,
         "effective_status": task.effective_status(),
         "depends_on": task.depends_on,
+        "effective_depends_on": (graph.dependencies.prerequisites(task.path)
+                                 if graph and graph.dependencies and graph.dependencies.complete else None),
+        "dependencies_complete": bool(graph and graph.dependencies and graph.dependencies.complete),
         "is_leaf": task.is_leaf,
         "body": task.body,
         "objective": sections.get("Objective", ""),
@@ -287,14 +303,31 @@ def main(argv: list[str] | None = None) -> None:
             print_tree(root, status_filter=args.status, graph=graph, tier_filter=args.tier)
 
     elif args.frontier:
-        frontier = compute_frontier(root)
+        graph = build_graph(plan_root, root=root)
+        try:
+            rows = frontier_rows(graph, plan_root)
+        except (ValueError, RuntimeError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
         if args.status:
-            frontier = [t for t in frontier if t.status == args.status]
-        print_frontier(frontier, as_json=args.as_json)
-
+            rows = [row for row in rows if row["status"] == args.status]
+        if args.as_json:
+            print(json.dumps(rows, indent=2))
+        else:
+            for row in rows:
+                steps = " [own work: " + ", ".join(row["steps"]) + "]" if "steps" in row else ""
+                print(f"  {row['path'] or '(root)'}: {row['title']}{steps}")
+            if not rows:
+                print("No tasks on the frontier (all approved, blocked, or parked).")
+        return
     elif args.dag is not None:
-        mermaid = render_dag(root, args.dag)
-        print(mermaid)
+        graph = build_graph(plan_root, root=root)
+        if args.as_json:
+            print(json.dumps(graph.dependencies.to_dict(), indent=2))
+        else:
+            print(render_dag(root, args.dag, graph=graph))
+        if not graph.dependencies.valid:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

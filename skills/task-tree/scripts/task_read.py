@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
 from _repro import DEFAULT_TIER, REPRO_SECTION, build_graph
 from _repro_state import ReproStateError, compute_status, runner_paths
+from _task_snapshot import own_step_states
 from _task_io import (
     Task,
     autodetect_plan_root,
@@ -40,12 +41,18 @@ def _collect_ancestors(plan_root: Path, target_path: str) -> list[Task]:
         current_dir = current_dir / parts[i]
         task_md = current_dir / "task.md"
         if task_md.exists():
-            ancestors.append(parse_task(task_md, plan_root))
+            try:
+                ancestors.append(parse_task(task_md, plan_root))
+            except (OSError, UnicodeDecodeError):
+                pass  # The shared snapshot retains the parse diagnostic.
     # Also include root if it exists and target is not root
     root_md = plan_root / "task.md"
     if root_md.exists():
-        root_task = parse_task(root_md, plan_root)
-        ancestors.insert(0, root_task)
+        try:
+            root_task = parse_task(root_md, plan_root)
+            ancestors.insert(0, root_task)
+        except (OSError, UnicodeDecodeError):
+            pass
     # deduplicate (root might have been added twice if parts[0] == plan_root)
     seen: list[str] = []
     unique: list[Task] = []
@@ -108,7 +115,7 @@ def _dep_tasks(target_task: Task, siblings: dict[str, Task]) -> list[tuple[str, 
 # ---------------------------------------------------------------------------
 
 def _reproduction_view(
-    plan_root: Path, target_task: Task, root: Task | None
+    plan_root: Path, target_task: Task, root: Task | None, graph=None
 ) -> dict | None:
     """Return the task's owned-step states and derived task edges, or ``None``.
 
@@ -123,7 +130,7 @@ def _reproduction_view(
 
     project_root = plan_root.resolve().parent
     tree = root if root is not None else walk_plan(plan_root)
-    graph = build_graph(plan_root, project_root=project_root, root=tree)
+    graph = graph or build_graph(plan_root, project_root=project_root, root=tree)
 
     steps = sorted(graph.steps_for(target_task.path), key=lambda s: s.name)
     states: dict[str, tuple[str, str]] = {}
@@ -148,7 +155,7 @@ def _reproduction_view(
     return {
         "tier": graph.tiers.get(target_task.path, DEFAULT_TIER),
         "steps": step_rows,
-        "feeds_on": sorted({a for a, b in graph.task_edges if b == target_task.path}),
+        "feeds_on": graph.dependencies.prerequisites(target_task.path),
         "feeds": sorted({b for a, b in graph.task_edges if a == target_task.path}),
     }
 
@@ -326,7 +333,7 @@ def render_human(
             parts.append("")
 
     if dep_pairs:
-        parts.append("=== Sibling Dependencies ===\n")
+        parts.append("=== Effective Dependencies ===\n")
         for slug, dep_task in dep_pairs:
             if dep_task is not None:
                 eff = dep_task.effective_status()
@@ -498,24 +505,42 @@ def main(argv: list[str] | None = None) -> None:
     show_ancestors = not args.no_ancestors
     ancestors = _collect_ancestors(plan_root, target_task.path) if show_ancestors else []
 
-    # Collect sibling deps
-    siblings = _sibling_map(plan_root, target_task)
-    dep_pairs = _dep_tasks(target_task, siblings)
-
     # Build the focused tree (root → target spine, siblings, direct children).
     focused_tree = ""
-    root = None
+    root = walk_plan(plan_root)
+    graph = build_graph(plan_root, root=root)
     if show_ancestors:
-        root = walk_plan(plan_root)
         focused_tree = format_focused_tree(root, target_task.path)
-
-    repro = _reproduction_view(plan_root, target_task, root)
+    dep_pairs = [(path, graph.dependencies.tasks[path])
+                 for path in graph.dependencies.prerequisites(target_task.path)]
+    repro = _reproduction_view(plan_root, target_task, root, graph=graph)
+    try:
+        states = own_step_states(graph, plan_root)
+        blockers = graph.dependencies.blockers(target_task.path, states)
+        own_work = [r for r in graph.dependencies.frontier(states)
+                    if r["path"] == target_task.path and r.get("kind") == "own-work"]
+        readiness = {"ready": graph.dependencies.ready(target_task.path, states),
+                     "blockers": blockers, "own_work": own_work}
+    except ReproStateError as exc:
+        readiness = {"ready": False, "unavailable": str(exc), "blockers": [], "own_work": []}
 
     # Render
     if args.as_json:
-        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
+        payload = json.loads(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
+        payload["dependency_graph"] = graph.dependencies.to_dict()
+        payload["findings"] = [f.to_dict() for f in graph.findings]
+        payload["readiness"] = readiness
+        print(json.dumps(payload, indent=2))
     else:
         print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
+        for blocker in readiness["blockers"]:
+            print("Blocked by " + ", ".join(f"{node} ({status})" for node, status in blocker["states"].items()))
+        for row in readiness["own_work"]:
+            print("Actionable own work: " + ", ".join(row["steps"]))
+        if readiness.get("unavailable"):
+            print("Readiness unavailable: " + readiness["unavailable"])
+        for finding in graph.findings:
+            print(finding.to_text())
 
 
 if __name__ == "__main__":

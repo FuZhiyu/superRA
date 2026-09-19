@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import preflight
+from _task_dependencies import task_index
 from _task_io import (
     TASK_ROOT_DIRNAME,
     apply_move_link_rewrites,
@@ -192,6 +194,27 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             sibling_drops, moved_drops = _collect_cross_parent_dep_drops(from_dir, to_dir)
         except Exception as exc:
             _die(f"cannot parse a task involved in the move: {exc}")
+
+    def proposed(root, tasks):
+        old_parent = from_status_path.rsplit("/", 1)[0] if "/" in from_status_path else ""
+        new_parent = to_status_path.rsplit("/", 1)[0] if "/" in to_status_path else ""
+        moving = tasks[from_status_path]
+        tasks[old_parent].children.remove(moving)
+        tasks[new_parent].children.append(moving)
+        if old_parent == new_parent:
+            for sibling in tasks[new_parent].children:
+                sibling.depends_on = [new_slug if d == old_slug else d for d in sibling.depends_on]
+        else:
+            for sibling in tasks[old_parent].children:
+                sibling.depends_on = [d for d in sibling.depends_on if d != old_slug]
+            moving.depends_on = [d for d in moving.depends_on if d not in moved_drops]
+        for old_path, node in task_index(moving).items():
+            node.path = to_status_path + old_path[len(from_status_path):]
+            node.dir_path = plan_root / node.path
+    try:
+        preflight(plan_root, proposed)
+    except ValueError as exc:
+        _die(str(exc))
 
     # Computed before the rename, while the moved subtree is readable at from_dir.
     link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)

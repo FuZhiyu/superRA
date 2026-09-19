@@ -1,6 +1,6 @@
 ---
 title: "Unify Logical and Inferred Task Dependencies"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -21,3 +21,10 @@ Ship the effective dependency graph and its task-tooling consumers under the [0.
 - The existing walker sorts explicit siblings before reproduction is built; [_repro.py](../../../../skills/task-tree/scripts/_repro.py) imports task parsing. Compose after parsing rather than importing reproduction back into the walker.
 - The graph currently exposes exact owner edges and only warns against opposite sibling order. Dependency-query clients need one resolved snapshot; structural repair paths and hook relevance scans must remain available without running shell configuration.
 - Retain enough dependency-origin evidence for `repro impact` to explain script, declared, include-closure, and environment dependencies. Shared Python files belong to this task until its graph interface lands; downstream tasks consume that interface.
+
+## Results
+
+- [The pure dependency snapshot](../../../../skills/task-tree/scripts/_task_dependencies.py) combines logical declarations with inferred file edges at every parent boundary, preserves provenance, excludes archived subtrees, and exposes actionable parent-owned steps. Parent setup → child → parent report keeps individual step identities and avoids a status-rollup deadlock.
+- [Graph assembly](../../../../skills/task-tree/scripts/_repro.py), [task adapters](../../../../skills/task-tree/scripts/_task_snapshot.py), and the read/query/check/mutation/dashboard consumers share that snapshot. Explicit dependency mutations preflight proposed trees; archived names and outputs cannot shadow active producers. Structural tree inspection remains shell-free and labels effective dependency data unavailable.
+- [Command-level fixtures](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover inferred/logical/mixed edges, step and collapsed-group cycles, targeted-build rejection, archived direct/transitive dependencies, create/link/move/resume preflight, single variable resolution, incomplete parsing, and an actual parent/child build that preserves the already-built setup step's freshness and last-run record.
+- Verification: the task-tree suite passed **1,080 tests, 9 skipped** with pytask and dashboard dependencies installed. The final graph/model regressions and runner/CLI regressions each passed **118 tests**; the real parent/child build passed independently. The repository's live-source `task check --category dependency --json` reported zero findings. Mechanics are documented in [the task contract](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), [commands](../../../../skills/task-tree/references/commands.md), and [internals](../../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).

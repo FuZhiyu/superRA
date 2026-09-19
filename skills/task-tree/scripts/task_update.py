@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import preflight
+from _task_dependencies import within
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -120,6 +122,25 @@ def update_task(
             "computed rollup.",
             file=sys.stderr,
         )
+
+    if status is not None and status != task.status and "archived" in {status, task.status}:
+        def proposed(root, tasks):
+            target = tasks[task_path]
+            if cascade:
+                for path, descendant in tasks.items():
+                    if within(path, task_path) and descendant.is_leaf:
+                        if descendant.status != "archived" or status == "archived":
+                            descendant.status = status
+                for node in reversed(list(tasks.values())):
+                    if node.children:
+                        node.status = compute_status(node)
+            else:
+                target.status = status
+        try:
+            preflight(plan_root, proposed)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     # --- Cascade application -------------------------------------------------
     if cascade and status is not None:

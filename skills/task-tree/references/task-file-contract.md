@@ -20,7 +20,7 @@ Every `task.md` — top-level, branch, or leaf — uses the same frontmatter and
 
 The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any other key is discarded the next time a CLI mutation rewrites the file (including ancestor-status rollups) — put custom metadata in a body section.
 
-- **`status`** — task-local validity marker. Values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`, `archived`, `postponed`. Co-owned across the dispatch lifecycle: implementer owns transitions up to `implemented` (including `revise` → `implemented` on fix rounds); reviewer owns `implemented` → `revise`, `implemented` → `approved`, and `approved` → `revise` when integration review surfaces issues in a previously approved task. Independent review is triggered, not scheduled — when none runs, the orchestrating agent sets `implemented` → `approved` on its own verification. Replan transitions — flipping a widened `approved` task to `revise`, resetting downstream dependents — are planner judgment, owned by `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. `archived` and `postponed` are orchestrator/researcher scope decisions, not dispatch verdicts: `archived` counts as resolved so dependents proceed; `postponed` parks the task off the frontier and blocks its dependents until resumed (set back to `not-started`). Review-only trees (e.g. writing-workflow review lanes) skip the implementer states — tasks go from `not-started` straight to `revise` or `approved` as the reviewer sets them.
+- **`status`** — task-local validity marker. Values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`, `archived`, `postponed`. Co-owned across the dispatch lifecycle: implementer owns transitions up to `implemented` (including `revise` → `implemented` on fix rounds); reviewer owns `implemented` → `revise`, `implemented` → `approved`, and `approved` → `revise` when integration review surfaces issues in a previously approved task. Independent review is triggered, not scheduled — when none runs, the orchestrating agent sets `implemented` → `approved` on its own verification. Replan transitions — flipping a widened `approved` task to `revise`, resetting downstream dependents — are planner judgment, owned by `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. `archived` and `postponed` are orchestrator/researcher scope decisions, not dispatch verdicts: `archived` removes the task and its subtree from the active dependency graph, with downstream warnings; `postponed` parks the task off the frontier and blocks its dependents until resumed (set back to `not-started`). Review-only trees (e.g. writing-workflow review lanes) skip the implementer states — tasks go from `not-started` straight to `revise` or `approved` as the reviewer sets them.
 - **`depends_on`** — sibling directory names, sibling-only; parent status rolls up from children automatically. Dependent siblings are ordered peers, not inherited context — read a dependency's `## Results` only when the downstream objective needs it.
 - **`## Objective`** — planner-owned: the task's goal plus any scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits. Implementers read it but do not rewrite it.
 - **`## Details`** — planner-owned, optional: planning findings, domain surveys, a suggested route. Implementers may deviate when another route satisfies `## Objective`; reviewers flag details only when they mislead, contradict the objective, or would fail to achieve it.
@@ -94,9 +94,21 @@ Any `## Results` riding higher than the task that produced a finding — a paren
 
 Commit figures to `attachments/` beside the task's `task.md` and embed relative to the task file — `![caption](attachments/fig_name.png)` — so moving a task moves its figures and the dashboard resolves them via `pathPrefix`. Full mechanics — PDF-to-PNG conversion, caption discipline, file-reference conventions — in `skills/communicate/references/markdown.md` §Figures.
 
+## Effective Dependencies
+
+**Author only logical prerequisites in `depends_on`.** The effective graph combines them with consumed-output edges inferred from reproduction steps, retaining both reasons when they coincide. Tasks without steps remain graph nodes. Removing a logical declaration leaves any inferred dependency intact.
+
+**Validate at every task boundary.** Nodes are direct child task groups and the containing task's individual steps. Edges inside one collapsed child stay internal; crossing edges order its sibling groups. Reject cycles in the step graph or any boundary graph, including cycles created only by grouping or combining logical and inferred edges. A parent's setup step → child task → parent's report step remains valid; adding a child preserves existing step identities and hashes.
+
+**Use effective prerequisites for development readiness.** Active prerequisite groups at `implemented`, `approved`, or `revise` satisfy the gate; `not-started`, `in-progress`, or `postponed` block. A group's prerequisites apply to its descendants. Internal parent/child prerequisites use actual producer-step freshness, avoiding a wait on the containing parent's child-status rollup. The frontier includes actionable parent-owned steps as `kind: own-work`, with their owner path and step names; this is derived context, not another persisted task status.
+
+**Exclude archived tasks and their subtrees from the active graph.** Keep declarations for direct/transitive downstream warnings. Their consumed artifacts become boundary inputs: available files remain usable, missing files still block execution. Archival itself does not create a blocking dependency or cycle.
+
+**Reject incomplete or cyclic graphs before dispatch or build selection.** Task/step/tier filters cannot bypass global validation. Structural `task tree` remains available without resolving shell configuration; `task read`, frontier, DAG, dependency checks, and mutation preflight resolve one shared snapshot. Invalid declarations stay readable with their findings.
+
 ## Reproduction Section
 
-The build unit is a **step**, never a task: step-to-step edges are inferred from files, and task-level reproduction edges are derived from those, never declared. Frontmatter `depends_on` stays sibling-only orchestration and is unaffected.
+The build unit is a **step**. File-derived edges also contribute task prerequisites under [Effective Dependencies](#effective-dependencies); `depends_on` retains its sibling-slug syntax. Logical prerequisites govern task development and do not add file inputs or pull unrelated scripts into a reproduction build.
 
 **The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
 
@@ -127,7 +139,7 @@ steps:
 
 | Key | Value |
 |---|---|
-| `name` | Slug, unique across the whole tree. |
+| `name` | Slug, unique across the active graph. Archived name/output conflicts are diagnostic only and cannot replace an active producer. |
 | `cmd` | Shell string, run from the project root. Mutually exclusive with `runner`. |
 | `runner` + `script` | Expands a runner template from config; the script is added to `deps` automatically. |
 | `deps` | Files or directories the step reads. With `cmd`, list the script here. |
@@ -187,15 +199,16 @@ Julia deps carry their own closure: a `.jl` dep expands to every file it reaches
 
 ### Validation
 
-Findings come back in the `Finding` shape shared with `task check`, under the `reproduction` category.
+Findings come back in the `Finding` shape shared with `task check`, under the `reproduction` or `dependency` category.
 
 **`[ERROR]`**
 
 - **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
-- **Names and outs:** a missing or non-slug `name`; a duplicate step name; two steps declaring the same out.
+- **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out.
 - **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
+- **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; an unknown tier; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; a derived task edge that contradicts sibling `depends_on` order; an `include` that could not be resolved.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.

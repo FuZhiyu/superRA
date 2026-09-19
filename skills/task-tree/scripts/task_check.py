@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _repro import check_reproduction
+from _repro import build_graph
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -39,7 +39,6 @@ from _task_io import (
 )
 from _task_validate import (
     Finding,
-    detect_cycles,
     invalid_status_message,
     validate_review_notes,
 )
@@ -112,61 +111,6 @@ def _check_status_recursive(
 # ---------------------------------------------------------------------------
 # Check 2: Dependency integrity
 # ---------------------------------------------------------------------------
-
-def check_dependency_integrity(root: Task) -> list[Finding]:
-    """Check dependency resolution, cycles, and archived dependencies."""
-    findings: list[Finding] = []
-    _check_deps_recursive(root, findings)
-    return findings
-
-
-def _check_deps_recursive(task: Task, findings: list[Finding]) -> None:
-    if not task.children:
-        return
-
-    sibling_map = {c.slug: c for c in task.children}
-
-    # Check each child's depends_on references
-    for child in task.children:
-        for dep in child.depends_on:
-            if dep not in sibling_map:
-                findings.append(Finding(
-                    task_path=child.path,
-                    category="dependency",
-                    severity="error",
-                    message=f"depends_on '{dep}' does not resolve to any sibling task",
-                ))
-            else:
-                dep_task = sibling_map[dep]
-                if dep_task.effective_status() == "archived":
-                    findings.append(Finding(
-                        task_path=child.path,
-                        category="dependency",
-                        severity="warning",
-                        message=f"depends on archived task '{dep}'",
-                    ))
-                elif dep_task.effective_status() == "postponed":
-                    findings.append(Finding(
-                        task_path=child.path,
-                        category="dependency",
-                        severity="warning",
-                        message=f"depends on postponed task '{dep}' (blocked until resumed)",
-                    ))
-
-    # Cycle detection at this sibling level
-    cycle_warnings = detect_cycles(task.children)
-    for warning in cycle_warnings:
-        findings.append(Finding(
-            task_path=task.path,
-            category="dependency",
-            severity="error",
-            message=warning,
-        ))
-
-    # Recurse into children that have their own children
-    for child in task.children:
-        _check_deps_recursive(child, findings)
-
 
 # ---------------------------------------------------------------------------
 # Check 3: Rollup consistency
@@ -281,14 +225,13 @@ def run_checks(
 
     if category is None or category == "status":
         findings.extend(check_status_validity(root, plan_root))
-    if category is None or category == "dependency":
-        findings.extend(check_dependency_integrity(root))
+
     if category is None or category == "rollup":
         findings.extend(check_rollup_consistency(root))
     if category is None or category == "sync-impact":
         findings.extend(check_sync_impact(root))
-    if category is None or category == "reproduction":
-        findings.extend(check_reproduction(plan_root, root))
+    if category is None or category in {"dependency", "reproduction"}:
+        findings.extend(build_graph(plan_root, root=root).findings)
 
     return findings
 

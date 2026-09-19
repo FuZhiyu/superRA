@@ -41,13 +41,15 @@ superra task result add 01-data/01-load \
 
 ## Manage dependencies
 
-Explicit dependency edits:
+Explicit logical dependency edits:
 
 ```bash
 superra task dep add 01-data/03-filter 02-merge
 
 superra task dep remove 01-data/03-filter 02-merge
 ```
+
+Removing an explicit edge preserves inferred evidence for the same prerequisite. Dependency-changing commands preflight the proposed effective graph before writing; an invalid proposal leaves task files and directories unchanged.
 
 ## Move / rename a task
 
@@ -64,7 +66,7 @@ superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 
 It re-points every relative Markdown link the move would break: links inside the moved files, and links anywhere else in the tree pointing into the moved subtree.
 
-`depends_on` is sibling-only, so no edge crossing the move survives. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
+Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the resulting hierarchy must remain acyclic before filesystem writes. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
 
 The PostToolUse hook still revalidates raw filesystem moves and keeps the same-parent auto-cascade guardrail, but is not the canonical move mechanism. Raw `mv` / `git mv` only for recovery from tool failure, then `superra task check`.
 
@@ -104,7 +106,7 @@ superra repro tier 02-merge required      # set a task's tier
 
 `--force` and `--force-all` are mutually exclusive. Without explicit targets, `--force` forces the tier's steps; `--force-all` also forces their ancestors across tiers. Add `--dry-run` to preview either selection without executing or changing build evidence; downstream execution remains conditional on regenerated content.
 
-`task read <path>` shows a registered task's owned-step states and derived `feeds` / `feeds on` task edges, computed the same way as `repro status --json` but without pytask. `task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge.
+`task read <path>` shows effective prerequisite tasks, including inherited group barriers, and a registered task's owned-step states. Its JSON includes the dependency snapshot and global findings; no pytask is required. `task frontier --json` additionally exposes actionable parent-owned steps with `kind: own-work`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity. `task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge.
 
 | State | Meaning |
 |---|---|

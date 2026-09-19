@@ -950,7 +950,10 @@ def walk_plan(plan_root: Path) -> Task:
     """
     root_task_md = plan_root / "task.md"
     if not root_task_md.is_symlink() and root_task_md.exists():
-        root = parse_task(root_task_md, plan_root)
+        try:
+            root = parse_task(root_task_md, plan_root)
+        except (OSError, UnicodeDecodeError) as exc:
+            root = Task(path="", dir_path=plan_root, title="(unreadable root)", parse_error=str(exc))
     else:
         root = Task(path="", dir_path=plan_root, title=SYNTHETIC_ROOT_TITLE)
 
@@ -1006,8 +1009,8 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     """Find and parse child task directories, sorted topologically by depends_on.
 
     Per-file errors (``OSError``, ``UnicodeDecodeError``) are caught, warned,
-    and skipped so one unreadable or undecodable ``task.md`` does not abort the
-    whole walk for all readers (dashboard, ``task query``, ``task read``).
+    and retained as parse-error nodes so one unreadable ``task.md`` does not
+    abort the whole walk for all readers (dashboard, ``task query``, ``task read``).
     Mirrors the leniency design used for unknown status values.
     """
     subdirs = iter_child_task_dirs(directory)
@@ -1017,11 +1020,12 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
             child = parse_task(subdir / "task.md", plan_root)
         except (OSError, UnicodeDecodeError) as exc:
             warnings.warn(
-                f"Skipping {subdir / 'task.md'}: {exc}; "
+                f"Unreadable {subdir / 'task.md'}: {exc}; "
                 f"run `superra task check` to diagnose.",
                 stacklevel=2,
             )
-            continue
+            child = Task(path=subdir.relative_to(plan_root).as_posix(), dir_path=subdir,
+                         title=subdir.name, parse_error=str(exc))
         child.children = _walk_children(subdir, plan_root)
         parsed.append(child)
 
@@ -1189,7 +1193,7 @@ def propagate_parent_status(
     return updated
 
 
-def compute_frontier(root: Task) -> list[Task]:
+def compute_frontier(root: Task, dependencies=None, step_states=None) -> list[Task]:
     """Compute the dispatch frontier: leaf tasks that have actionable work now.
 
     A leaf task is on the frontier when:
@@ -1203,6 +1207,8 @@ def compute_frontier(root: Task) -> list[Task]:
        'in-progress', and 'postponed' dependencies block dependents.
     3. All ancestor tasks' sibling dependencies are met (recursively)
     """
+    if dependencies is not None:
+        return [dependencies.tasks[row["path"]] for row in dependencies.frontier(step_states)]
     frontier: list[Task] = []
     _collect_frontier(root, frontier, ancestors_ready=True)
     return frontier
