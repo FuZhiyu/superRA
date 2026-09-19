@@ -1243,7 +1243,7 @@ function reproBoundaryHTML(project) {
       + new Set(items.map(function(b) { return b.hidden; })).size + ' hidden neighbors ('
       + Array.from(new Set(items.flatMap(function(b) { return b.reasons; }))).join(', ') + ')</summary>'
       + items.map(function(b) { return '<div>' + reproButton('Reveal ' + b.hidden, 'reveal', b.hidden)
-        + ' via ' + escapeHtml((b.edge.via || []).join(', ')) + '</div>'; }).join('') + '</details>';
+        + ' via ' + escapeHtml(b.edge.via || '') + '</div>'; }).join('') + '</details>';
   }).join('') + '</div>';
 }
 function reproTransform() {
