@@ -1,14 +1,14 @@
 ---
-title: "Navigate Reproduction Graphs by Subtree, Tier, and Dependency"
+title: "Integrate Task Navigation and Expandable Dependencies"
 status: in-progress
 depends_on: []
 ---
 
 ## Objective
 
-Make one hierarchical graph usable at task, step, and mixed levels for locating results, tracing prerequisites, and inspecting execution state in projects with 500 steps across 50 owner tasks.
+Integrate task reading and dependency inspection into one workspace, with Tree and DAG as alternative navigators sharing selection and task content, and flexible task/step expansion in projects with 500 steps across 50 owner tasks.
 
-- Implement the [interaction contract and acceptance checks](attachments/design.md): task overview, combined subtree/tier filtering, focused step graphs, persistent inspection, and navigation recovery.
+- Implement the [interaction contract and acceptance checks](attachments/design.md): Tree/DAG navigation, shared task reader and comments, independent selection/expansion/focus actions, combined subtree/tier filtering, persistent inspection, and navigation recovery. Remove the duplicate reproduction overview and subtree picker; make existing task-page dependency entry points use the same graph.
 - Group step cards by owner task with collapsible summaries, readable initial zoom, routed directional edges, and selection that remains visible beside the inspector. Validate against the heterogeneity graph as well as synthetic fixtures.
 - Consume the [0.5 dependency and freshness contract](../../attachments/v05-design.md) from the graph/runner owners; preserve task comments and standalone export. This task owns dashboard presentation and payload integration, not a second dependency or freshness implementation.
 - Expose logical-only tasks/edges, parent-owned steps, invalid combined cycles, and fresh-by-acceptance evidence without additional status vocabulary.
@@ -17,7 +17,7 @@ Make one hierarchical graph usable at task, step, and mixed levels for locating 
 ## Details
 
 - **Placement:** this is a substantial extension of [the reproduction dashboard](../task.md), whose shipped view covers a small all-step graph. The general [dashboard task](../../../task-tree/dashboard/task.md) owns the application shell, not reproduction graph semantics. One implementation task owns this shared UI edit surface; splitting search, filters, layout, and inspection into sibling tasks would duplicate ownership.
-- **Implementation surface:** [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L895) owns reproduction rendering and the shared hash router; [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css#L1603) owns its presentation. [plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py) embeds client assets and graph snapshots for export. [test_dashboard.py](../../../../skills/task-tree/scripts/test_dashboard.py#L6637) and [state-preservation tests](../../../../skills/task-tree/scripts/tests/test_state_preservation.py) are the existing verification homes.
+- **Implementation surface:** [base.html](../../../../skills/task-tree/scripts/templates/base.html) owns the shared workspace shell; [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js#L895) owns reproduction rendering and the shared hash router; [dashboard.css](../../../../skills/task-tree/scripts/templates/dashboard.css#L1603) owns its presentation. [plan_dashboard.py](../../../../skills/task-tree/scripts/plan_dashboard.py) embeds client assets and graph snapshots for export. [test_dashboard.py](../../../../skills/task-tree/scripts/test_dashboard.py#L6637) and [state-preservation tests](../../../../skills/task-tree/scripts/tests/test_state_preservation.py) are the existing verification homes.
 - **Data already available:** [graph_to_dict](../../../../skills/task-tree/scripts/_repro.py#L566) provides task ownership, tiers, file paths, step edges with their connecting files, and external inputs. The client fetches all tiers. The graph owner supplies effective task nodes/edges and provenance; the runner owner supplies acceptance explanations. Reuse these payloads for local expansion, filtering, and tracing.
 - **Navigation coupling:** the shared router uses the hash for the active task and attachment; the worktree selector lives in the ordinary query string. Extend this router coherently so reproduction history cannot hijack task or attachment navigation.
 - **Artifacts:** maintained UI code and regression fixtures belong beside their existing runtime and test owners. Screenshots and a concise manual-verification record belong in this task's attachments. The hand-authored design below has no producer step; register any retained scripted measurement when its results are cited, per [reproducibility](../../../../skills/reproducibility/SKILL.md#what-gets-a-step).
@@ -25,7 +25,7 @@ Make one hierarchical graph usable at task, step, and mixed levels for locating 
 
 ## Revision Notes
 
-The 0.5 contract replaces separate task summaries and step dependencies with one expandable hierarchy. Earlier task-return allowances are invalid between disjoint groups; parent/child internal edges remain valid. The graph and runner parent prerequisites must land before the UI can verify the new payloads.
+The 0.5 contract replaces separate task summaries and step dependencies with one expandable hierarchy. The researcher further selected Tree and DAG as alternative task navigators, replacing the separate Reproduction destination and duplicate tree. Earlier task-return allowances are invalid between disjoint groups; parent/child internal edges remain valid. The graph and runner parent prerequisites must land before the UI can verify the new payloads.
 
 ## Results
 

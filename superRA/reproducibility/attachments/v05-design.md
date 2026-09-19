@@ -31,6 +31,8 @@ Removing an explicit prerequisite removes only that evidence: an inferred edge c
 
 ## Task and step views expand the same hierarchy
 
+Integrate dependencies into the task workspace: `Tree` and `DAG` are alternative navigators sharing task selection, the task reader, comments, and attachments. Remove the separate reproduction destination, overview tree, and subtree picker. Selection, one-level expansion/folding, and subtree focus are distinct actions; selection and expansion do not change scope. DAG mode gives the graph the main canvas beside the shared reader. Preserve nested expansion choices and navigator-specific positions when switching modes. The [navigation contract](../04-dashboard-view/scalable-navigation/attachments/design.md) owns interaction details and legacy-link compatibility.
+
 The dashboard begins with task nodes and their effective dependencies. Expanding a task exposes its steps and the file connections supporting those edges; mixed expansion keeps other tasks compact. Logical-only edges remain labeled connections between task boundaries, including tasks with no steps. They are never fabricated into step-level file edges.
 
 Use compact containers with task titles and per-state counts, readable initial scale, and explicit Fit overview. Keep step names readable, route directional edges around cards, and emphasize the selected connection chain. Opening the inspector keeps selection visible. Preserve scope, tier, search, history, worktree isolation, keyboard/touch support, and offline export from the [navigation contract](../04-dashboard-view/scalable-navigation/attachments/design.md).
