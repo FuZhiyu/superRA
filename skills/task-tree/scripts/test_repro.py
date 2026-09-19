@@ -678,7 +678,7 @@ class TestEdges:
         assert graph.external_inputs[0].consumers == ["build"]
         assert graph.external_inputs[0].exists is True
 
-    def test_a_steps_own_out_is_not_a_self_edge(self, tmp_path):
+    def test_a_step_reading_its_own_out_is_a_cycle(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(
             plan / "01-build",
@@ -690,7 +690,8 @@ class TestEdges:
             "    outs: [output/panel.parquet]\n",
         )
         graph = _graph(plan)
-        assert graph.step_edges == []
+        assert graph.step_edges == [("build", "build", "output/panel.parquet")]
+        assert _has(graph, "error", "step cycle")
         assert graph.external_inputs == []
 
     def test_json_serialization_round_trips(self, tmp_path):
@@ -700,7 +701,8 @@ class TestEdges:
         assert payload["step_edges"] == [
             {"from": "build", "to": "estimate", "via": "output/panel.parquet"}
         ]
-        assert payload["task_edges"] == [{"from": "01-build", "to": "02-estimate"}]
+        assert [(e["from"], e["to"]) for e in payload["task_edges"]] == [("01-build", "02-estimate")]
+        assert {e["kind"] for e in payload["task_edges"][0]["evidence"]} == {"logical", "inferred"}
         assert payload["steps"][0]["outs"][0]["sidecar"] is None
 
     def test_sidecar_survives_into_the_serialized_out(self, tmp_path):
@@ -935,8 +937,8 @@ class TestFindings:
         )
         assert _has(
             _graph(plan),
-            "warning",
-            "depends_on orders '01-build' after '02-estimate'",
+            "error",
+            "dependency cycle",
         )
 
     def test_consistent_depends_on_raises_nothing(self, tmp_path):

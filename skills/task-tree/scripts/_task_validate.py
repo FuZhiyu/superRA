@@ -182,7 +182,7 @@ def detect_cycles(tasks: list[Task]) -> list[str]:
     return warnings_out
 
 
-def validate_plan(plan_root: Path) -> list[str]:
+def validate_plan(plan_root: Path, *, dependencies: bool = True) -> list[str]:
     """Walk the entire plan tree and run all validations at each level.
 
     Returns aggregated list of warning strings, each prefixed with the task path.
@@ -215,11 +215,13 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_review_notes(task):
                 warnings_out.append(f"{prefix}: {w}")
 
-            for w in validate_dependencies(task, sibling_names):
-                warnings_out.append(f"{prefix}: {w}")
+            if dependencies:
+                for w in validate_dependencies(task, sibling_names):
+                    warnings_out.append(f"{prefix}: {w}")
 
-        for w in detect_cycles(tasks_at_level):
-            warnings_out.append(f"{directory.name}: {w}")
+        if dependencies:
+            for w in detect_cycles(tasks_at_level):
+                warnings_out.append(f"{directory.name}: {w}")
 
         for subdir in subdirs:
             _validate_level(subdir)

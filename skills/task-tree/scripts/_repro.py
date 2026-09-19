@@ -19,11 +19,12 @@ import os
 import posixpath
 import re
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
 
-from _task_io import Task, parse_body_sections, walk_plan
+from _task_io import VALID_STATUSES, Task, parse_body_sections, walk_plan
+from _task_dependencies import Dependencies, archived_paths, compose, cycle_path
 from _task_validate import Finding
 
 
@@ -488,6 +489,7 @@ class Step:
     deps: list[PathRef] = field(default_factory=list)
     outs: list[Out] = field(default_factory=list)
     params: dict = field(default_factory=dict)
+    dependency_origins: dict[str, list[dict]] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -503,6 +505,7 @@ class Step:
             "deps": [d.to_dict() for d in self.deps],
             "outs": [o.to_dict() for o in self.outs],
             "params": self.params,
+            "dependency_origins": self.dependency_origins,
         }
 
 
@@ -552,6 +555,8 @@ class Graph:
     task_edges: list[tuple[str, str]] = field(default_factory=list)
     external_inputs: list[ExternalInput] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
+    dependencies: Dependencies | None = None
+    archived_steps: list[Step] = field(default_factory=list)
 
     def step(self, name: str) -> Step | None:
         for step in self.steps:
@@ -579,7 +584,10 @@ def graph_to_dict(graph: Graph) -> dict:
         "step_edges": [
             {"from": src, "to": dst, "via": via} for src, dst, via in graph.step_edges
         ],
-        "task_edges": [{"from": src, "to": dst} for src, dst in graph.task_edges],
+        "task_edges": (graph.dependencies.edges if graph.dependencies else
+                       [{"from": src, "to": dst} for src, dst in graph.task_edges]),
+        "dependencies": graph.dependencies.to_dict() if graph.dependencies else None,
+        "archived_steps": [s.to_dict() for s in graph.archived_steps],
         "external_inputs": [e.to_dict() for e in graph.external_inputs],
         "findings": [f.to_dict() for f in graph.findings],
     }
@@ -1048,15 +1056,21 @@ def _expand_deps(
     ordered: list[PathRef] = []
     seen: set[str] = set()
 
-    def _add(ref: PathRef) -> None:
+    def _add(ref: PathRef, kind: str, via: str | None = None) -> None:
+        origin = {"kind": kind}
+        if via is not None:
+            origin["via"] = via
+        origins = step.dependency_origins.setdefault(ref.logical, [])
+        if origin not in origins:
+            origins.append(origin)
         if ref.logical not in seen:
             seen.add(ref.logical)
             ordered.append(ref)
 
     if step.script is not None:
-        _add(step.script)
+        _add(step.script, "script")
     for ref in step.declared_deps:
-        _add(ref)
+        _add(ref, "declared")
 
     for ref in list(ordered):
         if not ref.resolved.endswith(".jl"):
@@ -1068,12 +1082,12 @@ def _expand_deps(
         for message in include_warnings:
             warn(f"step {step.name!r}: {message}")
         for rel in included:
-            _add(PathRef(logical=rel, resolved=rel))
+            _add(PathRef(logical=rel, resolved=rel), "include", ref.logical)
 
     for raw in config.env_deps:
         # Unknown ${VAR}s here are reported once against config.yaml, not per step.
         ref, _unknown = _path_ref(raw, config.variables)
-        _add(ref)
+        _add(ref, "environment")
     return ordered
 
 
@@ -1107,11 +1121,14 @@ def build_graph(
     plan_root = Path(plan_root)
     project_root = Path(project_root) if project_root else plan_root.resolve().parent
     tree = root if root is not None else walk_plan(plan_root)
+    archived = archived_paths(tree)
 
     graph = Graph()
     findings = graph.findings
 
     def _finding(task_path: str, severity: str, message: str) -> None:
+        if task_path in archived and severity == "error":
+            severity = "warning"
         findings.append(
             Finding(
                 task_path=task_path, category=CATEGORY, severity=severity, message=message
@@ -1152,6 +1169,11 @@ def build_graph(
                 )
 
     tasks = _iter_tasks(tree)
+    for task in tasks:
+        if not task.title.strip():
+            _finding(task.path, "error", "task frontmatter is missing a title or could not be parsed")
+        if task.status not in VALID_STATUSES:
+            _finding(task.path, "error", f"invalid task status {task.status!r}")
     step_names: dict[str, str] = {}
 
     for task in tasks:
@@ -1206,20 +1228,43 @@ def build_graph(
             except _StepError as exc:
                 _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
                 continue
-            owner = step_names.get(step.name)
-            if owner is not None:
-                _finding(
-                    task.path,
-                    "error",
-                    f"step name {step.name!r} is already used by task "
-                    f"{owner or '(root)'}; step names are unique across the tree",
-                )
-                continue
-            step_names[step.name] = task.path
+            if task.path not in archived:
+                owner = step_names.get(step.name)
+                if owner is not None:
+                    _finding(task.path, "error", f"step name {step.name!r} is already used by task "
+                             f"{owner or '(root)'}; active step names are unique across the tree")
+                    continue
+                step_names[step.name] = task.path
             graph.steps.append(step)
 
+    graph.archived_steps = [s for s in graph.steps if s.task_path in archived]
+    graph.steps = [s for s in graph.steps if s.task_path not in archived]
+    # Diagnostic identities keep archived name collisions out of active lookup.
+    # Active producers win any output collision with an archived declaration.
+    labels = {f"@archived:{i}:{s.name}": s.name for i, s in enumerate(graph.archived_steps)}
+    archived_declarations = [replace(s, name=alias)
+                             for alias, s in zip(labels, graph.archived_steps)]
+    declared = Graph(steps=[*graph.steps, *archived_declarations])
+    _link(declared, project_root)
+    for step in graph.archived_steps:
+        if step.name in step_names:
+            _finding(step.task_path, "warning", f"archived step name {step.name!r} also belongs to active task {step_names[step.name]!r}")
+    for finding in declared.findings:
+        if finding.severity == "error" and finding.task_path in archived:
+            _finding(finding.task_path, "warning", finding.message)
+    graph.tiers = {p: tier for p, tier in graph.tiers.items() if p not in archived}
     _link(graph, project_root)
-    _check_task_edges(graph, tree)
+    cycle = cycle_path([(a, b) for a, b, _ in graph.step_edges])
+    if cycle:
+        witness = [f"{a} -> {b} via {via}" for a, b, via in graph.step_edges
+                   if (a, b) in set(zip(cycle, cycle[1:]))]
+        _finding("", "error", "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness))
+    graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels,
+                                 complete=resolve_vars and not any(f.severity == "error" for f in findings))
+    graph.findings.extend(Finding(**f) for f in graph.dependencies.findings)
+    graph.dependencies.findings = [f.to_dict() for f in graph.findings]
+    graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
+    graph.dependencies.order_tree()
     return graph
 
 
@@ -1260,8 +1305,7 @@ def _link(graph: Graph, project_root: Path) -> None:
         for dep in step.deps:
             producer = _producing_step(dep.resolved, producer_paths, graph.producers)
             if producer is not None:
-                if producer != step.name:
-                    edges.add((producer, step.name, dep.logical))
+                edges.add((producer, step.name, dep.logical))
                 continue
             exists = (project_root / dep.resolved).exists()
             entry = externals.get(dep.logical)
@@ -1307,94 +1351,6 @@ def _producing_step(
         if dep.startswith(out + "/"):
             return producers[out]
     return None
-
-
-def _check_task_edges(graph: Graph, root: Task) -> None:
-    """Warn when data flows against the declared sibling ``depends_on`` order."""
-    parents: dict[str, str] = {}
-    siblings: dict[str, list[str]] = {}
-    deps: dict[str, list[str]] = {}
-
-    def _walk(task: Task) -> None:
-        child_paths = [c.path for c in task.children]
-        for child in task.children:
-            parents[child.path] = task.path
-            siblings[child.path] = child_paths
-            deps[child.path] = [
-                f"{task.path}/{d}".lstrip("/") for d in child.depends_on
-            ]
-            _walk(child)
-
-    _walk(root)
-
-    for producer_task, consumer_task in graph.task_edges:
-        pair = _sibling_pair(producer_task, consumer_task, parents)
-        if pair is None:
-            continue
-        producer_side, consumer_side = pair
-        if _declares_dependency(producer_side, consumer_side, deps):
-            graph.findings.append(
-                Finding(
-                    task_path=producer_task,
-                    category=CATEGORY,
-                    severity="warning",
-                    message=(
-                        f"produces files read by {consumer_task or '(root)'}, but "
-                        f"depends_on orders {producer_side.rsplit('/', 1)[-1]!r} "
-                        f"after {consumer_side.rsplit('/', 1)[-1]!r}"
-                    ),
-                )
-            )
-
-
-def _sibling_pair(
-    producer: str, consumer: str, parents: dict[str, str]
-) -> tuple[str, str] | None:
-    """Lift two task paths to the sibling level where ``depends_on`` compares."""
-    producer_chain = _ancestry(producer, parents)
-    consumer_chain = _ancestry(consumer, parents)
-    common = ""
-    for a, b in zip(producer_chain, consumer_chain):
-        if a != b:
-            break
-        common = a
-    producer_side = _child_of(common, producer_chain)
-    consumer_side = _child_of(common, consumer_chain)
-    if producer_side is None or consumer_side is None or producer_side == consumer_side:
-        return None
-    return producer_side, consumer_side
-
-
-def _ancestry(path: str, parents: dict[str, str]) -> list[str]:
-    chain = [path]
-    while path in parents:
-        path = parents[path]
-        chain.append(path)
-    return list(reversed(chain))
-
-
-def _child_of(common: str, chain: list[str]) -> str | None:
-    for i, entry in enumerate(chain):
-        if entry == common:
-            return chain[i + 1] if i + 1 < len(chain) else None
-    return None
-
-
-def _declares_dependency(
-    start: str, target: str, deps: dict[str, list[str]]
-) -> bool:
-    """True when *start* depends on *target*, directly or through siblings."""
-    pending = list(deps.get(start, []))
-    seen: set[str] = set()
-    while pending:
-        current = pending.pop()
-        if current == target:
-            return True
-        if current in seen:
-            continue
-        seen.add(current)
-        pending.extend(deps.get(current, []))
-    return False
 
 
 # ---------------------------------------------------------------------------

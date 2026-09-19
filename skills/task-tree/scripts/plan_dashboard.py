@@ -491,9 +491,12 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
             # and after the reparse so both adding and removing a section
             # counts. An edit to a task with no section on either side leaves
             # the graph alone, and the view is not asked to refetch.
-            before = _declares_reproduction(_find_task(state, task_path))
+            previous = _find_task(state, task_path)
+            before = _declares_reproduction(previous)
+            dependency_before = (previous.status, tuple(previous.depends_on), previous.parse_error) if previous else None
             updated, children_changed = rebuild_state_task(state, task_path)
-            if before or _declares_reproduction(updated):
+            dependency_after = (updated.status, tuple(updated.depends_on), updated.parse_error) if updated else None
+            if before or _declares_reproduction(updated) or dependency_before != dependency_after:
                 repro_graph_changed = True
             if children_changed:
                 # A task.md edit that changes this task's own child set is
@@ -515,7 +518,7 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
             summary_html = _render_summary(state.root_task)
             await _broadcast("summary-updated", summary_html, state.wt_id)
 
-    if repro_lock_changed or repro_graph_changed:
+    if repro_lock_changed or repro_graph_changed or structural_parent_paths:
         await _broadcast("repro-updated", "{}", state.wt_id)
 
     # Companion changes never rebuild the task tree or active card. Emit one
@@ -979,12 +982,13 @@ def _render_node_body(task: Task, project_root: str) -> str:
     return template.render(task=task, project_root=project_root)
 
 
-def _children_graph_payload(root_task: Task) -> dict:
+def _children_graph_payload(root_task: Task, graph=None) -> dict:
     """Direct-children graph for *root_task*: nodes (path, slug, title, status)
     plus sibling dependency edges. Feeds the children dependency panel — GET
     /api/children-graph and its matching standalone fragment — straight from
     Task data, with no mermaid source and no client-side text parsing."""
-    children = list(root_task.children)
+    children = [c for c in root_task.children
+                if graph is None or c.path not in graph.dependencies.archived]
     child_paths = {c.path for c in children}
     prefix = f"{root_task.path}/" if root_task.path else ""
     nodes = [
@@ -1001,7 +1005,16 @@ def _children_graph_payload(root_task: Task) -> dict:
         deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
         if deps:
             edges[c.path] = deps
-    return {"children": nodes, "edges": edges}
+    payload = {"children": nodes, "edges": edges}
+    if graph is not None:
+        payload["edges"] = {}
+        for edge in graph.dependencies.edges:
+            if edge["from"] in child_paths and edge["to"] in child_paths:
+                payload["edges"].setdefault(edge["to"], []).append(edge["from"])
+        payload["boundary"] = graph.dependencies.boundaries.get(root_task.path)
+        payload["valid"] = graph.dependencies.valid
+        payload["findings"] = [f.to_dict() for f in graph.findings]
+    return payload
 
 
 def _render_summary(root_task: Task | None) -> str:
@@ -1378,7 +1391,8 @@ async def children_graph(request: Request, root: str):
     sub_root = _find_task(state, root)
     if sub_root is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
-    return _children_graph_payload(sub_root)
+    graph = await asyncio.to_thread(_repro_graph, state)
+    return _children_graph_payload(sub_root, graph)
 
 
 # --- Route: GET /kanban ------------------------------------------------------
@@ -2163,9 +2177,10 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     # node body at all. /nav/<path> stays descendants-only (the root is served
     # by the main /nav fragment, never /nav/).
     all_tasks = collect_all_tasks(root_task)
+    graph = _repro_graph(state)
     for task in [root_task, *all_tasks]:
         fragments[f"/node/{task.path}"] = _render_node_body(task, state.project_root)
-        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task)
+        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task, graph)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 

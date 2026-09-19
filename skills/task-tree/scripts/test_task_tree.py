@@ -348,8 +348,8 @@ class TestWalkPlan:
         assert load.slug == "01-load"
         assert load.is_leaf
 
-    def test_walk_skips_undecodable_file(self, tmp_path):
-        """An undecodable task.md is warned and skipped; the walk completes."""
+    def test_walk_retains_undecodable_file_as_error(self, tmp_path):
+        """An unreadable task remains visible and prevents a complete graph."""
         import warnings as _warnings
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
@@ -365,8 +365,9 @@ class TestWalkPlan:
             _warnings.simplefilter("always")
             root = _task_io.walk_plan(root_dir)
 
-        assert len(root.children) == 1
+        assert len(root.children) == 2
         assert root.children[0].slug == "01-good"
+        assert root.children[1].parse_error
         assert caught
 
 

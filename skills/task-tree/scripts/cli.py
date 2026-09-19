@@ -240,6 +240,8 @@ def _run_dag(args: argparse.Namespace) -> None:
     argv = _root_args(args.root) + ["--dag"]
     if args.subtree:
         argv.append(args.subtree)
+    if args.as_json:
+        argv.append("--json")
     _module_main("task_query", argv)
 
 
@@ -558,6 +560,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     dag = task_sub.add_parser("dag", help="Render a Mermaid dependency DAG")
     dag.add_argument("subtree", nargs="?", default="", help="Optional subtree path")
+    dag.add_argument("--json", action="store_true", dest="as_json")
     dag.add_argument(
         "--root",
         default=None,

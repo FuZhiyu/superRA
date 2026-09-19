@@ -8,7 +8,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import preflight
 from _task_io import (
+    Task,
     TASK_ROOT_DIRNAME,
     iter_child_task_dirs,
     propagate_parent_status,
@@ -96,6 +98,17 @@ def create_task(
         depends_on=deps_yaml,
     )
 
+    def proposed(root, tasks):
+        parent = task_path.rsplit("/", 1)[0] if "/" in task_path else ""
+        if parent not in tasks:
+            raise ValueError(f"destination parent is not a task: {parent}")
+        tasks[parent].children.append(Task(path=task_path, dir_path=task_dir, title=title,
+                                           depends_on=depends_on, body=f"## Objective\n{objective}\n{details}"))
+    try:
+        preflight(plan_root, proposed)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
     task_dir.mkdir(parents=False)
     task_md = task_dir / "task.md"
     task_md.write_text(content, encoding="utf-8")

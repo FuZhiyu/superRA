@@ -49,8 +49,16 @@ Key properties:
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
 | `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Task Anatomy`. |
-| `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is actionable (not-started/in-progress/implemented/revise) and every sibling dep's work product exists (approved/archived/implemented/revise). |
+| `compute_frontier(root, dependencies, step_states)` | Task objects selected by the shared dependency snapshot; command callers use `frontier_rows` to retain parent own-work details. The single-argument legacy helper handles logical-only trees. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
+
+### Effective dependency snapshot
+
+`_repro.build_graph()` parses once, resolves configuration once, infers file edges, and calls pure `_task_dependencies.compose()`. `Graph.dependencies` owns effective edges, evidence, active task paths, per-parent boundary graphs, validation, ordering, and readiness. `Graph.steps` contains active steps; `Graph.archived_steps` retains excluded declarations. `Step.dependency_origins` records each dependency's `script`, `declared`, `include` (with entry path), or `environment` origins.
+
+The serialized `dependencies` object carries `valid`, `complete`, `tasks`, `edges`, `boundaries`, `archived_tasks`, and `findings`. Boundary node IDs are `task:<path>` and `step:<name>`. Each edge retains an `evidence` list: inferred records carry actual owner paths, producer/consumer step names, and `via`; logical records carry the authored declaration. Graph semantics are defined in [the task-file contract](task-file-contract.md#effective-dependencies).
+
+`_task_snapshot.py` adapts filesystem/state operations: mutation preflight edits an in-memory tree, then requires a valid graph before writes; frontier state reads only the parent-owned steps and their producer closure. Parsing never imports reproduction or runs configured shell commands. Structural tree JSON marks `dependencies_complete: false` and leaves `effective_depends_on: null` until a resolved snapshot is available. Unreadable tasks remain parse-error nodes so a partial tree cannot advertise readiness. Hook relevance/reconciliation uses unresolved graph inspection; explicit dependency commands perform authoritative resolved validation.
 
 ### Validation suite: `_task_validate.py`
 
@@ -285,6 +293,8 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `_artifacts.py` | Task-companion discovery, secure resolution, watcher ownership, MIME classification, and bounded standalone packing |
 | `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
 | `_task_validate.py` | Validation suite — one owner per validity rule, single message source; owns the shared `Finding` shape |
+| `_task_dependencies.py` | Pure hierarchical dependency composition, provenance, cycles, task ordering and readiness |
+| `_task_snapshot.py` | Mutation preflight and parent-step freshness adapters |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
 | `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering, tier editing |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
@@ -322,6 +332,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `test_worktree_selector.py` | Worktree selector UI and live refresh |
 | `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
+| `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `test_repro_runner.py` | Runner — hash cache, status classification, target selection, tier editing, and, when pytask is installed, build, rerun, and lock behavior |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |
