@@ -759,7 +759,7 @@ def test_step_reader_evidence_disclosure_and_file_metadata(browser, workspace, w
       const s=_reproData.graph.steps.find(s=>s.name==='step-0-0');s.kind='check';
       s.dependency_origins={'data/source.csv':[{kind:'declared'}]};
       const entry=_reproData.status.steps.find(s=>s.name==='step-0-0');
-      Object.assign(entry,{status:'fresh',reason:'up to date',log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit',evidence:{'review.md':'digest'}}});
+      Object.assign(entry,{status:'fresh',reason:'up to date',log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit',evidence:{'review.md':'digest'}},boundary_inputs:[{logical:'${OUT}/saved-input.csv',resolved:'out/saved-input.csv',provenance:'existing',producer:'upstream-step'}]});
       renderReproDetail('step-0-0');
     }""")
     assert 'fresh' in page.locator('.repro-status-line').inner_text()
@@ -767,6 +767,9 @@ def test_step_reader_evidence_disclosure_and_file_metadata(browser, workspace, w
     evidence = page.locator('[data-detail-section=evidence]').inner_text()
     assert 'Reviewed documentation-only edit' in evidence and 'review.md' in evidence
     assert 'Actual execution log' in evidence and 'Last run' in evidence
+    saved_input = page.locator('[data-detail-section=evidence] .repro-file-name a')
+    assert saved_input.get_attribute('href').endswith('/out/saved-input.csv')
+    assert '${OUT}/' in evidence
     assert 'Declared input' in page.locator('[data-detail-section=inputs]').inner_text()
     assert '[object Object]' not in page.locator('#repro-detail').inner_text()
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
