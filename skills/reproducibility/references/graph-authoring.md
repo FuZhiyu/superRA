@@ -27,7 +27,6 @@ Validate declarations and the effective dependency graph before building: `super
 
 Present a new or restructured graph for the researcher's decisions on required work and the input boundary. Apply the coverage rule in [protect-and-completion.md](protect-and-completion.md) when selecting tasks.
 
-- Export the graph into `## Results` with `superra repro dag --mermaid`.
 - Use the dashboard DAG navigator for task/step expansion and evidence; graph comments use the shared task reader's Reproduction section.
 
 ## Acting on graph comments
