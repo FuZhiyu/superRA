@@ -1,6 +1,6 @@
 ---
 title: "Teach One Dependency Model and Reviewed Reuse"
-status: implemented
+status: approved
 depends_on: []
 ---
 
