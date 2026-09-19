@@ -8,7 +8,7 @@ depends_on: []
 
 Integrate task reading and dependency inspection into one workspace, with Tree and DAG as alternative navigators sharing selection and task content, and flexible task/step expansion in projects with 500 steps across 50 owner tasks.
 
-- Implement the [interaction contract and acceptance checks](attachments/design.md): Tree/DAG navigation, shared task reader and comments, independent selection/expansion/focus actions, combined subtree/tier filtering, persistent inspection, and navigation recovery. Remove the duplicate reproduction overview and subtree picker; make existing task-page dependency entry points use the same graph.
+- Implement the [interaction contract and acceptance checks](attachments/design.md): Tree/DAG navigation, shared task reader and comments, independent selection and expansion, a visible project overview, persistent inspection, and navigation recovery. Remove the duplicate reproduction overview and subtree picker; make existing task-page dependency entry points use the same graph.
 - Group step cards by owner task with collapsible summaries, readable initial zoom, routed directional edges, and selection that remains visible beside the inspector. Validate against the heterogeneity graph as well as synthetic fixtures.
 - Consume the [0.5 dependency and freshness contract](../../attachments/v05-design.md) from the graph/runner owners; preserve task comments and standalone export. This task owns dashboard presentation and payload integration, not a second dependency or freshness implementation.
 - Expose logical-only tasks/edges, parent-owned steps, invalid combined cycles, and fresh-by-acceptance evidence without additional status vocabulary.
