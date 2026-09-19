@@ -29,8 +29,7 @@ uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/super
 Run the committed `./superRA/superra` wrapper created above — contributors inside the superRA checkout substitute `uv run --script skills/task-tree/scripts/cli.py`. Every `superra …` example below and in the references denotes it:
 
 ```bash
-./superRA/superra task tree            # tree with status badges (required reproduction tier marked too)
-./superRA/superra task tree --tier required  # only required-registered tasks
+./superRA/superra task tree            # tree with status badges
 ./superRA/superra task frontier        # ready tasks and actionable parent-owned steps
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
@@ -72,7 +71,7 @@ Field-by-field anatomy and body-section ownership: `references/task-file-contrac
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Validate tree structure, fix status inconsistencies, diagnose orphaned `depends_on` entries | `references/commands.md §Diagnostics` |
-| Rebuild steps, inspect change impact, accept reviewed results, or set reproduction tiers | [commands.md §Reproduction](references/commands.md#reproduction) |
+| Rebuild steps, inspect change impact, or accept reviewed results | [commands.md §Reproduction](references/commands.md#reproduction) |
 | Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
 | Task companion-file classification, placement, reproducibility, promotion, and maturation | `../using-superra/references/task-companion-files.md` |
 | Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |

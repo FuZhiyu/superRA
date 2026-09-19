@@ -36,7 +36,7 @@ def pytask_execute_task_setup(session, task):
         # Metadata may appear after a scoped build. Reuse its full-byte evidence
         # without rewriting the successful lock into a sidecar-based baseline.
         local = compute_status(graph, paths, targets=[f'{step.task_path or "."}#{step.name}'],
-                               tier='all', cache=task.attributes['superra_cache'],
+                               cache=task.attributes['superra_cache'],
                                completed_locks=session.config.get('_superra_completed', {})).entry(step.name)
         if local and local.status == 'fresh':
             raise SkippedUnchanged
@@ -44,7 +44,7 @@ def pytask_execute_task_setup(session, task):
     if step.name not in ledger['steps']:
         return
     entry = compute_status(
-        graph, paths, targets=[f'{step.task_path or "."}#{step.name}'], tier='all', upstream=True,
+        graph, paths, targets=[f'{step.task_path or "."}#{step.name}'], upstream=True,
         cache=task.attributes['superra_cache'], acceptance_ledger=ledger,
         completed_locks=session.config.get('_superra_completed', {}),
     ).entry(step.name)

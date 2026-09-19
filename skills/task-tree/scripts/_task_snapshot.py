@@ -30,7 +30,7 @@ def own_step_states(graph, plan_root):
     if not names or not graph.dependencies.valid:
         return {}
     targets = [f'{graph.step(name).task_path or "."}#{name}' for name in names]
-    report = compute_status(graph, runner_paths(plan_root.resolve().parent), tier="all", targets=targets, upstream=True)
+    report = compute_status(graph, runner_paths(plan_root.resolve().parent), targets=targets, upstream=True)
     return {e.step.name: e.status for e in report.entries}
 
 

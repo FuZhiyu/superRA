@@ -1,6 +1,6 @@
 # Bounded Adoption
 
-Start with one producer and one meaningful `kind: check` in an `on-demand` task, with a named saved-input boundary. Keep upstream reconstruction and promotion outside that pilot unless requested. Follow [graph authoring](graph-authoring.md) and [scoped verification](../SKILL.md#build-and-status).
+Start with one producer and one meaningful `kind: check` in one task, with a named saved-input boundary. Keep upstream reconstruction outside that pilot unless requested. Follow [graph authoring](graph-authoring.md) and [scoped verification](../SKILL.md#build-and-status).
 
 ## Verification Recipe
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Runner state for the reproduction graph: hashes, lock reading, status.
 
-Stdlib only, so ``repro status`` / ``explain`` / ``dag`` / ``tier`` — and the
+Stdlib only, so ``repro status`` / ``explain`` / ``dag`` — and the
 `task read` and dashboard views that consume their JSON — run without pytask.
 Only ``repro build`` needs the engine; it lives in ``repro_run.py``.
 
@@ -26,12 +26,10 @@ from pathlib import Path
 from typing import Iterable
 
 if __package__:
-    from ._repro import REPRO_SECTION, TIERS, Graph, Step, normalize_tier
-    from ._task_io import parse_body_sections, resolve_path
+    from ._repro import Graph, Step
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
-    from _repro import REPRO_SECTION, TIERS, Graph, Step, normalize_tier
-    from _task_io import parse_body_sections, resolve_path
+    from _repro import Graph, Step
 
 try:  # Python 3.11+
     import tomllib
@@ -436,7 +434,6 @@ class StepStatus:
         return {
             "name": self.step.name,
             "task": self.step.task_path,
-            "tier": self.step.tier,
             "kind": self.step.kind,
             "cmd": self.step.cmd_logical,
             "status": self.status,
@@ -462,7 +459,6 @@ class StepStatus:
 @dataclass
 class StatusReport:
     project_root: Path
-    tier: str
     graph: Graph
     entries: list[StepStatus] = field(default_factory=list)
     targets: list[str] = field(default_factory=list)
@@ -474,13 +470,11 @@ class StatusReport:
     def reported(self) -> list[StepStatus]:
         if self.selected is not None:
             return [e for e in self.entries if e.step.name in self.selected]
-        if self.tier == "all":
-            return self.entries
-        return [e for e in self.entries if e.step.tier == self.tier]
+        return self.entries
 
     @property
     def external_inputs(self) -> list:
-        """Boundary inputs of the reported steps, so the tier scopes both lists."""
+        """Boundary inputs of the reported steps, so the selection scopes both lists."""
         names = {e.step.name for e in self.reported}
         return [
             e
@@ -508,7 +502,6 @@ class StatusReport:
         summary["total"] = len(reported)
         return {
             "root": str(self.project_root),
-            "tier": self.tier,
             "targets": self.targets,
             "upstream": self.upstream,
             "boundary_inputs": self.boundary_inputs,
@@ -524,7 +517,6 @@ def compute_status(
     graph: Graph,
     paths: RunnerPaths,
     *,
-    tier: str = "required",
     targets: Iterable[str] = (),
     cache: HashCache | None = None,
     acceptance_ledger: dict | None = None,
@@ -532,9 +524,8 @@ def compute_status(
     upstream: bool = False,
 ) -> StatusReport:
     """Classify a selection against saved inputs, optionally including producers."""
-    tier = normalize_tier(tier)
     targets = list(targets)
-    names, unknown = select_steps(graph, targets, tier, include_ancestors=upstream)
+    names, unknown = select_steps(graph, targets, include_ancestors=upstream)
     if unknown:
         raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
     needed = set(names)
@@ -545,7 +536,7 @@ def compute_status(
     outputs = output_nodes(graph)
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
     report = StatusReport(
-        project_root=paths.project_root, tier=tier, graph=graph,
+        project_root=paths.project_root, graph=graph,
         targets=targets, selected=selected, upstream=upstream,
     )
 
@@ -743,15 +734,14 @@ def _plural(head: str, extra: int) -> str:
 # ---------------------------------------------------------------------------
 
 def select_steps(
-    graph: Graph, targets: Iterable[str], tier: str, *, include_ancestors: bool = False
+    graph: Graph, targets: Iterable[str], *, include_ancestors: bool = False
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
     A target is a step name or a task path (that task and its descendants).
     Qualified task#step targets name one step. Ancestors are opt-in.
-    The tier filter only chooses the default selection.
+    No targets selects every active step; the CLI requires explicit targets.
     """
-    tier = normalize_tier(tier)
     targets = [t for t in targets if t]
     unknown: list[str] = []
     selected: set[str] = set()
@@ -773,7 +763,7 @@ def select_steps(
                 for s in graph.steps
                 if not task_path or s.task_path == task_path or s.task_path.startswith(f"{task_path}/")
             ]
-            task_exists = bool(owned) or bool(
+            task_exists = bool(owned) or not task_path or bool(
                 graph.dependencies and task_path in graph.dependencies.tasks
                 and task_path not in graph.dependencies.archived
             )
@@ -789,9 +779,7 @@ def select_steps(
             else:
                 unknown.append(target)
     else:
-        selected = {
-            s.name for s in graph.steps if tier == "all" or s.tier == tier
-        }
+        selected = {s.name for s in graph.steps}
 
     if not include_ancestors:
         return [s.name for s in graph.steps if s.name in selected], unknown
@@ -827,7 +815,7 @@ _MARKS = {
 def format_status(report: StatusReport) -> str:
     entries = report.reported
     if not entries:
-        return f"No steps registered at tier {report.tier}; no result verified."
+        return "No steps registered; no result verified."
     width = max(len(e.step.name) for e in entries)
     lines = []
     for entry in sorted(entries, key=lambda e: e.step.name):
@@ -844,7 +832,7 @@ def format_status(report: StatusReport) -> str:
     lines.append("")
     scope = (
         f"for {', '.join(report.targets)}"
-        if report.targets else f"at tier {report.tier}"
+        if report.targets else "for every registered step"
     )
     scope += " (including producer ancestors)" if report.upstream else " (selected steps only)"
     lines.append(f"{len(entries)} step(s) {scope}: {counts}")
@@ -873,7 +861,7 @@ def format_explain(report: StatusReport, step_name: str) -> str:
     lines = [
         f"{step.name}  [{entry.status}]  {entry.reason}",
         f"  task:  {step.task_path or '(root)'}",
-        f"  tier:  {step.tier}    kind: {step.kind}",
+        f"  kind:  {step.kind}",
         f"  cmd:   {step.cmd_logical}",
     ]
     if step.cmd != step.cmd_logical:
@@ -925,7 +913,7 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
         if not steps:
             return "No steps registered."
         lines = [
-            f"{s.name}  ({s.task_path or '(root)'}, {s.tier})"
+            f"{s.name}  ({s.task_path or '(root)'})"
             for s in sorted(steps, key=lambda s: s.name)
         ]
         lines.append("")
@@ -940,74 +928,14 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
     lines = ["graph LR"]
     for step in steps:
         node = _MERMAID_ID_RE.sub("_", step.name)
-        style = ":::check" if step.kind == "check" else f":::{step.tier}"
+        style = ":::check" if step.kind == "check" else ""
         lines.append(f'    {node}["{step.name}"]{style}')
     for src, dst, via in edges:
         label = via.rsplit("/", 1)[-1]
         lines.append(f"    {_MERMAID_ID_RE.sub('_', src)} -->|{label}| {_MERMAID_ID_RE.sub('_', dst)}")
     lines.append("")
-    lines.append("    classDef required fill:#c8e6c9,stroke:#43a047,color:#1b5e20")
-    lines.append("    classDef on-demand fill:#e0e0e0,stroke:#999,color:#333")
     lines.append("    classDef check fill:#bbdefb,stroke:#1976d2,color:#0d47a1")
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Tier mutation
-# ---------------------------------------------------------------------------
-
-def set_tier(plan_root: Path, task_path: str, tier: str) -> str:
-    """Set the ``tier`` key of a task's ``## Reproduction`` block."""
-    tier = normalize_tier(tier)
-    if tier not in TIERS:
-        raise ReproStateError(f"unknown tier: {tier}")
-    task_file = resolve_path(plan_root, task_path) / "task.md"
-    if not task_file.is_file():
-        raise ReproStateError(f"task not found: {task_path}")
-    text = task_file.read_text(encoding="utf-8")
-    section = parse_body_sections(text).get(REPRO_SECTION)
-    if section is None:
-        raise ReproStateError(
-            f"task {task_path} has no ## {REPRO_SECTION} section to set a tier on"
-        )
-
-    lines = text.split("\n")
-    fence = _fence_bounds(lines)
-    if fence is None:
-        raise ReproStateError(
-            f"task {task_path}: the ## {REPRO_SECTION} body is not one fenced yaml block"
-        )
-    start, end = fence
-    for index in range(start, end):
-        if re.match(r"^tier\s*:", lines[index]):
-            lines[index] = f"tier: {tier}"
-            break
-    else:
-        lines.insert(start, f"tier: {tier}")
-    task_file.write_text("\n".join(lines), encoding="utf-8")
-    return f"{task_path}: tier set to {tier}"
-
-
-def _fence_bounds(lines: list[str]) -> tuple[int, int] | None:
-    """(first line inside, line of the closing fence) of the Reproduction block."""
-    heading = None
-    for index, line in enumerate(lines):
-        if line.strip() == f"## {REPRO_SECTION}":
-            heading = index
-            break
-    if heading is None:
-        return None
-    opened = None
-    for index in range(heading + 1, len(lines)):
-        stripped = lines[index].strip()
-        if opened is None:
-            if stripped.startswith("```"):
-                opened = index
-            elif stripped.startswith("## "):
-                return None
-        elif stripped == "```":
-            return opened + 1, index
-    return None
 
 
 __all__ = [
@@ -1035,7 +963,6 @@ __all__ = [
     "runner_paths",
     "output_nodes",
     "select_steps",
-    "set_tier",
     "spec_hash",
     "spec_node_id",
     "step_nodes",

@@ -1019,12 +1019,11 @@ function nodeOwnRowMatches(el, status, search) {
    Reproduction view — reviewing the build graph the task tree declares
    ──────────────────────────────────────────────────────────────────────
    Two payloads back this view: /api/repro/graph (what the `## Reproduction`
-   sections declare) and /api/repro/status?tier=all (what the committed lock
-   says each step's freshness is, plus its log tail). Both are fetched once and
-   cached here; the tier filter, the node detail panel and the task-page step
-   table all read the same cached pair, so switching tiers or opening a task
-   costs no request. The whole tier is always fetched so the standalone export
-   embeds one snapshot that serves every tier the exported view can select.
+   sections declare) and /api/repro/status (what the committed lock says each
+   step's freshness is, plus its log tail). Both are fetched once and cached
+   here; the node detail panel and the task-page step table read the same cached
+   pair, so opening a task costs no request, and the standalone export embeds
+   one snapshot of each.
 
    Nodes come from the graph and take their state from the status payload, so
    the graph still renders when the runner cannot read the lock (Python < 3.11
@@ -1047,8 +1046,8 @@ var REPRO_GLYPHS = {};
 REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
 
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
-var _reproTier = 'all', _reproSelected = '', _reproLinkOwner = null;
-var _reproNav = { roots: [], tier: 'all', view: 'graph', mode: 'scope', anchor: '', selected: '', expanded: [] };
+var _reproSelected = '', _reproLinkOwner = null;
+var _reproNav = { roots: [], view: 'graph', mode: 'scope', anchor: '', selected: '', expanded: [] };
 var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = false, _reproLegacyReveal = false;
 var _reproContext = [], _reproNotice = '', _reproLayoutCache = null;
 var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
@@ -1062,8 +1061,7 @@ function reproRoots(roots) {
   });
 }
 function reproMatches(step, nav) {
-  return (nav.tier === 'all' || step.tier === nav.tier)
-    && (!nav.roots.length || nav.roots.some(function(root) { return reproWithin(step.task, root); }));
+  return (!nav.roots.length || nav.roots.some(function(root) { return reproWithin(step.task, root); }));
 }
 function reproProject(graph, nav, context) {
   var byName = {}, incoming = {}, outgoing = {};
@@ -1095,7 +1093,6 @@ function reproProject(graph, nav, context) {
     if (!hidden) return;
     var reasons = [];
     if (nav.roots.length && !nav.roots.some(function(r) { return reproWithin(hidden.task, r); })) reasons.push('subtree');
-    if (nav.tier !== 'all' && hidden.tier !== nav.tier) reasons.push('tier');
     if (!reasons.length) reasons.push('focus');
     boundary.push({ edge: e, hidden: hidden.name, visible: visible.has(e.from) ? e.from : e.to,
       direction: visible.has(e.from) ? 'Downstream' : 'Upstream', reasons: reasons });
@@ -1122,10 +1119,10 @@ function reproReadHash() {
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
-    _reproNav={roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',
+    _reproNav={roots:[],view:'graph',mode:'scope',anchor:'',
       expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
       selected:step||(typeof n.selected==='string'?n.selected:'')};
-    _reproTier='all';_reproSelected=_reproNav.selected;_reproContext=[];_reproNotice='';
+    _reproSelected=_reproNav.selected;_reproContext=[];_reproNotice='';
     _reproLinkOwner=step?parseHash():null;
     _reproInspectorClosed=false;_reproEntered=true;
     _reproLegacyReveal=!!step||!!(n.roots||n.mode||n.tier)||!Array.isArray(n.expanded);
@@ -1140,7 +1137,7 @@ function reproReadHash() {
 function reproNavigate(patch, overview) {
   if(patch.expanded)_reproNav.expanded=patch.expanded;
   if(typeof patch.selected==='string')_reproNav.selected=patch.selected;
-  _reproNav.roots=[];_reproNav.tier='all';_reproNav.mode='scope';_reproNav.anchor='';
+  _reproNav.roots=[];_reproNav.mode='scope';_reproNav.anchor='';
   _reproSelected=_reproNav.selected;_reproContext=[];_reproNotice='';
   if(overview)_reproFitNext=true;
   var hash=reproHash();
@@ -1155,7 +1152,7 @@ async function loadReproData(force) {
   var seq = ++_reproLoadSeq;
   var pending = (async function() {
     var g = await fetch(wtUrl('/api/repro/graph'));
-    var s = await fetch(wtUrl('/api/repro/status?tier=all'));
+    var s = await fetch(wtUrl('/api/repro/status'));
     if (!g.ok || !s.ok) throw new Error('reproduction data unavailable');
     var loaded = { graph: await g.json(), status: await s.json() };
     if (seq === _reproLoadSeq) _reproData = loaded;
@@ -1228,9 +1225,9 @@ function reproHierarchy(graph, nav, project) {
   project.steps.forEach(function(s) { (own[s.task] || (own[s.task] = [])).push(s); });
   function matchesTask(p) { return !nav.roots.length || nav.roots.some(function(r) { return reproWithin(p,r); }); }
   var needed = new Set();
-  paths.forEach(function(p) { if (nav.mode === 'scope' && nav.tier === 'all' && matchesTask(p)) needed.add(p); });
+  paths.forEach(function(p) { if (nav.mode === 'scope' && matchesTask(p)) needed.add(p); });
   project.steps.forEach(function(s) { needed.add(s.task); });
-  /* Logical prerequisites remain boundary context even in a narrower tier. */
+  /* Logical prerequisites remain boundary context in a narrower scope. */
   var logical = [];
   Object.values(graph.dependencies && graph.dependencies.boundaries || {}).forEach(function(b) {
     b.edges.forEach(function(e) { (e.evidence || []).forEach(function(r) {
@@ -1824,7 +1821,7 @@ function renderReproDetail(name) {
   var code=escapeHtml(command);if(window.hljs&&hljs.getLanguage('bash'))code=hljs.highlight(command,{language:'bash',ignoreIllegals:true}).value;
   var title=name.replace(/[-_]+/g,' ');title=title.charAt(0).toUpperCase()+title.slice(1);
   host.dataset.step=name;host.dataset.state=state;
-  host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+' · '+escapeHtml(step.tier)+'</span></div>'
+  host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+'</span></div>'
     +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
     +'<div class="repro-status-line"><span class="repro-step-state rp-'+state+'"><span class="repro-glyph">'+(REPRO_GLYPHS[state]||'?')+'</span> '+escapeHtml(state)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'
     +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
@@ -1862,7 +1859,7 @@ function reproPathList(paths) {
 }
 
 /* Open the Reproduction view on one step — the target of a task-page step row.
-   A step the current tier filter hides widens the filter rather than landing on
+   A step the current scope hides widens the scope rather than landing on
    a canvas the step is not on. */
 function revealReproStep(name, owner) {
   var wt=ACTIVE_WT;
@@ -1874,7 +1871,7 @@ function revealReproStep(name, owner) {
       if(currentView!=='reproduction')showView('reproduction');
       drawReproView(document.getElementById('view-reproduction'),data);return;
     }
-    _reproNav.roots=[];_reproNav.tier='all';_reproNav.mode='scope';_reproNav.anchor='';
+    _reproNav.roots=[];_reproNav.mode='scope';_reproNav.anchor='';
     _reproInspectorClosed=false;reproRevealOwner(step.task);
     selectReproStep(name);
     if(currentView==='reproduction'){drawReproView(document.getElementById('view-reproduction'),data);_reproViewport.zoom=1;reproCenter();}
@@ -4616,13 +4613,13 @@ async function applyWorktree(wtId, path, artifactPath) {
   ACTIVE_WT = wtId || '';
   var remembered=_reproWorktrees[ACTIVE_WT];
   _workspaceFilters=normalizeWorkspaceFilters(remembered&&remembered.filters);
-  _reproNav=remembered?remembered.nav:{roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
+  _reproNav=remembered?remembered.nav:{roots:[],view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
   _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
   _reproReaderFull=!!(remembered&&remembered.readerFull&&_reproReaderPreference!==false);
   reproSizeWorkspace();
   document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
   document.getElementById('workspace').classList.toggle('dag-reader-closed',_reproReaderClosed);
-  _reproEntered=!!remembered;_reproSelected=_reproNav.selected;_reproTier=_reproNav.tier;
+  _reproEntered=!!remembered;_reproSelected=_reproNav.selected;
   _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproContext=remembered?remembered.context:[];_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproFitNext=!remembered;
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */

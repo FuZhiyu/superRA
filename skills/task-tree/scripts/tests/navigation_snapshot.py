@@ -15,12 +15,12 @@ import plan_dashboard as dashboard
 def capture(source):
     state = dashboard._build_worktree_state('graph-only', source)
     raw = dashboard._repro_graph_payload(state)
-    status = dashboard._repro_status_payload(state, 'all')
+    status = dashboard._repro_status_payload(state)
     dependencies = raw['dependencies']
     graph = {
         'tasks': raw['tasks'],
         'steps': [{
-            'name': s['name'], 'task': s['task'], 'tier': s['tier'], 'kind': s['kind'],
+            'name': s['name'], 'task': s['task'], 'kind': s['kind'],
             'cmd': '[command omitted from graph-only fixture]',
             'deps': [{'logical': d['logical']} for d in s['deps']],
             'outs': [{'path': {'logical': o['path']['logical']},
@@ -30,7 +30,7 @@ def capture(source):
         'dependencies': dependencies, 'findings': raw['findings'], 'external_inputs': [],
     }
     clean_status = {
-        'tier': 'all', 'ok': status['ok'], 'summary': status['summary'],
+        'ok': status['ok'], 'summary': status['summary'],
         'findings': status['findings'],
         'steps': [{'name': s['name'], 'status': s['status'], 'reason': s['status'],
                    'duration': s.get('duration'), 'last_run': s.get('last_run')}

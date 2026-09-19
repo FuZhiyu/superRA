@@ -104,7 +104,7 @@ Commit figures to `attachments/` beside the task's `task.md` and embed relative 
 
 **Exclude archived tasks and their subtrees from the active graph.** Keep declarations for direct/transitive downstream warnings. Their consumed artifacts become boundary inputs: available files remain usable, missing files still block execution. Archival itself does not create a blocking dependency or cycle.
 
-**Reject incomplete or cyclic graphs before dispatch or build selection.** Task/step/tier filters cannot bypass global validation. Structural `task tree` remains available without resolving shell configuration; `task read`, frontier, DAG, dependency checks, and mutation preflight resolve one shared snapshot. Invalid declarations stay readable with their findings.
+**Reject incomplete or cyclic graphs before dispatch or build selection.** Task/step target selection cannot bypass global validation. Structural `task tree` remains available without resolving shell configuration; `task read`, frontier, DAG, dependency checks, and mutation preflight resolve one shared snapshot. Invalid declarations stay readable with their findings.
 
 ## Reproduction Section
 
@@ -113,7 +113,6 @@ The build unit is a **step**. File-derived edges also contribute task prerequisi
 **The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
 
 ```yaml
-tier: required
 steps:
   - name: build-panel
     cmd: julia --project=. Code/build_panel.jl
@@ -140,7 +139,6 @@ The dashboard reveals and selects the step, and rendered step rows expose matchi
 
 | Key | Value |
 |---|---|
-| `tier` | `required` or `on-demand` (default `on-demand`). `required` selects the task's steps for the default build and completion gate; `on-demand` registers them for explicit execution. Legacy `canon` and `local` values remain accepted aliases; readers normalize them, and tier mutations write the new names. |
 | `steps` | List of step mappings. |
 
 ### Step keys
@@ -215,9 +213,9 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out.
 - **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
 - **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
-- **Keys and config:** an unknown section, step, or `reproduction:` key; an unknown tier; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
+- **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
+**`[WARNING]`** — a retired `tier:` section key, which is ignored; a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 

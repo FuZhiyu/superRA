@@ -255,9 +255,9 @@ def test_logical_prerequisites_do_not_expand_replay_and_archival_cannot_be_targe
     task(root, "old", status="archived", steps=[("old", [], ["old.txt"])])
     current = graph(root)
     assert current.dependencies.prerequisites("target") == ["logical"]
-    assert select_steps(current, ["target#target"], "all") == (["target"], [])
-    assert select_steps(current, ["old"], "all") == ([], ["old"])
-    assert "old" not in select_steps(current, [], "all")[0]
+    assert select_steps(current, ["target#target"]) == (["target"], [])
+    assert select_steps(current, ["old"]) == ([], ["old"])
+    assert "old" not in select_steps(current, [])[0]
 
 
 def test_archived_logical_warning_reaches_inheriting_descendants(tmp_path):

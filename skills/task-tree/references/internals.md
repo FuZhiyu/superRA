@@ -242,7 +242,7 @@ The wrapper's `dashboard` subcommand routes straight to `plan_dashboard.py` via 
 
 **Opening files locally.** Loopback-bound, non-doc-mode server: the card-head `Open` button, body file links, attachment links, and the reading pane's `Open` button hand the file to the OS default application for its type; the header `VS Code` button opens the active task's file in the window already holding that worktree (`SUPERRA_EDITOR` overrides the `code` executable for a fork such as `cursor`). Modifier or middle click keeps the `vscode://` link. Any other bind — off-loopback `--host`, doc-mode, standalone export — leaves every control on `vscode://`. Known gap: an SSH port-forward is indistinguishable from a local request, so an open runs on the server's machine.
 
-**Task DAG navigator.** Tree and Graph share search, task/status filters, task/step selection, the reader, comments, and attachments. Tree prioritizes reading with a hideable sidebar; Graph prioritizes the map with hideable details. Board is removed. The DAG projects the dependency snapshot through independently folded task containers. Its hash state stores layout, task/status filters, expansion, and selection; legacy filters normalize to the full project map; worktree-local state retains viewport and reader preferences. It is rendered client-side from two read-only routes: `/api/repro/graph` (the `_repro.graph_to_dict` shape) and `/api/repro/status?tier=all` (the `compute_status(...).to_dict()` shape, plus a per-step `log_tail` the dashboard adds so the node detail panel needs no third route). The client fetches all tiers once; the standalone export embeds the same project-wide graph and state snapshot. Reading either route never creates `.superra-repro/` or its `.gitignore` entry — only `superra repro` does — and never needs pytask; without `tomllib` the status payload carries `unavailable` and every step reads `unknown`. A build is cached per worktree for two seconds under the tree's task-file and `config.yaml` mtimes, so the request pair the view opens with resolves `reproduction.vars` once; the window stays short because the environment those vars read is in no signature.
+**Task DAG navigator.** Tree and Graph share search, task/status filters, task/step selection, the reader, comments, and attachments. Tree prioritizes reading with a hideable sidebar; Graph prioritizes the map with hideable details. Board is removed. The DAG projects the dependency snapshot through independently folded task containers. Its hash state stores layout, task/status filters, expansion, and selection; legacy filters normalize to the full project map; worktree-local state retains viewport and reader preferences. It is rendered client-side from two read-only routes: `/api/repro/graph` (the `_repro.graph_to_dict` shape) and `/api/repro/status` (the `compute_status(...).to_dict()` shape, plus a per-step `log_tail` the dashboard adds so the node detail panel needs no third route). The client fetches both once; the standalone export embeds the same project-wide graph and state snapshot. Reading either route never creates `.superra-repro/` or its `.gitignore` entry — only `superra repro` does — and never needs pytask; without `tomllib` the status payload carries `unavailable` and every step reads `unknown`. A build is cached per worktree for two seconds under the tree's task-file and `config.yaml` mtimes, so the request pair the view opens with resolves `reproduction.vars` once; the window stays short because the environment those vars read is in no signature.
 
 The view refreshes on `repro-updated`, which the watcher emits for exactly two changes. A build rewrites `pytask.lock` at the project root, outside the watched plan root: the watcher loops over `awatch` sessions with that file in its set, and while the file does not yet exist the session also yields on its timeout, so the tick that notices a first build announces it and re-enters watching the lock. A `## Reproduction` edit moves the graph: each changed task is tested for the section before and after its reparse, so adding and removing one both count and an edit elsewhere costs the view nothing.
 
@@ -307,7 +307,7 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `_repro_hooks.py` | Optional pytask setup/teardown integration for reuse and verified receipts |
 | `_task_snapshot.py` | Mutation preflight and parent-step freshness adapters |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
-| `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering, tier editing |
+| `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
 | `_worktree_discovery.py` | Worktree discovery — enumerate git worktrees, identify those with a task root |
 
@@ -321,11 +321,11 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `task_create.py` | Create a new task directory with template `task.md` |
 | `task_update.py` | Update frontmatter fields on an existing task |
 | `task_add_result.py` | Append a finding to a task's `## Results` section |
-| `task_query.py` | Query the tree: `--tree` (required-tier badge, `--tier` filter), `--frontier`, `--dag`, `--json` |
+| `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |
-| `repro_run.py` | `superra repro` — pytask build bridge and stdlib status/explain/impact/accept/revoke/dag/tier commands |
+| `repro_run.py` | `superra repro` — pytask build bridge and stdlib status/explain/impact/accept/revoke/dag commands |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |
@@ -346,5 +346,5 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
-| `test_repro_runner.py` | Runner — hash cache, status classification, target selection, tier editing, and, when pytask is installed, build, rerun, and lock behavior |
+| `test_repro_runner.py` | Runner — hash cache, status classification, target selection, and, when pytask is installed, build, rerun, and lock behavior |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

@@ -45,7 +45,7 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
-from _repro import CONFIG_FILENAME, REPRO_SECTION, TIER_INPUTS, build_graph, graph_to_dict, normalize_tier
+from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
 from _repro_state import (
     LOCK_FILENAME,
     STATUSES,
@@ -1410,7 +1410,6 @@ async def children_graph(request: Request, root: str):
 
 REPRO_LOG_TAIL_LINES = 20
 REPRO_LOG_TAIL_BYTES = 64 * 1024
-REPRO_TIERS = (*TIER_INPUTS, "all")
 
 # How long one build may serve later requests. The view opens with two requests
 # milliseconds apart and each build resolves `reproduction.vars`, which the
@@ -1470,7 +1469,7 @@ def _repro_graph_payload(state: WorktreeState) -> dict:
     return graph_to_dict(_repro_graph(state))
 
 
-def _repro_status_payload(state: WorktreeState, tier: str) -> dict:
+def _repro_status_payload(state: WorktreeState) -> dict:
     """Runner state for every declared step, each with its log tail.
 
     Degrades instead of failing when the lock cannot be read (Python < 3.11 has
@@ -1483,14 +1482,13 @@ def _repro_status_payload(state: WorktreeState, tier: str) -> dict:
     paths = runner_paths(project_root)
     findings = [f.to_dict() for f in graph.findings]
     try:
-        report = compute_status(graph, paths, tier=tier, upstream=True)
-        report.selected = {e.step.name for e in report.entries if tier == 'all' or e.step.tier == tier}
+        report = compute_status(graph, paths, upstream=True)
+        report.selected = {e.step.name for e in report.entries}
     except ReproStateError as exc:
         summary = {name: 0 for name in STATUSES}
         summary["total"] = 0
         return {
             "root": str(project_root),
-            "tier": tier,
             "ok": False,
             "summary": summary,
             "steps": [],
@@ -1518,15 +1516,12 @@ async def repro_graph(request: Request):
 
 
 @app.get("/api/repro/status")
-async def repro_status(request: Request, tier: str = "all"):
-    """Per-step freshness at a reproduction tier, accepting legacy aliases."""
-    if tier not in REPRO_TIERS:
-        raise HTTPException(status_code=400, detail=f"Unknown tier: {tier}")
-    tier = normalize_tier(tier)
+async def repro_status(request: Request):
+    """Per-step freshness of every registered step."""
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    return await asyncio.to_thread(_repro_status_payload, state, tier)
+    return await asyncio.to_thread(_repro_status_payload, state)
 
 
 # --- Route: GET /files/{path} ----------------------------------------------
@@ -2172,10 +2167,9 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 
     # Reproduction view — a snapshot of the graph and of the freshness state at
-    # export time. The client asks for the whole tier and filters client-side,
-    # so one status fragment serves every tier the exported view can select.
+    # export time.
     fragments["/api/repro/graph"] = _repro_graph_payload(state)
-    fragments["/api/repro/status?tier=all"] = _repro_status_payload(state, "all")
+    fragments["/api/repro/status"] = _repro_status_payload(state)
 
     return fragments
 

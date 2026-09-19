@@ -49,12 +49,12 @@ def workspace(tmp_path_factory):
             name = f'step-{i}-{j}'
             steps.append({'name': name, 'cmd': f'echo {name}', 'deps': [f'out/{i}-{j-1}.txt'] if j else [], 'outs': [f'out/{i}-{j}.txt']})
         import yaml
-        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n---\n\n## Objective\n\nRead analysis {i}. [Own step](#step-step-{i}-0). [Other step](../analysis-1/task.md#step-step-1-2).\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'tier': 'required', 'steps': steps}) + '```\n')
+        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n---\n\n## Objective\n\nRead analysis {i}. [Own step](#step-step-{i}-0). [Other step](../analysis-1/task.md#step-step-1-2).\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'steps': steps}) + '```\n')
     for path in ('analysis-0/phase-a', 'analysis-0/phase-b', 'analysis-0/phase-a/leaf'):
         owner = root / path
         owner.mkdir(parents=True, exist_ok=True)
         name = path.replace('/', '-')
-        (owner / 'task.md').write_text(f'---\ntitle: {path}\nstatus: in-progress\n---\n\n## Objective\n\nInspect nested work.\n\n## Reproduction\n\n```yaml\ntier: required\nsteps:\n  - name: {name}\n    cmd: echo nested\n    outs: [out/{name}.txt]\n```\n')
+        (owner / 'task.md').write_text(f'---\ntitle: {path}\nstatus: in-progress\n---\n\n## Objective\n\nInspect nested work.\n\n## Reproduction\n\n```yaml\nsteps:\n  - name: {name}\n    cmd: echo nested\n    outs: [out/{name}.txt]\n```\n')
     previous = dashboard.PLAN_ROOT
     dashboard.PLAN_ROOT = root
     dashboard.rebuild_tree()
@@ -317,8 +317,8 @@ def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace
       const ids=['heterogeneity','treasury','elasticity','paper','downstream'];
       const titles=['Heterogeneity estimates','Treasury bounds','Elasticity estimates','Reproduce paper','Publish results'];
       const pairs=[[0,1],[0,2],[0,3],[1,3],[2,3],[3,0],[3,4]];
-      const graph={steps:ids.map((id,i)=>({name:id,task:id,tier:'required',kind:'command'})),step_edges:pairs.map(([a,b])=>({from:ids[a],to:ids[b],via:'out.csv'})),dependencies:{tasks:ids.map((id,i)=>({path:id,title:titles[i],status:'in-progress'})),boundaries:{}}};
-      _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+      const graph={steps:ids.map((id,i)=>({name:id,task:id,kind:'command'})),step_edges:pairs.map(([a,b])=>({from:ids[a],to:ids[b],via:'out.csv'})),dependencies:{tasks:ids.map((id,i)=>({path:id,title:titles[i],status:'in-progress'})),boundaries:{}}};
+      _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
     }""")
     assert page.locator('#rp-arrow-cycle').get_attribute('markerUnits') == 'userSpaceOnUse'
@@ -362,7 +362,7 @@ def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes
     enter(page, workspace['url'])
     if page.locator('#task-preview').is_visible(): page.click('#navigation-toggle')
     page.evaluate("""graph => {
-      _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+      _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
     }""", routing_fixture('components'))
     page.locator('[data-rp-action=fit]').click()

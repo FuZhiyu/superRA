@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["pytask>=0.6,<0.7", "pytask-parallel", "pyyaml"]
 # ///
-"""The `superra repro` command surface: build, status, explain, dag, tier.
+"""The `superra repro` command surface: build, status, explain, dag.
 
 `cli.py` routes `repro` here. Only ``build`` imports pytask; when the current
 interpreter cannot (``cli.py`` declares pyyaml alone), ``main`` re-execs this
@@ -33,7 +33,7 @@ from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _repro import TIER_INPUTS, Graph, Out, Step, build_graph, normalize_tier  # noqa: E402
+from _repro import Graph, Out, Step, build_graph  # noqa: E402
 from _repro_state import (  # noqa: E402
     TOML_AVAILABLE,
     HashCache,
@@ -51,7 +51,6 @@ from _repro_state import (  # noqa: E402
     render_dag,
     runner_paths,
     select_steps,
-    set_tier,
     output_nodes,
     spec_hash,
     spec_node_id,
@@ -62,7 +61,8 @@ from _repro_state import (  # noqa: E402
 from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
-TIERS = (*TIER_INPUTS, "all")
+NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every registered step"
+TARGET_HINT = "name task or task#step targets ('.' selects every registered step)"
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +424,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     build = sub.add_parser("build", help="Rebuild stale steps")
     build.add_argument("targets", nargs="*", help="Task paths (including descendants) or task#step selectors")
-    build.add_argument("--tier", choices=TIERS)
+    build.add_argument("--tier", help=argparse.SUPPRESS)
     build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
     build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
@@ -433,7 +433,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Report each step's freshness")
     status.add_argument("targets", nargs="*", help="Task paths or task#step selectors; saved inputs outside scope")
-    status.add_argument("--tier", choices=TIERS)
+    status.add_argument("--tier", help=argparse.SUPPRESS)
     status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
@@ -462,11 +462,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     dag = sub.add_parser("dag", help="Render the step graph")
     dag.add_argument("--mermaid", action="store_true")
-
-    tier = sub.add_parser("tier", help="Set a task's reproduction tier")
-    tier.add_argument("task_path")
-    tier.add_argument("tier", choices=TIER_INPUTS)
     return parser
+
+
+def _command_word(argv: list[str]) -> str | None:
+    """The subcommand token, skipping ``--plan-root`` / ``--root <path>``."""
+    skip = False
+    for token in argv:
+        if skip:
+            skip = False
+        elif token in ("--plan-root", "--root"):
+            skip = True
+        elif not token.startswith("-"):
+            return token
+    return None
 
 
 def _unsupported_here(command: str) -> bool:
@@ -512,11 +521,14 @@ def _reexec(argv: list[str], command: str) -> int:
 
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if _command_word(argv) == "tier":
+        build_parser().error(f'reproduction tiers are retired; {TARGET_HINT}')
     args = build_parser().parse_args(argv)
     if args.command in ('build', 'status'):
-        if args.targets and args.tier is not None:
-            build_parser().error('explicit targets and --tier are mutually exclusive')
-        args.tier = args.tier or 'required'
+        if args.tier is not None:
+            build_parser().error(f'--tier is retired; {TARGET_HINT}')
+        if not args.targets:
+            build_parser().error(NO_TARGET_ERROR)
     if getattr(args, 'force_all', False):
         build_parser().error('--force-all is retired; use --upstream --force')
 
@@ -532,14 +544,6 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
     project_root = plan_root.resolve().parent
     paths = runner_paths(project_root)
-
-    if args.command == "tier":
-        try:
-            print(set_tier(plan_root, args.task_path, args.tier))
-        except ReproStateError as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            sys.exit(1)
-        return
 
     from _repro_acceptance import bind_sources, source_signature
     signature = source_signature(plan_root) if args.command in ("build", "accept") else None
@@ -585,9 +589,8 @@ def main(argv: list[str] | None = None) -> None:
             for finding in errors:
                 print(f"  {finding.to_text()}", file=sys.stderr)
             sys.exit(1)
-        args.tier = normalize_tier(args.tier)
         try:
-            names, unknown = select_steps(graph, args.targets, args.tier, include_ancestors=args.upstream)
+            names, unknown = select_steps(graph, args.targets, include_ancestors=args.upstream)
         except ReproStateError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
@@ -597,7 +600,7 @@ def main(argv: list[str] | None = None) -> None:
             )
             sys.exit(1)
         if not names:
-            print(f"No steps registered at tier {args.tier}.")
+            print("No steps registered.")
             return
         force_names = names if args.force else []
         try:
@@ -617,14 +620,14 @@ def main(argv: list[str] | None = None) -> None:
     try:
         explain_targets = ()
         if args.command == 'explain':
-            matches, unknown = select_steps(graph, [args.step], 'all')
+            matches, unknown = select_steps(graph, [args.step])
             if unknown or len(matches) != 1:
                 raise ReproStateError(f"unknown step or non-single-step target {args.step!r}")
             args.step = matches[0]
             step = graph.step(args.step)
             explain_targets = [f'{step.task_path or "."}#{step.name}']
         report = compute_status(
-            graph, paths, tier="all" if args.command == "explain" else args.tier,
+            graph, paths,
             targets=args.targets if args.command == "status" else explain_targets,
             upstream=args.upstream if args.command == 'status' else True,
         )

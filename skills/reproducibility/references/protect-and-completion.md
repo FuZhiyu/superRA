@@ -4,7 +4,7 @@
 
 Fold three reproduction decisions into the protection proposal the researcher answers (`skills/superintegrate/references/protect.md` step 3):
 
-- **Required tasks.** Include tasks owning kept-result producers and tasks owning selected protection checks, including check-only tasks. Other tasks stay `on-demand`. Use `superra repro tier <task-path> required`.
+- **Completion targets.** Name the tasks owning kept-result producers and the selected protection checks, including check-only tasks.
 - **A `kind: check` step for each drift test the researcher selects.** A file-consumer edge alone does not select a protection check.
 - **The boundary.** Name the inputs the project receives rather than rebuilds, and get the researcher's agreement that they are not reproducible here.
 
@@ -15,11 +15,11 @@ Record all three in the `integrate(protect)` commit body.
 Run at the IMPLEMENT phase exit, once every task is approved:
 
 ```bash
-superra repro build --tier required --upstream
-superra repro status --tier required --upstream
+superra repro build <deliverable-task>... '<check-task>#<check-step>'... --upstream
+superra repro status <deliverable-task>... '<check-task>#<check-step>'... --upstream
 ```
 
-Verify that the selection covers kept results and selected protection checks. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-model.md#reviewed-acceptance). On-demand claims require their own [scoped verification](../SKILL.md#build-and-status).
+Target the final deliverable tasks and the selected protection checks — the Protect completion targets once recorded; `--upstream` adds their producer chains. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-model.md#reviewed-acceptance). Claims outside these targets require their own [scoped verification](../SKILL.md#build-and-status).
 
 A failure blocks the completion menu:
 

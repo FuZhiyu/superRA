@@ -1458,19 +1458,18 @@ class TestTaskQuery:
             task_query.render_dag(root, subtree_path="99-nonexistent")
         assert exc_info.value.code == 1
 
-    # --- Reproduction tier badge / filter ---
+    # --- Reproduction registration in the tree views ---
 
-    def _canon_and_plain(self, tmp_path):
-        """A canon-registered task alongside a plain, unregistered one."""
+    def _registered_and_plain(self, tmp_path):
+        """A step-registered task alongside a plain, unregistered one."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
-        c = root_dir / "01-canon"
+        c = root_dir / "01-registered"
         c.mkdir()
         _write_task_md(
-            c / "task.md", "Canon Task", "not-started",
+            c / "task.md", "Registered Task", "not-started",
             reproduction=(
-                "tier: canon\n"
                 "steps:\n"
                 "  - name: build\n"
                 "    cmd: sh build.sh\n"
@@ -1482,32 +1481,22 @@ class TestTaskQuery:
         _write_task_md(p / "task.md", "Plain Task", "not-started")
         return root_dir
 
-    def test_tree_marks_canon_task_with_badge(self, tmp_path, capsys):
-        """`task tree` marks a canon-registered task with a `[required]` badge."""
-        root_dir = self._canon_and_plain(tmp_path)
+    def test_tree_carries_no_reproduction_badge(self, tmp_path, capsys):
+        """`task tree` labels registered and plain tasks alike."""
+        root_dir = self._registered_and_plain(tmp_path)
         task_query.main(["--tree", "--plan-root", str(root_dir)])
         out = capsys.readouterr().out
-        assert "01-canon: Canon Task [required]" in out
+        assert "01-registered: Registered Task" in out
         assert "02-plain: Plain Task" in out
-        assert "02-plain: Plain Task [required]" not in out
+        assert "[required]" not in out
 
-    def test_tree_json_tier_field(self, tmp_path):
-        """`tree_to_json` carries `tier`, null for a task with no ## Reproduction."""
-        root_dir = self._canon_and_plain(tmp_path)
+    def test_tree_json_carries_no_tier_field(self, tmp_path):
+        """`tree_to_json` no longer reports a reproduction tier."""
+        root_dir = self._registered_and_plain(tmp_path)
         root = _task_io.walk_plan(root_dir)
         graph = _repro.build_graph(root_dir, root=root, resolve_vars=False)
         data = task_query.tree_to_json(root, graph=graph)
-        tiers = {child["path"]: child["tier"] for child in data["children"]}
-        assert tiers["01-canon"] == "required"
-        assert tiers["02-plain"] is None
-
-    def test_tree_tier_filter_selects_only_that_tier(self, tmp_path, capsys):
-        """`--tier canon` hides tasks not registered at that tier."""
-        root_dir = self._canon_and_plain(tmp_path)
-        task_query.main(["--tree", "--tier", "canon", "--plan-root", str(root_dir)])
-        out = capsys.readouterr().out
-        assert "Canon Task" in out
-        assert "Plain Task" not in out
+        assert all("tier" not in child for child in data["children"])
 
 
 # --- Migration tests ---
@@ -2264,11 +2253,11 @@ class TestTaskRead:
 
 
 class TestTaskReadReproduction:
-    """`task read`'s ``## Reproduction`` block: tier, step states, task edges."""
+    """`task read`'s ``## Reproduction`` block: step states and task edges."""
 
     def _pipeline(self, tmp_path):
-        """Two-task pipeline: 01-build (canon) produces panel.parquet, which
-        02-estimate (local) consumes."""
+        """Two-task pipeline: 01-build produces panel.parquet, which
+        02-estimate consumes."""
         root = tmp_path / "superRA"
         root.mkdir()
         _write_task_md(root / "task.md", "Root", "not-started", objective="Root.")
@@ -2277,7 +2266,6 @@ class TestTaskReadReproduction:
         _write_task_md(
             b / "task.md", "Build", "not-started", objective="Build panel.",
             reproduction=(
-                "tier: canon\n"
                 "steps:\n"
                 "  - name: build-panel\n"
                 "    cmd: sh Code/build.sh\n"
@@ -2291,7 +2279,6 @@ class TestTaskReadReproduction:
             e / "task.md", "Estimate", "not-started",
             objective="Estimate model.", depends_on=["01-build"],
             reproduction=(
-                "tier: local\n"
                 "steps:\n"
                 "  - name: fit-model\n"
                 "    cmd: sh Code/fit.sh\n"
@@ -2316,12 +2303,12 @@ class TestTaskReadReproduction:
         )
         assert data["task"]["reproduction"] is None
 
-    def test_registered_task_shows_tier_and_never_built_step(self, tmp_path):
-        """A registered, never-built task shows its tier and a `missing` step."""
+    def test_registered_task_shows_a_never_built_step(self, tmp_path):
+        """A registered, never-built task shows a `missing` step and no tier."""
         root = self._pipeline(tmp_path)
         target = _task_io.parse_task(root / "01-build" / "task.md", root)
         repro = task_read._reproduction_view(root, target, None)
-        assert repro["tier"] == "required"
+        assert "tier" not in repro
         assert len(repro["steps"]) == 1
         step = repro["steps"][0]
         assert step["name"] == "build-panel"
@@ -2329,7 +2316,7 @@ class TestTaskReadReproduction:
         assert step["reason"] == "never built"
         assert step["outs"] == ["output/panel.parquet"]
         human = task_read.render_human([], target, [], show_ancestors=False, repro=repro)
-        assert "tier: required" in human
+        assert "tier:" not in human
         assert "build-panel: missing — never built" in human
 
     def test_task_edges_are_feeds_and_feeds_on(self, tmp_path):
@@ -2349,7 +2336,7 @@ class TestTaskReadReproduction:
         assert "feeds: 02-estimate" in human
 
     def test_json_reproduction_shape(self, tmp_path):
-        """JSON reproduction carries tier/steps/feeds_on/feeds."""
+        """JSON reproduction carries steps/feeds_on/feeds."""
         root = self._pipeline(tmp_path)
         target = _task_io.parse_task(root / "01-build" / "task.md", root)
         repro = task_read._reproduction_view(root, target, None)
@@ -2357,7 +2344,7 @@ class TestTaskReadReproduction:
             task_read.render_json([], target, [], show_ancestors=False, repro=repro)
         )
         rep = data["task"]["reproduction"]
-        assert rep["tier"] == "required"
+        assert "tier" not in rep
         assert rep["steps"][0]["name"] == "build-panel"
         assert rep["feeds"] == ["02-estimate"]
 
@@ -3173,7 +3160,6 @@ class TestTaskHook:
         task_dir = plan_root / "01-pipeline"
         self._write_repro_task(
             task_dir,
-            "tier: canon\n"
             "steps:\n"
             "  - name: build-panel\n"
             "    cmd: echo build\n"
@@ -4421,7 +4407,7 @@ class TestTaskCheck:
         assert any(f.category == "reproduction" for f in findings)
 
     def test_reproduction_never_built_step_checks_clean(self, tmp_path):
-        """A registered, never-built canon step is runner state, not a finding —
+        """A registered, never-built step is runner state, not a finding —
         a fresh clone checks clean."""
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
@@ -4431,7 +4417,6 @@ class TestTaskCheck:
         _write_task_md(
             d / "task.md", "Build", "not-started",
             reproduction=(
-                "tier: canon\n"
                 "steps:\n"
                 "  - name: build\n"
                 "    cmd: sh build.sh\n"

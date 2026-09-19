@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_snapshot import frontier_rows
-from _repro import TIER_INPUTS, Graph, build_graph, normalize_tier
+from _repro import Graph, build_graph
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
@@ -46,48 +46,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     group.add_argument("--dag", nargs="?", const="", metavar="SUBTREE", help="Render dependency DAG (Mermaid format)")
 
     parser.add_argument("--status", help="Filter by status")
-    parser.add_argument(
-        "--tier",
-        choices=TIER_INPUTS,
-        help="With --tree, filter to tasks registered at this reproduction tier",
-    )
     parser.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
     return parser.parse_args(argv)
-
-
-def _tier_badge(task: Task, graph: Graph | None) -> str:
-    """Badge tasks selected for the default reproduction build."""
-    if graph is not None and graph.tiers.get(task.path) == "required":
-        return " [required]"
-    return ""
 
 
 def print_tree(
     task: Task,
     indent: int = 0,
     status_filter: str | None = None,
-    *,
-    graph: Graph | None = None,
-    tier_filter: str | None = None,
 ) -> None:
-    """Print an indented tree with status icons and, when *graph* is given,
-    a ``[required]`` badge — filterable by *tier_filter* (``graph.tiers[task.path]``)
-    alongside the existing *status_filter*."""
+    """Print an indented tree with status icons, filterable by *status_filter*."""
     effective = task.effective_status()
     icon = STATUS_ICONS.get(effective, "?")
 
     pass_filter = True
     if status_filter and effective != status_filter:
         pass_filter = False
-    if tier_filter and (graph is None or graph.tiers.get(task.path) != tier_filter):
-        pass_filter = False
-
-    badge = _tier_badge(task, graph)
 
     if task.is_root:
         label = task.title or "(root)"
         if pass_filter:
-            print(f"{icon} {label}{badge}")
+            print(f"{icon} {label}")
     else:
         prefix = "  " * indent
         label = task.title or task.slug
@@ -99,10 +78,10 @@ def print_tree(
         else:
             progress = ""
         if pass_filter:
-            print(f"{prefix}{icon} {task.slug}: {label}{progress}{badge}")
+            print(f"{prefix}{icon} {task.slug}: {label}{progress}")
 
     for child in task.children:
-        print_tree(child, indent + 1, status_filter, graph=graph, tier_filter=tier_filter)
+        print_tree(child, indent + 1, status_filter)
 
 
 def _tree_node_line(task: Task, indent: int, marker: str = "") -> str:
@@ -251,12 +230,7 @@ def _find_subtask(task: Task, path: str) -> Task | None:
 
 
 def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
-    """Serialize the task tree to a JSON-compatible dict.
-
-    ``tier`` is the reproduction tier (``"required"`` / ``"on-demand"``) when *graph*
-    is given and the task registers a ``## Reproduction`` section, else
-    ``None``.
-    """
+    """Serialize the task tree to a JSON-compatible dict."""
     sections = parse_body_sections(task.body)
     return {
         "path": task.path,
@@ -274,14 +248,12 @@ def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
         "decisions": sections.get("Decisions", ""),
         "revision_notes": sections.get("Revision Notes", ""),
         "review_notes": sections.get("Review Notes", ""),
-        "tier": graph.tiers.get(task.path) if graph is not None else None,
         "children": [tree_to_json(c, graph=graph) for c in task.children],
     }
 
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    args.tier = normalize_tier(args.tier)
     plan_root = Path(args.plan_root) if args.plan_root else autodetect_plan_root(Path.cwd())
     if plan_root is None:
         print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
@@ -294,13 +266,12 @@ def main(argv: list[str] | None = None) -> None:
     root = walk_plan(plan_root)
 
     if args.tree:
-        # `resolve_vars=False` skips `${VAR}` resolution (no env/shell evaluation)
-        # since only `graph.tiers` is needed here, not resolved dep/out paths.
-        graph = build_graph(plan_root, root=root, resolve_vars=False)
         if args.as_json:
+            # `resolve_vars=False` skips `${VAR}` resolution (no env/shell evaluation).
+            graph = build_graph(plan_root, root=root, resolve_vars=False)
             print(json.dumps(tree_to_json(root, graph=graph), indent=2))
         else:
-            print_tree(root, status_filter=args.status, graph=graph, tier_filter=args.tier)
+            print_tree(root, status_filter=args.status)
 
     elif args.frontier:
         graph = build_graph(plan_root, root=root)

@@ -25,10 +25,10 @@ Validate declarations and the effective dependency graph before building: `super
 
 ## Presenting a graph for review
 
-Present a new or restructured graph for the researcher's decisions on required work and the input boundary. Apply the coverage rule in [protect-and-completion.md](protect-and-completion.md) when selecting tasks.
+Present a new or restructured graph for the researcher's decisions on completion targets and the input boundary. Apply the coverage rule in [protect-and-completion.md](protect-and-completion.md) when naming targets.
 
 - Use the dashboard DAG navigator for task/step expansion and evidence; graph comments use the shared task reader's Reproduction section.
 
 ## Acting on graph comments
 
-A comment anchored to a step is a graph-design finding: fix the section and rerun `superra repro status`. A comment that moves what counts as canonical, or where the boundary sits, is a scope change — carry it back to the task tree instead of quietly re-tiering.
+A comment anchored to a step is a graph-design finding: fix the section and rerun `superra repro status`. A comment that moves what counts as canonical, or where the boundary sits, is a scope change — carry it back to the task tree instead of quietly changing the declarations.

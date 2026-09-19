@@ -6533,7 +6533,6 @@ Read the vendor extract.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: fetch-crsp
     cmd: sh code/fetch.sh
@@ -6563,7 +6562,6 @@ Build the panel.
 ## Reproduction
 
 ```yaml
-tier: local
 steps:
   - name: merge-panel
     cmd: sh code/merge.sh
@@ -6578,9 +6576,9 @@ steps:
 
 @pytest.fixture
 def repro_plan(tmp_path):
-    """A tree declaring three steps across two owner tasks: a canon pair (one a
-    check step) and a local step consuming the canon task's out, so the payload
-    carries a cross-task edge, both tiers, and both step kinds."""
+    """A tree declaring three steps across two owner tasks: a pair (one a check
+    step) and a third step consuming the first task's out, so the payload
+    carries a cross-task edge and both step kinds."""
     root = tmp_path / "superRA"
     root.mkdir()
     (root / "config.yaml").write_text(REPRO_CONFIG, encoding="utf-8")
@@ -6612,9 +6610,8 @@ class TestReproRoutes:
         assert [s["name"] for s in body["steps"]] == [
             "fetch-crsp", "check-ingest", "merge-panel",
         ]
-        assert {t["path"]: t["tier"] for t in body["tasks"]} == {
-            "01-ingest": "required", "02-panel": "on-demand",
-        }
+        assert [t["path"] for t in body["tasks"]] == ["01-ingest", "02-panel"]
+        assert all("tier" not in t for t in body["tasks"])
         # Step edges are inferred from files, including across owner tasks.
         assert {(e["from"], e["to"]) for e in body["step_edges"]} == {
             ("fetch-crsp", "check-ingest"), ("fetch-crsp", "merge-panel"),
@@ -6626,8 +6623,8 @@ class TestReproRoutes:
 
     def test_status_route_serves_the_runner_contract(self, repro_plan):
         with _repro_client(repro_plan) as c:
-            body = c.get("/api/repro/status", params={"tier": "all"}).json()
-        assert body["tier"] == "all"
+            body = c.get("/api/repro/status").json()
+        assert "tier" not in body
         assert body["summary"] == {
             "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "external": 0,
             "total": 3,
@@ -6639,25 +6636,21 @@ class TestReproRoutes:
         # The dashboard's own addition: the node detail panel's log tail rides
         # the status payload, so the view needs no third route.
         assert entry["log_tail"] == ""
-        for key in ("task", "tier", "kind", "cmd", "deps", "outs", "duration"):
+        for key in ("task", "kind", "cmd", "deps", "outs", "duration"):
             assert key in entry
+        assert "tier" not in entry
 
-    def test_status_route_scopes_to_a_tier(self, repro_plan):
+    def test_status_route_serves_every_step_and_ignores_a_legacy_tier_query(
+        self, repro_plan
+    ):
         with _repro_client(repro_plan) as c:
-            canon = c.get("/api/repro/status", params={"tier": "canon"}).json()
-            local = c.get("/api/repro/status", params={"tier": "local"}).json()
-            required = c.get("/api/repro/status", params={"tier": "required"}).json()
-            on_demand = c.get("/api/repro/status", params={"tier": "on-demand"}).json()
-        assert canon == required
-        assert local == on_demand
-        assert required["tier"] == "required"
-        assert on_demand["tier"] == "on-demand"
-        assert [s["name"] for s in canon["steps"]] == ["fetch-crsp", "check-ingest"]
-        assert [s["name"] for s in local["steps"]] == ["merge-panel"]
-
-    def test_status_route_rejects_an_unknown_tier(self, repro_plan):
-        with _repro_client(repro_plan) as c:
-            assert c.get("/api/repro/status", params={"tier": "canonn"}).status_code == 400
+            body = c.get("/api/repro/status").json()
+            legacy = c.get("/api/repro/status", params={"tier": "canon"})
+        assert [s["name"] for s in body["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert legacy.status_code == 200
+        assert legacy.json() == body
 
     def test_status_route_carries_a_bounded_log_tail(self, repro_plan):
         """The node detail panel reads the step's log through this payload, so a
@@ -6668,7 +6661,7 @@ class TestReproRoutes:
             "\n".join(f"line {i}" for i in range(5000)), encoding="utf-8"
         )
         with _repro_client(repro_plan) as c:
-            body = c.get("/api/repro/status", params={"tier": "all"}).json()
+            body = c.get("/api/repro/status").json()
         tail = {s["name"]: s["log_tail"] for s in body["steps"]}
         assert tail["fetch-crsp"].splitlines()[-1] == "line 4999"
         assert len(tail["fetch-crsp"].splitlines()) == 20
@@ -6684,7 +6677,7 @@ class TestReproRoutes:
 
         monkeypatch.setattr(plan_dashboard, "compute_status", _boom)
         with _repro_client(repro_plan) as c:
-            resp = c.get("/api/repro/status", params={"tier": "all"})
+            resp = c.get("/api/repro/status")
         assert resp.status_code == 200
         body = resp.json()
         assert body["steps"] == [] and body["ok"] is False
@@ -6697,14 +6690,14 @@ class TestReproRoutes:
         project_root = repro_plan.parent
         with _repro_client(repro_plan) as c:
             c.get("/api/repro/graph")
-            c.get("/api/repro/status", params={"tier": "all"})
+            c.get("/api/repro/status")
         assert not (project_root / ".superra-repro").exists()
         assert not (project_root / ".gitignore").exists()
 
     def test_tree_with_no_reproduction_sections_serves_empty_payloads(self, plan_root):
         with _repro_client(plan_root) as c:
             graph = c.get("/api/repro/graph").json()
-            status = c.get("/api/repro/status", params={"tier": "all"}).json()
+            status = c.get("/api/repro/status").json()
         assert graph["steps"] == [] and graph["tasks"] == [] and graph["findings"] == []
         assert status["steps"] == [] and status["summary"]["total"] == 0
         assert status["ok"] is True
@@ -6735,9 +6728,7 @@ class TestReproExportSnapshot:
             plan_dashboard.render_standalone_html(repro_plan)
         )
         graph = fragments["/api/repro/graph"]
-        # The client asks for the whole tier and filters client-side, so one
-        # status fragment has to serve every tier the exported view can select.
-        status = fragments["/api/repro/status?tier=all"]
+        status = fragments["/api/repro/status"]
         assert [s["name"] for s in graph["steps"]] == [
             "fetch-crsp", "check-ingest", "merge-panel",
         ]
@@ -6751,7 +6742,7 @@ class TestReproExportSnapshot:
             plan_dashboard.render_standalone_html(plan_root)
         )
         assert fragments["/api/repro/graph"]["steps"] == []
-        assert fragments["/api/repro/status?tier=all"]["steps"] == []
+        assert fragments["/api/repro/status"]["steps"] == []
 
 
 def _extract_css_tokens(css_text):
@@ -7029,8 +7020,8 @@ def _run_repro_render_node(harness_body):
     # supplies just enough DOM and module state for the pure render path.
     shim = (
         "var _workspaceFilters={statuses:[],tasks:null};\n"
-        "var _reproTier='all', _reproSelected='', _reproData=null, pathTitles={};\n"
-        "var window={}; var _reproNav={roots:[],tier:'all',mode:'scope',view:'overview'};\n"
+        "var _reproSelected='', _reproData=null, pathTitles={};\n"
+        "var window={}; var _reproNav={roots:[],mode:'scope',view:'overview'};\n"
         "var _reproContext=[], _reproNotice='', _reproLayoutCache=null, _reproFitNext=true, _reproPreserve='';\n"
         "var activeArtifactPath='',currentView='reproduction',activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
         "var history={pushState:function(s,t,url){location.hash=url;}};\n"
@@ -7179,7 +7170,7 @@ class TestReproGraphReuse:
         plan_dashboard._repro_graph_cache.clear()
         with _repro_client(probe_plan) as c:
             assert c.get("/api/repro/graph").status_code == 200
-            assert c.get("/api/repro/status", params={"tier": "all"}).status_code == 200
+            assert c.get("/api/repro/status").status_code == 200
         assert _probe_runs(probe_plan) == 1
 
     def test_a_task_edit_resolves_them_again(self, probe_plan):
@@ -7287,13 +7278,13 @@ var location={hash:'#/analysis'}, history={
   pushState:function(s,t,url){location.hash=url;},
   replaceState:function(s,t,url){location.hash=url;}
 };
-var _reproNav={roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
-var _reproTier='all', _reproSelected='', _reproContext=[];
+var _reproNav={roots:[],view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
+var _reproSelected='', _reproContext=[];
 var _reproInspectorClosed=false, _reproFitNext=false, _reproLayoutCache=null, currentView='workspace';
 var _reproViewport={x:0,y:0,zoom:1};
 var _reproData={graph:{steps:[
-  {name:'input',task:'other',tier:'on-demand'},
-  {name:'result',task:'analysis',tier:'required'}
+  {name:'input',task:'other'},
+  {name:'result',task:'analysis'}
 ],step_edges:[{from:'input',to:'result'}]},status:{steps:[]}};
 var drawn=null, opened='', selected='', transformed=0;
 var box={querySelectorAll:function(){return [];},querySelector:function(){return null;},classList:{remove:function(){}},focus:function(){}};
@@ -7339,12 +7330,11 @@ assert.deepEqual(_reproNav.roots,[]);
 
     def test_task_link_reveals_step_without_filtering_peers(self):
         self.run_client("""
-currentView='reproduction'; _reproNav.roots=['analysis']; _reproNav.tier=_reproTier='required';
+currentView='reproduction'; _reproNav.roots=['analysis'];
 await revealReproStep('input');
 assert.equal(_reproNav.view,'graph');
 assert.equal(_reproNav.mode,'scope');
 assert.equal(_reproNav.selected,'input');
-assert.equal(_reproNav.tier,'all');
 assert.deepEqual(_reproNav.roots,[]);
 assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 """)
@@ -7356,7 +7346,7 @@ location.hash='#/analysis?repro='+encodeURIComponent(JSON.stringify(wanted));
 initRouter();
 assert.deepEqual(_reproNav.roots,[]);
 assert.equal(_reproNav.mode,'scope');
-assert.equal(_reproNav.tier,'all');
+assert.equal(_reproNav.tier,undefined);
 assert.equal(_reproNav.selected,'result');
 assert.equal(opened,'reproduction');
 assert.ok(location.hash.includes('?repro='));

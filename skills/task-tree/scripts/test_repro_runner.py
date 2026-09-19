@@ -1,8 +1,8 @@
 """Tests for the `superra repro` runner (repro_run.py, _repro_state.py).
 
-The stdlib half — hash cache, status classification, tier editing, DAG
-rendering, target selection — runs everywhere. The build half needs pytask and
-skips without it, so the pytask-free baseline suite still passes.
+The stdlib half — hash cache, status classification, DAG rendering, target
+selection — runs everywhere. The build half needs pytask and skips without it,
+so the pytask-free baseline suite still passes.
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ from _repro_state import (
     runner_paths,
     select_steps,
 )
+
+CHAIN = ("01-a", "02-b")  # the a -> b -> check-b chain; 03-x stands apart
 
 HAS_PYTASK = importlib.util.find_spec("pytask") is not None
 needs_pytask = pytest.mark.skipif(not HAS_PYTASK, reason="pytask is not installed")
@@ -58,7 +60,6 @@ Build a.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: build-a
     cmd: sh Code/a.sh
@@ -83,7 +84,6 @@ Build b and check it.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: build-b
     runner: sh
@@ -114,7 +114,6 @@ An independent chain.
 ## Reproduction
 
 ```yaml
-tier: local
 steps:
   - name: build-x
     cmd: sh Code/x.sh
@@ -140,7 +139,6 @@ Write a directory of parts.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: z-gen
     cmd: sh Code/gen.sh
@@ -165,7 +163,6 @@ Read one file out of that directory.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: a-use
     cmd: sh Code/use.sh
@@ -205,11 +202,11 @@ class Project:
             return int(exc.code or 0)
         return 0
 
-    def status(self, tier: str = "canon"):
-        return compute_status(self.graph(), self.paths, tier=tier)
+    def status(self, *targets: str):
+        return compute_status(self.graph(), self.paths, targets=targets)
 
-    def states(self, tier: str = "all") -> dict[str, str]:
-        return {e.step.name: e.status for e in self.status(tier=tier).reported}
+    def states(self, *targets: str) -> dict[str, str]:
+        return {e.step.name: e.status for e in self.status(*targets).reported}
 
     def run_times(self) -> dict[str, float]:
         """When each step last executed — unchanged means pytask skipped it."""
@@ -301,7 +298,7 @@ def test_missing_path_has_no_state(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_unbuilt_steps_report_never_built(project):
-    report = project.status()
+    report = project.status(*CHAIN)
     assert {e.step.name for e in report.reported} == {"build-a", "build-b", "check-b"}
     assert all(e.status == "missing" for e in report.reported)
     assert all(e.reason == "never built" for e in report.reported)
@@ -313,7 +310,7 @@ def test_missing_external_input_marks_the_step_external(project):
     project.write(
         "superRA/01-a/task.md", TASK_A.replace("      - Code/a.sh", "      - Data/raw.csv")
     )
-    entry = project.status().entry("build-a")
+    entry = project.status(*CHAIN).entry("build-a")
     assert entry.status == "external"
     assert "Data/raw.csv" in entry.reason
 
@@ -324,39 +321,33 @@ def test_a_tree_with_no_steps_leaves_no_state_behind(project, tmp_path):
         "superRA/01-a/task.md",
         '---\ntitle: "A"\nstatus: not-started\ndepends_on: []\n---\n\n## Objective\n\nNo steps.\n',
     )
-    assert bare.run("status") == 0
+    assert bare.run("status", ".") == 1
     assert not (bare.root / STATE_DIRNAME).exists()
     assert not (bare.root / ".gitignore").exists()
 
 
-def test_status_reports_only_the_requested_tier(project):
-    assert set(project.states("canon")) == {"build-a", "build-b", "check-b"}
-    assert set(project.states("local")) == {"build-x"}
-    assert set(project.states("all")) == {"build-a", "build-b", "check-b", "build-x"}
-
-
-@pytest.mark.parametrize("legacy,current", [("canon", "required"), ("local", "on-demand")])
-def test_tier_aliases_select_the_same_steps(project, legacy, current):
-    assert select_steps(project.graph(), [], legacy) == select_steps(project.graph(), [], current)
-    assert project.states(legacy) == project.states(current)
+def test_status_reports_only_the_selected_scope(project):
+    assert set(project.states(*CHAIN)) == {"build-a", "build-b", "check-b"}
+    assert set(project.states("03-x")) == {"build-x"}
+    assert set(project.states()) == {"build-a", "build-b", "check-b", "build-x"}
 
 
 @needs_pytask
-def test_renaming_tiers_preserves_a_built_lock(project):
-    assert project.run("build", "--tier", "all") == 0
+def test_a_retired_tier_key_does_not_disturb_a_built_lock(project):
+    assert project.run("build", ".") == 0
     lock = project.paths.lock_file.read_bytes()
     times = project.run_times()
     for task in ("01-a", "02-b", "03-x"):
         path = f"superRA/{task}/task.md"
-        project.write(path, project.read(path).replace("tier: canon", "tier: required").replace("tier: local", "tier: on-demand"))
+        project.write(path, project.read(path).replace("```yaml\nsteps:\n", "```yaml\ntier: canon\nsteps:\n"))
     assert all(state == "fresh" for state in project.states().values())
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     assert project.paths.lock_file.read_bytes() == lock
     assert project.run_times() == times
 
 
 @needs_pytask
-def test_scoped_status_verifies_on_demand_work_without_unrelated_steps(project, capsys):
+def test_scoped_status_verifies_one_task_without_unrelated_steps(project, capsys):
     assert project.run("status", "03-x") == 1
     assert project.run("build", "03-x") == 0
     capsys.readouterr()
@@ -367,8 +358,7 @@ def test_scoped_status_verifies_on_demand_work_without_unrelated_steps(project, 
     assert project.states()["build-a"] == "missing"
 
 
-def test_scoped_status_includes_ancestors_across_tiers(project, capsys):
-    assert project.run("tier", "01-a", "on-demand") == 0
+def test_scoped_status_includes_ancestors_across_tasks(project, capsys):
     capsys.readouterr()
     assert project.run("status", "check-b", "--upstream", "--json") == 1
     report = json.loads(capsys.readouterr().out)
@@ -382,10 +372,9 @@ def test_scoped_status_rejects_an_unknown_target(project, capsys):
 
 
 @needs_pytask
-@pytest.mark.parametrize("targets", [[], ["check-b"]])
+@pytest.mark.parametrize("targets", [["02-b"], ["check-b"]])
 def test_scoped_status_hashes_only_selected_ancestors(project, targets):
-    assert project.run("build", "--tier", "all") == 0
-    assert project.run("tier", "01-a", "on-demand") == 0
+    assert project.run("build", ".") == 0
 
     class RecordingCache(HashCache):
         def __init__(self):
@@ -405,12 +394,12 @@ def test_scoped_status_hashes_only_selected_ancestors(project, targets):
     assert cache.full_reads > 0
 
     all_cache = RecordingCache()
-    compute_status(project.graph(), project.paths, tier="all", cache=all_cache)
+    compute_status(project.graph(), project.paths, cache=all_cache)
     assert {"Code/x.sh", "output/x.txt"} <= all_cache.visited
 
 
 @needs_pytask
-def test_selected_check_only_task_blocks_required_completion(project):
+def test_a_check_only_task_blocks_completion_once_it_is_in_scope(project):
     project.write("superRA/04-check/task.md", '''---
 title: Selected protection
 status: not-started
@@ -431,11 +420,10 @@ steps:
       - "${OUT}/a.txt"
 ```
 ''')
-    assert project.run("build") == 0
-    assert project.status().ok
-    assert project.run("tier", "04-check", "required") == 0
-    assert not project.status().ok
-    assert project.run("build") == 1
+    assert project.run("build", *CHAIN) == 0
+    assert project.status(*CHAIN).ok
+    assert not project.status(".").ok
+    assert project.run("build", ".") == 1
     assert project.states()["protect-a"] == "failed"
 
 
@@ -443,55 +431,58 @@ steps:
 # Target selection
 # ---------------------------------------------------------------------------
 
-def test_selection_defaults_to_the_tier(project):
-    names, unknown = select_steps(project.graph(), [], "canon")
-    assert names == ["build-a", "build-b", "check-b"]
+def test_no_targets_selects_every_registered_step(project):
+    names, unknown = select_steps(project.graph(), [])
+    assert names == ["build-a", "build-b", "check-b", "build-x"]
     assert unknown == []
 
 
+def test_the_dot_target_selects_every_registered_step(project):
+    assert select_steps(project.graph(), ["."]) == select_steps(project.graph(), [])
+
+
 def test_a_step_target_pulls_its_ancestors(project):
-    names, _ = select_steps(project.graph(), ["check-b"], "canon", include_ancestors=True)
+    names, _ = select_steps(project.graph(), ["check-b"], include_ancestors=True)
     assert set(names) == {"build-a", "build-b", "check-b"}
 
 
 def test_a_task_path_target_selects_every_step_it_owns(project):
-    names, _ = select_steps(project.graph(), ["02-b"], "canon")
+    names, _ = select_steps(project.graph(), ["02-b"])
     assert set(names) == {"build-b", "check-b"}
 
 
-def test_an_explicit_target_overrides_the_tier(project):
-    names, _ = select_steps(project.graph(), ["build-x"], "canon")
-    assert names == ["build-x"]
-
-
 def test_an_unknown_target_is_reported(project):
-    names, unknown = select_steps(project.graph(), ["build-z"], "canon")
+    names, unknown = select_steps(project.graph(), ["build-z"])
     assert names == []
     assert unknown == ["build-z"]
 
 
 # ---------------------------------------------------------------------------
-# Tier command
+# Retired tier surface
 # ---------------------------------------------------------------------------
 
-def test_tier_replaces_the_existing_key(project):
-    assert project.run("tier", "01-a", "local") == 0
-    assert "tier: on-demand" in project.read("superRA/01-a/task.md")
-    assert project.graph().tiers["01-a"] == "on-demand"
+@pytest.mark.parametrize("command", ["build", "status"])
+def test_a_command_without_targets_is_rejected(project, command, capsys):
+    assert project.run(command) == 2
+    assert "name at least one task or task#step target" in capsys.readouterr().err
 
 
-def test_tier_inserts_the_key_when_absent(project):
-    project.write("superRA/01-a/task.md", TASK_A.replace("tier: canon\n", ""))
-    assert project.run("tier", "01-a", "canon") == 0
-    assert project.graph().tiers["01-a"] == "required"
+@pytest.mark.parametrize("command", ["build", "status"])
+@pytest.mark.parametrize("value", ["all", "required", "canon"])
+def test_the_tier_flag_is_retired(project, command, value, capsys):
+    assert project.run(command, ".", "--tier", value) == 2
+    assert "--tier is retired" in capsys.readouterr().err
 
 
-def test_tier_rejects_a_task_without_a_reproduction_section(project):
-    project.write(
-        "superRA/04-none/task.md",
-        "---\ntitle: \"None\"\nstatus: not-started\ndepends_on: []\n---\n\n## Objective\n\nNo steps.\n",
-    )
-    assert project.run("tier", "04-none", "canon") == 1
+@pytest.mark.parametrize("prefix", [[], ["--plan-root", "superRA"], ["--root", "superRA"]])
+def test_the_tier_subcommand_is_retired(capsys, prefix):
+    try:
+        repro_run.main([*prefix, "tier", "01-a", "required"])
+    except SystemExit as exc:
+        assert int(exc.code) == 2
+    else:  # pragma: no cover - the parser must reject the retired subcommand
+        raise AssertionError("repro tier did not error")
+    assert "reproduction tiers are retired" in capsys.readouterr().err
 
 
 # ---------------------------------------------------------------------------
@@ -500,14 +491,15 @@ def test_tier_rejects_a_task_without_a_reproduction_section(project):
 
 def test_dag_text_lists_steps_and_edges(project):
     text = render_dag(project.graph())
-    assert "build-a" in text
+    assert "build-a  (01-a)" in text
     assert "build-a --> build-b" in text
 
 
 def test_dag_mermaid_renders_a_flowchart(project):
     text = render_dag(project.graph(), mermaid=True)
     assert text.startswith("graph LR")
-    assert 'build-a["build-a"]:::required' in text
+    assert 'build-a["build-a"]\n' in text
+    assert 'check-b["check-b"]:::check' in text
     assert "build-a -->|a.txt| build-b" in text
 
 
@@ -522,11 +514,11 @@ def test_cli_routes_repro_to_the_runner(project, capsys):
 
 @needs_pytask
 def test_first_build_runs_every_step(project):
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     assert project.read("output/a.txt") == "hello\n"
     assert project.read("output/b.txt") == "hello\nhello\n"
     assert (project.root / STATE_DIRNAME / "stamps" / "check-b.stamp").is_file()
-    assert project.states("canon") == {
+    assert project.states(*CHAIN) == {
         "build-a": "fresh",
         "build-b": "fresh",
         "check-b": "fresh",
@@ -535,14 +527,14 @@ def test_first_build_runs_every_step(project):
 
 @needs_pytask
 def test_state_directory_is_created_and_gitignored(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     assert (project.root / STATE_DIRNAME / "logs" / "build-a.log").is_file()
     assert f"{STATE_DIRNAME}/" in project.read(".gitignore").split()
 
 
 @needs_pytask
 def test_lock_ids_stay_in_logical_form(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     lock = read_lock(project.paths.lock_file)
     assert "${OUT}/a.txt" in lock["build-a"].produces
     assert "output/a.txt" not in lock["build-a"].produces
@@ -551,34 +543,34 @@ def test_lock_ids_stay_in_logical_form(project):
 
 @needs_pytask
 def test_second_build_is_a_no_op(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     assert project.run_times() == before
 
 
 @needs_pytask
 def test_touching_a_dep_with_identical_bytes_is_a_no_op(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
     (project.root / "Code" / "a.sh").touch()
-    assert project.states("canon")["build-a"] == "fresh"
-    assert project.run("build") == 0
+    assert project.states(*CHAIN)["build-a"] == "fresh"
+    assert project.run("build", *CHAIN) == 0
     assert project.run_times() == before
 
 
 @needs_pytask
 def test_a_dep_edit_reruns_exactly_the_affected_chain(project):
-    project.run("build", "--tier", "all")
+    project.run("build", ".")
     before = project.run_times()
     project.write("Code/a.sh", "mkdir -p output\necho goodbye > output/a.txt\n")
 
-    states = project.states("all")
+    states = project.states()
     assert states["build-a"] == "stale"
     assert states["build-b"] == "stale"
     assert states["build-x"] == "fresh"
 
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     after = project.run_times()
     assert after["build-a"] != before["build-a"]
     assert after["build-b"] != before["build-b"]
@@ -588,11 +580,11 @@ def test_a_dep_edit_reruns_exactly_the_affected_chain(project):
 
 @needs_pytask
 def test_regenerating_identical_bytes_does_not_cascade(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
     project.write("Code/a.sh", "mkdir -p output\n# no behaviour change\necho hello > output/a.txt\n")
 
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     after = project.run_times()
     assert after["build-a"] != before["build-a"]
     assert after["build-b"] == before["build-b"]
@@ -601,16 +593,16 @@ def test_regenerating_identical_bytes_does_not_cascade(project):
 
 @needs_pytask
 def test_deleting_an_out_reports_missing_and_rebuilds_it(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     (project.root / "output" / "b.txt").unlink()
 
-    entry = project.status().entry("build-b")
+    entry = project.status(*CHAIN).entry("build-b")
     assert entry.status == "missing"
     assert "${OUT}/b.txt" in entry.reason
 
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     assert project.read("output/b.txt") == "hello\nhello\n"
-    assert project.states("canon")["build-b"] == "fresh"
+    assert project.states(*CHAIN)["build-b"] == "fresh"
 
 
 @needs_pytask
@@ -628,31 +620,31 @@ def test_a_target_pulls_its_stale_ancestors(project):
 
 @needs_pytask
 def test_a_check_step_reruns_when_its_deps_change(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
     project.write("Code/a.sh", "mkdir -p output\necho changed > output/a.txt\n")
-    project.run("build")
+    project.run("build", *CHAIN)
     assert project.run_times()["check-b"] != before["check-b"]
 
 
 @needs_pytask
 def test_a_failing_step_stops_its_descendants_and_exits_non_zero(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     project.write("Code/b.sh", "echo boom >&2\nexit 3\n")
 
-    assert project.run("build") == 1
-    entry = project.status().entry("build-b")
+    assert project.run("build", *CHAIN) == 1
+    entry = project.status(*CHAIN).entry("build-b")
     assert entry.status == "failed"
     assert f"{STATE_DIRNAME}/logs/build-b.log" in entry.reason
     assert "boom" in project.read(f"{STATE_DIRNAME}/logs/build-b.log")
-    assert project.states("canon")["check-b"] == "stale"
+    assert project.states(*CHAIN)["check-b"] == "stale"
 
 
 @needs_pytask
 def test_force_reruns_a_fresh_step(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
-    assert project.run("build", "--force") == 0
+    assert project.run("build", *CHAIN, "--force") == 0
     assert project.run_times()["build-a"] != before["build-a"]
 
 
@@ -662,44 +654,42 @@ def test_force_reruns_a_fresh_step(project):
     (("--upstream", "--force"), {"build-a", "build-b", "check-b"}),
 ])
 def test_force_scope_preserves_freshness_and_unrelated_steps(project, flag, expected):
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     before = project.run_times()
     assert project.run("build", "check-b", *flag, "-j", "2") == 0
     after = project.run_times()
     assert {name for name in after if before[name] != after[name]} == expected
     assert all(state == "fresh" for state in project.states().values())
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     assert project.run_times() == after
 
 
 @needs_pytask
 def test_targeted_force_leaves_stale_ancestors_outside_scope(project):
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     before = project.run_times()
     project.write("Code/a.sh", project.read("Code/a.sh") + "# same output\n")
     assert project.run("build", "check-b", "--force") == 0
     after = project.run_times()
     assert {name for name in after if before[name] != after[name]} == {"check-b"}
-    assert not project.status().ok
+    assert not project.status(*CHAIN).ok
     assert compute_status(project.graph(), project.paths, targets=["check-b"]).ok
 
 
 @needs_pytask
-@pytest.mark.parametrize("target", [[], ["02-b"]])
-def test_force_task_or_tier_does_not_force_other_tier_ancestors(project, target):
-    assert project.run("tier", "01-a", "on-demand") == 0
-    assert project.run("build", "--tier", "all") == 0
+def test_force_on_a_task_scope_does_not_force_its_producer_ancestors(project):
+    assert project.run("build", ".") == 0
     before = project.run_times()
-    assert project.run("build", *target, "--force") == 0
+    assert project.run("build", "02-b", "--force") == 0
     after = project.run_times()
     assert {name for name in after if before[name] != after[name]} == {"build-b", "check-b"}
 
 
 @needs_pytask
 def test_force_all_can_rerun_every_registered_step(project):
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     before = project.run_times()
-    assert project.run("build", "--tier", "all", "--force", "-j", "2") == 0
+    assert project.run("build", ".", "--force", "-j", "2") == 0
     after = project.run_times()
     assert all(before[name] != after[name] for name in before)
     assert all(state == "fresh" for state in project.states().values())
@@ -708,7 +698,7 @@ def test_force_all_can_rerun_every_registered_step(project):
 @needs_pytask
 @pytest.mark.parametrize("flag", [("--force",), ("--upstream", "--force")])
 def test_force_dry_run_does_not_change_build_evidence(project, flag, capsys):
-    assert project.run("build", "--tier", "all") == 0
+    assert project.run("build", ".") == 0
     before = project.run_times()
     lock = project.paths.lock_file.read_bytes()
     capsys.readouterr()
@@ -722,7 +712,7 @@ def test_force_dry_run_does_not_change_build_evidence(project, flag, capsys):
 
 
 def test_force_modes_are_mutually_exclusive(project):
-    assert project.run("build", "--force", "--force-all") == 2
+    assert project.run("build", ".", "--force", "--force-all") == 2
 
 
 @needs_pytask
@@ -736,27 +726,27 @@ def test_failed_forced_check_cannot_reuse_cached_success(project, monkeypatch, f
         '    deps:\n      - Code/check.sh\n      - "${OUT}/b.txt"',
     ))
     monkeypatch.setenv("CHECK_OK", "yes")
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     monkeypatch.setenv("CHECK_OK", "no")
     assert project.run("build", "check-b", *flag) == 1
     assert project.states()["check-b"] == "failed"
-    assert project.run("build") == 1
+    assert project.run("build", *CHAIN) == 1
     monkeypatch.setenv("CHECK_OK", "yes")
-    assert project.run("build") == 0
-    assert project.status().ok
+    assert project.run("build", *CHAIN) == 0
+    assert project.status(*CHAIN).ok
 
 
 @needs_pytask
 def test_dry_run_changes_nothing(project):
-    assert project.run("build", "--dry-run") == 0
+    assert project.run("build", *CHAIN, "--dry-run") == 0
     assert not (project.root / "output").exists()
     assert not project.paths.lock_file.exists()
 
 
 @needs_pytask
 def test_parallel_jobs_build_the_whole_graph(project):
-    assert project.run("build", "--tier", "all", "-j", "2") == 0
-    assert project.states("all") == {
+    assert project.run("build", ".", "-j", "2") == 0
+    assert project.states() == {
         "build-a": "fresh",
         "build-b": "fresh",
         "check-b": "fresh",
@@ -766,7 +756,7 @@ def test_parallel_jobs_build_the_whole_graph(project):
 
 @needs_pytask
 def test_a_params_change_reruns_only_that_step(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     before = project.run_times()
     project.write(
         "superRA/01-a/task.md",
@@ -775,11 +765,11 @@ def test_a_params_change_reruns_only_that_step(project):
             '    params:\n      seed: 7\n    outs:\n      - "${OUT}/a.txt"',
         ),
     )
-    entry = project.status().entry("build-a")
+    entry = project.status(*CHAIN).entry("build-a")
     assert entry.status == "stale"
     assert entry.reason == "the step definition changed"
 
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     after = project.run_times()
     assert after["build-a"] != before["build-a"]
     assert after["build-b"] == before["build-b"]
@@ -805,18 +795,18 @@ def test_a_sidecar_tracked_out_is_hashed_through_its_sidecar(project):
 
     # A hand-edit of the out goes unnoticed until the sidecar is rewritten.
     project.write("output/a.txt", "tampered\n")
-    assert project.states("canon")["build-a"] == "fresh"
+    assert project.states(*CHAIN)["build-a"] == "fresh"
 
 
 @needs_pytask
 def test_status_json_matches_the_documented_shape(project, capsys):
-    project.run("build")
+    project.run("build", *CHAIN)
     capsys.readouterr()
-    assert project.run("status", "--json") == 0
+    assert project.run("status", *CHAIN, "--json") == 0
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["ok"] is True
-    assert payload["tier"] == "required"
+    assert payload["targets"] == list(CHAIN)
     assert payload["root"] == str(project.root)
     assert payload["summary"]["total"] == 3
     assert payload["summary"]["fresh"] == 3
@@ -829,7 +819,7 @@ def test_status_json_matches_the_documented_shape(project, capsys):
 
     step = next(s for s in payload["steps"] if s["name"] == "build-b")
     assert set(step) == {
-        "name", "task", "tier", "kind", "cmd", "status", "reason", "changes",
+        "name", "task", "kind", "cmd", "status", "reason", "changes",
         "duration", "last_run", "log", "deps", "outs", "acceptance",
         "local_status", "local_reason", "boundary_inputs",
     }
@@ -847,10 +837,10 @@ def test_status_json_matches_the_documented_shape(project, capsys):
 
 @needs_pytask
 def test_status_json_reports_a_stale_step_and_exits_one(project, capsys):
-    project.run("build")
+    project.run("build", *CHAIN)
     project.write("Code/b.sh", "cat output/a.txt > output/b.txt\n")
     capsys.readouterr()
-    assert project.run("status", "--json") == 1
+    assert project.run("status", *CHAIN, "--json") == 1
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["ok"] is False
@@ -863,7 +853,7 @@ def test_status_json_reports_a_stale_step_and_exits_one(project, capsys):
 
 @needs_pytask
 def test_explain_names_the_changed_dependency(project, capsys):
-    project.run("build")
+    project.run("build", *CHAIN)
     project.write("Code/b.sh", "cat output/a.txt > output/b.txt\n")
     capsys.readouterr()
     assert project.run("explain", "build-b") == 0
@@ -881,16 +871,16 @@ def test_explain_rejects_an_unknown_step(project):
 
 @needs_pytask
 def test_a_second_status_reads_no_file_content(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     graph = project.graph()
     project.paths.cache_file.unlink()  # the build populated it; start cold
 
     first = HashCache(project.paths.cache_file)
-    compute_status(graph, project.paths, tier="all", cache=first)
+    compute_status(graph, project.paths, cache=first)
     assert first.full_reads > 0
 
     second = HashCache(project.paths.cache_file)
-    compute_status(graph, project.paths, tier="all", cache=second)
+    compute_status(graph, project.paths, cache=second)
     assert second.full_reads == 0
 
 
@@ -899,7 +889,7 @@ def test_a_graph_error_blocks_the_build(project, capsys):
     project.write(
         "superRA/03-x/task.md", TASK_X.replace("name: build-x", "name: build-a")
     )
-    assert project.run("build", "--tier", "all") == 1
+    assert project.run("build", ".") == 1
     assert "task check" in capsys.readouterr().err
 
 
@@ -921,7 +911,7 @@ def test_path_aliases_share_producer_nodes(project, jobs, sidecar):
     ).replace('      - "${OUT}/a.txt"', '      - output/a.txt'))
     assert project.run("build", "check-b", "--upstream", "-j", jobs) == 0
     assert project.read("output/b.txt") == "hello\nhello\n"
-    assert project.status().ok
+    assert project.status(*CHAIN).ok
     lock = read_lock(project.paths.lock_file)
     assert "${OUT}/a.txt" in lock["a-consumer"].depends_on
     assert "output/a.txt" not in lock["a-consumer"].depends_on
@@ -932,11 +922,11 @@ def test_path_aliases_share_producer_nodes(project, jobs, sidecar):
     project.write("Code/a.sh", "mkdir -p output\necho changed > output/a.txt\n")
     assert project.run("build", "check-b", "--upstream", "-j", jobs) == 0
     assert project.read("output/b.txt") == "changed\nchanged\n"
-    assert project.status().ok
+    assert project.status(*CHAIN).ok
     if sidecar:
         project.write("output/a.txt", "untracked bytes\n")
         before = project.run_times()
-        assert project.status().ok
+        assert project.status(*CHAIN).ok
         assert project.run("build", "check-b", "--upstream", "-j", jobs) == 0
         assert project.run_times() == before
 
@@ -946,7 +936,7 @@ def test_legacy_alias_lock_requires_only_affected_consumer_rebuild(project):
     project.write("superRA/02-b/task.md", TASK_B.replace(
         '      - "${OUT}/a.txt"', '      - output/a.txt'
     ))
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     # Earlier runners recorded the consumer's own spelling for this file.
     blocks = project.paths.lock_file.read_text().split("[[task]]")
     blocks = [
@@ -956,11 +946,11 @@ def test_legacy_alias_lock_requires_only_affected_consumer_rebuild(project):
     ]
     project.paths.lock_file.write_text("[[task]]".join(blocks))
     assert "output/a.txt" in read_lock(project.paths.lock_file)["build-b"].depends_on
-    assert project.status().entry("build-b").status == "stale"
+    assert project.status(*CHAIN).entry("build-b").status == "stale"
     before = project.run_times()
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     assert {name for name, time in project.run_times().items() if before[name] != time} == {"build-b"}
-    assert project.status().ok
+    assert project.status(*CHAIN).ok
 
 
 def test_a_directory_out_becomes_a_dep_node_of_its_consumer(dir_project):
@@ -983,15 +973,15 @@ def test_the_generated_task_carries_the_directory_edge(dir_project):
 @needs_pytask
 @pytest.mark.parametrize("jobs", ["1", "2"])
 def test_a_directory_out_orders_its_consumer(dir_project, jobs):
-    assert dir_project.run("build", "-j", jobs) == 0
+    assert dir_project.run("build", ".", "-j", jobs) == 0
     assert dir_project.read("output/used.txt") == "v1\n"
 
     dir_project.write(
         "Code/gen.sh", "mkdir -p output/parts\necho v2 > output/parts/a.txt\n"
     )
-    assert dir_project.run("build", "-j", jobs) == 0
+    assert dir_project.run("build", ".", "-j", jobs) == 0
     assert dir_project.read("output/used.txt") == "v2\n"
-    assert dir_project.states("canon") == {"z-gen": "fresh", "a-use": "fresh"}
+    assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
 
 
 # ---------------------------------------------------------------------------
@@ -1014,13 +1004,13 @@ def test_deleting_a_sidecar_tracked_out_reports_missing_and_rebuilds_it(project)
     assert project.run("build", "build-a") == 0
     (project.root / "output" / "a.txt").unlink()
 
-    entry = project.status().entry("build-a")
+    entry = project.status(*CHAIN).entry("build-a")
     assert entry.status == "missing"
     assert "${OUT}/a.txt" in entry.reason
 
     assert project.run("build", "build-a") == 0
     assert project.read("output/a.txt") == "hello\n"
-    assert project.states("canon")["build-a"] == "fresh"
+    assert project.states(*CHAIN)["build-a"] == "fresh"
 
 
 MODE_CONFIG = """\
@@ -1045,7 +1035,6 @@ A step whose only variable reaches `cmd`.
 ## Reproduction
 
 ```yaml
-tier: canon
 steps:
   - name: mode-step
     cmd: sh Code/mode.sh "${MODE}"
@@ -1065,16 +1054,16 @@ def test_a_var_that_only_reaches_cmd_invalidates_the_step(tmp_path, monkeypatch)
     proj.write("Code/mode.sh", 'mkdir -p output\necho "$1" > output/mode.txt\n')
 
     monkeypatch.setenv("REPRO_TEST_MODE", "fast")
-    assert proj.run("build") == 0
+    assert proj.run("build", ".") == 0
     assert proj.read("output/mode.txt") == "fast\n"
-    assert proj.states("canon")["mode-step"] == "fresh"
+    assert proj.states()["mode-step"] == "fresh"
 
     monkeypatch.setenv("REPRO_TEST_MODE", "slow")
     entry = proj.status().entry("mode-step")
     assert entry.status == "stale"
     assert entry.reason == "the resolved command changed"
 
-    assert proj.run("build") == 0
+    assert proj.run("build", ".") == 0
     assert proj.read("output/mode.txt") == "slow\n"
 
 
@@ -1086,7 +1075,7 @@ def test_a_declaration_edit_outranks_the_resolved_half(tmp_path, monkeypatch):
     proj.write("Code/mode.sh", 'mkdir -p output\necho "$1" > output/mode.txt\n')
 
     monkeypatch.setenv("REPRO_TEST_MODE", "fast")
-    assert proj.run("build") == 0
+    assert proj.run("build", ".") == 0
 
     proj.write(
         "superRA/01-mode/task.md",
@@ -1099,33 +1088,33 @@ def test_a_declaration_edit_outranks_the_resolved_half(tmp_path, monkeypatch):
 
 @needs_pytask
 def test_restoring_the_input_clears_a_failed_step(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     original = project.read("Code/b.sh")
     project.write("Code/b.sh", "echo boom >&2\nexit 3\n")
-    assert project.run("build") == 1
-    assert project.status().entry("build-b").status == "failed"
+    assert project.run("build", *CHAIN) == 1
+    assert project.status(*CHAIN).entry("build-b").status == "failed"
 
     project.write("Code/b.sh", original)
-    assert project.states("canon")["build-b"] == "fresh"
-    assert project.run("status") == 0
+    assert project.states(*CHAIN)["build-b"] == "fresh"
+    assert project.run("status", *CHAIN) == 0
 
     before = project.run_times()
-    assert project.run("build") == 0
+    assert project.run("build", *CHAIN) == 0
     assert project.run_times() == before
 
 
 @needs_pytask
 def test_a_dep_edit_after_a_cleared_failure_names_what_changed(project):
-    project.run("build")
+    project.run("build", *CHAIN)
     original = project.read("Code/b.sh")
     project.write("Code/b.sh", "echo boom >&2\nexit 3\n")
-    assert project.run("build") == 1
+    assert project.run("build", *CHAIN) == 1
 
     project.write("Code/b.sh", original)
-    assert project.states("canon")["build-b"] == "fresh"
+    assert project.states(*CHAIN)["build-b"] == "fresh"
 
     project.write("Code/b.sh", original + "# edited\n")
-    entry = project.status().entry("build-b")
+    entry = project.status(*CHAIN).entry("build-b")
     assert entry.status == "failed"
     assert entry.reason.startswith("dependency Code/b.sh changed")
     assert f"{STATE_DIRNAME}/logs/build-b.log" in entry.reason
@@ -1136,7 +1125,7 @@ def test_a_failing_step_reports_its_message_without_python_frames(project, capsy
     project.run("build", "build-a")
     project.write("Code/b.sh", "exit 3\n")
     capsys.readouterr()
-    assert project.run("build") == 1
+    assert project.run("build", *CHAIN) == 1
 
     out = capsys.readouterr().out
     assert "StepFailed: step 'build-b' exited 3" in out
