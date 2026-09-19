@@ -3,7 +3,7 @@ from pytask import hookimpl
 from _pytask.outcomes import Skipped, SkippedAncestorFailed, SkippedUnchanged, WouldBeExecuted
 
 from _repro_acceptance import capture_receipt, check_sources, read_ledger, supersede
-from _repro_state import LockEntry, compute_status, read_run_record, write_run_record
+from _repro_state import LockEntry, StepStatus, compute_status, read_lock, read_run_record, write_run_record
 
 
 @hookimpl(tryfirst=True)
@@ -16,6 +16,16 @@ def pytask_execute_task_setup(session, task):
         return
     graph, paths, step = context
     check_sources(graph)
+    from _repro_scope import boundary_inputs, check_boundary_receipt
+    boundary_status = StepStatus(step)
+    boundary = boundary_inputs(graph, graph._execution_names, paths, task.attributes['superra_cache'], consumers={step.name})
+    check_boundary_receipt(boundary_status, graph, paths, task.attributes['superra_cache'],
+                           session.config.get('_superra_completed', {}).get(step.name)
+                           or read_lock(paths.lock_file).get(step.name), boundary)
+    if boundary_status.status != 'fresh':
+        task.force_pending = True
+        task.attributes['superra_retry_required'] = True
+        task.markers[:] = [m for m in task.markers if m.name != 'skip_unchanged']
     if task.force_pending:
         if not session.config["dry_run"]:
             task.attributes["superra_attempt"] = True
@@ -25,7 +35,7 @@ def pytask_execute_task_setup(session, task):
     if step.name not in ledger['steps']:
         return
     entry = compute_status(
-        graph, paths, targets=[step.name], tier='all',
+        graph, paths, targets=[f'{step.task_path or "."}#{step.name}'], tier='all', upstream=True,
         cache=task.attributes['superra_cache'], acceptance_ledger=ledger,
         completed_locks=session.config.get('_superra_completed', {}),
     ).entry(step.name)

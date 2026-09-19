@@ -56,7 +56,7 @@ def test_dry_run_force_scope_and_real_success_supersedes(project):
     assert lock == project.paths.lock_file.read_bytes()
     assert project.run('build', 'build-b', '--force') == 0
     assert project.run_times()['build-a'] == times['build-a']
-    assert project.run('build', 'build-b', '--force-all') == 0
+    assert project.run('build', 'build-b', '--upstream', '--force') == 0
     assert project.run_times()['build-a'] > times['build-a']
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
@@ -333,7 +333,7 @@ def test_failed_predecessor_does_not_skip_as_success_or_run_accepted_child(proje
     review(project, ['build-b'])
     before = project.run_times()['build-b']
     project.write('Code/a.sh', 'exit 4\n')
-    assert project.run('build', 'build-b', '--force-all', '-j', jobs) != 0
+    assert project.run('build', 'build-b', '--upstream', '--force', '-j', jobs) != 0
     assert project.run_times()['build-b'] == before
     assert project.states()['build-b'] == 'stale'
 

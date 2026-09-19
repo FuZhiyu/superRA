@@ -134,6 +134,17 @@ def capture_receipt(graph, step, paths, before):
     receipt = {'state': state, 'snapshots': source_snapshots(step, paths, state),
                'spec': step.to_dict(), 'recorded_at': time.time(),
                'run': dict(read_run_record(paths, step.name), outcome='success')}
+    from _repro_scope import boundary_inputs
+    scope = getattr(graph, '_execution_names', {s.name for s in graph.steps})
+    boundary = boundary_inputs(graph, scope, paths, consumers={step.name})
+    old_boundary = before.get('boundary_inputs', [])
+    fingerprints = lambda rows: {(r['logical'], r['resolved']): r['digest'] for r in rows}
+    if fingerprints(boundary) != fingerprints(old_boundary):
+        raise ReproStateError(f'{step.name}: saved inputs changed during execution; rerun')
+    if any(item['digest'] is None for item in boundary):
+        raise ReproStateError(f'{step.name}: saved input is missing after execution')
+    receipt['boundary_inputs'] = boundary
+    receipt['execution_scope'] = sorted(scope)
     receipt['id'] = identity(receipt)
     atomic_json(receipt_path(paths, step.name), receipt)
     return receipt
@@ -199,12 +210,22 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
     valid_graph = not any(f.severity == 'error' for f in report.graph.findings)
+    context = None
+    if not report.upstream and any(name in ledger['steps'] for name in by_name):
+        from _repro_state import compute_status
+        context = compute_status(report.graph, paths, targets=[f'{e.step.task_path or "."}#{e.step.name}' for e in report.entries],
+                                 tier='all', upstream=True, cache=cache,
+                                 acceptance_ledger=ledger, completed_locks=lock)
     for name in _topological(by_name, parents):
         entry = by_name[name]
-        upstream = {p: by_name[p].acceptance['id'] for p in parents[name] if by_name[p].acceptance}
+        all_parents = [src for src, dst, _ in report.graph.step_edges if dst == name]
+        upstream_entries = [context.entry(p) if context else by_name.get(p) for p in all_parents]
+        upstream = {p.step.name: p.acceptance['id'] for p in upstream_entries if p and p.acceptance}
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
         record = ledger['steps'].get(name)
         invalid = validate_record(report.graph, entry.step, paths, record, lock.get(name), upstream, cache) if record else None
+        if record and context and not context.entry(name).acceptance:
+            invalid = invalid or 'upstream acceptance unavailable'
         if valid_graph and not blocked and record and not invalid:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'up to date', record
             if entry.last_run is None:
@@ -219,6 +240,7 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
                 entry.status, entry.reason = 'failed', 'last execution did not succeed'
             if record.get('upstream') != upstream:
                 entry.status, entry.reason = 'stale', 'upstream acceptance changed'
+        entry.local_status, entry.local_reason = entry.status, entry.reason
         if blocked and entry.status == 'fresh':
             entry.status, entry.reason = 'stale', f'upstream step {blocked!r} is {by_name[blocked].status}'
 
@@ -283,7 +305,7 @@ def preview(graph, paths, targets, reason, reviews, evidence):
         if name not in names:
             continue
         step = graph.step(name)
-        status = compute_status(graph, paths, tier='all', acceptance_ledger=ledger)
+        status = compute_status(graph, paths, tier='all', upstream=True, acceptance_ledger=ledger)
         blocked = [p for p in parents[name] if status.entry(p).status != 'fresh']
         if blocked:
             raise ReproStateError(f'{name}: upstream producers are not fresh: {", ".join(blocked)}')
@@ -432,6 +454,10 @@ def bind_sources(graph, root, signature=None):
 
 
 def check_sources(graph):
+    build_guard = getattr(graph, '_build_guard', None)
+    if build_guard is not None:
+        build_guard.check()
+        return
     guard = getattr(graph, '_acceptance_sources', None)
     if guard is not None and source_signature(guard[0], guard[2]) != guard[1]:
         raise ReproStateError('task declarations or configuration changed during this operation; retry')

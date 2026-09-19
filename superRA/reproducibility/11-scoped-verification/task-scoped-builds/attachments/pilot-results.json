@@ -1,0 +1,113 @@
+{
+  "project": "isolated registered superRA task/source copy",
+  "target": "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+  "coverage": "One existing registered projection check; no research analyses or browser capture.",
+  "selected_steps": [
+    "dashboard-navigation-projection-check"
+  ],
+  "unrelated_steps_executed": false,
+  "unchanged_evidence_preserved": true,
+  "dry_run_evidence_preserved": true,
+  "warm_build_median_seconds": 0.3772,
+  "warm_status_median_seconds": 0.0682,
+  "commands": [
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
+      ],
+      "seconds": 2.9438,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "status",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--json"
+      ],
+      "seconds": 0.0626,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
+      ],
+      "seconds": 0.3772,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "status",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--json"
+      ],
+      "seconds": 0.0682,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
+      ],
+      "seconds": 0.3708,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "status",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--json"
+      ],
+      "seconds": 0.0618,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
+      ],
+      "seconds": 0.4317,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "status",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--json"
+      ],
+      "seconds": 0.0691,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--force",
+        "--dry-run"
+      ],
+      "seconds": 0.3891,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "build",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--upstream",
+        "--force"
+      ],
+      "seconds": 2.3371,
+      "exit_code": 0
+    },
+    {
+      "args": [
+        "status",
+        "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
+        "--upstream",
+        "--json"
+      ],
+      "seconds": 0.0615,
+      "exit_code": 0
+    }
+  ]
+}

@@ -1671,6 +1671,8 @@ function renderReproDetail(name) {
   var rows = '';
   rows += reproDetailRow('State', '<span class="repro-glyph">' + (REPRO_GLYPHS[state] || '?')
     + '</span> ' + escapeHtml(state) + (entry ? ' — ' + escapeHtml(entry.reason) : ''));
+  if (entry && entry.local_status && entry.local_status !== state) rows += reproDetailRow('For saved inputs', escapeHtml(entry.local_status) + ' — ' + escapeHtml(entry.local_reason || ''));
+  if (entry && entry.boundary_inputs && entry.boundary_inputs.length) rows += reproDetailRow('Saved input evidence', entry.boundary_inputs.map(function(b) { return '<div>' + escapeHtml(b.logical) + ' — ' + escapeHtml(b.provenance) + ' (' + escapeHtml(b.producer) + ')</div>'; }).join(''));
   rows += reproDetailRow('Owner task', '<button class="repro-task-link" type="button" data-path="'
     + escapeAttr(step.task) + '">' + escapeHtml(reproTaskTitle(step.task))
     + '</button>');

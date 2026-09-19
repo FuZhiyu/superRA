@@ -418,6 +418,9 @@ class StepStatus:
     last_run: float | None = None
     log: str | None = None
     acceptance: dict | None = None
+    local_status: str | None = None
+    local_reason: str | None = None
+    boundary_inputs: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -428,6 +431,9 @@ class StepStatus:
             "cmd": self.step.cmd_logical,
             "status": self.status,
             "reason": self.reason,
+            "local_status": self.local_status or self.status,
+            "local_reason": self.local_reason or self.reason,
+            "boundary_inputs": self.boundary_inputs,
             "changes": [c.to_dict() for c in self.changes],
             "duration": self.duration,
             "last_run": self.last_run,
@@ -451,6 +457,8 @@ class StatusReport:
     entries: list[StepStatus] = field(default_factory=list)
     targets: list[str] = field(default_factory=list)
     selected: set[str] | None = None
+    upstream: bool = False
+    boundary_inputs: list[dict] = field(default_factory=list)
 
     @property
     def reported(self) -> list[StepStatus]:
@@ -492,6 +500,8 @@ class StatusReport:
             "root": str(self.project_root),
             "tier": self.tier,
             "targets": self.targets,
+            "upstream": self.upstream,
+            "boundary_inputs": self.boundary_inputs,
             "ok": self.ok,
             "summary": summary,
             "steps": [e.to_dict() for e in reported],
@@ -509,15 +519,16 @@ def compute_status(
     cache: HashCache | None = None,
     acceptance_ledger: dict | None = None,
     completed_locks: dict[str, LockEntry] | None = None,
+    upstream: bool = False,
 ) -> StatusReport:
-    """Classify the selected closure, including ancestors across tiers."""
+    """Classify a selection against saved inputs, optionally including producers."""
     tier = normalize_tier(tier)
     targets = list(targets)
-    names, unknown = select_steps(graph, targets, tier)
+    names, unknown = select_steps(graph, targets, tier, include_ancestors=upstream)
     if unknown:
         raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
     needed = set(names)
-    selected = needed if targets else None
+    selected = needed
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
     lock.update(completed_locks or {})
@@ -525,7 +536,7 @@ def compute_status(
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
     report = StatusReport(
         project_root=paths.project_root, tier=tier, graph=graph,
-        targets=targets, selected=selected,
+        targets=targets, selected=selected, upstream=upstream,
     )
 
     for step in graph.steps:
@@ -536,6 +547,12 @@ def compute_status(
                 step, lock.get(step.name), paths, cache, outputs, missing_external
             )
         )
+    from _repro_scope import boundary_inputs, check_boundary_receipt
+    report.boundary_inputs = boundary_inputs(graph, names, paths, cache, lock)
+    for entry in report.entries:
+        current_boundary = [b for b in report.boundary_inputs if entry.step.name in b['consumers']]
+        check_boundary_receipt(entry, graph, paths, cache, lock.get(entry.step.name), current_boundary)
+        entry.boundary_inputs = current_boundary or entry.boundary_inputs
     from _repro_acceptance import apply_to_status
     apply_to_status(report, paths, cache, acceptance_ledger, lock)
     cache.flush()
@@ -716,13 +733,12 @@ def _plural(head: str, extra: int) -> str:
 # ---------------------------------------------------------------------------
 
 def select_steps(
-    graph: Graph, targets: Iterable[str], tier: str, *, include_ancestors: bool = True
+    graph: Graph, targets: Iterable[str], tier: str, *, include_ancestors: bool = False
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
     A target is a step name or a task path (that task and its descendants).
-    Ancestors come along by default so a target can be built from a cold tree.
-    Excluding them identifies the direct targets for selective forcing.
+    Qualified task#step targets name one step. Ancestors are opt-in.
     The tier filter only chooses the default selection.
     """
     tier = normalize_tier(tier)
@@ -731,16 +747,35 @@ def select_steps(
     selected: set[str] = set()
     if targets:
         for target in targets:
-            if graph.step(target) is not None:
-                selected.add(target)
+            task_path, sep, step_name = target.partition('#')
+            task_path = task_path.removeprefix('./').rstrip('/')
+            if task_path == '.':
+                task_path = ''
+            if sep:
+                step = graph.step(step_name)
+                if step is not None and step.task_path == task_path:
+                    selected.add(step.name)
+                else:
+                    unknown.append(target)
                 continue
             owned = [
                 s.name
                 for s in graph.steps
-                if s.task_path == target or s.task_path.startswith(f"{target}/")
+                if not task_path or s.task_path == task_path or s.task_path.startswith(f"{task_path}/")
             ]
+            task_exists = bool(owned) or bool(
+                graph.dependencies and task_path in graph.dependencies.tasks
+                and task_path not in graph.dependencies.archived
+            )
+            step = graph.step(target)
+            if step is not None and task_exists:
+                raise ReproStateError(f"ambiguous target {target!r}: use './{task_path}' for the task or '{step.task_path or '.'}#{step.name}' for the step")
             if owned:
                 selected.update(owned)
+            elif step is not None:
+                selected.add(step.name)
+            elif task_exists:
+                raise ReproStateError(f"task {target!r} selects no steps; no result verified")
             else:
                 unknown.append(target)
     else:
@@ -798,10 +833,15 @@ def format_status(report: StatusReport) -> str:
     )
     lines.append("")
     scope = (
-        f"for {', '.join(report.targets)} (including producer ancestors)"
+        f"for {', '.join(report.targets)}"
         if report.targets else f"at tier {report.tier}"
     )
+    scope += " (including producer ancestors)" if report.upstream else " (selected steps only)"
     lines.append(f"{len(entries)} step(s) {scope}: {counts}")
+    if report.boundary_inputs:
+        lines.append("Saved inputs from outside scope (upstream freshness not verified):")
+        for item in report.boundary_inputs:
+            lines.append(f"  {item['logical']} — {item['producer']}: {item['provenance']}")
     missing = [e for e in report.external_inputs if not e.exists]
     if missing:
         lines.append("")

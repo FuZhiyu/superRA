@@ -134,14 +134,16 @@ def _reproduction_view(
 
     steps = sorted(graph.steps_for(target_task.path), key=lambda s: s.name)
     states: dict[str, tuple[str, str]] = {}
+    evidence: dict[str, dict] = {}
     unavailable: str | None = None
     if steps:
         try:
-            report = compute_status(graph, runner_paths(project_root), tier="all")
+            report = compute_status(graph, runner_paths(project_root), tier="all", upstream=True)
         except ReproStateError as exc:
             unavailable = str(exc)
         else:
             states = {e.step.name: (e.status, e.reason) for e in report.entries}
+            evidence = {e.step.name: e.to_dict() for e in report.entries}
 
     step_rows = []
     for step in steps:
@@ -150,7 +152,9 @@ def _reproduction_view(
             status, reason = "unknown", f"runner unavailable: {unavailable}"
         else:
             status, reason = states[step.name]
-        step_rows.append({"name": step.name, "status": status, "reason": reason, "outs": outs})
+        row = {"name": step.name, "status": status, "reason": reason, "outs": outs}
+        row.update({k: evidence.get(step.name, {}).get(k) for k in ('local_status', 'local_reason', 'boundary_inputs')})
+        step_rows.append(row)
 
     return {
         "tier": graph.tiers.get(target_task.path, DEFAULT_TIER),
@@ -260,6 +264,10 @@ def _render_reproduction_human(repro: dict) -> list[str]:
             lines.append(
                 f"  - {row['name']}: {row['status']} — {row['reason']} [outs: {outs}]"
             )
+            if row.get('local_status') and row['local_status'] != row['status']:
+                lines.append(f"    for saved inputs: {row['local_status']} — {row['local_reason']}")
+            for boundary in row.get('boundary_inputs') or []:
+                lines.append(f"    saved input: {boundary['logical']} ({boundary['provenance']}; producer {boundary['producer']})")
     else:
         lines.append("steps: (none)")
     for task_path in repro["feeds_on"]:

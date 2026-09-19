@@ -1,6 +1,6 @@
 ---
 title: "Build selected tasks against saved inputs by default"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -15,13 +15,105 @@ Implement one task/step selection contract for reproduction build, status, and p
 
 ## Details
 
-This is one update task because target resolution, execution nodes, status propagation, receipts, and their public contract share an edit surface. The existing scoped-verification task covers this concern; a separate top-level reproduction task would duplicate it. Fold the outcome into that parent and the durable owning tasks at integration.
+The [CLI and evidence design](attachments/design.md) records the researcher decisions and acceptance matrix. This update keeps selection, execution, and status under one task because their evidence contract crosses the same files. Logical task prerequisites remain separate from executable file edges; initial graph validation and task readiness remain global. Acceptance retains its separate transaction guard.
 
-- [Selection and status](../../../../skills/task-tree/scripts/_repro_state.py) always add producer ancestors today. [Runner](../../../../skills/task-tree/scripts/repro_run.py) separately calculates direct targets for force; [acceptance propagation](../../../../skills/task-tree/scripts/_repro_acceptance.py) lifts locally fresh steps to stale when upstream is stale. Selection alone is insufficient: successful local execution needs an explicit evidence scope.
-- [Dependency contract](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) keeps logical task prerequisites separate from executable file edges. Preserve its global validation and task-readiness rules.
-- Baseline selection/force checks passed six cases in [runner tests](../../../../skills/task-tree/scripts/test_repro_runner.py); they exercise the existing behavior and must be revised with the new contract. They do not validate the proposed default.
-- The declaration guard fingerprints the whole task tree; adding an unrelated task aborts long-running work. Ordinary active status transitions are already normalized. Narrow runtime guarding to the selected contract without weakening input-mutation checks or the separate acceptance transaction.
+## Reproduction
+
+```yaml
+tier: on-demand
+steps:
+  - name: task-scoped-builds-check
+    kind: check
+    cmd: uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_repro_scope.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_task_dependencies.py -q
+    deps:
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_hooks.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/conftest.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/plan_migrate.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_add_result.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_comment.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/wrapper_resolver.py
+      - skills/task-tree/scripts/test_repro_scope.py
+      - skills/task-tree/scripts/test_repro_runner.py
+      - skills/task-tree/scripts/test_repro_acceptance.py
+      - skills/task-tree/scripts/test_task_dependencies.py
+  - name: task-scoped-builds-pilot
+    cmd: uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel python superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot.py --output superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json
+    deps:
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_hooks.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/conftest.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/plan_migrate.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_add_result.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_comment.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/wrapper_resolver.py
+      - skills/task-tree/scripts/test_dashboard.py
+      - skills/task-tree/scripts/tests/test_navigation_projection.py
+      - skills/task-tree/scripts/tests/navigation_browser.py
+      - skills/task-tree/scripts/templates
+      - skills/task-tree/scripts/vendor
+      - superRA/reproducibility/04-dashboard-view/scalable-navigation/task.md
+      - superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot.py
+    outs:
+      - superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json
+```
 
 ## Results
 
-[Design and acceptance matrix](attachments/design.md) record the proposed CLI, saved-input boundary, reporting, migration, and workflow integration. Implementation has not started. The design is hand-authored from the researcher discussion and inspection of the linked parser, runner, status, and workflow owners.
+Task-scoped builds now execute the selected task/step union against saved inputs, with explicit `--upstream` expansion and `--force` over the resulting scope. The [runner](../../../../skills/task-tree/scripts/repro_run.py) and [scope/evidence helper](../../../../skills/task-tree/scripts/_repro_scope.py) preserve upstream uncertainty in global task-reader/dashboard state and allow unrelated declaration edits during execution. The [command reference](../../../../skills/task-tree/references/commands.md#reproduction) owns syntax and migration.
+
+The [reproducibility skill](../../../../skills/reproducibility/SKILL.md#what-gets-a-step) owns default registration of executable support for retained results; the shared task interface loads it during planning, implementation, and review, including unconfigured trees. Task-tree revision points there, and completion/integration explicitly verify upstream.
+
+- Verification: the full script suite passed **1,159 tests, 34 skipped**. After the final internal-selector fix and reader-evidence regression, the registered scoped check passed **166 tests**. Both declared steps built successfully in an isolated source/task copy and matching scoped status reported **fresh**. Harness compatibility, skill validation, and Markdown checks passed. Repository task checking found no errors; two dashboard status-rollup warnings belong to the concurrent dashboard update.
+- The [pilot script](attachments/pilot.py) runs an existing registered dashboard projection check in a disposable source/task copy with neutral grouping ancestors. Its generated [record](attachments/pilot-results.json) reports only the selected step executing, unchanged evidence after repeat/dry-run, and warm median build/status times of **0.377 s / 0.068 s**. Regenerate with `task-scoped-builds-pilot` above; declared inputs identify its source. This is an existing repository check, not a research-analysis or browser-capture pilot.
+- [Behavioral regressions](../../../../skills/task-tree/scripts/test_repro_scope.py) exercise missing/unverified/changed saved inputs, failed upstream, sidecar byte changes, target unions and collisions, force/preview, frozen selection, and concurrent unrelated/relevant edits with one and two workers. Full-byte boundary receipts are local evidence; a missing sidecar baseline causes the selected consumer to rerun without rebuilding its producer.
+
+The design is hand-authored from the researcher discussion and code inspection. Independent correctness review is requested; the separate dashboard redesign is outside this change.

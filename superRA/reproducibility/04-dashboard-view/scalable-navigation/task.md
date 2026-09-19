@@ -40,6 +40,7 @@ steps:
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_task_io.py
       - skills/task-tree/scripts/_task_dependencies.py
@@ -62,6 +63,7 @@ steps:
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_task_io.py
       - skills/task-tree/scripts/_task_dependencies.py
@@ -86,6 +88,7 @@ steps:
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_task_io.py
       - skills/task-tree/scripts/_task_dependencies.py

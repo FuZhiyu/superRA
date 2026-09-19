@@ -29,7 +29,7 @@ Step citations: [task-file contract §Step references](../task-tree/references/t
 
 **Edit** the `task.md` directly with Read/Edit. Hook auto-behaviors are intended: child status changes cascade to ancestors, same-parent task renames re-point sibling `depends_on` edges, and edited task-tree markdown is checked for render-integrity issues with non-blocking feedback. You own leaf status; non-leaf (ancestor rollup) status is hook-derived — leave it as the hook sets it and never hand-edit it back. Stage the hook's edits alongside your own so the tree stays consistent in git.
 
-**Reproduce what you produce.** Load `superRA:reproducibility` before producing or changing a maintained output in a tree whose `superRA/config.yaml` carries a `reproduction:` key.
+**Reproduce retained results.** Load `superRA:reproducibility` when planning, producing, changing, or reviewing task results that depend on executable steps, including trees without reproduction configuration.
 
 **Place files by lifespan and owner.** Session scratch stays outside `superRA/`, uncommitted. A retained file — code included — owned by one task solely to produce, reproduce, review, or interpret its recorded results is a **task companion**: commit it under that task's `attachments/`. Maintained code, shared or runtime-consumed files, and promised deliverables go in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a companion.
 

@@ -26,6 +26,8 @@ Sidecar tracking (contract §Reproduction Section) is for one measurably slow in
 
 ## Diagnosing a surprise
 
+Task-scoped build/status assess saved inputs; `--upstream` includes their producers. A locally fresh result can remain stale in the full graph. Runtime declaration guards cover the frozen selected commands, paths, and relevant output ownership; unrelated tree edits do not invalidate running work. A relevant edit or changed input during execution requires retrying affected work.
+
 `superra repro impact <path...>` identifies affected consumers and why the file is tracked; `superra repro explain <step> --json` separates own changes from upstream uncertainty and exposes verified baseline diffs when available. Impact predicts invalidation, not changed output values.
 
 | It names | Read it as |

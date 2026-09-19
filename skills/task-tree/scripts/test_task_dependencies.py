@@ -255,7 +255,7 @@ def test_logical_prerequisites_do_not_expand_replay_and_archival_cannot_be_targe
     task(root, "old", status="archived", steps=[("old", [], ["old.txt"])])
     current = graph(root)
     assert current.dependencies.prerequisites("target") == ["logical"]
-    assert select_steps(current, ["target"], "all") == (["target"], [])
+    assert select_steps(current, ["target#target"], "all") == (["target"], [])
     assert select_steps(current, ["old"], "all") == ([], ["old"])
     assert "old" not in select_steps(current, [], "all")[0]
 
@@ -292,7 +292,7 @@ def test_built_parent_keeps_freshness_when_child_is_added(tmp_path):
     assert status.returncode == 0, status.stderr
     assert json.loads(status.stdout)["steps"][0]["status"] == "fresh"
     assert [row["path"] for row in json.loads(run(root, "task", "frontier", "--json").stdout)] == ["child"]
-    built = run(root, "repro", "build", "report")
+    built = run(root, "repro", "build", "report", "--upstream")
     assert built.returncode == 0, built.stdout + built.stderr
     assert (tmp_path / "report.txt").read_text() == "seed"
     assert read_run_record(paths, "setup") == setup_record

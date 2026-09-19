@@ -1497,7 +1497,8 @@ def _repro_status_payload(state: WorktreeState, tier: str) -> dict:
     paths = runner_paths(project_root)
     findings = [f.to_dict() for f in graph.findings]
     try:
-        report = compute_status(graph, paths, tier=tier)
+        report = compute_status(graph, paths, tier=tier, upstream=True)
+        report.selected = {e.step.name for e in report.entries if tier == 'all' or e.step.tier == tier}
     except ReproStateError as exc:
         summary = {name: 0 for name in STATUSES}
         summary["total"] = 0

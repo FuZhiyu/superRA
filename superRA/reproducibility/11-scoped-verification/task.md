@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -18,10 +18,6 @@ Make reproduction verification cover the claimed result and its selected checks,
 - **Validation:** demonstrate an unbuilt on-demand target fails scoped status; an unrelated stale task does not block it; selected protection checks block required completion on failure; legacy and new tiers select equivalent work without invalidating the lock. Exercise CLI and dashboard tier surfaces and the two-step pilot's unchanged/timestamp/helper/missing-output/identical-output/corruption/restoration cases, recording actual execution and unchanged-command latency. Environment-file edits alone skip all steps when those files are undeclared; explicit `env_deps` retain their invalidation behavior.
 - **Force validation:** test fresh targets, stale upstream inputs, task and tier selection across tiers, complete reruns, and dry-run scope/evidence preservation against the task-scoped build contract.
 
-## Revision Notes
-
-The task-scoped builds child replaces automatic upstream selection and the two force modes with bounded default execution and explicit upstream expansion. Earlier results below describe the implemented baseline; the child owns the new implementation and its evidence.
-
 ## Details
 
 The audience is researchers choosing what to rebuild and contributors implementing that contract. The accepted design keeps the existing content-based runner and task-local declarations.
@@ -35,6 +31,10 @@ The audience is researchers choosing what to rebuild and contributors implementi
 - One temporary update task covers the shared parser/runner/skill edit surface. The existing skill-authoring task does not own CLI changes, and workflow-integration does not own runner semantics. Fold the validated outcome into the owning tasks during integration.
 
 ## Results
+
+[Task-scoped builds](task-scoped-builds/task.md) implements the current selection, saved-input evidence, and concurrent-edit contract. Its results supersede the earlier upstream/force behavior below.
+
+### Earlier implementation evidence
 
 The runner verifies explicit task/step targets, and the skill requires evidence for the claimed result and selected checks. `required` / `on-demand` are the displayed tier names; legacy inputs remain supported without rewriting declarations or invalidating existing locks.
 
