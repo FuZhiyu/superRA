@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _repro import build_graph
+from _step_links import check_step_links
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -209,7 +210,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup", "sync-impact", "reproduction"],
+        choices=["status", "dependency", "rollup", "sync-impact", "reproduction", "links"],
         help="Only run a specific check category",
     )
     return parser.parse_args(argv)
@@ -230,8 +231,12 @@ def run_checks(
         findings.extend(check_rollup_consistency(root))
     if category is None or category == "sync-impact":
         findings.extend(check_sync_impact(root))
-    if category is None or category in {"dependency", "reproduction"}:
-        findings.extend(build_graph(plan_root, root=root).findings)
+    if category is None or category in {"dependency", "reproduction", "links"}:
+        graph = build_graph(plan_root, root=root)
+        if category != "links":
+            findings.extend(graph.findings)
+        if category is None or category == "links":
+            findings.extend(check_step_links(plan_root, graph))
 
     return findings
 

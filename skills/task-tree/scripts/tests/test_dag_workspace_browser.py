@@ -49,7 +49,7 @@ def workspace(tmp_path_factory):
             name = f'step-{i}-{j}'
             steps.append({'name': name, 'cmd': f'echo {name}', 'deps': [f'out/{i}-{j-1}.txt'] if j else [], 'outs': [f'out/{i}-{j}.txt']})
         import yaml
-        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n---\n\n## Objective\n\nRead analysis {i}.\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'tier': 'required', 'steps': steps}) + '```\n')
+        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n---\n\n## Objective\n\nRead analysis {i}. [Own step](#step-step-{i}-0). [Other step](../analysis-1/task.md#step-step-1-2).\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'tier': 'required', 'steps': steps}) + '```\n')
     for path in ('analysis-0/phase-a', 'analysis-0/phase-b', 'analysis-0/phase-a/leaf'):
         owner = root / path
         owner.mkdir(parents=True, exist_ok=True)
@@ -187,26 +187,20 @@ def test_wheel_pinch_safari_gestures_and_keyboard_recovery(browser, workspace):
     page.close()
 
 
-def test_menus_scope_removal_and_offline_preview(browser, workspace):
+def test_overview_legacy_links_and_offline_preview(browser, workspace):
     page = browser.new_page(viewport={'width': 1030, 'height': 768})
-    enter(page, workspace['url'], {'roots': ['analysis-0', 'analysis-1'], 'view': 'graph'})
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=remove-root][data-value="analysis-1"]').click()
-    assert page.evaluate('_reproNav.roots') == ['analysis-0']
-    menu(page, 'Graph options')
-    page.keyboard.press('Escape')
-    assert page.locator('.rp-menu[open]').count() == 0
-    menu(page, 'Graph options')
-    page.locator('.repro-canvas').click(position={'x': 10, 'y': 10})
-    assert page.locator('.rp-menu[open]').count() == 0
-    page.locator('.rp-task-title[data-value="analysis-0"]').click()
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=clear]').click()
-    page.locator('.rp-task-title[data-value="analysis-1"]').click()
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=focus-selected]').click()
-    page.wait_for_function('_reproNav.roots[0] === "analysis-1"')
-    assert page.evaluate('activePath') == 'analysis-1'
+    enter(page, workspace['url'], {'roots': ['analysis-0'], 'mode': 'nearby', 'anchor': 'step-0-0', 'selected': 'step-0-0', 'tier': 'required'})
+    assert page.evaluate('_reproNav.roots') == []
+    assert page.locator('.rp-task[data-task="analysis-1"]').count() == 1
+    assert page.locator('[data-rp-menu=trace], [data-rp-menu=options], #repro-tier').count() == 0
+    page.locator('[data-rp-action=overview]').click()
+    assert page.locator('.rp-task').count() == 4
+    assert page.locator('.repro-node').count() == 0
+    assert page.evaluate('_reproSelected') == 'step-0-0'
+    assert 'Contains selected step' in page.locator('.rp-task[data-task="analysis-0"]').inner_text()
+    assert 'step-0-0' in page.locator('#repro-detail').inner_text()
+    page.locator('#dag-reader-controls [data-rp-action=show-selected]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
     page.route('http://**/*', lambda route: route.abort())
     page.route('https://**/*', lambda route: route.abort())
     enter(page, workspace['export'], {'roots': [], 'selected': 'step-0-0', 'view': 'graph'})
@@ -255,58 +249,42 @@ def test_diagnostics_stay_inside_graph_with_preview_open_or_closed(browser, work
     page.close()
 
 
-def test_branch_expansion_counts_bounds_anchor_and_history(browser, workspace):
+def test_selection_folding_search_and_history_preserve_project(browser, workspace):
     page = browser.new_page(viewport={'width': 1372, 'height': 768})
     enter(page, workspace['url'])
-    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
-    page.locator('.rp-task-title[data-value="analysis-1"]').click()
     page.locator('[data-rp-action=fold][data-value="analysis-1"]').click()
-    page.locator('.rp-task-title[data-value="analysis-0"]').click()
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=expand-branch]').click()
-    assert page.locator('#repro-branch-depth').input_value() == '2'
-    assert '10 cards' in page.locator('#repro-branch-count').inner_text()
-    assert 'analysis-0' in page.locator('.rp-branch-path').inner_text()
-    page.keyboard.press('Escape')
-    assert page.locator('#repro-options-toggle').evaluate('(e)=>e===document.activeElement')
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=expand-branch]').click()
-    before = page.locator('.rp-task[data-task="analysis-0"]').bounding_box()
-    canvas_before = page.locator('.repro-canvas').bounding_box()
-    page.locator('[data-rp-action=branch-apply]').click()
-    after = page.locator('.rp-task[data-task="analysis-0"]').bounding_box()
-    assert page.locator('#repro-options-toggle').evaluate('(e)=>e===document.activeElement')
-    assert after['x'] == pytest.approx(before['x'])
-    canvas_after = page.locator('.repro-canvas').bounding_box()
-    assert after['y'] - canvas_after['y'] == pytest.approx(before['y'] - canvas_before['y'])
+    page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
+    before = viewport(page)
+    nodes = page.locator('[data-node-id]').evaluate_all('(nodes)=>nodes.map(n=>n.dataset.nodeId)')
+    page.locator('#repro-node-step-0-0').dispatch_event('click')
+    assert viewport(page) == before
+    assert page.locator('[data-node-id]').evaluate_all('(nodes)=>nodes.map(n=>n.dataset.nodeId)') == nodes
+    page.locator('[data-rp-action=fold][data-value="analysis-0"]').dispatch_event('click')
+    assert page.evaluate('_reproSelected') == 'step-0-0'
+    assert 'step-0-0' in page.locator('#repro-detail').inner_text()
+    assert page.locator('.rp-task[data-task="analysis-0"] .rp-selected-inside').is_visible()
     assert 'analysis-1' in page.evaluate('_reproNav.expanded')
-    assert page.evaluate('_reproNav.roots') == []
-    assert not page.locator('#task-preview').is_visible()
-    # A smaller choice genuinely bounds a branch that was previously fully expanded.
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=expand-branch]').click()
-    page.select_option('#repro-branch-depth', 'all')
-    assert '11 cards' in page.locator('#repro-branch-count').inner_text()
-    page.locator('[data-rp-action=branch-apply]').click()
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=expand-branch]').click()
-    page.select_option('#repro-branch-depth', '1')
-    assert '7 cards' in page.locator('#repro-branch-count').inner_text()
-    page.evaluate('drawReproView(document.getElementById("view-reproduction"),_reproData)')
-    assert page.locator('#repro-branch-depth').input_value() == '1'
-    page.locator('[data-rp-action=branch-apply]').click()
-    assert page.evaluate('_reproNav.expanded') == ['analysis-1', 'analysis-0']
+    assert not page.locator('#repro-notice').inner_text()
+    page.reload()
+    page.wait_for_selector('.rp-task')
+    assert page.locator('#repro-node-step-0-0').count() == 0
+    assert page.evaluate('_reproSelected') == 'step-0-0'
+    page.locator('#dag-reader-controls [data-rp-action=show-selected]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    page.fill('#repro-search', 'step-3-3')
+    page.locator('#repro-search-results [data-rp-action=open]').click()
+    page.wait_for_selector('#repro-node-step-3-3')
+    assert page.evaluate('_reproSelected') == 'step-3-3'
+    assert {'analysis-0', 'analysis-1', 'analysis-3'} <= set(page.evaluate('_reproNav.expanded'))
+    assert page.locator('#repro-node-step-0-0').count() == 1
     page.go_back()
-    page.wait_for_function('_reproNav.expanded.includes("analysis-0/phase-a/leaf")')
-    page.evaluate("reproFocus('analysis-1')")
-    page.wait_for_function('_reproNav.roots[0] === "analysis-1"')
-    page.evaluate("reproSelectTask('analysis-0')")
-    menu(page, 'Graph options')
-    page.locator('[data-rp-action=expand-branch]').click()
-    assert page.locator('#repro-branch-apply').is_disabled()
-    assert 'Focus selected task' in page.locator('#repro-branch-count').inner_text()
-    assert page.locator('#repro-branch-count [data-rp-action=focus]').evaluate('(e)=>e===document.activeElement')
-    assert page.evaluate('_reproNav.roots') == ['analysis-1']
+    page.wait_for_function('_reproSelected === "step-0-0"')
+    assert page.locator('.rp-task[data-task="analysis-2"]').count() == 1
+    page.locator('[data-rp-action=overview]').click()
+    assert page.locator('.rp-selected-inside:not([hidden])').count() == 1
+    page.locator('.rp-task-title[data-value="analysis-2"]').click()
+    assert page.evaluate('_reproSelected') == ''
+    assert page.locator('.rp-selected-inside:not([hidden])').count() == 0
     page.close()
 
 
@@ -316,7 +294,7 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     page.locator('#dag-preview-resizer').focus()
     page.keyboard.press('Shift+ArrowLeft')
     page.set_viewport_size({'width': 390, 'height': 844})
-    for selector in ('#task-preview', '[data-rp-action=close-reader]', '.repro-controls > .rp-menu > summary'):
+    for selector in ('#task-preview', '[data-rp-action=close-reader]', '[data-rp-action=overview]'):
         for box in page.locator(selector).all():
             bounds = box.bounding_box()
             assert bounds['x'] >= 0
@@ -324,7 +302,7 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     reader = page.locator('#task-preview').bounding_box()
     assert reader['y'] >= 0
     assert reader['y'] + reader['height'] <= 844
-    assert page.locator('.repro-controls > .rp-menu > summary').first.bounding_box()['y'] > page.locator('#repro-search').bounding_box()['y']
+    assert page.locator('[data-rp-action=overview]').is_visible()
     page.close()
 
 
@@ -492,3 +470,47 @@ def test_bottom_preview_divider_accepts_touch_drag(browser, workspace):
     assert page.locator('#task-preview').bounding_box()['height']==pytest.approx(before+60,abs=2)
     assert divider.evaluate('(e)=>getComputedStyle(e).touchAction')=='none'
     context.close()
+
+
+@pytest.mark.parametrize('surface', ['url', 'export'])
+def test_step_markdown_links_shared_urls_and_wrong_owner(browser, workspace, surface):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    if surface == 'export':
+        page.route('http://**/*', lambda route: route.abort())
+        page.route('https://**/*', lambda route: route.abort())
+    base = workspace[surface]
+    page.goto(base + '#/analysis-0')
+    page.get_by_role('link', name='Own step', exact=True).click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    assert page.evaluate('_reproSelected') == 'step-0-0'
+    assert page.locator('.rp-task[data-task="analysis-3"]').count() == 1
+    page.get_by_role('link', name='Other step', exact=True).click()
+    page.wait_for_selector('#repro-node-step-1-2')
+    assert page.evaluate('_reproSelected') == 'step-1-2'
+    assert page.evaluate('activePath') == 'analysis-1'
+    page.goto(base + '#/analysis-0?step=step-1-2')
+    page.wait_for_selector('.rp-task')
+    assert 'not declared' in page.locator('#repro-notice').inner_text()
+    assert page.evaluate('_reproSelected') == ''
+    page.goto(base + '#/analysis-1?step=step-1-2')
+    page.wait_for_selector('#repro-node-step-1-2')
+    assert page.evaluate('_reproSelected') == 'step-1-2'
+    page.locator('[data-rp-action=declaration]').click()
+    page.wait_for_selector('tr[id="step-step-1-2"]')
+    page.close()
+
+
+def test_connection_details_group_files_without_losing_evidence(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'], {'expanded': ['analysis-0'], 'selected': 'step-0-0'})
+    page.evaluate("_reproData.graph.step_edges.push({from:'step-0-0',to:'step-0-1',via:'out/extra.txt'});drawReproView(document.getElementById('view-reproduction'),_reproData)")
+    links = page.locator('#repro-detail [data-rp-action=related][data-value="step-0-1"]')
+    assert links.count() == 1
+    evidence = links.locator('..').inner_text()
+    assert 'out/0-0.txt' in evidence and 'out/extra.txt' in evidence
+    wire = page.locator('.rp-wire[data-from="step-0-0"][data-to="step-0-1"]')
+    assert wire.count() == 1
+    wire.dispatch_event('click')
+    assert 'out/extra.txt' in page.locator('#repro-edge-detail').inner_text()
+    assert 'out/0-0.txt' in page.locator('#repro-edge-detail').inner_text()
+    page.close()

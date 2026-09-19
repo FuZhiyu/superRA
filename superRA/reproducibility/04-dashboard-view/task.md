@@ -21,11 +21,13 @@ Let the researcher review an agent-built graph in the dashboard and comment on i
 - Route and export mechanics: [plan_dashboard.py](../../../skills/task-tree/scripts/plan_dashboard.py) `/api/children-graph` and `/export`; theme tokens in `templates/base.html`.
 - Preserve the state palette's glyph-and-label accessibility in both themes.
 
-## Revision Notes
-
-Extend the reproduction UI to support larger graphs and combined subtree/tier filtering. The nested navigation task owns implementation and validation; historical results below establish the earlier implementation only; the 0.5 graph and acceptance changes require fresh UI verification.
-
 ## Results
+
+The [current navigation implementation](scalable-navigation/dag-design/task.md) replaces subtree/tier filtering and trace modes with one project map, Project overview, global search, local folding, and persistent step selection. Its results record fresh browser verification and Markdown step-link support.
+
+### Original implementation evidence
+
+The following evidence describes the earlier dashboard implementation; the linked navigation task owns current UI behavior.
 
 The dashboard has a third top-level view, **Reproduction**, over the graph [01-section-contract](../01-section-contract/task.md) defines and the freshness [02-runner](../02-runner/task.md) computes. Graph feedback goes back to agents through the `## Reproduction` section's existing comment gutter. The real-graph pass is [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md)'s.
 

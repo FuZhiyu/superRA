@@ -2662,6 +2662,9 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-edges .rp-wire:hover,.repro-edges .rp-wire:focus,.repro-edges .rp-wire.is-lit { stroke:var(--accent);stroke-width:3; }
 .repro-edges marker path { stroke:none;fill:var(--text-mute); }
 .repro-plot.is-zoomed-out .rp-task-meta { visibility:hidden; }
+.repro-plot.is-zoomed-out .rp-selected-inside { visibility:visible; }
+.rp-selected-inside { color:var(--accent); }
+.repro-related { margin-bottom:10px; }
 #repro-detail pre { max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere; }
 #repro-detail .hc-btn { height:auto;min-height:28px;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;text-align:left; }
 @media(max-width:1000px) {

@@ -1,6 +1,6 @@
 ---
 title: Clean, Intuitive DAG Workspace
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -28,12 +28,10 @@ Remake the DAG workspace into a clean, intuitive interface consistent with the r
 
 - The existing navigation task owns the functional model. This temporary child owns the substantial visual and interaction redesign on that same runtime surface; the general dashboard task does not own DAG-specific presentation.
 - Initial Safari review at roughly 1030 × 768 showed controls wrapping to several rows, expanded diagnostic prose above the graph, and a reader consuming about one third of the workspace. The graph starts near the bottom edge. Chrome at 1372 × 768 has the same hierarchy problem.
-- Suggested design: a compact heading/scope row and search/filter toolbar; graph canvas filling remaining height; grouped viewport controls on the canvas; a concise error/warning summary with collapsed details; task cards with readable titles and subdued metadata. Preserve persistent selection while making reading an explicit choice.
-- Runtime owners: [dashboard.js](../../../../../skills/task-tree/scripts/templates/dashboard.js), [dashboard.css](../../../../../skills/task-tree/scripts/templates/dashboard.css), and [base.html](../../../../../skills/task-tree/scripts/templates/base.html). The reviewed navigation branch was merged into the local superra-dev checkout at 14fcd6f6; make this revision there. Port 8996 still serves the temporary navigation checkout, while the research dashboard on port 8653 loads installed plugin assets.
-- Execution: Astra implementer; main agent performs thorough correctness, scope-fidelity, and visual usability review. No generated runtime assets are planned.
-- Branch-expansion exploration: Treasury contains 15 active task cards and 7 steps; one/two/three/all levels show 8/16/22/22 cards. Heterogeneity contains 31 task cards and 54 steps; the same depths show 8/32/74/85 cards. Suggested control: Graph options → Expand selected branch, with depth and projected counts computed from the existing graph projection before Apply. An out-of-scope selection needs an explicit focus action; expansion must not silently widen scope. Replace the unqualified global Expand all steps action with this task-scoped control.
+- Runtime owners: [dashboard.js](../../../../../skills/task-tree/scripts/templates/dashboard.js), [dashboard.css](../../../../../skills/task-tree/scripts/templates/dashboard.css), and [base.html](../../../../../skills/task-tree/scripts/templates/base.html). Port 8996 serves the temporary navigation checkout; the research dashboard on port 8653 serves this development checkout.
+- Execution: main-agent implementation and self-review in interactive mode. No generated runtime assets.
 - Routing review: coincident horizontal and vertical tracks falsely suggest Methods → Verification and a box enclosing the four top-level research tasks. The declared top-level Treasury flow is Heterogeneity → Treasury → Reproduce manuscript exhibits. Use separate lanes and endpoint ports, minimize crossings and detours, and keep routes outside unrelated cards. Inspect cycles or aggregation-induced cycles before changing rank placement; preserve all real edges and their evidence. Dense graphs may cross, but crossings must not look like joins.
-- Disconnected-group design: the research overview currently places unconnected tasks in the first rank beside the Stock-Market Construction Inputs routes, visually implying they feed downstream. Lay out connected components independently, with connected groups first and a compact isolated-card area afterward. Prefer understated headings, whitespace, and separators using existing theme tokens; avoid enclosing outlines that resemble dependency routes. Qualify isolated cards as “No connections in this view,” since filters and collapsed containers affect visible connectivity. Use component-local routing so arrows cannot pass beside an unrelated group. Keep ordering deterministic and retain viewport anchoring during expansion.
+- Disconnected-group design: the research overview currently places unconnected tasks in the first rank beside the Stock-Market Construction Inputs routes, visually implying they feed downstream. Lay out connected components independently, with connected groups first and a compact isolated-card area afterward. Prefer understated headings, whitespace, and separators using existing theme tokens; avoid enclosing outlines that resemble dependency routes. Qualify isolated cards as “No connections in this view,” since collapsed containers affect visible connectivity. Use component-local routing so arrows cannot pass beside an unrelated group. Keep ordering deterministic and retain viewport anchoring during expansion.
 
 ## Reproduction
 
@@ -63,10 +61,13 @@ steps:
       - superRA/reproducibility/04-dashboard-view/scalable-navigation/dag-design/attachments/browser
   - name: dashboard-dag-design-interaction-check
     kind: check
-    cmd: uv run --with pytest --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/tests/test_dag_workspace_browser.py skills/task-tree/scripts/tests/test_navigation_projection.py -q
+    cmd: uv run --with pytest --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/tests/test_dag_workspace_browser.py skills/task-tree/scripts/tests/test_navigation_projection.py skills/task-tree/scripts/test_step_links.py -q
     deps:
       - skills/task-tree/scripts/tests/test_dag_workspace_browser.py
       - skills/task-tree/scripts/tests/test_navigation_projection.py
+      - skills/task-tree/scripts/test_step_links.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/task_check.py
       - skills/task-tree/scripts/test_dashboard.py
       - skills/task-tree/scripts/tests/navigation_browser.py
       - skills/task-tree/scripts/plan_dashboard.py
@@ -88,4 +89,12 @@ steps:
 
 ## Results
 
-Implementing the approved single-map navigation design. Existing browser artifacts describe the previous interface; fresh verification is pending.
+The [graph navigator](../../../../../skills/task-tree/scripts/templates/dashboard.js) uses one project map with Project overview, global search, local chevrons, and persistent selection. Trace modes, scope controls, tier filtering, expansion-depth controls, and the duplicate step list are removed. Legacy URLs normalize to the full map; folding retains selected-step details and a containing-task indicator. Show in graph restores the step. Selection and refresh preserve the camera; Back/Forward uses one history entry per navigation.
+
+- **Step citations:** [the contract](../../../../../skills/task-tree/references/task-file-contract.md#step-references) defines relative and same-task links. Live and offline links reveal the declared step, reject wrong owners, and expose matching rendered anchors. [Link checks](../../../../../skills/task-tree/scripts/test_step_links.py) cover missing targets, wrong owners, code examples, and task moves.
+- **Connections:** one arrow per visible endpoint pair retains every file. Uses and Used by appear before technical file lists, grouping related-step links and their file evidence.
+- **Verification:** 391 dashboard/link tests passed. The registered interaction check passed 40 tests, including live/offline step links, legacy URLs, overview, folding, history, grouped evidence, responsive panes, gestures, and layout projection. The [500-step browser fixture](../../../../../skills/task-tree/scripts/tests/navigation_browser.py) passed with 1,494 file connections, worktree isolation, live updates, removal recovery, and offline navigation. [Recorded browser results](attachments/browser/browser-results.json) and [desktop evidence](attachments/browser/dag-desktop.png) identify the environment and timings. Native Safari and physical trackpad gestures were unavailable; Chrome exercises the platform event handlers.
+- **Reproduction:** scoped builds of `dashboard-dag-design-browser` and `dashboard-dag-design-interaction-check` succeeded; matching status reports both fresh. Their outputs and [lock](../../../../../pytask.lock) record actual execution.
+- **Research view:** a session-only read-only snapshot of the [research dashboard](http://localhost:8653/?wt=heterogeneity-reproduction) exercised its legacy construction URL, peer-preserving selection, overview/reveal, and phone width with 92 steps and 274 file connections. Research data and declarations were unchanged. Port 8653 serves this checkout's updated source; the separate port 8996 dashboard was restored after correcting the launch directory.
+
+Independent review has not run.

@@ -1,33 +1,33 @@
 {
   "machine": "macOS-27.0-arm64-arm-64bit",
-  "live": "http://127.0.0.1:50565",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-0v7b0mmn/superRA",
+  "live": "http://127.0.0.1:60850",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-fv62jvqq/superRA",
   "browser": "153.0.8010.48",
   "counts": {
     "steps": 500,
     "tasks": 51,
     "edges": 1494
   },
-  "initialZoom": 1,
+  "initialZoom": 0.5885286783042394,
   "timingsMs": {
     "search": [
-      0.7999999821186066,
+      0.4000000059604645,
       0.19999998807907104,
-      0.10000002384185791,
+      0.30000001192092896,
       0.19999998807907104,
-      0.19999998807907104
+      0.30000001192092896
     ],
-    "filter": [
-      6.4000000059604645,
-      3.5,
-      2.5,
+    "overview": [
       3,
-      3.300000011920929
+      2.9000000059604645,
+      2.699999988079071,
+      2.9000000059604645,
+      2.5999999940395355
     ],
     "full": [
-      98.5,
-      98.89999997615814,
-      93.7000000178814
+      91.5,
+      90.7000000178814,
+      89.09999999403954
     ]
   },
   "sharedReaderAndHistory": true,
