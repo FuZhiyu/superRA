@@ -1,6 +1,6 @@
 ---
 title: Unified Tree and Graph Workspace
-status: implemented
+status: in-progress
 depends_on: []
 ---
 
@@ -15,6 +15,7 @@ Unify Tree and Graph navigation around one search, task/status filter, selection
 - Provide one shared Filter panel with a visibly nested, collapsible task checklist, Select all, Deselect all, partial-selection indicators, and status choices, visible active-filter summaries, and Clear filters recovery. Hidden tasks hide descendants; status matches retain ancestor context. Search opens tasks, steps, and files without changing filters. Switching layouts preserves selection, reader content/scroll, and filter state; each layout retains its own expansion and pane preference. Remove Board UI and runtime/export support.
 - Remove trace modes, reproduction-tier filters, scope controls, and expansion-depth controls. Normalize legacy links to the full map while preserving meaningful task/step selection and expansion. Keep URL history, worktree isolation, and offline navigation.
 - Support relative Markdown step links using `task.md#step-<name>` and same-task `#step-<name>`, with the declaration's existing name as identity. Reveal/select the exact step and validate its owner; report broken references. Dashboard sharing uses `?step=<name>`, and rendered step rows expose the anchor.
+- Integrate step inspection into the shared reader with task context, clear status and output hierarchy, a copyable command, and progressive disclosure for inputs, dependencies, and run evidence. Fix task loading from Tree step selections and direct links; verify the research example, both themes, narrow panes, history, and offline navigation.
 - Bundle file connections by endpoint pair; retain every file in arrow evidence and grouped Uses/Used by lists.
 - Make each dependency arrow independently traceable. Avoid shared line segments that imply a common bus, false connection, or enclosing box; provide distinct routes and readable arrowheads, with source/destination highlighting on hover and keyboard focus. Verify collapsed top-level tasks and the expanded heterogeneity branch without changing dependency semantics.
 - Identify cyclic dependencies with the dashboard's existing muted rust accent and a compact accessible cycle label, keeping card surfaces neutral. Distinguish a cycle in collapsed task groups from an executable-step cycle; do not imply that aggregation alone makes execution impossible. Keep acyclic edges neutral and preserve cycle visibility during edge inspection. Use existing theme tokens rather than a competing error-red palette.
