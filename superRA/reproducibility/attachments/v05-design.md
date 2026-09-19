@@ -35,7 +35,7 @@ Integrate dependencies into the task workspace: `Tree` and `DAG` are alternative
 
 The dashboard begins with task nodes and their effective dependencies. Expanding a task exposes its steps and the file connections supporting those edges; mixed expansion keeps other tasks compact. Logical-only edges remain labeled connections between task boundaries, including tasks with no steps. They are never fabricated into step-level file edges.
 
-Use compact containers with task titles and per-state counts, readable initial scale, and explicit Fit overview. Keep step names readable, route directional edges around cards, and emphasize the selected connection chain. Opening the inspector keeps selection visible. Preserve scope, tier, search, history, worktree isolation, keyboard/touch support, and offline export from the [navigation contract](../04-dashboard-view/scalable-navigation/attachments/design.md).
+Use compact containers with task titles and per-state counts, readable initial scale, and explicit Fit overview. Keep step names readable, route directional edges around cards, and emphasize the selected connection chain. Opening the inspector keeps selection visible. Preserve search, history, worktree isolation, keyboard/touch support, and offline export from the [navigation contract](../04-dashboard-view/scalable-navigation/attachments/design.md).
 
 Filtering changes the view, not validity. Retain hidden prerequisite markers and global cycle diagnostics. Invalid graphs remain inspectable, with links to their declarations; do not present them as an executable DAG. Findings must distinguish omitted malformed steps from validly parsed steps involved in a cycle.
 
@@ -76,7 +76,7 @@ The protocol belongs in the reproduction skill's existing authoring/rerun/comple
 | No reproduction declarations | Existing logical dependency syntax and frontier behavior remain compatible |
 | Archived prerequisite or subtree with active direct/transitive consumers | Archived nodes stay excluded; downstream warnings retain provenance; existing boundary inputs remain usable and missing inputs still block execution |
 | Inferred-only, logical-only, and duplicate-origin edge | CLI and UI agree; one edge retains both reasons; unlinking logical evidence preserves an inferred edge |
-| Step cycle, owner cycle with acyclic steps, mixed-source cycle, parent-branch cycle | Actionable cycle witness; no dispatch or build bypass through target/tier filters |
+| Step cycle, owner cycle with acyclic steps, mixed-source cycle, parent-branch cycle | Actionable cycle witness; no dispatch or build bypass through target selection |
 | Add a subtask to a task with existing steps; parent setup → child → parent report; umbrella-root work | No ownership/hash migration or self-blocking; valid internal ordering stays valid; missing own work is actionable |
 | Parsing/resolution failure and dependency-changing move | Repair remains possible; no falsely ready frontier or partial CLI mutation |
 | Shared helper and split configuration fixture | Impact explains fan-out; unrelated edits leave independent consumers untouched; identical derived configuration stops reruns |

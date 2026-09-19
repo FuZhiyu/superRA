@@ -223,7 +223,7 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
     if not report.upstream and any(name in ledger['steps'] for name in by_name):
         from _repro_state import compute_status
         context = compute_status(report.graph, paths, targets=[f'{e.step.task_path or "."}#{e.step.name}' for e in report.entries],
-                                 tier='all', upstream=True, cache=cache,
+                                 upstream=True, cache=cache,
                                  acceptance_ledger=ledger, completed_locks=lock)
     for name in _topological(by_name, parents):
         entry = by_name[name]
@@ -303,7 +303,7 @@ def preview(graph, paths, targets, reason, reviews, evidence):
     from _repro_state import compute_status
     if any(f.severity == 'error' for f in graph.findings):
         raise ReproStateError('invalid graph; acceptance is unavailable')
-    names, unknown = select_steps(graph, targets, 'all', include_ancestors=False)
+    names, unknown = select_steps(graph, targets, include_ancestors=False)
     if unknown or not names or not targets:
         raise ReproStateError('select exact step or task targets: ' + ', '.join(unknown))
     ledger = read_ledger(paths)
@@ -318,7 +318,7 @@ def preview(graph, paths, targets, reason, reviews, evidence):
         if name not in names:
             continue
         step = graph.step(name)
-        status = compute_status(graph, paths, tier='all', upstream=True, acceptance_ledger=ledger)
+        status = compute_status(graph, paths, upstream=True, acceptance_ledger=ledger)
         blocked = [p for p in parents[name] if status.entry(p).status != 'fresh']
         if blocked:
             raise ReproStateError(f'{name}: upstream producers are not fresh: {", ".join(blocked)}')
@@ -393,7 +393,7 @@ def accept(graph, paths, targets, reason, reviews, evidence, token=None):
 
 
 def revoke(graph, paths, targets):
-    names, unknown = select_steps(graph, targets, 'all', include_ancestors=False)
+    names, unknown = select_steps(graph, targets, include_ancestors=False)
     with mutation_lock(paths):
         ledger = read_ledger(paths)
         names += [name for name in unknown if name in ledger['steps']]
@@ -406,7 +406,7 @@ def revoke(graph, paths, targets):
 
 
 def impact(graph, paths, files, scope=()):
-    selected, unknown = select_steps(graph, scope, 'all', include_ancestors=False)
+    selected, unknown = select_steps(graph, scope, include_ancestors=False)
     if unknown:
         raise ReproStateError('unknown scope: ' + ', '.join(unknown))
     resolved = {str(absolute(paths.project_root, p).resolve()) for p in files}

@@ -38,9 +38,8 @@ def fixture(base):
             deps = [f'out/{n}.txt' for n in range(max(0, k - 3), k)]
             steps.append({'name': f'step-{k:03}', 'cmd': f'echo {k}', 'deps': deps, 'outs': [f'out/{k}.txt']})
         import yaml
-        tier = 'required' if i % 2 else 'on-demand'
         text = f'---\ntitle: Analysis {i % 3} — Long-horizon heterogeneity estimates and research verification\nstatus: in-progress\n---\n\n## Objective\n\nRead {owner}.\n\n## Reproduction\n\n```yaml\n'
-        (path / 'task.md').write_text(text + yaml.safe_dump({'tier': tier, 'steps': steps}, sort_keys=False) + '```\n')
+        (path / 'task.md').write_text(text + yaml.safe_dump({'steps': steps}, sort_keys=False) + '```\n')
     return root
 
 
@@ -70,7 +69,7 @@ def routing_fixture(kind):
         ids = ['data', 'methods', 'estimates', 'verification', 'manuscript']
         titles = ['Build research data', 'Methods', 'Estimate heterogeneity', 'Verification checks', 'Manuscript exhibits']
         pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (2, 3), (2, 4), (3, 4)]
-    return {'steps': [{'name': name, 'task': name, 'tier': 'required', 'kind': 'command'} for name in ids],
+    return {'steps': [{'name': name, 'task': name, 'kind': 'command'} for name in ids],
             'step_edges': [{'from': ids[a], 'to': ids[b], 'via': 'output.csv'} for a, b in pairs],
             'dependencies': {'tasks': [{'path': name, 'title': title, 'status': 'in-progress'} for name, title in zip(ids, titles)], 'boundaries': {}}}
 
@@ -89,7 +88,7 @@ def run(evidence, snapshot=None):
                 import yaml
                 (path / 'task.md').write_text('---\n' + yaml.safe_dump({'title': task['title'], 'status': task['status']}, allow_unicode=True) + '---\n\n## Objective\n\nGraph-only verification fixture. Research task prose is omitted.\n')
             dashboard._repro_graph_payload = lambda state: captured['graph']
-            dashboard._repro_status_payload = lambda state, tier: captured['status']
+            dashboard._repro_status_payload = lambda state: captured['status']
         else:
             root = fixture(base)
         dashboard.PLAN_ROOT = root
@@ -351,7 +350,7 @@ def run(evidence, snapshot=None):
                 if routing.locator('#task-preview').is_visible(): routing.locator('#navigation-toggle').click()
                 for kind in ('cycle', 'fan', 'components'):
                     routing.evaluate("""graph => {
-                        _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+                        _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
                         _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
                     }""", routing_fixture(kind))
                     routing.locator('[data-rp-action=fit]').click()

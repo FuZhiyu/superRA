@@ -10,7 +10,7 @@ step on screen at once:
   failed    bootstrap-se exits 1
   stale     fm.sh is touched after the build, so fama-macbeth and its
             descendants no longer match the lock
-  missing   the 04-figures lane is tier local, so `build --tier canon` skips it
+  missing   the 04-figures lane is outside the build targets, so it is never built
   fresh     everything else
 
 Usage:
@@ -41,10 +41,11 @@ reproduction:
     - env.lock
 """
 
+BUILT = ("01-ingest", "02-panel", "03-estimation")  # 04-figures stays never-built
+
 TASKS = {
     "01-ingest": (
         "Ingest Raw Vendor Extracts",
-        "canon",
         """\
   - name: fetch-crsp
     runner: sh
@@ -78,7 +79,6 @@ TASKS = {
     ),
     "02-panel": (
         "Build the Firm-Month Panel",
-        "canon",
         """\
   - name: merge-panel
     runner: sh
@@ -113,7 +113,6 @@ TASKS = {
     ),
     "03-estimation": (
         "Cross-Sectional Estimation",
-        "canon",
         """\
   - name: fama-macbeth
     runner: sh
@@ -146,7 +145,6 @@ TASKS = {
     ),
     "04-figures": (
         "Figures and Appendix Tables",
-        "local",
         """\
   - name: fig-coefs
     runner: sh
@@ -217,11 +215,11 @@ def build_project(root: Path) -> None:
         "depends_on: []\n---\n\n## Objective\n\nA fixture project for the "
         "Reproduction dashboard view.\n",
     )
-    for slug, (title, tier, steps) in TASKS.items():
+    for slug, (title, steps) in TASKS.items():
         body = (
             f"---\ntitle: \"{title}\"\nstatus: in-progress\ndepends_on: []\n---\n\n"
             f"## Objective\n\n{title}.\n\n## Reproduction\n\n```yaml\n"
-            f"tier: {tier}\nsteps:\n{steps}```\n"
+            f"steps:\n{steps}```\n"
         )
         write(plan_root / slug / "task.md", body)
 
@@ -268,13 +266,13 @@ def main() -> None:
     if cli is None:
         print("pass --cli <path to repro_run.py> to drive the build", file=sys.stderr)
         return
-    print(run(root, cli, "build", "--tier", "canon").stdout)
+    print(run(root, cli, "build", *BUILT).stdout)
     # Touch one script after the build so its step and descendants read stale.
     time.sleep(1.1)
     (root / "code" / "fm.sh").write_text(
         (root / "code" / "fm.sh").read_text() + "# re-specified with a 60-month window\n"
     )
-    print(run(root, cli, "status", "--tier", "all").stdout)
+    print(run(root, cli, "status", ".").stdout)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ Tree and Graph share search, task/status filters, task/step selection, and one r
 
 One arrow represents each visible endpoint pair. Arrow evidence retains every connecting file and logical prerequisite. Uses and Used by group direct connections by step and list their files. Selection highlights related arrows without hiding unrelated nodes.
 
-The shared reader retains declaration/comments, task status, reproduction state and reason, command, inputs, outputs, tier, checks, accepted evidence, actual run metadata, and logs. Reproduction tier belongs in details, not a visibility filter.
+The shared reader retains declaration/comments, task status, reproduction state and reason, command, inputs, outputs, checks, accepted evidence, actual run metadata, and logs.
 
 ## State and compatibility
 
@@ -36,7 +36,7 @@ Step citations use relative Markdown links to `task.md#step-<name>` or same-task
 - Overview is available from deep legacy URLs, selected steps, and collapsed groups.
 - Selection preserves siblings, nodes, camera position, and unrelated expansions.
 - Folding retains selected-step details; Show in graph restores the step.
-- Search reaches any task/step across tiers without changing filters; task/status filters apply identically to Tree and Graph. No trace/scope/tier controls remain.
+- Search reaches any task/step without changing filters; task/status filters apply identically to Tree and Graph. No trace/scope/tier controls remain.
 - Grouped arrows and Uses/Used by preserve all evidence.
 - Relative, same-task, shared, invalid, and offline step links behave consistently.
 - Existing comments, history, refresh, responsive reader sizing, dark mode, keyboard/touch input, logical-only tasks, and error visibility remain intact.

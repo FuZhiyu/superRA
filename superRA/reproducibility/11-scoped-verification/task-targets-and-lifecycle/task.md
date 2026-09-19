@@ -1,6 +1,6 @@
 ---
 title: "Replace tiers with task targets and define step retirement"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -27,4 +27,12 @@ The researcher accepted dropping tiers after identifying final task targets as t
 
 ## Results
 
-Design decisions recorded from the researcher discussion and inspection of registration, task-tree revision, and integration-maturation instructions. Implementation has not started; the current CLI still supports tiers.
+Reproduction tiers are gone: `repro build` / `status` run the named task or `task#step` targets, `.` selects every registered step, and a bare command fails with that instruction. The [reproducibility skill](../../../../skills/reproducibility/SKILL.md#step-lifecycle) replaces §Tiers with the step lifecycle.
+
+- **Runtime.** [Parser](../../../../skills/task-tree/scripts/_repro.py), [selection/status](../../../../skills/task-tree/scripts/_repro_state.py), [runner](../../../../skills/task-tree/scripts/repro_run.py), task read/tree, and the dashboard route and client carry no tier field, filter, badge, or `set_tier`. Library callers with no targets still assess every step; only the CLI requires a target.
+- **Migration.** `--tier` and `repro tier` exit 2 naming the target-based replacement, under both `--plan-root` and `--root`. A leftover `tier:` key is one `[WARNING]` per section and changes no step state: a disposable two-task fixture stayed 2 of 2 `fresh` with `tier: canon` / `tier: gold` added or removed, and rebuilt nothing. This repository's three sections dropped the key.
+- **Completion.** [Protect](../../../../skills/reproducibility/references/protect-and-completion.md) names completion targets — tasks owning kept-result producers plus selected checks — in the `integrate(protect)` commit body; the IMPLEMENT, Integrate, and Finish gates run `repro build <targets> --upstream` and a clean matching `status`. A check runs only when targeted or owned by a target task.
+- **Lifecycle.** Retire a step only when its result or check is no longer retained and no retained consumer reads its output; moved or merged tasks keep step names; deleting or archiving an owner first rehomes needed producers or agrees a frozen boundary. [Maturation](../../../../skills/superintegrate/references/mature-consolidate.md) points there. Registration now covers retained findings generally, not only cited numbers.
+- **Verification.** The task-tree suite passed **1,173 tests** and the dashboard browser suite **35**; `test_artifact_ui.py` keeps its two earlier sidebar/attachment failures, outside this change. Seven new tests cover the retired key, flag, and subcommand, bare commands, `.`, and lock preservation; ten tier-only tests were deleted. The [workflow journey](../../07-workflow-integration/unified-dependency-workflow/attachments/verify_workflow.py) passes on explicit targets after qualifying its ambiguous `source` selectors, which task-scoped builds had already broken. `repro build` on [task-scoped builds](../task-scoped-builds/task.md) reran its check and pilot with the new CLI; both are `fresh`. Skill, Markdown, harness-compatibility, and `task check` passes are clean.
+
+The implementation was verified by the implementing agent; no independent review has run. Step-lifecycle scenarios (scratch-to-retained registration, rehoming, retirement with a surviving consumer) are instruction changes without an agent-level run.

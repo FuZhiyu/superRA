@@ -33,22 +33,15 @@ CONFIG_FILENAME = "config.yaml"
 CONFIG_KEY = "reproduction"
 CATEGORY = "reproduction"
 
-TIERS = ("required", "on-demand")
-TIER_ALIASES = {"canon": "required", "local": "on-demand"}
-TIER_INPUTS = (*TIERS, *TIER_ALIASES)
-DEFAULT_TIER = "on-demand"
 STEP_KINDS = ("build", "check")
 
-SECTION_KEYS = ("tier", "steps")
+SECTION_KEYS = ("steps",)
+RETIRED_SECTION_KEYS = ("tier",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
 CONFIG_KEYS = ("vars", "runners", "env_deps", "code_roots")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-
-
-def normalize_tier(tier: str) -> str:
-    return TIER_ALIASES.get(tier, tier) if isinstance(tier, str) else tier
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +472,6 @@ class Step:
 
     name: str
     task_path: str
-    tier: str = DEFAULT_TIER
     kind: str = "build"
     cmd: str = ""
     cmd_logical: str = ""
@@ -495,7 +487,6 @@ class Step:
         return {
             "name": self.name,
             "task": self.task_path,
-            "tier": self.tier,
             "kind": self.kind,
             "cmd": self.cmd,
             "cmd_logical": self.cmd_logical,
@@ -549,7 +540,7 @@ class Graph:
 
     config: ReproConfig = field(default_factory=ReproConfig)
     steps: list[Step] = field(default_factory=list)
-    tiers: dict[str, str] = field(default_factory=dict)          # task path -> tier
+    section_tasks: list[str] = field(default_factory=list)       # tasks declaring a section
     producers: dict[str, str] = field(default_factory=dict)      # resolved out -> step
     step_edges: list[tuple[str, str, str]] = field(default_factory=list)
     task_edges: list[tuple[str, str]] = field(default_factory=list)
@@ -575,10 +566,9 @@ def graph_to_dict(graph: Graph) -> dict:
         "tasks": [
             {
                 "path": path,
-                "tier": tier,
                 "steps": [s.name for s in graph.steps_for(path)],
             }
-            for path, tier in sorted(graph.tiers.items())
+            for path in sorted(graph.section_tasks)
         ],
         "steps": [s.to_dict() for s in graph.steps],
         "step_edges": [
@@ -925,7 +915,6 @@ class _StepError(ValueError):
 def _build_step(
     raw: Any,
     task_path: str,
-    tier: str,
     config: ReproConfig,
     project_root: Path,
     warn: Callable[[str], None],
@@ -950,7 +939,7 @@ def _build_step(
 
     variables = config.variables
     unknown_vars: list[str] = []
-    step = Step(name=name, task_path=task_path, tier=tier, kind=kind)
+    step = Step(name=name, task_path=task_path, kind=kind)
 
     has_cmd = raw.get("cmd") is not None
     has_runner = raw.get("runner") is not None
@@ -1193,22 +1182,21 @@ def build_graph(
             )
             continue
         for key in document:
-            if key not in SECTION_KEYS:
+            if key in RETIRED_SECTION_KEYS:
+                _finding(
+                    task.path,
+                    "warning",
+                    f"## {REPRO_SECTION}: {key!r} is retired and ignored; remove the key "
+                    "and name task targets instead",
+                )
+            elif key not in SECTION_KEYS:
                 _finding(
                     task.path,
                     "error",
                     f"## {REPRO_SECTION}: unknown key {key!r}; "
                     f"expected one of {list(SECTION_KEYS)}",
                 )
-        tier = normalize_tier(document.get("tier") or DEFAULT_TIER)
-        if tier not in TIERS:
-            _finding(
-                task.path,
-                "error",
-                f"## {REPRO_SECTION}: tier {tier!r}; expected one of {list(TIERS)}",
-            )
-            tier = DEFAULT_TIER
-        graph.tiers[task.path] = tier
+        graph.section_tasks.append(task.path)
 
         raw_steps = document.get("steps") or []
         if not isinstance(raw_steps, list):
@@ -1219,7 +1207,6 @@ def build_graph(
                 step = _build_step(
                     raw_step,
                     task.path,
-                    tier,
                     graph.config,
                     project_root,
                     lambda message, path=task.path: _finding(path, "warning", message),
@@ -1252,7 +1239,7 @@ def build_graph(
     for finding in declared.findings:
         if finding.severity == "error" and finding.task_path in archived:
             _finding(finding.task_path, "warning", finding.message)
-    graph.tiers = {p: tier for p, tier in graph.tiers.items() if p not in archived}
+    graph.section_tasks = [p for p in graph.section_tasks if p not in archived]
     _link(graph, project_root)
     cycle = cycle_path([(a, b) for a, b, _ in graph.step_edges])
     if cycle:

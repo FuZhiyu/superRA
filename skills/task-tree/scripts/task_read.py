@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
-from _repro import DEFAULT_TIER, REPRO_SECTION, build_graph
+from _repro import REPRO_SECTION, build_graph
 from _repro_state import ReproStateError, compute_status, runner_paths
 from _task_snapshot import own_step_states
 from _task_io import (
@@ -138,7 +138,7 @@ def _reproduction_view(
     unavailable: str | None = None
     if steps:
         try:
-            report = compute_status(graph, runner_paths(project_root), tier="all", upstream=True)
+            report = compute_status(graph, runner_paths(project_root), upstream=True)
         except ReproStateError as exc:
             unavailable = str(exc)
         else:
@@ -157,7 +157,6 @@ def _reproduction_view(
         step_rows.append(row)
 
     return {
-        "tier": graph.tiers.get(target_task.path, DEFAULT_TIER),
         "steps": step_rows,
         "feeds_on": graph.dependencies.prerequisites(target_task.path),
         "feeds": sorted({b for a, b in graph.task_edges if a == target_task.path}),
@@ -256,7 +255,7 @@ def _render_frontmatter_readable(fm: dict) -> str:
 
 def _render_reproduction_human(repro: dict) -> list[str]:
     """Render the ``=== Reproduction ===`` block from a `_reproduction_view` dict."""
-    lines = ["=== Reproduction ===\n", f"tier: {repro['tier']}"]
+    lines = ["=== Reproduction ===\n"]
     if repro["steps"]:
         lines.append("steps:")
         for row in repro["steps"]:

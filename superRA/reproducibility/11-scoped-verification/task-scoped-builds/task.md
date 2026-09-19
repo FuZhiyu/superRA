@@ -20,7 +20,6 @@ The [CLI and evidence design](attachments/design.md) records the researcher deci
 ## Reproduction
 
 ```yaml
-tier: on-demand
 steps:
   - name: task-scoped-builds-check
     kind: check

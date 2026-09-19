@@ -223,7 +223,6 @@ def _run_read(args: argparse.Namespace) -> None:
 def _run_tree(args: argparse.Namespace) -> None:
     argv = _root_args(args.root) + ["--tree"]
     _append_optional(argv, "--status", args.status)
-    _append_optional(argv, "--tier", args.tier)
     if args.as_json:
         argv.append("--json")
     _module_main("task_query", argv)
@@ -541,11 +540,6 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     tree.add_argument("--status", help="Filter by effective status")
-    tree.add_argument(
-        "--tier",
-        choices=_load("_repro").TIER_INPUTS,
-        help="Filter to tasks registered at this reproduction tier",
-    )
     tree.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
     _set_runner(tree, _run_tree)
 

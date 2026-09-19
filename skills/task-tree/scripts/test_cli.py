@@ -127,7 +127,6 @@ def test_task_read_shows_reproduction_block_for_registered_task(
     _write_task_md(
         build / "task.md", "Build",
         reproduction=(
-            "tier: canon\n"
             "steps:\n"
             "  - name: build-panel\n"
             "    cmd: sh build.sh\n"
@@ -140,7 +139,7 @@ def test_task_read_shows_reproduction_block_for_registered_task(
 
     data = json.loads(capsys.readouterr().out)
     rep = data["task"]["reproduction"]
-    assert rep["tier"] == "required"
+    assert "tier" not in rep
     assert rep["steps"][0]["name"] == "build-panel"
     assert rep["steps"][0]["status"] == "missing"
 
@@ -190,7 +189,7 @@ def test_task_check_reproduction_category(
     assert any(f["category"] == "reproduction" for f in data["findings"])
 
 
-def test_task_tree_tier_badge_and_filter(
+def test_task_tree_carries_no_reproduction_badge(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -198,12 +197,11 @@ def test_task_tree_tier_badge_and_filter(
     root = tmp_path / "superRA"
     root.mkdir()
     _write_task_md(root / "task.md", "Root")
-    canon = root / "01-canon"
-    canon.mkdir()
+    registered = root / "01-registered"
+    registered.mkdir()
     _write_task_md(
-        canon / "task.md", "Canon Task",
+        registered / "task.md", "Registered Task",
         reproduction=(
-            "tier: canon\n"
             "steps:\n"
             "  - name: build\n"
             "    cmd: sh build.sh\n"
@@ -217,13 +215,9 @@ def test_task_tree_tier_badge_and_filter(
 
     cli.main(["task", "tree"])
     out = capsys.readouterr().out
-    assert "Canon Task [required]" in out
+    assert "Registered Task" in out
+    assert "[required]" not in out
     assert "Plain Task" in out
-
-    cli.main(["task", "tree", "--tier", "canon"])
-    out = capsys.readouterr().out
-    assert "Canon Task" in out
-    assert "Plain Task" not in out
 
 
 def test_task_create_uses_autodetected_root_for_legacy_wrapper(

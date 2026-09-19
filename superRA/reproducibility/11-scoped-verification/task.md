@@ -1,6 +1,6 @@
 ---
 title: "Verify claimed results and simplify reproduction adoption"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
@@ -20,7 +20,7 @@ Make reproduction verification cover the claimed result and its selected checks,
 
 ## Revision Notes
 
-The researcher selected tier removal and asked for an explicit step lifecycle. The new child owns this follow-up; the approved task-scoped implementation remains the current runtime until that revision lands.
+The researcher selected tier removal and asked for an explicit step lifecycle; [task targets and lifecycle](task-targets-and-lifecycle/task.md) implements both.
 
 ## Details
 
@@ -36,7 +36,7 @@ The audience is researchers choosing what to rebuild and contributors implementi
 
 ## Results
 
-[Task-scoped builds](task-scoped-builds/task.md) implements the current selection, saved-input evidence, and concurrent-edit contract. Its results supersede the earlier upstream/force behavior below.
+[Task-scoped builds](task-scoped-builds/task.md) implements the current selection, saved-input evidence, and concurrent-edit contract. Its results supersede the earlier upstream/force behavior below. [Task targets and lifecycle](task-targets-and-lifecycle/task.md) then removed tiers: every tier name, flag, and default below is historical.
 
 ### Earlier implementation evidence
 

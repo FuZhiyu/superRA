@@ -24,10 +24,10 @@ def run(body):
 
 FIXTURE = """
 var tasks=['p','p/child','p/child/nested','peer','logical'].map(path=>({path,title:'Repeated',status:'in-progress'}));
-var steps=[['setup','p','on-demand'],['build','p/child','required'],['nested','p/child/nested','required'],['report','p','required'],['independent','peer','required']].map(([name,task,tier])=>({name,task,tier}));
+var steps=[['setup','p'],['build','p/child'],['nested','p/child/nested'],['report','p'],['independent','peer']].map(([name,task])=>({name,task}));
 var edges=[['setup','build'],['build','nested'],['nested','report'],['setup','report']].map(([from,to])=>({from,to,via:from+'.csv'}));
 var graph={steps,step_edges:edges,dependencies:{tasks,boundaries:{'':{nodes:['task:p','task:logical','task:peer'],edges:[{from:'task:logical',to:'task:p',evidence:[{kind:'logical',from:'logical',to:'p',declaration:'p depends_on: logical'}]}]}}}};
-var nav={roots:[],tier:'all',mode:'scope',anchor:'',expanded:[]};
+var nav={roots:[],mode:'scope',anchor:'',expanded:[]};
 function model(){return reproHierarchy(graph,nav,reproProject(graph,nav,[]));}
 """
 
@@ -48,12 +48,12 @@ nav.expanded.push('p');assert(model().nodes.some(n=>n.id==='build'));
 """)
 
 
-def test_subtree_tier_intersection_trace_and_hidden_edges():
+def test_subtree_trace_and_hidden_edges():
     run(FIXTURE + """
 nav.roots=reproRoots(['p/child','p','peer']);assert.deepEqual(nav.roots,['p','peer']);
-nav.roots=['p/child'];nav.tier='required';var p=reproProject(graph,nav,[]);
+nav.roots=['p/child'];var p=reproProject(graph,nav,[]);
 assert.deepEqual(p.matches.map(s=>s.name),['build','nested']);
-assert(p.boundary.some(b=>b.hidden==='setup'&&b.reasons.includes('tier')&&b.reasons.includes('subtree')));
+assert(p.boundary.some(b=>b.hidden==='setup'&&b.reasons.includes('subtree')));
 nav.mode='upstream';nav.anchor='nested';nav.expanded=['p','p/child','p/child/nested'];p=reproProject(graph,nav,[]);
 assert.deepEqual(p.steps.map(s=>s.name),['setup','build','nested']);
 assert(!reproWithin('peer-2','peer'));
@@ -76,12 +76,12 @@ for(let e of l.edges)for(let n of m.nodes){if(ancestor(n.id,e.from)||ancestor(n.
 def test_shape_visibility_and_cycle_layout_termination(kind):
     run("""
 var tasks=Array.from({length:20},(_,i)=>({path:'t'+i,title:'T'+i}));
-var steps=tasks.map((t,i)=>({name:'s'+i,task:t.path,tier:'required'}));
+var steps=tasks.map((t,i)=>({name:'s'+i,task:t.path}));
 var kind=""" + json.dumps(kind) + """,edges=[];
 for(let i=1;i<20;i++){if(kind==='chain'||kind==='cycle')edges.push({from:'s'+(i-1),to:'s'+i,via:'f'+i});if(kind==='fan')edges.push({from:'s0',to:'s'+i,via:'f'+i});}
 if(kind==='chain')edges.push({from:'s0',to:'s19',via:'shortcut'});
 if(kind==='cycle')edges.push({from:'s19',to:'s0',via:'cycle'});
-var graph={steps,step_edges:edges,dependencies:{tasks,boundaries:{}}},nav={roots:[],tier:'all',mode:'scope',expanded:tasks.map(t=>t.path)};
+var graph={steps,step_edges:edges,dependencies:{tasks,boundaries:{}}},nav={roots:[],mode:'scope',expanded:tasks.map(t=>t.path)};
 var m=reproHierarchy(graph,nav,reproProject(graph,nav,[])),l=reproHierarchyLayout(m);
 assert.equal(m.nodes.filter(n=>n.type==='step').length,20);assert.equal(l.edges.length,edges.length);
 for(let e of l.edges){assert(e.evidence.length===1);assert(Number.isFinite(l.pos[e.from].x));}
@@ -92,8 +92,8 @@ def test_inherited_logical_prerequisites_and_order_independent_closure():
     run("""
 var tasks=['a','b','c','c/child'].map(path=>({path,title:path}));
 var logical=[{kind:'logical',from:'b',to:'c',declaration:'c depends_on b'},{kind:'logical',from:'a',to:'b',declaration:'b depends_on a'}];
-var graph={steps:[{name:'result',task:'c/child',tier:'required'}],step_edges:[],dependencies:{tasks,boundaries:{'':{edges:logical.map(e=>({from:'task:'+e.from,to:'task:'+e.to,evidence:[e]}))}}}};
-var nav={roots:['c/child'],tier:'required',mode:'scope',expanded:[]};
+var graph={steps:[{name:'result',task:'c/child'}],step_edges:[],dependencies:{tasks,boundaries:{'':{edges:logical.map(e=>({from:'task:'+e.from,to:'task:'+e.to,evidence:[e]}))}}}};
+var nav={roots:['c/child'],mode:'scope',expanded:[]};
 var m=reproHierarchy(graph,nav,reproProject(graph,nav,[]));
 assert(m.nodes.some(n=>n.id==='task:a'));assert(m.nodes.some(n=>n.id==='task:b'));assert(m.nodes.some(n=>n.id==='task:c/child'));
 assert(m.edges.some(e=>e.from==='task:a'&&e.to==='task:b'));
@@ -117,10 +117,9 @@ nav.expanded=[];
 assert.equal(reproBranchExpansion(graph,nav,[],'p/child','2').visible,false);
 nav.roots=['p'];
 assert.equal(reproBranchExpansion(graph,nav,[],'peer','2').visible,false);
-nav.tier='required';
-assert.equal(plan('1').steps,1);
+assert.equal(plan('1').steps,2);
 nav.mode='upstream';nav.anchor='nested';
-assert.equal(plan('all').steps,3); // trace follows the on-demand producer, omits report
+assert.equal(plan('all').steps,3); // trace follows the producer, omits report
 assert.equal(nav.anchor,'nested');
 """)
 
@@ -163,10 +162,10 @@ assert.deepEqual(l.edges.map(e=>[e.from,e.to]),pairs);
 def test_nested_lanes_and_ports_do_not_share_segments():
     run(ROUTE_GEOMETRY + """
 const tasks=['p','p/a','p/b','p/c','q'];
-const steps=Array.from({length:30},(_,i)=>({name:'s'+i,task:tasks[1+i%3],tier:'required'}));
+const steps=Array.from({length:30},(_,i)=>({name:'s'+i,task:tasks[1+i%3]}));
 const edges=[];for(let i=1;i<30;i++)for(let j=Math.max(0,i-3);j<i;j++)edges.push({from:'s'+j,to:'s'+i,via:'out'+j});
 const graph={steps,step_edges:edges,dependencies:{tasks:tasks.map(path=>({path,title:path})),boundaries:{}}};
-const nav={roots:[],tier:'all',mode:'scope',expanded:tasks};
+const nav={roots:[],mode:'scope',expanded:tasks};
 const m=reproHierarchy(graph,nav,reproProject(graph,nav,[])),l=reproHierarchyLayout(m);assertDistinct(l);
 assert.equal(l.edges.length,edges.length);
 """)
@@ -224,18 +223,18 @@ assert.equal(l.pos['solo-1'].y,l.pos['solo-3'].y);assert(l.pos['solo-4'].y>l.pos
 def test_nested_internal_graph_stays_connected_without_containment_edges():
     run(ROUTE_GEOMETRY + """
 const tasks=['a','a/left','a/right','a/empty','b','c','solo'];
-const steps=[{name:'input',task:'a/left',tier:'required'},{name:'output',task:'a/right',tier:'on-demand'},{name:'other-in',task:'b',tier:'required'},{name:'other-out',task:'c',tier:'required'}];
+const steps=[{name:'input',task:'a/left'},{name:'output',task:'a/right'},{name:'other-in',task:'b'},{name:'other-out',task:'c'}];
 const graph={steps,step_edges:[{from:'input',to:'output',via:'a.csv'},{from:'other-in',to:'other-out',via:'b.csv'}],dependencies:{tasks:tasks.map(path=>({path,title:path})),boundaries:{}}};
-const nav={roots:[],tier:'all',mode:'scope',expanded:['a','a/left','a/right']};
+const nav={roots:[],mode:'scope',expanded:['a','a/left','a/right']};
 const layout=()=>reproHierarchyLayout(reproHierarchy(graph,nav,reproProject(graph,nav,[])));
 let l=layout();assertDistinct(l);
 let root=l.bands.filter(b=>!b.parent);assert.deepEqual(root.map(b=>b.ids),[['task:a'],['task:b','task:c'],['task:solo']]);
 assert(!root[0].isolated); // visible internal edges make this an independent graph
 const nested=l.bands.filter(b=>b.parent==='task:a');assert.deepEqual(nested.map(b=>b.ids),[['task:a/left','task:a/right'],['task:a/empty']]);
 assert.equal(l.edges.length,2);assert(l.pos['task:a'].x<=l.pos.input.x);
-nav.tier='required';l=layout();assertDistinct(l);root=l.bands.filter(b=>!b.parent);
-assert(root.find(b=>b.isolated).ids.includes('task:a'));assert.equal(l.edges.length,1);
-nav.roots=['a'];nav.tier='all';l=layout();assert.equal(l.edges.length,1);assert(!l.bands.find(b=>!b.parent).isolated);
+nav.roots=['a/left','b','c'];l=layout();assertDistinct(l);root=l.bands.filter(b=>!b.parent);
+assert(root.find(b=>b.isolated).ids.includes('task:a/left'));assert.equal(l.edges.length,1);
+nav.roots=['a'];l=layout();assert.equal(l.edges.length,1);assert(!l.bands.find(b=>!b.parent).isolated);
 """)
 
 

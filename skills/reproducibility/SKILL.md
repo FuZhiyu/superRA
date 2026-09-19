@@ -21,17 +21,16 @@ Section schema, config keys, and validation findings: `skills/task-tree/referenc
 **Register executable support before recording retained results.** Reuse existing registered producers/checks or declare them in their owning tasks, including unchanged scripts used for new findings. Cover the producer chain to the agreed external-input boundary; update declarations with result, input, or ownership changes in the same commit.
 
 - **A maintained producer of a committed exhibit or a canonical result** — the script behind a table, figure, estimate, or dataset that the manuscript, the slides, or another task's `## Results` cites.
-- **A task companion the results cite** — a script under a task's `attachments/` that produced a number in that task's `## Results`, at `tier: on-demand`.
+- **A task companion the results cite** — a script under a task's `attachments/` that produced a finding in that task's `## Results`.
 - **A drift test or validation script** — as a `kind: check` step over the artifacts it reads; `[BLOCKING]` for drift tests protecting registered outs.
 
-Leave unregistered: exploration that produced no cited number, anything regenerated per machine, and the boundary inputs a project receives rather than builds (`references/graph-authoring.md`).
+Leave unregistered: exploration whose findings are not retained, anything regenerated per machine, and the boundary inputs a project receives rather than builds (`references/graph-authoring.md`).
 
-## Tiers
+## Step Lifecycle
 
-- **`required`** — selected by build/status without targets and by the completion gate; chosen at Protect (`references/protect-and-completion.md`).
-- **`on-demand`** (default) — built by explicit target; may remain stale between uses.
-
-Legacy `canon` / `local` declarations and arguments remain accepted aliases. Use the new names when authoring.
+- **Retire a step only when its result or check is no longer retained and no retained consumer reads its output.**
+- **Moving or merging tasks:** move surviving steps with their names unchanged, so successful evidence carries over.
+- **Deleting or archiving an owner:** first move needed producers to a surviving task, or agree a frozen external-input boundary with the researcher.
 
 ## Build and Status
 
@@ -44,9 +43,9 @@ superra repro status <task> '<check-task>#<check-step>'
 
 A task target includes its own steps and descendant tasks; `task#step` selects one step. Multiple targets select their union. A check already included by the task target needs no separate argument. An empty selection verifies no result.
 
-**Use saved inputs outside the selection.** Existing files are usable regardless of upstream freshness or successful-build evidence; missing inputs block. Report their provenance without certifying their producers. Add `--upstream` to build/status for the producer chain, across tiers.
+**Use saved inputs outside the selection.** Existing files are usable regardless of upstream freshness or successful-build evidence; missing inputs block. Report their provenance without certifying their producers. Add `--upstream` to build/status for the producer chain.
 
-**Force within scope:** `--force` reruns every selected step; combine with `--upstream` for a full-chain rerun. For every registered step, use `build --tier all --force`. Preview with `--dry-run`.
+**Force within scope:** `--force` reruns every selected step; combine with `--upstream` for a full-chain rerun. For every registered step, use `build . --force`. Preview with `--dry-run`.
 
 **State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness covers successful execution or [reviewed acceptance](references/rerun-model.md#reviewed-acceptance); distinguish executed steps and checks from accepted results. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit changed execution or acceptance records with the work.
 

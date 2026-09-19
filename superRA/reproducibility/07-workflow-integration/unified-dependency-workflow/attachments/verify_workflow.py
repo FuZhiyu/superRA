@@ -46,7 +46,7 @@ def step(name: str, command: str, deps: list[str], outs: list[str] | None) -> st
 
 
 def reproduction(steps: str) -> str:
-    return f"\n## Reproduction\n\n```yaml\ntier: required\nsteps:\n{steps}```\n"
+    return f"\n## Reproduction\n\n```yaml\nsteps:\n{steps}```\n"
 
 
 def verify(base: Path) -> None:
@@ -76,7 +76,7 @@ def verify(base: Path) -> None:
     context = json.loads(run(root, "task", "read", "consumer", "--json"))
     assert [row["path"] for row in context["dependencies"]] == ["source"]
     run(root, "task", "check", "--category", "dependency", "--json")
-    run(root, "repro", "build")
+    run(root, "repro", "build", ".")
     lock = (root / "pytask.lock").read_bytes()
     events = (root / "events.txt").read_text()
 
@@ -84,30 +84,30 @@ def verify(base: Path) -> None:
           + "# Documentation only: value returns seven.\n")
     impact = json.loads(run(root, "repro", "impact", "Code/shared.sh", "--json"))
     assert {row["step"] for row in impact["direct"]} == {"source", "consumer"}
-    baseline = json.loads(run(root, "repro", "explain", "source", "--json"))
+    baseline = json.loads(run(root, "repro", "explain", "source#source", "--json"))
     assert "Documentation only" in json.dumps(baseline)
     write(root, "review.md", "Inspected the verified baseline diff and Code/a.sh: only a trailing "
           "comment in shared.sh changed. The sourced value function and its call site remain "
           "identical. Existing source output remains valid. Consumer calculation is reviewed separately.\n")
-    args = ["repro", "accept", "source", "--reason", "Helper documentation only",
+    args = ["repro", "accept", "source#source", "--reason", "Helper documentation only",
             "--review", "Code/shared.sh=Only a trailing comment changed; value and its call site are identical",
             "--evidence", "review.md", "--json"]
     proposal = json.loads(run(root, *args))
     run(root, *args, "--apply", proposal["token"])
     assert (root / "pytask.lock").read_bytes() == lock
     assert (root / "events.txt").read_text() == events
-    run(root, "repro", "status", "source", "--json")
+    run(root, "repro", "status", "source#source", "--json")
 
     # Changed calculation/assertion: equivalence is not established, so execute.
     write(root, "Code/b.sh", (root / "Code/b.sh").read_text().replace("+ $(value)", "+ $(value) + 1"))
     write(root, "Code/check.sh", (root / "Code/check.sh").read_text().replace("= 14", "= 15"))
-    run(root, "repro", "build")
+    run(root, "repro", "build", ".")
     events = (root / "events.txt").read_text().splitlines()
     assert events.count("source") == 1
     assert events.count("consumer") == 2 and events.count("check") == 2
     assert (root / "output/b.txt").read_text().strip() == "15"
-    run(root, "repro", "status")
-    run(root, "repro", "build", "source", "--force")
+    run(root, "repro", "status", ".")
+    run(root, "repro", "build", "source#source", "--force")
     assert (root / "events.txt").read_text().splitlines().count("source") == 2
 
 

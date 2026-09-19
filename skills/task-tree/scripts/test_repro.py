@@ -13,7 +13,6 @@ import math
 import pytest
 
 from _repro import (
-    DEFAULT_TIER,
     Graph,
     PathRef,
     YamlSubsetError,
@@ -193,9 +192,8 @@ class TestPyyamlAgreement:
     """The optional dependency must read every accepted text identically."""
 
     FIXTURES = [
-        "tier: canon\nsteps: []\n",
+        "steps: []\n",
         (
-            "tier: canon\n"
             "steps:\n"
             "  - name: build-panel\n"
             "    cmd: julia --project=. Code/build_panel.jl\n"
@@ -247,30 +245,30 @@ class TestPyyamlAgreement:
 
 class TestSectionExtraction:
     def test_extracts_the_fenced_block(self):
-        assert extract_repro_block("\n```yaml\ntier: canon\n```\n") == "tier: canon"
+        assert extract_repro_block("\n```yaml\nsteps: []\n```\n") == "steps: []"
 
     def test_prose_outside_the_fence_is_rejected(self):
         with pytest.raises(YamlSubsetError) as excinfo:
-            extract_repro_block("These steps rebuild the panel.\n\n```yaml\ntier: canon\n```\n")
+            extract_repro_block("These steps rebuild the panel.\n\n```yaml\nsteps: []\n```\n")
         assert "prose outside the fenced yaml block" in str(excinfo.value)
 
     def test_trailing_prose_is_rejected(self):
         with pytest.raises(YamlSubsetError):
-            extract_repro_block("```yaml\ntier: canon\n```\n\nSee the runner docs.\n")
+            extract_repro_block("```yaml\nsteps: []\n```\n\nSee the runner docs.\n")
 
     def test_a_second_block_is_rejected(self):
         with pytest.raises(YamlSubsetError) as excinfo:
-            extract_repro_block("```yaml\ntier: canon\n```\n```yaml\ntier: local\n```\n")
+            extract_repro_block("```yaml\nsteps: []\n```\n```yaml\nsteps: []\n```\n")
         assert "exactly one fenced yaml block" in str(excinfo.value)
 
     def test_non_yaml_info_string_is_rejected(self):
         with pytest.raises(YamlSubsetError) as excinfo:
-            extract_repro_block("```\ntier: canon\n```\n")
+            extract_repro_block("```\nsteps: []\n```\n")
         assert "must be ```yaml" in str(excinfo.value)
 
     def test_unclosed_fence_is_rejected(self):
         with pytest.raises(YamlSubsetError):
-            extract_repro_block("```yaml\ntier: canon\n")
+            extract_repro_block("```yaml\nsteps: []\n")
 
 
 # ---------------------------------------------------------------------------
@@ -475,10 +473,10 @@ class TestGraphConstruction:
         _write_repro_task(plan / "01-load", "Load", None)
         graph = _graph(plan)
         assert graph.steps == []
-        assert graph.tiers == {}
+        assert graph.section_tasks == []
         assert graph.findings == []
 
-    def test_section_presence_registers_the_task_at_the_default_tier(self, tmp_path):
+    def test_section_presence_registers_the_task(self, tmp_path):
         plan = _plan(tmp_path)
         (tmp_path / "run.sh").write_text("echo hi\n", encoding="utf-8")
         _write_repro_task(
@@ -487,18 +485,10 @@ class TestGraphConstruction:
             "steps:\n  - name: load\n    cmd: sh run.sh\n    deps: [run.sh]\n    outs: [out/raw.csv]\n",
         )
         graph = _graph(plan)
-        assert graph.tiers == {"01-load": DEFAULT_TIER}
+        assert graph.section_tasks == ["01-load"]
         step = graph.step("load")
-        assert step.tier == DEFAULT_TIER
         assert step.kind == "build"
         assert step.task_path == "01-load"
-
-    def test_tier_canon_opts_the_task_in(self, tmp_path):
-        plan = _plan(tmp_path)
-        _write_repro_task(
-            plan / "01-load", "Load", "tier: canon\nsteps:\n  - name: load\n    cmd: true\n"
-        )
-        assert _graph(plan).tiers == {"01-load": "required"}
 
     def test_variables_resolve_in_cmd_deps_and_outs(self, tmp_path):
         plan = _plan(tmp_path)
@@ -771,7 +761,7 @@ class TestFindings:
             '---\ntitle: "A"\nstatus: not-started\ndepends_on: []\n---\n\n'
             "## Objective\n\nObj.\n\n"
             "## Reproduction\n\nThese steps rebuild the panel.\n\n"
-            "```yaml\ntier: canon\n```\n",
+            "```yaml\nsteps: []\n```\n",
             encoding="utf-8",
         )
         assert _has(_graph(plan), "error", "prose outside the fenced yaml block")
@@ -810,15 +800,20 @@ class TestFindings:
 
     def test_unknown_section_key(self, tmp_path):
         plan = _plan(tmp_path)
-        _write_repro_task(plan / "01-a", "A", "tier: canon\nlevel: high\nsteps: []\n")
+        _write_repro_task(plan / "01-a", "A", "level: high\nsteps: []\n")
         assert _has(_graph(plan), "error", "unknown key 'level'")
 
-    def test_invalid_tier_falls_back_to_the_default(self, tmp_path):
+    @pytest.mark.parametrize("value", ["canon", "gold", "required"])
+    def test_retired_tier_key_warns_and_keeps_the_steps(self, tmp_path, value):
         plan = _plan(tmp_path)
-        _write_repro_task(plan / "01-a", "A", "tier: gold\nsteps: []\n")
+        _write_repro_task(
+            plan / "01-a", "A", f"tier: {value}\nsteps:\n  - name: load\n    cmd: true\n"
+        )
         graph = _graph(plan)
-        assert _has(graph, "error", "tier 'gold'")
-        assert graph.tiers == {"01-a": DEFAULT_TIER}
+        assert _has(graph, "warning", "'tier' is retired and ignored")
+        assert _messages(graph, "error") == []
+        assert [s.name for s in graph.steps] == ["load"]
+        assert graph.section_tasks == ["01-a"]
 
     def test_unknown_step_key(self, tmp_path):
         plan = _plan(tmp_path)
@@ -966,7 +961,7 @@ class TestFindings:
 
     def test_findings_use_the_task_check_finding_shape(self, tmp_path):
         plan = _plan(tmp_path)
-        _write_repro_task(plan / "01-a", "A", "tier: gold\nsteps: []\n")
+        _write_repro_task(plan / "01-a", "A", "level: high\nsteps: []\n")
         finding = check_reproduction(plan)[0]
         assert finding.to_dict().keys() == {
             "task_path",

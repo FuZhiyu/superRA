@@ -1,5 +1,7 @@
 # Task-scoped reproduction
 
+[Task targets](../../task-targets-and-lifecycle/task.md) supersede every tier reference below: build/status require a target, `.` replaces `--tier all`, and completion names its targets instead of `--tier required`.
+
 The declared graph records complete provenance. Each invocation selects an execution scope; saved artifacts supply inputs from outside it. The default runs only selected work. Upstream expansion and forced execution are independent choices.
 
 ## Decision status

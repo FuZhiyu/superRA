@@ -6,12 +6,13 @@ The reproduction upgrade: task-declared build steps, content-based reruns, and a
 
 ### Added
 
-- Reproduction sections register producers and checks with required/on-demand tiers; the runner rebuilds changed work and records execution state.
+- Reproduction sections register producers and checks; the runner rebuilds changed work and records execution state.
 - The dashboard exposes reproduction steps, freshness, file dependencies, and task ownership; workflow skills register and verify maintained results.
 
 ### Changed
 
-- **Task-scoped builds by default.** Task paths include their own and nested steps; `task#step` selects one step. Builds use saved inputs outside the selection even when upstream is stale or unverified. Add `--upstream` to include producers, `--force` to rerun the selected scope, or both for full-chain execution. `--force-all` is retired; explicit targets and `--tier` cannot be combined. Existing declarations and locks remain readable. Scoped status and full-chain status distinguish local execution from upstream freshness.
+- **Task-scoped builds by default.** Task paths include their own and nested steps; `task#step` selects one step. Builds use saved inputs outside the selection even when upstream is stale or unverified. Add `--upstream` to include producers, `--force` to rerun the selected scope, or both for full-chain execution. `--force-all` is retired. Existing declarations and locks remain readable. Scoped status and full-chain status distinguish local execution from upstream freshness.
+- **Task targets replace reproduction tiers.** `repro build` and `repro status` require a target; `.` selects every registered step. `--tier`, `repro tier`, and the `task tree --tier` filter and badge are retired with actionable errors, and the completion gate names its deliverable tasks and selected checks. A leftover `tier:` section key is a warning; tier never entered a step's hash, so existing locks stay fresh.
 - **Scoped build guards.** Unrelated task additions and unused configuration edits no longer abort running steps. Changes to the selected execution contract or input bytes still reject inconsistent success evidence.
 - **One effective dependency graph.** File-derived prerequisites and explicit logical prerequisites jointly govern task development. Combined cycles, including cycles introduced by grouping acyclic steps, block dispatch and builds. Existing reproduction projects need a `task check` audit and may need declaration or ownership repairs. Logical prerequisites do not add file inputs or unrelated producers to targeted script replay.
 - **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. The frontier exposes actionable parent-owned work without waiting on its own child-status rollup. Archived subtrees leave the active graph, with warnings for their downstream consumers.

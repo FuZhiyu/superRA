@@ -28,8 +28,8 @@ Prompt:
     `superRA:communicate` and its `references/rewrite.md`; that bar applies to
     every section you touch, not only new writes. A fold moves the folded task's
     `## Reproduction` steps into the target task's section; preserve step names,
-    logical artifact paths, and retained acceptance evidence. No required step
-    disappears with a removed directory.
+    logical artifact paths, and retained acceptance evidence. Retire a step
+    only per `superRA:reproducibility` §Step Lifecycle.
     Land recoverable commits per affected subtree.
 ```
 

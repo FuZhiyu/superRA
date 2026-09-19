@@ -5,14 +5,14 @@ import pytest
 
 from _repro_state import ReproStateError, compute_status, read_run_record, select_steps
 from _repro_acceptance import receipt_path
-from test_repro_runner import project, dir_project, needs_pytask, TASK_X
+from test_repro_runner import CHAIN, project, dir_project, needs_pytask, TASK_X
 
 
 def test_task_and_qualified_step_targets(project):
-    assert select_steps(project.graph(), ['02-b'], 'required')[0] == ['build-b', 'check-b']
-    assert select_steps(project.graph(), ['02-b#check-b'], 'required')[0] == ['check-b']
-    assert select_steps(project.graph(), ['02-b#build-a'], 'required')[1]
-    assert set(select_steps(project.graph(), ['.'], 'required')[0]) == {'build-a', 'build-b', 'check-b', 'build-x'}
+    assert select_steps(project.graph(), ['02-b'])[0] == ['build-b', 'check-b']
+    assert select_steps(project.graph(), ['02-b#check-b'])[0] == ['check-b']
+    assert select_steps(project.graph(), ['02-b#build-a'])[1]
+    assert set(select_steps(project.graph(), ['.'])[0]) == {'build-a', 'build-b', 'check-b', 'build-x'}
 
 
 @needs_pytask
@@ -26,7 +26,7 @@ def test_scoped_build_uses_existing_unverified_inputs(project):
 
 @needs_pytask
 def test_scoped_build_survives_failed_upstream_and_rebuilds_changed_inputs(project):
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', 'exit 1\n')
     assert project.run('build', '01-a') == 1
     failed = read_run_record(project.paths, 'build-a')
@@ -48,7 +48,7 @@ def test_missing_boundary_does_not_expand_but_upstream_does(project):
 @needs_pytask
 @pytest.mark.parametrize('upstream,expected', [(False, {'check-b'}), (True, {'build-a', 'build-b', 'check-b'})])
 def test_force_applies_to_effective_scope(project, upstream, expected):
-    assert project.run('build', '--tier', 'all') == 0
+    assert project.run('build', '.') == 0
     before = project.run_times()
     assert project.run('build', '02-b#check-b', '--force', *(['--upstream'] if upstream else [])) == 0
     assert {name for name, value in project.run_times().items() if before[name] != value} == expected
@@ -82,13 +82,13 @@ def test_nested_union_root_and_ambiguous_targets(project):
     project.write('superRA/group/task.md', '---\ntitle: Group\nstatus: not-started\n---\n')
     project.write('superRA/group/nested/task.md', TASK_X.replace('build-x', 'nested').replace('x.txt', 'nested.txt'))
     graph = project.graph()
-    assert select_steps(graph, ['group', 'group/nested#nested'], 'all')[0] == ['nested']
+    assert select_steps(graph, ['group', 'group/nested#nested'])[0] == ['nested']
     project.write('superRA/build-a/task.md', '---\ntitle: Collision\nstatus: not-started\n---\n')
     with pytest.raises(ReproStateError, match='ambiguous'):
-        select_steps(project.graph(), ['build-a'], 'all')
-    assert select_steps(project.graph(), ['01-a#build-a'], 'all')[0] == ['build-a']
+        select_steps(project.graph(), ['build-a'])
+    assert select_steps(project.graph(), ['01-a#build-a'])[0] == ['build-a']
     with pytest.raises(ReproStateError, match='no steps'):
-        select_steps(project.graph(), ['./build-a'], 'all')
+        select_steps(project.graph(), ['./build-a'])
 
 
 @needs_pytask
@@ -133,7 +133,7 @@ def test_saved_input_mutation_during_execution_rejects_receipt(project):
 def test_sidecar_does_not_hide_saved_input_change(project):
     from test_repro_runner import _use_a_sidecar
     _use_a_sidecar(project)
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     before = project.run_times()
     project.write('output/a.txt', 'changed without updating sidecar\n')
     assert not compute_status(project.graph(), project.paths, targets=['02-b']).ok
@@ -200,7 +200,7 @@ def test_acceptance_cannot_hide_changed_saved_bytes(project, drop_receipt):
     from test_repro_runner import _use_a_sidecar
     from test_repro_acceptance import review
     _use_a_sidecar(project)
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     assert project.run('build', '02-b') == 0
     project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
     review(project, ['build-b'])
@@ -221,7 +221,7 @@ def test_batch_acceptance_tracks_inputs_between_accepted_steps(project):
     from test_repro_runner import _use_a_sidecar
     from test_repro_acceptance import review
     _use_a_sidecar(project)
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     for script in ['Code/a.sh', 'Code/b.sh']:
         project.write(script, project.read(script) + '# harmless\n')
     review(project, ['build-a', 'build-b'])
@@ -237,7 +237,7 @@ def test_saved_input_evidence_follows_logical_path_relocation(project, accepted)
     from test_repro_runner import _use_a_sidecar
     from test_repro_acceptance import review
     _use_a_sidecar(project)
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     assert project.run('build', '02-b') == 0
     if accepted:
         project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
@@ -252,7 +252,7 @@ def test_saved_input_evidence_follows_logical_path_relocation(project, accepted)
 
 @needs_pytask
 def test_partial_selection_leaves_intervening_producer_untouched(project):
-    assert project.run('build') == 0
+    assert project.run('build', *CHAIN) == 0
     before = project.run_times()
     project.write('Code/a.sh', 'echo changed > output/a.txt\n')
     assert project.run('build', '01-a', '02-b#check-b', '--force') == 0
@@ -291,8 +291,8 @@ def test_new_step_in_selected_task_waits_for_next_build(project):
     assert (project.root / 'new-step-ran').exists()
 
 
-def test_target_tier_conflict_and_retired_force_flag(project, capsys):
+def test_retired_tier_flag_and_force_flag(project, capsys):
     assert project.run('build', '02-b', '--tier', 'required') == 2
-    assert 'mutually exclusive' in capsys.readouterr().err
-    assert project.run('build', '--force-all') == 2
+    assert '--tier is retired' in capsys.readouterr().err
+    assert project.run('build', '.', '--force-all') == 2
     assert '--upstream --force' in capsys.readouterr().err

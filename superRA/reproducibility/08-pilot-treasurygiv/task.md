@@ -74,10 +74,7 @@ canon` and the completion gate behind it go green while those pins never run. Ru
 with `--tier all` before integration; the tiers stay as registered, since per-task tiering is the v1
 rule and this pilot's lean default build was the ask.
 
-### Open questions
-
-- Should a `kind: check` step carry its own tier, independent of its owning task's, so a drift pin
-  protecting a canonical result isn't silently excluded by per-task tiering? Unresolved in v1.
+Resolved since: [task targets](../11-scoped-verification/task-targets-and-lifecycle/task.md) replaced tiers, and the completion gate names its protection checks explicitly.
 
 ### Verification
 

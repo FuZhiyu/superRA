@@ -38,7 +38,6 @@ Unify Tree and Graph navigation around one search, task/status filter, selection
 ## Reproduction
 
 ```yaml
-tier: on-demand
 steps:
   - name: dashboard-dag-design-browser
     cmd: uv run --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python skills/task-tree/scripts/tests/navigation_browser.py --evidence superRA/reproducibility/04-dashboard-view/scalable-navigation/dag-design/attachments/browser
