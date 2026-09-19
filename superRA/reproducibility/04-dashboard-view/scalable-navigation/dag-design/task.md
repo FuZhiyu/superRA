@@ -1,6 +1,6 @@
 ---
 title: Unified Tree and Graph Workspace
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -103,3 +103,9 @@ Tree and Graph use one search, task/status filter, selection, and reader in the 
 - **Live dashboard:** [port 8653](http://localhost:8653/?wt=heterogeneity-reproduction) serves the development source. The reported task-loading error did not recur after restarting the stopped server and testing the supplied link, sidebar clicks, and reloads; its original cause remains unconfirmed. Task-load exceptions now offer Retry, verified with an interrupted request.
 
 Independent review has not run.
+
+## Review Notes
+
+Tier: quick. Focus: correctness, UI integration, navigation regressions. Scope: step reader redesign in ce34acb6 only.
+
+1. [ADVISORY] [Saved-input links](../../../../../skills/task-tree/scripts/templates/dashboard.js#L1818) discard each boundary input's `resolved` path. A targeted Node check with logical `${OUT}/input.csv` and resolved `output/input.csv` generates a literal `${OUT}/input.csv` open target. Preserve `resolved: b.resolved` in the mapped file entry so saved-input links resolve like ordinary input links.
