@@ -284,6 +284,14 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 
 **Attachment data path.** `_task_io.py` owns the structural rule: every task scan and task-path mutation treats `attachments/` as opaque and rejects symlinked task directories, `task.md` files, and task-path components before parsing or writing. Migrations consume its structural task-file iterator, not recursive globs. `_artifacts.py` owns task-scoped attachment discovery, containment, MIME/preview classification, watcher ownership, and standalone packing. Direct files beside `task.md` are neither listed nor readable through this API. Live clients list with `/api/artifacts?task=<path>` and read with `/api/artifact?task=<path>&path=attachments/<relative-path>`; `download=true` forces attachment disposition. Default ceilings are 512 returned files, 256 KiB of manifest metadata, and 4,096 visited directory entries per task, 2 MiB per live preview, 2 MiB per standalone file, and 20 MiB total raw standalone bytes. Manifests name truncation and export-omission reasons; exports include a commit-pinned repository URL when the caller supplies one.
 
+## Reviewed reuse execution
+
+[_repro_acceptance.py](../scripts/_repro_acceptance.py) owns atomic acceptance records, verified successful receipts, exact-state preview tokens, and dependency impact. Status composes acceptance with the upstream cascade in topological order: valid reuse cuts upstream uncertainty, while a downstream step's own changes remain stale. Public step JSON exposes nullable `acceptance` details without adding a status enum.
+
+[_repro_hooks.py](../scripts/_repro_hooks.py) is loaded only by the pinned pytask 0.6 bridge. Its setup hook checks failure/dry-run cascade markers, force scope, declarations, and current acceptance state before raising `SkippedUnchanged`. That outcome preserves successful lock entries and allows eligible descendants to run. Ordinary skip markers and no-op task bodies have different engine semantics and are not used for reuse. Serial and thread workers share setup and teardown hooks.
+
+The teardown wrapper captures a successful receipt only after engine product verification; dependency edits during execution fail the step. Run records distinguish interrupted/pending work from success. A project-local process lock coordinates builds, apply, and revoke on POSIX systems; records use atomic replacement. Preview tokens and immediate hash/declaration rechecks detect edits from writers outside that lock. Status, impact, and explain remain engine-free.
+
 ## Script Inventory
 
 **Data layer (not invoked directly):**
@@ -294,6 +302,8 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
 | `_task_validate.py` | Validation suite — one owner per validity rule, single message source; owns the shared `Finding` shape |
 | `_task_dependencies.py` | Pure hierarchical dependency composition, provenance, cycles, task ordering and readiness |
+| `_repro_acceptance.py` | Exact-state acceptance, successful receipts, impact, and mutation coordination |
+| `_repro_hooks.py` | Optional pytask setup/teardown integration for reuse and verified receipts |
 | `_task_snapshot.py` | Mutation preflight and parent-step freshness adapters |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
 | `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering, tier editing |
@@ -314,7 +324,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |
-| `repro_run.py` | `superra repro` — the pytask bridge for `build`, plus stdlib `status`, `explain`, `dag`, and `tier` |
+| `repro_run.py` | `superra repro` — pytask build bridge and stdlib status/explain/impact/accept/revoke/dag/tier commands |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |
@@ -334,5 +344,6 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
 | `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
+| `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
 | `test_repro_runner.py` | Runner — hash cache, status classification, target selection, tier editing, and, when pytask is installed, build, rerun, and lock behavior |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

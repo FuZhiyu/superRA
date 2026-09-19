@@ -380,7 +380,8 @@ def read_lock(path: Path) -> dict[str, LockEntry]:
 def write_run_record(paths: RunnerPaths, step: str, record: dict) -> None:
     """Record one step's outcome; one file per step keeps parallel runs race-free."""
     paths.runs_dir.mkdir(parents=True, exist_ok=True)
-    paths.run_file(step).write_text(json.dumps(record), encoding="utf-8")
+    from _repro_acceptance import atomic_json
+    atomic_json(paths.run_file(step), record)
 
 
 def read_run_record(paths: RunnerPaths, step: str) -> dict:
@@ -416,6 +417,7 @@ class StepStatus:
     duration: float | None = None
     last_run: float | None = None
     log: str | None = None
+    acceptance: dict | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -430,6 +432,12 @@ class StepStatus:
             "duration": self.duration,
             "last_run": self.last_run,
             "log": self.log,
+            "acceptance": (
+                {key: self.acceptance[key] for key in
+                 ("id", "reason", "reviews", "evidence", "recorded_at", "actor")
+                 if key in self.acceptance}
+                if self.acceptance else None
+            ),
             "deps": [d.to_dict() for d in self.step.deps],
             "outs": [o.to_dict() for o in self.step.outs],
         }
@@ -499,6 +507,8 @@ def compute_status(
     tier: str = "required",
     targets: Iterable[str] = (),
     cache: HashCache | None = None,
+    acceptance_ledger: dict | None = None,
+    completed_locks: dict[str, LockEntry] | None = None,
 ) -> StatusReport:
     """Classify the selected closure, including ancestors across tiers."""
     tier = normalize_tier(tier)
@@ -510,6 +520,7 @@ def compute_status(
     selected = needed if targets else None
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
+    lock.update(completed_locks or {})
     outputs = output_nodes(graph)
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
     report = StatusReport(
@@ -525,7 +536,8 @@ def compute_status(
                 step, lock.get(step.name), paths, cache, outputs, missing_external
             )
         )
-    _cascade(report, graph)
+    from _repro_acceptance import apply_to_status
+    apply_to_status(report, paths, cache, acceptance_ledger, lock)
     cache.flush()
     return report
 
@@ -561,6 +573,10 @@ def _classify(
         result.reason = "never built"
     else:
         _compare(result, step, entry, paths, cache, outputs)
+
+    if record.get("outcome") in ("running", "pending"):
+        result.status = "failed"
+        result.reason = "previous execution was interrupted; rerun required"
 
     # Restoring inputs can clear an ordinary failure. A forced failure must be
     # retried even with unchanged bytes: it invalidates the cached success.
@@ -666,27 +682,6 @@ def _changed_nodes(
         if current is not None and current != recorded:
             changes.append(Change(node=node[0], kind="output", change="changed"))
     return changes
-
-
-def _cascade(report: StatusReport, graph: Graph) -> None:
-    """Lift a fresh step to stale when anything it reads is not fresh."""
-    by_name = {e.step.name: e for e in report.entries}
-    upstream: dict[str, list[str]] = {name: [] for name in by_name}
-    for src, dst, _ in graph.step_edges:
-        if dst in upstream and src in by_name:
-            upstream[dst].append(src)
-
-    for name in _topological(by_name, upstream):
-        entry = by_name[name]
-        if entry.status != "fresh":
-            continue
-        for parent in upstream[name]:
-            if by_name[parent].status != "fresh":
-                entry.status = "stale"
-                entry.reason = (
-                    f"upstream step {parent!r} is {by_name[parent].status}"
-                )
-                break
 
 
 def _topological(by_name: dict, upstream: dict[str, list[str]]) -> list[str]:
@@ -839,8 +834,11 @@ def format_explain(report: StatusReport, step_name: str) -> str:
         lines.append(f"  last:  {entry.duration:.1f}s at {_stamp(entry.last_run)}")
     if entry.log:
         lines.append(f"  log:   {entry.log}")
+    if entry.acceptance:
+        lines.append(f"  reviewed acceptance: {entry.acceptance['reason']}")
+        lines.extend(f"    evidence: {ref}" for ref in entry.acceptance["evidence"])
     if entry.changes:
-        lines.append("  changed since the last build:")
+        lines.append("  own changes since the last build:")
         lines.extend(f"    {c.kind}: {c.node} ({c.change})" for c in entry.changes)
     upstream = sorted(
         {src for src, dst, _ in report.graph.step_edges if dst == step.name}
