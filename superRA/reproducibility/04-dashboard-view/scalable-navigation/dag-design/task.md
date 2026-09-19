@@ -1,6 +1,6 @@
 ---
 title: Clean, Intuitive DAG Workspace
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -26,10 +26,6 @@ Remake the DAG workspace into a clean, intuitive interface consistent with the r
 - Execution: Astra implementer; main agent performs thorough correctness, scope-fidelity, and visual usability review. No generated runtime assets are planned.
 - Branch-expansion exploration: Treasury contains 15 active task cards and 7 steps; one/two/three/all levels show 8/16/22/22 cards. Heterogeneity contains 31 task cards and 54 steps; the same depths show 8/32/74/85 cards. Suggested control: Graph options → Expand selected branch, with depth and projected counts computed from the existing graph projection before Apply. An out-of-scope selection needs an explicit focus action; expansion must not silently widen scope. Replace the unqualified global Expand all steps action with this task-scoped control.
 - Routing review: coincident horizontal and vertical tracks falsely suggest Methods → Verification and a box enclosing the four top-level research tasks. The declared top-level Treasury flow is Heterogeneity → Treasury → Reproduce manuscript exhibits. Use separate lanes and endpoint ports, minimize crossings and detours, and keep routes outside unrelated cards. Inspect cycles or aggregation-induced cycles before changing rank placement; preserve all real edges and their evidence. Dense graphs may cross, but crossings must not look like joins.
-
-## Revision Notes
-
-The initial visual review missed ambiguous overlapping arrows in collapsed views. Reopen routing and endpoint interaction for implementation and independent Safari review; the existing workspace controls and bounded expansion remain accepted.
 
 ## Reproduction
 
@@ -88,15 +84,25 @@ The DAG fills the available viewport, with a default-hidden task preview and com
 
 - **Selection preserves preview visibility and graph position.** Task preview toggles the shared reader; Close preview restores the graph even from full-width reading. Initial task and legacy step links keep the preview hidden. Focus selected task uses the current selection.
 - **Branch expansion is bounded and previewed.** Graph options → Expand selected branch offers 1, 2 (default), 3, or All levels, with projected task/step card counts before Apply. A shallower choice folds deeper descendants while preserving peers, scope, preview state, and the branch header’s canvas position. Hidden or out-of-scope selections require an explicit focus action. Browser history restores expansion; Escape, Cancel, and Apply restore keyboard focus.
+- **Connections remain individually traceable.** Strongly connected components retain distinct rank columns; downstream tasks keep their own ranks. Adjacent connections use short routes; longer connections use separate hierarchy tracks, column gutters, and endpoint ports. Crossing lines have a background casing. Arrowheads stay 6 px high during inspection, with at least 7 px between ports; high-degree cards reserve the needed height. All declared edges and evidence remain intact.
+- **Connection inspection names both endpoints.** Hover or keyboard focus highlights the route and its source/destination cards, with a human-readable source → destination label. Enter/Space opens the evidence. Focus and cycle metadata survive unchanged-topology redraws. Cycles use the existing muted rust accent and a compact accessible label on neutral cards; labels distinguish task-group cycles from step cycles without changing validation or execution status.
 - **Canvas input covers both platforms.** Two-axis wheel events pan; Chromium control-wheel and Safari gesture events zoom around the pointer. Handled events cancel native scrolling/zooming. Drag, zoom buttons, Fit, Center selected, arrow keys, `+`/`−`, `0` (fit), and `C` (center) remain available. Physical trackpad pinch cannot be synthesized by the available computer-control surface; the [browser regression](../../../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py) dispatches platform events into the production listeners and checks anchoring, cancellation, and duplicate-event suppression.
-- **Verification:** the dashboard suite passed **385 tests, with 4 skipped**; the scoped interaction check passed **19 tests** (9 browser journeys and 10 projection checks). These cover diagnostic popup bounds, desktop-resized previews at phone width, nested branch depths/counts, unrelated expansion, trace/filter semantics, live redraws, and keyboard recovery. The four pre-existing browser checks require a bundled Playwright Chromium unavailable in this environment; the new checks used installed Chrome at 1372 × 768, 1030 × 768, and 390 × 844. JavaScript syntax and git whitespace checks passed.
+- **Verification:** the dashboard suite passed **385 tests, with 4 skipped**; the scoped interaction check passed **25 tests** (10 browser journeys and 15 projection checks). These cover cycle ranking and downstream placement, noncoincident nested routes, dense fan-in port spacing, ancestor/descendant logical edges, endpoint focus/hover, cached cycle badges, diagnostic popup bounds, desktop-resized previews at phone width, nested branch depths/counts, unrelated expansion, trace/filter semantics, live redraws, and keyboard recovery. The four pre-existing browser checks require a bundled Playwright Chromium unavailable in this environment; the new checks used installed Chrome at 1372 × 768, 1030 × 768, and 390 × 844. JavaScript syntax and git whitespace checks passed.
 - **Scale and compatibility:** the [500-step browser journey](../../../../../skills/task-tree/scripts/tests/navigation_browser.py) passed with 51 task records and 1,494 edges, including comments through CLI round-trip, history, live status refresh, worktree isolation, legacy/removal recovery, offline export, keyboard reading, resizing, and touch panning. [Recorded results](attachments/browser/browser-results.json) identify Chrome 153.0.8010.48 on macOS arm64: repeated search, filter, and full-expansion timings remain below the navigation budgets. Research fixtures were read-only; data and declarations were unchanged.
 
 The main agent’s Safari computer-control pass at approximately 1064 px and 1543 px window widths covered hidden preview on reload, task selection, vertical canvas panning, preview toggling, selected-task focus, subtree expansion, step evidence, full-width declaration, and light/dark themes. Treasury expansion applied two levels (16 cards), All (22), then one level (8), confirming deeper descendants fold. Heterogeneity’s previews showed 32/74/85 cards at two/three/All levels; All was previewed rather than applied there. Native horizontal scroll calls did not produce a visible pan, and physical pinch was unavailable; those Safari gestures remain physically unverified.
 
+Routing verification also used the real research fixture read-only: collapsed roots, one-level Heterogeneity, fully expanded Heterogeneity, fully expanded Treasury, and the fully expanded project (339 cards, 215 displayed edges). The independent reviewer’s geometry probe found no coincident positive-length segments and no crossings through unrelated cards in any of these views. Native Safari confirmed the initial routing and edge-evidence interaction. The corrected palette, card metadata, arrowheads, and light/dark controls were reviewed in the retained Chromium artifacts while the researcher was using Safari; these final visual details are not claimed as a separate native Safari pass.
+
+![Chromium: task-group cycle with distinct routes and a separate downstream task](attachments/browser/dag-routing-cycle.png)
+
+![Chromium: acyclic fan and long connections in dark mode](attachments/browser/dag-routing-fan-dark.png)
+
+The producer also retains [dark cycle](attachments/browser/dag-routing-cycle-dark.png) and [light fan](attachments/browser/dag-routing-fan.png) views. The small cycle fixture preserves the six root-cycle connections plus one acyclic downstream edge; the fan fixture has seven acyclic connections.
+
 ![Chromium: collapsed 500-step graph with compact controls and hidden preview](attachments/browser/dag-desktop.png)
 
-The on-demand reproduction steps above generate the retained [Chromium evidence folder](attachments/browser/) directly from the synthetic fixture and verify interaction behavior. No research input is consumed. Scoped build succeeded for `dashboard-dag-design-browser` and `dashboard-dag-design-interaction-check`; matching status reports both **fresh**. The updated [pytask.lock](../../../../../pytask.lock) records these runs.
+The on-demand reproduction steps above generate the retained [Chromium evidence folder](attachments/browser/) directly from the synthetic scale and routing fixtures and verify interaction behavior. No research input is consumed. Scoped build succeeded for `dashboard-dag-design-browser` and `dashboard-dag-design-interaction-check`; matching status reports both **fresh**. The updated [pytask.lock](../../../../../pytask.lock) records these runs.
 
 Regression command:
 

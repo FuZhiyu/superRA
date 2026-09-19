@@ -1,7 +1,7 @@
 {
   "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
-  "live": "http://127.0.0.1:52721",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-tywcw9ak/superRA",
+  "live": "http://127.0.0.1:60558",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-9ppg87qf/superRA",
   "browser": "153.0.8010.48",
   "counts": {
     "steps": 500,
@@ -12,22 +12,22 @@
   "timingsMs": {
     "search": [
       0.5,
-      0.20000000298023224,
-      0.20000000298023224,
-      0.29999999701976776,
-      0.10000000894069672
+      0.09999999403953552,
+      0.09999999403953552,
+      0.19999998807907104,
+      0.30000001192092896
     ],
     "filter": [
-      4.600000008940697,
-      2.0999999940395355,
-      2.2000000029802322,
-      2.8999999910593033,
-      2.5
+      5.600000023841858,
+      2.199999988079071,
+      2.7000000178813934,
+      2.9000000059604645,
+      2.899999976158142
     ],
     "full": [
-      42.79999999701977,
-      37.900000005960464,
-      45.1000000089407
+      78.90000000596046,
+      79.59999999403954,
+      75.5
     ]
   },
   "sharedReaderAndHistory": true,
@@ -37,5 +37,15 @@
   "legacyAndRemovalRecovery": true,
   "offline": true,
   "touchNavigationAndPan": true,
+  "routing-cycle": {
+    "nodes": 5,
+    "edges": 7,
+    "cycleEdges": 6
+  },
+  "routing-fan": {
+    "nodes": 5,
+    "edges": 7,
+    "cycleEdges": 0
+  },
   "errors": []
 }

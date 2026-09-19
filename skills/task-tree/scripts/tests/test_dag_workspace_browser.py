@@ -322,3 +322,48 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     assert reader['y'] + reader['height'] <= 844
     assert page.locator('.repro-controls > .rp-menu > summary').first.bounding_box()['y'] > page.locator('#repro-search').bounding_box()['y']
     page.close()
+
+
+def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'])
+    page.evaluate("""() => {
+      const ids=['heterogeneity','treasury','elasticity','paper','downstream'];
+      const titles=['Heterogeneity estimates','Treasury bounds','Elasticity estimates','Reproduce paper','Publish results'];
+      const pairs=[[0,1],[0,2],[0,3],[1,3],[2,3],[3,0],[3,4]];
+      const graph={steps:ids.map((id,i)=>({name:id,task:id,tier:'required',kind:'command'})),step_edges:pairs.map(([a,b])=>({from:ids[a],to:ids[b],via:'out.csv'})),dependencies:{tasks:ids.map((id,i)=>({path:id,title:titles[i],status:'in-progress'})),boundaries:{}}};
+      _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+      _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
+    }""")
+    assert page.locator('#rp-arrow-cycle').get_attribute('markerUnits') == 'userSpaceOnUse'
+    assert page.locator('#rp-arrow-cycle').get_attribute('markerHeight') == '6'
+    cycle = page.locator('.rp-wire.is-cycle').first
+    assert page.locator('.rp-wire.is-cycle').count() == 6
+    assert 'Heterogeneity estimates → Treasury bounds' in cycle.get_attribute('aria-label')
+    assert 'Task-group cycle' in cycle.get_attribute('aria-label')
+    cycle.focus()
+    assert page.locator('.is-edge-endpoint').count() == 2
+    assert page.locator('.is-edge-active').count() == 1
+    assert 'Heterogeneity estimates → Treasury bounds' in page.locator('#repro-connection-label').inner_text()
+    accent = cycle.evaluate('(el)=>getComputedStyle(el).stroke')
+    cycle.press('Enter')
+    assert 'Heterogeneity estimates → Treasury bounds' in page.locator('#repro-edge-detail h3').inner_text()
+    page.locator('.repro-canvas').focus()
+    assert page.locator('.is-edge-endpoint').count() == 0
+    ordinary = page.locator('.rp-wire:not(.is-cycle)').first
+    ordinary.dispatch_event('pointerover')
+    assert page.locator('.is-edge-endpoint').count() == 2
+    assert 'Publish results' in page.locator('#repro-connection-label').inner_text()
+    ordinary.dispatch_event('pointerout')
+    assert page.locator('.is-edge-endpoint').count() == 0
+    cycle.dispatch_event('pointerover')
+    assert cycle.evaluate('(el)=>getComputedStyle(el).stroke') == accent
+    assert page.locator('.rp-task.is-cycle').count() == 4
+    cycle.focus()
+    focused = cycle.get_attribute('id')
+    page.evaluate("drawReproView(document.getElementById('view-reproduction'),_reproData)")
+    assert page.evaluate('document.activeElement.id') == focused
+    assert page.locator('.is-edge-endpoint').count() == 2
+    assert page.locator('.rp-task.is-cycle').count() == 4
+    assert page.locator('.rp-cycle-label[aria-label="Task-group cycle"]').count() == 4
+    page.close()

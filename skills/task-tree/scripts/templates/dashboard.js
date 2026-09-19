@@ -1196,62 +1196,90 @@ function reproBranchPanel(path, selectedDepth, focus) {
   depth.onchange=preview;preview();if(focus!==false){var target=depth.disabled?host.querySelector('[data-rp-action=focus]'):depth;target.focus({preventScroll:true});}
 }
 
-/* Each hierarchy boundary receives independent rank columns and routing gutters.
-   Variable-size children reserve their entire box, including descendants. */
+/* Rank the condensation graph first: a projected task cycle must not collapse
+   every member (and its downstream work) into one column. */
 function reproHierarchyLayout(model) {
-  var pos = {}, byId = {}, routed = [], nodeParent = {};
-  model.nodes.forEach(function(n) {byId[n.id] = n; nodeParent[n.id] = n.parent;});
-  function direct(id,parent) { while (byId[id] && nodeParent[id] !== parent) {id = nodeParent[id];} return id; }
-  function level(items,parent) {
-    var ids = new Set(items.map(function(n) {return n.id;})), links = [], indeg = {}, rank = {}, next = {};
-    items.forEach(function(n) {indeg[n.id]=0;rank[n.id]=0;next[n.id]=[]; if(n.children.length) level(n.children,n.id); else {n.width=260;n.height=108;}});
-    model.edges.forEach(function(e) {
-      var a=direct(e.from,parent),b=direct(e.to,parent);
-      if(a && b && a!==b && ids.has(a) && ids.has(b) && !links.some(function(x){return x[0]===a&&x[1]===b;})) {links.push([a,b]);indeg[b]++;next[a].push(b);}
-    });
-    var queue=Object.keys(indeg).filter(function(id){return !indeg[id];}).sort(),seen=new Set();
-    while(queue.length) {var id=queue.shift();seen.add(id);next[id].forEach(function(to){rank[to]=Math.max(rank[to],rank[id]+1);if(!--indeg[to])queue.push(to);});}
-    var end=Math.max(0,...Object.values(rank)); items.forEach(function(n){if(!seen.has(n.id))rank[n.id]=end+1;});
-    var widths={}, heights={}, xs={}, top=54, x=24;
-    items.forEach(function(n){widths[rank[n.id]]=Math.max(widths[rank[n.id]]||0,n.width);});
-    Object.keys(widths).map(Number).sort(function(a,b){return a-b;}).forEach(function(r){xs[r]=x;x+=widths[r]+72;});
-    items.slice().sort(function(a,b){return a.id.localeCompare(b.id);}).forEach(function(n){var r=rank[n.id];n.x=xs[r];n.routeRight=xs[r]+widths[r]+18;n.routeLeft=xs[r]-18;n.y=top+(heights[r]||0);heights[r]=(heights[r]||0)+n.height+32;});
-    if(parent) {byId[parent].width=Math.max(300,x-48);byId[parent].height=108+Math.max(0,...Object.values(heights));}
-    return {width:Math.max(320,x),height:top+Math.max(0,...Object.values(heights))+24};
-  }
-  var size=level(model.nodes.filter(function(n){return !n.parent;}),null);
-  function place(n,x,y){pos[n.id]={x:x+n.x,y:y+n.y,width:n.width,height:n.height,routeRight:x+n.routeRight,routeLeft:x+n.routeLeft};n.children.forEach(function(c){place(c,x+n.x,y+n.y+72);});}
-  model.nodes.filter(function(n){return !n.parent;}).forEach(function(n){place(n,0,0);});
-  model.edges.forEach(function(e,i){
-    var a=pos[e.from],b=pos[e.to]; if(!a||!b)return;
-    var parents=[], p=nodeParent[e.from]; while(p){parents.push(p);p=nodeParent[p];}
-    p=nodeParent[e.to];while(p&&parents.indexOf(p)<0)p=nodeParent[p];
-    var common=p;
-    function climb(id,side) {
-      var box=pos[id],points=[[side==='right'?box.x+box.width:box.x,box.y+48]];
-      while(true){
-        var parent=nodeParent[id], gutter=side==='right'?box.routeRight:box.routeLeft;
-        points.push([gutter,points[points.length-1][1]]);
-        points.push([gutter,parent?pos[parent].y+112:30]);
-        if(parent===common)break;
-        id=parent;box=pos[id];
-      }
-      return points;
+  var pos={},byId={},nodeParent={},levels={},routes=[];
+  model.nodes.forEach(function(n){byId[n.id]=n;nodeParent[n.id]=n.parent;n.cycle=false;n.cycleKind='';});
+  function direct(id,parent){while(byId[id]&&nodeParent[id]!==parent)id=nodeParent[id];return id;}
+  function level(items,parent){
+    var ids=items.map(function(n){return n.id;}).sort(),next={},index={},low={},stack=[],on=new Set(),groups=[],serial=0,groupOf={};
+    ids.forEach(function(id){next[id]=[];});
+    model.edges.forEach(function(e){var a=direct(e.from,parent),b=direct(e.to,parent);if(a&&b&&a!==b&&next[a]&&next[b]&&next[a].indexOf(b)<0)next[a].push(b);});
+    function visit(id){index[id]=low[id]=serial++;stack.push(id);on.add(id);next[id].sort().forEach(function(to){if(index[to]===undefined){visit(to);low[id]=Math.min(low[id],low[to]);}else if(on.has(to))low[id]=Math.min(low[id],index[to]);});if(low[id]===index[id]){var group=[],v;do{v=stack.pop();on.delete(v);group.push(v);}while(v!==id);groups.push(group);}}
+    ids.forEach(function(id){if(index[id]===undefined)visit(id);});
+    groups.forEach(function(g,i){g.forEach(function(id){groupOf[id]=i;});});
+    var incoming=groups.map(function(){return 0;}),out=groups.map(function(){return new Set();}),base=groups.map(function(){return 0;}),rank={};
+    ids.forEach(function(id){next[id].forEach(function(to){var a=groupOf[id],b=groupOf[to];if(a!==b&&!out[a].has(b)){out[a].add(b);incoming[b]++;}});});
+    var queue=groups.map(function(_,i){return i;}).filter(function(i){return !incoming[i];});
+    while(queue.length){var gi=queue.shift(),remaining=groups[gi].slice(),ordered=[];
+      while(remaining.length){remaining.sort(function(a,b){function score(id){return next[id].filter(function(to){return remaining.indexOf(to)>=0;}).length-remaining.filter(function(from){return next[from].indexOf(id)>=0;}).length;}return score(b)-score(a)||a.localeCompare(b);});ordered.push(remaining.shift());}
+      ordered.forEach(function(id,i){rank[id]=base[gi]+i;if(ordered.length>1){byId[id].cycle=true;byId[id].cycleKind=ordered.some(function(key){return byId[key].type==='task';})?'Task-group cycle':'Step cycle';}});
+      out[gi].forEach(function(to){base[to]=Math.max(base[to],base[gi]+ordered.length);if(!--incoming[to])queue.push(to);});
     }
-    var points=climb(e.from,'right').concat(climb(e.to,'left').reverse());
-    var d=points.map(function(point,j){return (j?'L':'M')+point[0]+','+point[1];}).join(' ');
-    routed.push(Object.assign({},e,{d:d,points:points}));
+    var info={items:items,parent:parent,rank:rank,tracks:[],left:{},right:{},channels:{left:{},right:{}}};levels[parent||'']=info;
+    items.forEach(function(n){if(n.children.length)level(n.children,n.id);});
+    model.edges.forEach(function(e){var a=direct(e.from,parent),b=direct(e.to,parent);if(a&&b&&a!==b&&groupOf[a]!==undefined&&groupOf[a]===groupOf[b]&&groups[groupOf[a]].length>1){e.cycle=true;if(!e.cycleKind)e.cycleKind=groups[groupOf[a]].some(function(id){return byId[id].type==='task';})?'Task-group cycle':'Step cycle';}});
+  }
+  model.edges.forEach(function(e){e.cycle=false;e.cycleKind='';});level(model.nodes.filter(function(n){return !n.parent;}),null);
+  model.edges.forEach(function(e){if(e.cycle)[e.from,e.to].forEach(function(id){byId[id].cycle=true;byId[id].cycleKind=byId[id].cycleKind||e.cycleKind;});});
+  function chain(id,common){var result=[];while(id&&id!==common){result.push(id);id=nodeParent[id];}return result;}
+  var ports={};
+  function port(id,side,i){var key=id+'|'+side;if(!ports[key])ports[key]=[];ports[key].push(i);}
+  model.edges.forEach(function(e,i){var ancestors=chain(nodeParent[e.from],null),p=nodeParent[e.to];while(p&&ancestors.indexOf(p)<0)p=nodeParent[p];var common=p;
+    var source=chain(e.from,common),target=chain(e.to,common),boundary=levels[common||''];
+    var directRoute=source.length===1&&target.length===1&&boundary.rank[e.to]===boundary.rank[e.from]+1;
+    var route={edge:e,index:i,common:common,source:source,target:target,direct:directRoute};routes.push(route);port(e.from,'right',i);port(e.to,'left',i);
+    source.forEach(function(id){var list=levels[nodeParent[id]||''].right; (list[id]||(list[id]=[])).push(i);});
+    target.forEach(function(id){var list=levels[nodeParent[id]||''].left; (list[id]||(list[id]=[])).push(i);});
+    if(!directRoute){var boundaries=new Set(source.concat(target).map(function(id){return nodeParent[id]||'';}));boundaries.forEach(function(key){levels[key].tracks.push(i);});}
   });
-  return {pos:pos,edges:routed,width:size.width,height:size.height,model:model};
+  function size(parent){var info=levels[parent||''];['left','right'].forEach(function(side){info.items.forEach(function(n){var r=info.rank[n.id],channel=info.channels[side][r]||(info.channels[side][r]=[]);(info[side][n.id]||[]).forEach(function(i){channel.push(n.id+'|'+i);});});});var widths={},lefts={},rights={},heights={},xs={},x=24,top=24+info.tracks.length*6;
+    info.items.forEach(function(n){if(n.children.length)size(n.id);else{n.width=260;n.height=108;}n.height=Math.max(n.height,80+7*(ports[n.id+'|left']||[]).length,47+7*(ports[n.id+'|right']||[]).length);var r=info.rank[n.id];widths[r]=Math.max(widths[r]||0,n.width);lefts[r]=info.channels.left[r].length;rights[r]=info.channels.right[r].length;});
+    Object.keys(widths).map(Number).sort(function(a,b){return a-b;}).forEach(function(r){x+=12+lefts[r]*5;xs[r]=x;x+=widths[r]+12+rights[r]*5+24;});
+    info.items.slice().sort(function(a,b){return a.id.localeCompare(b.id);}).forEach(function(n){var r=info.rank[n.id];n.x=xs[r];n.y=top+(heights[r]||0);n.routeRight=xs[r]+widths[r]+10;n.routeLeft=xs[r]-10;heights[r]=(heights[r]||0)+n.height+28;});
+    info.width=Math.max(320,x);info.height=top+Math.max(0,...Object.values(heights))+24;
+    if(parent){byId[parent].width=info.width;byId[parent].height=108+info.height;}
+  }
+  size(null);
+  function place(n,x,y){pos[n.id]={x:x+n.x,y:y+n.y,width:n.width,height:n.height,routeRight:x+n.routeRight,routeLeft:x+n.routeLeft};n.children.forEach(function(c){place(c,x+n.x,y+n.y+108);});}
+  model.nodes.filter(function(n){return !n.parent;}).forEach(function(n){place(n,0,0);});
+  function portY(id,side,i){var list=ports[id+'|'+side];return pos[id].y+(side==='right'?28:61.5)+7*(list.indexOf(i)+1);}
+  function gutter(id,side,i){var info=levels[nodeParent[id]||''],list=info.channels[side][info.rank[id]];return pos[id][side==='right'?'routeRight':'routeLeft']+(side==='right'?1:-1)*5*list.indexOf(id+'|'+i);}
+  function track(parent,i){return (parent?pos[parent].y+108:0)+12+levels[parent||''].tracks.indexOf(i)*6;}
+  var routed=routes.map(function(route){var e=route.edge,i=route.index,a=pos[e.from],b=pos[e.to],points;
+    if(route.direct){var x=gutter(e.from,'right',i);points=[[a.x+a.width,portY(e.from,'right',i)],[x,portY(e.from,'right',i)],[x,portY(e.to,'left',i)],[b.x,portY(e.to,'left',i)]];}
+    else {function climb(ids,side){var id=ids[0],box=pos[id],points=[[side==='right'?box.x+box.width:box.x,portY(id,side,i)]];ids.forEach(function(current){var x=gutter(current,side,i);points.push([x,points[points.length-1][1]]);points.push([x,track(nodeParent[current],i)]);});return points;}points=climb(route.source,'right').concat(climb(route.target,'left').reverse());}
+    points=points.filter(function(p,j){return !j||p[0]!==points[j-1][0]||p[1]!==points[j-1][1];});
+    return Object.assign({},e,{points:points,d:points.map(function(p,j){return(j?'L':'M')+p[0]+','+p[1];}).join(' ')});
+  });
+  return {pos:pos,edges:routed,width:levels[''].width,height:levels[''].height,cycles:Object.fromEntries(model.nodes.filter(function(n){return n.cycle;}).map(function(n){return[n.id,n.cycleKind];})),model:model};
 }
+function reproEdgeLabel(lay,e){
+  function name(id){var n=lay.model.nodes.find(function(n){return n.id===id;});return n&&n.type==='task'?(n.title||reproTaskTitle(n.task)):id;}
+  return name(e.from)+' → '+name(e.to)+(e.cycle?' · '+e.cycleKind:'');
+}
+function reproHighlightEdge(container,wire){
+  container.querySelectorAll('.is-edge-endpoint,.is-edge-active').forEach(function(el){el.classList.remove('is-edge-endpoint','is-edge-active');});
+  container.classList.toggle('has-edge-focus',!!wire);
+  var label=container.querySelector('#repro-connection-label');if(label)label.textContent=wire?wire.getAttribute('aria-label'):'';
+  if(!wire)return;wire.classList.add('is-edge-active');
+  container.querySelectorAll('[data-node-id]').forEach(function(node){if(node.dataset.nodeId===wire.dataset.from||node.dataset.nodeId===wire.dataset.to)node.classList.add('is-edge-endpoint');});
+}
+function reproBindEdges(container){
+  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);};
+  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));};
+  ['focusin','focusout'].forEach(function(type){container.removeEventListener(type,reproEdgeFocus);container.addEventListener(type,reproEdgeFocus);});
+}
+function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
 function reproGraphHTML(lay,statuses) {
-  var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>';
-  html+=lay.edges.map(function(e,i){return '<path class="rp-wire" tabindex="0" role="button" aria-label="'+escapeAttr(e.from+' → '+e.to)+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(e.from+' → '+e.to+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
+  var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
+  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(e.cycle?' is-cycle':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
-    if(n.type==='step') {var st=reproStateOf(statuses[n.id]);return '<button class="repro-node rp-'+st+(n.id===_reproSelected?' is-selected':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'" id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state">'+(REPRO_GLYPHS[st]||'?')+' '+st+(n.step.kind==='check'?' · check':'')+(!reproMatches(n.step,_reproNav)?' · Outside scope':'')+'</span></button>';}
+    if(n.type==='step') {var st=reproStateOf(statuses[n.id]);return '<button class="repro-node rp-'+st+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'" id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state">'+(REPRO_GLYPHS[st]||'?')+' '+st+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':'')+(!reproMatches(n.step,_reproNav)?' · Outside scope':'')+'</span></button>';}
     var counts={};n.steps.forEach(function(s){var st=reproStateOf(statuses[s.name]);counts[st]=(counts[st]||0)+1;});
     var summary=(n.outside?'Outside scope · ':'')+n.steps.length+' steps'+(n.steps.length?' · ':'')+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ');
-    return '<section class="rp-task'+(n.expanded&&n.expandable?' rp-expanded':'')+(n.task===activePath?' is-selected':'')+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button></div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+escapeHtml(summary)+'</span></div></section>';
+    return '<section class="rp-task'+(n.cycle?' is-cycle':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button></div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+escapeHtml(summary)+'</span></div></section>';
   }).join('');return html;
 }
 function reproHeadHTML() {
@@ -1279,7 +1307,7 @@ function drawReproView(container,data) {
   var signature=JSON.stringify([model.nodes.map(function(n){return [n.id,n.parent,n.expanded];}),model.edges]);
   var oldCanvas=container.querySelector('.repro-canvas'),same=_reproLayoutCache&&_reproLayoutCache.signature===signature&&oldCanvas;
   var oldLayout=_reproLayoutCache&&_reproLayoutCache.layout, lay=same?_reproLayoutCache.layout:reproHierarchyLayout(model);
-  lay.model=model;
+  lay.model=model;model.nodes.forEach(function(n){n.cycle=!!lay.cycles[n.id];n.cycleKind=lay.cycles[n.id]||'';});
   var anchor=_reproPreserve||_reproSelected||'task:'+activePath;_reproPreserve='';
   if(!same&&oldLayout&&oldLayout.pos[anchor]&&lay.pos[anchor]&&!_reproFitNext){_reproViewport.x+=(oldLayout.pos[anchor].x-lay.pos[anchor].x)*_reproViewport.zoom;_reproViewport.y+=(oldLayout.pos[anchor].y-lay.pos[anchor].y)*_reproViewport.zoom;}
   _reproLayoutCache={signature:signature,layout:lay};
@@ -1295,12 +1323,13 @@ function drawReproView(container,data) {
     +'<p id="repro-notice" role="status">'+escapeHtml(notice||_reproNotice)+'</p>'
     +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
     +(!model.nodes.length?'<p class="repro-empty">'+(paths.length?'No tasks or steps match these filters. Use Whole project in Graph options to recover.':'No active tasks in this tree.')+'</p>':'')
-    +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+reproButton('Center selected','center')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-edge-detail"></div></div>'
+    +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+reproButton('Center selected','center')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-connection-label" role="status"></div><div id="repro-edge-detail"></div></div>'
     +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span><details class="rp-menu rp-footer-menu" data-rp-menu="steps"><summary>Step list · '+project.steps.length+'</summary><div class="rp-menu-body repro-step-list">'+project.steps.map(function(s){return reproButton(s.name+' · '+reproTaskTitle(s.task),'open',s.name);}).join('')+'</div></details>'
     +((project.boundary.length||model.logicalBoundary.length)?'<details class="rp-menu rp-footer-menu" data-rp-menu="boundaries"><summary>Outside dependencies</summary><div class="rp-menu-body">'+reproBoundaryHTML(project)+reproLogicalBoundaryHTML(model)+'</div></details>':'')+'</div>';
 
   if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
   container.onclick=onReproClick;
+  reproBindEdges(container);
   container.onkeydown=function(e){if(e.key==='Escape'){container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});document.getElementById('repro-search-results').innerHTML='';document.getElementById('repro-search').oninput=function(){reproRenderSearch(false);};reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
   reproBindHead(container);reproBindViewport(container);renderReproDetail(_reproSelected);reproReaderControls();reproSizeWorkspace();
   if(branchPanel)reproBranchPanel(branchPanel.path,branchPanel.depth,false);
@@ -1557,7 +1586,7 @@ function onReproClick(event) {
       reproNavigate({expanded:Array.from(expanded)},false);
     } else if (action === 'edge') {
       var edge=_reproLayoutCache.layout.edges[Number(value)],host=document.getElementById('repro-edge-detail');
-      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(edge.from+' → '+edge.to)+'</h3>'+reproEvidenceHTML(edge.evidence);
+      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(reproEdgeLabel(_reproLayoutCache.layout,edge))+'</h3>'+reproEvidenceHTML(edge.evidence);
     } else if(action==='close-edge'){reproCloseGraphDetail();
     } else if (action === 'clear') reproNavigate({roots:[],tier:'all',mode:'scope',anchor:'',selected:''},true);
     else if (action === 'refresh') renderReproView(true);
