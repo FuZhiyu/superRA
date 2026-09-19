@@ -16,6 +16,7 @@ Verify the [0.5 contract](../../attachments/v05-design.md#verification-and-upgra
 ## Details
 
 - Existing pilot evidence includes an inferred edge contradicting declared task order. The heterogeneity dashboard showed broad shared-code dependencies; its graph is a diagnostic fixture, not a constraint on the new contract.
+- Current audit leads: the paper-reproduction task owns an upstream `construction-baseline` consumed by heterogeneity as well as downstream exhibit work. Inspect early construction versus later rendering ownership before choosing a boundary repair. The canonical table renderer imports `canonical_specs.jl` for layout constants; separating layout from estimation settings is a bounded candidate for reducing helper fan-out. Recheck these against the isolated source snapshot before editing.
 - Use [worktree-data-sync](../../../../skills/worktree-data-sync/SKILL.md) before working with untracked data. Choose a current source worktree and an isolated destination through the project's own task tree; do not reuse the old pilot's worktree as an implicit writable target.
 - Historical baseline: [parent results](../task.md#results). Validation is bounded to the changed behavior; BondElasticity adoption and file-open tracing remain postponed.
 - Retained scripts, measurements, and screenshots belong in this task's attachments, with producer commands and reproduction coverage when they support results. Record project source/commit, machine/environment, and exercised runtime version.
