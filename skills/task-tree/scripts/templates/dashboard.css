@@ -6,7 +6,7 @@
 
   /* Chrome type scale (modular, ratio ~1.25; shares 01-reading-typography's
      content anchors 15/16/19/23). Chrome stops using ad-hoc px and steps from
-     these named roles so sidebar/header/kanban hierarchy is encoded by the
+     these named roles so sidebar/header hierarchy is encoded by the
      scale, not by near-identical sizes. --fs-micro is the smallest step
      (badges, small-caps labels, captions); do not invent sizes off-scale. */
   --fs-micro: 10px;   /* badges, progress counts, section icons, paths */
@@ -74,9 +74,6 @@
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
 
-  --kanban-bg: var(--bg-alt);
-  --kanban-card-bg: var(--bg-card);
-  --kanban-card-border: var(--border);
 
   /* Syntax-highlight tokens (light) — readable on --bg-alt code blocks. */
   --hl-keyword:  #953f24;
@@ -137,9 +134,6 @@
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
 
-  --kanban-bg: var(--bg-alt);
-  --kanban-card-bg: var(--bg-card);
-  --kanban-card-border: var(--border);
 
   /* Syntax-highlight tokens (dark) — readable on --bg-alt code blocks. */
   --hl-keyword:  #e08070;
@@ -172,19 +166,16 @@
 html[data-doc-mode] .badge,
 html[data-doc-mode] .task-progress { display: none !important; }
 html[data-doc-mode] #summary-bar { display: none !important; }
-html[data-doc-mode] #btn-kanban { display: none !important; }
 html[data-doc-mode] #btn-reproduction { display: none !important; }
 html[data-doc-mode] .children-dag { display: none !important; }
 
 /* Residual tracker chrome a docs reader does not need (audit in the task
-   Results): the workspace/kanban view toggle (Kanban is already gone, so the
-   lone "Workspace" button has nothing to switch to), the status filter
-   <select> and its phone search trigger (status is a tracker concept), the
+   Results): the layout toggle and task filter, the
    worktree selector, and the per-task "Open task.md" + "Share subtree"
    controls in the active-node head. Kept: sidebar nav, the title filter +
    full-text Find, theme toggle, and the doc title. */
 html[data-doc-mode] #btn-workspace { display: none !important; }
-html[data-doc-mode] #filter-status { display: none !important; }
+html[data-doc-mode] #filter-trigger { display: none !important; }
 html[data-doc-mode] #search-trigger { display: none !important; }
 html[data-doc-mode] .worktree-selector { display: none !important; }
 html[data-doc-mode] .open-btn,
@@ -413,75 +404,6 @@ body {
 .hc-search-trigger svg { display: block; }
 
 /* ── Phone search/filter sheet ── */
-.search-sheet-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.38);
-  z-index: 140;
-  opacity: 0;
-  transition: opacity 0.22s ease;
-}
-.search-sheet-backdrop.open { display: block; opacity: 1; }
-.search-sheet {
-  display: none;
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 150;
-  flex-direction: column;
-  gap: 12px;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-  border-radius: 14px 14px 0 0;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
-  /* Bottom-anchored sheet: clear the home indicator / rounded corners on iOS
-     (env() resolves to 0 elsewhere, so the 16px/14px floor is the default). */
-  padding-top: 14px;
-  padding-right: max(16px, env(safe-area-inset-right));
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  padding-left: max(16px, env(safe-area-inset-left));
-  transform: translateY(100%);
-  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.search-sheet.open { display: flex; transform: translateY(0); }
-.search-sheet-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.search-sheet-title {
-  font-family: var(--font-display);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--text-mid);
-}
-.search-sheet-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px; height: 32px;
-  font-size: var(--fs-title); line-height: 1;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  color: var(--text-mute);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.search-sheet-close:hover { background: var(--bg-hover); color: var(--text); }
-.search-sheet-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* Inside the sheet the search + filter fill the width and grow to a comfortable
-   tap height (the coarse-pointer block enlarges the controls further). */
-.search-sheet-body .hc-search-host { flex-direction: column; align-items: stretch; }
-.search-sheet-body .hc-search,
-.search-sheet-body .hc-select { width: 100%; }
-
 /* ── Full-text search palette ── */
 .search-palette-backdrop {
   display: none;
@@ -957,7 +879,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 /* When the sheet has adopted the search host, it must show regardless of the
    phone-width hide rule above (the host moves into .search-sheet-body, so this
    descendant override re-reveals it inside the sheet). */
-.search-sheet-body .hc-search-host { display: flex; }
 
 /* ── Touch tap targets (coarse pointer only) ──────────────────────────────
    iOS HIG asks for >=44x44px hit areas. Gated behind (pointer: coarse) so the
@@ -970,8 +891,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   /* Kill the gray flash on tap; the :active / :focus-visible rules below give a
      real, intentional affordance instead. */
   .hc-btn, .hc-select, .theme-toggle, .nav-hamburger, .pin-toggle,
-  .crumb, .task-row, .hc-search-trigger, .search-sheet-close,
-  .child-card, .kanban-card, .share-btn, .open-btn, .worktree-selector .hc-select {
+  .crumb, .task-row,
+  .child-card, .share-btn, .open-btn, .worktree-selector .hc-select {
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -1050,27 +971,24 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   }
 
   /* Sheet close button: already 32px; floor it to 44. */
-  .search-sheet-close { min-width: 44px; min-height: 44px; }
 
   /* Tap feedback: a brief, intentional press state replacing the suppressed gray
      box. focus-visible keeps keyboard rings (an iPad with a keyboard attached). */
   .hc-btn:active, .crumb:active, .nav-hamburger:active, .theme-toggle:active,
-  .hc-search-trigger:active, .pin-toggle:active, .search-sheet-close:active {
+  .pin-toggle:active {
     background: var(--bg-hover);
   }
   .task-row:active { background: var(--accent-soft); }
 
   /* Horizontal-scroll affordance: a trailing-edge fade on the children-DAG and
-     the kanban so a clipped, scrollable region reads as scrollable on touch (no
+     a clipped, scrollable region so it reads as scrollable on touch (no
      hover scrollbar to hint it). A mask-image fades the right edge of the scroll
      container's viewport; paired with scroll-snap on the kanban columns so
      swipes settle cleanly on a column rather than mid-card. */
-  .children-dag, .kanban {
+  .children-dag {
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
             mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
   }
-  .kanban { scroll-snap-type: x proximity; }
-  .kanban-col { scroll-snap-align: start; }
 }
 
 /* Phone + touch: the search trigger is the only one shown here (the inline
@@ -1578,14 +1496,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 /* The card knows its tier (for a faint left accent on dependent tiers). */
 .child-card.has-deps { border-left: 3px solid var(--accent-soft); }
 .child-card.has-deps:hover { border-left-color: var(--accent); }
-
-/* When Workspace is showing, the Kanban container is hidden via .hidden;
-   when Kanban shows, it keeps the legacy centered layout. */
-#view-kanban:not(.hidden) {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px 24px 60px;
-}
 
 /* ── Reproduction view: task overview, bounded graph, and step inspector ── */
 #view-reproduction:not(.hidden) {
@@ -2410,63 +2320,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .dag-hint { color: var(--text-mute); font-size: var(--fs-body); }
 
 /* ── Kanban view ── */
-.kanban {
-  display: flex;
-  gap: 14px;
-  padding: 16px 0;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  min-height: 400px;
-}
-.kanban-col {
-  min-width: 200px;
-  flex: 1;
-  background: var(--kanban-bg);
-  border-radius: 6px;
-  padding: 10px;
-}
-.kanban-col-header {
-  font-family: var(--font-display);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-  border-bottom: 2px solid var(--border);
-  color: var(--text-mid);
-}
-.kanban-col-header .count {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--text-mute);
-  font-weight: 400;
-}
-.kanban-card {
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  background: var(--kanban-card-bg);
-  border: 1px solid var(--kanban-card-border);
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: var(--fs-meta);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.kanban-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-sm);
-}
-.kanban-card-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-meta);
-  color: var(--text);
-}
-.kanban-card-path {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  color: var(--text-mute);
-  margin-top: 3px;
-}
-
 /* ── Comment gutter and threads ── */
 .commentable-block { position: relative; padding-left: 24px; }
 .commentable-block:hover .comment-gutter-btn { opacity: 1; }
@@ -2533,7 +2386,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Brief highlight when a task is revealed via navigation (Kanban/DAG click) */
+/* Brief highlight when a task is revealed via navigation (task or graph click) */
 @keyframes revealPulse {
   0%   { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
   100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
@@ -2576,7 +2429,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .dag-mode > .detail-panel { position:relative;flex:0 0 var(--dag-preview-size,420px);width:var(--dag-preview-size,420px);height:auto;min-width:0;min-height:0;max-width:none;resize:none;overflow:auto;scroll-padding-top:var(--dag-reader-offset,100px);border-left:1px solid var(--border);padding:16px;box-sizing:border-box; }
 #dag-reader-controls { position:sticky;top:0;z-index:8;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:8px 0;background:var(--bg);border-bottom:1px solid var(--border-lt); }
 #repro-detail { max-height:none;overflow:visible;position:static; }
-.dag-mode #children-dag,.workspace:not(.dag-mode) #repro-detail { display:none; }
+.dag-mode #children-dag { display:none; }
 .dag-mode.dag-full-reader > .repro-view,.dag-mode.dag-reader-closed > .detail-panel { display:none !important; }
 .dag-mode.dag-full-reader > .detail-panel { width:100%;height:100%;max-width:100%;flex:1;resize:none; }
 .dag-mode .hc-btn,.dag-mode .hc-select { background:var(--bg-card);color:var(--text); }
@@ -2586,7 +2439,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-heading { display:flex;align-items:baseline;gap:14px;min-width:0; }
 .repro-head strong { font-size:var(--fs-title);font-weight:600; }
 .repro-head .repro-scope { margin:0;color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-meta); }
-#repro-preview-toggle { flex:none; }
 .repro-controls { flex-wrap:nowrap;gap:8px;margin:0;position:relative;z-index:12; }
 .repro-controls .repro-search-label { flex:1;min-width:100px; }
 .repro-controls input[type=search] { height:32px;padding:5px 10px;font-family:var(--font-text);font-size:var(--fs-body);border-radius:5px; }
@@ -2628,10 +2480,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .rp-footer-menu .rp-menu-body { top:auto;bottom:calc(100% + 7px);width:400px; }
 .repro-boundaries { margin:0; }
 .repro-boundaries .hc-btn { white-space:normal;height:auto;min-height:28px; }
-#repro-search-results { position:relative;z-index:20; }
-#repro-search-results > details { position:absolute;top:5px;left:0;right:0;max-height:55vh;overflow:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:10px;box-shadow:var(--shadow-md);font-size:var(--fs-meta); }
-.repro-search-items { margin-bottom:0; }
-.repro-search-items .hc-btn { width:100%;min-height:32px;height:auto;white-space:normal;text-align:left;overflow-wrap:anywhere; }
 #repro-edge-detail:empty { display:none; }
 #repro-edge-detail { position:absolute;z-index:6;right:12px;top:12px;max-width:min(450px,calc(100% - 48px));max-height:65%;overflow:auto;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;box-shadow:var(--shadow-md);font-size:var(--fs-meta);overflow-wrap:anywhere; }
 .rp-branch-title { margin:8px 0 2px;font-size:var(--fs-emph);color:var(--text); }
@@ -2742,3 +2590,48 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .dag-reader-bottom .repro-stage { min-height:100px; }
 .dag-resizing { user-select:none; }
 @media(pointer:coarse) { .dag-mode > .dag-preview-resizer { flex-basis:20px; } .dag-preview-resizer::after { left:9px; } .dag-preview-resizer::before { left:7px; } .dag-reader-bottom > .dag-preview-resizer::after { left:0;top:9px; } .dag-reader-bottom > .dag-preview-resizer::before { left:calc(50% - 18px);top:7px; } }
+
+/* Shared workspace controls and filtering. */
+.workspace-filter-summary { display:flex;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--bg-alt);font-size:12px;flex-wrap:wrap; }
+.workspace-filter-summary[hidden],#selection-filter-notice[hidden] { display:none; }
+.workspace-filter { color:var(--text);background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:min(520px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box;padding:20px; }
+.workspace-filter::backdrop { background:rgba(0,0,0,.3); }
+.workspace-filter-head { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.workspace-filter fieldset { border:0;border-top:1px solid var(--border);margin:16px 0;padding:12px 0 0; }
+.workspace-filter legend { font-weight:600;padding-right:8px; }
+#workspace-status-options { display:flex;flex-wrap:wrap;gap:8px 16px; }
+.workspace-filter label { display:flex;align-items:center;gap:8px;font-size:13px;min-height:32px; }
+.workspace-filter input[type=checkbox] { accent-color:var(--accent);width:16px;height:16px;flex-shrink:0; }
+#workspace-task-query { width:100%;box-sizing:border-box;padding:8px;margin-bottom:8px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:5px; }
+#workspace-task-options { max-height:42dvh;overflow:auto; }
+#workspace-task-options label { padding:4px 0 4px calc(var(--task-depth)*12px); }
+#workspace-task-options small { display:block;color:var(--text-mute);font-size:11px;overflow-wrap:anywhere; }
+#selection-filter-notice { padding:8px 12px;margin-bottom:12px;border:1px solid var(--border);background:var(--bg-alt);font-size:13px; }
+.filter-context > .task-row { opacity:.55; }
+.nav-step-list { padding:4px 8px 4px 24px; }
+.nav-step { display:block;border:0;border-radius:4px;background:transparent;color:var(--text-mid);padding:6px 8px;text-align:left;font:inherit;font-size:12px;width:100%;overflow-wrap:anywhere;cursor:pointer; }
+.nav-step:hover { background:var(--bg-hover); }
+.nav-step.is-selected { color:var(--accent);background:var(--accent-soft); }
+.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-spacer,.workspace:not(.dag-mode).tree-sidebar-hidden > .nav-tree,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-resizer,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-rail { display:none; }
+#navigation-toggle { white-space:nowrap; }
+@media(max-width:620px) { .header-controls #btn-find { display:inline-flex;max-width:150px;overflow:hidden;white-space:nowrap; } .workspace-filter-summary { padding:6px 12px;gap:6px; } .workspace-filter { padding:16px; } .workspace-filter label { min-height:40px; } }
+
+.filter-task-actions { display:flex;gap:8px;margin:8px 0; }
+.filter-task-row { display:flex;align-items:center;gap:3px;min-height:40px; }
+.filter-task-row:hover { background:var(--bg-hover);border-radius:5px; }
+#workspace-task-options .filter-task-row label { padding:4px 0;flex:1;min-width:0;cursor:pointer; }
+.filter-task-row label span { overflow-wrap:anywhere; }
+.filter-task-fold,.filter-task-leaf { flex:0 0 26px;width:26px; }
+.filter-task-fold { border:0;background:transparent;color:var(--text-mid);cursor:pointer;align-self:stretch;font-size:16px;padding:0; }
+.filter-task-children { margin-left:13px;padding-left:17px;border-left:1px solid var(--border); }
+.filter-task-count { font-size:11px;color:var(--text-mute);padding:0 5px; }
+@media(pointer:coarse) { .filter-task-fold { flex-basis:36px;min-height:44px; } }
+
+#nav-hamburger[hidden] { display:none; }
+
+.workspace-filter[open] { display:flex;flex-direction:column;margin:auto; }
+.workspace-task-filter { display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden;border-top:1px solid var(--border);margin:0 0 16px;padding-top:12px; }
+.workspace-task-filter h3 { font:inherit;font-weight:600;margin:0 0 12px;flex-shrink:0; }
+.workspace-filter #workspace-task-options { flex:1;min-height:0;overflow:auto; }
+.workspace-filter > .hc-btn { align-self:flex-start;flex-shrink:0; }
+.workspace-filter-head,.workspace-filter > fieldset:first-of-type,.filter-task-actions,#workspace-task-query { flex-shrink:0; }

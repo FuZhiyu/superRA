@@ -45,7 +45,7 @@ flowchart TB
     class FINISHED terminal
 ```
 
-Research is rarely this linear: an unanticipated issue mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving unrelated finished work untouched. Run `./superRA/superra dashboard` from a project terminal to watch and steer any of it through the tree, DAG, and kanban views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks a full cycle end to end, covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
+Research is rarely this linear: an unanticipated issue mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving unrelated finished work untouched. Run `./superRA/superra dashboard` from a project terminal to watch and steer any of it through the Tree and Graph views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks a full cycle end to end, covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
 
 ## Installation
 
@@ -73,7 +73,7 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 For the unreleased 0.5.0 upgrade, ask the agent to audit an isolated copy of your project with `superra task check` before resuming work. File-derived prerequisites and authored logical prerequisites form one graph; a cycle is rejected even when individual build steps are acyclic. Correct erroneous declarations or task boundaries while preserving real input dependencies. Projects without reproduction declarations retain their logical dependency behavior; adding a child to a task does not require moving its existing steps.
 
-Use `repro impact` to inspect change scope. Reviewed acceptance can keep unaffected results fresh without rerunning them; it records the reason and evidence separately from actual execution. Forced verification still runs its selected steps. The [reproducibility skill](skills/reproducibility/SKILL.md) owns that distinction. The dashboard upgrade uses Tree and DAG as alternative navigators with one task reader; expanding tasks exposes their steps. UI and existing-project compatibility checks remain release prerequisites.
+Use `repro impact` to inspect change scope. Reviewed acceptance can keep unaffected results fresh without rerunning them; it records the reason and evidence separately from actual execution. Forced verification still runs its selected steps. The [reproducibility skill](skills/reproducibility/SKILL.md) owns that distinction. The dashboard upgrade uses Tree and Graph with shared search, task/status filters, selection, and one task reader; expanding tasks exposes their steps. UI and existing-project compatibility checks remain release prerequisites.
 
 `repro build <task>` builds that task and its nested tasks using saved upstream inputs. Add `--upstream` to include producers and `--force` to rerun every step in that scope; `--upstream --force` replaces `--force-all`. Use `task#step` for one step. Explicit targets cannot be combined with `--tier`. Build/status defaults are scoped; completion checks explicitly verify upstream too. See the [command reference](skills/task-tree/references/commands.md#reproduction).
 

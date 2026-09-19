@@ -77,64 +77,27 @@
   </div>
   <div class="header-spacer"></div>
   <div class="header-controls">
-    {#- Phone-only trigger for the search/filter sheet. The actual search input
-        and status <select> below are MOVED into the sheet at phone width (their
-        ids travel with them, so applyFilters() is unchanged); on wider screens
-        they stay inline here and this button is hidden. -#}
-    <button class="hc-search-trigger" id="search-trigger" type="button"
-            aria-label="Search and filter tasks" aria-haspopup="dialog"
-            aria-expanded="false" title="Search & filter"
-            onclick="toggleSearchSheet()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-    </button>
-    {#- Search + status filter live in this host inline on desktop; the sheet
-        adopts them on phone and returns them here on close. -#}
-    <span class="hc-search-host" id="search-host">
-      <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
-      <select class="hc-select" id="filter-status" onchange="applyFilters()">
-        <option value="">All statuses</option>
-        <option value="not-started">not-started</option>
-        <option value="in-progress">in-progress</option>
-        <option value="implemented">implemented</option>
-        <option value="revise">revise</option>
-        <option value="approved">approved</option>
-        <option value="archived">archived</option>
-        <option value="postponed">postponed</option>
-      </select>
-    </span>
-    {#- Full-text search-and-navigate: opens a command-palette overlay that
-        searches node titles AND body text and jumps to the chosen result. Distinct
-        from the title-only sidebar filter (#search-box) above. Keyboard: '/' or
-        Ctrl/Cmd-K opens it; ↑/↓ move, Enter opens, Esc dismisses. -#}
-    <button class="hc-btn" id="btn-find" type="button"
-            aria-haspopup="dialog" title="Search tasks and pages (/ or Ctrl-K)"
-            onclick="openSearchPalette()">Find</button>
+    <button class="hc-btn workspace-search" id="btn-find" type="button" aria-haspopup="dialog"
+            title="Search tasks, steps, files, and task text (/ or Ctrl-K)" onclick="openSearchPalette()">Search tasks, steps, files…</button>
+    <button class="hc-btn" id="filter-trigger" type="button" aria-haspopup="dialog" onclick="openWorkspaceFilter()">Filter</button>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Tree</button>
-    <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
     <button class="hc-btn" id="btn-reproduction" onclick="showView('reproduction')">Graph</button>
+    <button class="hc-btn" id="navigation-toggle" onclick="toggleNavigationPane()">Hide sidebar</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
   </div>
 </div>
 
-{#- Phone search/filter sheet: a bottom sheet that adopts the existing #search-box
-    and #filter-status (moved in by openSearchSheet, returned by closeSearchSheet),
-    so search/filter logic is reused verbatim. Backdrop + focus trap + Esc mirror
-    the drawer pattern. Hidden (display:none) until opened; phone-width only. -#}
-<div class="search-sheet-backdrop" id="search-sheet-backdrop" onclick="closeSearchSheet()"></div>
-<div class="search-sheet" id="search-sheet" role="dialog" aria-modal="true"
-     aria-label="Search and filter tasks">
-  <div class="search-sheet-head">
-    <span class="search-sheet-title">Search &amp; filter</span>
-    <button class="search-sheet-close" id="search-sheet-close" type="button"
-            aria-label="Close search" onclick="closeSearchSheet()">&times;</button>
-  </div>
-  <div class="search-sheet-body" id="search-sheet-body"></div>
-</div>
+<div id="workspace-filter-summary" class="workspace-filter-summary" hidden></div>
+<dialog id="workspace-filter" class="workspace-filter" aria-labelledby="workspace-filter-title">
+  <div class="workspace-filter-head"><strong id="workspace-filter-title">Filter tasks</strong><button class="hc-btn" onclick="closeWorkspaceFilter()">Done</button></div>
+  <fieldset><legend>Task status</legend><div id="workspace-status-options"></div></fieldset>
+  <section class="workspace-task-filter" aria-labelledby="workspace-task-filter-title"><h3 id="workspace-task-filter-title">Tasks to show</h3>
+    <input id="workspace-task-query" type="search" placeholder="Find a task in this list…" aria-label="Find a task in filter list" oninput="renderWorkspaceTaskOptions()">
+    <div class="filter-task-actions"><button class="hc-btn" onclick="selectAllWorkspaceTasks(true)">Select all</button><button class="hc-btn" onclick="selectAllWorkspaceTasks(false)">Deselect all</button></div>
+    <div id="workspace-task-options"></div>
+  </section>
+  <button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>
+</dialog>
 
 {#- Full-text search palette: a centered command-palette overlay that searches
     node titles + body text over the embedded SEARCH_INDEX and navigates to the
@@ -201,6 +164,7 @@
     <div id="view-reproduction" class="repro-view hidden"></div>
     <button class="dag-preview-resizer" id="dag-preview-resizer" type="button" role="separator" aria-orientation="vertical" aria-label="Resize task preview width" aria-controls="task-preview" aria-valuemin="300" aria-valuenow="420"></button>
     <main class="detail-panel" id="task-preview">
+      <div id="selection-filter-notice" role="status" hidden></div>
       <div id="dag-reader-controls" class="hidden" onclick="onReproClick(event)"></div>
       <aside id="repro-detail" aria-label="Step details" onclick="onReproClick(event)"></aside>
       <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
@@ -212,7 +176,6 @@
     <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeDrawer()"></div>
   </div>
 
-  <div id="view-kanban" class="kanban hidden"></div>
 
   {#- Reproduction view: the build graph the `## Reproduction` sections declare,
       laid out in swimlanes by owner task and columns by dependency depth, with

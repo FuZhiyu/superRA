@@ -53,7 +53,7 @@ def click_graph_action(page, selector):
 
 def open_preview(page):
     if not page.locator('#task-preview').is_visible():
-        page.locator('#repro-preview-toggle').click()
+        page.locator('#navigation-toggle').click()
 
 
 def routing_fixture(kind):
@@ -124,6 +124,19 @@ def run(evidence, snapshot=None):
                     assert results['counts']['steps'] == 500
                     assert results['counts']['edges'] == 1494
                     assert page.locator('.rp-task').count() == 5
+                    page.click('#filter-trigger')
+                    page.locator('[data-filter-fold="group-0"]').click()
+                    page.get_by_role('button', name='Deselect all', exact=True).click()
+                    page.locator('[data-filter-task="group-0"]').check()
+                    page.screenshot(path=str(evidence / 'workspace-filter-tree.png'), full_page=True)
+                    page.get_by_role('button', name='Done', exact=True).click()
+                    page.click('#btn-workspace')
+                    page.wait_for_selector('#task-group-0')
+                    assert not page.locator('#task-group-1').is_visible()
+                    page.screenshot(path=str(evidence / 'workspace-filtered-tree.png'), full_page=True)
+                    page.locator('#workspace-filter-summary').get_by_role('button',name='Clear filters').click()
+                    page.click('#btn-reproduction')
+                    results['sharedTaskFilter'] = True
                     scope = page.evaluate('JSON.stringify(_reproNav.roots)')
                     page.locator('[data-rp-action=task][data-value="group-0"]').click()
                     assert page.evaluate('activePath') == 'group-0'
@@ -134,7 +147,7 @@ def run(evidence, snapshot=None):
                     page.locator('[data-rp-action=fold][data-value="group-0/task-1"]').click()
                     assert page.locator('.repro-node').count() == 20
                     page.evaluate("selectReproStep('step-010')")
-                    assert page.evaluate('activePath') == 'group-0/task-1'
+                    assert page.evaluate('activePath') == 'group-0/task-1', page.evaluate('({activePath,selected:_reproSelected,step:_reproData.graph.steps.find(s=>s.name==="step-010"),view:currentView})')
                     before = page.evaluate('JSON.stringify(_reproViewport)')
                     page.evaluate("selectReproStep('step-011')")
                     assert page.evaluate('JSON.stringify(_reproViewport)') == before
@@ -144,12 +157,13 @@ def run(evidence, snapshot=None):
                     assert 'Contains selected step' in page.locator('[data-task="group-0"]').inner_text()
                     page.evaluate("document.querySelector('[data-rp-action=fold][data-value=\"group-0\"]').click()")
                     assert page.locator('[data-task="group-0/task-1"].rp-expanded').count() == 1
-                    page.fill('#repro-search', 'group-1')
-                    page.locator('[data-rp-action=find-task][data-value="group-1"]').click()
+                    page.click('#btn-find')
+                    page.fill('#search-palette-input', 'group-1')
+                    page.locator('#search-palette-input').press('Enter')
                     assert page.evaluate('_reproNav.roots') == []
                     click_graph_action(page, '[data-rp-action=overview]')
                     # Repeated pure UI timings after both payloads are loaded.
-                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],overview:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();document.getElementById('repro-search').value='step-499';reproRenderSearch(false);r.search.push(performance.now()-t);t=performance.now();reproNavigate({expanded:[]},true);r.overview.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
+                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],overview:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();renderSearchResults('step-499');r.search.push(performance.now()-t);t=performance.now();reproNavigate({expanded:[]},true);r.overview.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
                     assert max(results['timingsMs']['search']) < 200
                     assert max(results['timingsMs']['overview']) < 200
                     assert max(results['timingsMs']['full']) < 2000
@@ -198,10 +212,9 @@ def run(evidence, snapshot=None):
                     page.locator('[data-rp-action=full-reader]').click()
                     # Keyboard search, selection, declaration, and dismissal.
                     page.locator('[data-rp-action=close-reader]').click()
-                    page.locator('#repro-search').focus()
+                    page.click('#btn-find')
                     page.keyboard.type('step-499')
-                    page.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').focus()
-                    page.keyboard.press('Enter')
+                    page.locator('#search-palette-input').press('Enter')
                     open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     page.locator('[data-rp-action=declaration]').focus()
@@ -210,8 +223,8 @@ def run(evidence, snapshot=None):
                     page.locator('[data-rp-action=full-reader]').click()
                     page.locator('[data-rp-action=close-reader]').focus()
                     page.keyboard.press('Enter')
-                    assert page.locator('#repro-preview-toggle').evaluate('(e)=>e===document.activeElement')
-                    page.locator('[data-rp-action=reader]').click()
+                    assert page.locator('#navigation-toggle').evaluate('(e)=>e===document.activeElement')
+                    page.locator('#navigation-toggle').click()
                     # Drag the accessible divider beside the reading pane.
                     reader = page.locator('.detail-panel')
                     box = reader.bounding_box()
@@ -240,8 +253,8 @@ def run(evidence, snapshot=None):
                     page.evaluate("async () => {await applyWorktree('alternate','');showView('reproduction');}")
                     page.wait_for_function('_reproData && _reproData.graph.steps.length === 0')
                     page.evaluate("showView('workspace');setActive('archived');showView('reproduction')")
-                    page.wait_for_function("document.getElementById('repro-notice').innerText.includes('archived')")
-                    assert page.locator('[data-task=archived]').count() == 0
+                    page.wait_for_selector('.rp-task[data-task=archived]')
+                    assert page.locator('.rp-task[data-task=archived]').count() == 1
                     assert page.locator('#task-preview').is_visible()
                     page.locator('[data-rp-action=close-reader]').click()
                     page.evaluate('(wt)=>applyWorktree(wt,"group-4/task-9")', original)
@@ -253,8 +266,9 @@ def run(evidence, snapshot=None):
                     assert abs(reader.bounding_box()['width']-after) < 2
                     results['worktreeIsolation'] = True
                 if snapshot:
-                    page.fill('#repro-search', 'intermediary-build-factors-and-panel')
-                    page.locator('#repro-search-results [data-rp-action=open]').first.click()
+                    page.click('#btn-find')
+                    page.fill('#search-palette-input', 'intermediary-build-factors-and-panel')
+                    page.locator('#search-palette-input').press('Enter')
                     open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     assert page.locator('.repro-findings').count() == 1
@@ -285,8 +299,9 @@ def run(evidence, snapshot=None):
                 page.click('#btn-reproduction')
                 page.wait_for_selector('.rp-task')
                 if not snapshot:
-                    page.fill('#repro-search', 'step-499')
-                    page.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').click()
+                    page.click('#btn-find')
+                    page.fill('#search-palette-input', 'step-499')
+                    page.locator('#search-palette-input').press('Enter')
                     page.wait_for_function("_reproSelected==='step-499'")
                     assert page.evaluate('activePath') == 'group-4/task-9'
                     open_preview(page)
@@ -301,8 +316,12 @@ def run(evidence, snapshot=None):
                     phone.locator('#btn-reproduction').tap()
                     phone.wait_for_selector('.rp-task')
                     assert phone.locator('#task-preview').is_visible()
-                    phone.locator('#repro-search').tap();phone.locator('#repro-search').fill('step-499')
-                    phone.locator('#repro-search-results [data-rp-action=open][data-value=step-499]').tap()
+                    phone.locator('#filter-trigger').tap()
+                    phone.locator('[data-filter-fold="group-0"]').tap()
+                    phone.screenshot(path=str(evidence / 'workspace-filter-phone.png'), full_page=True)
+                    phone.get_by_role('button', name='Done', exact=True).tap()
+                    phone.locator('#btn-find').tap();phone.locator('#search-palette-input').fill('step-499')
+                    phone.locator('#search-palette-input').press('Enter')
                     open_preview(phone)
                     phone.locator('[data-rp-action=declaration]').tap()
                     phone.wait_for_selector('#active-node [data-section="Reproduction"] .rendered-md[data-rendered]')
@@ -328,7 +347,7 @@ def run(evidence, snapshot=None):
                 routing.goto(results['live'])
                 routing.click('#btn-reproduction')
                 routing.wait_for_selector('.rp-task')
-                if routing.locator('#task-preview').is_visible(): routing.locator('#repro-preview-toggle').click()
+                if routing.locator('#task-preview').is_visible(): routing.locator('#navigation-toggle').click()
                 for kind in ('cycle', 'fan', 'components'):
                     routing.evaluate("""graph => {
                         _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};

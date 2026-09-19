@@ -2,7 +2,7 @@
    STANDALONE MODE — server-less single-file export.
    ──────────────────────────────────────────────────────────────────────────
    The live dashboard fetches HTML/JSON fragments from the FastAPI server
-   (/nav, /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban,
+   (/nav, /nav/<path>, /node/<path>, /api/children-graph?root=<path>,
    /api/*). A file
    opened via file:// has no server, so generate_dashboard() pre-renders every
    one of those fragments with the SAME Jinja partials the server uses and
@@ -27,7 +27,7 @@ function _standaloneResponse(payload, found) {
 
 /* Resolve a fetch URL against the embedded data instead of the network.
    - Exact fragment hits (/nav, /node/<path>, /api/children-graph?root=<path>,
-     /kanban, /nav/<path>) return their pre-rendered HTML/JSON. The map is
+     /nav/<path>) return their pre-rendered HTML/JSON. The map is
      keyed by the raw (decoded) path, but the children-graph loader builds its
      URL with encodeURIComponent(path), which escapes the '/' in
      multi-segment paths to %2F. We decode before the lookup so an encoded
@@ -430,32 +430,194 @@ function toggleTheme() {
   localStorage.setItem('dashboard-theme', next);
 }
 
+/* Shared navigation state: layout changes do not change what is selected or filtered. */
+var _workspaceFilters={statuses:[],tasks:null};
+var _treeSidebarHidden=false;
+var _filterExpanded=new Set(['']);
+function normalizeWorkspaceFilters(value) {
+  value=value||{};
+  var selected=Array.isArray(value.tasks)?Array.from(new Set(value.tasks.filter(function(p){return typeof p==='string';}))).sort():null;
+  if(selected===null&&Array.isArray(value.hidden)&&value.hidden.length)selected=workspaceTasks().filter(function(t){return !value.hidden.some(function(p){return typeof p==='string'&&reproWithin(t.path,p);});}).map(function(t){return t.path;});
+  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected};
+}
+function workspaceTasks() {
+  var tasks={};
+  (SEARCH_INDEX||[]).forEach(function(t){tasks[t.path]=t;});
+  if(_reproData)(_reproData.graph.dependencies&&_reproData.graph.dependencies.tasks||[]).forEach(function(t){tasks[t.path]=Object.assign({},tasks[t.path],t);});
+  return Object.values(tasks).sort(function(a,b){return a.path.localeCompare(b.path);});
+}
+function workspaceTaskMatches(path, task) {
+  if(_workspaceFilters.tasks!==null&&!_workspaceFilters.tasks.includes(path))return false;
+  if(!_workspaceFilters.statuses.length)return true;
+  task=task||workspaceTasks().find(function(t){return t.path===path;});
+  return !!task&&_workspaceFilters.statuses.includes(task.status);
+}
+function workspaceVisibility() {
+  var tasks=workspaceTasks(),matches=new Set(),visible=new Set();
+  tasks.forEach(function(t){if(workspaceTaskMatches(t.path,t)){matches.add(t.path);visible.add(t.path);var p=t.path;while(p){p=parentPath(p);visible.add(p);}}});
+  return {matches:matches,visible:visible};
+}
+function workspaceGraph(graph) {
+  var archived=graph.dependencies&&graph.dependencies.archived_tasks||[];
+  if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
+  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length)return graph;
+  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task);}),names=new Set(steps.map(function(s){return s.name;}));
+  var dependencies=Object.assign({},graph.dependencies),boundaries={};
+  Object.keys(dependencies.boundaries||{}).forEach(function(k){var b=dependencies.boundaries[k];boundaries[k]=Object.assign({},b,{edges:(b.edges||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);})});});
+  dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
+  dependencies.edges=(dependencies.edges||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
+  dependencies.boundaries=boundaries;
+  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to);})});
+}
+function workspaceWriteHistory() {
+  if(restoring)return;
+  var hash=reproHash();
+  if(location.hash!==hash)history.pushState({wt:ACTIVE_WT},'',hash);
+}
+function applyWorkspaceFilters(changed) {
+  var visibility=workspaceVisibility();
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
+    node.style.display=visibility.visible.has(node.dataset.path)?'':'none';
+    node.classList.toggle('filter-context',visibility.visible.has(node.dataset.path)&&!visibility.matches.has(node.dataset.path));
+    var steps=node.querySelector(':scope > .task-children > .nav-step-list');if(steps)steps.hidden=!visibility.matches.has(node.dataset.path);
+  });
+  var nav=document.getElementById('nav-tree'),empty=document.getElementById('navigation-empty');
+  if(nav){if(!empty){empty=document.createElement('p');empty.id='navigation-empty';empty.className='repro-hint';nav.prepend(empty);}empty.hidden=visibility.visible.size>0;empty.textContent='No tasks match these filters.';}
+  updateWorkspaceFilterSummary();refreshRovingTabindex();
+  if(changed){
+    if(_workspaceFilters.statuses.length){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
+    workspaceWriteHistory();
+    if(currentView==='reproduction'&&_reproData)drawReproView(document.getElementById('view-reproduction'),_reproData);
+    renderReproDetail(_reproSelected);
+  }
+}
+function updateWorkspaceFilterSummary() {
+  var host=document.getElementById('workspace-filter-summary');if(!host)return;
+  var active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1);
+  host.hidden=!active;
+  host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
+    +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
+    +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
+  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
+  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
+  if(typeof reproSizeWorkspace==='function')reproSizeWorkspace();
+}
+function openWorkspaceFilter() {
+  var dialog=document.getElementById('workspace-filter');
+  document.getElementById('workspace-task-query').value='';
+  renderWorkspaceFilter();dialog.showModal();
+  loadReproData(false).then(renderWorkspaceFilter).catch(function(){});
+}
+function closeWorkspaceFilter() {document.getElementById('workspace-filter').close();document.getElementById('filter-trigger').focus();}
+function renderWorkspaceFilter() {
+  var host=document.getElementById('workspace-status-options');if(!host)return;
+  host.innerHTML=['not-started','in-progress','implemented','revise','approved','archived','postponed'].map(function(status){return '<label><input type="checkbox" data-filter-status="'+status+'"'+(_workspaceFilters.statuses.includes(status)?' checked':'')+'> '+status+'</label>';}).join('');
+  renderWorkspaceTaskOptions();
+}
+function renderWorkspaceTaskOptions() {
+  var host=document.getElementById('workspace-task-options');if(!host)return;
+  var q=document.getElementById('workspace-task-query').value.trim().toLowerCase(),tasks=workspaceTasks(),byPath={},children={};
+  tasks.forEach(function(t){byPath[t.path]=t;children[t.path]=[];});
+  tasks.forEach(function(t){if(t.path&&children[parentPath(t.path)])children[parentPath(t.path)].push(t.path);});
+  var matches=new Set(tasks.filter(function(t){return (t.path+' '+t.title).toLowerCase().includes(q);}).map(function(t){return t.path;})),visible=new Set(matches);
+  Array.from(matches).forEach(function(p){while(p){p=parentPath(p);visible.add(p);}});
+  function branch(path){
+    if(!visible.has(path))return '';
+    var task=byPath[path],kids=children[path],descendants=tasks.filter(function(t){return reproWithin(t.path,path);}),selected=descendants.filter(function(t){return _workspaceFilters.tasks===null||_workspaceFilters.tasks.includes(t.path);}).length;
+    var open=q?true:_filterExpanded.has(path),hasKids=kids.length>0;
+    return '<div class="filter-task-branch"><div class="filter-task-row">'
+      +(hasKids?'<button type="button" class="filter-task-fold" data-filter-fold="'+escapeAttr(path)+'" aria-expanded="'+open+'" aria-label="'+(open?'Collapse ':'Expand ')+escapeAttr(task.title||path||'Project root')+'">'+(open?'▾':'▸')+'</button>':'<span class="filter-task-leaf"></span>')
+      +'<label><input type="checkbox" data-filter-task="'+escapeAttr(path)+'"'+(selected===descendants.length?' checked':'')+(selected>0&&selected<descendants.length?' data-partial="true"':'')+'><span>'+escapeHtml(task.title||path||'Project root')+'<small>'+escapeHtml(path||'Project root')+'</small></span></label>'
+      +(hasKids?'<span class="filter-task-count">'+selected+'/'+descendants.length+'</span>':'')+'</div>'
+      +(hasKids?'<div class="filter-task-children"'+(open?'':' hidden')+'>'+kids.map(branch).join('')+'</div>':'')+'</div>';
+  }
+  var roots=tasks.filter(function(t){return !t.path||!byPath[parentPath(t.path)];});
+  host.innerHTML=roots.map(function(t){return branch(t.path);}).join('')||'<p>No tasks match.</p>';
+  host.querySelectorAll('[data-partial]').forEach(function(input){input.indeterminate=true;});
+}
+function selectAllWorkspaceTasks(selected) {
+  _workspaceFilters.tasks=selected?null:[];renderWorkspaceTaskOptions();applyWorkspaceFilters(true);
+}
+function clearWorkspaceFilters() {
+  _workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
+}
+function workspaceSearchRecords() {
+  var records=(SEARCH_INDEX||[]).slice();
+  if(_reproData)(_reproData.graph.steps||[]).forEach(function(s){
+    records.push({kind:'Step',step:s.name,path:s.task,title:s.name,slug:s.name,text:reproTaskTitle(s.task)});
+    (s.outs||[]).forEach(function(out){var file=reproOutLabel(out);records.push({kind:'File',step:s.name,path:s.task,title:file,slug:file,text:s.name+' '+reproTaskTitle(s.task)});});
+  });
+  return records;
+}
+function syncTreeSteps() {
+  if(!_reproData)return;
+  var byTask={};(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
+    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children');
+    if(!steps.length){var old=children&&children.querySelector(':scope > .nav-step-list');if(old)old.remove();return;}
+    if(!children){children=document.createElement('div');children.className='task-children';children.style.display='none';node.appendChild(children);node.dataset.needsLoad='false';var caret=node.querySelector(':scope > .task-row > .task-toggle');if(caret){caret.classList.remove('leaf');caret.textContent='▸';}}
+    var list=children.querySelector(':scope > .nav-step-list');if(!list){list=document.createElement('div');list.className='nav-step-list';children.prepend(list);}
+    list.innerHTML=steps.map(function(s){return '<button type="button" class="nav-step'+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'>'+escapeHtml(s.name)+'</button>';}).join('');
+  });
+}
+function updateNavigationToggle() {
+  var button=document.getElementById('navigation-toggle');if(!button)return;
+  var graph=currentView==='reproduction',visible=graph?!_reproReaderClosed:!_treeSidebarHidden;
+  button.textContent=(visible?'Hide ':'Show ')+(graph?'details':'sidebar');
+  button.setAttribute('aria-controls',graph?'task-preview':'sidebar');button.setAttribute('aria-expanded',String(visible));
+  document.getElementById('workspace').classList.toggle('tree-sidebar-hidden',_treeSidebarHidden);
+  var hamburger=document.getElementById('nav-hamburger');if(hamburger)hamburger.hidden=graph;
+}
+function toggleNavigationPane() {
+  if(currentView==='reproduction'){reproSetReader(_reproReaderClosed);updateNavigationToggle();return;}
+  _treeSidebarHidden=!_treeSidebarHidden;
+  try{localStorage.setItem('dashboard-tree-hidden',JSON.stringify(_treeSidebarHidden));}catch(e){}
+  updateNavigationToggle();
+  if(!_treeSidebarHidden&&window.innerWidth<=900)openDrawer();
+}
+function initWorkspaceControls() {
+  try{_treeSidebarHidden=JSON.parse(localStorage.getItem('dashboard-tree-hidden'))===true;}catch(e){}
+  updateNavigationToggle();
+  var dialog=document.getElementById('workspace-filter');
+  dialog.addEventListener('change',function(event){
+    var input=event.target;
+    if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
+    else if(input.hasAttribute('data-filter-task')){
+      var path=input.dataset.filterTask,tasks=workspaceTasks(),selected=new Set(_workspaceFilters.tasks===null?tasks.map(function(t){return t.path;}):_workspaceFilters.tasks);
+      tasks.forEach(function(t){if(reproWithin(t.path,path)){if(input.checked)selected.add(t.path);else selected.delete(t.path);}});
+      _workspaceFilters.tasks=selected.size===tasks.length?null:Array.from(selected).sort();renderWorkspaceTaskOptions();
+      var replacement=Array.from(dialog.querySelectorAll('[data-filter-task]')).find(function(el){return el.dataset.filterTask===path;});if(replacement)replacement.focus({preventScroll:true});
+    }
+    applyWorkspaceFilters(true);
+  });
+  dialog.addEventListener('click',function(e){var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
+  loadReproData(false).then(function(){syncTreeSteps();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+}
+
 /* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
 var currentView = 'workspace';
 
 function showView(view) {
-  var previousView=currentView;
-  currentView = view;
-  document.querySelectorAll('.header-controls .hc-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.getElementById('btn-' + view).classList.add('active');
-  var workspace = document.getElementById('workspace');
-  workspace.classList.toggle('hidden', view === 'kanban');
-  workspace.classList.toggle('dag-mode', view === 'reproduction');
-  workspace.classList.toggle('dag-reader-closed', _reproReaderClosed);
-  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
-  document.getElementById('view-reproduction').classList.toggle('hidden', view !== 'reproduction');
-  document.getElementById('dag-reader-controls').classList.toggle('hidden', view !== 'reproduction');
-  if (view === 'kanban') renderKanbanView();
-  if (view === 'reproduction') {
-    reproSizeWorkspace();
-    if (!_reproEntered) { _reproNav.roots = []; _reproEntered = true; }
-    if (!restoring && location.hash !== reproHash()) history.pushState({wt: ACTIVE_WT}, '', reproHash());
-    if(previousView==='workspace'&&!_reproSelected&&activePath&&(!_reproNav.roots.length||_reproNav.roots.some(function(r){return reproWithin(activePath,r);}))) {var ancestor=parentPath(activePath),expanded=new Set(_reproNav.expanded||[]);while(ancestor){expanded.add(ancestor);ancestor=parentPath(ancestor);}_reproNav.expanded=Array.from(expanded);}
+  view=view==='reproduction'?'reproduction':'workspace';
+  var reader=document.getElementById('task-preview'), scroll=reader.scrollTop, pageScroll=window.scrollY;
+  var previousView=currentView;currentView=view;
+  ['workspace','reproduction'].forEach(function(v){document.getElementById('btn-'+v).classList.toggle('active',v===view);});
+  var workspace=document.getElementById('workspace');
+  workspace.classList.remove('hidden');workspace.classList.toggle('dag-mode',view==='reproduction');
+  workspace.classList.toggle('dag-reader-closed',_reproReaderClosed);
+  document.getElementById('view-reproduction').classList.toggle('hidden',view!=='reproduction');
+  document.getElementById('dag-reader-controls').classList.toggle('hidden',view!=='reproduction');
+  updateNavigationToggle();
+  if(view==='reproduction') {
+    reproSizeWorkspace();_reproEntered=true;
+    if(!restoring&&previousView==='workspace'&&activePath)reproRevealOwner(_reproSelected?activePath:parentPath(activePath));
     renderReproView(false);
   } else {
-    if (view === 'workspace' && !restoring && !activeArtifactPath) history.pushState({wt: ACTIVE_WT}, '', '#/' + activePath);
-    if (view === 'workspace') updateSidebar(activePath);
+    _lastSidebarUpdate=updateSidebar(activePath);
+    renderReproDetail(_reproSelected);
   }
+  if(!restoring)workspaceWriteHistory();
+  requestAnimationFrame(function(){reader.scrollTop=scroll;if(view==='workspace')window.scrollTo(0,pageScroll);});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -511,10 +673,10 @@ function searchSnippet(rec, q) {
 function runSearch(query) {
   var q = (query || '').trim().toLowerCase();
   if (!q) return [];
-  var scored = [];
-  for (var i = 0; i < SEARCH_INDEX.length; i++) {
-    var s = scoreSearchRecord(SEARCH_INDEX[i], q);
-    if (s > 0) scored.push({ rec: SEARCH_INDEX[i], score: s });
+  var scored = [], records=workspaceSearchRecords();
+  for (var i = 0; i < records.length; i++) {
+    var s = scoreSearchRecord(records[i], q);
+    if (s > 0) scored.push({ rec: records[i], score: s });
   }
   scored.sort(function(a, b) { return b.score - a.score; });
   return scored.slice(0, SEARCH_MAX_RESULTS).map(function(x) { return x.rec; });
@@ -539,7 +701,7 @@ function renderSearchResults(query) {
   var q = query.trim().toLowerCase();
   list.innerHTML = _searchResults.map(function(rec, idx) {
     var snippet = searchSnippet(rec, q);
-    var pathLabel = rec.path || 'root';
+    var pathLabel = (rec.kind||'Task')+' · '+(rec.path||'root')+(workspaceTaskMatches(rec.path||'')?'':' · Hidden by filters');
     return '<li class="search-result" role="option" data-idx="' + idx + '"'
       + (idx === 0 ? ' aria-selected="true"' : '')
       + ' onmousedown="onSearchResultClick(event, ' + idx + ')">'
@@ -570,7 +732,8 @@ function chooseSearchResult(idx) {
   var rec = _searchResults[idx];
   if (!rec) return;
   closeSearchPalette();
-  setActive(rec.path || '');
+  if(rec.step)revealReproStep(rec.step);
+  else {reproSelectTask(rec.path||'');if(currentView==='reproduction'){reproRevealOwner(parentPath(rec.path||''));drawReproView(document.getElementById('view-reproduction'),_reproData);reproCenter();}}
 }
 
 function onSearchResultClick(event, idx) {
@@ -610,6 +773,7 @@ function openSearchPalette() {
   input.value = '';
   renderSearchResults('');
   input.focus();
+  loadReproData(false).then(function(){if(palette.classList.contains('open'))renderSearchResults(input.value);}).catch(function(){});
 }
 
 function closeSearchPalette() {
@@ -738,34 +902,7 @@ function applyFilters() {
   _filterDebounceTimer = setTimeout(applyFiltersNow, FILTER_DEBOUNCE_MS);
 }
 
-function applyFiltersNow() {
-  var status = document.getElementById('filter-status').value;
-  var search = document.getElementById('search-box').value.toLowerCase();
-  var active = !!status || !!search;
-
-  if (active && preFilterFoldState === null) {
-    preFilterFoldState = snapshotNavFolds();  /* entering filter mode */
-  }
-
-  document.querySelectorAll('#nav-tree > .task-node').forEach(function(el) {
-    applyFiltersToNode(el, status, search);
-  });
-
-  if (active) {
-    /* Matching rows live behind collapsed ancestors (the whole sidebar is
-       folded by default), so `.hidden` removal alone leaves them invisible.
-       Expand the ancestor chain of every still-visible match so matches are
-       actually revealed. Scoped to rows already in the DOM — deep, not-yet
-       lazy-loaded branches are intentionally not eagerly loaded to search. */
-    revealFilterMatches(status, search);
-  } else if (preFilterFoldState !== null) {
-    restoreNavFolds(preFilterFoldState);  /* leaving filter mode */
-    preFilterFoldState = null;
-  }
-
-  /* Visibility of rows changed -> keep exactly one row tab-focusable. */
-  refreshRovingTabindex();
-}
+function applyFiltersNow() { applyWorkspaceFilters(false); }
 
 /* Single post-order pass: each node's own row is evaluated once and combined
    bottom-up with its already-computed children, so no subtree is walked more
@@ -878,26 +1015,6 @@ function nodeOwnRowMatches(el, status, search) {
    Cards carry data-path (server-escaped) rather than an inline onclick built
    by interpolating the task path — a delegated listener on the container
    reads it back, mirroring onChildCardClick's pattern. */
-function onKanbanCardClick(event) {
-  var card = event.target.closest('.kanban-card');
-  if (card && card.dataset.path !== undefined) revealTask(card.dataset.path);
-}
-
-async function renderKanbanView() {
-  var container = document.getElementById('view-kanban');
-  container.onclick = onKanbanCardClick;
-  try {
-    var resp = await fetch(wtUrl('/kanban'));
-    if (resp.ok) {
-      container.innerHTML = await resp.text();
-    } else {
-      container.innerHTML = '<p style="color:var(--text-mute)">Could not load kanban view.</p>';
-    }
-  } catch(e) {
-    container.innerHTML = '<p style="color:var(--st-rev-t)">Kanban render error: ' + e.message + '</p>';
-  }
-}
-
 /* ════════════════════════════════════════════════════════════════════════
    Reproduction view — reviewing the build graph the task tree declares
    ──────────────────────────────────────────────────────────────────────
@@ -995,14 +1112,16 @@ function reproSearch(steps, query) {
   });
 }
 function reproHash() {
-  return '#/' + activePath + '?repro=' + encodeURIComponent(JSON.stringify({expanded:_reproNav.expanded||[],selected:_reproSelected||''}));
+  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
+  return '#/'+activePath+'?'+(activeArtifactPath?'attachment='+encodeURIComponent(activeArtifactPath)+'&':'')+'repro='+encodeURIComponent(JSON.stringify(state));
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
   var raw=params.get('repro'), step=params.get('step');
-  if(!raw&&!step){if(currentView==='reproduction'){var previous=restoring;restoring=true;showView('workspace');restoring=previous;}return false;}
+  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
     var n=raw?JSON.parse(raw):{};
+    _workspaceFilters=normalizeWorkspaceFilters(n.filters);
     _reproNav={roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',
       expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
       selected:step||(typeof n.selected==='string'?n.selected:'')};
@@ -1012,7 +1131,9 @@ function reproReadHash() {
     _reproLegacyReveal=!!step||!!(n.roots||n.mode||n.tier)||!Array.isArray(n.expanded);
     _reproFitNext=!(history.state&&history.state.rpViewport);
     if(!_reproFitNext)_reproViewport=Object.assign({},history.state.rpViewport);
-    var previous=restoring;restoring=true;showView('reproduction');restoring=previous;
+    var previous=restoring;restoring=true;showView(n.layout==='tree'?'workspace':'reproduction');restoring=previous;
+    applyWorkspaceFilters(false);
+    if(n.layout==='tree')loadReproData(false).then(function(){renderReproDetail(_reproSelected);syncTreeSteps();});
     return true;
   } catch(e){return false;}
 }
@@ -1024,7 +1145,7 @@ function reproNavigate(patch, overview) {
   if(overview)_reproFitNext=true;
   var hash=reproHash();
   if(location.hash!==hash)history.pushState({wt:ACTIVE_WT},'',hash);
-  drawReproView(document.getElementById('view-reproduction'),_reproData);
+  if(currentView==='reproduction')drawReproView(document.getElementById('view-reproduction'),_reproData);
 }
 
 /* Coalesce the graph and status requests and ignore superseded loads. */
@@ -1288,10 +1409,10 @@ function reproGraphHTML(lay,statuses) {
   }).join('');return html;
 }
 function reproHeadHTML() {
-  return '<div class="repro-head"><div class="repro-heading"><strong>Project graph</strong></div><button type="button" class="hc-btn" id="repro-preview-toggle" data-rp-action="reader" aria-controls="task-preview" aria-expanded="false">Details</button></div>';
+  return '<div class="repro-head"><div class="repro-heading"><strong>Project graph</strong></div></div>';
 }
 function reproControlsHTML() {
-  return '<div class="repro-controls">'+reproButton('Project overview','overview')+'<label class="repro-search-label"><span class="sr-only">Find a task, step, or output</span><input id="repro-search" type="search" placeholder="Find a task, step, or output…" autocomplete="off"></label></div><div id="repro-search-results"></div>';
+  return '<div class="repro-controls">'+reproButton('Project overview','overview')+'</div>';
 }
 function drawReproView(container,data) {
   if(!container||!data)return;
@@ -1299,11 +1420,11 @@ function drawReproView(container,data) {
   var focused=document.activeElement,focusId=focused&&focused.id;
   var openMenu=container.querySelector('.rp-menu[open]');
   var menuKey=openMenu&&openMenu.dataset.rpMenu;
-  var project=reproProject(data.graph,_reproNav,_reproContext),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
-  if(_reproSelected&&!project.byName[_reproSelected]){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
+  var visibleGraph=workspaceGraph(data.graph),project=reproProject(visibleGraph,_reproNav,_reproContext),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
+  if(_reproSelected&&!(data.graph.steps||[]).some(function(s){return s.name===_reproSelected;})){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
   if(_reproNav.anchor&&!project.byName[_reproNav.anchor]){_reproNav.anchor='';_reproNav.mode='scope';project=reproProject(data.graph,_reproNav,[]);}
-  var missing=_reproNav.roots.filter(function(r){return paths.indexOf(r)<0;}),archived=(data.graph.dependencies&&data.graph.dependencies.archived_tasks||[]).indexOf(activePath)>=0;
-  var model=reproHierarchy(data.graph,_reproNav,project);
+  var missing=_reproNav.roots.filter(function(r){return paths.indexOf(r)<0;});
+  var model=reproHierarchy(visibleGraph,_reproNav,project);
   var signature=JSON.stringify([model.nodes.map(function(n){return [n.id,n.parent,n.expanded];}),model.edges]);
   var oldCanvas=container.querySelector('.repro-canvas'),same=_reproLayoutCache&&_reproLayoutCache.signature===signature&&oldCanvas;
   if(oldCanvas){_reproViewport.x-=oldCanvas.scrollLeft;_reproViewport.y-=oldCanvas.scrollTop;oldCanvas.scrollLeft=0;oldCanvas.scrollTop=0;}
@@ -1313,7 +1434,7 @@ function drawReproView(container,data) {
   if(!same&&oldLayout&&oldLayout.pos[anchor]&&lay.pos[anchor]&&!_reproFitNext){_reproViewport.x+=(oldLayout.pos[anchor].x-lay.pos[anchor].x)*_reproViewport.zoom;_reproViewport.y+=(oldLayout.pos[anchor].y-lay.pos[anchor].y)*_reproViewport.zoom;}
   _reproLayoutCache={signature:signature,layout:lay};
   var findings=(data.graph.findings||[]).concat(data.status.findings||[]).filter(function(f,i,a){return a.findIndex(function(o){return JSON.stringify(o)===JSON.stringify(f);})===i;});
-  var notice=missing.length?'Selected subtree was removed or archived: '+missing.join(', ')+'. Use Whole project to recover.':archived?'Selected task is archived and excluded from the active DAG.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
+  var notice=missing.length?'Selected subtree was removed or archived: '+missing.join(', ')+'. Use Whole project to recover.':!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
   var errors=findings.filter(function(f){return f.severity==='error';}).length;
   var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
   var outside=project.steps.filter(function(s){return !reproMatches(s,_reproNav);}).length;
@@ -1323,7 +1444,7 @@ function drawReproView(container,data) {
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
     +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
-    +(!model.nodes.length?'<p class="repro-empty">'+(paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
+    +(!model.nodes.length?'<p class="repro-empty">'+((_workspaceFilters.tasks!==null||_workspaceFilters.statuses.length)?'No tasks match these filters. Use Clear filters to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
     +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-connection-label" role="status"></div><div id="repro-edge-detail"></div></div>'
     +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span></div>';
 
@@ -1331,7 +1452,7 @@ function drawReproView(container,data) {
   if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
   container.onclick=onReproClick;
   reproBindEdges(container);
-  container.onkeydown=function(e){if(e.key==='Escape'){container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});document.getElementById('repro-search-results').innerHTML='';document.getElementById('repro-search').oninput=function(){reproRenderSearch(false);};reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
+  container.onkeydown=function(e){if(e.key==='Escape'){container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
   reproBindHead(container);reproBindViewport(container);renderReproDetail(_reproSelected);reproReaderControls();reproSizeWorkspace();
   if(menuKey){var menu=container.querySelector('[data-rp-menu="'+menuKey+'"]');if(menu)menu.open=true;}
   if(_reproFitNext){_reproFitNext=false;reproFit();}else reproTransform();
@@ -1346,8 +1467,9 @@ function reproLogicalBoundaryHTML(model){
   return '<details class="repro-boundaries" open><summary>Inherited logical prerequisites outside this view</summary>'+model.logicalBoundary.map(function(e){return '<div>'+reproButton(reproTaskTitle(e.from),'task',e.from)+' → '+reproButton(reproTaskTitle(e.to),'task',e.to)+'<p>'+escapeHtml(e.declaration)+' · Applies to scoped descendant work.</p></div>';}).join('')+'</details>';
 }
 function reproReaderControls(){
-  var toggle=document.getElementById('repro-preview-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show details':'Hide details';toggle.title=_reproReaderClosed?'Show details':'Hide details';}
+  var toggle=document.getElementById('navigation-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show details':'Hide details';toggle.title=_reproReaderClosed?'Show details':'Hide details';}
   var selection=document.getElementById('repro-selection');if(selection){selection.textContent=_reproSelected||reproTaskTitle(activePath);selection.title=_reproSelected||activePath;}
+  updateNavigationToggle();
   var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Show in graph','show-selected',activePath)+reproButton((_reproReaderFull||_reproReaderCompact)?'Back to graph':'Read full width','full-reader')+reproButton('Hide details','close-reader');
   if(host&&_reproData){var edges=(_reproData.graph.dependencies&&_reproData.graph.dependencies.edges||[]).filter(function(e){return e.from===activePath||e.to===activePath;});
     if(edges.length)host.innerHTML+='<details class="rp-task-deps"><summary>Task dependencies ('+edges.length+')</summary>'+edges.map(function(e){var other=e.to===activePath?e.from:e.to;return '<div>'+reproButton((e.to===activePath?'Prerequisite: ':'Dependent: ')+reproTaskTitle(other),'task',other)+reproEvidenceHTML(e.evidence||[])+'</div>';}).join('')+'</details>';
@@ -1423,8 +1545,6 @@ new ResizeObserver(reproSizeWorkspace).observe(document.querySelector('.header')
 document.addEventListener('pointerdown',function(e){
   if(currentView!=='reproduction')return;
   document.querySelectorAll('#view-reproduction .rp-menu[open]').forEach(function(menu){if(!menu.contains(e.target))menu.open=false;});
-  var results=document.getElementById('repro-search-results');
-  if(results&&!results.contains(e.target)&&e.target.id!=='repro-search'){results.innerHTML='';var search=document.getElementById('repro-search');if(search)search.oninput=function(){reproRenderSearch(false);};}
 });
 function reproSetReader(open) {
   _reproReaderPreference=!!open;_reproReaderClosed=!open;reproPersistReader();
@@ -1432,18 +1552,10 @@ function reproSetReader(open) {
   workspace.classList.toggle('dag-reader-closed',!open);
   if(!open){_reproReaderFull=false;workspace.classList.remove('dag-full-reader');}
   reproSizeWorkspace();
-  if(!open){var toggle=document.getElementById('repro-preview-toggle');if(toggle)toggle.focus({preventScroll:true});}
+  if(!open){var toggle=document.getElementById('navigation-toggle');if(toggle)toggle.focus({preventScroll:true});}
 }
 function reproBindHead(container) {
-  var search=container.querySelector('#repro-search');if(search)search.oninput=function(){reproRenderSearch(false);};
   container.querySelectorAll('.rp-menu').forEach(function(menu){menu.ontoggle=function(){if(menu.open)container.querySelectorAll('.rp-menu').forEach(function(other){if(other!==menu)other.open=false;});};});
-}
-function reproRenderSearch() {
-  var query=document.getElementById('repro-search').value.trim();
-  if(!query){document.getElementById('repro-search-results').innerHTML='';return;}
-  var found=reproSearch(_reproData.graph.steps,query);
-  var tasks=reproTasks(_reproData.graph).filter(function(p){return (p+' '+reproTaskTitle(p)).toLowerCase().indexOf(query.toLowerCase())>=0;});
-  document.getElementById('repro-search-results').innerHTML='<details open><summary>'+(found.length+tasks.length)+' results</summary><div class="repro-search-items">'+tasks.map(function(p){return reproButton(reproTaskTitle(p)+' · '+(p||'Project root'),'find-task',p);}).join('')+found.map(function(s){return reproButton(s.name+' · '+reproTaskTitle(s.task),'open',s.name);}).join('')+'</div></details>';
 }
 function reproBoundaryHTML(project) {
   var groups = {};
@@ -1590,10 +1702,9 @@ function onReproClick(event) {
     event.preventDefault();
     var action = control.dataset.rpAction, value = control.dataset.value;
     var menu=control.closest('.rp-menu');if(menu)menu.open=false;
-    if(['task','open','find-task'].indexOf(action)>=0){var results=document.getElementById('repro-search-results');if(results)results.innerHTML='';}
     if(action==='task')reproSelectTask(value);
     else if(action==='find-task'||action==='focus'||action==='explore')reproFocus(value);
-    else if(action==='overview'||action==='clear'){reproNavigate({expanded:[]},true);}
+    else if(action==='overview'||action==='clear'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
     else if(action==='show-selected'){if(_reproSelected)revealReproStep(_reproSelected);else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
@@ -1631,14 +1742,14 @@ function onReproClick(event) {
   var node = event.target.closest('.repro-node');
   if (node && node.dataset.step) { selectReproStep(node.dataset.step); return; }
   var link = event.target.closest('.repro-task-link');
-  if (link && link.dataset.path !== undefined) revealTask(link.dataset.path);
+  if (link && link.dataset.path !== undefined) reproSelectTask(link.dataset.path);
 }
 
 function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
   _reproSelected = name;
   _reproNav.selected = name;
-  setActive(step.task);reproReaderControls();
+  var oldRestoring=restoring;restoring=true;setActive(step.task);restoring=oldRestoring;reproReaderControls();
   _reproInspectorClosed = false;
   if (location.hash !== reproHash()) history.pushState({ wt: ACTIVE_WT }, '', reproHash());
   var container = document.getElementById('view-reproduction');
@@ -1680,7 +1791,7 @@ function renderReproDetail(name) {
   var related = reproProject(_reproData.graph,_reproNav,[]);
   ['incoming','outgoing'].forEach(function(direction){
     var connections={};(related[direction][name]||[]).forEach(function(e){var other=direction==='incoming'?e.from:e.to;(connections[other]||(connections[other]=[])).push(e.via);});
-    rows+=reproDetailRow(direction==='incoming'?'Uses':'Used by',Object.keys(connections).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+reproPathList(Array.from(new Set(connections[other])))+'</div>';}).join('')||'—');
+    rows+=reproDetailRow(direction==='incoming'?'Uses':'Used by',Object.keys(connections).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+(!workspaceTaskMatches(related.byName[other].task)?'<span class="repro-hint">Hidden from navigation</span>':'')+reproPathList(Array.from(new Set(connections[other])))+'</div>';}).join('')||'—');
   });
   rows += reproDetailRow('Command', '<code>' + escapeHtml(step.cmd_logical || step.cmd) + '</code>');
   rows += reproDetailRow('Tier', escapeHtml(step.tier) + (step.kind === 'check' ? ' · check step' : ''));
@@ -1731,10 +1842,11 @@ function revealReproStep(name, owner) {
       if(currentView!=='reproduction')showView('reproduction');
       drawReproView(document.getElementById('view-reproduction'),data);return;
     }
+    _reproNav.roots=[];_reproNav.tier='all';_reproNav.mode='scope';_reproNav.anchor='';
     _reproInspectorClosed=false;reproRevealOwner(step.task);
-    if(currentView!=='reproduction')showView('reproduction');
-    var previous=restoring;restoring=true;setActive(step.task);restoring=previous;
-    reproNavigate({selected:name},false);selectReproStep(name);_reproViewport.zoom=1;reproCenter();
+    selectReproStep(name);
+    if(currentView==='reproduction'){drawReproView(document.getElementById('view-reproduction'),data);_reproViewport.zoom=1;reproCenter();}
+    syncTreeSteps();
   });
 }
 
@@ -1786,7 +1898,7 @@ function refreshReproStepTables() {
 function onReproUpdated() {
   _reproData = null;
   if (currentView === 'reproduction') renderReproView(true);
-  else loadReproData(true).then(refreshReproStepTables).catch(function() {});
+  else loadReproData(true).then(function(){refreshReproStepTables();syncTreeSteps();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function() {});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1863,13 +1975,12 @@ function parseArtifactHash() {
    restoring), then refreshes every derived region. */
 function setActive(path, artifactPath) {
   path = path || '';
-  if(currentView==='workspace'&&!restoring&&path!==activePath){_reproSelected='';_reproNav.selected='';}
+  if(!restoring){_reproSelected='';_reproNav.selected='';renderReproDetail('');}
   activePath = path;
   activeArtifactPath = artifactPath || '';
 
   if (!restoring) {
-    var hash = activeArtifactPath ? '#/'+path+'?attachment='+encodeURIComponent(activeArtifactPath)
-      : currentView==='reproduction' ? reproHash() : '#/'+path;
+    var hash = reproHash();
     /* Relative '#/...' keeps location.search (the ?wt=) intact, so a task-path
        navigation never drops the active worktree from the URL. */
     if (location.hash !== hash) history.pushState({ path: path, wt: ACTIVE_WT }, '', hash);
@@ -1881,12 +1992,12 @@ function setActive(path, artifactPath) {
   }
 
   /* A node click always means "show me the workspace." */
-  if (currentView === 'kanban' || activeArtifactPath) showView('workspace');
+  if (activeArtifactPath) showView('workspace');
 
   updateBreadcrumb(path, activeArtifactPath);
   /* The header VS Code button opens the active task's file, so it follows nav. */
   updateWorktreeOpenHref();
-  _lastSidebarUpdate = updateSidebar(path);
+  _lastSidebarUpdate = updateSidebar(path).then(function(){syncTreeSteps();applyWorkspaceFilters(false);});
   if (activeArtifactPath) {
     loadActiveArtifact(path, activeArtifactPath);
     var children = document.getElementById('children-dag');
@@ -1900,6 +2011,7 @@ function setActive(path, artifactPath) {
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
      module below; guard so the router still works if it ever loads first. */
   if (typeof onNavigationChrome === 'function') onNavigationChrome();
+  updateWorkspaceFilterSummary();
 }
 
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
@@ -2055,6 +2167,14 @@ function openLocalPath(path, target) {
     showOpenError('Could not open ' + path + (err && err.message ? ' — ' + err.message : ''));
   });
 }
+
+document.addEventListener('click',function(e){
+  var link=e.target.closest&&e.target.closest('a.task-link');
+  if(!link||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  var href=link.getAttribute('href');if(!href||!href.startsWith('#/'))return;
+  e.preventDefault();var parts=href.slice(2).split('?'),params=new URLSearchParams(parts.slice(1).join('?'));
+  if(params.has('step'))revealReproStep(params.get('step'),parts[0]);else reproSelectTask(parts[0]);
+});
 
 /* One delegated handler for every local-open control: the card-head button, the
    header VS Code button, body file links, attachment links, and the artifact
@@ -3249,13 +3369,11 @@ function initRouter() {
   history.replaceState(
     { path: path, attachment: artifactPath, wt: ACTIVE_WT },
     '',
-    '#/' + path + (artifactPath
-      ? '?attachment=' + encodeURIComponent(artifactPath)
-      : stepState ? '?step='+encodeURIComponent(stepState) : reproState ? '?repro=' + encodeURIComponent(reproState) : '')
+    '#/'+path+(routeParams.toString()?'?'+routeParams.toString():'')
   );
   setActive(path, artifactPath);
   restoring = false;
-  if ((reproState || stepState) && !artifactPath) reproReadHash();
+  if (reproState || stepState) reproReadHash();
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -3280,6 +3398,7 @@ async function loadNavTree() {
     if (!resp.ok) return;
     container.innerHTML = await resp.text();
     markLazyNodes();
+    syncTreeSteps();
     indexNavTitles(container);
     applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
     loadAttachmentBranches(container);
@@ -3331,6 +3450,7 @@ function initSidebarEvents() {
   var container = document.getElementById('nav-tree');
   if (!container) return;
   container.addEventListener('click', function(ev) {
+    var step=ev.target.closest('[data-tree-step]');if(step){ev.stopPropagation();revealReproStep(step.dataset.treeStep);return;}
     var toggle = ev.target.closest('.task-toggle');
     if (toggle && container.contains(toggle) && !toggle.classList.contains('leaf')) {
       ev.stopPropagation();
@@ -3371,7 +3491,7 @@ async function toggleNavCaret(node) {
     node.dataset.needsLoad = 'false';
     await loadNavChildren(node);
   }
-  refreshRovingTabindex();
+  syncTreeSteps();applyWorkspaceFilters(false);refreshRovingTabindex();
 }
 
 /* Lazily fetch a node's body-free children into its .task-children container.
@@ -3386,6 +3506,7 @@ async function loadNavChildren(node) {
     if (!resp.ok) return false;
     children.innerHTML = await resp.text();
     markLazyNodes();
+    syncTreeSteps();
     indexNavTitles(children);
     applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
     loadAttachmentBranches(children);
@@ -3493,6 +3614,7 @@ async function updateSidebar(path) {
      naturally expanded one level than as a closed caret the user must re-open
      to see what they just navigated into. Leaf nodes are a no-op (guarded in
      expandNavNode). */
+  syncTreeSteps();
   await expandNavNode(target);
 
   var row = target.querySelector(':scope > .task-row');
@@ -3503,6 +3625,7 @@ async function updateSidebar(path) {
        lands on it. (applyTreeAria also keeps roles current after any lazy load
        the ancestor walk just triggered.) */
     applyTreeAria();
+    syncTreeSteps();applyWorkspaceFilters(false);
     requestAnimationFrame(function() {
       row.scrollIntoView({ block: 'nearest' });
     });
@@ -3871,115 +3994,6 @@ function drawerKeydown(ev) {
 function onNavigationChrome() {
   hideSidebar(0);
   closeDrawer();
-  closeSearchSheet();
-}
-
-/* ── Phone search/filter sheet ────────────────────────────────────────────
-   On phone the inline #search-box + #filter-status are hidden; the sheet adopts
-   them (so search/filter logic is reused unchanged), shows them at a tappable
-   size, and returns them to the header on close. Backdrop + Esc + focus trap
-   mirror the drawer. The sheet closes on a status selection (a "done filtering"
-   signal); free-text search keeps it open so typing isn't interrupted. */
-var _searchSheetLastFocus = null;
-
-function toggleSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-  else openSearchSheet();
-}
-
-function openSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  var backdrop = document.getElementById('search-sheet-backdrop');
-  var body = document.getElementById('search-sheet-body');
-  var host = document.getElementById('search-host');
-  var trigger = document.getElementById('search-trigger');
-  if (!sheet || !backdrop || !body || !host) return;
-  if (sheet.classList.contains('open')) return;
-  _searchSheetLastFocus = document.activeElement;
-  body.appendChild(host);              /* adopt the live search/filter elements */
-  backdrop.classList.add('open');
-  sheet.classList.add('open');
-  if (trigger) trigger.setAttribute('aria-expanded', 'true');
-  var search = document.getElementById('search-box');
-  if (search) search.focus();
-  document.addEventListener('keydown', searchSheetKeydown, true);
-}
-
-function closeSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet || !sheet.classList.contains('open')) return;
-  var backdrop = document.getElementById('search-sheet-backdrop');
-  var host = document.getElementById('search-host');
-  var controls = document.querySelector('.header-controls');
-  var trigger = document.getElementById('search-trigger');
-  sheet.classList.remove('open');
-  if (backdrop) backdrop.classList.remove('open');
-  /* Return the search/filter host to the header (just after the trigger button)
-     so it is inline again when the viewport widens. */
-  if (host && controls && trigger) controls.insertBefore(host, trigger.nextSibling);
-  else if (host && controls) controls.appendChild(host);
-  if (trigger) trigger.setAttribute('aria-expanded', 'false');
-  document.removeEventListener('keydown', searchSheetKeydown, true);
-  if (_searchSheetLastFocus && document.contains(_searchSheetLastFocus)) _searchSheetLastFocus.focus();
-  else if (trigger) trigger.focus();
-  _searchSheetLastFocus = null;
-}
-
-/* Focusable controls inside the open sheet, for the focus trap. */
-function searchSheetFocusables() {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet) return [];
-  return Array.prototype.filter.call(
-    sheet.querySelectorAll('button, input, select, [href], [tabindex]:not([tabindex="-1"])'),
-    function(el) { return el.offsetParent !== null || el === document.activeElement; }
-  );
-}
-
-/* Esc closes; Tab/Shift+Tab cycle within the sheet (focus trap). */
-function searchSheetKeydown(ev) {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet || !sheet.classList.contains('open')) return;
-  if (ev.key === 'Escape') { ev.preventDefault(); closeSearchSheet(); return; }
-  if (ev.key !== 'Tab') return;
-  var f = searchSheetFocusables();
-  if (f.length === 0) return;
-  var first = f[0], last = f[f.length - 1];
-  if (ev.shiftKey && document.activeElement === first) {
-    ev.preventDefault(); last.focus();
-  } else if (!ev.shiftKey && document.activeElement === last) {
-    ev.preventDefault(); first.focus();
-  }
-}
-
-/* Close the sheet when the user commits a status filter (a "done filtering"
-   signal). Wired as a separate listener so applyFilters / the inline onchange
-   stay unchanged; free-text typing in the search box leaves the sheet open.
-   Also close it when the viewport widens past the 620px phone breakpoint while
-   open (e.g. an iPhone rotated to landscape): the inline search returns to the
-   header instead of stranding the adopted host inside the bottom sheet —
-   mirrors the drawer's resize-up drop. */
-function initSearchSheet() {
-  var filter = document.getElementById('filter-status');
-  if (filter) {
-    filter.addEventListener('change', function() {
-      var sheet = document.getElementById('search-sheet');
-      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-    });
-  }
-  var phoneMQ = window.matchMedia
-    ? window.matchMedia('(max-width: 620px)') : null;
-  if (phoneMQ) {
-    /* Fires when crossing 620px in either direction; act only on widening out
-       of phone width (no longer matches) while the sheet is open. */
-    var onPhoneChange = function() {
-      if (phoneMQ.matches) return;
-      var sheet = document.getElementById('search-sheet');
-      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-    };
-    if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', onPhoneChange);
-    else if (phoneMQ.addListener) phoneMQ.addListener(onPhoneChange);  /* older Safari */
-  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -4287,8 +4301,7 @@ function onTaskUpdate(path) {
    (applyWorktree), not a server full-reload, so this only fires for in-worktree
    structural edits and never crosses worktrees. */
 async function onFullReload() {
-  var wanted = activePath;
-  var priorView = currentView;
+  var wt = ACTIVE_WT;
   /* Capture the open branches before the rebuild wipes them, so the tree
      reopens where the user left it instead of folding back to the root. */
   var expanded = getExpandedNavPaths();
@@ -4304,7 +4317,8 @@ async function onFullReload() {
   /* Refresh PROJECT_ROOT/selector before re-rendering the active card so the VS
      Code button bakes in the current worktree's root. */
   await fetchWorktrees();
-  var target = resolveSurvivingPath(wanted);
+  if(wt!==ACTIVE_WT)return;
+  var wanted=activePath,target = resolveSurvivingPath(wanted);
   restoring = true;
   if (target !== wanted) {
     /* Relative '#/...' preserves the ?wt= in location.search. */
@@ -4312,11 +4326,8 @@ async function onFullReload() {
   }
   setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
-  /* setActive forces Workspace; a reload is a server signal, not a navigation,
-     so put the reader back on the view they were reading. */
-  if (priorView !== 'workspace') showView(priorView);
   if (currentView === 'reproduction') renderReproView(true);
-  else _reproData = null;
+  else loadReproData(true).then(function(){syncTreeSteps();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
 }
 
 /* Nearest still-present path at or above `path`, by walking up until a nav row
@@ -4568,9 +4579,10 @@ function switchWorktree(token) {
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
 async function applyWorktree(wtId, path, artifactPath) {
-  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,context:_reproContext.slice(),inspectorClosed:_reproInspectorClosed,notice:_reproNotice};
+  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,context:_reproContext.slice(),inspectorClosed:_reproInspectorClosed,notice:_reproNotice,filters:JSON.parse(JSON.stringify(_workspaceFilters))};
   ACTIVE_WT = wtId || '';
   var remembered=_reproWorktrees[ACTIVE_WT];
+  _workspaceFilters=normalizeWorkspaceFilters(remembered&&remembered.filters);
   _reproNav=remembered?remembered.nav:{roots:[],tier:'all',view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
   _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
   _reproReaderFull=!!(remembered&&remembered.readerFull&&_reproReaderPreference!==false);
@@ -4595,7 +4607,8 @@ async function applyWorktree(wtId, path, artifactPath) {
   }
   setActive(target, target === (path || '') ? (artifactPath || '') : '');
   showView(remembered?remembered.view:'workspace');
-  if(remembered&&remembered.view==='reproduction')history.replaceState({wt:ACTIVE_WT},'',reproHash());
+  history.replaceState({wt:ACTIVE_WT},'',reproHash());
+  applyWorkspaceFilters(false);
   restoring = false;
 }
 
@@ -5103,9 +5116,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   initReproReader();
   initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
   initSidebarEvents();
-  initSearchSheet();       /* phone search/filter sheet close-on-selection wiring */
   initTreeKeyboard();      /* roving-tabindex keyboard nav on #nav-tree */
   await loadNavTree();
   initRouter();
+  initWorkspaceControls();
   updateTreeCommentBadges();
 });

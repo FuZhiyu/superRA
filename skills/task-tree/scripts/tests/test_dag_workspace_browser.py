@@ -101,7 +101,7 @@ def test_preview_selection_full_reader_and_canvas_space(browser, workspace, widt
     assert page.locator('#task-preview').is_visible(), page.evaluate('({height:document.getElementById("workspace").clientHeight,bounds:reproPaneBounds()})')
     graph=page.locator('#view-reproduction').bounding_box();reader=page.locator('#task-preview').bounding_box()
     assert (reader['x'] >= graph['x']+graph['width']) if width>=1100 else (reader['y'] >= graph['y']+graph['height'])
-    page.click('#repro-preview-toggle')
+    page.click('#navigation-toggle')
     assert not page.locator('#task-preview').is_visible()
     box = page.locator('.repro-canvas').bounding_box()
     assert box['height'] >= height * .45
@@ -113,7 +113,7 @@ def test_preview_selection_full_reader_and_canvas_space(browser, workspace, widt
     page.evaluate("selectReproStep('step-0-0')")
     assert not page.locator('#task-preview').is_visible()
     before = viewport(page)
-    page.click('#repro-preview-toggle')
+    page.click('#navigation-toggle')
     assert page.locator('#task-preview').is_visible()
     assert 'step-0-0' in page.locator('#repro-detail').inner_text()
     assert viewport(page) == before
@@ -123,7 +123,7 @@ def test_preview_selection_full_reader_and_canvas_space(browser, workspace, widt
     assert page.locator('.repro-canvas').is_visible()
     assert not page.locator('#task-preview').is_visible()
     assert viewport(page) == before
-    assert page.locator('#repro-preview-toggle').evaluate('(e)=>e===document.activeElement')
+    assert page.locator('#navigation-toggle').evaluate('(e)=>e===document.activeElement')
     page.click('#btn-workspace')
     assert page.locator('#task-preview').is_visible()
     page.click('#btn-reproduction')
@@ -135,7 +135,7 @@ def test_preview_selection_full_reader_and_canvas_space(browser, workspace, widt
 def test_wheel_pinch_safari_gestures_and_keyboard_recovery(browser, workspace):
     page = browser.new_page(viewport={'width': 1030, 'height': 768})
     enter(page, workspace['url'])
-    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
+    if page.locator('#task-preview').is_visible(): page.click('#navigation-toggle')
     canvas = page.locator('.repro-canvas')
     before = viewport(page)
     box = canvas.bounding_box()
@@ -234,7 +234,7 @@ def test_diagnostics_stay_inside_graph_with_preview_open_or_closed(browser, work
     enter(page, workspace['url'])
     for preview in (False, True):
         if page.locator('#task-preview').is_visible()!=preview:
-            page.click('#repro-preview-toggle')
+            page.click('#navigation-toggle')
         summary = page.locator('.rp-diagnostics > summary')
         assert 'graph blocked' in summary.inner_text()
         assert not page.locator('.rp-diagnostics').evaluate('(e)=>e.open')
@@ -271,8 +271,9 @@ def test_selection_folding_search_and_history_preserve_project(browser, workspac
     assert page.evaluate('_reproSelected') == 'step-0-0'
     page.locator('#dag-reader-controls [data-rp-action=show-selected]').click()
     page.wait_for_selector('#repro-node-step-0-0')
-    page.fill('#repro-search', 'step-3-3')
-    page.locator('#repro-search-results [data-rp-action=open]').click()
+    page.click('#btn-find')
+    page.fill('#search-palette-input', 'step-3-3')
+    page.locator('#search-palette-input').press('Enter')
     page.wait_for_selector('#repro-node-step-3-3')
     assert page.evaluate('_reproSelected') == 'step-3-3'
     assert {'analysis-0', 'analysis-1', 'analysis-3'} <= set(page.evaluate('_reproNav.expanded'))
@@ -294,8 +295,10 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     page.locator('#dag-preview-resizer').focus()
     page.keyboard.press('Shift+ArrowLeft')
     page.set_viewport_size({'width': 390, 'height': 844})
+    page.wait_for_function("_reproReaderPlacement==='bottom' && !_reproReaderClosed")
     for selector in ('#task-preview', '[data-rp-action=close-reader]', '[data-rp-action=overview]'):
         for box in page.locator(selector).all():
+            box.wait_for(state='visible')
             bounds = box.bounding_box()
             assert bounds['x'] >= 0
             assert bounds['x'] + bounds['width'] <= 390
@@ -309,7 +312,7 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
 def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace):
     page = browser.new_page(viewport={'width': 1372, 'height': 900})
     enter(page, workspace['url'])
-    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
+    if page.locator('#task-preview').is_visible(): page.click('#navigation-toggle')
     page.evaluate("""() => {
       const ids=['heterogeneity','treasury','elasticity','paper','downstream'];
       const titles=['Heterogeneity estimates','Treasury bounds','Elasticity estimates','Reproduce paper','Publish results'];
@@ -357,7 +360,7 @@ def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes
     routing_fixture = run_path(str(Path(__file__).with_name("navigation_browser.py")))["routing_fixture"]
     page = browser.new_page(viewport={'width': 1440, 'height': 1000})
     enter(page, workspace['url'])
-    if page.locator('#task-preview').is_visible(): page.click('#repro-preview-toggle')
+    if page.locator('#task-preview').is_visible(): page.click('#navigation-toggle')
     page.evaluate("""graph => {
       _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
@@ -424,7 +427,7 @@ def test_preview_manual_visibility_short_window_and_full_reader_recovery(browser
     assert not page.locator('#view-reproduction').is_visible()
     page.locator('[data-rp-action=full-reader]').click()
     # Explicit opening in a short portrait window still provides a reachable hide control.
-    page.locator('#repro-preview-toggle').click()
+    page.locator('#navigation-toggle').click()
     assert page.locator('#task-preview').is_visible()
     assert not page.locator('#view-reproduction').is_visible()
     reader=page.locator('#task-preview').bounding_box()
@@ -435,7 +438,7 @@ def test_preview_manual_visibility_short_window_and_full_reader_recovery(browser
     assert not page.locator('#task-preview').is_visible()
     page.set_viewport_size({'width':820,'height':1180});page.wait_for_timeout(100)
     assert not page.locator('#task-preview').is_visible()
-    page.click('#repro-preview-toggle');page.reload();page.wait_for_selector('.rp-task')
+    page.click('#navigation-toggle');page.reload();page.wait_for_selector('.rp-task')
     assert page.locator('#task-preview').is_visible()
     page.close()
 
@@ -481,6 +484,9 @@ def test_step_markdown_links_shared_urls_and_wrong_owner(browser, workspace, sur
     base = workspace[surface]
     page.goto(base + '#/analysis-0')
     page.get_by_role('link', name='Own step', exact=True).click()
+    page.wait_for_function("_reproSelected==='step-0-0'")
+    assert page.evaluate('currentView') == 'workspace'
+    page.click('#btn-reproduction')
     page.wait_for_selector('#repro-node-step-0-0')
     assert page.evaluate('_reproSelected') == 'step-0-0'
     assert page.locator('.rp-task[data-task="analysis-3"]').count() == 1
@@ -513,4 +519,170 @@ def test_connection_details_group_files_without_losing_evidence(browser, workspa
     wire.dispatch_event('click')
     assert 'out/extra.txt' in page.locator('#repro-edge-detail').inner_text()
     assert 'out/0-0.txt' in page.locator('#repro-edge-detail').inner_text()
+    page.close()
+
+
+@pytest.mark.parametrize('surface', ['url', 'export'])
+def test_shared_filters_search_selection_and_layout_priority(browser, workspace, surface):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    enter(page, workspace[surface])
+    assert page.locator('#btn-kanban, #view-kanban, #search-box, #repro-search').count() == 0
+    page.evaluate("revealReproStep('step-0-1')")
+    page.wait_for_selector('#repro-detail .repro-detail')
+    page.click('#filter-trigger')
+    page.locator('[data-filter-task="analysis-0"]').uncheck()
+    page.get_by_role('button', name='Done', exact=True).click()
+    assert page.locator('.rp-task[data-task="analysis-0"]').count() == 0
+    assert page.locator('.rp-task[data-task="analysis-1"]').count() == 1
+    assert page.evaluate('_reproSelected') == 'step-0-1'
+    assert page.locator('#selection-filter-notice').is_visible()
+    filters = page.evaluate('_workspaceFilters')
+    page.click('#btn-workspace')
+    assert page.locator('#task-preview').is_visible()
+    assert not page.locator('#task-analysis-0').is_visible()
+    assert page.locator('#task-analysis-1').is_visible()
+    assert 'step-0-1' in page.locator('#repro-detail').inner_text()
+    # Shared search opens a hidden step without changing layout or filter choices.
+    page.click('#btn-find')
+    page.fill('#search-palette-input', 'step-0-3')
+    assert 'Hidden by filters' in page.locator('#search-palette-results').inner_text()
+    page.locator('#search-palette-input').press('Enter')
+    page.wait_for_function("_reproSelected==='step-0-3'")
+    assert page.evaluate('currentView') == 'workspace'
+    assert page.evaluate('_workspaceFilters') == filters
+    page.reload()
+    page.wait_for_function("_reproSelected==='step-0-3' && !!_reproData")
+    assert page.evaluate('currentView') == 'workspace'
+    assert page.evaluate('_workspaceFilters') == filters
+    page.locator('#workspace-filter-summary').get_by_role('button', name='Clear filters').click()
+    page.wait_for_selector('[data-tree-step="step-0-3"]')
+    assert page.locator('[data-tree-step="step-0-3"]').get_attribute('aria-current') == 'true'
+    # The task document is not replaced just because the layout changes.
+    page.evaluate("window.readerIdentity=document.querySelector('#active-node > *')")
+    page.click('#navigation-toggle')
+    assert not page.locator('#sidebar').is_visible()
+    assert page.locator('#task-preview').is_visible()
+    page.click('#btn-reproduction')
+    assert page.evaluate("readerIdentity===document.querySelector('#active-node > *')")
+    assert page.evaluate('_reproSelected') == 'step-0-3'
+    page.click('#navigation-toggle')
+    assert not page.locator('#task-preview').is_visible()
+    assert page.locator('.repro-canvas').is_visible()
+    page.click('#btn-workspace')
+    assert page.locator('#task-preview').is_visible()
+    assert not page.locator('#sidebar').is_visible()
+    page.click('#btn-reproduction')
+    assert not page.locator('#task-preview').is_visible()
+    assert not errors
+    page.close()
+
+
+def test_status_filter_preserves_nested_matches_and_history(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'])
+    # Give one nested task a distinct status in the fixture payload consumed by both views.
+    page.evaluate("""() => {
+      _reproData.graph.dependencies.tasks.find(t=>t.path==='analysis-0/phase-a/leaf').status='approved';
+    }""")
+    page.click('#filter-trigger')
+    page.locator('[data-filter-status="approved"]').check()
+    page.get_by_role('button', name='Done', exact=True).click()
+    page.wait_for_selector('.rp-task[data-task="analysis-0/phase-a/leaf"]')
+    assert page.locator('.rp-task[data-task="analysis-1"]').count() == 0
+    assert page.locator('.rp-task[data-task="analysis-0"]').count() == 1
+    assert page.locator('#repro-node-analysis-0-phase-b').count() == 0
+    page.click('#btn-workspace')
+    page.wait_for_selector('#task-analysis-0-phase-a-leaf')
+    assert not page.locator('#task-analysis-0-phase-b').is_visible()
+    assert page.locator('#task-analysis-0').is_visible()
+    page.go_back()
+    page.wait_for_function("currentView==='reproduction'")
+    assert page.evaluate('_workspaceFilters.statuses') == ['approved']
+    page.go_back()
+    page.wait_for_function('_workspaceFilters.statuses.length===0')
+    page.wait_for_selector('.rp-task[data-task="analysis-1"]')
+    page.close()
+
+
+def test_tree_step_links_keep_layout_and_filters(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    page.goto(workspace['url']+'#/analysis-0')
+    page.wait_for_selector('#active-node a.task-link')
+    page.locator('#active-node a.task-link').filter(has_text='Other step').click()
+    page.wait_for_function("_reproSelected==='step-1-2'")
+    assert page.evaluate('currentView') == 'workspace'
+    assert page.locator('#repro-detail').is_visible()
+    page.wait_for_selector('[data-tree-step="step-1-2"]')
+    page.locator('[data-tree-step="step-1-3"]').click()
+    assert page.evaluate('_reproSelected') == 'step-1-3'
+    assert page.evaluate('currentView') == 'workspace'
+    page.close()
+
+
+@pytest.mark.parametrize('width', [1030, 390])
+def test_filter_tree_folding_and_deselect_all(browser, workspace, width):
+    page = browser.new_page(viewport={'width': width, 'height': 844})
+    enter(page, workspace['url'])
+    page.click('#filter-trigger')
+    assert not page.locator('[data-filter-task="analysis-0/phase-a"]').is_visible()
+    page.locator('[data-filter-fold="analysis-0"]').click()
+    assert page.locator('[data-filter-task="analysis-0/phase-a"]').is_visible()
+    options = page.locator('#workspace-task-options').bounding_box()
+    clear = page.locator('#workspace-filter > button').bounding_box()
+    assert clear['y'] >= options['y'] + options['height']
+    assert clear['y'] + clear['height'] <= 844
+    page.get_by_role('button', name='Deselect all', exact=True).click()
+    assert page.evaluate('_workspaceFilters.tasks') == []
+    page.locator('[data-filter-task="analysis-0/phase-a"]').check()
+    page.get_by_role('button', name='Done', exact=True).click()
+    assert page.evaluate('_workspaceFilters.tasks') == ['analysis-0/phase-a', 'analysis-0/phase-a/leaf']
+    assert page.locator('.rp-task[data-task="analysis-1"]').count() == 0
+    page.click('#filter-trigger')
+    assert page.locator('[data-filter-task="analysis-0"]').evaluate('(e)=>e.indeterminate')
+    page.locator('[data-filter-fold="analysis-0"]').click()
+    assert not page.locator('[data-filter-task="analysis-0/phase-a"]').is_visible()
+    page.get_by_role('button', name='Select all', exact=True).click()
+    page.get_by_role('button', name='Done', exact=True).click()
+    assert page.locator('.rp-task[data-task="analysis-1"]').count() == 1
+    assert page.evaluate('_workspaceFilters.tasks') is None
+    page.close()
+
+
+def test_archived_task_filter_has_same_tasks_in_both_layouts(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'])
+    page.evaluate("""() => {
+      _reproData.graph.dependencies.tasks=_reproData.graph.dependencies.tasks.filter(t=>t.path!=='analysis-3');
+      _reproData.graph.dependencies.archived_tasks=['analysis-3'];
+      SEARCH_INDEX.find(t=>t.path==='analysis-3').status='archived';
+    }""")
+    page.click('#filter-trigger')
+    page.locator('[data-filter-status="archived"]').check()
+    page.get_by_role('button', name='Done', exact=True).click()
+    assert page.locator('.rp-task[data-task="analysis-3"]').count() == 1
+    assert page.locator('.rp-task[data-task="analysis-0"]').count() == 0
+    page.click('#btn-workspace')
+    assert page.locator('#task-analysis-3').is_visible()
+    assert not page.locator('#task-analysis-0').is_visible()
+    page.close()
+
+
+def test_selection_during_live_refresh_is_not_replaced(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'])
+    page.evaluate("""async () => {
+      const original=loadNavTree;
+      let release;
+      loadNavTree=()=>new Promise(resolve=>release=resolve);
+      const refresh=onFullReload();
+      selectReproStep('step-1-2');
+      loadNavTree=original;
+      release();
+      await refresh;
+    }""")
+    assert page.evaluate('activePath') == 'analysis-1'
+    assert page.evaluate('_reproSelected') == 'step-1-2'
+    assert page.evaluate('currentView') == 'reproduction'
     page.close()
