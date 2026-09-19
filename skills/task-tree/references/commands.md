@@ -147,7 +147,7 @@ Root relocation and command-resolution changes follow the [rerun model](../../re
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 
-The dashboard's **DAG** navigator shares the Tree navigator's task reader and comments. Expand task containers one level to inspect steps and dependency evidence; selection, expansion, and subtree focus are independent. The task preview opens beside the graph in wide windows or below it in narrow, tall windows; short windows start with it hidden. Drag its divider or use arrow keys on the divider to resize it. Hide/show choices and the preferred width and height persist. Use the preview to inspect the selected step's command, files, freshness reason, reviewed evidence, and last actual run. A task page carrying a `## Reproduction` section shows its steps' current state as a table above the declaration, and the section's comment gutter is where a researcher pins graph feedback.
+The dashboard's **Graph** navigator shares the Tree navigator's task reader and comments. **Project overview** collapses groups and fits the full map; task chevrons expand locally. Selecting a task or step preserves the map and viewport. Search and **Show in graph** reveal the target without filtering peers. Folding retains step details and labels its collapsed owner. **Uses** and **Used by** group connecting files by step; each visible endpoint pair has one arrow with all evidence. Legacy filtered URLs open the full map. The resizable preview sits beside or below the graph and preserves explicit visibility and dimensions. Step citations and shared URLs follow [Step references](task-file-contract.md#step-references).
 
 ## Comments
 

@@ -7097,8 +7097,10 @@ class TestReproFindingsRendering:
         )
         assert 'class="repro-canvas"' in out["html"]
         assert 'data-step="merge-panel"' in out["html"]
-        assert "Reveal " + edge["from"] in out["html"]
-        assert edge["via"] in out["html"]
+        producer_owner = next(s["task"] for s in graph["steps"] if s["name"] == edge["from"])
+        assert f'data-node-id="task:{producer_owner}"' in out["html"]
+        assert f'data-from="task:{producer_owner}" data-to="merge-panel"' in out["html"]
+        assert "Project overview" in out["html"]
 
     def test_a_graph_that_failed_to_load_shows_its_errors_not_an_empty_state(self):
         """A section that was declared and did not load must not read as a tree
@@ -7328,6 +7330,7 @@ function renderReproDetail(name){selected=name;}
 function loadReproData(){return Promise.resolve(_reproData);}
 function reproTransform(){transformed++;}
 function reproReaderControls(){}
+function reproSelectTask(path){_reproSelected='';_reproNav.selected='';setActive(path);}
 function reproCenter(){}
 function parseHash(){return 'analysis';}
 function parseArtifactHash(){return '';}
@@ -7343,40 +7346,43 @@ function click(action,value){onReproClick({preventDefault:function(){},target:{c
         )
         assert proc.returncode == 0, proc.stderr
 
-    def test_explore_select_trace_and_clear_are_connected(self):
+    def test_reveal_select_and_overview_keep_all_steps(self):
         self.run_client("""
 click('explore','analysis');await Promise.resolve();
 assert.equal(_reproNav.view,'graph');
-assert.deepEqual(drawn.steps.map(s=>s.name),['result']);
+assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 click('select','result');
 assert.equal(selected,'result');
 click('mode','upstream');
 assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
-assert.equal(_reproNav.anchor,'result');
+assert.equal(_reproNav.anchor,'');
 click('clear');
-assert.equal(_reproNav.selected,'');
+assert.equal(_reproNav.selected,'result');
+assert.deepEqual(_reproNav.expanded,[]);
 assert.deepEqual(_reproNav.roots,[]);
 """)
 
-    def test_task_link_opens_out_of_scope_step_and_inspector(self):
+    def test_task_link_reveals_step_without_filtering_peers(self):
         self.run_client("""
 currentView='reproduction'; _reproNav.roots=['analysis']; _reproNav.tier=_reproTier='required';
 await revealReproStep('input');
-assert.equal(opened,'reproduction');
 assert.equal(_reproNav.view,'graph');
-assert.equal(_reproNav.mode,'nearby');
+assert.equal(_reproNav.mode,'scope');
 assert.equal(_reproNav.selected,'input');
 assert.equal(_reproNav.tier,'all');
-assert.deepEqual(_reproNav.roots,['analysis','other']);
+assert.deepEqual(_reproNav.roots,[]);
 assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 """)
 
-    def test_reload_preserves_scoped_reproduction_hash(self):
+    def test_reload_normalizes_legacy_filtered_hash(self):
         self.run_client("""
 var wanted={roots:['analysis'],tier:'required',view:'graph',mode:'upstream',anchor:'result',selected:'result',expanded:[]};
 location.hash='#/analysis?repro='+encodeURIComponent(JSON.stringify(wanted));
 initRouter();
-assert.deepEqual(_reproNav,wanted);
+assert.deepEqual(_reproNav.roots,[]);
+assert.equal(_reproNav.mode,'scope');
+assert.equal(_reproNav.tier,'all');
+assert.equal(_reproNav.selected,'result');
 assert.equal(opened,'reproduction');
 assert.ok(location.hash.includes('?repro='));
 """)

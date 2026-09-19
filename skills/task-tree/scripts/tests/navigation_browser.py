@@ -135,28 +135,23 @@ def run(evidence, snapshot=None):
                     assert page.locator('.repro-node').count() == 20
                     page.evaluate("selectReproStep('step-010')")
                     assert page.evaluate('activePath') == 'group-0/task-1'
-                    click_graph_action(page, '[data-rp-action=mode][data-value=upstream]')
-                    assert page.evaluate('_reproNav.anchor') == 'step-010'
-                    page.evaluate("reproSelectTask('group-1')")
+                    before = page.evaluate('JSON.stringify(_reproViewport)')
+                    page.evaluate("selectReproStep('step-011')")
+                    assert page.evaluate('JSON.stringify(_reproViewport)') == before
                     page.evaluate("document.querySelector('[data-rp-action=fold][data-value=\"group-0\"]').click()")
-                    assert page.evaluate('_reproNav.anchor') == 'step-010'
+                    assert page.evaluate('_reproSelected') == 'step-011'
                     assert page.locator('.repro-node').count() == 0
+                    assert 'Contains selected step' in page.locator('[data-task="group-0"]').inner_text()
                     page.evaluate("document.querySelector('[data-rp-action=fold][data-value=\"group-0\"]').click()")
                     assert page.locator('[data-task="group-0/task-1"].rp-expanded').count() == 1
-                    click_graph_action(page, '[data-rp-action=mode][data-value=scope]')
-                    page.evaluate("reproFocus('group-0')")
-                    page.wait_for_function('_reproNav.roots[0] === "group-0"')
-                    click_graph_action(page, '[data-rp-action=add-scope]')
                     page.fill('#repro-search', 'group-1')
-                    page.locator('[data-rp-action=scope-add][data-value="group-1"]').click()
-                    assert page.locator('[data-rp-action=up]').is_disabled()
-                    page.evaluate("reproSelectTask('group-4')")
-                    assert page.evaluate('_reproNav.roots') == ['group-0', 'group-1']
-                    click_graph_action(page, '[data-rp-action=clear]')
+                    page.locator('[data-rp-action=find-task][data-value="group-1"]').click()
+                    assert page.evaluate('_reproNav.roots') == []
+                    click_graph_action(page, '[data-rp-action=overview]')
                     # Repeated pure UI timings after both payloads are loaded.
-                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],filter:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();document.getElementById('repro-search').value='step-499';reproRenderSearch(false);r.search.push(performance.now()-t);t=performance.now();reproNavigate({roots:['group-'+i]},true);r.filter.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
+                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],overview:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();document.getElementById('repro-search').value='step-499';reproRenderSearch(false);r.search.push(performance.now()-t);t=performance.now();reproNavigate({expanded:[]},true);r.overview.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
                     assert max(results['timingsMs']['search']) < 200
-                    assert max(results['timingsMs']['filter']) < 200
+                    assert max(results['timingsMs']['overview']) < 200
                     assert max(results['timingsMs']['full']) < 2000
                     page.evaluate("revealReproStep('step-499')")
                     open_preview(page)
@@ -264,7 +259,7 @@ def run(evidence, snapshot=None):
                     page.wait_for_selector('#repro-detail .repro-detail')
                     assert page.locator('.repro-findings').count() == 1
                     assert 'cycle' in page.locator('.repro-findings').inner_text()
-                    assert page.evaluate('_reproNav.mode') == 'nearby'
+                    assert page.evaluate('_reproNav.mode') == 'scope'
                     page.screenshot(path=str(evidence / 'dag-real-step.png'), full_page=True)
                     results['realGraphMixedInspection'] = True
                 for width, theme in [(768, 'light'), (390, 'light'), (390, 'dark'), (1440, 'dark')]:
@@ -280,8 +275,6 @@ def run(evidence, snapshot=None):
                     page.wait_for_selector('#repro-node-step-499')
                     assert page.evaluate('activePath') == 'group-4/task-9'
                     # Structural removal arrives over the live server's SSE path.
-                    page.evaluate("reproFocus('group-4/task-9')")
-                    page.wait_for_function('_reproNav.roots[0] === "group-4/task-9"')
                     (root / 'group-4/task-9/task.md').unlink()
                     page.wait_for_function('_reproData && !_reproData.graph.steps.some(s=>s.name==="step-499")')
                     assert 'removed' in page.locator('#repro-notice').inner_text()

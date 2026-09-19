@@ -128,6 +128,14 @@ steps:
     deps: ["${OUT}/panel.parquet", test/check_panel.jl]
 ```
 
+### Step references
+
+Cite a step with `[build-panel](../data/task.md#step-build-panel)`, relative to the citing file; use `[build-panel](#step-build-panel)` within its own task. The fragment's name must match a step declared in the target task. `task check --category links` validates these citations.
+
+Keep the step name stable when reordering or editing its command. Task moves rewrite relative links; a step rename also requires updating its citations. Citations do not create execution dependencies.
+
+The dashboard reveals and selects the step, and rendered step rows expose matching anchors. A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selector intact. Generic Markdown viewers can open the task file; exact step jumping requires a renderer that emits the anchor.
+
 ### Top-level keys
 
 | Key | Value |
