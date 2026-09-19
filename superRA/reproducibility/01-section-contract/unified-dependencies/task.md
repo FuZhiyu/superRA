@@ -1,6 +1,6 @@
 ---
 title: "Unify Logical and Inferred Task Dependencies"
-status: implemented
+status: approved
 depends_on: []
 ---
 

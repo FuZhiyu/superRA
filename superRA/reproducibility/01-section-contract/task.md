@@ -1,6 +1,6 @@
 ---
 title: "Define the `## Reproduction` Section Contract and Graph Model"
-status: implemented
+status: approved
 depends_on: []
 ---
 
