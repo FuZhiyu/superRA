@@ -4,9 +4,9 @@ The declared graph records complete provenance. Each invocation selects an execu
 
 ## Decision status
 
-The researcher selected task/step targets, task-scoped execution without a scope keyword, upstream execution on demand, and default registration of executable support for retained results. This design proposes `--upstream` for expansion and `--force` for execution of fresh steps within the resulting scope.
+The researcher selected task/step targets, task-scoped execution without a scope keyword, upstream execution on demand, and default registration of executable support for retained results. Task targets include their own steps and all active nested tasks; multiple targets select their union. This design proposes `--upstream` for expansion and `--force` for execution of fresh steps within the resulting scope.
 
-Three preferences were presented for researcher feedback: task targets include descendants; canonical selectors are task paths and `task#step`; unverified saved inputs require `--use-existing`. The specification below uses those recommendations. Settle any outstanding preference before implementation; no runner behavior has changed at planning time.
+Two preferences remain open: canonical selectors are task paths and `task#step`; unverified saved inputs require `--use-existing`. The specification below uses those recommendations. Settle any outstanding preference before implementation; no runner behavior has changed at planning time.
 
 ## Selection determines the execution boundary
 
