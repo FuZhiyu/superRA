@@ -58,7 +58,11 @@ def open_preview(page):
 
 def routing_fixture(kind):
     """Small topology fixtures keep routing readable in retained screenshots."""
-    if kind == 'cycle':
+    if kind == 'components':
+        ids = ['data', 'estimates', 'paper', 'inputs', 'checks', 'notes', 'literature', 'ideas', 'archive']
+        titles = ['Build research data', 'Estimate heterogeneity', 'Manuscript exhibits', 'Separate input pipeline', 'Independent checks', 'Research notes', 'Literature review', 'Future questions', 'Reference material']
+        pairs = [(0, 1), (1, 2), (3, 4)]
+    elif kind == 'cycle':
         ids = ['heterogeneity', 'treasury', 'elasticity', 'paper', 'downstream']
         titles = ['Heterogeneity estimates', 'Treasury bounds', 'Elasticity estimates', 'Reproduce paper', 'Publish results']
         pairs = [(0, 1), (0, 2), (0, 3), (1, 3), (2, 3), (3, 0), (3, 4)]
@@ -324,7 +328,7 @@ def run(evidence, snapshot=None):
                 routing.goto(results['live'])
                 routing.click('#btn-reproduction')
                 routing.wait_for_selector('.rp-task')
-                for kind in ('cycle', 'fan'):
+                for kind in ('cycle', 'fan', 'components'):
                     routing.evaluate("""graph => {
                         _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
                         _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
@@ -334,7 +338,7 @@ def run(evidence, snapshot=None):
                     routing.locator('.theme-toggle').click()
                     routing.screenshot(path=str(evidence / f'dag-routing-{kind}-dark.png'), full_page=True, animations='disabled')
                     routing.locator('.theme-toggle').click()
-                    results[f'routing-{kind}'] = routing.evaluate('({nodes:_reproLayoutCache.layout.model.nodes.length,edges:_reproLayoutCache.layout.edges.length,cycleEdges:_reproLayoutCache.layout.edges.filter(e=>e.cycle).length})')
+                    results[f'routing-{kind}'] = routing.evaluate('({nodes:_reproLayoutCache.layout.model.nodes.length,edges:_reproLayoutCache.layout.edges.length,cycleEdges:_reproLayoutCache.layout.edges.filter(e=>e.cycle).length,components:_reproLayoutCache.layout.bands.filter(b=>!b.parent&&!b.isolated).length,isolatedCards:_reproLayoutCache.layout.bands.filter(b=>!b.parent&&b.isolated).reduce((n,b)=>n+b.ids.length,0)})')
                 routing.close()
                 results['errors'] = errors
                 assert not errors, errors

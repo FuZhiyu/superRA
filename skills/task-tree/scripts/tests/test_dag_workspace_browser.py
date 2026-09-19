@@ -367,3 +367,32 @@ def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace
     assert page.locator('.rp-task.is-cycle').count() == 4
     assert page.locator('.rp-cycle-label[aria-label="Task-group cycle"]').count() == 4
     page.close()
+
+
+def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes(browser, workspace):
+    from runpy import run_path
+    routing_fixture = run_path(str(Path(__file__).with_name("navigation_browser.py")))["routing_fixture"]
+    page = browser.new_page(viewport={'width': 1440, 'height': 1000})
+    enter(page, workspace['url'])
+    page.evaluate("""graph => {
+      _reproData.graph=graph;_reproNav={roots:[],expanded:[],tier:'all',mode:'scope',anchor:'',selected:''};
+      _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
+    }""", routing_fixture('components'))
+    page.locator('[data-rp-action=fit]').click()
+    headings = page.locator('.rp-component-label[data-component-parent=""]')
+    assert headings.all_text_contents() == ['Dependency group 1', 'Dependency group 2', 'No connections in this view']
+    assert page.locator('.rp-task').count() == 9
+    assert page.locator('.rp-wire').count() == 3
+    assert not page.locator('#task-preview').is_visible()
+    isolated = page.locator('[data-component-kind=isolated]').bounding_box()
+    first_card = page.locator('.rp-task[data-task=notes]').bounding_box()
+    assert first_card['y'] > isolated['y'] + isolated['height']
+    assert page.evaluate("""() => {
+      const l=_reproLayoutCache.layout,b=l.bands.find(b=>b.isolated);
+      return l.edges.every(e=>e.points.every(p=>p[1]<b.y));
+    }""")
+    page.locator('.rp-task-title[data-value=notes]').focus()
+    assert page.locator('.rp-task-title[data-value=notes]').evaluate('(el)=>el===document.activeElement')
+    page.evaluate("drawReproView(document.getElementById('view-reproduction'),_reproData)")
+    assert headings.all_text_contents() == ['Dependency group 1', 'Dependency group 2', 'No connections in this view']
+    page.close()

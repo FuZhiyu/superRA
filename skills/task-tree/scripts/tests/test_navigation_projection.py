@@ -220,3 +220,51 @@ const model={nodes:[{id:'parent',type:'task',parent:null,children:[child]},child
 const l=reproHierarchyLayout(model);assertDistinct(l);
 assert.equal(l.edges.length,1);assert(l.edges[0].points.every(p=>p.every(Number.isFinite)));
 """)
+
+
+def test_disconnected_graphs_and_isolated_cards_have_separate_bands():
+    run(ROUTE_GEOMETRY + """
+const ids=['a','b','c','d','e','solo-1','solo-2','solo-3','solo-4'];
+const pairs=[['a','b'],['b','c'],['c','a'],['d','e']];
+const make=()=>({nodes:ids.map(id=>({id,type:'task',parent:null,children:[]})),edges:pairs.map(([from,to])=>({from,to,evidence:[]}))});
+const m=make(),l=reproHierarchyLayout(m),bands=l.bands.filter(b=>!b.parent);assertDistinct(l);
+assert.deepEqual(bands.map(b=>b.ids),[['a','b','c'],['d','e'],['solo-1','solo-2','solo-3','solo-4']]);
+assert.deepEqual(bands.map(b=>b.isolated),[false,false,true]);
+assert.equal(bands[2].label,'No connections in this view');
+for(let i=1;i<bands.length;i++)assert(bands[i].y>=bands[i-1].y+bands[i-1].height+32);
+for(const e of l.edges){const band=bands.find(b=>b.ids.includes(e.from));assert(band.ids.includes(e.to));assert(e.points.every(p=>p[1]>=band.y&&p[1]<band.y+band.height));}
+assert.deepEqual(Object.keys(l.pos).sort(),ids.sort());assert.deepEqual(l.edges.map(e=>[e.from,e.to]),pairs);
+assert.deepEqual(l.pos,reproHierarchyLayout(make()).pos);
+assert.equal(l.pos['solo-1'].y,l.pos['solo-3'].y);assert(l.pos['solo-4'].y>l.pos['solo-1'].y);
+""")
+
+
+def test_nested_internal_graph_stays_connected_without_containment_edges():
+    run(ROUTE_GEOMETRY + """
+const tasks=['a','a/left','a/right','a/empty','b','c','solo'];
+const steps=[{name:'input',task:'a/left',tier:'required'},{name:'output',task:'a/right',tier:'on-demand'},{name:'other-in',task:'b',tier:'required'},{name:'other-out',task:'c',tier:'required'}];
+const graph={steps,step_edges:[{from:'input',to:'output',via:'a.csv'},{from:'other-in',to:'other-out',via:'b.csv'}],dependencies:{tasks:tasks.map(path=>({path,title:path})),boundaries:{}}};
+const nav={roots:[],tier:'all',mode:'scope',expanded:['a','a/left','a/right']};
+const layout=()=>reproHierarchyLayout(reproHierarchy(graph,nav,reproProject(graph,nav,[])));
+let l=layout();assertDistinct(l);
+let root=l.bands.filter(b=>!b.parent);assert.deepEqual(root.map(b=>b.ids),[['task:a'],['task:b','task:c'],['task:solo']]);
+assert(!root[0].isolated); // visible internal edges make this an independent graph
+const nested=l.bands.filter(b=>b.parent==='task:a');assert.deepEqual(nested.map(b=>b.ids),[['task:a/left','task:a/right'],['task:a/empty']]);
+assert.equal(l.edges.length,2);assert(l.pos['task:a'].x<=l.pos.input.x);
+nav.tier='required';l=layout();assertDistinct(l);root=l.bands.filter(b=>!b.parent);
+assert(root.find(b=>b.isolated).ids.includes('task:a'));assert.equal(l.edges.length,1);
+nav.roots=['a'];nav.tier='all';l=layout();assert.equal(l.edges.length,1);assert(!l.bands.find(b=>!b.parent).isolated);
+""")
+
+
+def test_lower_nested_band_can_route_outside_parent_without_crossing_earlier_graph():
+    run(ROUTE_GEOMETRY + """
+const a={id:'a',type:'step',parent:'parent',children:[]},b={id:'b',type:'step',parent:'parent',children:[]};
+const c={id:'c',type:'step',parent:'parent',children:[]},d={id:'d',type:'step',parent:'parent',children:[]};
+const model={nodes:[{id:'parent',type:'task',parent:null,children:[a,b,c,d]},a,b,c,d,{id:'outside',type:'step',parent:null,children:[]}],edges:[['a','b'],['c','d'],['d','outside']].map(([from,to])=>({from,to,evidence:[]}))};
+const l=reproHierarchyLayout(model);assertDistinct(l);
+assert.deepEqual(l.bands.filter(b=>b.parent==='parent').map(b=>b.ids),[['a','b'],['c','d']]);
+const edge=l.edges.find(e=>e.to==='outside');
+for(const id of ['a','b']){const box=l.pos[id];for(let i=1;i<edge.points.length;i++){const [x,y]=edge.points[i-1],[xx,yy]=edge.points[i];const hit=x===xx?x>box.x&&x<box.x+box.width&&Math.max(y,yy)>box.y&&Math.min(y,yy)<box.y+box.height:y>box.y&&y<box.y+box.height&&Math.max(x,xx)>box.x&&Math.min(x,xx)<box.x+box.width;assert(!hit,`escaping route crosses ${id}`);}}
+assert.equal(l.edges.length,3);
+""")
