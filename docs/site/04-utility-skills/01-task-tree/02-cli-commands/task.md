@@ -51,8 +51,9 @@ For reproduction work, ask the agent to explain the effects of a change before r
 
 ```bash
 ./superRA/superra repro impact Code/helpers.jl --json
-./superRA/superra repro explain build-panel --json
-./superRA/superra repro accept build-panel --json  # preview only
+./superRA/superra repro explain '02-merge#build-panel' --json
+./superRA/superra repro accept 02-merge --reason 'Reviewed the current panel'
+./superRA/superra repro accept 02-merge --dry-run  # preview only
 ```
 
 Acceptance records a reviewed baseline with a reason and optional evidence, including results produced before registration. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview, apply, and revoke.

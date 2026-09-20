@@ -491,13 +491,23 @@ def test_status_and_explain_name_consumers_outside_the_owning_task(project, caps
 
     assert project.run("status", ".") == 1
     text = capsys.readouterr().out
-    assert re.search(r"build-a\s+missing\s+shared", text)
-    assert re.search(r"build-x\s+missing\s+task-local", text)
+    assert re.search(r"build-a\s+missing\s+outside readers: 1", text)
+    assert re.search(r"build-x\s+missing\s+outside readers: 0", text)
+    # A check with no cross-task consumer gets the fact, never a significance verdict.
+    assert not re.search(r"task-local|\bshared\b", text)
 
     assert project.run("explain", "01-a#build-a") == 0
-    assert "shared — outs read outside 01-a:\n    02-b#build-b" in capsys.readouterr().out
+    assert "  outs read outside 01-a:\n    02-b#build-b" in capsys.readouterr().out
     assert project.run("explain", "03-x#build-x") == 0
-    assert "task-local — no step outside 03-x reads its outs" in capsys.readouterr().out
+    assert "  no step outside 03-x reads its outs" in capsys.readouterr().out
+
+
+@needs_pytask
+def test_dry_run_with_no_recorded_duration_reports_no_total(project, capsys):
+    assert project.run("build", ".", "--dry-run") == 0
+    output = capsys.readouterr().out
+    assert "No step has a recorded duration; 4 step(s) never ran." in output
+    assert "Last recorded cost" not in output  # a 0.0s total would read as free
 
 
 @needs_pytask
