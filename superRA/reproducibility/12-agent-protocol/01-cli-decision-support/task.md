@@ -1,6 +1,6 @@
 ---
 title: "CLI Decision Support: One-Shot Accept, Cost and Role in Output, No Legacy Surface"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -52,3 +52,12 @@ Full task-tree suite passes. New fixtures: one-shot accept success with its prin
 The dashboard UI paragraph moved from commands.md §Reproduction into [internals.md §Dashboard](../../../../skills/task-tree/references/internals.md), merged with the Task DAG navigator paragraph that already stated its overlapping half.
 
 Three `reproducibility` files named a bare `<step>` placeholder or the token-only acceptance recipe; those are corrected to `'<task>#<step>'` and to the one-shot form. `03-skill-redesign` owns any further rewrite there.
+
+## Review Notes
+
+Tier: thorough (ran the four reproduction test files, 261 passed; exercised `status .`, `build --dry-run`, and the bare-step rejection on this tree). Focus: correctness. Reviewer: main agent.
+
+1. `[BLOCKING]` **`status` and `explain` print a significance verdict the fact does not support.** [_repro_state.py:843](../../../../skills/task-tree/scripts/_repro_state.py#L843) labels every step without a cross-task consumer `task-local`, and [_repro_state.py:912](../../../../skills/task-tree/scripts/_repro_state.py#L912) repeats it in `explain`. On this tree `status .` labels all five `kind: check` steps `task-local`. The [group decisions](../task.md#decisions-researcher-2026-09-20) make a selected check, a maintained-path producer, and an out a document cites significant whatever their step consumers, and the stale rule leaves a task-local step stale, so the label steers agents to leave protection checks and final exhibits stale. Fix: report the fact only — the outside consumers, or that no step outside the task reads the outs — and drop the `shared` / `task-local` words from both outputs, their help text, and [commands.md](../../../../skills/task-tree/references/commands.md#reproduction). The JSON `external_consumers` field stands.
+2. `[ADVISORY]` `superra repro --help` does not name the engine. The researcher decided after this task was written that agents are told the engine is pytask, since they already know how pytask works; one line in the model text covers it. [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)
+3. `[ADVISORY]` With no known duration the dry-run prints `Last recorded cost: 0.0s, plus 2 step(s) with no recorded duration`; a zero total reads as free. Print the total only when at least one duration is known. [repro_run.py:421](../../../../skills/task-tree/scripts/repro_run.py#L421)
+4. `[ADVISORY]` The docs site still shows bare step names and a preview-only accept: [02-cli-commands/task.md:54-55](../../../../docs/site/04-utility-skills/01-task-tree/02-cli-commands/task.md#L54-L55).
