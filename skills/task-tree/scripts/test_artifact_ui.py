@@ -681,5 +681,6 @@ class TestSidebarResizeBrowser:
                 "#sidebar", "e => e.getBoundingClientRect().width"
             )
             assert abs(restored - 400) < 1.5, f"width after widening {restored}px"
-            assert page.get_attribute("#sidebar-resizer", "aria-valuemax") == "480"
+            # The pinned cap leaves 360px of task content: 1024 - 360.
+            assert page.get_attribute("#sidebar-resizer", "aria-valuemax") == "664"
             browser.close()

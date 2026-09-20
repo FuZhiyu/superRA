@@ -272,9 +272,12 @@ def run(evidence, snapshot=None):
                     open_preview(page)
                     page.wait_for_selector('#repro-detail .repro-detail')
                     assert page.locator('.repro-findings').count() == 1
+                    # Diagnostics are disclosed on demand; open them for the record.
+                    page.locator('.rp-diagnostics > summary').click()
                     assert 'cycle' in page.locator('.repro-findings').inner_text()
                     assert page.evaluate('_reproNav.mode') == 'scope'
                     page.screenshot(path=str(evidence / 'dag-real-step.png'), full_page=True)
+                    page.locator('.rp-diagnostics > summary').click()
                     results['realGraphMixedInspection'] = True
                 for width, theme in [(768, 'light'), (390, 'light'), (390, 'dark'), (1440, 'dark')]:
                     page.set_viewport_size({'width': width, 'height': 900})
