@@ -1,17 +1,20 @@
 ---
 title: "Reuse Reviewed Results Without Unnecessary Rebuilds"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
 ## Objective
 
-Implement dependency-impact inspection and scoped stale-result acceptance under the [0.5 design](../../attachments/v05-design.md#narrow-dependencies-before-accepting-stale-results). Accepted results are `fresh` for routine use, with durable reasons and evidence accessible through explain/details; successful execution history stays truthful.
+Provide impact inspection and exact-state acceptance for retained results, including work executed before registration or rerun outside the graph. One `accept` command establishes or replaces a reviewed baseline with a required reason and optional evidence files and per-node notes. Accepted freshness stays distinct from execution evidence.
 
-- Deliver impact, accept preview/apply, and revoke operations with JSON support and exact target selection. Capture trustworthy baseline evidence for explaining changes, including dirty-source runs, and disclose unavailable historical diffs.
-- Make status and ordinary serial/parallel builds agree on accepted freshness. Revalidate immediately before skipping a producer; preserve descendant execution, force scope, failures, output-integrity checks, and atomic records. No-op commands or rewritten successful locks cannot stand in for acceptance.
-- Exercise every acceptance, fan-out, cascade, force, failure, sidecar, concurrency, and baseline scenario in the [verification matrix](../../attachments/v05-design.md#verification-and-upgrade), including real pytask runs against the pinned engine. Demonstrate a reviewed shared-helper change skipping one consumer while an independently changed consumer runs.
-- Update state/acceptance command and record documentation in the task-tree references after the graph task's changes land. Agent decision discipline belongs to [workflow integration](../../07-workflow-integration/unified-dependency-workflow/task.md).
+- Preserve preview/apply concurrency protection, scoped targets, subsequent invalidation, portable records, revoke, serial/threaded build skips, and forced execution. Acceptance never fabricates successful locks, run records, or check stamps; never-run checks require execution.
+- Cover first acceptance, changed outputs, saved-input boundaries, sidecars, cache loss, failure/retry, and downstream behavior with real runner fixtures.
+- Teach agents to register retained interactive results and accept their reviewed current state without a redundant rerun. Update the owning skill, CLI/record contracts, and public descriptions together.
+
+## Revision Notes
+
+The accepted baseline extends beyond unchanged outputs from a previous runner success. The existing execution history remains authoritative for what the runner actually executed; acceptance records a separate review of current files.
 
 ## Details
 
