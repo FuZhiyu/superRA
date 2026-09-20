@@ -1,11 +1,10 @@
 """Advisory reproduction signals: staleness fan-out and unregistered results.
 
-Every function here reads the graph, the task tree, and the runner's hash
-cache; none of them hashes a whole tree, resolves a ``${VAR}``, or runs a
-subprocess, so the reminder hook can call them on the edit hot path. All
-signals are advisory: a retained file legitimately has no producer step (a
-hand-edited ``.tex``, a boundary input), so every rule here is written to stay
-silent when in doubt.
+Every function here reads the graph and the task tree; none of them hashes a
+file, resolves a ``${VAR}``, or runs a subprocess, so the reminder hook can
+call them on the edit hot path. All signals are advisory: a retained file
+legitimately has no producer step (a hand-edited ``.tex``, a boundary input),
+so every rule here is written to stay silent when in doubt.
 """
 
 from __future__ import annotations
@@ -31,10 +30,6 @@ GENERATED_SUFFIXES = {
 OUTPUT_ROOT_SUFFIXES = {".tex"}
 # Path segments that mark throwaway work, wherever they appear.
 SCRATCH_SEGMENTS = {"cache", "node_modules", "sandbox", "scratch", "temp", "tmp"}
-# Extensions the Bash pass watches, beyond a step's script and include closure.
-CODE_SUFFIXES = {
-    ".do", ".ipynb", ".jl", ".m", ".py", ".r", ".sh", ".sql", ".toml", ".yaml", ".yml",
-}
 
 _FENCE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 _INLINE_CODE_RE = re.compile(r"(`+).*?\1")
@@ -75,71 +70,14 @@ def step_durations(project_root: Path, names: list[str]) -> dict[str, float | No
 
 
 def format_fan_out(names: list[str], durations: dict[str, float | None]) -> str:
-    """`a (12.4s), b (never run)` — the cost of the rerun the edit implies."""
+    """`a (12.4s), b (no recorded duration)` — the rerun cost the edit implies."""
     parts = []
     for name in names:
         seconds = durations.get(name)
-        parts.append(f"{name} ({seconds:.1f}s)" if seconds else f"{name} (never run)")
+        parts.append(
+            f"{name} ({seconds:.1f}s)" if seconds else f"{name} (no recorded duration)"
+        )
     return ", ".join(parts)
-
-
-# ---------------------------------------------------------------------------
-# Changed code deps (the Bash path, where no tool file path is available)
-# ---------------------------------------------------------------------------
-
-def code_dep_paths(graph) -> list[str]:
-    """Resolved literal paths of the graph's code deps, in declaration order.
-
-    Code is a step's script, its Julia include closure, a configured
-    environment dep, or a declared dep under a `code_roots` directory or with a
-    source extension. Data deps stay out so the stat pass never re-hashes a
-    large input, and a path no step produces is the only kind an edit can own.
-    """
-    code_roots = list(graph.config.code_roots)
-    paths: list[str] = []
-    seen: set[str] = set()
-    for step in graph.steps:
-        for dep in step.deps:
-            if "${" in dep.resolved or dep.resolved in seen:
-                continue
-            if dep.resolved in graph.producers:
-                continue
-            kinds = {o.get("kind") for o in step.dependency_origins.get(dep.logical, [])}
-            if not (
-                kinds & {"script", "include", "environment"}
-                or any(dep.resolved == r or dep.resolved.startswith(r + "/") for r in code_roots)
-                or posixpath.splitext(dep.resolved)[1].lower() in CODE_SUFFIXES
-            ):
-                continue
-            seen.add(dep.resolved)
-            paths.append(dep.resolved)
-    return paths
-
-
-def changed_code_deps(graph, project_root: Path, cache) -> list[str]:
-    """Code deps whose content differs from what the hash cache last recorded.
-
-    A file the cache has never seen is seeded by the build, not by an edit, so
-    it reports nothing: this answers "changed since the last build", which is
-    exactly the staleness the reminder is about. `cache` is read, never
-    flushed, so a concurrent build owns the cache file alone.
-    """
-    changed: list[str] = []
-    for resolved in code_dep_paths(graph):
-        path = Path(project_root) / resolved
-        try:
-            info = path.stat()
-        except OSError:
-            continue
-        entry = cache._entries.get(str(path))
-        if entry is None:
-            continue
-        if entry[0] == info.st_size and entry[1] == info.st_mtime_ns:
-            continue
-        digest = cache.file_hash(path)
-        if digest is not None and digest != entry[2]:
-            changed.append(resolved)
-    return changed
 
 
 # ---------------------------------------------------------------------------
@@ -157,12 +95,22 @@ def _matches(candidate: str, declared: str) -> bool:
     """Does `candidate` name `declared`, or a file inside it?
 
     A declared path still carrying a `${VAR}` is compared on its literal tail,
-    which can only suppress a warning — an unresolved variable must never make
-    a registered out look unregistered.
+    found as a run of whole segments anywhere in the candidate, so a
+    variable-rooted directory covers the files under it
+    (`${OUT}/estimates` covers `output/estimates/a.csv`). A declaration that is
+    nothing but a variable (`${OUT}`) has no tail and covers everything.
+    Matching a tail can only suppress a warning — an unresolved variable must
+    never make a registered out look unregistered.
     """
     if "${" in declared:
-        tail = _literal_tail(declared)
-        return bool(tail) and (candidate == tail or candidate.endswith("/" + tail))
+        needle = [s for s in _literal_tail(declared).split("/") if s]
+        if not needle:
+            return True
+        segments = candidate.split("/")
+        return any(
+            segments[i:i + len(needle)] == needle
+            for i in range(len(segments) - len(needle) + 1)
+        )
     return candidate == declared or candidate.startswith(declared + "/")
 
 

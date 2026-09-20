@@ -17,6 +17,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _repro
+import _repro_signals
 import _task_io
 import _task_validate
 from _task_io import parse_body_sections
@@ -3465,17 +3466,6 @@ class TestTaskHook:
             json.dumps({"outcome": "success", "duration": duration}), encoding="utf-8"
         )
 
-    def _seed_hash_cache(self, project_root: Path, paths: list[Path]) -> None:
-        """Record each file's current content in the runner's hash cache."""
-        from _repro_state import HashCache, ensure_state_dir, runner_paths
-
-        runner = runner_paths(project_root)
-        ensure_state_dir(runner)
-        cache = HashCache(runner.cache_file)
-        for path in paths:
-            cache.file_hash(path)
-        cache.flush()
-
     def test_reproduction_reminder_lists_downstream_fan_out(self, tmp_path):
         """The reminder names every step the edit stales and its last duration."""
         plan_root = tmp_path / "superRA"
@@ -3491,7 +3481,10 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Stales build-panel (12.4s), fit-model (3.0s), make-figure (never run)" in context
+        assert (
+            "Stales build-panel (12.4s), fit-model (3.0s), "
+            "make-figure (no recorded duration)"
+        ) in context
 
     def test_reproduction_reminder_fan_out_excludes_upstream(self, tmp_path):
         """Only the steps downstream of the edit are listed, not the ones feeding it."""
@@ -3505,95 +3498,11 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Stales fit-model (never run), make-figure (never run)." in context
+        assert (
+            "Stales fit-model (no recorded duration), "
+            "make-figure (no recorded duration)."
+        ) in context
         assert "build-panel" not in context
-
-    def test_reproduction_bash_edit_detected_by_content(self, tmp_path):
-        """A Bash rewrite draws the reminder though the payload names no file."""
-        plan_root = tmp_path / "superRA"
-        plan_root.mkdir()
-        self._write_chain(plan_root)
-        build = tmp_path / "Code" / "build.jl"
-        self._seed_hash_cache(tmp_path, [build])
-        build.write_text("# rewritten by sed, with more bytes\n", encoding="utf-8")
-
-        payload = {
-            "session_id": "s1",
-            "tool_name": "Bash",
-            "tool_input": {"command": "sed -i '' 's/build/rebuild/' Code/build.jl"},
-        }
-        result = self._run_hook_result(payload, cwd=tmp_path)
-        assert result.returncode == 0
-        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Code/build.jl" in context
-        assert "Stales build-panel" in context
-
-        # Once per file per session: the next Bash call over the same change is silent.
-        second = self._run_hook_result(payload, cwd=tmp_path)
-        assert second.stdout == ""
-
-    def test_reproduction_bash_silent_when_content_restored(self, tmp_path):
-        """A stat change with unchanged content (a `git checkout` back) is silent."""
-        plan_root = tmp_path / "superRA"
-        plan_root.mkdir()
-        self._write_chain(plan_root)
-        build = tmp_path / "Code" / "build.jl"
-        self._seed_hash_cache(tmp_path, [build])
-        info = build.stat()
-        os.utime(build, (info.st_atime + 60, info.st_mtime + 60))
-
-        payload = {
-            "session_id": "s1",
-            "tool_name": "Bash",
-            "tool_input": {"command": "git checkout -- Code/build.jl"},
-        }
-        result = self._run_hook_result(payload, cwd=tmp_path)
-        assert result.returncode == 0
-        assert result.stdout == ""
-
-    def test_reproduction_bash_silent_before_first_build(self, tmp_path):
-        """No hash cache means no baseline, so the pass reports nothing."""
-        plan_root = tmp_path / "superRA"
-        plan_root.mkdir()
-        self._write_chain(plan_root)
-        (tmp_path / "Code" / "build.jl").write_text("# changed\n", encoding="utf-8")
-
-        payload = {
-            "session_id": "s1",
-            "tool_name": "Bash",
-            "tool_input": {"command": "python rewrite.py"},
-        }
-        result = self._run_hook_result(payload, cwd=tmp_path)
-        assert result.returncode == 0
-        assert result.stdout == ""
-
-    def test_reproduction_bash_check_cost(self, tmp_path, monkeypatch):
-        """Per-Bash-call cost of the content pass, on a tree with a seeded cache.
-
-        Measured in-process (no subprocess launch overhead) across 5 calls and
-        recorded in `## Results`: the pass is one graph build plus a `stat` per
-        tracked code dep, and hashes only the files whose stat moved.
-        """
-        import time as time_module
-
-        plan_root = tmp_path / "superRA"
-        plan_root.mkdir()
-        self._write_chain(plan_root)
-        for i in range(2, 12):
-            self._write_repro_task(
-                plan_root / f"{i:02d}-other", "steps: []\n", title=f"Other {i}"
-            )
-        self._seed_hash_cache(tmp_path, list((tmp_path / "Code").iterdir()))
-        monkeypatch.chdir(tmp_path)
-
-        elapsed = []
-        for i in range(5):
-            t0 = time_module.perf_counter()
-            assert task_hook._reproduction_bash_reminder({"session_id": f"s{i}"}) == []
-            elapsed.append(time_module.perf_counter() - t0)
-
-        avg_ms = 1000 * sum(elapsed) / len(elapsed)
-        assert avg_ms < 200, f"bash pass averaged {avg_ms:.1f}ms across 5 runs"
 
     def _write_implemented_task(
         self, plan_root: Path, results: str, *, status: str = "implemented"
@@ -3732,6 +3641,42 @@ class TestTaskHook:
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert "out/fig.png" not in (result.stdout or "")
 
+    def test_implemented_reminder_silent_for_var_rooted_directory_out(self, tmp_path):
+        """A directory out under a `${VAR}` root covers the files inside it.
+
+        `${OUT}/estimates` is the common project shape; with the hook's
+        unresolved graph its literal tail has to match as a run of whole
+        segments, or every file in the directory reads as unregistered.
+        """
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  vars:\n    OUT: output\n", encoding="utf-8"
+        )
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir()
+        _write_task_md(
+            task_dir / "task.md",
+            "Pipeline",
+            "implemented",
+            results="See [the estimates](../../output/estimates/alpha.csv).\n",
+            reproduction=(
+                "steps:\n"
+                "  - name: estimate\n"
+                "    cmd: julia Code/estimate.jl\n"
+                '    outs:\n      - "${OUT}/estimates"\n'
+            ),
+        )
+        self._write_artifacts(tmp_path, "output/estimates/alpha.csv")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert "alpha.csv" not in (result.stdout or "")
+
     def test_implemented_reminder_silent_without_config(self, tmp_path):
         """A tree with no reproduction configuration never reminds."""
         plan_root = tmp_path / "superRA"
@@ -3759,6 +3704,22 @@ class TestTaskHook:
 
 
 class TestResultsCoverageCheck:
+    @pytest.mark.parametrize(
+        "candidate,declared",
+        [
+            ("output/estimates/alpha.csv", "${OUT}/estimates"),  # var-rooted directory
+            ("output/alpha.csv", "${OUT}"),                      # bare variable root
+            ("out/fig.png", "${OUT}/fig.png"),                   # var-rooted file
+            ("a/b/out/tables/t.tex", "${OUT}/tables"),           # tail deeper in the path
+        ],
+    )
+    def test_var_rooted_declaration_covers_its_files(self, candidate, declared):
+        """An unresolved `${VAR}` must never make a registered out look unregistered."""
+        assert _repro_signals._matches(candidate, declared)
+
+    def test_unrelated_path_does_not_match_a_var_rooted_declaration(self):
+        assert not _repro_signals._matches("Paper/model.tex", "${OUT}/tables")
+
     def _tree(
         self,
         tmp_path: Path,
