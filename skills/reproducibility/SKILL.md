@@ -51,7 +51,7 @@ A task target includes its own steps and descendant tasks; `task#step` selects o
 
 **State what the evidence covers in `## Results`:** verified targets, boundary inputs, and check outcomes. Freshness covers successful execution or [reviewed acceptance](references/rerun-model.md#reviewed-acceptance); distinguish executed steps and checks from accepted results. End-to-end reproduction requires rebuilding the claimed pipeline from its agreed boundary. Commit changed execution or acceptance records with the work.
 
-A step still stale after its own successful build is a diagnosis, not a rerun: `superra repro explain <step>` and `references/rerun-model.md`.
+A step still stale after its own successful build is a diagnosis, not a rerun: `superra repro explain '<task>#<step>'` and `references/rerun-model.md`.
 
 ## Environment Changes
 

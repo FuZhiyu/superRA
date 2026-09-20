@@ -76,7 +76,8 @@ def read_ledger(paths):
         if (not isinstance(record, dict)
                 or not all(isinstance(record.get(key), dict) for key in ('baseline', 'state', 'reviews', 'evidence', 'upstream'))
                 or not isinstance(record.get('reason'), str)
-                or record.get('basis') not in (None, 'reviewed')
+                or not isinstance(record.get('boundary_inputs'), list)
+                or record.get('basis') != 'reviewed'
                 or record.get('id') != identity({k: v for k, v in record.items() if k != 'id'})):
             raise ReproStateError(f'{LEDGER}: malformed acceptance for {name}')
     return value
@@ -202,8 +203,6 @@ def validate_record(graph, step, paths, record, lock, upstream, cache=None):
         return 'required input or output missing'
     if state != record.get('state'):
         return 'reviewed state changed'
-    if record.get('basis') != 'reviewed' and state['outputs'] != record['baseline'].get('outputs'):
-        return 'outputs differ from successful baseline'
     return None
 
 
@@ -223,44 +222,26 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
     valid_graph = not any(f.severity == 'error' for f in report.graph.findings)
-    context = None
-    legacy = {name for name, record in ledger['steps'].items() if record.get('basis') != 'reviewed'}
-    if not report.upstream and legacy.intersection(by_name):
-        from _repro_state import compute_status
-        context = compute_status(report.graph, paths, targets=[f'{e.step.task_path or "."}#{e.step.name}' for e in report.entries],
-                                 upstream=True, cache=cache,
-                                 acceptance_ledger=ledger, completed_locks=lock)
     for name in _topological(by_name, parents):
         entry = by_name[name]
         record = ledger['steps'].get(name)
-        reviewed = record and record.get('basis') == 'reviewed'
-        if reviewed:
-            # Only decisions this acceptance relied on bind it. Out-of-scope
-            # producers remain saved inputs, with their actual bytes recorded.
-            upstream = {p: ledger['steps'][p]['id'] for p in record['upstream'] if p in ledger['steps']}
-        else:
-            all_parents = [src for src, dst, _ in report.graph.step_edges if dst == name]
-            upstream_entries = [context.entry(p) if context else by_name.get(p) for p in all_parents]
-            upstream = {p.step.name: p.acceptance['id'] for p in upstream_entries if p and p.acceptance}
+        # Only decisions this acceptance relied on bind it. Out-of-scope
+        # producers remain saved inputs, with their actual bytes recorded.
+        upstream = {p: ledger['steps'][p]['id'] for p in record['upstream'] if p in ledger['steps']} if record else None
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
         invalid = validate_record(report.graph, entry.step, paths, record, lock.get(name), upstream, cache) if record else None
-        if record and 'boundary_inputs' not in record and any(c.kind == 'boundary' for c in entry.changes):
-            invalid = invalid or 'saved input bytes changed without reviewed evidence'
-        if record and not reviewed and context and not context.entry(name).acceptance:
-            invalid = invalid or 'upstream acceptance unavailable'
-        if valid_graph and record and not invalid and (reviewed or not blocked):
-            entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline' if reviewed else 'up to date', record
+        if valid_graph and record and not invalid:
+            entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
             entry.changes = []
             if entry.last_run is None:
                 run = record['baseline'].get('run', {})
                 entry.last_run, entry.duration, entry.log = run.get('ended_at'), run.get('duration'), run.get('log')
         elif record and invalid:
             state = current_state(report.graph, entry.step, paths, cache)
-            if reviewed:
-                entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
-                                 for c in state_differences(record['state'], state)] + [
-                                     c for c in entry.changes if c.kind == 'boundary']
-            if entry.status == 'fresh' or (reviewed and entry.status == 'missing' and all(
+            entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
+                             for c in state_differences(record['state'], state)] + [
+                                 c for c in entry.changes if c.kind == 'boundary']
+            if entry.status == 'fresh' or (entry.status == 'missing' and all(
                     v is not None for group in state.values() for v in group.values())):
                 entry.status, entry.reason = 'stale', invalid
             if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
@@ -288,7 +269,7 @@ def state_differences(before, after):
 def inspect_baseline(graph, step, paths):
     accepted = read_ledger(paths)['steps'].get(step.name)
     reviewed = None
-    if accepted and accepted.get('basis') == 'reviewed':
+    if accepted:
         diffs = [dict(row, diff=None, history='unavailable')
                  for row in state_differences(accepted['state'], current_state(graph, step, paths))]
         reviewed = {'available': True, 'basis': 'reviewed', 'receipt': None, 'diffs': diffs}
@@ -388,19 +369,20 @@ def preview(graph, paths, targets, reason, reviews, evidence):
     return result
 
 
-def accept(graph, paths, targets, reason, reviews, evidence, token=None):
+def accept(graph, paths, targets, reason, reviews, evidence, token=None, *, dry_run=False):
+    """Apply the reviewed baseline in one call; *dry_run* previews, *token* re-applies one."""
     with mutation_lock(paths):
         check_sources(graph)
         result = preview(graph, paths, targets, reason, reviews, evidence)
-        if token is None:
+        if dry_run:
             return result
-        if token != result['token']:
+        if token is not None and token != result['token']:
             raise ReproStateError('preview no longer matches current state; inspect a new preview')
         if not result['ready']:
             raise ReproStateError('acceptance requires --reason describing the reviewed current results')
         # Re-read hashes and evidence immediately before the atomic write.
         check_sources(graph)
-        if preview(graph, paths, targets, reason, reviews, evidence)['token'] != token:
+        if preview(graph, paths, targets, reason, reviews, evidence)['token'] != result['token']:
             raise ReproStateError('state changed during acceptance; inspect a new preview')
         ledger = read_ledger(paths)
         replacements = {}
