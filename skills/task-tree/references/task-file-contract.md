@@ -217,6 +217,8 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 
 **`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
+**Unregistered results artifact** — an advisory `[WARNING]`, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Not every retained artifact belongs in the graph, so it never blocks. Silent for a tree with no `## Reproduction` section and no `code_roots`, for prose and source links, and for scratch paths.
+
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
 ### Acceptance and successful baseline records

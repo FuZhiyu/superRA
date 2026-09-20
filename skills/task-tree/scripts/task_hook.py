@@ -8,9 +8,13 @@
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
 calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
 In both cases it runs the same best-effort reconcile — validate the tree and
-propagate parent status. It also reminds, once per file per session, when an
+propagate parent status. It also carries two advisory reproduction signals,
+both non-blocking: a reminder, once per file per session, when an
 Edit/Write/apply_patch touches a file the reproduction graph tracks as a
-step's dep/script or a `code_roots` producer (see `_reproduction_reminder`).
+step's dep/script or a `code_roots` producer, naming the steps the edit
+stales (`_reproduction_reminder`, emitted through `_repro_emit`); and, once
+per transition, a reminder when a leaf reaches `implemented` with results
+files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
 Validation warnings and non-fatal reconcile failures are injected through
@@ -50,6 +54,9 @@ _CODEX_EMPTY_JSON_MODE = False
 # reminded. `02-runner`'s own state directory is expected to reuse this name.
 REPRO_STATE_DIRNAME = ".superra-repro"
 REPRO_MARKER_SUBDIR = "hook-markers"
+# The `implemented` reminder tracks a status transition rather than a session,
+# so its markers live under one fixed key instead of a per-session one.
+IMPLEMENTED_MARKER_KEY = "transitions"
 
 
 def _scripts_dir() -> Path:
@@ -193,12 +200,56 @@ def _repro_under_code_root(code_roots: list[str], rel: str) -> bool:
     return any(rel == root or rel.startswith(root + "/") for root in code_roots)
 
 
-def _repro_message(rel: str, owners: list[str]) -> str:
+def _repro_message(rel: str, owners: list[str], fan_out: str = "") -> str:
     owner_text = ", ".join(sorted(owners)) if owners else "none"
+    stales = f"Stales {fan_out}. " if fan_out else ""
     return (
-        f"Reproduction: {rel} changed (owning step(s): {owner_text}). Update the "
+        f"Reproduction: {rel} changed (owning step(s): {owner_text}). {stales}Update the "
         "step's deps/outs or register a new step, then run `superra repro status`."
     )
+
+
+def _repro_fan_out(graph, project_root: Path, owners: list[str]) -> str:
+    """The steps this edit stales and what rerunning them last cost."""
+    if not owners:
+        return ""
+    try:
+        import _repro_signals
+        names = _repro_signals.downstream_steps(graph, owners)
+        return _repro_signals.format_fan_out(
+            names, _repro_signals.step_durations(project_root, names)
+        )
+    except Exception:
+        return ""
+
+
+def _repro_emit(
+    data: dict, graph, project_root: Path, rel_paths: list[str]
+) -> list[str]:
+    """Message each changed path once per session, with its staleness fan-out.
+
+    Takes project-relative paths from whichever detector found them, so every
+    detector draws the identical reminder under one marker per file per
+    session.
+    """
+    feedback: list[str] = []
+    session_key: str | None = None
+    for rel in rel_paths:
+        if session_key is None:
+            session_key = _repro_session_key(data)
+        marker = _repro_marker_path(project_root, session_key, rel)
+        if marker.exists():
+            continue
+        owners = _repro_owning_steps(graph, rel)
+        feedback.append(
+            _repro_message(rel, owners, _repro_fan_out(graph, project_root, owners))
+        )
+        try:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
+        except OSError:
+            pass
+    return feedback
 
 
 def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
@@ -229,7 +280,6 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
             by_plan_root.setdefault(plan_root, []).append(file_path)
 
     feedback: list[str] = []
-    session_key: str | None = None
 
     for plan_root, paths in by_plan_root.items():
         project_root = plan_root.parent
@@ -243,26 +293,18 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
         if not graph.steps and not graph.config.code_roots:
             continue  # no reproduction config anywhere: nothing to match
 
+        relevant: list[str] = []
         for file_path in paths:
             try:
                 rel = file_path.resolve().relative_to(project_root.resolve())
             except (ValueError, OSError):
                 continue
             rel_str = _repro._norm(rel.as_posix())
-            owners = _repro_owning_steps(graph, rel_str)
-            if not owners and not _repro_under_code_root(graph.config.code_roots, rel_str):
-                continue
-            if session_key is None:
-                session_key = _repro_session_key(data)
-            marker = _repro_marker_path(project_root, session_key, rel_str)
-            if marker.exists():
-                continue
-            feedback.append(_repro_message(rel_str, owners))
-            try:
-                marker.parent.mkdir(parents=True, exist_ok=True)
-                marker.touch()
-            except OSError:
-                pass
+            if _repro_owning_steps(graph, rel_str) or _repro_under_code_root(
+                graph.config.code_roots, rel_str
+            ):
+                relevant.append(rel_str)
+        feedback.extend(_repro_emit(data, graph, project_root, relevant))
 
     return feedback
 
@@ -325,6 +367,60 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
     if not resolved_paths:
         return
     _clear_repro_markers(plan_root.parent, resolved_paths)
+
+
+def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]:
+    """Remind once per transition when a leaf reaches `implemented` carrying
+    results files the reproduction graph does not cover.
+
+    The marker key is the task, not the session, so the reminder follows the
+    status transition: it is cleared whenever the task is not `implemented`,
+    and set once a reminder is emitted. A task that leaves `implemented` and
+    returns reminds again. Cheap gates (status, leaf, a linked results file)
+    run before any graph build, so an ordinary task.md edit costs a parse.
+    Best-effort: any failure is silence.
+    """
+    project_root = plan_root.parent
+    marker = _repro_marker_path(
+        project_root, IMPLEMENTED_MARKER_KEY, f"implemented:{task_path}"
+    )
+    task_md = (plan_root if task_path == "" else plan_root / task_path) / "task.md"
+    _ensure_scripts_on_path()
+    try:
+        import _task_io as task_io
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # parse_task warns on a bad status
+            task = task_io.parse_task(task_md, plan_root)
+        is_leaf = not any(task_io.iter_child_task_dirs(task_md.parent))
+        if task.status != "implemented" or not is_leaf:
+            if marker.exists():
+                marker.unlink()
+            return []
+        if marker.exists() or "](" not in task.results:
+            return []
+        import _repro
+        import _repro_signals
+        graph = _repro.build_graph(
+            plan_root, project_root=project_root, resolve_vars=False
+        )
+        if not _repro_signals.has_reproduction(graph):
+            return []
+        files = _repro_signals.uncovered_results_files(graph, task, project_root)
+    except Exception:
+        return []
+    if not files:
+        return []
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    except OSError:
+        pass
+    return [
+        f"Reproduction: task {task_path or '(root)'} is implemented and its "
+        f"## Results links {', '.join(files)}, which no step produces or reads. "
+        "Register the producer step, or leave it if the file has none — "
+        "`superRA:reproducibility` has the call."
+    ]
 
 
 def _feedback_json(feedback: list[str]) -> str:
@@ -706,6 +802,9 @@ def _handle_edit_write(data: dict) -> None:
                     task_path = ""
                 feedback.extend(_reconcile(plan_root, task_path=task_path))
                 _clear_reproduction_markers_for_task(plan_root, task_path)
+                feedback.extend(
+                    _implemented_coverage_reminder(plan_root, task_path)
+                )
 
         # Broader branch: render-integrity-check any .md under a task root.
         feedback.extend(_markdown_integrity_feedback(file_path))
@@ -777,6 +876,7 @@ def _handle_apply_patch(data: dict) -> None:
             continue
         plan_root, task_path = match
         _clear_reproduction_markers_for_task(plan_root, task_path)
+        feedback.extend(_implemented_coverage_reminder(plan_root, task_path))
         resolved = plan_root.resolve()
         if resolved in seen:
             continue
