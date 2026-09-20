@@ -3426,6 +3426,438 @@ class TestTaskHook:
         # this finding, and would multiply per shell: var if it ran at all).
         assert avg_ms < 200, f"reminder averaged {avg_ms:.1f}ms across 5 runs"
 
+    # --- advisory signals (12-agent-protocol/02-agent-signals) ---
+
+    def _write_chain(self, plan_root: Path) -> None:
+        """Three chained steps: build-panel -> fit-model -> make-figure."""
+        self._write_repro_task(
+            plan_root / "01-pipeline",
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: julia Code/build.jl\n"
+            "    deps:\n"
+            "      - Code/build.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n"
+            "  - name: fit-model\n"
+            "    cmd: julia Code/fit.jl\n"
+            "    deps:\n"
+            "      - out/panel.parquet\n"
+            "      - Code/fit.jl\n"
+            "    outs:\n"
+            "      - out/fit.json\n"
+            "  - name: make-figure\n"
+            "    cmd: julia Code/fig.jl\n"
+            "    deps:\n"
+            "      - out/fit.json\n"
+            "    outs:\n"
+            "      - out/fig.png\n",
+        )
+        code = plan_root.parent / "Code"
+        code.mkdir(parents=True, exist_ok=True)
+        for name in ("build.jl", "fit.jl", "fig.jl"):
+            (code / name).write_text(f"# {name}\n", encoding="utf-8")
+
+    def _record_run(self, project_root: Path, step: str, duration: float) -> None:
+        runs = project_root / ".superra-repro" / "runs"
+        runs.mkdir(parents=True, exist_ok=True)
+        (runs / f"{step}.json").write_text(
+            json.dumps({"outcome": "success", "duration": duration}), encoding="utf-8"
+        )
+
+    def _seed_hash_cache(self, project_root: Path, paths: list[Path]) -> None:
+        """Record each file's current content in the runner's hash cache."""
+        from _repro_state import HashCache, ensure_state_dir, runner_paths
+
+        runner = runner_paths(project_root)
+        ensure_state_dir(runner)
+        cache = HashCache(runner.cache_file)
+        for path in paths:
+            cache.file_hash(path)
+        cache.flush()
+
+    def test_reproduction_reminder_lists_downstream_fan_out(self, tmp_path):
+        """The reminder names every step the edit stales and its last duration."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        self._record_run(tmp_path, "build-panel", 12.4)
+        self._record_run(tmp_path, "fit-model", 3.0)
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(tmp_path / "Code" / "build.jl")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Stales build-panel (12.4s), fit-model (3.0s), make-figure (never run)" in context
+
+    def test_reproduction_reminder_fan_out_excludes_upstream(self, tmp_path):
+        """Only the steps downstream of the edit are listed, not the ones feeding it."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(tmp_path / "Code" / "fit.jl")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Stales fit-model (never run), make-figure (never run)." in context
+        assert "build-panel" not in context
+
+    def test_reproduction_bash_edit_detected_by_content(self, tmp_path):
+        """A Bash rewrite draws the reminder though the payload names no file."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        build = tmp_path / "Code" / "build.jl"
+        self._seed_hash_cache(tmp_path, [build])
+        build.write_text("# rewritten by sed, with more bytes\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Bash",
+            "tool_input": {"command": "sed -i '' 's/build/rebuild/' Code/build.jl"},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Code/build.jl" in context
+        assert "Stales build-panel" in context
+
+        # Once per file per session: the next Bash call over the same change is silent.
+        second = self._run_hook_result(payload, cwd=tmp_path)
+        assert second.stdout == ""
+
+    def test_reproduction_bash_silent_when_content_restored(self, tmp_path):
+        """A stat change with unchanged content (a `git checkout` back) is silent."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        build = tmp_path / "Code" / "build.jl"
+        self._seed_hash_cache(tmp_path, [build])
+        info = build.stat()
+        os.utime(build, (info.st_atime + 60, info.st_mtime + 60))
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Bash",
+            "tool_input": {"command": "git checkout -- Code/build.jl"},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_reproduction_bash_silent_before_first_build(self, tmp_path):
+        """No hash cache means no baseline, so the pass reports nothing."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        (tmp_path / "Code" / "build.jl").write_text("# changed\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python rewrite.py"},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_reproduction_bash_check_cost(self, tmp_path, monkeypatch):
+        """Per-Bash-call cost of the content pass, on a tree with a seeded cache.
+
+        Measured in-process (no subprocess launch overhead) across 5 calls and
+        recorded in `## Results`: the pass is one graph build plus a `stat` per
+        tracked code dep, and hashes only the files whose stat moved.
+        """
+        import time as time_module
+
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        for i in range(2, 12):
+            self._write_repro_task(
+                plan_root / f"{i:02d}-other", "steps: []\n", title=f"Other {i}"
+            )
+        self._seed_hash_cache(tmp_path, list((tmp_path / "Code").iterdir()))
+        monkeypatch.chdir(tmp_path)
+
+        elapsed = []
+        for i in range(5):
+            t0 = time_module.perf_counter()
+            assert task_hook._reproduction_bash_reminder({"session_id": f"s{i}"}) == []
+            elapsed.append(time_module.perf_counter() - t0)
+
+        avg_ms = 1000 * sum(elapsed) / len(elapsed)
+        assert avg_ms < 200, f"bash pass averaged {avg_ms:.1f}ms across 5 runs"
+
+    def _write_implemented_task(
+        self, plan_root: Path, results: str, *, status: str = "implemented"
+    ) -> Path:
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir(parents=True, exist_ok=True)
+        _write_task_md(
+            task_dir / "task.md",
+            "Pipeline",
+            status,
+            objective="Build the pipeline.",
+            results=results,
+            reproduction=(
+                "steps:\n"
+                "  - name: build-panel\n"
+                "    cmd: julia Code/build.jl\n"
+                "    deps:\n"
+                "      - raw/input.csv\n"
+                "    outs:\n"
+                "      - out/panel.parquet\n"
+            ),
+        )
+        return task_dir
+
+    def _write_artifacts(self, project_root: Path, *relative: str) -> None:
+        for rel in relative:
+            path = project_root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"artifact")
+
+    def test_implemented_reminder_names_uncovered_files(self, tmp_path):
+        """A leaf reaching `implemented` with an unregistered result reminds once."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = self._write_implemented_task(
+            plan_root, "The [figure](../../out/fig.png) shows the spread.\n"
+        )
+        self._write_artifacts(tmp_path, "out/fig.png")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "out/fig.png" in context
+        assert "01-pipeline is implemented" in context
+        assert "superRA:reproducibility" in context
+
+        # Once per transition: still implemented, so a further edit is silent.
+        second = self._run_hook_result(payload, cwd=tmp_path)
+        assert "out/fig.png" not in (second.stdout or "")
+
+    def test_implemented_reminder_fires_again_after_status_round_trip(self, tmp_path):
+        """Leaving `implemented` clears the marker; returning reminds again."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = self._write_implemented_task(
+            plan_root, "The [figure](../../out/fig.png) shows the spread.\n"
+        )
+        self._write_artifacts(tmp_path, "out/fig.png")
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        assert "out/fig.png" in self._run_hook_result(payload, cwd=tmp_path).stdout
+
+        self._write_implemented_task(
+            plan_root,
+            "The [figure](../../out/fig.png) shows the spread.\n",
+            status="revise",
+        )
+        self._run_hook_result(payload, cwd=tmp_path)
+        self._write_implemented_task(
+            plan_root, "The [figure](../../out/fig.png) shows the spread.\n"
+        )
+        again = self._run_hook_result(payload, cwd=tmp_path)
+        assert "out/fig.png" in again.stdout
+
+    def test_implemented_reminder_silent_for_covered_and_prose_links(self, tmp_path):
+        """A declared out, a boundary dep, a `.tex`, and a `.md` all stay silent."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = self._write_implemented_task(
+            plan_root,
+            "The [panel](../../out/panel.parquet) comes from "
+            "[the raw extract](../../raw/input.csv); see [the model](../../Paper/model.tex) "
+            "and [the notes](../../notes.md).\n",
+        )
+        self._write_artifacts(
+            tmp_path, "out/panel.parquet", "raw/input.csv", "Paper/model.tex", "notes.md"
+        )
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert "no step produces or reads" not in (result.stdout or "")
+
+    def test_implemented_reminder_silent_for_unresolved_var_out(self, tmp_path):
+        """A `${VAR}` out is matched on its literal tail, never reported uncovered.
+
+        The hook never resolves variables, so an out declared as
+        `${OUT}/fig.png` must still cover a results link to `out/fig.png`.
+        """
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  vars:\n    OUT: out\n", encoding="utf-8"
+        )
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir()
+        _write_task_md(
+            task_dir / "task.md",
+            "Pipeline",
+            "implemented",
+            results="The [figure](../../out/fig.png) shows the spread.\n",
+            reproduction=(
+                "steps:\n"
+                "  - name: make-figure\n"
+                "    cmd: julia Code/fig.jl\n"
+                '    outs:\n      - "${OUT}/fig.png"\n'
+            ),
+        )
+        self._write_artifacts(tmp_path, "out/fig.png")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert "out/fig.png" not in (result.stdout or "")
+
+    def test_implemented_reminder_silent_without_config(self, tmp_path):
+        """A tree with no reproduction configuration never reminds."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir()
+        _write_task_md(
+            task_dir / "task.md",
+            "Pipeline",
+            "implemented",
+            results="The [figure](../../out/fig.png) shows the spread.\n",
+        )
+        self._write_artifacts(tmp_path, "out/fig.png")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert "out/fig.png" not in (result.stdout or "")
+
+
+# --- results-coverage check (task_check `reproduction` category) ---
+
+
+class TestResultsCoverageCheck:
+    def _tree(
+        self,
+        tmp_path: Path,
+        results: str,
+        *,
+        reproduction: str = (
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: julia Code/build.jl\n"
+            "    deps:\n"
+            "      - raw/input.csv\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n"
+            "      - out/tables/main.tex\n"
+        ),
+    ) -> Path:
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        _write_task_md(plan_root / "task.md", "Root", "not-started")
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir()
+        _write_task_md(
+            task_dir / "task.md", "Pipeline", "implemented",
+            results=results, reproduction=reproduction,
+        )
+        for rel in ("out/panel.parquet", "out/fig.png", "out/tables/summary.tex",
+                    "raw/input.csv", "Paper/model.tex", "notes.md", "tmp/draft.png"):
+            path = tmp_path / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"artifact")
+        return plan_root
+
+    def _coverage_findings(self, plan_root: Path) -> list:
+        return [
+            f for f in task_check.run_checks(plan_root, category="reproduction")
+            if "## Results links" in f.message
+        ]
+
+    def test_uncovered_artifact_warns(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [figure](../../out/fig.png).\n")
+        findings = self._coverage_findings(plan_root)
+        assert len(findings) == 1
+        assert findings[0].severity == "warning"
+        assert findings[0].category == "reproduction"
+        assert findings[0].task_path == "01-pipeline"
+        assert "out/fig.png" in findings[0].message
+
+    def test_declared_out_is_silent(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [panel](../../out/panel.parquet).\n")
+        assert self._coverage_findings(plan_root) == []
+
+    def test_boundary_dep_is_silent(self, tmp_path):
+        plan_root = self._tree(tmp_path, "Built from [the extract](../../raw/input.csv).\n")
+        assert self._coverage_findings(plan_root) == []
+
+    def test_tex_warns_only_under_an_output_root(self, tmp_path):
+        """A `.tex` beside the prose is a document; one in an out directory is a table."""
+        plan_root = self._tree(
+            tmp_path,
+            "See [the model](../../Paper/model.tex) and "
+            "[the table](../../out/tables/summary.tex).\n",
+        )
+        findings = self._coverage_findings(plan_root)
+        assert len(findings) == 1
+        assert "out/tables/summary.tex" in findings[0].message
+
+    def test_documents_and_scratch_paths_are_silent(self, tmp_path):
+        plan_root = self._tree(
+            tmp_path,
+            "See [the notes](../../notes.md) and [a draft](../../tmp/draft.png).\n",
+        )
+        assert self._coverage_findings(plan_root) == []
+
+    def test_missing_file_is_silent(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [figure](../../out/absent.png).\n")
+        assert self._coverage_findings(plan_root) == []
+
+    def test_tree_without_reproduction_config_is_silent(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [figure](../../out/fig.png).\n",
+                               reproduction="")
+        assert self._coverage_findings(plan_root) == []
+
+    def test_resolved_var_out_is_silent(self, tmp_path):
+        """`task check` resolves `${VAR}`, so a var-declared out covers its link."""
+        plan_root = self._tree(
+            tmp_path, "See the [figure](../../out/fig.png).\n",
+            reproduction=(
+                "steps:\n"
+                "  - name: make-figure\n"
+                "    cmd: julia Code/fig.jl\n"
+                '    outs:\n      - "${OUT}/fig.png"\n'
+            ),
+        )
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  vars:\n    OUT: out\n", encoding="utf-8"
+        )
+        assert self._coverage_findings(plan_root) == []
+
+
 # --- Revision-note stale-leak validation tests ---
 
 

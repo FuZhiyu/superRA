@@ -1,6 +1,6 @@
 ---
 title: "Advisory Signals: Missing Registration and the Staleness an Edit Causes"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -21,3 +21,65 @@ Tell the agent, at the moment it can still act cheaply, that a retained result h
 - Suggested Bash detection: a size-and-mtime pass over the graph's literal-path code deps against the existing hash cache; hash only files whose stat changed.
 - Which extensions count as generated output is the open design call: start from data and exhibit formats (`.csv`, `.parquet`, `.arrow`, `.png`, `.pdf`, generated `.tex` tables under an output root) and report the rule chosen and its misses.
 - Load `superRA:task-tree` for every edit under `skills/task-tree/`.
+
+## Results
+
+All four signals ship, sharing one analysis module: [_repro_signals.py](../../../../skills/task-tree/scripts/_repro_signals.py). It is read-only, resolves no `${VAR}`, starts no subprocess, and hashes only files whose `stat` moved, so every caller — including the edit hot path — pays graph reads alone.
+
+- **The producer-edit reminder names the fan-out.** The owning steps plus their transitive consumers over `graph.step_edges`, each with the duration its last run record carries: `Stales build-panel (12.4s), fit-model (3.0s), make-figure (never run).` ([_repro_signals.py:47-88](../../../../skills/task-tree/scripts/_repro_signals.py#L47-L88), wired at [task_hook.py:214](../../../../skills/task-tree/scripts/task_hook.py#L214)). Upstream steps are excluded — an edit to a consumer's script never implies rerunning its producers.
+- **Bash edits are seen by content.** [`_reproduction_bash_reminder`](../../../../skills/task-tree/scripts/task_hook.py#L319) runs before the structural gates on every Bash call: it locates the tree from cwd, stats each tracked code dep against the runner's hash cache, and hashes only the ones whose `(size, mtime_ns)` moved ([_repro_signals.py:119-146](../../../../skills/task-tree/scripts/_repro_signals.py#L119-L146)). A changed hash draws the identical reminder through the same per-file-per-session marker, so a `sed`, a Python rewrite, and a `git checkout` to different content all fire, while a checkout back to the cached content stays silent. The cache is read, never written, leaving it to a concurrent build.
+  - **Watched deps are code only:** a step's script, its Julia include closure, a configured env dep, or a declared dep under `code_roots` or with a source extension, and never a path some step produces. Data inputs stay out, so the pass never re-hashes a large file.
+  - **Before the first build there is no baseline.** No `hashes.json` means the pass returns before building the graph, so a tree that has never run pays nothing.
+- **`task check` warns on an unregistered results artifact.** One `[WARNING]` per file a task's `## Results` links that looks generated and that no active step declares as an out and no step reads as a dep ([_repro_signals.py:251](../../../../skills/task-tree/scripts/_repro_signals.py#L251), wired at [task_check.py:243](../../../../skills/task-tree/scripts/task_check.py#L243); contract at [task-file-contract.md §Validation](../../../../skills/task-tree/references/task-file-contract.md#validation)).
+- **The `implemented` reminder follows the transition, not the session.** [`_implemented_coverage_reminder`](../../../../skills/task-tree/scripts/task_hook.py#L414) fires once when a leaf's `task.md` edit leaves it at `implemented` with such files, and its marker is cleared whenever the task is not `implemented`, so a task that leaves and returns reminds again. Cheap gates — status, leaf, a link in `## Results` — run before any graph build.
+
+### The generated-file rule, and what it misses
+
+A linked file counts as generated when its extension is a data or exhibit format (`.arrow .csv .dta .feather .jld2 .parquet .rds .tsv`, `.eps .jpeg .jpg .pdf .png .svg`), or when it is a `.tex` inside a directory some step already writes into ([_repro_signals.py:25-33](../../../../skills/task-tree/scripts/_repro_signals.py#L25-L33)). Silence otherwise: a tree with no `## Reproduction` section and no `code_roots`, a link to prose or source, a path with a `tmp`/`temp`/`scratch`/`cache`/`sandbox`/`node_modules` segment or a dotted one, and a file not on disk.
+
+Known misses, all deliberate and all in the quiet direction:
+
+- A generated `.txt`, `.json`, `.html`, or `.log` — too often config, notes, or a checked-in fixture to warn on.
+- A generated `.tex` written outside every out directory, and any generated file in a scratch-named directory.
+- An out still carrying an unresolved `${VAR}` is matched on its literal tail (`${OUT}/fig.png` covers `out/fig.png`), so the hook's unresolved graph cannot manufacture a false positive.
+
+### Measured cost
+
+Measured on superRA's own tree (about 150 tasks, 8 steps, 42 watched code deps) on a Mac Studio M1 Max, in-process across 5 calls:
+
+| Path | Cost |
+|---|---:|
+| Bash pass, no hash cache yet | 0.0 ms |
+| Bash pass, cache present, nothing changed | 27.3 ms |
+| — of which the graph build | 27.0 ms |
+| — of which the stat pass over 42 deps | 0.3 ms |
+| Whole hook subprocess on `ls`, cache present | 80.3 ms (49 ms before) |
+
+The graph build dominates; the detection itself is a stat per watched dep. A project that has never run a build pays nothing, since the pass exits before the build.
+
+### False positives on a real tree
+
+`superra task check --category reproduction` on this checkout reports 11 coverage warnings across 3 tasks, and each names a real unregistered exhibit:
+
+- 4 dashboard screenshots under [04-dashboard-view/attachments](../../04-dashboard-view/task.md) — captured by hand; the registered screenshot producer in its child task writes a different directory.
+- 6 figures and a `.csv` across two `showcase-analysis` tasks, a demo tree whose tasks carry no `## Reproduction` section at all.
+
+Nothing fired on prose links, on `.tex` beside the manuscript, on boundary inputs, or on the many tasks whose results link only code and task files.
+
+### Validation
+
+[test_task_tree.py](../../../../skills/task-tree/scripts/test_task_tree.py) gains 19 tests: the fan-out listing and its upstream exclusion, a Bash-made edit detected by content, a restored file and a cacheless tree staying silent, the Bash cost measurement, the `implemented` reminder with its once-per-transition marker and its round-trip re-fire, and coverage fixtures for a covered out, a boundary dep, a `.tex` inside and outside an out directory, a `.md`, a scratch path, a missing file, a `${VAR}` out under both resolution modes, and a tree without config. Full script suite: 1206 passed, 10 skipped. The registered check steps my edits stale were run by their own commands and pass — 195 cases for `task-scoped-builds-check` (which covers `reviewed-baseline-regression-check`'s files), 54 for `dashboard-dag-design-interaction-check`, and the `unified-dependency-workflow-check` verifier. Their stamps were not rebuilt here, since `repro build` would rewrite the committed `pytask.lock` from a worktree the orchestrator has yet to merge. The new `agent-signals-check` step below registers this task's own suite and was run by the same command.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: agent-signals-check
+    kind: check
+    cmd: uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_tree.py -q -p no:cacheprovider
+    deps:
+      - skills/task-tree/scripts/test_task_tree.py
+      - skills/task-tree/scripts/_repro_signals.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_check.py
+```
