@@ -1,6 +1,6 @@
 ---
 title: "Replace tiers with task targets and define step retirement"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -42,7 +42,10 @@ The implementation was verified by the implementing agent; no independent review
 Quick tier, correctness focus, over `77ff41bc..d109843c`.
 
 1. **[BLOCKING]** [commands.md:113](../../../../skills/task-tree/references/commands.md#L113) still documents the removed `task tree --tier` filter: "`task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge." The flag is gone from [cli.py](../../../../skills/task-tree/scripts/cli.py) and [task_query.py](../../../../skills/task-tree/scripts/task_query.py), so `superra task tree --tier required` now exits with `unrecognized arguments: --tier required`, and no badge is printed. Six lines above, [commands.md:107](../../../../skills/task-tree/references/commands.md#L107) already states the retirement, so the file contradicts itself. Delete the stale sentence and, if the `task tree` retirement needs saying, fold it into line 107.
+   → implemented: deleted the sentence; `commands.md` no longer names the filter or badge.
 
 2. **[ADVISORY]** [task-file-contract.md:192](../../../../skills/task-tree/references/task-file-contract.md#L192) ends with "Tier names do not enter the lock's step-spec hash." Nothing in the schema declares a tier any more, so the sentence explains an invalidation rule for a key the same file documents only as retired at [line 218](../../../../skills/task-tree/references/task-file-contract.md#L218). Drop it.
+   → implemented: deleted the dangling sentence.
 
 3. **[ADVISORY]** [RELEASE-NOTES.md:15](../../../../RELEASE-NOTES.md#L15) says `--tier`, `repro tier`, "and the `task tree --tier` filter and badge are retired with actionable errors". The first two exit 2 naming the replacement; `task tree --tier` gets argparse's generic `unrecognized arguments`. Either say so or name the replacement in that path too.
+   → implemented: the note now says the `task tree --tier` filter and badge are removed, and reserves "actionable errors" for `--tier` and `repro tier`.
