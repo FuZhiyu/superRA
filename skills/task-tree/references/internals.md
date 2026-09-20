@@ -286,7 +286,7 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 
 ## Reviewed reuse execution
 
-[_repro_acceptance.py](../scripts/_repro_acceptance.py) owns atomic acceptance records, verified successful receipts, exact-state preview tokens, and dependency impact. Status composes acceptance with the upstream cascade in topological order: valid reuse cuts upstream uncertainty, while a downstream step's own changes remain stale. Public step JSON exposes nullable `acceptance` details without adding a status enum.
+[_repro_acceptance.py](../scripts/_repro_acceptance.py) owns atomic acceptance records, verified successful receipts, exact-state preview tokens, and dependency impact. Current reviewed baselines can precede the first runner execution and bind saved-input bytes outside scope. Status applies acceptance before propagating selected upstream uncertainty; legacy records retain full-chain validation. Public step JSON exposes nullable `acceptance` details without adding a status enum.
 
 [_repro_hooks.py](../scripts/_repro_hooks.py) is loaded only by the pinned pytask 0.6 bridge. Its setup hook checks failure/dry-run cascade markers, force scope, declarations, and current acceptance state before raising `SkippedUnchanged`. That outcome preserves successful lock entries and allows eligible descendants to run. Ordinary skip markers and no-op task bodies have different engine semantics and are not used for reuse. Serial and thread workers share setup and teardown hooks.
 
