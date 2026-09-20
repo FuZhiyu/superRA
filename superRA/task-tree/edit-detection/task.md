@@ -9,8 +9,9 @@ depends_on: []
 Make the task hook's PostToolUse behaviors fire for a file edit made through any tool. Agents now write most edits as Bash Python heredocs, which the hook's command-text parsing cannot see, so task.md reconcile, the Markdown integrity check, the communicate reminder, and the reproduction reminder silently skip those edits.
 
 - **One detector, no command parsing.** After every `Bash`, `Edit`, `Write`, and `apply_patch` call, the hook compares the watched files against a per-session rolling baseline and hands the changed paths to the existing consumers. A file counts as changed only when its content hash differs. Paths the tool call itself supplies are always included, so the call that seeds the baseline loses nothing.
-- **Watched set.** Every `.md` under a task root, plus the literal-path scripts, deps, and Julia include closures of registered reproduction steps. Markdown outside a task root is watched only through the tool-supplied path.
-- **`code_roots` is retired.** Delete the config key, its parser support, the hook branch, the contract row, and their tests; v0.5 is unreleased, so no compatibility surface stays. Missing-registration signals belong to [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md).
+- **Watched set.** Every `.md` and common script file under a task root, plus the literal-path scripts, deps, and Julia include closures of registered reproduction steps. Markdown outside a task root is watched only through the tool-supplied path.
+- **An unregistered script under a task root draws the reproduction reminder** with no owning step named, in trees that carry reproduction config: a retained task companion is always registered.
+- **`code_roots` is retired.** The hook is its only consumer. Delete the config key, its parser support, the hook branch, the contract row, and their tests; v0.5 is unreleased, so no compatibility surface stays. Other missing-registration signals belong to [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md).
 - **A step's out draws no reproduction reminder**, even when another step reads it as a dep: a rerun rewrites it.
 - **Messages state what changed, not who changed it.** A change can come from the researcher, another agent, or a sync, and surfaces at the next tool call.
 - **Approval check after the write is advisory.** A changed `task.md` that carries `status: approved` with blocking review notes draws non-blocking feedback naming the task. The PreToolUse approval and communicate gates stay as they are.
@@ -22,6 +23,7 @@ Make the task hook's PostToolUse behaviors fire for a file edit made through any
     - a `task.md` edit reconciles and propagates status;
     - a task-root `.md` edit draws integrity feedback;
     - a registered script edit draws the reminder once per session;
+    - an unregistered script under a task's `attachments/` draws the reminder with no owning step, and stays silent in a tree without reproduction config;
     - a rewritten out that another step reads is silent;
     - a touch with unchanged content is silent;
     - the first event of a session seeds the baseline and still handles its tool-supplied path;
@@ -38,6 +40,7 @@ Make the task hook's PostToolUse behaviors fire for a file edit made through any
   - [task_hook.py:671](../../../skills/task-tree/scripts/task_hook.py#L671) `_handle_edit_write` shows the consumer sequence; every consumer already takes a `file_paths` list.
   - [task_hook.py:204](../../../skills/task-tree/scripts/task_hook.py#L204) `_reproduction_reminder` holds the `code_roots` branch to delete.
 - **Suggested detector:** [HashCache](../../../skills/task-tree/scripts/_repro_state.py#L126) already persists `(size, mtime_ns, sha256)` per path, costs one `stat` on a hit, and survives Dropbox. A per-session instance is the baseline: a changed file is one whose hash differs from the cached entry before the call refreshes it.
+- **Which extensions count as a common script is the open design call:** start from `.jl`, `.py`, `.R`, `.do`, `.sh`, `.ipynb`, `.sql`, and `.m`, and report the rule chosen.
 - **Measured on this repository:** the warm hook takes about 60 ms per call, about 40 ms of it `uv` plus interpreter start; a cold first call took 245 ms. Statting the 167 files under `superRA/` takes 0.9 ms.
 - **Not pursued:** a git-based diff cannot tell a new edit from an already-dirty file; a baseline refresh on UserPromptSubmit and a Stop sweep add hook wiring for reminders that are advisory anyway. Revisit the refresh only if reports of researcher edits prove noisy.
 - **Stale references to sweep with the `code_roots` deletion:** [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md), [internals.md](../../../skills/task-tree/references/internals.md), the "code roots" mention in the [reproducibility](../../reproducibility/task.md) context, and [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md) results.
