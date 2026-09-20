@@ -434,8 +434,12 @@ def format_cost(names: list[str], paths: RunnerPaths) -> str:
         else:
             total += duration
             lines.append(f"  {name:<{width}}  {duration:.1f}s")
+    known = len(names) - unknown
     tail = f", plus {unknown} step(s) with no recorded duration" if unknown else ""
-    lines.append(f"Last recorded cost: {total:.1f}s{tail}.")
+    lines.append(
+        f"Last recorded cost: {total:.1f}s{tail}." if known
+        else f"No step has a recorded duration; {unknown} step(s) never ran."
+    )
     lines.append(
         "Alternatives: `superra repro explain <task>#<step>` for why a step is stale; "
         "`superra repro accept <target> --reason ...` to record the current results "
@@ -471,6 +475,7 @@ def format_accept(result: dict) -> str:
 
 MODEL = """\
 Steps belong to tasks: a task's `## Reproduction` section registers its steps.
+pytask 0.6 executes them, generated in memory — a project holds no task_*.py.
 A step is fresh when the content hashes of its deps, definition, and outs match
 its last successful build or its reviewed acceptance.
 Targets scope every command: a task path selects its own and descendant steps,
@@ -518,7 +523,7 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
     build.add_argument("--dry-run", action="store_true", help="Report what would run and its last recorded cost")
 
-    status = _sub(sub, "status", "Report each selected step's freshness and role", [
+    status = _sub(sub, "status", "Report each selected step's freshness and outside readers", [
         "superra repro status .",
         "superra repro status 02-merge '02-merge#check-panel'",
         "superra repro status . --upstream --json",

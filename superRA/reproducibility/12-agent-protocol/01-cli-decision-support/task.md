@@ -1,6 +1,6 @@
 ---
 title: "CLI Decision Support: One-Shot Accept, Cost and Role in Output, No Legacy Surface"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -28,9 +28,9 @@ Make `superra repro` cheap to use correctly: an agent facing a stale step sees w
 ### The four decision-support changes
 
 - **One-shot accept is the default.** `repro accept <targets> --reason '…'` previews, revalidates, and writes the ledger inside one `mutation_lock`, then prints the steps it covered and what changed under each ([_repro_acceptance.py:372](../../../../skills/task-tree/scripts/_repro_acceptance.py#L372), [repro_run.py:447](../../../../skills/task-tree/scripts/repro_run.py#L447)). `--dry-run` previews and prints a token; `--apply <token>` accepts exactly that preview. Every guard the split form ran — source signature, run outcome, evidence bytes, re-preview token equality — runs inside the one-shot call.
-- **`build --dry-run` reports cost.** Steps pytask marks `WouldBeExecuted` are listed with their last recorded duration, `unknown` when never run, then the known total and the `explain` / `accept` alternatives ([repro_run.py:421](../../../../skills/task-tree/scripts/repro_run.py#L421)). A fully fresh scope prints `Nothing to execute`.
-- **Role sits in `status` and `explain`.** A step is `shared` when a step in another task reads its outs and `task-local` when none does — the significance input the [group decisions](../task.md#decisions-researcher-2026-09-20) infer from. `status` carries it as a column, `explain` names the consuming `task#step`s, and status JSON exposes `external_consumers` ([_repro_state.py:565](../../../../skills/task-tree/scripts/_repro_state.py#L565)).
-- **`--help` teaches.** `superra repro --help` states the model in five lines; each subcommand carries a purpose line and worked examples.
+- **`build --dry-run` reports cost.** Steps pytask marks `WouldBeExecuted` are listed with their last recorded duration, `unknown` when never run, then the `explain` / `accept` alternatives ([repro_run.py:421](../../../../skills/task-tree/scripts/repro_run.py#L421)). The total prints only when at least one duration is known, so an all-unknown scope reads `No step has a recorded duration` rather than a `0.0s` that looks free. A fully fresh scope prints `Nothing to execute`.
+- **Outside readers are a fact in `status` and `explain`, not a verdict.** `status` prints `outside readers: N` — how many steps in other tasks read the step's outs — `explain` names them or states that none does, and status JSON exposes `external_consumers` ([_repro_state.py:565](../../../../skills/task-tree/scripts/_repro_state.py#L565)). The count is one input to the significance inference in the [group decisions](../task.md#decisions-researcher-2026-09-20); the CLI never labels a step task-local, because a selected check, a maintained-path producer, and an out a document cites are all significant at zero outside readers.
+- **`--help` teaches.** `superra repro --help` states the model in six lines, naming pytask 0.6 as the engine; each subcommand carries a purpose line and worked examples.
 
 ### Legacy deleted
 
@@ -47,17 +47,21 @@ The fix is deleting the `tier:` line from each section — `git grep -l '^tier:'
 
 ### Validation
 
-Full task-tree suite passes. New fixtures: one-shot accept success with its printed output, concurrent declaration edit rejected, never-run check rejected, dry-run cost with known and unknown durations, and the outside-consumer flag across JSON, `status`, and `explain` ([test_repro_acceptance.py](../../../../skills/task-tree/scripts/test_repro_acceptance.py), [test_repro_runner.py](../../../../skills/task-tree/scripts/test_repro_runner.py)).
+Full task-tree suite passes. New fixtures: one-shot accept success with its printed output, concurrent declaration edit rejected, never-run check rejected, dry-run cost with known durations and with none at all, and the outside-reader count across JSON, `status`, and `explain` — the `status` case also asserts neither verdict word reaches the output ([test_repro_acceptance.py](../../../../skills/task-tree/scripts/test_repro_acceptance.py), [test_repro_runner.py](../../../../skills/task-tree/scripts/test_repro_runner.py)).
 
 The dashboard UI paragraph moved from commands.md §Reproduction into [internals.md §Dashboard](../../../../skills/task-tree/references/internals.md), merged with the Task DAG navigator paragraph that already stated its overlapping half.
 
-Three `reproducibility` files named a bare `<step>` placeholder or the token-only acceptance recipe; those are corrected to `'<task>#<step>'` and to the one-shot form. `03-skill-redesign` owns any further rewrite there.
+Four docs outside the two the objective named held stale invocations — three `reproducibility` files with a bare `<step>` placeholder or the token-only acceptance recipe, and the [CLI-commands docs page](../../../../docs/site/04-utility-skills/01-task-tree/02-cli-commands/task.md). All are corrected to `'<task>#<step>'` and the one-shot form. `03-skill-redesign` owns any further rewrite of the skill.
 
 ## Review Notes
 
 Tier: thorough (ran the four reproduction test files, 261 passed; exercised `status .`, `build --dry-run`, and the bare-step rejection on this tree). Focus: correctness. Reviewer: main agent.
 
 1. `[BLOCKING]` **`status` and `explain` print a significance verdict the fact does not support.** [_repro_state.py:843](../../../../skills/task-tree/scripts/_repro_state.py#L843) labels every step without a cross-task consumer `task-local`, and [_repro_state.py:912](../../../../skills/task-tree/scripts/_repro_state.py#L912) repeats it in `explain`. On this tree `status .` labels all five `kind: check` steps `task-local`. The [group decisions](../task.md#decisions-researcher-2026-09-20) make a selected check, a maintained-path producer, and an out a document cites significant whatever their step consumers, and the stale rule leaves a task-local step stale, so the label steers agents to leave protection checks and final exhibits stale. Fix: report the fact only — the outside consumers, or that no step outside the task reads the outs — and drop the `shared` / `task-local` words from both outputs, their help text, and [commands.md](../../../../skills/task-tree/references/commands.md#reproduction). The JSON `external_consumers` field stands.
+   → implemented: [_repro_state.py:844](../../../../skills/task-tree/scripts/_repro_state.py#L844) now prints `outside readers: N` and [_repro_state.py:913](../../../../skills/task-tree/scripts/_repro_state.py#L913) names the consumers or states that none does; the verdict words are gone from both outputs, the `status` help line, the [`external_consumers` docstring](../../../../skills/task-tree/scripts/_repro_state.py#L565), and [commands.md:111](../../../../skills/task-tree/references/commands.md#reproduction), which now says the count is never the judgment.
 2. `[ADVISORY]` `superra repro --help` does not name the engine. The researcher decided after this task was written that agents are told the engine is pytask, since they already know how pytask works; one line in the model text covers it. [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)
+   → implemented: [repro_run.py:478](../../../../skills/task-tree/scripts/repro_run.py#L478) adds "pytask 0.6 executes them, generated in memory — a project holds no task_*.py." to the model text.
 3. `[ADVISORY]` With no known duration the dry-run prints `Last recorded cost: 0.0s, plus 2 step(s) with no recorded duration`; a zero total reads as free. Print the total only when at least one duration is known. [repro_run.py:421](../../../../skills/task-tree/scripts/repro_run.py#L421)
+   → implemented: [repro_run.py:437](../../../../skills/task-tree/scripts/repro_run.py#L437) prints the total only with a known duration and otherwise `No step has a recorded duration; N step(s) never ran.`
 4. `[ADVISORY]` The docs site still shows bare step names and a preview-only accept: [02-cli-commands/task.md:54-55](../../../../docs/site/04-utility-skills/01-task-tree/02-cli-commands/task.md#L54-L55).
+   → implemented: [02-cli-commands/task.md:54-56](../../../../docs/site/04-utility-skills/01-task-tree/02-cli-commands/task.md#L54-L56) uses `'02-merge#build-panel'` and shows the one-shot accept beside its `--dry-run` preview.

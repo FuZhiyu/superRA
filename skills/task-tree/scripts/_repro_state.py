@@ -563,10 +563,11 @@ def compute_status(
 
 
 def external_consumers(graph: Graph, step: Step) -> list[str]:
-    """Steps in other tasks that read *step*'s outs — the significance input.
+    """Steps in other tasks that read *step*'s outs.
 
-    An empty list means the outs stay inside the owning task, which is what
-    lets a stale step be resolved as task-local.
+    One input to a significance judgment, never the verdict: a selected check,
+    a maintained-path producer, and an out a document cites are all significant
+    with an empty list here.
     """
     refs = set()
     for src, dst, _ in graph.step_edges:
@@ -840,10 +841,10 @@ def format_status(report: StatusReport) -> str:
     lines = []
     for entry in sorted(entries, key=lambda e: e.step.name):
         duration = f"  {entry.duration:.1f}s" if entry.duration else ""
-        role = "shared" if entry.external_consumers else "task-local"
+        readers = f"outside readers: {len(entry.external_consumers)}"
         lines.append(
             f"{_MARKS[entry.status]} {entry.step.name:<{width}}  "
-            f"{entry.status:<8}  {role:<10}  {entry.reason}{duration}"
+            f"{entry.status:<8}  {readers:<19}  {entry.reason}{duration}"
         )
     counts = ", ".join(
         f"{sum(1 for e in entries if e.status == name)} {name}"
@@ -909,10 +910,10 @@ def format_explain(report: StatusReport, step_name: str) -> str:
             lines.append(f"    {name}: {parent.status if parent else 'unknown'}")
     owner = step.task_path or "(root)"
     if entry.external_consumers:
-        lines.append(f"  shared — outs read outside {owner}:")
+        lines.append(f"  outs read outside {owner}:")
         lines.extend(f"    {ref}" for ref in entry.external_consumers)
     else:
-        lines.append(f"  task-local — no step outside {owner} reads its outs")
+        lines.append(f"  no step outside {owner} reads its outs")
     lines.append("  deps:")
     lines.extend(f"    {d.logical}" for d in step.deps)
     lines.append("  outs:")
