@@ -36,7 +36,6 @@ CATEGORY = "reproduction"
 STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("steps",)
-RETIRED_SECTION_KEYS = ("tier",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
 CONFIG_KEYS = ("vars", "runners", "env_deps", "code_roots")
 
@@ -1182,14 +1181,7 @@ def build_graph(
             )
             continue
         for key in document:
-            if key in RETIRED_SECTION_KEYS:
-                _finding(
-                    task.path,
-                    "warning",
-                    f"## {REPRO_SECTION}: {key!r} is retired and ignored; remove the key "
-                    "and name task targets instead",
-                )
-            elif key not in SECTION_KEYS:
+            if key not in SECTION_KEYS:
                 _finding(
                     task.path,
                     "error",

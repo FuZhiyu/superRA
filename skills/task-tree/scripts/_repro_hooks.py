@@ -45,7 +45,6 @@ def pytask_execute_task_setup(session, task):
         return
     entry = compute_status(
         graph, paths, targets=[f'{step.task_path or "."}#{step.name}'],
-        upstream=ledger['steps'][step.name].get('basis') != 'reviewed',
         cache=task.attributes['superra_cache'], acceptance_ledger=ledger,
         completed_locks=session.config.get('_superra_completed', {}),
     ).entry(step.name)

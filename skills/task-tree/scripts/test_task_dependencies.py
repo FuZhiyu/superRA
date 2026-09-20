@@ -92,7 +92,7 @@ def test_cycles_cannot_be_hidden_by_frontier_or_scoped_build(tmp_path, kind):
         require_valid(graph(root))
     import importlib.util
     if importlib.util.find_spec("pytask"):
-        built = run(root, "repro", "build", "a", "--dry-run")
+        built = run(root, "repro", "build", ".#a", "--dry-run")
         assert built.returncode == 1 and "cycle" in built.stderr
 
 
@@ -278,7 +278,7 @@ def test_built_parent_keeps_freshness_when_child_is_added(tmp_path):
     task(root, "", steps=[("setup", [], ["setup.txt"])])
     parent = root / "task.md"
     parent.write_text(parent.read_text().replace("cmd: echo setup", "cmd: printf seed > setup.txt"))
-    first = run(root, "repro", "build", "setup")
+    first = run(root, "repro", "build", ".#setup")
     assert first.returncode == 0, first.stdout + first.stderr
     from _repro_state import read_run_record, runner_paths
     paths = runner_paths(tmp_path)
@@ -288,11 +288,11 @@ def test_built_parent_keeps_freshness_when_child_is_added(tmp_path):
     task(root, "child", steps=[("child", ["setup.txt"], ["child.txt"])])
     child = root / "child/task.md"
     child.write_text(child.read_text().replace("cmd: echo child", "cmd: cat setup.txt > child.txt"))
-    status = run(root, "repro", "status", "setup", "--json")
+    status = run(root, "repro", "status", ".#setup", "--json")
     assert status.returncode == 0, status.stderr
     assert json.loads(status.stdout)["steps"][0]["status"] == "fresh"
     assert [row["path"] for row in json.loads(run(root, "task", "frontier", "--json").stdout)] == ["child"]
-    built = run(root, "repro", "build", "report", "--upstream")
+    built = run(root, "repro", "build", ".#report", "--upstream")
     assert built.returncode == 0, built.stdout + built.stderr
     assert (tmp_path / "report.txt").read_text() == "seed"
     assert read_run_record(paths, "setup") == setup_record

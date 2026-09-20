@@ -28,14 +28,14 @@ Sidecar tracking (contract §Reproduction Section) is for one measurably slow in
 
 Task-scoped build/status assess saved inputs; `--upstream` includes their producers. A locally fresh result can remain stale in the full graph. Runtime declaration guards cover the frozen selected commands, paths, and relevant output ownership; unrelated tree edits do not invalidate running work. A relevant edit or changed input during execution requires retrying affected work.
 
-`superra repro impact <path...>` identifies affected consumers and why the file is tracked; `superra repro explain <step> --json` separates own changes from upstream uncertainty and exposes verified baseline diffs when available. Impact predicts invalidation, not changed output values.
+`superra repro impact <path...>` identifies affected consumers and why the file is tracked; `superra repro explain '<task>#<step>' --json` separates own changes from upstream uncertainty and exposes verified baseline diffs when available. Impact predicts invalidation, not changed output values.
 
 | It names | Read it as |
 |---|---|
 | An out you did not edit | Check concurrent writers, synchronization, and path routing; test determinism by comparing repeated outputs. |
 | A dep under a directory you declared | Check whether the changed file is an actual input; narrow the directory when it includes unrelated files. |
 | A file you did not know the step read | The include closure or `env_deps` reached it — correct, if the script really reads it. |
-| An upstream step is stale | Follow that producer with `superra repro explain <producer>`. |
+| An upstream step is stale | Follow that producer with `superra repro explain '<producer-task>#<producer-step>'`. |
 | `external` on a generated file | Confirm the boundary: retrieve an agreed saved input, or register an in-scope producer. |
 
 ## Reviewed acceptance
@@ -46,4 +46,4 @@ Task-scoped build/status assess saved inputs; `--upstream` includes their produc
 
 **Execute unresolved work.** Unreviewed results, result-affecting changes not yet executed, and changed check assertions require running the affected producer/check. Acceptance neither executes a check nor supplies a missing successful check stamp.
 
-**Preview the exact selection, then apply its token**, using [the acceptance commands](../../task-tree/references/commands.md#reviewed-acceptance). Inputs outside the selection are saved boundaries; accepting a consumer does not certify its upstream producers.
+**Accept the exact selection in one call**, using [the acceptance commands](../../task-tree/references/commands.md#reviewed-acceptance); split the preview from the apply with `--dry-run` and `--apply <token>` when a separate review step is wanted. Inputs outside the selection are saved boundaries; accepting a consumer does not certify its upstream producers.
