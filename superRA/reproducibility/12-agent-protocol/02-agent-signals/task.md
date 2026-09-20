@@ -1,6 +1,6 @@
 ---
 title: "Advisory Signals: Missing Registration and the Staleness an Edit Causes"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -69,6 +69,16 @@ Nothing fired on prose links, on `.tex` beside the manuscript, on boundary input
 ### Validation
 
 [test_task_tree.py](../../../../skills/task-tree/scripts/test_task_tree.py) gains 19 tests: the fan-out listing and its upstream exclusion, a Bash-made edit detected by content, a restored file and a cacheless tree staying silent, the Bash cost measurement, the `implemented` reminder with its once-per-transition marker and its round-trip re-fire, and coverage fixtures for a covered out, a boundary dep, a `.tex` inside and outside an out directory, a `.md`, a scratch path, a missing file, a `${VAR}` out under both resolution modes, and a tree without config. Full script suite: 1206 passed, 10 skipped. The registered check steps my edits stale were run by their own commands and pass — 195 cases for `task-scoped-builds-check` (which covers `reviewed-baseline-regression-check`'s files), 54 for `dashboard-dag-design-interaction-check`, and the `unified-dependency-workflow-check` verifier. Their stamps were not rebuilt here, since `repro build` would rewrite the committed `pytask.lock` from a worktree the orchestrator has yet to merge. The new `agent-signals-check` step below registers this task's own suite and was run by the same command.
+
+## Review Notes
+
+Tier: quick, with two spot checks. Focus: correctness, scope-fidelity. Reviewer: main agent.
+
+1. `[BLOCKING]` **A directory out or dep rooted in a `${VAR}` does not cover the files inside it, so the `implemented` reminder fires false positives.** [_repro_signals.py:163-165](../../../../skills/task-tree/scripts/_repro_signals.py#L163-L165) accepts only `candidate == tail` or `candidate.endswith("/" + tail)`. Spot check: `_matches("output/estimates/a.csv", "${OUT}/estimates")` and `_matches("output/a.csv", "${OUT}")` both return `False`. The hook builds its graph with `resolve_vars=False` ([task_hook.py:414](../../../../skills/task-tree/scripts/task_hook.py#L414)), and variable-rooted directory outs are the norm in TreasuryGIV, so the Results claim that the unresolved graph "cannot manufacture a false positive" does not hold. Fix: match the tail as a run of whole segments anywhere in the candidate, treat an empty tail as covering, and add fixtures for both cases.
+2. `[BLOCKING]` **Bash-edit detection is no longer this task's.** The researcher revised the objective after dispatch: changed paths now come from the tool-agnostic detector in [edit-detection](../../../task-tree/edit-detection/task.md), and this task "adds no detection of its own". Remove `_reproduction_bash_reminder`, `changed_code_deps`, `code_dep_paths`, `CODE_SUFFIXES`, their tests, the matching [internals.md](../../../../skills/task-tree/references/internals.md) text, and the Bash and cost parts of `## Results`. Keep `_repro_emit` as the shared entry the detector will feed.
+3. `[ADVISORY]` "never run" is wrong for a step with no local run record: an accepted step, a zero-second duration, or a fresh clone. Say "no recorded duration". [_repro_signals.py:82](../../../../skills/task-tree/scripts/_repro_signals.py#L82)
+4. `[ADVISORY]` A legitimately producer-less file warns on every `task check` with no way to acknowledge it: the 4 hand-captured dashboard screenshots are that class, not "real unregistered exhibits".
+5. `[ADVISORY]` `has_reproduction` reads `code_roots` ([_repro_signals.py:248](../../../../skills/task-tree/scripts/_repro_signals.py#L248)), which [edit-detection](../../../task-tree/edit-detection/task.md) retires.
 
 ## Reproduction
 
