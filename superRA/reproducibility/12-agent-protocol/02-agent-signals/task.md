@@ -1,6 +1,6 @@
 ---
 title: "Advisory Signals: Missing Registration and the Staleness an Edit Causes"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -35,6 +35,34 @@ Detection of *which* files changed is not this task's: [`_repro_emit`](../../../
 ### The generated-file rule, and what it misses
 
 A linked file counts as generated when its extension is a data or exhibit format (`.arrow .csv .dta .feather .jld2 .parquet .rds .tsv`, `.eps .jpeg .jpg .pdf .png .svg`), or when it is a `.tex` inside a directory some step already writes into ([_repro_signals.py:22-31](../../../../skills/task-tree/scripts/_repro_signals.py#L22-L31)). Silence otherwise: a tree with no `## Reproduction` section and no `code_roots`, a link to prose or source, a path with a `tmp`/`temp`/`scratch`/`cache`/`sandbox`/`node_modules` segment or a dotted one, and a file not on disk.
+
+Known misses, all deliberate and all in the quiet direction:
+
+- A generated `.txt`, `.json`, `.html`, or `.log` — too often config, notes, or a checked-in fixture to warn on.
+- A generated `.tex` written outside every out directory, and any generated file in a scratch-named directory.
+- An out or dep still carrying an unresolved `${VAR}` is matched on its literal tail, found as a run of whole path segments ([_repro_signals.py:94-114](../../../../skills/task-tree/scripts/_repro_signals.py#L94-L114)): `${OUT}/estimates` covers `output/estimates/alpha.csv`, and a declaration that is only a variable covers everything. The match is deliberately loose in the covering direction, so the hook's unresolved graph over-suppresses rather than warning on a registered out.
+
+### What fires on a real tree
+
+`superra task check --category reproduction` on this checkout reports 11 coverage warnings across 3 tasks, each naming a retained exhibit with no producer step:
+
+- 6 figures and a `.csv` across two `showcase-analysis` tasks, a demo tree whose tasks carry no `## Reproduction` section at all — the case the signal is for.
+- 4 dashboard screenshots under [04-dashboard-view/attachments](../../04-dashboard-view/task.md), captured by hand. These are the legitimately producer-less class: correct by the rule, and repeated on every `task check` with no way to acknowledge them (review note 4, deferred).
+
+Nothing fired on prose links, on `.tex` beside the manuscript, on boundary inputs, or on the many tasks whose results link only code and task files.
+
+### Validation
+
+[test_task_tree.py](../../../../skills/task-tree/scripts/test_task_tree.py) gains 21 cases: the fan-out listing and its upstream exclusion; the `implemented` reminder with its once-per-transition marker and its round-trip re-fire; `${VAR}` coverage for a var-rooted file, a var-rooted directory, a bare variable root, a tail deeper in the path, and a non-matching path, under both resolution modes; and coverage fixtures for a covered out, a boundary dep, a `.tex` inside and outside an out directory, a `.md`, a scratch path, a missing file, and a tree without config. Full script suite: 1208 passed, 10 skipped. The registered check steps my edits stale were run by their own commands and pass — 195 cases for `task-scoped-builds-check` (which covers `reviewed-baseline-regression-check`'s files), 54 for `dashboard-dag-design-interaction-check`, and the `unified-dependency-workflow-check` verifier. Their stamps were not rebuilt here, since `repro build` would rewrite the committed `pytask.lock` from a worktree the orchestrator has yet to merge. The new `agent-signals-check` step below registers this task's own suite and was run by the same command.
+
+## Review Notes
+
+Tier: quick, with two spot checks; narrow re-review. Focus: correctness, scope-fidelity. Reviewer: main agent. Deferred by the orchestrator:
+
+1. `[ADVISORY]` A legitimately producer-less file warns on every `task check` with no way to acknowledge it: the 4 hand-captured dashboard screenshots are that class.
+2. `[ADVISORY]` `has_reproduction` reads `code_roots`, which [edit-detection](../../../task-tree/edit-detection/task.md) retires; that task's sweep covers it.
+
+## Reproduction` section and no `code_roots`, a link to prose or source, a path with a `tmp`/`temp`/`scratch`/`cache`/`sandbox`/`node_modules` segment or a dotted one, and a file not on disk.
 
 Known misses, all deliberate and all in the quiet direction:
 
