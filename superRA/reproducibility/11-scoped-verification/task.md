@@ -18,10 +18,6 @@ Make reproduction verification cover the claimed result and its selected checks,
 - **Validation:** an unbuilt target fails scoped status; unrelated stale work does not block it; selected protection checks block completion on failure. Exercise task-based CLI/dashboard selection, migration from tiers, the step lifecycle, and pilot cases for unchanged inputs, timestamps, helpers, missing/identical/corrupt/restored outputs. Undeclared environment changes skip all steps; explicit `env_deps` retain invalidation.
 - **Force validation:** test fresh targets, stale upstream inputs, task/step unions and explicit producer expansion, complete reruns, and dry-run scope/evidence preservation against the task-scoped build contract.
 
-## Revision Notes
-
-The researcher selected tier removal and asked for an explicit step lifecycle; [task targets and lifecycle](task-targets-and-lifecycle/task.md) implements both.
-
 ## Details
 
 The audience is researchers choosing what to rebuild and contributors implementing that contract. The accepted design keeps the existing content-based runner and task-local declarations.
