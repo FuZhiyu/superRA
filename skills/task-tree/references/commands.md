@@ -110,7 +110,7 @@ Inputs from out-of-scope producers use existing files without requiring a succes
 
 Status JSON records `targets`, `upstream`, and `boundary_inputs` (paths, producer, fingerprints, provenance, consumers). Step entries retain full-scope `status`/`reason` and expose `local_status`/`local_reason` before upstream staleness propagation. Default status certifies only selected work against saved inputs; `status --upstream` assesses the chain. The task reader and dashboard retain global freshness while exposing local evidence.
 
-`task read <path>` shows effective prerequisite tasks, including inherited group barriers, and a registered task's owned-step states. Its JSON includes the dependency snapshot and global findings; no pytask is required. `task frontier --json` additionally exposes actionable parent-owned steps with `kind: own-work`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity. `task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge.
+`task read <path>` shows effective prerequisite tasks, including inherited group barriers, and a registered task's owned-step states. Its JSON includes the dependency snapshot and global findings; no pytask is required. `task frontier --json` additionally exposes actionable parent-owned steps with `kind: own-work`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity.
 
 | State | Meaning |
 |---|---|
