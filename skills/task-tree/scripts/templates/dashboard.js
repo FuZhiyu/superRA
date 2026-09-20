@@ -1110,7 +1110,11 @@ function reproSearch(steps, query) {
 }
 function reproHash() {
   var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
-  return '#/'+activePath+'?'+(activeArtifactPath?'attachment='+encodeURIComponent(activeArtifactPath)+'&':'')+'repro='+encodeURIComponent(JSON.stringify(state));
+  var f=_workspaceFilters||{};
+  /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null;
+  var query=(activeArtifactPath?['attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
+  return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
