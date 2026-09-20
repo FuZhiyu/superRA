@@ -1,6 +1,6 @@
 ---
 title: "Agent Protocol: Teach Registration, Graph Design, and Rerun-or-Accept Judgment"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 

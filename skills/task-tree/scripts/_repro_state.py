@@ -429,6 +429,7 @@ class StepStatus:
     local_status: str | None = None
     local_reason: str | None = None
     boundary_inputs: list[dict] = field(default_factory=list)
+    external_consumers: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -441,6 +442,7 @@ class StepStatus:
             "local_status": self.local_status or self.status,
             "local_reason": self.local_reason or self.reason,
             "boundary_inputs": self.boundary_inputs,
+            "external_consumers": self.external_consumers,
             "changes": [c.to_dict() for c in self.changes],
             "duration": self.duration,
             "last_run": self.last_run,
@@ -543,11 +545,11 @@ def compute_status(
     for step in graph.steps:
         if step.name not in needed:
             continue
-        report.entries.append(
-            _classify(
-                step, lock.get(step.name), paths, cache, outputs, missing_external
-            )
+        entry = _classify(
+            step, lock.get(step.name), paths, cache, outputs, missing_external
         )
+        entry.external_consumers = external_consumers(graph, step)
+        report.entries.append(entry)
     from _repro_scope import boundary_inputs, check_boundary_receipt
     report.boundary_inputs = boundary_inputs(graph, names, paths, cache, lock)
     for entry in report.entries:
@@ -558,6 +560,23 @@ def compute_status(
     apply_to_status(report, paths, cache, acceptance_ledger, lock)
     cache.flush()
     return report
+
+
+def external_consumers(graph: Graph, step: Step) -> list[str]:
+    """Steps in other tasks that read *step*'s outs.
+
+    One input to a significance judgment, never the verdict: a selected check,
+    a maintained-path producer, and an out a document cites are all significant
+    with an empty list here.
+    """
+    refs = set()
+    for src, dst, _ in graph.step_edges:
+        if src != step.name:
+            continue
+        consumer = graph.step(dst)
+        if consumer is not None and consumer.task_path != step.task_path:
+            refs.add(f"{consumer.task_path or '.'}#{consumer.name}")
+    return sorted(refs)
 
 
 def _classify(
@@ -738,9 +757,10 @@ def select_steps(
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
-    A target is a step name or a task path (that task and its descendants).
-    Qualified task#step targets name one step. Ancestors are opt-in.
-    No targets selects every active step; the CLI requires explicit targets.
+    A target is a task path (that task and its descendants) or a qualified
+    ``task#step``. A bare step name is rejected with its qualified form.
+    Ancestors are opt-in. No targets selects every active step; the CLI
+    requires explicit targets.
     """
     targets = [t for t in targets if t]
     unknown: list[str] = []
@@ -767,16 +787,17 @@ def select_steps(
                 graph.dependencies and task_path in graph.dependencies.tasks
                 and task_path not in graph.dependencies.archived
             )
-            step = graph.step(target)
-            if step is not None and task_exists:
-                raise ReproStateError(f"ambiguous target {target!r}: use './{task_path}' for the task or '{step.task_path or '.'}#{step.name}' for the step")
             if owned:
                 selected.update(owned)
-            elif step is not None:
-                selected.add(step.name)
             elif task_exists:
                 raise ReproStateError(f"task {target!r} selects no steps; no result verified")
             else:
+                step = graph.step(target)
+                if step is not None:
+                    raise ReproStateError(
+                        f"{target!r} is a step name, not a target; select it as "
+                        f"'{step.task_path or '.'}#{step.name}'"
+                    )
                 unknown.append(target)
     else:
         selected = {s.name for s in graph.steps}
@@ -820,9 +841,10 @@ def format_status(report: StatusReport) -> str:
     lines = []
     for entry in sorted(entries, key=lambda e: e.step.name):
         duration = f"  {entry.duration:.1f}s" if entry.duration else ""
+        readers = f"outside readers: {len(entry.external_consumers)}"
         lines.append(
             f"{_MARKS[entry.status]} {entry.step.name:<{width}}  "
-            f"{entry.status:<8}  {entry.reason}{duration}"
+            f"{entry.status:<8}  {readers:<19}  {entry.reason}{duration}"
         )
     counts = ", ".join(
         f"{sum(1 for e in entries if e.status == name)} {name}"
@@ -886,6 +908,12 @@ def format_explain(report: StatusReport, step_name: str) -> str:
         for name in upstream:
             parent = report.entry(name)
             lines.append(f"    {name}: {parent.status if parent else 'unknown'}")
+    owner = step.task_path or "(root)"
+    if entry.external_consumers:
+        lines.append(f"  outs read outside {owner}:")
+        lines.extend(f"    {ref}" for ref in entry.external_consumers)
+    else:
+        lines.append(f"  no step outside {owner} reads its outs")
     lines.append("  deps:")
     lines.extend(f"    {d.logical}" for d in step.deps)
     lines.append("  outs:")
@@ -953,6 +981,7 @@ __all__ = [
     "compute_status",
     "directory_dep_nodes",
     "ensure_state_dir",
+    "external_consumers",
     "format_explain",
     "format_status",
     "node_state",

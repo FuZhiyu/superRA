@@ -23,6 +23,6 @@ Target the final deliverable tasks and the selected protection checks — the Pr
 
 A failure blocks the completion menu:
 
-- **A step failed** — inspect the log from `superra repro explain <step>` to distinguish producer, environment, and declaration failures.
+- **A step failed** — inspect the log from `superra repro explain '<task>#<step>'` to distinguish producer, environment, and declaration failures.
 - **The build succeeded and status is still dirty** — `rerun-model.md` §Diagnosing a surprise.
 - **A kept result has no producer** — register it or identify its agreed external-input boundary.

@@ -26,7 +26,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Details`** — planner-owned, optional: planning findings, domain surveys, a suggested route. Implementers may deviate when another route satisfies `## Objective`; reviewers flag details only when they mislead, contradict the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
 - **`## Revision Notes`** — temporary update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Planner- or orchestrator-authored on an objective rewrite (`task-tree-design.md` §Objective rewrites on scope expansion); the implementer removes it once incorporated, in the same commit that sets `status: implemented` (`implement-task` §Execution) — whether or not review follows.
-- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register a step, and when to opt a task into `required`, is discipline owned by the `reproducibility` skill.
+- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register or retire a step is discipline owned by the `reproducibility` skill.
 - **`## Review Notes`** — reviewer-owned. Present while any item remains: open `[BLOCKING]` findings at `revise`, or the tier/focus header and any un-actioned `[ADVISORY]` items at `approved`. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — temporary, integration-phase-only. Added by the sync author during `superintegrate` Sync to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
@@ -215,7 +215,7 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a retired `tier:` section key, which is ignored; a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
@@ -226,7 +226,7 @@ The project-root `repro-acceptance.json` is committed separately from `pytask.lo
 | Field | Binding |
 | --- | --- |
 | `id` | SHA-256 of the canonical JSON record excluding `id` |
-| `basis` | `reviewed` for current-state acceptance; absent on legacy unchanged-output acceptance |
+| `basis` | `reviewed`; the only accepted value |
 | `baseline` | Preceding successful lock and available execution evidence; `lock: null` when the runner has never built the step |
 | `boundary_inputs` | Actual saved-input fingerprints at acceptance, including inputs between steps accepted together |
 | `state` | Reviewed dependency/specification hashes, engine product hashes, and actual output fingerprints |
@@ -241,4 +241,4 @@ Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. A
 
 Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance retains its separate preview/apply consistency guard.
 
-Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. `explain` discloses unavailable source text. Legacy acceptance records without `basis` retain successful-output equality and upstream-freshness requirements. Check acceptance requires its previous successful baseline and unchanged stamp; missing stamps require execution.
+Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. `explain` discloses unavailable source text. Check acceptance requires its previous successful baseline and unchanged stamp; missing stamps require execution.
