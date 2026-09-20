@@ -40,10 +40,10 @@ Task-scoped build/status assess saved inputs; `--upstream` includes their produc
 
 ## Reviewed acceptance
 
-**Inspect before accepting.** Follow the changed inputs/specification, verified baseline diff, and include/import path for each affected consumer. Reduce recurring fan-out through [module or artifact boundaries](graph-authoring.md#isolate-meaningful-recomputation) when within scope.
+**Inspect before accepting.** Review the selected producers' current specification, inputs, and outputs. Existing baseline: inspect its changes with `explain`. Reduce recurring fan-out through [module or artifact boundaries](graph-authoring.md#isolate-meaningful-recomputation) when within scope.
 
-**Justify every changed item.** Cite inspected code, call sites, or a focused check establishing that the selected consumer's behavior and outputs remain unchanged. Split batches when only some consumers are unaffected. Missing historical source text permits other documented evidence; unchanged output files alone do not establish equivalence.
+**Accept reviewed current results.** Use `accept` for initial registration, unchanged results after harmless edits, or changed outputs already produced interactively. State why the current results are valid in `--reason`; cite existing evidence with `--evidence` when useful. Per-node `--review` notes are optional.
 
-**Rerun uncertain effects.** Changed analytical specifications, changed assertions, or insufficient evidence require execution of the affected producer/check.
+**Execute unresolved work.** Unreviewed results, result-affecting changes not yet executed, and changed check assertions require running the affected producer/check. Acceptance neither executes a check nor supplies a missing successful check stamp.
 
-**Preview the exact selection, then apply it with evidence**, using [the acceptance commands](../../task-tree/references/commands.md#reviewed-acceptance).
+**Preview the exact selection, then apply its token**, using [the acceptance commands](../../task-tree/references/commands.md#reviewed-acceptance). Inputs outside the selection are saved boundaries; accepting a consumer does not certify its upstream producers.

@@ -114,7 +114,7 @@ Status JSON records `targets`, `upstream`, and `boundary_inputs` (paths, produce
 
 | State | Meaning |
 |---|---|
-| `fresh` | Inputs and outputs match the successful build, or a valid exact-state acceptance covers the changes. |
+| `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
 | `missing` | Never built, or an out is gone. |
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
@@ -126,25 +126,26 @@ Status JSON records `targets`, `upstream`, and `boundary_inputs` (paths, produce
 
 `impact <path...> [--scope <task-or-step>]` reports direct consumers with script/declared/include/environment origins, affected descendants, and connecting files. Repeat `--scope` for multiple selections; `in_scope: false` keeps outside effects visible. This predicts invalidation; unchanged regenerated outputs can stop execution downstream.
 
-`accept <step-or-task...>` previews an exact step list. A task expands to its owned and descendant steps; producer ancestors and downstream consumers are not implicitly accepted. Supply a rationale for each `changes[].node`, a summary reason, and existing project-relative evidence files (optional `#anchor` references):
+`accept <step-or-task...>` previews the current inputs, specification, and outputs as a reviewed baseline. It supports first registration, harmless changes, and changed outputs from direct runs. A task expands to its owned and descendant steps; producers outside the selection remain saved inputs. Acceptance certifies the selection, not those producers.
 
 ```bash
 superra repro accept build-panel --json
-superra repro accept build-panel --reason 'Comment-only helper edit' \
-  --review 'Code/helpers.jl=Only documentation changed; the executed function is identical' \
-  --evidence superRA/02-merge/attachments/review.md --json
-# Repeat those arguments with the token returned by the complete preview:
-superra repro accept build-panel --reason 'Comment-only helper edit' \
-  --review 'Code/helpers.jl=Only documentation changed; the executed function is identical' \
-  --evidence superRA/02-merge/attachments/review.md --apply <preview-token> --json
+superra repro accept build-panel --reason 'Ran interactively and reviewed the current results' --json
+# Apply with the same arguments and the token from the complete preview:
+superra repro accept build-panel --reason 'Ran interactively and reviewed the current results' \
+  --apply <preview-token> --json
 superra repro revoke build-panel --json
 ```
 
-Preview is the default; `--dry-run` is its explicit alias. The token binds selection, current hashes, baseline, review coverage, evidence-file bytes, and the preceding ledger. Apply rechecks these and writes all selected records atomically. It requires a valid graph, a successful baseline, existing inputs/outputs, output equality, and fresh upstream producers; a selected upstream acceptance may satisfy a downstream one in the same batch. Missing/uncovered evidence, concurrent changes, and failed or interrupted runs reject the operation.
+`--reason` is required to apply. Optional `--review NODE=RATIONALE` adds per-node notes; optional `--evidence FILE` binds an existing evidence file's bytes (optional `#anchor` references). Repeat either option for multiple notes/files.
 
-Commit the project-root `repro-acceptance.json` with the reviewed source change. Valid records make ordinary builds and status `fresh`; `explain` and JSON `acceptance` retain the reason, item reviews, evidence hashes, actor, and recording time. Last actual execution metadata and `pytask.lock` remain unchanged. Forced execution bypasses acceptance within the existing target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes only the selected records; dependent acceptances bound to them become ineffective.
+Preview is the default; `--dry-run` is its explicit alias. The token binds selection, current hashes, preceding successful lock if any, review notes, supplied evidence bytes, and the preceding ledger. Apply rechecks these and writes all selected records atomically. Invalid graphs, missing declared inputs/outputs, unavailable supplied evidence, concurrent edits, and failed or interrupted runs reject acceptance. Checks require an existing successful baseline and unchanged check stamp; a never-run check must execute.
 
-`explain --json` reports verified successful-source snapshots when available, including dirty-checkout runs. Historical text that was not captured is explicitly unavailable; other documented evidence can still support acceptance. Legacy sidecar outputs without a verified full-output digest need one successful run of that step before acceptance. See [the record contract](task-file-contract.md#acceptance-and-successful-baseline-records).
+Commit the project-root `repro-acceptance.json` with the declarations and reviewed changes. Valid records make ordinary builds and status `fresh`; `explain` and JSON `acceptance` retain the reason, optional notes/evidence, actor, recording time, and `basis: reviewed`. Last actual execution metadata, `pytask.lock`, and check stamps remain unchanged. Forced execution bypasses acceptance within the target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes selected records; acceptances bound to them become ineffective.
+
+Changes after acceptance invalidate its exact state, including actual sidecar-backed output bytes and saved-input bytes. A matching scoped status does not certify upstream producers; add `--upstream` to assess the chain.
+
+`explain --json` reports verified successful-source snapshots when available, including dirty-checkout runs. Reviewed baselines supply recorded hashes; source text not captured at execution is explicitly unavailable. Raw source snapshots remain local. Legacy acceptance records retain their original successful-baseline and upstream requirements. See [the record contract](task-file-contract.md#acceptance-and-successful-baseline-records).
 
 Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/rerun-model.md#what-makes-a-step-rerun).
 

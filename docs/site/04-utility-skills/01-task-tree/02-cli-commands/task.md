@@ -55,6 +55,6 @@ For reproduction work, ask the agent to explain the effects of a change before r
 ./superRA/superra repro accept build-panel --json  # preview only
 ```
 
-Acceptance requires an exact review with recorded evidence. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview, apply, and revoke.
+Acceptance records a reviewed baseline with a reason and optional evidence, including results produced before registration. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview, apply, and revoke.
 
 The DAG view (`task dag <subtree>`, Mermaid output) and the [dashboard](#/04-utility-skills/01-task-tree/04-dashboard) round out the surface. Every flag, bulk status operation, result-append command, and migration tool is in [skills/task-tree/references/commands.md](skills/task-tree/references/commands.md).

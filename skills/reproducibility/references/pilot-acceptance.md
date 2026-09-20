@@ -16,6 +16,7 @@ Use a disposable fixture or isolated copies for perturbations. Record reported s
 | Timestamp-only change | Neither step executes. |
 | Producer or included-helper edit | Its consumer is invalidated; the expected code executes. |
 | Undeclared environment-file edit | Neither step executes automatically; apply [environment-change judgment](../SKILL.md#environment-changes). |
+| First registration or changed outputs after a direct run | Acceptance with a reason and no evidence file establishes the reviewed baseline without creating execution records or check stamps. Ordinary builds skip accepted producers and execute outstanding checks; forced builds execute the producers. |
 | Reviewed harmless edit | Exact acceptance makes the consumer fresh without changing its successful lock or last-run evidence; ordinary build skips it, forced verification executes it. |
 | Missing output | The producer recreates it. |
 | Identical regeneration | The downstream check skips if its own deps are unchanged. |

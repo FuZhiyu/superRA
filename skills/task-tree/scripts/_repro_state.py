@@ -447,7 +447,7 @@ class StepStatus:
             "log": self.log,
             "acceptance": (
                 {key: self.acceptance[key] for key in
-                 ("id", "reason", "reviews", "evidence", "recorded_at", "actor")
+                 ("id", "basis", "reason", "reviews", "evidence", "recorded_at", "actor")
                  if key in self.acceptance}
                 if self.acceptance else None
             ),

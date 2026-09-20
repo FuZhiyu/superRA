@@ -12,7 +12,7 @@ Section schema, config keys, and validation findings: `skills/task-tree/referenc
 | Reference | Load when |
 |---|---|
 | `references/graph-authoring.md` | Declaring or changing steps, or presenting a graph for review. |
-| [rerun-model.md](references/rerun-model.md) | Predicting reruns, diagnosing state, or reviewing stale results for acceptance. |
+| [rerun-model.md](references/rerun-model.md) | Predicting reruns, diagnosing state, or accepting current results. |
 | `references/protect-and-completion.md` | At `Stage: protection`, or at the IMPLEMENT completion gate. |
 | [pilot-acceptance.md](references/pilot-acceptance.md) | Adopting reproduction or changing its discovery/rerun mechanism. |
 
@@ -33,6 +33,8 @@ Leave unregistered: exploration whose findings are not retained, anything regene
 - **Deleting or archiving an owner:** first move needed producers to a surviving task, or agree a frozen external-input boundary with the researcher.
 
 ## Build and Status
+
+**Results already produced interactively:** register their steps, then use [reviewed acceptance](references/rerun-model.md#reviewed-acceptance) to establish or replace the baseline without repeating execution.
 
 **Verify the claimed result's scope**, including its selected checks, using the same targets:
 
