@@ -1,6 +1,6 @@
 ---
 title: "Replace tiers with task targets and define step retirement"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -36,3 +36,13 @@ Reproduction tiers are gone: `repro build` / `status` run the named task or `tas
 - **Verification.** The task-tree suite passed **1,173 tests** and the dashboard browser suite **35**; `test_artifact_ui.py` keeps its two earlier sidebar/attachment failures, outside this change. Seven new tests cover the retired key, flag, and subcommand, bare commands, `.`, and lock preservation; ten tier-only tests were deleted. The [workflow journey](../../07-workflow-integration/unified-dependency-workflow/attachments/verify_workflow.py) passes on explicit targets after qualifying its ambiguous `source` selectors, which task-scoped builds had already broken. `repro build` on [task-scoped builds](../task-scoped-builds/task.md) reran its check and pilot with the new CLI; both are `fresh`. Skill, Markdown, harness-compatibility, and `task check` passes are clean.
 
 The implementation was verified by the implementing agent; no independent review has run. Step-lifecycle scenarios (scratch-to-retained registration, rehoming, retirement with a surviving consumer) are instruction changes without an agent-level run.
+
+## Review Notes
+
+Quick tier, correctness focus, over `77ff41bc..d109843c`.
+
+1. **[BLOCKING]** [commands.md:113](../../../../skills/task-tree/references/commands.md#L113) still documents the removed `task tree --tier` filter: "`task tree --tier required|on-demand` filters to one tier, accepting the legacy aliases; a registered `required` task gets a `[required]` badge." The flag is gone from [cli.py](../../../../skills/task-tree/scripts/cli.py) and [task_query.py](../../../../skills/task-tree/scripts/task_query.py), so `superra task tree --tier required` now exits with `unrecognized arguments: --tier required`, and no badge is printed. Six lines above, [commands.md:107](../../../../skills/task-tree/references/commands.md#L107) already states the retirement, so the file contradicts itself. Delete the stale sentence and, if the `task tree` retirement needs saying, fold it into line 107.
+
+2. **[ADVISORY]** [task-file-contract.md:192](../../../../skills/task-tree/references/task-file-contract.md#L192) ends with "Tier names do not enter the lock's step-spec hash." Nothing in the schema declares a tier any more, so the sentence explains an invalidation rule for a key the same file documents only as retired at [line 218](../../../../skills/task-tree/references/task-file-contract.md#L218). Drop it.
+
+3. **[ADVISORY]** [RELEASE-NOTES.md:15](../../../../RELEASE-NOTES.md#L15) says `--tier`, `repro tier`, "and the `task tree --tier` filter and badge are retired with actionable errors". The first two exit 2 naming the replacement; `task tree --tier` gets argparse's generic `unrecognized arguments`. Either say so or name the replacement in that path too.
