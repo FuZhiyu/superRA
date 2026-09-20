@@ -1,15 +1,41 @@
 {
-  "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
-  "live": "http://127.0.0.1:62014",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-oouqbp25/superRA",
+  "machine": "macOS-27.0-arm64-arm-64bit",
+  "live": "http://127.0.0.1:60858",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-jh257xb7/superRA",
   "browser": "153.0.8010.48",
   "counts": {
     "steps": 89,
     "tasks": 251,
     "edges": 283
   },
-  "initialZoom": 1,
+  "initialZoom": 0.7173252279635258,
   "realGraphMixedInspection": true,
   "offline": true,
+  "routing-cycle": {
+    "nodes": 5,
+    "edges": 7,
+    "cycleEdges": 6,
+    "components": 1,
+    "isolatedCards": 0
+  },
+  "routing-fan": {
+    "nodes": 5,
+    "edges": 7,
+    "cycleEdges": 0,
+    "components": 1,
+    "isolatedCards": 0
+  },
+  "routing-components": {
+    "nodes": 9,
+    "edges": 6,
+    "cycleEdges": 6,
+    "components": 1,
+    "isolatedCards": 5
+  },
+  "responsivePanes": {
+    "side": true,
+    "portraitBottom": true,
+    "sidebarWidth": 712.0
+  },
   "errors": []
 }

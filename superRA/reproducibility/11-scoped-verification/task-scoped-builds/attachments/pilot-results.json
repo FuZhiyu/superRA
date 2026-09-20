@@ -8,15 +8,15 @@
   "unrelated_steps_executed": false,
   "unchanged_evidence_preserved": true,
   "dry_run_evidence_preserved": true,
-  "warm_build_median_seconds": 0.3394,
-  "warm_status_median_seconds": 0.0582,
+  "warm_build_median_seconds": 0.371,
+  "warm_status_median_seconds": 0.0628,
   "commands": [
     {
       "args": [
         "build",
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
       ],
-      "seconds": 3.3366,
+      "seconds": 3.8325,
       "exit_code": 0
     },
     {
@@ -25,7 +25,7 @@
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
         "--json"
       ],
-      "seconds": 0.0629,
+      "seconds": 0.065,
       "exit_code": 0
     },
     {
@@ -33,7 +33,7 @@
         "build",
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
       ],
-      "seconds": 0.3587,
+      "seconds": 0.371,
       "exit_code": 0
     },
     {
@@ -42,7 +42,7 @@
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
         "--json"
       ],
-      "seconds": 0.0582,
+      "seconds": 0.0661,
       "exit_code": 0
     },
     {
@@ -50,7 +50,7 @@
         "build",
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
       ],
-      "seconds": 0.3394,
+      "seconds": 0.3906,
       "exit_code": 0
     },
     {
@@ -59,7 +59,7 @@
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
         "--json"
       ],
-      "seconds": 0.0572,
+      "seconds": 0.0623,
       "exit_code": 0
     },
     {
@@ -67,7 +67,7 @@
         "build",
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check"
       ],
-      "seconds": 0.332,
+      "seconds": 0.3709,
       "exit_code": 0
     },
     {
@@ -76,7 +76,7 @@
         "reproducibility/04-dashboard-view/scalable-navigation#dashboard-navigation-projection-check",
         "--json"
       ],
-      "seconds": 0.0619,
+      "seconds": 0.0628,
       "exit_code": 0
     },
     {
@@ -86,7 +86,7 @@
         "--force",
         "--dry-run"
       ],
-      "seconds": 0.3349,
+      "seconds": 0.3584,
       "exit_code": 0
     },
     {
@@ -96,7 +96,7 @@
         "--upstream",
         "--force"
       ],
-      "seconds": 2.7578,
+      "seconds": 2.8537,
       "exit_code": 0
     },
     {
@@ -106,7 +106,7 @@
         "--upstream",
         "--json"
       ],
-      "seconds": 0.0597,
+      "seconds": 0.0613,
       "exit_code": 0
     }
   ]

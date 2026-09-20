@@ -21,6 +21,47 @@ Align workflow and public guidance with the [0.5 design](../../attachments/v05-d
 - Docs HTML is produced by [docs/build_site.sh](../../../../docs/build_site.sh), never edited directly. The three version manifests are already at 0.5.0; keep the release unreleased until implementation and compatibility evidence land.
 
 
+## Reproduction
+
+```yaml
+steps:
+  - name: unified-dependency-workflow-check
+    kind: check
+    cmd: uv run --script superRA/reproducibility/07-workflow-integration/unified-dependency-workflow/attachments/verify_workflow.py
+    deps:
+      - superRA/reproducibility/07-workflow-integration/unified-dependency-workflow/attachments/verify_workflow.py
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_hooks.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/plan_migrate.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_add_result.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_comment.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/wrapper_resolver.py
+```
+
 ## Results
 
 - [Planning](../../../../skills/superplan/references/build-and-review.md#task-dependencies), [consolidation](../../../../skills/superplan/references/consolidation.md), and [scope-change invalidation](../../../../skills/superplan/references/task-tree-design.md#objective-rewrites-on-scope-expansion) use effective dependencies. Task splitting preserves parent-owned work; maturation retains step identities and acceptance evidence. Mechanics remain in the task-tree contract and commands.
@@ -39,9 +80,8 @@ The retained [verification companion](attachments/verify_workflow.py) creates a 
 
 The harness companion-route test required a retired duplicate pointer in `communicate`. Its assertion was removed; the test still checks the unique companion-contract file and its canonical `using-superra` route, matching contributor ownership. The generic skill validator accepted `reproducibility`; it rejects `task-tree`'s unchanged, supported `user-invocable` metadata, which was preserved.
 
-The companion is hand-authored from the task's verification requirements and the approved [dependency](../../01-section-contract/unified-dependencies/task.md) and [acceptance](../../02-runner/reviewed-acceptance/task.md) contracts. Run it and the focused suite from the repository root:
+The companion is hand-authored from the task's verification requirements and the approved [dependency](../../01-section-contract/unified-dependencies/task.md) and [acceptance](../../02-runner/reviewed-acceptance/task.md) contracts. `unified-dependency-workflow-check` above runs it; the focused suite runs from the repository root:
 
 ```bash
-uv run --script superRA/reproducibility/07-workflow-integration/unified-dependency-workflow/attachments/verify_workflow.py
 uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py skills/task-tree/scripts/test_repro_acceptance.py tests/harness-instruction-following/test_contract.py -q
 ```

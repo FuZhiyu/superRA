@@ -28,28 +28,6 @@ Integrate task reading and dependency inspection into one workspace, with Tree a
 
 ```yaml
 steps:
-  - name: dashboard-navigation-browser
-    cmd: uv run --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python skills/task-tree/scripts/tests/navigation_browser.py --evidence superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/browser
-    deps:
-      - skills/task-tree/scripts/tests/navigation_browser.py
-      - skills/task-tree/scripts/plan_dashboard.py
-      - skills/task-tree/scripts/templates
-      - skills/task-tree/scripts/vendor
-      - skills/task-tree/scripts/_artifacts.py
-      - skills/task-tree/scripts/_comments.py
-      - skills/task-tree/scripts/_repro.py
-      - skills/task-tree/scripts/_repro_state.py
-      - skills/task-tree/scripts/_repro_scope.py
-      - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_task_io.py
-      - skills/task-tree/scripts/_task_dependencies.py
-      - skills/task-tree/scripts/_task_snapshot.py
-      - skills/task-tree/scripts/_task_validate.py
-      - skills/task-tree/scripts/_worktree_discovery.py
-      - skills/task-tree/scripts/cli.py
-      - skills/task-tree/scripts/task_comment.py
-    outs:
-      - superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/browser
   - name: dashboard-navigation-heterogeneity
     cmd: uv run --with playwright --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python skills/task-tree/scripts/tests/navigation_browser.py --evidence superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity --graph-snapshot superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json
     deps:
@@ -100,16 +78,16 @@ steps:
 
 ## Results
 
-- [The workspace DAG](../../../../skills/task-tree/scripts/templates/dashboard.js) uses the shared task reader and comments, independently folded task containers, scoped search, cross-filter traces, and logical/file edge evidence. [Projection regressions](../../../../skills/task-tree/scripts/tests/test_navigation_projection.py) cover parent setup → child → parent report, inherited logical prerequisites, nested folding, chain shortcuts, disconnected components, fan-out, and cyclic graph inspection.
-- [The browser harness](../../../../skills/task-tree/scripts/tests/navigation_browser.py) exercises 500 steps across 50 owner tasks plus the project root, with 1,494 file edges. The registered on-demand producer records repeated timings and environment information in [browser-results.json](attachments/browser/browser-results.json), with live and offline navigation, shared comment round-trip, keyboard/touch control, actual reader resizing, worktree isolation, legacy-link recovery, archived-task exclusion, and removal updates over SSE. Chrome is an external execution prerequisite; the harness creates disposable synthetic projects and an isolated browser profile.
-- The researcher authorized local graph-only capture of the heterogeneity project. The [sanitized boundary snapshot](attachments/heterogeneity-input.json) retains 89 steps, 251 active tasks, and 283 file edges, including the existing combined task cycle. [The capture utility](../../../../skills/task-tree/scripts/tests/navigation_snapshot.py) removes task prose, comments, attachments, commands, logs, and acceptance prose before rendering. The separate on-demand producer uses this frozen input; its [browser record](attachments/heterogeneity/browser-results.json) covers live/offline rendering and responsive inspection.
+- [The workspace DAG](../../../../skills/task-tree/scripts/templates/dashboard.js) uses the shared task reader and comments, independently folded task containers, global search, and logical/file edge evidence; the [unified workspace](dag-design/task.md) later replaced scope and trace controls with one project map. [Projection regressions](../../../../skills/task-tree/scripts/tests/test_navigation_projection.py) cover parent setup → child → parent report, inherited logical prerequisites, nested folding, chain shortcuts, disconnected components, fan-out, and cyclic graph inspection.
+- [The browser harness](../../../../skills/task-tree/scripts/tests/navigation_browser.py) exercises 500 steps across 50 owner tasks plus the project root, with 1,494 file edges. Its registered producer is [`dashboard-dag-design-browser`](dag-design/task.md#step-dashboard-dag-design-browser), which records repeated timings and environment information in [browser-results.json](dag-design/attachments/browser/browser-results.json), with live and offline navigation, shared comment round-trip, keyboard/touch control, actual reader resizing, worktree isolation, legacy-link recovery, archived-task exclusion, and removal updates over SSE. Chrome is an external execution prerequisite; the harness creates disposable synthetic projects and an isolated browser profile.
+- The researcher authorized local graph-only capture of the heterogeneity project. The [sanitized boundary snapshot](attachments/heterogeneity-input.json) retains 89 steps, 251 active tasks, and 283 file edges, including the existing combined task cycle. [The capture utility](../../../../skills/task-tree/scripts/tests/navigation_snapshot.py) removes task prose, comments, attachments, commands, logs, and acceptance prose before rendering. [`dashboard-navigation-heterogeneity`](#step-dashboard-navigation-heterogeneity) uses this frozen input; its [browser record](attachments/heterogeneity/browser-results.json) covers live/offline rendering and responsive inspection.
   - Source: the isolated heterogeneity compatibility worktree, captured with `navigation_snapshot.py --source <isolated-project>/superRA --output superRA/reproducibility/04-dashboard-view/scalable-navigation/attachments/heterogeneity-input.json`. This input is a metadata boundary fixture, not a copy of research results.
 
-- Verification: dashboard, state-preservation, and projection suites passed **422 tests, 4 skipped**. The scoped browser producers completed successfully and reported **fresh**. On Chrome 153.0.8010.48 / macOS ARM64, repeated loaded-payload maxima were **0.6 ms search**, **4.7 ms scope filtering**, and **25.1 ms full expansion**; initial scale was 100%. Light/dark desktop, tablet, and 390 px phone checks found no page-level horizontal overflow. The retained real-project image omits research prose and execution content.
+- Verification: dashboard, state-preservation, projection, and browser suites passed **503 tests, 4 skipped**, and this task's two steps plus the unified-workspace producer are **fresh**. On Chrome 153.0.8010.48 / macOS ARM64, repeated loaded-payload maxima on the 500-step fixture were **0.8 ms search**, **3.1 ms Project overview**, and **97.2 ms full expansion**; the collapsed map opens at 59% scale. An earlier duplicate producer that timed the removed scope filter is retired. Light/dark desktop, tablet, and 390 px phone checks found no page-level horizontal overflow. The retained real-project image omits research prose and execution content.
 
-![Collapsed task DAG at readable scale, beside the shared task reader.](attachments/browser/dag-desktop.png)
+![Collapsed task DAG at readable scale, beside the shared task reader.](dag-design/attachments/browser/dag-desktop.png)
 
-Source: [registered browser producer](../../../../skills/task-tree/scripts/tests/navigation_browser.py).
+Source: [`dashboard-dag-design-browser`](dag-design/task.md#step-dashboard-dag-design-browser).
 
 ![The real dependency neighborhood remains inspectable while its global cycle diagnosis stays visible.](attachments/heterogeneity/dag-real-step.png)
 
