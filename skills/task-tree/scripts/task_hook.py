@@ -8,15 +8,13 @@
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
 calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
 In both cases it runs the same best-effort reconcile — validate the tree and
-propagate parent status. It also carries three advisory reproduction signals,
-all non-blocking: a reminder, once per file per session, when an
+propagate parent status. It also carries two advisory reproduction signals,
+both non-blocking: a reminder, once per file per session, when an
 Edit/Write/apply_patch touches a file the reproduction graph tracks as a
 step's dep/script or a `code_roots` producer, naming the steps the edit
-stales (`_reproduction_reminder`); the same reminder for a Bash command that
-changed a tracked code dep, detected by content since Bash names no file
-(`_reproduction_bash_reminder`); and, once per transition, a reminder when a
-leaf reaches `implemented` with results files no step produces or reads
-(`_implemented_coverage_reminder`).
+stales (`_reproduction_reminder`, emitted through `_repro_emit`); and, once
+per transition, a reminder when a leaf reaches `implemented` with results
+files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
 Validation warnings and non-fatal reconcile failures are injected through
@@ -230,9 +228,9 @@ def _repro_emit(
 ) -> list[str]:
     """Message each changed path once per session, with its staleness fan-out.
 
-    Shared by the path-based (Edit/Write/apply_patch) and content-based (Bash)
-    detectors so both draw the identical reminder and honour one marker per
-    file per session.
+    Takes project-relative paths from whichever detector found them, so every
+    detector draws the identical reminder under one marker per file per
+    session.
     """
     feedback: list[str] = []
     session_key: str | None = None
@@ -309,46 +307,6 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
         feedback.extend(_repro_emit(data, graph, project_root, relevant))
 
     return feedback
-
-
-def _repro_plan_root_for_dir(directory: Path) -> Path | None:
-    """Nearest task tree at or above a directory (see `_repro_plan_root_for_file`)."""
-    return _repro_plan_root_for_file(directory / "_")
-
-
-def _reproduction_bash_reminder(data: dict) -> list[str]:
-    """Remind when a Bash command changed a code dep the graph tracks.
-
-    A Bash call carries no file path, so relevance is decided by content: one
-    `stat` per tracked code dep against the runner's hash cache, hashing only
-    the files whose stat moved, so a `sed`, a Python rewrite, or a `git
-    checkout` draws the same reminder an Edit does. Before the first build
-    there is no cache and therefore no baseline, which the pass detects before
-    building the graph. The cache is read, never written. Fails open.
-    """
-    cwd = Path.cwd()
-    plan_root = _repro_plan_root_for_dir(cwd)
-    if plan_root is None:
-        return []
-    project_root = plan_root.parent
-    _ensure_scripts_on_path()
-    try:
-        from _repro_state import HashCache, runner_paths
-
-        cache_file = runner_paths(project_root).cache_file
-        if not cache_file.is_file():
-            return []
-        import _repro
-        import _repro_signals
-        graph = _repro.build_graph(
-            plan_root, project_root=project_root, resolve_vars=False
-        )
-        changed = _repro_signals.changed_code_deps(
-            graph, project_root, HashCache(cache_file)
-        )
-    except Exception:
-        return []
-    return _repro_emit(data, graph, project_root, changed)
 
 
 def _clear_repro_markers(project_root: Path, resolved_paths: set[str]) -> None:
@@ -710,19 +668,16 @@ def _handle_bash(data: dict) -> None:
     """Reconcile any task tree touched by a structural Bash command."""
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
-
-    # Content-based, so it runs for every command: a Bash edit names no file.
-    repro_feedback = _reproduction_bash_reminder(data)
     if not command:
-        _exit_success(repro_feedback)
+        _exit_success()
 
     # Gate: must reference a task root AND contain a mutating verb. A read-only
     # command that merely mentions a task root (task_query.py, grep, serve) is
     # not a structural change and must early-exit.
     if not _command_mentions_task_root(command):
-        _exit_success(repro_feedback)
+        _exit_success()
     if not _MUTATING_RE.search(command):
-        _exit_success(repro_feedback)
+        _exit_success()
 
     _ensure_scripts_on_path()
     import _task_io as task_io
@@ -800,7 +755,7 @@ def _handle_bash(data: dict) -> None:
                 plan_roots.append(candidate)
                 break
 
-    feedback: list[str] = repro_feedback + rewire_feedback
+    feedback: list[str] = list(rewire_feedback)
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
             continue
