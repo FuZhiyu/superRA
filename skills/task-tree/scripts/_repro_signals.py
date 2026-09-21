@@ -193,7 +193,9 @@ def uncovered_results_files(graph, task: Task, project_root: Path) -> list[str]:
 
 def has_reproduction(graph) -> bool:
     """Does this tree configure reproduction at all? Nothing warns when it does not."""
-    return bool(graph.steps or graph.config.code_roots)
+    return bool(
+        graph.steps or graph.section_tasks or any(graph.config.to_dict().values())
+    )
 
 
 def check_results_coverage(graph, root: Task, project_root: Path) -> list[Finding]:

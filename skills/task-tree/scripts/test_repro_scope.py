@@ -65,7 +65,7 @@ def test_unrelated_task_creation_during_execution_is_allowed(project, jobs):
 
 @needs_pytask
 def test_unused_config_change_during_execution_is_allowed(project):
-    project.write('new-config.txt', project.read('superRA/config.yaml') + '  code_roots: [Other]\n')
+    project.write('new-config.txt', project.read('superRA/config.yaml') + '    unused: echo {script}\n')
     project.write('Code/a.sh', project.read('Code/a.sh') + 'cp new-config.txt superRA/config.yaml\n')
     assert project.run('build', '01-a') == 0
 
