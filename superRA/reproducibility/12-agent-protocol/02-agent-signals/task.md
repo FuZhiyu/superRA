@@ -33,7 +33,7 @@ Detection of *which* files changed is not this task's: [`_repro_emit`](../../../
 
 ### The generated-file rule, and what it misses
 
-A linked file counts as generated when its extension is a data or exhibit format (`.arrow .csv .dta .feather .jld2 .parquet .rds .tsv`, `.eps .jpeg .jpg .pdf .png .svg`), or when it is a `.tex` inside a directory some step already writes into ([_repro_signals.py:22-31](../../../../skills/task-tree/scripts/_repro_signals.py#L22-L31)). Silence otherwise: a tree with no `## Reproduction` section and no `code_roots`, a link to prose or source, a path with a `tmp`/`temp`/`scratch`/`cache`/`sandbox`/`node_modules` segment or a dotted one, and a file not on disk.
+A linked file counts as generated when its extension is a data or exhibit format (`.arrow .csv .dta .feather .jld2 .parquet .rds .tsv`, `.eps .jpeg .jpg .pdf .png .svg`), or when it is a `.tex` inside a directory some step already writes into ([_repro_signals.py:22-31](../../../../skills/task-tree/scripts/_repro_signals.py#L22-L31)). Silence otherwise: a tree carrying no reproduction config at all — no step, no `## Reproduction` section, no `reproduction:` config value — a link to prose or source, a path with a `tmp`/`temp`/`scratch`/`cache`/`sandbox`/`node_modules` segment or a dotted one, and a file not on disk.
 
 Known misses, all deliberate and all in the quiet direction:
 
