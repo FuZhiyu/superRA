@@ -643,6 +643,9 @@ def test_acceptance_of_saved_inputs_does_not_certify_or_build_upstream(project):
     project.write('output/a.txt', 'saved without producer execution\n')
     project.write('output/b.txt', 'reviewed downstream result\n')
     review(project, ['02-b#build-b'])
+    saved = read_ledger(project.paths)['steps']['build-b']['boundary_inputs']
+    assert [item['logical'] for item in saved] == ['${OUT}/a.txt']
+    assert all('resolved' not in item for item in saved)
     assert project.status('02-b').entry('build-b').status == 'fresh'
     assert compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).entry('build-b').status != 'fresh'
     assert project.run('build', '02-b') == 0
@@ -719,6 +722,20 @@ def test_initial_batch_acceptance_binds_upstream_and_runs_checks(project):
     assert set(read_lock(project.paths.lock_file)) == {'check-b'}
     revoke(project.graph(), project.paths, ['01-a#build-a'])
     assert project.states()['build-b'] != 'fresh'
+
+
+@needs_pytask
+def test_reaccepted_upstream_keeps_the_downstream_acceptance_it_bound(project):
+    project.write('output/a.txt', 'a\n')
+    project.write('output/b.txt', 'aa\n')
+    review(project, ['01-a#build-a', '02-b#build-b'])
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    review(project, ['01-a#build-a'])
+    assert project.states()['build-a'] == 'fresh'
+    assert project.states()['build-b'] == 'fresh'
+    assert project.run('build', *CHAIN) == 0
+    assert set(project.run_times()) == {'check-b'}
+    assert project.read('output/b.txt') == 'aa\n'
 
 
 @needs_pytask
