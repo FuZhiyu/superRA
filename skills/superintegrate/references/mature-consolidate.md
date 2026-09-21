@@ -29,7 +29,7 @@ Prompt:
     every section you touch, not only new writes. A fold moves the folded task's
     `## Reproduction` steps into the target task's section; preserve step names,
     logical artifact paths, and retained acceptance evidence. Retire a step
-    only per `superRA:reproducibility` §Step Lifecycle.
+    only per `reproducibility/references/designing-the-graph.md` §Step lifecycle.
     Land recoverable commits per affected subtree.
 ```
 

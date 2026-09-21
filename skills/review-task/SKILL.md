@@ -25,6 +25,8 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 
 **Verify from evidence; re-execute only when something is off.** Spot-check a subset when a value looks wrong; full rerun only with researcher approval. Evidence can't support a claim → "evidence missing" finding; the implementer closes it.
 
+**A result from retained code is registered, built, and — if accepted rather than run — reasoned.** Check those three against `superRA:reproducibility` §Gates.
+
 Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Review Notes`, independent `status:`. Unclear task structure: flag in your return, don't invent one.
 
 ## Findings
