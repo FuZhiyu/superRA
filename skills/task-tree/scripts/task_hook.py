@@ -209,12 +209,22 @@ def _repro_is_out(graph, rel: str) -> bool:
 REPRO_REMINDER_CAP = 5
 
 
-def _repro_message(rel: str, owners: list[str], fan_out: str = "") -> str:
+def _repro_status_targets(graph, owners: list[str]) -> str:
+    """`superra repro status` targets for *owners* — the command needs at least
+    one, and `.` selects every registered step when no step owns the file."""
+    by_name = {step.name: step for step in graph.steps}
+    targets = sorted(
+        f"{by_name[name].task_path}#{name}" for name in owners if name in by_name
+    )
+    return " ".join(targets) if targets else "."
+
+
+def _repro_message(rel: str, owners: list[str], fan_out: str = "", targets: str = ".") -> str:
     owner_text = ", ".join(sorted(owners)) if owners else "none"
     stales = f"Stales {fan_out}. " if fan_out else ""
     return (
         f"Reproduction: {rel} changed (owning step(s): {owner_text}). {stales}Update the "
-        "step's deps/outs or register a new step, then run `superra repro status`."
+        f"step's deps/outs or register a new step, then run `superra repro status {targets}`."
     )
 
 
@@ -251,7 +261,12 @@ def _repro_emit(
             continue
         owners = _repro_owning_steps(graph, rel)
         feedback.append(
-            _repro_message(rel, owners, _repro_fan_out(graph, project_root, owners))
+            _repro_message(
+                rel,
+                owners,
+                _repro_fan_out(graph, project_root, owners),
+                _repro_status_targets(graph, owners),
+            )
         )
         try:
             marker.parent.mkdir(parents=True, exist_ok=True)
@@ -325,7 +340,7 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
     if len(feedback) > REPRO_REMINDER_CAP:
         return [
             f"Reproduction: {len(feedback)} tracked files changed. Run "
-            "`superra repro status` to see the steps they stale."
+            "`superra repro status .` to see the steps they stale."
         ]
     return feedback
 

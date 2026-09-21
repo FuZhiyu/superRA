@@ -21,6 +21,8 @@ import time
 from pathlib import Path
 from typing import Callable, Iterable
 
+from _checkout_scope import is_foreign
+
 TASK_ROOT_DIRNAME = "superRA"
 STATE_DIRNAME = ".superra-repro"
 BASELINE_SUBDIR = "hook-baseline"
@@ -72,9 +74,16 @@ def _plan_root_above(start: Path) -> Path | None:
 
 def plan_roots(cwd: Path, tool_paths: Iterable[Path], command: str) -> list[Path]:
     """Task roots to check: the session cwd's, the tool-supplied paths', and
-    those of absolute paths the command names (an agent working in another
+    those of absolute paths the command names (an agent working in a sibling
     worktree addresses it by absolute path). The command is read only to learn
-    where to look, never what changed."""
+    where to look, never what changed.
+
+    A root in a foreign checkout is dropped: detection leads to a reconcile, and
+    a session must not rewrite task files in a checkout it was not pointed at.
+    Membership is the `guard-foreign-checkout` gate's own test
+    (`_checkout_scope.is_foreign`), so every worktree of the session's own
+    repository stays in reach.
+    """
     starts: list[Path] = [cwd]
     starts.extend(p.parent for p in tool_paths)
     for match in list(_ABS_PATH_RE.finditer(command))[:_MAX_PATH_HINTS]:
@@ -90,8 +99,10 @@ def plan_roots(cwd: Path, tool_paths: Iterable[Path], command: str) -> list[Path
             root = _plan_root_above(start.resolve())
         except OSError:
             continue
-        if root is not None and root not in seen:
-            seen.add(root)
+        if root is None or root in seen:
+            continue
+        seen.add(root)
+        if not is_foreign(root, cwd):
             roots.append(root)
     return roots
 
