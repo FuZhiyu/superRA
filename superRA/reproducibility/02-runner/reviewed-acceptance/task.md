@@ -1,6 +1,6 @@
 ---
 title: "Reuse Reviewed Results Without Unnecessary Rebuilds"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -76,16 +76,6 @@ steps:
 
 ## Review Notes
 
-Tier: thorough (read [_repro_acceptance.py](../../../../skills/task-tree/scripts/_repro_acceptance.py) and the engine hooks in full; ran a throwaway two-step fixture through accept, status, dry-run, build, and a comment-only edit). Focus: correctness. Reviewer: main agent, on the code as it stands after [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md).
+Tier: thorough; narrow re-review. Focus: correctness. Reviewer: main agent. Deferred by the orchestrator:
 
-1. `[BLOCKING]` **Re-accepting an upstream step restales every downstream step accepted with it, and the next build reruns them.** Fixture: `make-a` writes `a.txt`, `make-b` reads it; both produced directly and accepted in one call; a comment is appended to `make-a`'s script and `make-a` alone is accepted again. `a.txt` and all of `make-b`'s own deps are byte-identical, `explain` reports upstream `make-a: fresh`, yet `make-b` is `stale: upstream acceptance changed` and an ordinary `build .` executes it. The record binds the parent's acceptance id ([_repro_acceptance.py:359](../../../../skills/task-tree/scripts/_repro_acceptance.py#L359)), and status compares that id ([_repro_acceptance.py:230](../../../../skills/task-tree/scripts/_repro_acceptance.py#L230), [193](../../../../skills/task-tree/scripts/_repro_acceptance.py#L193)), so any new parent record breaks it. This is the adoption path — register a pipeline produced interactively, accept it whole — followed by the superficial upstream edit the objective exists to make cheap. A downstream with an executed baseline is unaffected. Fix: a bound parent satisfies the child while it still holds a valid acceptance or a successful lock; the child's own recorded dep hashes already pin the parent's output bytes. Revoking the parent with no successful lock must still invalidate the child. Add the fixture above as a red-green test.
-
-   → implemented: [_repro_acceptance.py:198-204](../../../../skills/task-tree/scripts/_repro_acceptance.py#L198-L204) — a bound producer satisfies the record while it holds an acceptance or a successful lock, and only losing both invalidates it; [test_repro_acceptance.py:728-738](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L728-L738) is the fixture, red on the id comparison (`build-b` was `stale`) and green now.
-
-2. `[ADVISORY]` The committed ledger stores each saved input's resolved path ([_repro_scope.py:49](../../../../skills/task-tree/scripts/_repro_scope.py#L49)), and the record id hashes it. A root resolved per author or branch then lands in `repro-acceptance.json`, which the design keeps free of both by keying on logical paths. Validation reads only `logical` and `digest`.
-
-   → implemented: [_repro_acceptance.py:84-86](../../../../skills/task-tree/scripts/_repro_acceptance.py#L84-L86) — the record and its baseline keep saved-input rows by logical path, asserted at [test_repro_acceptance.py:646-648](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L646-L648); the gitignored receipt still carries both path forms.
-
-3. `[ADVISORY]` `## Revision Notes` is still present at `implemented`; the task hook warns on every task edit in this tree.
-
-   → implemented: the section is removed, its content incorporated in `## Objective` and `## Results`.
+1. `[ADVISORY]` `record['baseline']['spec']`, present only when a successful receipt exists, still stores resolved dep paths and the resolved command, so a per-author or per-branch root can reach the committed ledger through that field. Same class as the saved-input rows this round made logical.
