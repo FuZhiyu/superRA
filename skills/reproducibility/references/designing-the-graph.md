@@ -12,8 +12,6 @@ Unregistered: findings that are not retained, anything regenerated per machine, 
 
 **A task companion is never upstream of main work** — [promote it](../../using-superra/references/task-companion-files.md#promote) the moment anything outside its task consumes its output, rather than drawing a dep edge into another task's `attachments/`.
 
-Mechanical registration signals — the producer-edit reminder, the `task check` coverage warning — are advisory: a hand-edited `.tex` legitimately has no producer.
-
 ## The step unit follows the script
 
 One step per script is the default, so shaping scripts shapes the graph.
@@ -24,8 +22,6 @@ One step per script is the default, so shaping scripts shapes the graph.
 - **Derive configuration per consumer.** A cheap producer emitting deterministic per-consumer artifacts stops the cascade on unchanged bytes.
 
 The balance is rerun selectivity against declaration upkeep and per-step process start-up: each step pays a fresh interpreter, which dominates a chain of short scripts.
-
-Planners draw these boundaries while mapping the artifact pipeline; implementers split the scripts their own task owns.
 
 ## The dependency trade-off is a ladder
 
@@ -61,4 +57,4 @@ Validate before building: `superra task check`. Repair genuine task-boundary cyc
 
 Present a new or restructured graph for the researcher's decisions on completion targets and the input boundary, applying the coverage rule in [protect-and-completion.md](protect-and-completion.md) when naming targets. The dashboard DAG navigator expands tasks into steps.
 
-A comment anchored to a step is a graph-design finding: fix the section and rerun `superra repro status`. A comment that moves what counts as canonical, or where the boundary sits, is a scope change — carry it back to the task tree instead of quietly changing the declarations.
+A comment anchored to a step is a graph-design finding: fix the section and rerun `superra repro status <task>`. A comment that moves what counts as canonical, or where the boundary sits, is a scope change — carry it back to the task tree instead of quietly changing the declarations.
