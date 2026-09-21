@@ -1,6 +1,6 @@
 ---
 title: "Detect File Edits Regardless of the Tool That Made Them"
-status: approved
+status: revise
 depends_on: []
 ---
 
@@ -81,7 +81,18 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 
 ## Review Notes
 
-Thorough pass on correctness and scope-fidelity. No blocking findings; four of five advisories were fixed or recorded under §Known limits after the pass, verified by the orchestrator's own tests. Verified by re-running the script suite (1088 passed, 140 skipped without pytask), by re-measuring the reported latencies, and by driving [task_hook.py](../../../skills/task-tree/scripts/task_hook.py) with payloads on scratch trees.
+### Second pass — thorough, on scope-fidelity and correctness against the design this landed beside
+
+Read against the [12-agent-protocol group decisions](../../reproducibility/12-agent-protocol/task.md#decisions-researcher-2026-09-20) and its three children, the redesigned [reproducibility skill](../../../skills/reproducibility/SKILL.md), [_repro_signals.py](../../../skills/task-tree/scripts/_repro_signals.py), and the `guard-foreign-checkout` gate from [agent-cwd-isolation](../agent-cwd-isolation/task.md). Verified by replaying two checkouts against both `45dba240` and `a6e7ff6e`, and by running the commands the hook prints.
+
+1. `[BLOCKING]` **Naming an absolute path inside another checkout makes the hook rewrite that checkout's task files.** [plan_roots](../../../skills/task-tree/scripts/_edit_detect.py#L73-L96) adds a task root for every absolute path a `Bash` command mentions, and [_process_paths](../../../skills/task-tree/scripts/task_hook.py#L913-L918) then reconciles every changed `task.md` it finds in that root. Reproduced with two scratch checkouts: from checkout A, two read-only `ls` calls naming a path in checkout B — with an edit in B between them — rewrote B's committed `parent/task.md` (status rolled to `approved`, title requoted, `depends_on: []` inserted) and created `.superra-repro/` there. At `45dba240` neither happened. This is the mutation `guard-foreign-checkout` exists to stop, and the gate cannot see it: it is PreToolUse over `Edit`/`Write`/`apply_patch` and git-verb `Bash`, while these writes come from the hook, which is not a tool call. §Known limits records the reach but not the conflict. Fix: drop foreign roots in `plan_roots` using the gate's own membership test ([_is_foreign](../../../hooks/checkout_isolation_gate.py#L178-L190), git common dir), which keeps the sibling-worktree reach the §Design calls rationale asks for.
+2. `[BLOCKING]` **The collapsed reminder prints a command that fails.** [task_hook.py:326-329](../../../skills/task-tree/scripts/task_hook.py#L326-L329) tells the agent to run `superra repro status`; that exits with `error: name at least one task or task#step target; '.' selects every registered step`. In the collapse path that line is the entire feedback, so the reminder carries nothing usable. Fix: `superra repro status .`. [task_hook.py:217](../../../skills/task-tree/scripts/task_hook.py#L217) carries the same bare form — pre-existing, same fix.
+3. `[ADVISORY]` **Two `code_roots` mentions survive in a file §Details listed for the sweep**: [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md) states the retired short-circuit as current code (`graph.steps == [] and graph.config.code_roots == []`) and names a `code_roots` config in its validation record. [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md) still gives the old silence condition, although §Results claims to close its `code_roots` advisory.
+4. `[ADVISORY]` **The codebase half of "registration follows placement" loses its only mechanical signal.** The reminder now covers registered deps and scripts plus unregistered scripts *under a task root*; [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md), which §Objective names as the home for other missing-registration signals, warns only on generated results artifacts and never on source. Unregistered retained code on a maintained path — what `code_roots` watched — is now silent, and no open task owns it.
+
+### First pass — thorough, on correctness and scope-fidelity
+
+No blocking findings; four of five advisories were fixed or recorded under §Known limits after the pass, verified by the orchestrator's own tests. Verified by re-running the script suite (1088 passed, 140 skipped without pytask), by re-measuring the reported latencies, and by driving [task_hook.py](../../../skills/task-tree/scripts/task_hook.py) with payloads on scratch trees.
 
 1. `[ADVISORY]` The objective's per-harness live-session check ran for Claude Code only. The Codex half is unrun for the reason §Results gives, and the rerun instruction it carries is the follow-up to track.
 
