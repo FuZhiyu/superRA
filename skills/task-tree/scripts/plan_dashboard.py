@@ -429,8 +429,8 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
             repro_lock_changed = True
             continue
 
-        # The project's reproduction config (variables, runners, env deps,
-        # code roots) shapes every step, so an edit moves the whole graph.
+        # The project's reproduction config (variables, runners, env deps)
+        # shapes every step, so an edit moves the whole graph.
         if name == CONFIG_FILENAME and fp.parent == state.plan_root:
             repro_graph_changed = True
             continue

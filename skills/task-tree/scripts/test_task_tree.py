@@ -3112,12 +3112,10 @@ class TestTaskHook:
 
     # --- reproduction reminder (05-reminder-hook) ---
 
-    def _write_repro_config(self, plan_root: Path, code_roots: tuple[str, ...] = ()) -> None:
-        lines = ["reproduction:"]
-        if code_roots:
-            lines.append("  code_roots:")
-            lines.extend(f"    - {root}" for root in code_roots)
-        (plan_root / "config.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    def _write_repro_config(self, plan_root: Path) -> None:
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  runners:\n    julia: julia {script}\n", encoding="utf-8"
+        )
 
     def _write_repro_task(self, task_dir: Path, block: str, title: str = "Pipeline") -> None:
         task_dir.mkdir(parents=True, exist_ok=True)
@@ -3132,12 +3130,13 @@ class TestTaskHook:
         )
         (task_dir / "task.md").write_text(text, encoding="utf-8")
 
-    def test_reproduction_reminder_under_code_root(self, tmp_path):
-        """A file under a configured code_root reminds with no owning step."""
+    def test_reproduction_reminder_unregistered_companion_script(self, tmp_path):
+        """A script under the task root that no step registers reminds with no
+        owning step."""
         plan_root = tmp_path / "superRA"
         plan_root.mkdir()
-        self._write_repro_config(plan_root, code_roots=["Code"])
-        helper = tmp_path / "Code" / "helper.jl"
+        self._write_repro_config(plan_root)
+        helper = plan_root / "01-first" / "attachments" / "helper.jl"
         helper.parent.mkdir(parents=True)
         helper.write_text("# helper\n", encoding="utf-8")
 
@@ -3150,7 +3149,7 @@ class TestTaskHook:
         assert result.returncode == 0
         context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         assert "Reproduction:" in context
-        assert "Code/helper.jl" in context
+        assert "superRA/01-first/attachments/helper.jl" in context
         assert "owning step(s): none" in context
         assert "superra repro status" in context
 
@@ -3311,10 +3310,18 @@ class TestTaskHook:
             "reproduction:\n"
             "  vars:\n"
             "    OUT:\n"
-            '      shell: "echo should-not-run"\n'
-            "  code_roots:\n"
-            "    - Code\n",
+            '      shell: "echo should-not-run"\n',
             encoding="utf-8",
+        )
+        self._write_repro_task(
+            plan_root / "01-pipeline",
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Code/helper.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n",
         )
         helper = tmp_path / "Code" / "helper.jl"
         helper.parent.mkdir(parents=True)
@@ -3341,7 +3348,17 @@ class TestTaskHook:
         """A multi-file edit (one apply_patch) under one plan_root builds once."""
         plan_root = tmp_path / "superRA"
         plan_root.mkdir()
-        self._write_repro_config(plan_root, code_roots=["Code"])
+        self._write_repro_task(
+            plan_root / "01-pipeline",
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Code/a.jl\n"
+            "      - Code/b.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n",
+        )
         a = tmp_path / "Code" / "a.jl"
         b = tmp_path / "Code" / "b.jl"
         a.parent.mkdir(parents=True)
@@ -3381,9 +3398,7 @@ class TestTaskHook:
             "reproduction:\n"
             "  vars:\n"
             "    OUT:\n"
-            '      shell: "echo /out"\n'
-            "  code_roots:\n"
-            "    - Code\n",
+            '      shell: "echo /out"\n',
             encoding="utf-8",
         )
         task_dir = plan_root / "01-pipeline"

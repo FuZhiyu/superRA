@@ -40,7 +40,7 @@ def workspace(tmp_path_factory):
     root = base / 'superRA'
     root.mkdir()
     (root / 'task.md').write_text('---\ntitle: DAG interaction fixture\nstatus: in-progress\n---\n\n## Objective\n\nInspect dependencies.\n')
-    (root / 'config.yaml').write_text('reproduction:\n  code_roots: [code]\n')
+    (root / 'config.yaml').write_text('reproduction:\n  runners:\n    sh: sh {script}\n')
     for i in range(4):
         owner = root / f'analysis-{i}'
         owner.mkdir()
