@@ -10,7 +10,7 @@ Artifacts planned inside a task directory follow `skills/using-superra/reference
 
 **Walk the project guidance docs, then point to or distill each relevant convention into scoped objective context** per `task-tree-design.md` §Context Distillation.
 
-**The mapped artifacts become `## Reproduction` steps.** Seed each producing task's section with the outs it should write, leaving `deps` to its implementer. What earns a step: `superRA:reproducibility`.
+**The mapped artifacts become `## Reproduction` steps.** Seed each producing task's section with the outs it should write, leaving `deps` to its implementer. Draw the script boundaries with the graph in mind, so an expensive stage and a frequently edited one start in separate scripts: `reproducibility/references/designing-the-graph.md`.
 
 ## Task Structure
 
