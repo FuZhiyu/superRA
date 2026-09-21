@@ -83,6 +83,11 @@ def read_ledger(paths):
     return value
 
 
+def logical_rows(rows):
+    """Committed saved-input rows key on the logical path; a resolved root is per-checkout."""
+    return [{key: value for key, value in row.items() if key != 'resolved'} for row in rows]
+
+
 def lock_state(entry):
     return {'deps': entry.depends_on, 'products': entry.produces} if entry else None
 
@@ -182,16 +187,21 @@ def differences(before, after):
             for key in sorted(before.keys() | after.keys()) if before.get(key) != after.get(key)]
 
 
-def validate_record(graph, step, paths, record, lock, upstream, cache=None):
+def validate_record(graph, step, paths, record, locks, ledger, cache=None):
     """Return the reason reuse is invalid; callers already validate upstream state."""
     if not record:
         return 'no acceptance'
-    if record.get('baseline', {}).get('lock') != lock_state(lock):
+    if record.get('baseline', {}).get('lock') != lock_state(locks.get(step.name)):
         return 'successful baseline changed'
     if read_run_record(paths, step.name).get('outcome') in ('failed', 'running', 'pending'):
         return 'last execution did not succeed'
-    if record.get('upstream') != upstream:
-        return 'upstream acceptance changed'
+    # A bound producer that still holds an acceptance or a successful lock keeps
+    # this record: the reviewed dep hashes below already pin its output bytes, so
+    # re-accepting it is not a change here. Losing its every baseline is.
+    revoked = next((name for name in record.get('upstream', {})
+                    if name not in ledger['steps'] and name not in locks), None)
+    if revoked:
+        return f'upstream acceptance for {revoked!r} was revoked'
     cache = cache or HashCache()
     current_paths = {dep.logical: dep.resolved for dep in step.deps}
     for item in record.get('boundary_inputs', []):
@@ -225,11 +235,8 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
     for name in _topological(by_name, parents):
         entry = by_name[name]
         record = ledger['steps'].get(name)
-        # Only decisions this acceptance relied on bind it. Out-of-scope
-        # producers remain saved inputs, with their actual bytes recorded.
-        upstream = {p: ledger['steps'][p]['id'] for p in record['upstream'] if p in ledger['steps']} if record else None
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
-        invalid = validate_record(report.graph, entry.step, paths, record, lock.get(name), upstream, cache) if record else None
+        invalid = validate_record(report.graph, entry.step, paths, record, lock, ledger, cache) if record else None
         if valid_graph and record and not invalid:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
             entry.changes = []
@@ -353,9 +360,13 @@ def preview(graph, paths, targets, reason, reviews, evidence):
                                 'before': previous['digest'], 'after': item['digest']})
         coverage = {change['node']: reviews[change['node']] for change in changes if change['node'] in reviews}
         portable_baseline = {key: value for key, value in before.items() if key != 'snapshots'}
+        if 'boundary_inputs' in portable_baseline:
+            portable_baseline['boundary_inputs'] = logical_rows(portable_baseline['boundary_inputs'])
         record = {'basis': 'reviewed', 'baseline': portable_baseline, 'state': state,
                   'reason': reason, 'reviews': coverage, 'evidence': evidence_hashes,
-                  'boundary_inputs': boundary,
+                  'boundary_inputs': logical_rows(boundary),
+                  # Only producers accepted alongside this one bind it; the rest
+                  # stay saved inputs, recorded above by their actual bytes.
                   'upstream': {p: ledger['steps'][p]['id'] for p in parents[name]
                                if p in names and p in ledger['steps']}}
         # Deterministic provisional ids also bind downstream batch acceptances.
