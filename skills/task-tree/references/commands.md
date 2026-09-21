@@ -148,7 +148,7 @@ Changes after acceptance invalidate its exact state, including actual sidecar-ba
 
 `explain --json` reports verified successful-source snapshots when available, including dirty-checkout runs. Reviewed baselines supply recorded hashes; source text not captured at execution is explicitly unavailable. Raw source snapshots remain local. See [the record contract](task-file-contract.md#acceptance-and-successful-baseline-records).
 
-Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/rerun-model.md#what-makes-a-step-rerun).
+Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/diagnosing.md#what-makes-a-step-rerun).
 
 Only `build` needs pytask, and it re-execs itself under `uv` to get it; nothing has to be installed first.
 
