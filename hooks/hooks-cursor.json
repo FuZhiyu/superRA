@@ -14,6 +14,9 @@
         "command": "./hooks/guard-task-approval"
       },
       {
+        "command": "./hooks/guard-foreign-checkout"
+      },
+      {
         "command": "./hooks/ensure-communicate"
       },
       {

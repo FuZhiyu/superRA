@@ -34,6 +34,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" guard-foreign-checkout; else printf '{}\\n'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
             "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then /bin/sh \"$root/hooks/run-hook.cmd\" ensure-communicate; else printf '{}\\n'; fi"
           }
         ]

@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 from pathlib import Path
 
 from sdk_load_evidence import (
@@ -74,6 +75,7 @@ from sdk_load_evidence import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "task-trees" / "bundle-two-tasks"
+HOOKS_DIR = REPO_ROOT / "hooks"
 
 # The agent the harness dispatches, and the role skill its prompt names so the
 # manifest loads fire.
@@ -162,6 +164,43 @@ def _is_subagent_load(input_data) -> bool:
     return bool(input_data.get("agent_id") or input_data.get("agent_type"))
 
 
+def confinement_hook(workspace: Path):
+    """PreToolUse callback denying tool calls that escape *workspace*.
+
+    A traced session runs against a scratch fixture with `permission_mode`
+    `acceptEdits` and an unrestricted `Bash`, so nothing in the SDK keeps it from
+    resolving another checkout's task tree, writing results into a task it was
+    never dispatched to, and committing that checkout's in-flight diff — which is
+    what a v0.4 trace did on 2026-08-02. The decision is the plugin gate's
+    (`hooks/checkout_isolation_gate.py`), registered in-process so confinement
+    does not depend on plugin hooks reaching the traced session.
+    """
+
+    if str(HOOKS_DIR) not in sys.path:
+        sys.path.insert(0, str(HOOKS_DIR))
+    from checkout_isolation_gate import deny_reason  # noqa: PLC0415
+
+    async def on_pretooluse(input_data, tool_use_id, context):
+        if not isinstance(input_data, dict):
+            return {}
+        reason = deny_reason(
+            input_data.get("tool_name", ""),
+            input_data.get("tool_input", {}) or {},
+            workspace,
+        )
+        if reason is None:
+            return {}
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": reason,
+            }
+        }
+
+    return on_pretooluse
+
+
 async def _run_session_async(
     *,
     prompt: str,
@@ -213,6 +252,7 @@ async def _run_session_async(
     pretooluse = [
         HookMatcher(matcher="Skill", hooks=[on_skill_pretooluse]),
         HookMatcher(matcher="Edit|Write", hooks=[on_edit_pretooluse]),
+        HookMatcher(matcher="Edit|Write|Bash", hooks=[confinement_hook(cwd)]),
     ]
     # Additive, opt-in: the Read channel records reference-file loads (e.g. the
     # planning-review reference, which loads via Read not the Skill tool). Default
