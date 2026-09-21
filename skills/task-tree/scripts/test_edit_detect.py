@@ -35,7 +35,10 @@ def _task(path: Path, title: str, status: str, body: str = "") -> None:
 
 def _hook(project: Path, payload: dict, env: dict | None = None):
     payload = {"session_id": "s1", "cwd": str(project), **payload}
-    run_env = {**os.environ, **(env or {})}
+    # The harness sets CLAUDE_PROJECT_DIR per session; a case that cares supplies
+    # its own, and no ambient value from the session running the suite leaks in.
+    run_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    run_env.update(env or {})
     return subprocess.run(
         [sys.executable, str(SCRIPTS_DIR / "task_hook.py")],
         input=json.dumps(payload),
@@ -46,9 +49,11 @@ def _hook(project: Path, payload: dict, env: dict | None = None):
     )
 
 
-def _bash(project: Path, command: str = HEREDOC, **extra) -> str:
+def _bash(project: Path, command: str = HEREDOC, env: dict | None = None, **extra) -> str:
     """Run the hook on a Bash payload; return its feedback text ('' when silent)."""
-    result = _hook(project, {"tool_name": "Bash", "tool_input": {"command": command}, **extra})
+    result = _hook(
+        project, {"tool_name": "Bash", "tool_input": {"command": command}, **extra}, env
+    )
     assert result.returncode == 0
     assert result.stderr == ""
     if not result.stdout.strip():
@@ -98,6 +103,31 @@ def repro_project(project):
 
 def _rewrite(path: Path, old: str, new: str) -> None:
     path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
+
+
+def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
+    )
+
+
+def _checkout(path: Path) -> Path:
+    """A disposable git checkout carrying a committed three-task tree."""
+    path.mkdir(parents=True)
+    _git(path, "init", "-q")
+    _git(path, "config", "user.email", "test@example.com")
+    _git(path, "config", "user.name", "Test")
+    _task(path / "superRA" / "task.md", "Root", "in-progress")
+    _task(path / "superRA" / "01-first" / "task.md", "First", "in-progress")
+    _task(path / "superRA" / "02-second" / "task.md", "Second", "approved")
+    _git(path, "add", "-A")
+    _git(path, "commit", "-qm", "init")
+    return path
+
+
+def _dirty(checkout: Path) -> set[str]:
+    porcelain = _git(checkout, "status", "--porcelain").stdout
+    return {line[3:] for line in porcelain.splitlines() if line}
 
 
 class TestBashMadeEdits:
@@ -154,12 +184,44 @@ class TestBashMadeEdits:
         assert "status: approved" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
         assert _bash(project) == ""
 
-    def test_edit_in_another_worktree_is_found_through_the_command(self, project, tmp_path_factory):
-        elsewhere = tmp_path_factory.mktemp("session-cwd")
-        command = f"cd {project} && {HEREDOC}"
-        assert _bash(elsewhere, command) == ""
-        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
-        assert "Markdown edited" in _bash(elsewhere, command)
+    def test_edit_in_a_sibling_worktree_is_found_through_the_command(self, tmp_path):
+        session = _checkout(tmp_path / "session")
+        sibling = tmp_path / "sibling"
+        _git(session, "worktree", "add", "-q", "-b", "sibling", str(sibling))
+        command = f"cd {sibling} && {HEREDOC}"
+        assert _bash(session, command) == ""
+        _rewrite(sibling / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+        assert "Markdown edited" in _bash(session, command)
+        assert "status: approved" in (sibling / "superRA" / "task.md").read_text(encoding="utf-8")
+
+    def test_a_foreign_checkout_is_left_alone(self, tmp_path):
+        """Naming a path in another repository's checkout must not rewrite its
+        task files: the hook writes nowhere `guard-foreign-checkout` would prompt."""
+        session = _checkout(tmp_path / "session")
+        foreign = _checkout(tmp_path / "foreign")
+        command = f"ls {foreign}/superRA"
+        assert _bash(session, command) == ""
+        _rewrite(foreign / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+        _rewrite(session / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+
+        assert "Markdown edited" in _bash(session, command)  # the session's own tree still reconciles
+        assert _dirty(foreign) == {"superRA/01-first/task.md"}
+        assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
+        assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
+
+    def test_a_payload_cwd_inside_the_foreign_checkout_does_not_unlock_it(self, tmp_path):
+        """A session that `cd`s into another checkout keeps the anchor it started
+        with: `CLAUDE_PROJECT_DIR` outranks the payload cwd, as in the gate."""
+        session = _checkout(tmp_path / "session")
+        foreign = _checkout(tmp_path / "foreign")
+        env = {"CLAUDE_PROJECT_DIR": str(session)}
+        assert _bash(foreign, "ls", env=env) == ""
+        _rewrite(foreign / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+
+        assert _bash(foreign, "ls", env=env) == ""
+        assert _dirty(foreign) == {"superRA/01-first/task.md"}
+        assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
+        assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
 
 
 class TestReproductionReminder:
@@ -170,6 +232,8 @@ class TestReproductionReminder:
         context = _bash(repro_project)
         assert "Code/build.jl changed" in context
         assert "build-panel" in context
+        # the command the reminder prints needs a target, and names the owning step
+        assert "`superra repro status 03-pipeline#build-panel`" in context
         script.write_text("# build v3\n", encoding="utf-8")
         assert _bash(repro_project) == ""
 
@@ -192,6 +256,7 @@ class TestReproductionReminder:
         context = _bash(repro_project)
         assert "superRA/03-pipeline/attachments/explore.py changed" in context
         assert "owning step(s): none" in context
+        assert "`superra repro status .`" in context  # no owner: the whole tree
 
     def test_tree_without_reproduction_config_keeps_markdown_behaviors(self, project):
         assert _bash(project) == ""
@@ -223,6 +288,7 @@ class TestReproductionReminder:
         context = _bash(repro_project)
         assert "8 tracked files changed" in context
         assert "s0.py" not in context
+        assert "`superra repro status .`" in context
 
 
 class TestCodexPayloads:

@@ -209,12 +209,22 @@ def _repro_is_out(graph, rel: str) -> bool:
 REPRO_REMINDER_CAP = 5
 
 
-def _repro_message(rel: str, owners: list[str], fan_out: str = "") -> str:
+def _repro_status_targets(graph, owners: list[str]) -> str:
+    """`superra repro status` targets for *owners* — the command needs at least
+    one, and `.` selects every registered step when no step owns the file."""
+    by_name = {step.name: step for step in graph.steps}
+    targets = sorted(
+        f"{by_name[name].task_path}#{name}" for name in owners if name in by_name
+    )
+    return " ".join(targets) if targets else "."
+
+
+def _repro_message(rel: str, owners: list[str], fan_out: str = "", targets: str = ".") -> str:
     owner_text = ", ".join(sorted(owners)) if owners else "none"
     stales = f"Stales {fan_out}. " if fan_out else ""
     return (
         f"Reproduction: {rel} changed (owning step(s): {owner_text}). {stales}Update the "
-        "step's deps/outs or register a new step, then run `superra repro status`."
+        f"step's deps/outs or register a new step, then run `superra repro status {targets}`."
     )
 
 
@@ -251,7 +261,12 @@ def _repro_emit(
             continue
         owners = _repro_owning_steps(graph, rel)
         feedback.append(
-            _repro_message(rel, owners, _repro_fan_out(graph, project_root, owners))
+            _repro_message(
+                rel,
+                owners,
+                _repro_fan_out(graph, project_root, owners),
+                _repro_status_targets(graph, owners),
+            )
         )
         try:
             marker.parent.mkdir(parents=True, exist_ok=True)
@@ -325,7 +340,7 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
     if len(feedback) > REPRO_REMINDER_CAP:
         return [
             f"Reproduction: {len(feedback)} tracked files changed. Run "
-            "`superra repro status` to see the steps they stale."
+            "`superra repro status .` to see the steps they stale."
         ]
     return feedback
 
@@ -867,13 +882,20 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
     """Watched files changed on disk since this session's baseline. Fails open."""
     try:
         _ensure_scripts_on_path()
+        import _checkout_scope
         import _edit_detect
         tool_input = data.get("tool_input", {}) or {}
         command = tool_input.get("command", "") if tool_name == "Bash" else ""
         session_key = _repro_session_key(data)
+        # The session anchor, not the payload cwd: a `cd` into another checkout
+        # must not make that checkout the session's own. Same resolution the
+        # `guard-foreign-checkout` gate uses.
+        anchor = _checkout_scope.session_anchor(data)
+        if anchor is None:
+            return []
         changed: list[Path] = []
         for plan_root in _edit_detect.plan_roots(
-            _cwd(data), tool_paths, command if isinstance(command, str) else ""
+            anchor, tool_paths, command if isinstance(command, str) else ""
         ):
             try:
                 changed.extend(
