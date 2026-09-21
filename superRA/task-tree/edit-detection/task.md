@@ -1,6 +1,6 @@
 ---
 title: "Detect File Edits Regardless of the Tool That Made Them"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -44,7 +44,7 @@ Make the task hook's PostToolUse behaviors fire for a file edit made through any
 
 ## Results
 
-The task hook now handles a file edit the same way whichever tool made it. A per-session content baseline ([_edit_detect.py](../../../skills/task-tree/scripts/_edit_detect.py)) finds the changed files, and one consumer sequence ([`_process_paths`](../../../skills/task-tree/scripts/task_hook.py#L889)) replaces the separate Edit/Write and `apply_patch` handlers. Mechanics: [internals.md §Hook Architecture](../../../skills/task-tree/references/internals.md#hook-architecture).
+The task hook now handles a file edit the same way whichever tool made it. A per-session content baseline ([_edit_detect.py](../../../skills/task-tree/scripts/_edit_detect.py)) finds the changed files, and one consumer sequence ([`_process_paths`](../../../skills/task-tree/scripts/task_hook.py#L908)) replaces the separate Edit/Write and `apply_patch` handlers. Mechanics: [internals.md §Hook Architecture](../../../skills/task-tree/references/internals.md#hook-architecture).
 
 - **A heredoc edit of a `task.md` rolls status up in a real Claude Code session.** `claude -p --plugin-dir <this worktree>` ran `ls`, then a Python heredoc flipping a child to `approved`: the root rolled up to `approved` and the model received the hook feedback.
 - **The live Codex check did not run.** Codex executes only hooks whose hash `~/.codex/config.toml` trusts and sets `PLUGIN_ROOT` itself, so neither a project `hooks.json` nor an environment override reached this worktree's code, and I did not edit that config. The Codex payload shapes pass as fixtures; rerun the same two-step prompt under `codex exec` once the installed plugin carries this change.
@@ -56,20 +56,25 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 | Whole hook process, no-op Bash call | 29.7 ms before, 36.2 ms after |
 | First call of a session (hash everything, build the graph) | 49 ms |
 | Graph rebuild, only after a `task.md` or `config.yaml` change | 28 ms |
+| Locating the trees to check, command naming nothing outside the session cwd | 0.07 ms |
+| The same, when the command names a path outside it (two `git rev-parse`) | 16 ms |
 
 ### Design calls
 
-- **Own baseline, not `HashCache`.** `HashCache` reads every file on a miss, so seeding would hash a multi-gigabyte data dep. The baseline hashes files up to 4 MB ([`HASH_MAX_BYTES`](../../../skills/task-tree/scripts/_edit_detect.py#L37)) and at most 64 MB per call, and compares the rest by size and mtime.
-- **Script rule:** `.jl .py .r .do .sh .ipynb .sql .m`, case-insensitive ([`SCRIPT_SUFFIXES`](../../../skills/task-tree/scripts/_edit_detect.py#L30)).
-- **Which trees are checked:** the task root beside or above the session cwd, each tool-supplied path, and each absolute path the Bash command names, because an agent in another worktree addresses it by absolute path. The command is read only for where to look. The upward walk stops at a repository top, and a root with more than 5,000 watched files is ignored as mis-resolved.
+- **Own baseline, not `HashCache`.** `HashCache` reads every file on a miss, so seeding would hash a multi-gigabyte data dep. The baseline hashes files up to 4 MB ([`HASH_MAX_BYTES`](../../../skills/task-tree/scripts/_edit_detect.py#L39)) and at most 64 MB per call, and compares the rest by size and mtime.
+- **Script rule:** `.jl .py .r .do .sh .ipynb .sql .m`, case-insensitive ([`SCRIPT_SUFFIXES`](../../../skills/task-tree/scripts/_edit_detect.py#L32)).
+- **Which trees are checked:** the task root beside or above the session cwd, each tool-supplied path, and each absolute path the Bash command names, because an agent in a sibling worktree addresses it by absolute path. The command is read only for where to look. The upward walk stops at a repository top, and a root with more than 5,000 watched files is ignored as mis-resolved.
+- **A root in a foreign checkout is dropped,** since detection leads to a reconcile that rewrites task files. Membership is the `guard-foreign-checkout` rule, moved to [_checkout_scope.py](../../../skills/task-tree/scripts/_checkout_scope.py) and shared by the gate and the detector rather than copied: a path under the session cwd, or in a checkout sharing its git common dir, is the session's own. Every worktree of the session's repository therefore stays in reach — that is where superRA dispatches implementers — and another repository does not.
 - **The hook never reports its own writes.** Reconcile rewrites ancestor statuses, so detection runs before any reconcile, and once one ran the hook detects again and discards the result.
-- **Reminder floods collapse.** More than five reproduction reminders in one call (a checkout, a merge) become one line pointing at `superra repro status`.
+- **Reminder floods collapse.** More than five reproduction reminders in one call (a checkout, a merge) become one line pointing at `superra repro status .`.
+- **Every reminder names a runnable target.** `superra repro status` needs at least one; a reminder with owning steps names them as `task#step` selectors, and one with none falls back to `.`, the whole active tree.
 - **"Carries reproduction config"** means any step, any `## Reproduction` section, or any `reproduction:` config value ([`has_reproduction`](../../../skills/task-tree/scripts/_repro_signals.py#L194)), which also closes the `code_roots` advisory in [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md).
 - **The post-write approval check needed no new code:** reconcile already reports `approved` with `[BLOCKING]` notes, and now runs for Bash-made edits.
 
 ### Known limits
 
-- A Bash edit in another worktree is seen only when the command names an absolute path into it. The reach is by mention, not by edit: a command that merely names a path inside another superRA project gives that project a self-ignored `.superra-repro/` baseline, and a later mention reconciles any `task.md` changed there.
+- A Bash edit in a sibling worktree is seen only when the command names an absolute path into it, and the reach is by mention rather than by edit: naming a path in a worktree of the session's own repository gives it a self-ignored `.superra-repro/` baseline, and a later mention reconciles any `task.md` changed there. Another repository is out of reach entirely.
+- A tool-supplied path is still processed wherever it points, including a foreign checkout, which keeps the pre-existing `Edit`/`Write` behavior. That route passes the `guard-foreign-checkout` PreToolUse gate first, so a foreign `task.md` write reaches the hook only after the researcher approved it.
 - Directory deps are not walked, so a Bash-made edit inside a registered directory dep is silent, while an `Edit` of the same file still reminds through its tool-supplied path.
 - Two edits to the same script in one session draw one reminder, as before.
 - A change made by the researcher or another agent surfaces at this session's next tool call, worded as a fact about the file.
@@ -77,7 +82,12 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 
 ### Validation
 
-[test_edit_detect.py](../../../skills/task-tree/scripts/test_edit_detect.py) adds 22 cases, each a file changed on disk followed by a `Bash` payload whose command does not name it: every fixture the objective lists, plus the advisory approval feedback, a newly registered dep seeded silently, the reminder collapse, a corrupt baseline, a structural `rm` that stays quiet about the hook's own rollup, the hashing budget, the oversized-root guard, and the repository-top stop. The `code_roots` tests in [test_task_tree.py](../../../skills/task-tree/scripts/test_task_tree.py) were rewritten onto registered deps and the companion-script rule. Full script suite with pytask: 1131 passed, 10 skipped (the browser suite under `tests/` deselected). The check step below was run by its command; its stamp was not built here, since `repro build` rewrites the committed `pytask.lock` from a worktree that is not merged yet. `task_hook.py` is also a dep of four existing check steps, which the full suite covers; the browser check `dashboard-dag-design-interaction-check`, whose config fixture changed, passes by its own command (54 cases).
+[test_edit_detect.py](../../../skills/task-tree/scripts/test_edit_detect.py) holds 23 cases, each a file changed on disk followed by a `Bash` payload whose command does not name it: every fixture the objective lists, plus the advisory approval feedback, a newly registered dep seeded silently, the reminder collapse, a corrupt baseline, a structural `rm` that stays quiet about the hook's own rollup, the hashing budget, the oversized-root guard, and the repository-top stop. The `code_roots` tests in [test_task_tree.py](../../../skills/task-tree/scripts/test_task_tree.py) were rewritten onto registered deps and the companion-script rule.
+
+- **The two-checkout reproduction is a red-green case.** `test_a_foreign_checkout_is_left_alone` builds two disposable `git init` checkouts, sends a read-only `ls` naming the foreign one from a session in the other, edits a `task.md` in each, and asserts the foreign checkout ends with exactly the one file it was edited in dirty, its root `task.md` unrolled, and no `.superra-repro/`, while the session's own tree still reconciles in that same call. Without the `plan_roots` filter it fails on the foreign root rolling up to `approved`.
+- **The sibling-worktree reach has a case of its own.** `test_edit_in_a_sibling_worktree_is_found_through_the_command` replaces the earlier version, which used two unrelated temporary directories and so no longer described the rule: it now adds a real `git worktree` and asserts a heredoc edit there is found and rolled up.
+- **The gate keeps its own suite.** [tests/hooks/test-guard-foreign-checkout.sh](../../../tests/hooks/test-guard-foreign-checkout.sh), 24 checks, passes unchanged against the extracted rule.
+- Full script suite with pytask: 1222 passed, 10 skipped (the browser suite under `tests/` deselected). The check step below was run by its command; its stamp was not built here, since `repro build` rewrites the committed `pytask.lock` from a worktree that is not merged yet. `task_hook.py` is also a dep of five other check steps, which the full suite covers; the browser check `dashboard-dag-design-interaction-check`, whose config fixture changed, passes by its own command (54 cases).
 
 ## Review Notes
 
@@ -86,8 +96,14 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 Read against the [12-agent-protocol group decisions](../../reproducibility/12-agent-protocol/task.md#decisions-researcher-2026-09-20) and its three children, the redesigned [reproducibility skill](../../../skills/reproducibility/SKILL.md), [_repro_signals.py](../../../skills/task-tree/scripts/_repro_signals.py), and the `guard-foreign-checkout` gate from [agent-cwd-isolation](../agent-cwd-isolation/task.md). Verified by replaying two checkouts against both `45dba240` and `a6e7ff6e`, and by running the commands the hook prints.
 
 1. `[BLOCKING]` **Naming an absolute path inside another checkout makes the hook rewrite that checkout's task files.** [plan_roots](../../../skills/task-tree/scripts/_edit_detect.py#L73-L96) adds a task root for every absolute path a `Bash` command mentions, and [_process_paths](../../../skills/task-tree/scripts/task_hook.py#L913-L918) then reconciles every changed `task.md` it finds in that root. Reproduced with two scratch checkouts: from checkout A, two read-only `ls` calls naming a path in checkout B — with an edit in B between them — rewrote B's committed `parent/task.md` (status rolled to `approved`, title requoted, `depends_on: []` inserted) and created `.superra-repro/` there. At `45dba240` neither happened. This is the mutation `guard-foreign-checkout` exists to stop, and the gate cannot see it: it is PreToolUse over `Edit`/`Write`/`apply_patch` and git-verb `Bash`, while these writes come from the hook, which is not a tool call. §Known limits records the reach but not the conflict. Fix: drop foreign roots in `plan_roots` using the gate's own membership test ([_is_foreign](../../../hooks/checkout_isolation_gate.py#L178-L190), git common dir), which keeps the sibling-worktree reach the §Design calls rationale asks for.
+
+    → implemented: the membership test moved to [_checkout_scope.py](../../../skills/task-tree/scripts/_checkout_scope.py), shared by the gate and by [plan_roots](../../../skills/task-tree/scripts/_edit_detect.py#L75-L107) rather than copied; your two-checkout reproduction is now [test_a_foreign_checkout_is_left_alone](../../../skills/task-tree/scripts/test_edit_detect.py#L192-L205), red before the filter and green after.
 2. `[BLOCKING]` **The collapsed reminder prints a command that fails.** [task_hook.py:326-329](../../../skills/task-tree/scripts/task_hook.py#L326-L329) tells the agent to run `superra repro status`; that exits with `error: name at least one task or task#step target; '.' selects every registered step`. In the collapse path that line is the entire feedback, so the reminder carries nothing usable. Fix: `superra repro status .`. [task_hook.py:217](../../../skills/task-tree/scripts/task_hook.py#L217) carries the same bare form — pre-existing, same fix.
+
+    → implemented: the collapse line names `.` ([task_hook.py:336](../../../skills/task-tree/scripts/task_hook.py#L343)), and the per-file reminder names its owning steps as `task#step` selectors ([`_repro_status_targets`](../../../skills/task-tree/scripts/task_hook.py#L212-L220)), falling back to `.` when no step owns the file. Both forms run clean.
 3. `[ADVISORY]` **Two `code_roots` mentions survive in a file §Details listed for the sweep**: [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md) states the retired short-circuit as current code (`graph.steps == [] and graph.config.code_roots == []`) and names a `code_roots` config in its validation record. [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md) still gives the old silence condition, although §Results claims to close its `code_roots` advisory.
+
+    → implemented: all three now state the `has_reproduction` condition — [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md) in its cost note and its validation record, [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md) in the generated-file rule. `code_roots` survives only where a sentence reports its retirement.
 4. `[ADVISORY]` **The codebase half of "registration follows placement" loses its only mechanical signal.** The reminder now covers registered deps and scripts plus unregistered scripts *under a task root*; [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md), which §Objective names as the home for other missing-registration signals, warns only on generated results artifacts and never on source. Unregistered retained code on a maintained path — what `code_roots` watched — is now silent, and no open task owns it.
 
 ### First pass — thorough, on correctness and scope-fidelity
@@ -108,5 +124,6 @@ steps:
     deps:
       - skills/task-tree/scripts/test_edit_detect.py
       - skills/task-tree/scripts/_edit_detect.py
+      - skills/task-tree/scripts/_checkout_scope.py
       - skills/task-tree/scripts/task_hook.py
 ```
