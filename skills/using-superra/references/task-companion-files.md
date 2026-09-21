@@ -18,9 +18,7 @@ Link every companion from the owning task's `## Results`, path relative to `task
 
 ## Promote
 
-Promote every companion that now meets the permanent-project definition: move it to the conventional path, update the `## Results` link, and re-register its step there (`superRA:reproducibility`). No duplicate task-local source of truth.
-
-**Promote on consumption, not at integration review.** The moment a step in another task, a maintained pipeline, or a document reads a companion, main work depends on a task-local file.
+Promote a companion as soon as it meets the permanent-project definition, not at integration review: move it to the conventional path, update the `## Results` link, and re-register its step there (`superRA:reproducibility`). No duplicate task-local source of truth.
 
 ## Mature and Consolidate
 

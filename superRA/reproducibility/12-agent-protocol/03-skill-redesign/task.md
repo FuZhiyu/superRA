@@ -1,6 +1,6 @@
 ---
 title: "Restructure the Reproducibility Skill by Moment and Wire the Role Skills"
-status: revise
+status: implemented
 depends_on:
   - 01-cli-decision-support
   - 02-agent-signals
@@ -62,7 +62,7 @@ Rewrite [skills/reproducibility/](../../../../skills/reproducibility/SKILL.md) s
 
 | Reference | Moved in | Added |
 |---|---|---|
-| [designing-the-graph.md](../../../../skills/reproducibility/references/designing-the-graph.md) | old SKILL.md §What Gets a Step and §Step Lifecycle, all of `graph-authoring.md` | the step unit follows the script; the dependency ladder; companions stay downstream; registration signals are advisory; two pilot lessons — per-step interpreter start-up, and enumerating outs from disk picking up leftovers |
+| [designing-the-graph.md](../../../../skills/reproducibility/references/designing-the-graph.md) | old SKILL.md §What Gets a Step and §Step Lifecycle, all of `graph-authoring.md` | the step unit follows the script; the dependency ladder; companions stay downstream; two pilot lessons — per-step interpreter start-up, and enumerating outs from disk picking up leftovers |
 | [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) | `rerun-model.md` §Reviewed acceptance | preview the cost and the cause; role classification; the stale rule; the superficial-change exception |
 | [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md) | the rest of `rerun-model.md`, old SKILL.md §Environment Changes | — |
 | [protect-and-completion.md](../../../../skills/reproducibility/references/protect-and-completion.md) | unchanged in scope; three links repointed | — |
@@ -81,13 +81,13 @@ Rewrite [skills/reproducibility/](../../../../skills/reproducibility/SKILL.md) s
 
 - **[implement-task](../../../../skills/implement-task/SKILL.md) §Self-Check** gains a fourth item routing a result recorded from retained code to the skill's gates; **[review-task](../../../../skills/review-task/SKILL.md) §Review Protocol** gains one line checking registration, the run route, and the reason behind any acceptance.
 - **[using-superra](../../../../skills/using-superra/SKILL.md) §Task Interface** now states registration as a consequence of placement, directly after the file-placement rule, instead of as an unrelated paragraph above it.
-- **[task-companion-files.md](../../../../skills/using-superra/references/task-companion-files.md)** says in §Classify that a companion feeds only its own task's results, and §Promote keeps the permanent-definition trigger while adding the consumption trigger that fires before integration review. `designing-the-graph.md` points there and adds only the reproduction-side instruction: do not draw a dep edge into another task's `attachments/`.
+- **[task-companion-files.md](../../../../skills/using-superra/references/task-companion-files.md)** says in §Classify that a companion feeds only its own task's results, and §Promote fires as soon as a companion meets the permanent-project definition rather than at integration review — keeping all three routes that definition covers, not only consumption by another task. `designing-the-graph.md` points there and adds only the reproduction-side instruction: do not draw a dep edge into another task's `attachments/`.
 - **[main-agent.md](../../../../skills/using-superra/references/main-agent.md) §Session Start Actions** runs `repro status .` on a tree with reproduction config and reports through the stale rule.
 - **[build-and-review.md](../../../../skills/superplan/references/build-and-review.md) §Artifact Pipeline** routes the planner to `designing-the-graph.md` when mapping scripts, replacing the generic skill pointer.
 
 ### Inventories and links
 
-`CLAUDE.md`'s ownership row and the `skills/CATEGORIES.md` entry now name the five references and the rerun-or-accept judgment. Four inbound links to renamed targets were repointed: `changing-the-tree.md` and `mature-consolidate.md` to `designing-the-graph.md`, `commands.md` and `task-file-contract.md` to `diagnosing.md`. The `superintegrate` step files, `superimplement/references/completion.md`, and `README.md` needed no change — they cite `protect-and-completion.md` or `SKILL.md`, both of which kept their paths. The two domain `planning.md` files cite the skill generically and are correct as they stand.
+`CLAUDE.md`'s ownership row and the `skills/CATEGORIES.md` entry now name graph and script design and the stale-step judgment among the skill's concerns; neither enumerates the references, which would be a second copy of SKILL.md's routing table. Four inbound links to renamed targets were repointed: `changing-the-tree.md` and `mature-consolidate.md` to `designing-the-graph.md`, `commands.md` and `task-file-contract.md` to `diagnosing.md`. The `superintegrate` step files, `superimplement/references/completion.md`, and `README.md` needed no change — they cite `protect-and-completion.md` or `SKILL.md`, both of which kept their paths. The two domain `planning.md` files cite the skill generically and are correct as they stand.
 
 ### Validation
 
@@ -100,10 +100,22 @@ No `## Reproduction` step is registered for this task: it ships no executable co
 Tier: thorough (read all six skill files and every wiring edit in full; ran the link check; grepped the repository for links to the deleted references). Focus: correctness, scope-fidelity, and the [CLAUDE.md](../../../../CLAUDE.md) three-test gate. Reviewer: main agent.
 
 1. `[BLOCKING]` **A named command fails.** [designing-the-graph.md:64](../../../../skills/reproducibility/references/designing-the-graph.md#L64) tells the agent to rerun `superra repro status` with no target; `status` requires one. Name the target form.
+
+   → implemented: [designing-the-graph.md:60](../../../../skills/reproducibility/references/designing-the-graph.md#L60) — now `superra repro status <task>`, the form a step comment's owning task takes.
 2. `[BLOCKING]` **Four lines fail the three-test gate.**
    - [designing-the-graph.md:28](../../../../skills/reproducibility/references/designing-the-graph.md#L28) — same-file restatement and DRY: rung 3 of the ladder already tells the implementer to split the scripts its task owns, and [build-and-review.md](../../../../skills/superplan/references/build-and-review.md) already tells the planner to draw the boundaries. Cut the sentence.
+
+     → implemented: [designing-the-graph.md:24-26](../../../../skills/reproducibility/references/designing-the-graph.md#L24-L26) — sentence cut; the section now ends on the start-up-cost line.
    - [designing-the-graph.md:15](../../../../skills/reproducibility/references/designing-the-graph.md#L15) — Necessity: the `task check` warning and the `implemented` reminder both already end "leave it if the file has none". Cut the paragraph.
+
+     → implemented: [designing-the-graph.md:13-15](../../../../skills/reproducibility/references/designing-the-graph.md#L13-L15) — paragraph cut; §What earns a step now ends on the companion line.
    - [task-companion-files.md:8](../../../../skills/using-superra/references/task-companion-files.md#L8), [21](../../../../skills/using-superra/references/task-companion-files.md#L21), [23](../../../../skills/using-superra/references/task-companion-files.md#L23) — one fact three times: the Classify clause, the permanent-artifact definition ("consumed by another task"), and the second §Promote paragraph, whose last sentence is rationale. Keep the Classify clause and make §Promote one imperative that carries the timing.
+
+     → implemented: [task-companion-files.md:21](../../../../skills/using-superra/references/task-companion-files.md#L21) — §Promote is one imperative carrying the timing ("as soon as it meets the permanent-project definition, not at integration review"); the second paragraph is gone and the Classify clause stands.
    - [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) — the clause after the dash is rationale. Cut it.
+
+     → implemented: [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) — clause cut; the bullet ends at the stale-rule link.
 3. `[ADVISORY]` The [CATEGORIES.md:52](../../../../skills/CATEGORIES.md#L52) row lists every reference and its contents, a second copy of the skill's routing table. One sentence on what the skill provides is enough.
+
+   → implemented: [CATEGORIES.md:52](../../../../skills/CATEGORIES.md#L52) — the row names the skill's concerns and drops the per-reference enumeration, matching the shape of its sibling rows.
 4. `[ADVISORY]` Seven task files under `superRA/reproducibility/` still link to the three deleted references, [06-skill](../../06-skill/task.md) and the [group task](../task.md) among them. `task check --category links` validates step citations only, so it passes over them.
