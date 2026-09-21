@@ -1,6 +1,6 @@
 ---
 title: "Reuse Reviewed Results Without Unnecessary Rebuilds"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -11,10 +11,6 @@ Provide impact inspection and exact-state acceptance for retained results, inclu
 - Preserve preview/apply concurrency protection, scoped targets, subsequent invalidation, portable records, revoke, serial/threaded build skips, and forced execution. Acceptance never fabricates successful locks, run records, or check stamps; never-run checks require execution.
 - Cover first acceptance, changed outputs, saved-input boundaries, sidecars, cache loss, failure/retry, and downstream behavior with real runner fixtures.
 - Teach agents to register retained interactive results and accept their reviewed current state without a redundant rerun. Update the owning skill, CLI/record contracts, and public descriptions together.
-
-## Revision Notes
-
-The accepted baseline extends beyond unchanged outputs from a previous runner success. The existing execution history remains authoritative for what the runner actually executed; acceptance records a separate review of current files.
 
 ## Details
 
@@ -70,17 +66,26 @@ steps:
 
 ## Results
 
-[Acceptance](../../../../skills/task-tree/scripts/_repro_acceptance.py) establishes or replaces a reviewed current baseline for newly registered producers, harmless edits, and changed outputs from direct runs. A reason is required; evidence files and per-node notes are optional. Existing legacy records retain their original validation rules.
+[Acceptance](../../../../skills/task-tree/scripts/_repro_acceptance.py) establishes or replaces a reviewed current baseline for newly registered producers, harmless edits, and changed outputs from direct runs. A reason is required; evidence files and per-node notes are optional. The committed record keys its saved inputs by logical path, so it reads the same on every checkout. Existing legacy records retain their original validation rules.
 
 - **Truthful history:** acceptance writes only its ledger. It leaves successful locks, execution records, receipts, and check stamps intact; initial acceptance creates none of those. Never-run checks, missing files, invalid graphs, and failed/interrupted executions remain blocked.
-- **Execution:** ordinary serial/threaded builds skip accepted producers and run outstanding downstream work/checks. Forced attempts remove acceptance and execute. Full output and saved-input fingerprints detect subsequent changes; scoped freshness leaves outside producers unverified. Batch decisions bind selected upstream acceptances and invalidate on revoke.
+- **Execution:** ordinary serial/threaded builds skip accepted producers and run outstanding downstream work/checks. Forced attempts remove acceptance and execute. Full output and saved-input fingerprints detect subsequent changes; scoped freshness leaves outside producers unverified.
+- **Binding a batch:** a decision binds the producers accepted with it. Re-accepting one of them leaves the downstream record valid — its reviewed dependency hashes already pin that producer's output bytes — while revoking one that holds no successful lock invalidates it.
 - **Agent workflow:** [Build and Status](../../../../skills/reproducibility/SKILL.md#build-and-status) routes already-produced interactive results through registration and [reviewed acceptance](../../../../skills/reproducibility/references/rerun-model.md#reviewed-acceptance). [Commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [record schema](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), and public descriptions match.
-- **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **174 tests** through the [registered regression check](#step-reviewed-baseline-regression-check), whose matching status is fresh. The full task-tree suite passed **1,187 tests, 44 skipped**. Skill validation, changed Markdown checks, and dependency/reproduction/link diagnostics passed. Independent correctness review is deferred at the researcher's request; the task remains implemented.
+- **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **168 tests** through the [registered regression check](#step-reviewed-baseline-regression-check), whose status is fresh. The full task-tree suite passed **1,199 tests, 10 skipped**. Changed Markdown checks and the tree's dependency/reproduction/link diagnostics passed. A thorough correctness review ran on the code and its findings are fixed in this round.
 
 ## Review Notes
 
 Tier: thorough (read [_repro_acceptance.py](../../../../skills/task-tree/scripts/_repro_acceptance.py) and the engine hooks in full; ran a throwaway two-step fixture through accept, status, dry-run, build, and a comment-only edit). Focus: correctness. Reviewer: main agent, on the code as it stands after [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md).
 
 1. `[BLOCKING]` **Re-accepting an upstream step restales every downstream step accepted with it, and the next build reruns them.** Fixture: `make-a` writes `a.txt`, `make-b` reads it; both produced directly and accepted in one call; a comment is appended to `make-a`'s script and `make-a` alone is accepted again. `a.txt` and all of `make-b`'s own deps are byte-identical, `explain` reports upstream `make-a: fresh`, yet `make-b` is `stale: upstream acceptance changed` and an ordinary `build .` executes it. The record binds the parent's acceptance id ([_repro_acceptance.py:359](../../../../skills/task-tree/scripts/_repro_acceptance.py#L359)), and status compares that id ([_repro_acceptance.py:230](../../../../skills/task-tree/scripts/_repro_acceptance.py#L230), [193](../../../../skills/task-tree/scripts/_repro_acceptance.py#L193)), so any new parent record breaks it. This is the adoption path — register a pipeline produced interactively, accept it whole — followed by the superficial upstream edit the objective exists to make cheap. A downstream with an executed baseline is unaffected. Fix: a bound parent satisfies the child while it still holds a valid acceptance or a successful lock; the child's own recorded dep hashes already pin the parent's output bytes. Revoking the parent with no successful lock must still invalidate the child. Add the fixture above as a red-green test.
+
+   → implemented: [_repro_acceptance.py:198-204](../../../../skills/task-tree/scripts/_repro_acceptance.py#L198-L204) — a bound producer satisfies the record while it holds an acceptance or a successful lock, and only losing both invalidates it; [test_repro_acceptance.py:728-738](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L728-L738) is the fixture, red on the id comparison (`build-b` was `stale`) and green now.
+
 2. `[ADVISORY]` The committed ledger stores each saved input's resolved path ([_repro_scope.py:49](../../../../skills/task-tree/scripts/_repro_scope.py#L49)), and the record id hashes it. A root resolved per author or branch then lands in `repro-acceptance.json`, which the design keeps free of both by keying on logical paths. Validation reads only `logical` and `digest`.
+
+   → implemented: [_repro_acceptance.py:84-86](../../../../skills/task-tree/scripts/_repro_acceptance.py#L84-L86) — the record and its baseline keep saved-input rows by logical path, asserted at [test_repro_acceptance.py:646-648](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L646-L648); the gitignored receipt still carries both path forms.
+
 3. `[ADVISORY]` `## Revision Notes` is still present at `implemented`; the task hook warns on every task edit in this tree.
+
+   → implemented: the section is removed, its content incorporated in `## Objective` and `## Results`.
