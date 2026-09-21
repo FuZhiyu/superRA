@@ -1,6 +1,6 @@
 ---
 title: "Restructure the Reproducibility Skill by Moment and Wire the Role Skills"
-status: implemented
+status: revise
 depends_on:
   - 01-cli-decision-support
   - 02-agent-signals
@@ -94,3 +94,16 @@ Rewrite [skills/reproducibility/](../../../../skills/reproducibility/SKILL.md) s
 A link checker over all 101 markdown files under `skills/` plus `CLAUDE.md` and `README.md` resolves every relative target and heading anchor; its 24 remaining misses are pre-existing illustrative placeholders (`file.py#L42`, `ATTACH_DIR/description.png`). `superra task check --category links` passes, and full `task check` reports 0 errors with only the 11 coverage warnings [02-agent-signals](../02-agent-signals/task.md) documented. `check_markdown.py` reports all six skill files clean. Every command and output named was checked against `./superRA/superra repro <subcommand> --help` in this worktree.
 
 No `## Reproduction` step is registered for this task: it ships no executable code, and `repro impact` confirms no existing step reads any file it touched, so nothing was staled. Behavioral verification is deferred to real-project use by researcher decision.
+
+## Review Notes
+
+Tier: thorough (read all six skill files and every wiring edit in full; ran the link check; grepped the repository for links to the deleted references). Focus: correctness, scope-fidelity, and the [CLAUDE.md](../../../../CLAUDE.md) three-test gate. Reviewer: main agent.
+
+1. `[BLOCKING]` **A named command fails.** [designing-the-graph.md:64](../../../../skills/reproducibility/references/designing-the-graph.md#L64) tells the agent to rerun `superra repro status` with no target; `status` requires one. Name the target form.
+2. `[BLOCKING]` **Four lines fail the three-test gate.**
+   - [designing-the-graph.md:28](../../../../skills/reproducibility/references/designing-the-graph.md#L28) — same-file restatement and DRY: rung 3 of the ladder already tells the implementer to split the scripts its task owns, and [build-and-review.md](../../../../skills/superplan/references/build-and-review.md) already tells the planner to draw the boundaries. Cut the sentence.
+   - [designing-the-graph.md:15](../../../../skills/reproducibility/references/designing-the-graph.md#L15) — Necessity: the `task check` warning and the `implemented` reminder both already end "leave it if the file has none". Cut the paragraph.
+   - [task-companion-files.md:8](../../../../skills/using-superra/references/task-companion-files.md#L8), [21](../../../../skills/using-superra/references/task-companion-files.md#L21), [23](../../../../skills/using-superra/references/task-companion-files.md#L23) — one fact three times: the Classify clause, the permanent-artifact definition ("consumed by another task"), and the second §Promote paragraph, whose last sentence is rationale. Keep the Classify clause and make §Promote one imperative that carries the timing.
+   - [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) — the clause after the dash is rationale. Cut it.
+3. `[ADVISORY]` The [CATEGORIES.md:52](../../../../skills/CATEGORIES.md#L52) row lists every reference and its contents, a second copy of the skill's routing table. One sentence on what the skill provides is enough.
+4. `[ADVISORY]` Seven task files under `superRA/reproducibility/` still link to the three deleted references, [06-skill](../../06-skill/task.md) and the [group task](../task.md) among them. `task check --category links` validates step citations only, so it passes over them.
