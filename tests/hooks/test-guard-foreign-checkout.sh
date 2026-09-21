@@ -7,10 +7,12 @@
 # and the PostToolUse reconcile hook all accept it silently — the escape had no
 # guard, which is why it was only noticed in `git log`.
 #
-# Part 2 asserts the new gate denies both mutations, and Part 3 asserts it stays
-# out of the way of the work superRA actually does: a session's own task tree,
-# sibling worktrees of its own repository, non-task files, and git in a foreign
-# repo that is not a task-tree checkout.
+# Part 2 asserts the new gate stops both mutations — `ask`, so a researcher who
+# set up cross-checkout work on purpose can approve — through every form that
+# reaches a foreign directory. Part 3 asserts it stays out of the way of the work
+# superRA actually does: a session's own task tree, sibling worktrees of its own
+# repository, non-task files, and git in a foreign repo that is not a task-tree
+# checkout.
 
 set -uo pipefail
 
@@ -66,9 +68,11 @@ bash_payload() {
 }
 
 expect() {
-  # expect <name> <allow|deny> <hook output>
+  # expect <name> <allow|ask|deny> <hook output>
   local name="$1" expected="$2" output="$3" actual="allow"
-  if printf '%s' "$output" | grep -q '"permissionDecision":"deny"'; then
+  if printf '%s' "$output" | grep -q '"permissionDecision":"ask"'; then
+    actual="ask"
+  elif printf '%s' "$output" | grep -q '"permissionDecision":"deny"'; then
     actual="deny"
   fi
   if [ "$actual" = "$expected" ] && printf '%s' "$output" | python3 -m json.tool >/dev/null 2>&1; then
@@ -129,30 +133,43 @@ assert 'reproduction: the escape commits the victim checkout in-flight diff' \
 (cd "$victim" && $GIT reset -q --hard HEAD~1 && $GIT clean -qfd) >/dev/null
 echo "work in progress" >"$victim/in-flight.txt"
 
-# ---- Part 2: the guard denies both halves of the escape ---------------------
+# ---- Part 2: the guard stops both halves of the escape ----------------------
 
 out=$(run_hook "$GUARD" "$session" Edit "$(edit_payload "$victim_task" '(empty)' 'Escaped results.')")
-expect 'denies an Edit of a foreign checkout task.md' deny "$out"
+expect 'asks on an Edit of a foreign checkout task.md' ask "$out"
 
 out=$(run_hook "$GUARD" "$session" Write "$(python3 -c 'import json,sys; print(json.dumps({"file_path": sys.argv[1], "content": "x"}))' "$victim_task")")
-expect 'denies a Write of a foreign checkout task.md' deny "$out"
+expect 'asks on a Write of a foreign checkout task.md' ask "$out"
 
 out=$(run_hook "$GUARD" "$session" Write "$(python3 -c 'import json,sys; print(json.dumps({"file_path": sys.argv[1], "content": "x"}))' "$victim/superRA/new-task/task.md")")
-expect 'denies a Write creating a task.md in a foreign checkout' deny "$out"
+expect 'asks on a Write creating a task.md in a foreign checkout' ask "$out"
 
+# Every form that points a shell or git at the foreign checkout.
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "cd $victim && git add -A && git commit -m 'implement(x): DONE'")")
-expect 'denies a git commit redirected into a foreign task-tree checkout' deny "$out"
+expect 'asks on a git commit redirected by cd' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "(cd $victim && git commit -am wip)")")
+expect 'asks on a git commit inside a subshell' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "{ cd $victim && git commit -am wip; }")")
+expect 'asks on a git commit inside a brace group' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "bash -c \"cd $victim && git commit -am wip\"")")
+expect 'asks on a git commit inside a bash -c payload' ask "$out"
 
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "git -C $victim commit -am wip")")
-expect 'denies git -C into a foreign task-tree checkout' deny "$out"
+expect 'asks on git -C into a foreign task-tree checkout' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "git --git-dir=$victim/.git --work-tree=$victim commit -am wip")")
+expect 'asks on git --git-dir/--work-tree into a foreign task-tree checkout' ask "$out"
 
 out=$(run_hook "$GUARD" "$TMPROOT/nowhere" Edit "$(edit_payload "$victim_task" '(empty)' 'x')")
-expect 'denies a foreign task.md write from a session with no repository' deny "$out"
+expect 'asks on a foreign task.md write from a session with no repository' ask "$out"
 
 # A `cd` earlier in the session can move the payload cwd into the foreign
 # checkout; CLAUDE_PROJECT_DIR is the anchor that cannot drift.
 out=$(CLAUDE_PROJECT_DIR="$session" run_hook "$GUARD" "$victim" Edit "$(edit_payload "$victim_task" '(empty)' 'x')")
-expect 'denies a foreign task.md write when the payload cwd has drifted' deny "$out"
+expect 'asks on a foreign task.md write when the payload cwd has drifted' ask "$out"
 
 assert 'the victim checkout keeps its in-flight diff uncommitted' \
   bash -c "cd '$victim' && git status --porcelain | grep -q in-flight.txt"
@@ -170,11 +187,17 @@ expect 'permits an Edit in a sibling worktree of the session repository' allow "
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "cd $worktree && git add -A && git commit -m 'implement(x): DONE'")")
 expect 'permits a commit in a sibling worktree of the session repository' allow "$out"
 
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "(cd $worktree && git commit -am wip)")")
+expect 'permits a subshell commit in a sibling worktree' allow "$out"
+
 out=$(run_hook "$GUARD" "$session" Write "$(python3 -c 'import json,sys; print(json.dumps({"file_path": sys.argv[1], "content": "x"}))' "$victim/notes.md")")
 expect 'permits a non-task file write outside the session checkout' allow "$out"
 
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "cd $plain && git commit -am wip")")
 expect 'permits git in a foreign repository that is not a task-tree checkout' allow "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "bash -c \"cd $plain && git commit -am wip\"")")
+expect 'permits a bash -c commit in a foreign repository with no task tree' allow "$out"
 
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "cd $victim && git status && git log --oneline -3")")
 expect 'permits read-only git in a foreign task-tree checkout' allow "$out"

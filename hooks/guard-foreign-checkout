@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse gate: a session cannot mutate a task tree in a foreign checkout.
+# PreToolUse gate: mutating a task tree in a foreign checkout needs approval.
 
 case "$0" in
   */*) script_dir=${0%/*} ;;

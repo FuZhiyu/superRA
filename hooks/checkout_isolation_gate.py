@@ -3,17 +3,23 @@
 
 A session whose cwd sits in one checkout can reach a *different* checkout by
 absolute path: write `## Results` into a task it was never dispatched to, and
-commit that checkout's in-flight diff. This gate denies the two mutations that
+commit that checkout's in-flight diff. This gate stops the two mutations that
 carry the damage:
 
 - an `Edit`/`Write`/`apply_patch` on a `task.md` under a task root that belongs
   to neither the session's repository nor its cwd;
 - a `Bash` command that retargets git at such a directory (`git -C <dir>`,
-  `cd <dir> && git commit ...`) with a history-writing verb.
+  `cd <dir> && git commit ...`, `git --work-tree=<dir> commit`) with a
+  history-writing verb.
 
 Worktrees of the session's own repository are not foreign — superRA dispatches
 implementers into sibling worktrees, and every worktree of one repository shares
 a single git common dir, which is the membership test used here.
+
+The decision is `ask`, not `deny`: cross-checkout work the researcher deliberately
+set up is legitimate, so an interactive session can approve while an unattended one
+still cannot proceed. The live Agent-SDK trace harness imports :func:`deny_reason`
+and hard-denies instead, because a traced session has no approver.
 
 Fails open on every uncertainty (git unavailable, unreadable payload,
 unresolvable path): a gate must never wedge a session.
@@ -29,15 +35,17 @@ import sys
 from pathlib import Path
 
 
-# `cd`/`pushd` at the start of the command or of any shell segment, and the
-# explicit `git -C <dir>` retarget. Both are how a command reaches a directory
-# other than the session cwd.
+# The three ways a command reaches a directory other than the session cwd: a
+# `cd`/`pushd`, and git's own `-C` / `--git-dir` / `--work-tree` retargets. The
+# `cd` boundary admits every shell opener a segment can start with — command
+# start, separators, subshell and group parens, `do`/`then`, and the quote that
+# opens a `bash -c "..."` payload.
+_PATH = r"""(?P<path>"[^"]+"|'[^']+'|[^\s;&|(){}"']+)"""
 _CD_RE = re.compile(
-    r"""(?:\A|[;&|]|\bdo\b|\bthen\b)\s*(?:cd|pushd)\s+(?P<path>"[^"]+"|'[^']+'|[^\s;&|()]+)"""
+    r"""(?:\A|[;&|(){}"']|\bdo\b|\bthen\b)\s*(?:cd|pushd)\s+""" + _PATH
 )
-_GIT_C_RE = re.compile(
-    r"""\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*-C\s+(?P<path>"[^"]+"|'[^']+'|[^\s;&|()]+)"""
-)
+_GIT_C_RE = re.compile(r"""\bgit\s+(?:-\S+\s+|--\S+=\S+\s+)*-C\s+""" + _PATH)
+_GIT_DIR_RE = re.compile(r"""--(?:git-dir|work-tree)[=\s]\s*""" + _PATH)
 _GIT_WRITE_RE = re.compile(
     r"\bgit\s+(?:-\S+\s+|--\S+=\S+\s+|-C\s+\S+\s+)*"
     r"(?:commit|add|rm|mv|merge|rebase|cherry-pick|revert|reset|restore|checkout|"
@@ -49,13 +57,13 @@ def _empty() -> None:
     print("{}")
 
 
-def _deny(reason: str) -> None:
+def _ask(reason: str) -> None:
     print(
         json.dumps(
             {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
+                    "permissionDecision": "ask",
                     "permissionDecisionReason": reason,
                 }
             },
@@ -66,20 +74,21 @@ def _deny(reason: str) -> None:
 
 def _task_md_reason(path: Path, cwd: Path) -> str:
     return (
-        f"Refusing to write {path}: that task tree belongs to a different checkout "
-        f"than this session's ({cwd}). A session that resolves another checkout's "
-        "task tree writes results into a task it was never dispatched to. Work the "
-        "task tree under this session's own cwd, or start a session in that "
-        "checkout if it is the one you mean to change."
+        f"{path} is a task tree in a different checkout than this session's ({cwd}). "
+        "Approve if you pointed this session at that checkout on purpose. Reject if "
+        "you did not: a session that resolves a checkout it was not given writes "
+        "results into a task nobody dispatched it to, and those results read as "
+        "genuine afterwards."
     )
 
 
 def _git_reason(target: Path, cwd: Path) -> str:
     return (
-        f"Refusing to run a git history-writing command in {target}: it is a "
-        f"different checkout than this session's ({cwd}), so its working tree may "
-        "carry another agent's in-flight diff. Run git where this session is "
-        "pointed, or start a session in that checkout."
+        f"This command writes git history in {target}, a different checkout than "
+        f"this session's ({cwd}). Approve if you meant this session to commit there. "
+        "Reject if you did not: that checkout's working tree may hold another "
+        "agent's in-flight diff, which this command would commit under this "
+        "session's message."
     )
 
 
@@ -237,13 +246,22 @@ def _apply_patch_reason(command: str, cwd: Path) -> str | None:
     return None
 
 
+def _retargeted_dirs(command: str, cwd: Path):
+    """Every directory *command* points a shell or git at, outside the session cwd."""
+    for pattern in (_CD_RE, _GIT_C_RE, _GIT_DIR_RE):
+        for match in pattern.finditer(command):
+            target = _resolve(match.group("path"), cwd)
+            # `--git-dir` names the repository dir; the checkout is its parent.
+            if target.name == ".git":
+                target = target.parent
+            if target.is_dir():
+                yield target
+
+
 def _bash_reason(command: str, cwd: Path) -> str | None:
     if "git" not in command or not _GIT_WRITE_RE.search(command):
         return None
-    for match in list(_CD_RE.finditer(command)) + list(_GIT_C_RE.finditer(command)):
-        target = _resolve(match.group("path"), cwd)
-        if not target.is_dir():
-            continue
+    for target in _retargeted_dirs(command, cwd):
         # Scoped to superRA checkouts: an ordinary cross-repo git command is the
         # researcher's business, a commit into another task-tree checkout is the
         # escape this gate exists for.
@@ -256,7 +274,8 @@ def deny_reason(tool_name: str, tool_input: dict, cwd: Path) -> str | None:
     """The reason this tool call escapes *cwd*'s checkout, or None to allow.
 
     The live Agent-SDK trace harness registers this as an in-process PreToolUse
-    hook so a traced session is confined by the same rule as a plugin session.
+    hook and hard-denies on it: a traced session has no approver, so the plugin
+    gate's `ask` would fail open there.
     """
     if not isinstance(tool_input, dict):
         return None
@@ -296,7 +315,7 @@ def main() -> None:
     if reason is None:
         _empty()
         return
-    _deny(reason)
+    _ask(reason)
 
 
 if __name__ == "__main__":
