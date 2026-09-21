@@ -6,12 +6,11 @@ depends_on: []
 
 ## Objective
 
-Implement dependency-impact inspection and scoped stale-result acceptance under the [0.5 design](../../attachments/v05-design.md#narrow-dependencies-before-accepting-stale-results). Accepted results are `fresh` for routine use, with durable reasons and evidence accessible through explain/details; successful execution history stays truthful.
+Provide impact inspection and exact-state acceptance for retained results, including work executed before registration or rerun outside the graph. One `accept` command establishes or replaces a reviewed baseline with a required reason and optional evidence files and per-node notes. Accepted freshness stays distinct from execution evidence.
 
-- Deliver impact, accept preview/apply, and revoke operations with JSON support and exact target selection. Capture trustworthy baseline evidence for explaining changes, including dirty-source runs, and disclose unavailable historical diffs.
-- Make status and ordinary serial/parallel builds agree on accepted freshness. Revalidate immediately before skipping a producer; preserve descendant execution, force scope, failures, output-integrity checks, and atomic records. No-op commands or rewritten successful locks cannot stand in for acceptance.
-- Exercise every acceptance, fan-out, cascade, force, failure, sidecar, concurrency, and baseline scenario in the [verification matrix](../../attachments/v05-design.md#verification-and-upgrade), including real pytask runs against the pinned engine. Demonstrate a reviewed shared-helper change skipping one consumer while an independently changed consumer runs.
-- Update state/acceptance command and record documentation in the task-tree references after the graph task's changes land. Agent decision discipline belongs to [workflow integration](../../07-workflow-integration/unified-dependency-workflow/task.md).
+- Preserve preview/apply concurrency protection, scoped targets, subsequent invalidation, portable records, revoke, serial/threaded build skips, and forced execution. Acceptance never fabricates successful locks, run records, or check stamps; never-run checks require execution.
+- Cover first acceptance, changed outputs, saved-input boundaries, sidecars, cache loss, failure/retry, and downstream behavior with real runner fixtures.
+- Teach agents to register retained interactive results and accept their reviewed current state without a redundant rerun. Update the owning skill, CLI/record contracts, and public descriptions together.
 
 ## Details
 
@@ -19,13 +18,64 @@ Implement dependency-impact inspection and scoped stale-result acceptance under 
 - `pytask.lock` stores hashes, not historical source text. A Git revision is useful only when its blobs match the recorded hashes; an arbitrary `git diff HEAD` is not a successful-run comparison.
 - Exploration of installed pytask 0.6 found that a setup hook raising `SkippedUnchanged` can avoid state updates without suppressing descendants. Verify this against dry-run, threaded execution, and predecessor failures; ordinary skip/skipif and no-op tasks have unsuitable semantics.
 - Capture successful receipts only after product verification. The existing subprocess run record is written before sidecar/stamp completion, so command exit alone is insufficient evidence.
-- A sidecar proves only the state it actually encodes. Acceptance needs trustworthy output equality, not merely unchanged arbitrary sidecar text.
+- Sidecars do not prove the output bytes. Reviewed baselines hash the actual output; successful-run provenance remains separately available when recorded.
 
+
+## Reproduction
+
+```yaml
+steps:
+  - name: reviewed-baseline-regression-check
+    kind: check
+    cmd: "uv run --with pytest --with 'pytask>=0.6,<0.7' --with pytask-parallel --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
+    deps:
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_hooks.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/plan_migrate.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_add_result.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_comment.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/wrapper_resolver.py
+      - skills/task-tree/scripts/test_repro_acceptance.py
+      - skills/task-tree/scripts/test_repro_runner.py
+      - skills/task-tree/scripts/test_repro_scope.py
+```
 
 ## Results
 
-- [Impact and acceptance](../../../../skills/task-tree/scripts/_repro_acceptance.py) expose exact task/step previews, per-changed-node rationale, hashed evidence references, atomic token-checked apply, and scoped revoke. The committed ledger binds successful baseline/output identities without embedding raw research inputs; local source snapshots support verified dirty-source diffs and disclose unavailable history.
-- [Engine hooks](../../../../skills/task-tree/scripts/_repro_hooks.py) make valid acceptance `fresh` and skip execution without changing successful locks, check stamps, or actual-run history. Serial/thread builds preserve independently dirty descendants, force scope, predecessor failures, and identical-output cutoff. Verified session-local completion evidence lets an accepted child skip after an upstream rerun with identical output bytes.
-- [Runner receipts](../../../../skills/task-tree/scripts/repro_run.py) are captured after product verification, including actual sidecar-backed output digests. Concurrent input or graph-declaration changes fail the attempt; unrelated task prose and active-status rollups do not interrupt execution; failed or interrupted work cannot establish success. Real execution removes that step's acceptance before running, so local cache loss cannot revive a failed override. Mutation coordination uses a local POSIX process lock and atomic record replacement.
-- [Behavioral fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) exercise reviewed shared-helper fan-out, deterministic per-consumer configuration cutoff, portable acceptance, exact target expansion, chained acceptance/revoke, missing/changed outputs, arbitrary sidecars, failed forces, dirty-source history, malformed/unavailable evidence, preview/setup races, and source-snapshot privacy. The full task-tree suite passed **1,115 tests, 9 skipped**; final acceptance/runner/CLI/dependency regressions passed **186 tests**, including **47 acceptance scenarios** on pytask 0.6.0. The repository's live-source dependency check and mechanics Markdown integrity checks were clean.
-- Mechanics are documented in [commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [the record contract](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), and [engine integration](../../../../skills/task-tree/references/internals.md#reviewed-reuse-execution). Legacy normal-output locks remain eligible with unavailable source history; a legacy sidecar baseline without a verified actual-output digest needs one successful run of that step.
+[Acceptance](../../../../skills/task-tree/scripts/_repro_acceptance.py) establishes or replaces a reviewed current baseline for newly registered producers, harmless edits, and changed outputs from direct runs. A reason is required; evidence files and per-node notes are optional. The committed record keys its saved inputs by logical path, so it reads the same on every checkout. Existing legacy records retain their original validation rules.
+
+- **Truthful history:** acceptance writes only its ledger. It leaves successful locks, execution records, receipts, and check stamps intact; initial acceptance creates none of those. Never-run checks, missing files, invalid graphs, and failed/interrupted executions remain blocked.
+- **Execution:** ordinary serial/threaded builds skip accepted producers and run outstanding downstream work/checks. Forced attempts remove acceptance and execute. Full output and saved-input fingerprints detect subsequent changes; scoped freshness leaves outside producers unverified.
+- **Binding a batch:** a decision binds the producers accepted with it. Re-accepting one of them leaves the downstream record valid — its reviewed dependency hashes already pin that producer's output bytes — while revoking one that holds no successful lock invalidates it.
+- **Agent workflow:** [Build and Status](../../../../skills/reproducibility/SKILL.md#build-and-status) routes already-produced interactive results through registration and [reviewed acceptance](../../../../skills/reproducibility/references/rerun-model.md#reviewed-acceptance). [Commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [record schema](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), and public descriptions match.
+- **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **168 tests** through the [registered regression check](#step-reviewed-baseline-regression-check), whose status is fresh. The full task-tree suite passed **1,199 tests, 10 skipped**. Changed Markdown checks and the tree's dependency/reproduction/link diagnostics passed. A thorough correctness review ran on the code and its findings are fixed in this round.
+
+## Review Notes
+
+Tier: thorough; narrow re-review. Focus: correctness. Reviewer: main agent. Deferred by the orchestrator:
+
+1. `[ADVISORY]` `record['baseline']['spec']`, present only when a successful receipt exists, still stores resolved dep paths and the resolved command, so a per-author or per-branch root can reach the committed ledger through that field. Same class as the saved-input rows this round made logical.

@@ -5,12 +5,18 @@
 # ///
 """PostToolUse hook: validate task.md and propagate status on edit/write/move.
 
-Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
-calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
-In both cases it runs the same best-effort reconcile — validate the tree and
-propagate parent status. It also reminds, once per file per session, when an
-Edit/Write/apply_patch touches a file the reproduction graph tracks as a
-step's dep/script or a `code_roots` producer (see `_reproduction_reminder`).
+Fires after Edit/Write/apply_patch and Bash tool calls. The edited files are
+the paths the tool call supplies plus those `_edit_detect` finds changed on
+disk, so an edit made through a Bash heredoc or `sed -i` is handled like an
+Edit (`_process_paths`). A changed task.md gets the best-effort reconcile —
+validate the tree and propagate parent status — as does a Bash call that
+structurally mutates a task tree (mv, rm, cp, mkdir, ...). It also carries two
+advisory reproduction signals, both non-blocking: a reminder, once per file
+per session, when a changed file is a registered step's dep/script or an
+unregistered script under a task root, naming the steps the edit
+stales (`_reproduction_reminder`, emitted through `_repro_emit`); and, once
+per transition, a reminder when a leaf reaches `implemented` with results
+files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
 Validation warnings and non-fatal reconcile failures are injected through
@@ -44,12 +50,17 @@ LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 CODEX_EMPTY_JSON_ENV = "SUPERRA_TASK_HOOK_EMPTY_JSON"
 _CODEX_EMPTY_JSON_MODE = False
+# Set once a reconcile ran in this process: it may have rewritten task files.
+_RECONCILED = False
 
 # Reproduction reminder: a gitignored state dir, sibling of the task root, that
 # holds one empty marker file per (session, resolved producer path) already
 # reminded. `02-runner`'s own state directory is expected to reuse this name.
 REPRO_STATE_DIRNAME = ".superra-repro"
 REPRO_MARKER_SUBDIR = "hook-markers"
+# The `implemented` reminder tracks a status transition rather than a session,
+# so its markers live under one fixed key instead of a per-session one.
+IMPLEMENTED_MARKER_KEY = "transitions"
 
 
 def _scripts_dir() -> Path:
@@ -189,24 +200,89 @@ def _repro_owning_steps(graph, rel: str) -> list[str]:
     return names
 
 
-def _repro_under_code_root(code_roots: list[str], rel: str) -> bool:
-    return any(rel == root or rel.startswith(root + "/") for root in code_roots)
+def _repro_is_out(graph, rel: str) -> bool:
+    """A step's out is rewritten by a rerun, even when another step reads it."""
+    return any(rel == out or rel.startswith(out + "/") for out in graph.producers)
 
 
-def _repro_message(rel: str, owners: list[str]) -> str:
-    owner_text = ", ".join(sorted(owners)) if owners else "none"
-    return (
-        f"Reproduction: {rel} changed (owning step(s): {owner_text}). Update the "
-        "step's deps/outs or register a new step, then run `superra repro status`."
+# More reminders than this in one call (a checkout, a merge) collapse to one line.
+REPRO_REMINDER_CAP = 5
+
+
+def _repro_status_targets(graph, owners: list[str]) -> str:
+    """`superra repro status` targets for *owners* — the command needs at least
+    one, and `.` selects every registered step when no step owns the file."""
+    by_name = {step.name: step for step in graph.steps}
+    targets = sorted(
+        f"{by_name[name].task_path}#{name}" for name in owners if name in by_name
     )
+    return " ".join(targets) if targets else "."
+
+
+def _repro_message(rel: str, owners: list[str], fan_out: str = "", targets: str = ".") -> str:
+    owner_text = ", ".join(sorted(owners)) if owners else "none"
+    stales = f"Stales {fan_out}. " if fan_out else ""
+    return (
+        f"Reproduction: {rel} changed (owning step(s): {owner_text}). {stales}Update the "
+        f"step's deps/outs or register a new step, then run `superra repro status {targets}`."
+    )
+
+
+def _repro_fan_out(graph, project_root: Path, owners: list[str]) -> str:
+    """The steps this edit stales and what rerunning them last cost."""
+    if not owners:
+        return ""
+    try:
+        import _repro_signals
+        names = _repro_signals.downstream_steps(graph, owners)
+        return _repro_signals.format_fan_out(
+            names, _repro_signals.step_durations(project_root, names)
+        )
+    except Exception:
+        return ""
+
+
+def _repro_emit(
+    data: dict, graph, project_root: Path, rel_paths: list[str]
+) -> list[str]:
+    """Message each changed path once per session, with its staleness fan-out.
+
+    Takes project-relative paths from whichever detector found them, so every
+    detector draws the identical reminder under one marker per file per
+    session.
+    """
+    feedback: list[str] = []
+    session_key: str | None = None
+    for rel in rel_paths:
+        if session_key is None:
+            session_key = _repro_session_key(data)
+        marker = _repro_marker_path(project_root, session_key, rel)
+        if marker.exists():
+            continue
+        owners = _repro_owning_steps(graph, rel)
+        feedback.append(
+            _repro_message(
+                rel,
+                owners,
+                _repro_fan_out(graph, project_root, owners),
+                _repro_status_targets(graph, owners),
+            )
+        )
+        try:
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.touch()
+        except OSError:
+            pass
+    return feedback
 
 
 def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
     """Remind once per file per session when an edit touches a producer input.
 
     Fires when the file is a dep or script of a registered step (including a
-    Julia include closure), or lies under a configured `code_roots` directory.
-    Task files never trigger. The graph used for matching is built with
+    Julia include closure), or is a script under the task root that no step
+    registers. A step's out and a task file never trigger. The graph used for
+    matching is built with
     `resolve_vars=False` (`_repro.build_graph`) — no `${VAR}` resolution, so no
     `env:`/`shell:` evaluation and no subprocess for *any* edit, producer or
     not; a dep/out/script that still references an unresolved `${VAR}` simply
@@ -229,41 +305,43 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
             by_plan_root.setdefault(plan_root, []).append(file_path)
 
     feedback: list[str] = []
-    session_key: str | None = None
 
     for plan_root, paths in by_plan_root.items():
         project_root = plan_root.parent
         try:
+            import _edit_detect
             import _repro
+            import _repro_signals
             graph = _repro.build_graph(
                 plan_root, project_root=project_root, resolve_vars=False
             )
+            if not _repro_signals.has_reproduction(graph):
+                continue  # no reproduction config anywhere: nothing to match
         except Exception:
             continue
-        if not graph.steps and not graph.config.code_roots:
-            continue  # no reproduction config anywhere: nothing to match
 
+        task_root_prefix = plan_root.name + "/"
+        relevant: list[str] = []
         for file_path in paths:
             try:
                 rel = file_path.resolve().relative_to(project_root.resolve())
             except (ValueError, OSError):
                 continue
             rel_str = _repro._norm(rel.as_posix())
-            owners = _repro_owning_steps(graph, rel_str)
-            if not owners and not _repro_under_code_root(graph.config.code_roots, rel_str):
+            if _repro_is_out(graph, rel_str):
                 continue
-            if session_key is None:
-                session_key = _repro_session_key(data)
-            marker = _repro_marker_path(project_root, session_key, rel_str)
-            if marker.exists():
-                continue
-            feedback.append(_repro_message(rel_str, owners))
-            try:
-                marker.parent.mkdir(parents=True, exist_ok=True)
-                marker.touch()
-            except OSError:
-                pass
+            unregistered_companion = rel_str.startswith(
+                task_root_prefix
+            ) and _edit_detect.is_script(file_path)
+            if _repro_owning_steps(graph, rel_str) or unregistered_companion:
+                relevant.append(rel_str)
+        feedback.extend(_repro_emit(data, graph, project_root, relevant))
 
+    if len(feedback) > REPRO_REMINDER_CAP:
+        return [
+            f"Reproduction: {len(feedback)} tracked files changed. Run "
+            "`superra repro status .` to see the steps they stale."
+        ]
     return feedback
 
 
@@ -327,6 +405,60 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
     _clear_repro_markers(plan_root.parent, resolved_paths)
 
 
+def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]:
+    """Remind once per transition when a leaf reaches `implemented` carrying
+    results files the reproduction graph does not cover.
+
+    The marker key is the task, not the session, so the reminder follows the
+    status transition: it is cleared whenever the task is not `implemented`,
+    and set once a reminder is emitted. A task that leaves `implemented` and
+    returns reminds again. Cheap gates (status, leaf, a linked results file)
+    run before any graph build, so an ordinary task.md edit costs a parse.
+    Best-effort: any failure is silence.
+    """
+    project_root = plan_root.parent
+    marker = _repro_marker_path(
+        project_root, IMPLEMENTED_MARKER_KEY, f"implemented:{task_path}"
+    )
+    task_md = (plan_root if task_path == "" else plan_root / task_path) / "task.md"
+    _ensure_scripts_on_path()
+    try:
+        import _task_io as task_io
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # parse_task warns on a bad status
+            task = task_io.parse_task(task_md, plan_root)
+        is_leaf = not any(task_io.iter_child_task_dirs(task_md.parent))
+        if task.status != "implemented" or not is_leaf:
+            if marker.exists():
+                marker.unlink()
+            return []
+        if marker.exists() or "](" not in task.results:
+            return []
+        import _repro
+        import _repro_signals
+        graph = _repro.build_graph(
+            plan_root, project_root=project_root, resolve_vars=False
+        )
+        if not _repro_signals.has_reproduction(graph):
+            return []
+        files = _repro_signals.uncovered_results_files(graph, task, project_root)
+    except Exception:
+        return []
+    if not files:
+        return []
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    except OSError:
+        pass
+    return [
+        f"Reproduction: task {task_path or '(root)'} is implemented and its "
+        f"## Results links {', '.join(files)}, which no step produces or reads. "
+        "Register the producer step, or leave it if the file has none — "
+        "`superRA:reproducibility` has the call."
+    ]
+
+
 def _feedback_json(feedback: list[str]) -> str:
     context = (
         "<IMPORTANT>Task-system hook feedback:\n"
@@ -373,6 +505,8 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     whole tree rather than along a single ancestor chain. The dashboard is not
     regenerated here; it is produced only on explicit `superra dashboard export`.
     """
+    global _RECONCILED
+    _RECONCILED = True
     _ensure_scripts_on_path()
     import _task_io as task_io
     import _task_validate as task_validate
@@ -568,20 +702,20 @@ def _find_plan_root_for_token(task_io, token: str, cwd: Path) -> Path | None:
     return plan_root if plan_root.exists() else None
 
 
-def _handle_bash(data: dict) -> None:
+def _bash_structural_feedback(data: dict) -> list[str]:
     """Reconcile any task tree touched by a structural Bash command."""
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
-        _exit_success()
+        return []
 
     # Gate: must reference a task root AND contain a mutating verb. A read-only
     # command that merely mentions a task root (task_query.py, grep, serve) is
     # not a structural change and must early-exit.
     if not _command_mentions_task_root(command):
-        _exit_success()
+        return []
     if not _MUTATING_RE.search(command):
-        _exit_success()
+        return []
 
     _ensure_scripts_on_path()
     import _task_io as task_io
@@ -665,54 +799,7 @@ def _handle_bash(data: dict) -> None:
             continue
         feedback.extend(_reconcile(plan_root, task_path=None))
 
-    _exit_success(feedback)
-
-
-def _handle_edit_write(data: dict) -> None:
-    """Handle an Edit/Write: reconcile task.md edits, render-integrity-check any
-    .md edited under a task root, and remind on a reproduction-producer edit.
-
-    Three branches merge into one feedback emission: the task.md-only reconcile
-    (validate + status propagation), the broader render-integrity check that
-    runs on any .md under a task root (including task.md), and the
-    reproduction reminder — not gated to markdown or the task root, since a
-    producer script usually lives beside the task tree, not inside it.
-    """
-    tool_input = data.get("tool_input", {}) or {}
-    file_path_str = tool_input.get("file_path", "")
-    if not file_path_str:
-        _exit_success()
-
-    file_path = Path(file_path_str)
-    feedback: list[str] = []
-
-    # Cheap gate: only a .md under a task root needs the communicate reminder,
-    # reconcile, and render-integrity check.
-    if _is_markdown_under_task_root(file_path):
-        feedback.extend(_communicate_reminder([file_path]))
-
-        # task.md-only branch: validate the tree and propagate parent status.
-        if file_path.name == "task.md":
-            _ensure_scripts_on_path()
-            import _task_io as task_io
-            plan_root = task_io._find_plan_root(file_path.parent)
-            if (
-                plan_root is not None
-                and not task_io.is_opaque_task_path(file_path.parent, plan_root)
-                and not task_io.has_symlink_task_component(file_path.parent, plan_root)
-            ):
-                task_path = str(file_path.parent.relative_to(plan_root))
-                if task_path == ".":
-                    task_path = ""
-                feedback.extend(_reconcile(plan_root, task_path=task_path))
-                _clear_reproduction_markers_for_task(plan_root, task_path)
-
-        # Broader branch: render-integrity-check any .md under a task root.
-        feedback.extend(_markdown_integrity_feedback(file_path))
-
-    feedback.extend(_reproduction_reminder(data, [file_path]))
-
-    _exit_success(feedback)
+    return feedback
 
 
 def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
@@ -749,47 +836,129 @@ def _apply_patch_paths(command: str) -> list[str]:
     return patch_paths(command)
 
 
-def _handle_apply_patch(data: dict) -> None:
-    """Reconcile task trees touched by Codex apply_patch file edits."""
+def _cwd(data: dict) -> Path:
+    cwd = data.get("cwd")
+    return Path(cwd) if isinstance(cwd, str) and cwd else Path.cwd()
+
+
+def _tool_paths(data: dict, tool_name: str) -> list[Path]:
+    """Files the tool call itself names as edited."""
     tool_input = data.get("tool_input", {}) or {}
-    command = tool_input.get("command", "") or ""
-    if not command:
-        _exit_success()
+    if tool_name in ("Edit", "Write"):
+        raw_paths = [tool_input.get("file_path", "")]
+    elif tool_name == "apply_patch":
+        command = tool_input.get("command", "") or ""
+        raw_paths = _apply_patch_paths(command) if command else []
+    else:
+        raw_paths = []
+    cwd = _cwd(data)
+    paths: list[Path] = []
+    for raw in raw_paths:
+        if not isinstance(raw, str) or not raw:
+            continue
+        path = Path(raw)
+        paths.append(path if path.is_absolute() else cwd / path)
+    return paths
 
-    cwd = Path.cwd()
-    roots: list[Path] = []
-    seen: set[Path] = set()
-    feedback: list[str] = []
-    edited_paths: list[Path] = []
 
-    for raw_path in _apply_patch_paths(command):
-        path = Path(raw_path)
-        file_path = path if path.is_absolute() else cwd / path
-        edited_paths.append(file_path)
+def _repro_watched_files(plan_root: Path) -> list[str]:
+    """Literal-path deps, scripts, and include closures of registered steps,
+    minus step outs — the watched files that live outside the task root."""
+    import _repro
+    project_root = plan_root.parent
+    graph = _repro.build_graph(plan_root, project_root=project_root, resolve_vars=False)
+    files: list[str] = []
+    for step in graph.steps:
+        for dep in step.deps:
+            if "${" in dep.resolved or _repro_is_out(graph, dep.resolved):
+                continue
+            path = project_root / dep.resolved
+            if path.is_file():
+                files.append(str(path))
+    return files
 
-        # Render-integrity-check any .md under a task root (including task.md);
-        # the cheap gate inside short-circuits everything else.
-        feedback.extend(_markdown_integrity_feedback(file_path))
 
-        # task.md-only branch: reconcile the touched plan tree once.
+def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[Path]:
+    """Watched files changed on disk since this session's baseline. Fails open."""
+    try:
+        _ensure_scripts_on_path()
+        import _checkout_scope
+        import _edit_detect
+        tool_input = data.get("tool_input", {}) or {}
+        command = tool_input.get("command", "") if tool_name == "Bash" else ""
+        session_key = _repro_session_key(data)
+        # The session anchor, not the payload cwd: a `cd` into another checkout
+        # must not make that checkout the session's own. Same resolution the
+        # `guard-foreign-checkout` gate uses.
+        anchor = _checkout_scope.session_anchor(data)
+        if anchor is None:
+            return []
+        changed: list[Path] = []
+        for plan_root in _edit_detect.plan_roots(
+            anchor, tool_paths, command if isinstance(command, str) else ""
+        ):
+            try:
+                changed.extend(
+                    _edit_detect.detect(
+                        plan_root,
+                        session_key,
+                        lambda root=plan_root: _repro_watched_files(root),
+                    )
+                )
+            except Exception:
+                continue
+        return changed
+    except Exception:
+        return []
+
+
+def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
+    """Run every edit consumer over the changed files, whichever tool wrote them.
+
+    The task.md-only reconcile (validate + status propagation), the communicate
+    reminder and render-integrity check for any .md under a task root, and the
+    reproduction reminder — not gated to markdown or the task root, since a
+    producer script usually lives beside the task tree, not inside it.
+    """
+    feedback: list[str] = list(_communicate_reminder(file_paths))
+    integrity: list[str] = []
+    task_edits: dict[Path, tuple[Path, list[str]]] = {}
+
+    for file_path in file_paths:
+        integrity.extend(_markdown_integrity_feedback(file_path))
         match = _task_path_from_file_path(file_path)
         if match is None:
             continue
         plan_root, task_path = match
-        _clear_reproduction_markers_for_task(plan_root, task_path)
-        resolved = plan_root.resolve()
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        roots.append(plan_root)
+        task_edits.setdefault(plan_root.resolve(), (plan_root, []))[1].append(task_path)
 
-    feedback.extend(_communicate_reminder(edited_paths))
-    feedback.extend(_reproduction_reminder(data, edited_paths))
+    for plan_root, task_paths in task_edits.values():
+        # One edited task reconciles along its ancestor chain; several recompute
+        # the whole tree once.
+        feedback.extend(
+            _reconcile(plan_root, task_path=task_paths[0] if len(task_paths) == 1 else None)
+        )
+        for task_path in task_paths:
+            _clear_reproduction_markers_for_task(plan_root, task_path)
+            feedback.extend(_implemented_coverage_reminder(plan_root, task_path))
 
-    for plan_root in roots:
-        feedback.extend(_reconcile(plan_root, task_path=None))
+    feedback.extend(integrity)
+    feedback.extend(_reproduction_reminder(data, file_paths))
+    return feedback
 
-    _exit_success(feedback)
+
+def _unique_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        try:
+            key = path.resolve()
+        except OSError:
+            key = path
+        if key not in seen:
+            seen.add(key)
+            unique.append(path)
+    return unique
 
 
 def main() -> None:
@@ -808,14 +977,27 @@ def main() -> None:
         or tool_name == "apply_patch"
     )
 
-    if tool_name == "Bash":
-        _handle_bash(data)
-    elif tool_name == "apply_patch":
-        _handle_apply_patch(data)
-    elif tool_name in ("Edit", "Write"):
-        _handle_edit_write(data)
+    if tool_name not in ("Bash", "apply_patch", "Edit", "Write"):
+        _exit_success()
 
-    _exit_success()
+    feedback: list[str] = []
+    tool_paths = _tool_paths(data, tool_name)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # parse_task warns on a bad status
+        # Detect before any reconcile runs, so only the tool call's own writes
+        # are reported.
+        changed = _unique_paths(
+            tool_paths + _detected_paths(data, tool_name, tool_paths)
+        )
+        if tool_name == "Bash":
+            feedback.extend(_bash_structural_feedback(data))
+        feedback.extend(_process_paths(data, changed))
+        if _RECONCILED:
+            # Reconcile rewrites ancestor statuses; absorb the hook's own writes
+            # so the next call does not report them as an edit.
+            _detected_paths(data, tool_name, tool_paths)
+
+    _exit_success(list(dict.fromkeys(feedback)))
 
 
 if __name__ == "__main__":

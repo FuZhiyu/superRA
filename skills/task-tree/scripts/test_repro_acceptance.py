@@ -9,17 +9,17 @@ from _repro_acceptance import (
     accept, preview, revoke, impact, read_ledger, receipt_path, mutation_lock,
     ReproStateError, LEDGER,
 )
-from _repro_state import read_lock, read_run_record
+from _repro_state import compute_status, read_lock, read_run_record
 
 
-def review(project, names=('build-a',), *, apply=True):
+def review(project, names=('01-a#build-a',), *, apply=True):
     project.write('review.md', 'Reviewed the changes: comments only; outputs remain valid.\n')
     first = preview(project.graph(), project.paths, names, '', {}, [])
     reviews = {change['node']: 'Comment only; execution and output are unchanged.'
                for row in first['steps'] for change in row['changes']}
     args = (project.graph(), project.paths, names, 'Harmless source changes', reviews, ['review.md'])
-    proposal = accept(*args)
-    return accept(*args, token=proposal['token']) if apply else (args, proposal)
+    # One shot is the default; `apply=False` exercises the split preview/apply.
+    return accept(*args) if apply else (args, accept(*args, dry_run=True))
 
 
 @needs_pytask
@@ -51,12 +51,12 @@ def test_dry_run_force_scope_and_real_success_supersedes(project):
     times = project.run_times()
     lock = project.paths.lock_file.read_bytes()
     assert project.run('build', *CHAIN, '--dry-run') == 0
-    assert project.run('build', 'build-b', '--force', '--dry-run') == 0
+    assert project.run('build', '02-b#build-b', '--force', '--dry-run') == 0
     assert times == project.run_times()
     assert lock == project.paths.lock_file.read_bytes()
-    assert project.run('build', 'build-b', '--force') == 0
+    assert project.run('build', '02-b#build-b', '--force') == 0
     assert project.run_times()['build-a'] == times['build-a']
-    assert project.run('build', 'build-b', '--upstream', '--force') == 0
+    assert project.run('build', '02-b#build-b', '--upstream', '--force') == 0
     assert project.run_times()['build-a'] > times['build-a']
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
@@ -68,7 +68,7 @@ def test_portable_acceptance_without_local_cache_and_receipts(project):
     review(project)
     shutil.rmtree(project.paths.state_dir)
     assert project.states()['build-a'] == 'fresh'
-    assert project.run('build', 'build-a') == 0
+    assert project.run('build', '01-a#build-a') == 0
     assert not project.paths.run_file('build-a').exists()
 
 
@@ -100,7 +100,7 @@ def test_failed_force_cannot_be_accepted_or_hidden_by_restored_inputs(project):
     project.write('Code/a.sh', original + '# harmless\n')
     review(project)
     project.write('Code/a.sh', 'exit 2\n')
-    assert project.run('build', 'build-a', '--force') != 0
+    assert project.run('build', '01-a#build-a', '--force') != 0
     project.write('Code/a.sh', original)
     assert project.states()['build-a'] == 'failed'
     project.write('Code/a.sh', original + '# harmless\n')
@@ -116,8 +116,10 @@ def test_sidecar_acceptance_verifies_actual_output_bytes(project):
     review(project)
     project.write('output/a.txt', 'corrupted without sidecar change')
     assert project.states()['build-a'] == 'stale'
-    with pytest.raises(ReproStateError, match='output differs'):
-        review(project)
+    args, proposal = review(project, apply=False)
+    assert any(row['kind'] == 'output' for row in proposal['steps'][0]['changes'])
+    accept(*args, token=proposal['token'])
+    assert project.states()['build-a'] == 'fresh'
 
 
 @needs_pytask
@@ -132,13 +134,17 @@ def test_legacy_lock_missing_history_can_accept_normal_outputs(project):
 
 
 @needs_pytask
-def test_legacy_sidecar_needs_trustworthy_baseline(project):
+def test_legacy_sidecar_can_establish_reviewed_output_baseline(project):
     _use_a_sidecar(project)
     assert project.run('build', *CHAIN) == 0
     receipt_path(project.paths, 'build-a').unlink()
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
-    with pytest.raises(ReproStateError, match='no verified output digest'):
-        review(project)
+    args, proposal = review(project, apply=False)
+    assert not proposal['steps'][0]['baseline_details']['available']
+    accept(*args, token=proposal['token'])
+    assert project.states()['build-a'] == 'fresh'
+    project.write('output/a.txt', 'changed after acceptance\n')
+    assert project.states()['build-a'] == 'stale'
 
 
 @needs_pytask
@@ -157,15 +163,21 @@ def test_dirty_source_snapshot_is_verified_and_preview_rejects_concurrent_edit(p
 
 
 @needs_pytask
-def test_missing_evidence_and_uncovered_changes_do_not_apply(project):
+def test_reason_required_and_optional_evidence_validated(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
-    proposal = accept(project.graph(), project.paths, ['build-a'], 'Reviewed', {}, [])
+    args = (project.graph(), project.paths, ['01-a#build-a'], '', {}, [])
+    proposal = accept(*args, dry_run=True)
     assert not proposal['ready']
-    with pytest.raises(ReproStateError, match='cover every changed'):
-        accept(project.graph(), project.paths, ['build-a'], 'Reviewed', {}, [], proposal['token'])
+    with pytest.raises(ReproStateError, match='requires --reason'):
+        accept(*args, token=proposal['token'])
     with pytest.raises(ReproStateError, match='evidence is unavailable'):
-        accept(project.graph(), project.paths, ['build-a'], 'Reviewed', {}, ['absent.md'])
+        accept(project.graph(), project.paths, ['01-a#build-a'], 'Reviewed', {}, ['absent.md'])
+    args = (project.graph(), project.paths, ['01-a#build-a'], 'Reviewed', {}, [])
+    proposal = accept(*args, dry_run=True)
+    assert proposal['ready']
+    accept(*args, token=proposal['token'])
+    assert project.states()['build-a'] == 'fresh'
 
 
 @needs_pytask
@@ -176,7 +188,7 @@ def test_check_acceptance_preserves_successful_stamp(project):
     path = next(project.paths.stamps_dir.iterdir())
     before = path.read_bytes(), path.stat().st_mtime_ns, project.run_times()['check-b']
     project.write('superRA/02-b/task.md', project.read('superRA/02-b/task.md').replace('test -s output/b.txt', 'test -s output/b.txt && true'))
-    review(project, ['check-b'])
+    review(project, ['02-b#check-b'])
     assert project.run('build', *CHAIN) == 0
     assert (path.read_bytes(), path.stat().st_mtime_ns, project.run_times()['check-b']) == before
 
@@ -184,7 +196,7 @@ def test_check_acceptance_preserves_successful_stamp(project):
 @needs_pytask
 def test_output_verification_failure_never_creates_success_receipt(project):
     project.write('Code/a.sh', 'true\n')
-    assert project.run('build', 'build-a') != 0
+    assert project.run('build', '01-a#build-a') != 0
     assert not receipt_path(project.paths, 'build-a').exists()
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
 
@@ -209,9 +221,10 @@ def test_batch_targets_and_upstream_binding(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
-    with pytest.raises(ReproStateError, match='upstream producers'):
-        review(project, ['build-b'])
-    result = review(project, ['01-a', 'build-b'])
+    review(project, ['02-b#build-b'])
+    assert project.status('02-b').entry('build-b').status == 'fresh'
+    assert compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).entry('build-b').status == 'stale'
+    result = review(project, ['01-a', '02-b#build-b'])
     assert [r['step'] for r in result['steps']] == ['build-a', 'build-b']
     ledger = read_ledger(project.paths)['steps']
     assert ledger['build-b']['upstream'] == {'build-a': ledger['build-a']['id']}
@@ -219,7 +232,7 @@ def test_batch_targets_and_upstream_binding(project):
     times = project.run_times()
     assert project.run('build', *CHAIN, '-j', '2') == 0
     assert times == project.run_times()
-    revoke(project.graph(), project.paths, ['build-a'])
+    revoke(project.graph(), project.paths, ['01-a#build-a'])
     assert project.states()['build-b'] == 'stale'
 
 
@@ -245,7 +258,7 @@ def test_failure_revokes_before_execution_even_after_cache_loss(project):
     project.write('Code/a.sh', original + '# harmless\n')
     review(project)
     project.write('Code/a.sh', 'exit 1\n')
-    assert project.run('build', 'build-a', '--force') != 0
+    assert project.run('build', '01-a#build-a', '--force') != 0
     assert 'build-a' not in read_ledger(project.paths)['steps']
     project.write('Code/a.sh', original + '# harmless\n')
     shutil.rmtree(project.paths.state_dir)
@@ -259,7 +272,7 @@ def test_invalid_graph_never_accepts_or_builds(project):
     review(project)
     project.write('superRA/01-a/task.md', project.read('superRA/01-a/task.md').replace('depends_on: []', 'depends_on: [02-b]'))
     assert not project.status(*CHAIN).ok
-    assert project.run('build', 'build-a') == 1
+    assert project.run('build', '01-a#build-a') == 1
     with pytest.raises(ReproStateError, match='invalid graph'):
         review(project)
 
@@ -271,12 +284,13 @@ def test_cli_preview_apply_explain_revoke_and_scope(project, capsys):
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     project.write('review.md', 'Reviewed comment-only edit.\n')
     args = ['accept', '01-a', '--reason', 'Harmless comment', '--review', 'Code/a.sh=Comment only', '--evidence', 'review.md', '--json']
-    assert project.run(*args) == 0
+    assert project.run(*args, '--dry-run') == 0
     proposal = json.loads(capsys.readouterr().out)
     assert [row['step'] for row in proposal['steps']] == ['build-a']
+    assert not (project.root / LEDGER).exists()
     assert project.run(*args, '--apply', proposal['token']) == 0
     capsys.readouterr()
-    assert project.run('explain', 'build-a', '--json') == 0
+    assert project.run('explain', '01-a#build-a', '--json') == 0
     explanation = json.loads(capsys.readouterr().out)
     assert explanation['status'] == 'fresh'
     assert explanation['acceptance']['reason'] == 'Harmless comment'
@@ -307,7 +321,7 @@ def test_source_and_evidence_edits_after_preview_reject_without_partial_write(pr
 @needs_pytask
 def test_input_change_during_execution_cannot_establish_baseline(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + "echo '# changed during run' >> Code/a.sh\n")
-    assert project.run('build', 'build-a') != 0
+    assert project.run('build', '01-a#build-a') != 0
     assert not receipt_path(project.paths, 'build-a').exists()
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
 
@@ -317,7 +331,7 @@ def test_directory_receipt_and_reuse(dir_project):
     project = dir_project
     assert project.run('build', '.') == 0
     project.write('Code/gen.sh', project.read('Code/gen.sh') + '# harmless\n')
-    review(project, ['z-gen'])
+    review(project, ['01-gen#z-gen'])
     times = project.run_times()
     assert project.run('build', '.', '-j', '2') == 0
     assert times == project.run_times()
@@ -330,10 +344,10 @@ def test_directory_receipt_and_reuse(dir_project):
 def test_failed_predecessor_does_not_skip_as_success_or_run_accepted_child(project, jobs):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
-    review(project, ['build-b'])
+    review(project, ['02-b#build-b'])
     before = project.run_times()['build-b']
     project.write('Code/a.sh', 'exit 4\n')
-    assert project.run('build', 'build-b', '--upstream', '--force', '-j', jobs) != 0
+    assert project.run('build', '02-b#build-b', '--upstream', '--force', '-j', jobs) != 0
     assert project.run_times()['build-b'] == before
     assert project.states()['build-b'] == 'stale'
 
@@ -351,7 +365,7 @@ def test_revalidates_between_task_creation_and_engine_setup(project, monkeypatch
         project.write('Code/a.sh', project.read('Code/a.sh') + '# edit after build selection\n')
         return tasks
     monkeypatch.setattr(repro_run, 'make_tasks', changed)
-    assert project.run('build', 'build-a') == 0
+    assert project.run('build', '01-a#build-a') == 0
     assert project.run_times()['build-a'] > before
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
@@ -368,7 +382,7 @@ def test_shared_helper_fanout_accepts_only_reviewed_consumer(project):
     project.write('Code/x.sh', project.read('Code/x.sh') + '# independent edit\n')
     result = impact(project.graph(), project.paths, ['Code/shared.sh'])
     assert {r['step'] for r in result['direct']} == {'build-a', 'build-x'}
-    review(project, ['build-a'])
+    review(project, ['01-a#build-a'])
     assert project.run('build', '.', '-j', '2') == 0
     assert project.run_times()['build-a'] == before['build-a']
     assert project.run_times()['build-x'] > before['build-x']
@@ -419,14 +433,14 @@ def test_textual_input_snapshots_stay_local_and_reuse_remains_portable(project):
     assert secret not in json.dumps(project.status(*CHAIN).to_dict())
     shutil.rmtree(project.paths.state_dir)
     assert project.states()['build-a'] == 'fresh'
-    assert project.run('build', 'build-a') == 0
+    assert project.run('build', '01-a#build-a') == 0
     assert not project.paths.run_file('build-a').exists()
     assert secret not in json.dumps(project.status(*CHAIN).to_dict())
 
 
 @needs_pytask
-def test_malformed_ledger_and_never_built_acceptance_fail(project):
-    with pytest.raises(ReproStateError, match='never built'):
+def test_malformed_ledger_and_missing_output_acceptance_fail(project):
+    with pytest.raises(ReproStateError, match='required input or output is missing'):
         review(project)
     assert project.run('build', *CHAIN) == 0
     project.write(LEDGER, '{malformed')
@@ -443,7 +457,7 @@ def test_force_dry_run_preserves_ledger_and_evidence(project):
     review(project)
     ledger = (project.root / LEDGER).read_bytes()
     receipt = receipt_path(project.paths, 'build-a').read_bytes()
-    assert project.run('build', 'build-a', '--force', '--dry-run', '-j', '2') == 0
+    assert project.run('build', '01-a#build-a', '--force', '--dry-run', '-j', '2') == 0
     assert (project.root / LEDGER).read_bytes() == ledger
     assert receipt_path(project.paths, 'build-a').read_bytes() == receipt
 
@@ -460,7 +474,7 @@ def test_precommand_forced_failure_preserves_truth_and_invalidates_cache(project
             raise OSError('cannot initialize command log')
         return execute
     monkeypatch.setattr(repro_run, '_run_step', fail_before_command)
-    assert project.run('build', 'build-a', '--force') != 0
+    assert project.run('build', '01-a#build-a', '--force') != 0
     assert project.run_times()['build-a'] == before
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
     assert 'build-a' not in read_ledger(project.paths)['steps']
@@ -471,7 +485,7 @@ def test_precommand_forced_failure_preserves_truth_and_invalidates_cache(project
 def test_identical_upstream_rerun_preserves_independent_child_acceptance(project, jobs):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
-    review(project, ['build-b'])
+    review(project, ['02-b#build-b'])
     before = project.run_times()
     ledger = read_ledger(project.paths)['steps']['build-b']
     project.write('Code/a.sh', project.read('Code/a.sh') + '# identical output\n')
@@ -500,7 +514,7 @@ def test_impact_reports_script_include_and_environment_origins(project):
 
 
 @needs_pytask
-def test_arbitrary_sidecar_requires_real_output_equality_and_can_be_reaccepted(project):
+def test_arbitrary_sidecar_tracks_reviewed_output_and_can_be_reaccepted(project):
     _use_a_sidecar(project)
     project.write('Code/a.sh', project.read('Code/a.sh') + 'echo arbitrary-version > output/a.txt.sha256\n')
     assert project.run('build', *CHAIN) == 0
@@ -511,8 +525,10 @@ def test_arbitrary_sidecar_requires_real_output_equality_and_can_be_reaccepted(p
     review(project)
     assert project.states()['build-a'] == 'fresh'
     project.write('output/a.txt', 'corruption\n')
-    with pytest.raises(ReproStateError, match='output differs'):
-        review(project)
+    args, proposal = review(project, apply=False)
+    assert any(row['kind'] == 'output' for row in proposal['steps'][0]['changes'])
+    accept(*args, token=proposal['token'])
+    assert project.states()['build-a'] == 'fresh'
 
 
 @needs_pytask
@@ -530,7 +546,7 @@ def test_prose_edits_and_active_rollups_do_not_invalidate_preview(project):
 @needs_pytask
 def test_results_edit_during_real_execution_does_not_abort(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + "printf '\\n## Results\\n\\nRecorded while running.\\n' >> superRA/01-a/task.md\n")
-    assert project.run('build', 'build-a') == 0
+    assert project.run('build', '01-a#build-a') == 0
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'success'
     assert project.states()['build-a'] == 'fresh'
 
@@ -550,3 +566,189 @@ def test_semantic_graph_guard_catches_validity_changes(project, change):
         project.write('superRA/config.yaml', project.read('superRA/config.yaml').replace('OUT: output', 'OUT: changed'))
     with pytest.raises(ReproStateError, match='declarations or configuration changed'):
         check_sources(graph)
+
+
+@pytest.mark.parametrize('jobs', ['1', '2'])
+@needs_pytask
+def test_first_acceptance_skips_without_fabricating_execution(project, jobs):
+    project.write('output/a.txt', 'interactive result\n')
+    args = (project.graph(), project.paths, ['01-a'], 'Reviewed the interactive result', {}, [])
+    proposal = accept(*args, dry_run=True)
+    assert proposal['ready']
+    assert not proposal['steps'][0]['baseline_details']['available']
+    accept(*args, token=proposal['token'])
+    entry = project.status('01-a').entry('build-a')
+    assert entry.status == 'fresh' and entry.acceptance['basis'] == 'reviewed'
+    assert entry.last_run is None and entry.log is None
+    assert 'build-a' not in read_lock(project.paths.lock_file)
+    assert read_run_record(project.paths, 'build-a') == {}
+    assert not receipt_path(project.paths, 'build-a').exists()
+    assert project.run('build', *CHAIN, '-j', jobs) == 0
+    assert 'build-a' not in project.run_times()
+    assert 'build-a' not in read_lock(project.paths.lock_file)
+    assert project.read('output/b.txt') == 'interactive result\n' * 2
+    assert project.states()['check-b'] == 'fresh'
+    assert project.run('build', '01-a', '--force', '--dry-run') == 0
+    assert read_run_record(project.paths, 'build-a') == {}
+    assert project.run('build', '01-a', '--force') == 0
+    assert read_run_record(project.paths, 'build-a')['outcome'] == 'success'
+    assert 'build-a' not in read_ledger(project.paths)['steps']
+
+
+@needs_pytask
+def test_direct_rerun_replaces_baseline_and_refreshes_descendant(project):
+    assert project.run('build', *CHAIN) == 0
+    lock = project.paths.lock_file.read_bytes()
+    run = read_run_record(project.paths, 'build-a')
+    receipt = receipt_path(project.paths, 'build-a').read_bytes()
+    project.write('Code/a.sh', 'mkdir -p output\nprintf updated > output/a.txt\n')
+    project.write('output/a.txt', 'updated')
+    args = (project.graph(), project.paths, ['01-a'], 'Ran updated analysis and reviewed its result', {}, [])
+    proposal = accept(*args, dry_run=True)
+    assert {'dependency', 'output'} <= {c['kind'] for c in proposal['steps'][0]['changes']}
+    accept(*args, token=proposal['token'])
+    assert project.paths.lock_file.read_bytes() == lock
+    assert read_run_record(project.paths, 'build-a') == run
+    assert receipt_path(project.paths, 'build-a').read_bytes() == receipt
+    assert project.run('build', *CHAIN) == 0
+    assert project.read('output/b.txt') == 'updated' * 2
+    assert read_run_record(project.paths, 'build-a') == run
+    project.write('output/a.txt', 'later edit')
+    assert project.states()['build-a'] == 'stale'
+
+
+@needs_pytask
+@pytest.mark.parametrize('change', ['input', 'output', 'spec', 'revoke'])
+def test_initial_acceptance_survives_cache_loss_and_invalidates(project, change):
+    project.write('output/a.txt', 'interactive result\n')
+    review(project)
+    shutil.rmtree(project.paths.state_dir)
+    assert project.status('01-a').entry('build-a').status == 'fresh'
+    assert project.run('build', '01-a') == 0
+    assert read_run_record(project.paths, 'build-a') == {}
+    if change == 'input':
+        project.write('Code/a.sh', project.read('Code/a.sh') + '# later\n')
+    elif change == 'output':
+        project.write('output/a.txt', 'later result\n')
+    elif change == 'spec':
+        path = 'superRA/01-a/task.md'
+        project.write(path, project.read(path).replace('sh Code/a.sh', 'sh Code/a.sh && true'))
+    else:
+        revoke(project.graph(), project.paths, ['01-a'])
+    assert project.status('01-a').entry('build-a').status != 'fresh'
+
+
+@needs_pytask
+def test_acceptance_of_saved_inputs_does_not_certify_or_build_upstream(project):
+    project.write('output/a.txt', 'saved without producer execution\n')
+    project.write('output/b.txt', 'reviewed downstream result\n')
+    review(project, ['02-b#build-b'])
+    saved = read_ledger(project.paths)['steps']['build-b']['boundary_inputs']
+    assert [item['logical'] for item in saved] == ['${OUT}/a.txt']
+    assert all('resolved' not in item for item in saved)
+    assert project.status('02-b').entry('build-b').status == 'fresh'
+    assert compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).entry('build-b').status != 'fresh'
+    assert project.run('build', '02-b') == 0
+    assert set(project.run_times()) == {'check-b'}
+    assert project.read('output/b.txt') == 'reviewed downstream result\n'
+
+
+def test_never_run_check_cannot_be_accepted_from_existing_inputs(project):
+    project.write('output/b.txt', 'interactive result\n')
+    with pytest.raises(ReproStateError, match='never built'):
+        accept(project.graph(), project.paths, ['02-b#check-b'], 'Reviewed the check inputs', {}, [])
+    assert not project.paths.stamps_dir.exists()
+    assert not (project.root / LEDGER).exists()
+
+
+@needs_pytask
+def test_one_shot_accept_applies_and_prints_what_it_accepted(project, capsys):
+    assert project.run('build', *CHAIN) == 0
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    capsys.readouterr()
+    assert project.run('accept', '01-a', '--reason', 'Reviewed the comment-only edit') == 0
+    output = capsys.readouterr().out
+    assert 'Accepted 1 step(s) as the reviewed baseline.' in output
+    assert 'reason: Reviewed the comment-only edit' in output
+    assert 'build-a' in output and 'dependency Code/a.sh' in output
+    assert read_ledger(project.paths)['steps']['build-a']['basis'] == 'reviewed'
+    assert project.states()['build-a'] == 'fresh'
+
+
+@needs_pytask
+def test_one_shot_accept_rejects_a_concurrent_declaration_edit(project):
+    from _repro_acceptance import bind_sources
+    assert project.run('build', *CHAIN) == 0
+    graph = project.graph()
+    bind_sources(graph, project.plan_root)
+    project.write('superRA/01-a/task.md',
+                  project.read('superRA/01-a/task.md').replace('sh Code/a.sh', 'sh Code/a.sh && true'))
+    with pytest.raises(ReproStateError, match='declarations or configuration changed'):
+        accept(graph, project.paths, ['01-a'], 'Reviewed the current result', {}, [])
+    assert not (project.root / LEDGER).exists()
+
+
+@needs_pytask
+def test_accept_dry_run_writes_nothing_and_names_its_token(project, capsys):
+    assert project.run('build', *CHAIN) == 0
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    capsys.readouterr()
+    assert project.run('accept', '01-a', '--reason', 'Reviewed', '--dry-run') == 0
+    output = capsys.readouterr().out
+    assert output.startswith('Would accept 1 step(s); no record was written.')
+    assert 'Apply this exact preview with --apply ' in output
+    assert not (project.root / LEDGER).exists()
+
+
+@pytest.mark.parametrize('change', ['output', 'input', 'evidence'])
+def test_initial_preview_rejects_concurrent_changes(project, change):
+    project.write('output/a.txt', 'interactive result\n')
+    args, proposal = review(project, apply=False)
+    path = {'output': 'output/a.txt', 'input': 'Code/a.sh', 'evidence': 'review.md'}[change]
+    project.write(path, project.read(path) + 'concurrent edit\n')
+    with pytest.raises(ReproStateError, match='preview no longer matches'):
+        accept(*args, token=proposal['token'])
+    assert not (project.root / LEDGER).exists()
+
+
+@needs_pytask
+def test_initial_batch_acceptance_binds_upstream_and_runs_checks(project):
+    project.write('output/a.txt', 'a\n')
+    project.write('output/b.txt', 'aa\n')
+    result = review(project, ['01-a#build-a', '02-b#build-b'])
+    assert [r['step'] for r in result['steps']] == ['build-a', 'build-b']
+    assert project.run('build', *CHAIN, '-j', '2') == 0
+    assert set(project.run_times()) == {'check-b'}
+    assert set(read_lock(project.paths.lock_file)) == {'check-b'}
+    revoke(project.graph(), project.paths, ['01-a#build-a'])
+    assert project.states()['build-b'] != 'fresh'
+
+
+@needs_pytask
+def test_reaccepted_upstream_keeps_the_downstream_acceptance_it_bound(project):
+    project.write('output/a.txt', 'a\n')
+    project.write('output/b.txt', 'aa\n')
+    review(project, ['01-a#build-a', '02-b#build-b'])
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    review(project, ['01-a#build-a'])
+    assert project.states()['build-a'] == 'fresh'
+    assert project.states()['build-b'] == 'fresh'
+    assert project.run('build', *CHAIN) == 0
+    assert set(project.run_times()) == {'check-b'}
+    assert project.read('output/b.txt') == 'aa\n'
+
+
+@needs_pytask
+def test_reacceptance_compares_to_reviewed_baseline_without_inventing_source_history(project):
+    from _repro_acceptance import inspect_baseline
+    project.write('output/a.txt', 'first interactive result\n')
+    review(project)
+    project.write('output/a.txt', 'second interactive result\n')
+    details = inspect_baseline(project.graph(), project.graph().step('build-a'), project.paths)
+    assert details['available'] and details['basis'] == 'reviewed'
+    assert any(row['kind'] == 'output' for row in details['diffs'])
+    assert all(row['history'] == 'unavailable' for row in details['diffs'])
+    review(project)
+    assert project.run('build', '01-a') == 0
+    assert project.read('output/a.txt') == 'second interactive result\n'
+    assert read_run_record(project.paths, 'build-a') == {}

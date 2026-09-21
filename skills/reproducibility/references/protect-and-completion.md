@@ -19,10 +19,10 @@ superra repro build <deliverable-task>... '<check-task>#<check-step>'... --upstr
 superra repro status <deliverable-task>... '<check-task>#<check-step>'... --upstream
 ```
 
-Target the final deliverable tasks and the selected protection checks — the Protect completion targets once recorded; `--upstream` adds their producer chains. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-model.md#reviewed-acceptance). Claims outside these targets require their own [scoped verification](../SKILL.md#build-and-status).
+Target the final deliverable tasks and the selected protection checks — the Protect completion targets once recorded; `--upstream` adds their producer chains. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-or-accept.md#accept). Claims outside these targets require their own [scoped verification](../SKILL.md#the-loop).
 
 A failure blocks the completion menu:
 
-- **A step failed** — inspect the log from `superra repro explain <step>` to distinguish producer, environment, and declaration failures.
-- **The build succeeded and status is still dirty** — `rerun-model.md` §Diagnosing a surprise.
+- **A step failed** — inspect the log from `superra repro explain '<task>#<step>'` to distinguish producer, environment, and declaration failures.
+- **The build succeeded and status is still dirty** — [diagnosing.md](diagnosing.md).
 - **A kept result has no producer** — register it or identify its agreed external-input boundary.

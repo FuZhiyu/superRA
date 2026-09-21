@@ -13,7 +13,9 @@ Checks:
 5. Reproduction — the ## Reproduction section and config.yaml build-graph
    contract (schema errors, duplicate outs, unknown ${VAR} refs); see
    _repro.check_reproduction. Never-built steps are runner state, not a
-   finding, so a fresh clone still checks clean.
+   finding, so a fresh clone still checks clean. Plus an advisory warning per
+   generated-looking file a task's ## Results links that no step produces or
+   reads; see _repro_signals.check_results_coverage.
 
 Exit code 0 if clean, 1 if issues found.
 """
@@ -28,6 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _repro import build_graph
+from _repro_signals import check_results_coverage
 from _step_links import check_step_links
 from _task_io import (
     TASK_ROOT_DIRNAME,
@@ -235,6 +238,10 @@ def run_checks(
         graph = build_graph(plan_root, root=root)
         if category != "links":
             findings.extend(graph.findings)
+        if category is None or category == "reproduction":
+            findings.extend(
+                check_results_coverage(graph, root, plan_root.resolve().parent)
+            )
         if category is None or category == "links":
             findings.extend(check_step_links(plan_root, graph))
 

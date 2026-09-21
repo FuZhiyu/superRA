@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from _repro_state import (
-    HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
+    Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
     output_nodes, read_lock, read_run_record, select_steps, spec_hash,
     spec_node_id, step_nodes, _topological,
 )
@@ -76,9 +76,16 @@ def read_ledger(paths):
         if (not isinstance(record, dict)
                 or not all(isinstance(record.get(key), dict) for key in ('baseline', 'state', 'reviews', 'evidence', 'upstream'))
                 or not isinstance(record.get('reason'), str)
+                or not isinstance(record.get('boundary_inputs'), list)
+                or record.get('basis') != 'reviewed'
                 or record.get('id') != identity({k: v for k, v in record.items() if k != 'id'})):
             raise ReproStateError(f'{LEDGER}: malformed acceptance for {name}')
     return value
+
+
+def logical_rows(rows):
+    """Committed saved-input rows key on the logical path; a resolved root is per-checkout."""
+    return [{key: value for key, value in row.items() if key != 'resolved'} for row in rows]
 
 
 def lock_state(entry):
@@ -152,9 +159,11 @@ def capture_receipt(graph, step, paths, before):
     return receipt
 
 
-def baseline(step, paths, entry):
+def baseline(step, paths, entry, *, required=True):
     if entry is None:
-        raise ReproStateError(f'{step.name}: never built')
+        if required:
+            raise ReproStateError(f'{step.name}: never built')
+        return {'lock': None, 'outputs': {}, 'receipt': None, 'snapshots': {}, 'spec': None, 'run': {}}
     recorded = lock_state(entry)
     receipt = read_json(receipt_path(paths, step.name), {})
     if receipt and receipt.get('id') == identity({k: v for k, v in receipt.items() if k != 'id'}):
@@ -166,9 +175,10 @@ def baseline(step, paths, entry):
     accepted = read_ledger(paths)['steps'].get(step.name, {}).get('baseline', {})
     if accepted.get('lock') == recorded:
         return accepted
-    if any(out.sidecar for out in step.outs):
+    sidecar = any(out.sidecar for out in step.outs)
+    if sidecar and required:
         raise ReproStateError(f'{step.name}: no verified output digest for sidecar baseline; rerun this step')
-    return {'lock': recorded, 'outputs': dict(entry.produces), 'receipt': None, 'snapshots': {}, 'spec': None, 'run': read_run_record(paths, step.name)}
+    return {'lock': recorded, 'outputs': {} if sidecar else dict(entry.produces), 'receipt': None, 'snapshots': {}, 'spec': None, 'run': read_run_record(paths, step.name)}
 
 
 def differences(before, after):
@@ -177,16 +187,21 @@ def differences(before, after):
             for key in sorted(before.keys() | after.keys()) if before.get(key) != after.get(key)]
 
 
-def validate_record(graph, step, paths, record, lock, upstream, cache=None):
+def validate_record(graph, step, paths, record, locks, ledger, cache=None):
     """Return the reason reuse is invalid; callers already validate upstream state."""
     if not record:
         return 'no acceptance'
-    if record.get('baseline', {}).get('lock') != lock_state(lock):
+    if record.get('baseline', {}).get('lock') != lock_state(locks.get(step.name)):
         return 'successful baseline changed'
     if read_run_record(paths, step.name).get('outcome') in ('failed', 'running', 'pending'):
         return 'last execution did not succeed'
-    if record.get('upstream') != upstream:
-        return 'upstream acceptance changed'
+    # A bound producer that still holds an acceptance or a successful lock keeps
+    # this record: the reviewed dep hashes below already pin its output bytes, so
+    # re-accepting it is not a change here. Losing its every baseline is.
+    revoked = next((name for name in record.get('upstream', {})
+                    if name not in ledger['steps'] and name not in locks), None)
+    if revoked:
+        return f'upstream acceptance for {revoked!r} was revoked'
     cache = cache or HashCache()
     current_paths = {dep.logical: dep.resolved for dep in step.deps}
     for item in record.get('boundary_inputs', []):
@@ -198,8 +213,6 @@ def validate_record(graph, step, paths, record, lock, upstream, cache=None):
         return 'required input or output missing'
     if state != record.get('state'):
         return 'reviewed state changed'
-    if state['outputs'] != record['baseline'].get('outputs'):
-        return 'outputs differ from successful baseline'
     return None
 
 
@@ -210,7 +223,7 @@ def supersede(paths, name):
 
 
 def apply_to_status(report, paths, cache, ledger=None, lock=None):
-    """Topological reuse and cascade together, so acceptance cuts uncertainty only."""
+    """Apply exact reviewed state, then propagate selected producer uncertainty."""
     ledger = read_ledger(paths) if ledger is None else ledger
     lock = read_lock(paths.lock_file) if lock is None else lock
     by_name = {entry.step.name: entry for entry in report.entries}
@@ -219,51 +232,59 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
     valid_graph = not any(f.severity == 'error' for f in report.graph.findings)
-    context = None
-    if not report.upstream and any(name in ledger['steps'] for name in by_name):
-        from _repro_state import compute_status
-        context = compute_status(report.graph, paths, targets=[f'{e.step.task_path or "."}#{e.step.name}' for e in report.entries],
-                                 upstream=True, cache=cache,
-                                 acceptance_ledger=ledger, completed_locks=lock)
     for name in _topological(by_name, parents):
         entry = by_name[name]
-        all_parents = [src for src, dst, _ in report.graph.step_edges if dst == name]
-        upstream_entries = [context.entry(p) if context else by_name.get(p) for p in all_parents]
-        upstream = {p.step.name: p.acceptance['id'] for p in upstream_entries if p and p.acceptance}
-        blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
         record = ledger['steps'].get(name)
-        invalid = validate_record(report.graph, entry.step, paths, record, lock.get(name), upstream, cache) if record else None
-        if record and 'boundary_inputs' not in record and any(c.kind == 'boundary' for c in entry.changes):
-            invalid = invalid or 'saved input bytes changed without reviewed evidence'
-        if record and context and not context.entry(name).acceptance:
-            invalid = invalid or 'upstream acceptance unavailable'
-        if valid_graph and not blocked and record and not invalid:
-            entry.status, entry.reason, entry.acceptance = 'fresh', 'up to date', record
+        blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
+        invalid = validate_record(report.graph, entry.step, paths, record, lock, ledger, cache) if record else None
+        if valid_graph and record and not invalid:
+            entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
+            entry.changes = []
             if entry.last_run is None:
                 run = record['baseline'].get('run', {})
                 entry.last_run, entry.duration, entry.log = run.get('ended_at'), run.get('duration'), run.get('log')
-        elif record and invalid and entry.status == 'fresh':
-            # A sidecar can conceal altered output bytes from the ordinary lock.
+        elif record and invalid:
             state = current_state(report.graph, entry.step, paths, cache)
-            if state['outputs'] != record.get('baseline', {}).get('outputs'):
-                entry.status, entry.reason = 'stale', 'output differs from accepted successful baseline'
+            entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
+                             for c in state_differences(record['state'], state)] + [
+                                 c for c in entry.changes if c.kind == 'boundary']
+            if entry.status == 'fresh' or (entry.status == 'missing' and all(
+                    v is not None for group in state.values() for v in group.values())):
+                entry.status, entry.reason = 'stale', invalid
             if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
                 entry.status, entry.reason = 'failed', 'last execution did not succeed'
-            if record.get('upstream') != upstream:
-                entry.status, entry.reason = 'stale', 'upstream acceptance changed'
-            if invalid.startswith('saved input'):
-                entry.status, entry.reason = 'stale', invalid
         entry.local_status, entry.local_reason = entry.status, entry.reason
         if blocked and entry.status == 'fresh':
             entry.status, entry.reason = 'stale', f'upstream step {blocked!r} is {by_name[blocked].status}'
 
 
+def state_differences(before, after):
+    """Input/output hashes, plus distinct engine metadata such as sidecars."""
+    changes = []
+    for group, kind in (('deps', 'dependency'), ('outputs', 'output'), ('products', 'output')):
+        for row in differences(before.get(group, {}), after[group]):
+            if group == 'products':
+                if any(c['node'] == row['node'] and c['before'] == row['before']
+                       and c['after'] == row['after'] for c in changes):
+                    continue
+                row['node'] += '::product'
+            row['kind'] = 'spec' if row['node'].endswith('::spec') else kind
+            changes.append(row)
+    return changes
+
+
 def inspect_baseline(graph, step, paths):
+    accepted = read_ledger(paths)['steps'].get(step.name)
+    reviewed = None
+    if accepted:
+        diffs = [dict(row, diff=None, history='unavailable')
+                 for row in state_differences(accepted['state'], current_state(graph, step, paths))]
+        reviewed = {'available': True, 'basis': 'reviewed', 'receipt': None, 'diffs': diffs}
     entry = read_lock(paths.lock_file).get(step.name)
     try:
         before = baseline(step, paths, entry)
     except ReproStateError as exc:
-        return {'available': False, 'reason': str(exc), 'diffs': []}
+        return reviewed or {'available': False, 'reason': str(exc), 'diffs': []}
     now = current_state(graph, step, paths)
     diffs = []
     by_logical = {d.logical: d for d in step.deps}
@@ -282,7 +303,7 @@ def inspect_baseline(graph, step, paths):
         if change['kind'] == 'spec' and before['spec']:
             row.update(history='verified receipt', before_spec=before['spec'], after_spec=step.to_dict())
         diffs.append(row)
-    return {'available': True, 'receipt': before['receipt'], 'diffs': diffs}
+    return {'available': True, 'receipt': before['receipt'], 'diffs': diffs, 'reviewed': reviewed}
 
 
 def evidence_files(paths, references):
@@ -294,13 +315,10 @@ def evidence_files(paths, references):
         if digest is None:
             raise ReproStateError(f'evidence is unavailable: {reference}')
         result[reference] = digest
-    if not result:
-        raise ReproStateError('acceptance requires --evidence FILE (an existing review or focused-check record)')
     return result
 
 
 def preview(graph, paths, targets, reason, reviews, evidence):
-    from _repro_state import compute_status
     if any(f.severity == 'error' for f in graph.findings):
         raise ReproStateError('invalid graph; acceptance is unavailable')
     names, unknown = select_steps(graph, targets, include_ancestors=False)
@@ -318,61 +336,64 @@ def preview(graph, paths, targets, reason, reviews, evidence):
         if name not in names:
             continue
         step = graph.step(name)
-        status = compute_status(graph, paths, upstream=True, acceptance_ledger=ledger)
-        blocked = [p for p in parents[name] if status.entry(p).status != 'fresh']
-        if blocked:
-            raise ReproStateError(f'{name}: upstream producers are not fresh: {", ".join(blocked)}')
         if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
             raise ReproStateError(f'{name}: last execution did not succeed')
-        before = baseline(step, paths, lock.get(name))
+        before = baseline(step, paths, lock.get(name), required=step.kind == 'check')
         state = current_state(graph, step, paths)
         if any(v is None for group in state.values() for v in group.values()):
             raise ReproStateError(f'{name}: required input or output is missing')
-        if state['outputs'] != before['outputs'] or state['products'] != before['lock']['products']:
-            raise ReproStateError(f'{name}: output differs from successful baseline')
-        changes = differences(before['lock']['deps'], state['deps'])
+        if step.kind == 'check' and state['products'] != before['lock']['products']:
+            raise ReproStateError(f'{name}: check stamp differs from successful baseline; run the check')
+        previous_record = ledger['steps'].get(name)
+        previous_state = previous_record['state'] if previous_record else {
+            'deps': (before['lock'] or {}).get('deps', {}),
+            'products': (before['lock'] or {}).get('products', {}), 'outputs': before['outputs']}
+        changes = state_differences(previous_state, state)
         from _repro_scope import boundary_inputs
         boundary = boundary_inputs(graph, {name}, paths, consumers={name})
-        previous_boundary = {item['logical']: item for item in before.get('boundary_inputs', [])}
+        previous_boundary = {item['logical']: item for item in
+                             (previous_record or before).get('boundary_inputs', [])}
         for item in boundary:
             previous = previous_boundary.get(item['logical'])
             if previous and previous['digest'] != item['digest']:
                 changes.append({'node': item['logical'] + '::boundary', 'kind': 'boundary',
                                 'before': previous['digest'], 'after': item['digest']})
-            elif not previous and item['sidecar'] and item['provenance'] != 'matches successful output':
-                raise ReproStateError(f'{name}: no verified saved-input baseline for {item["logical"]}; rerun this step')
-        if not changes:
-            raise ReproStateError(f'{name}: no changed dependencies or specification to accept')
-        coverage = {change['node']: reviews.get(change['node'], '') for change in changes}
+        coverage = {change['node']: reviews[change['node']] for change in changes if change['node'] in reviews}
         portable_baseline = {key: value for key, value in before.items() if key != 'snapshots'}
-        record = {'baseline': portable_baseline, 'state': state, 'reason': reason, 'reviews': coverage,
-                  'evidence': evidence_hashes,
-                  'boundary_inputs': boundary,
-                  'upstream': {p: status.entry(p).acceptance['id'] for p in parents[name] if status.entry(p).acceptance}}
+        if 'boundary_inputs' in portable_baseline:
+            portable_baseline['boundary_inputs'] = logical_rows(portable_baseline['boundary_inputs'])
+        record = {'basis': 'reviewed', 'baseline': portable_baseline, 'state': state,
+                  'reason': reason, 'reviews': coverage, 'evidence': evidence_hashes,
+                  'boundary_inputs': logical_rows(boundary),
+                  # Only producers accepted alongside this one bind it; the rest
+                  # stay saved inputs, recorded above by their actual bytes.
+                  'upstream': {p: ledger['steps'][p]['id'] for p in parents[name]
+                               if p in names and p in ledger['steps']}}
         # Deterministic provisional ids also bind downstream batch acceptances.
         record['id'] = identity(record)
         ledger['steps'][name] = record
         rows.append({'step': name, 'changes': changes, 'record': record,
                      'baseline_details': inspect_baseline(graph, step, paths)})
-    ready = bool(reason.strip() and evidence_hashes and all(all(r['record']['reviews'].values()) for r in rows))
+    ready = bool(reason.strip())
     result = {'steps': rows, 'ledger_before': original, 'ready': ready}
     result['token'] = identity(result)
     return result
 
 
-def accept(graph, paths, targets, reason, reviews, evidence, token=None):
+def accept(graph, paths, targets, reason, reviews, evidence, token=None, *, dry_run=False):
+    """Apply the reviewed baseline in one call; *dry_run* previews, *token* re-applies one."""
     with mutation_lock(paths):
         check_sources(graph)
         result = preview(graph, paths, targets, reason, reviews, evidence)
-        if token is None:
+        if dry_run:
             return result
-        if token != result['token']:
+        if token is not None and token != result['token']:
             raise ReproStateError('preview no longer matches current state; inspect a new preview')
         if not result['ready']:
-            raise ReproStateError('cover every changed node with --review NODE=RATIONALE, --reason, and --evidence')
+            raise ReproStateError('acceptance requires --reason describing the reviewed current results')
         # Re-read hashes and evidence immediately before the atomic write.
         check_sources(graph)
-        if preview(graph, paths, targets, reason, reviews, evidence)['token'] != token:
+        if preview(graph, paths, targets, reason, reviews, evidence)['token'] != result['token']:
             raise ReproStateError('state changed during acceptance; inspect a new preview')
         ledger = read_ledger(paths)
         replacements = {}

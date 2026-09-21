@@ -65,7 +65,7 @@ def test_unrelated_task_creation_during_execution_is_allowed(project, jobs):
 
 @needs_pytask
 def test_unused_config_change_during_execution_is_allowed(project):
-    project.write('new-config.txt', project.read('superRA/config.yaml') + '  code_roots: [Other]\n')
+    project.write('new-config.txt', project.read('superRA/config.yaml') + '    unused: echo {script}\n')
     project.write('Code/a.sh', project.read('Code/a.sh') + 'cp new-config.txt superRA/config.yaml\n')
     assert project.run('build', '01-a') == 0
 
@@ -78,17 +78,16 @@ def test_selected_command_change_during_execution_is_rejected(project):
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
 
 
-def test_nested_union_root_and_ambiguous_targets(project):
+def test_nested_union_root_and_a_task_named_like_a_step(project):
     project.write('superRA/group/task.md', '---\ntitle: Group\nstatus: not-started\n---\n')
     project.write('superRA/group/nested/task.md', TASK_X.replace('build-x', 'nested').replace('x.txt', 'nested.txt'))
     graph = project.graph()
     assert select_steps(graph, ['group', 'group/nested#nested'])[0] == ['nested']
     project.write('superRA/build-a/task.md', '---\ntitle: Collision\nstatus: not-started\n---\n')
-    with pytest.raises(ReproStateError, match='ambiguous'):
-        select_steps(project.graph(), ['build-a'])
+    for target in ('build-a', './build-a'):
+        with pytest.raises(ReproStateError, match='no steps'):
+            select_steps(project.graph(), [target])
     assert select_steps(project.graph(), ['01-a#build-a'])[0] == ['build-a']
-    with pytest.raises(ReproStateError, match='no steps'):
-        select_steps(project.graph(), ['./build-a'])
 
 
 @needs_pytask
@@ -203,7 +202,7 @@ def test_acceptance_cannot_hide_changed_saved_bytes(project, drop_receipt):
     assert project.run('build', *CHAIN) == 0
     assert project.run('build', '02-b') == 0
     project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
-    review(project, ['build-b'])
+    review(project, ['02-b#build-b'])
     if drop_receipt:
         receipt_path(project.paths, 'build-b').unlink()
     assert project.run('status', '02-b') == 0
@@ -224,7 +223,7 @@ def test_batch_acceptance_tracks_inputs_between_accepted_steps(project):
     assert project.run('build', *CHAIN) == 0
     for script in ['Code/a.sh', 'Code/b.sh']:
         project.write(script, project.read(script) + '# harmless\n')
-    review(project, ['build-a', 'build-b'])
+    review(project, ['01-a#build-a', '02-b#build-b'])
     assert project.run('status', '02-b') == 0
     project.write('output/a.txt', 'changed after batch acceptance\n')
     assert project.run('status', '02-b') == 1
@@ -241,7 +240,7 @@ def test_saved_input_evidence_follows_logical_path_relocation(project, accepted)
     assert project.run('build', '02-b') == 0
     if accepted:
         project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
-        review(project, ['build-b'])
+        review(project, ['02-b#build-b'])
     shutil.copytree(project.root / 'output', project.root / 'relocated')
     project.write('superRA/config.yaml', project.read('superRA/config.yaml').replace('OUT: output', 'OUT: relocated'))
     assert project.run('status', '02-b') == 0
@@ -289,10 +288,3 @@ def test_new_step_in_selected_task_waits_for_next_build(project):
     assert not (project.root / 'new-step-ran').exists()
     assert project.run('build', '01-a') == 0
     assert (project.root / 'new-step-ran').exists()
-
-
-def test_retired_tier_flag_and_force_flag(project, capsys):
-    assert project.run('build', '02-b', '--tier', 'required') == 2
-    assert '--tier is retired' in capsys.readouterr().err
-    assert project.run('build', '.', '--force-all') == 2
-    assert '--upstream --force' in capsys.readouterr().err

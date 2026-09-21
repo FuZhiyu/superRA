@@ -227,7 +227,7 @@ class TestPyyamlAgreement:
             "  env_deps:\n"
             "    - Project.toml\n"
             "    - Manifest.toml\n"
-            "  code_roots: [Code, test]\n"
+            "  flow_list: [Code, test]\n"
         ),
     ]
 
@@ -802,18 +802,6 @@ class TestFindings:
         plan = _plan(tmp_path)
         _write_repro_task(plan / "01-a", "A", "level: high\nsteps: []\n")
         assert _has(_graph(plan), "error", "unknown key 'level'")
-
-    @pytest.mark.parametrize("value", ["canon", "gold", "required"])
-    def test_retired_tier_key_warns_and_keeps_the_steps(self, tmp_path, value):
-        plan = _plan(tmp_path)
-        _write_repro_task(
-            plan / "01-a", "A", f"tier: {value}\nsteps:\n  - name: load\n    cmd: true\n"
-        )
-        graph = _graph(plan)
-        assert _has(graph, "warning", "'tier' is retired and ignored")
-        assert _messages(graph, "error") == []
-        assert [s.name for s in graph.steps] == ["load"]
-        assert graph.section_tasks == ["01-a"]
 
     def test_unknown_step_key(self, tmp_path):
         plan = _plan(tmp_path)

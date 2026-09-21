@@ -36,9 +36,8 @@ CATEGORY = "reproduction"
 STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("steps",)
-RETIRED_SECTION_KEYS = ("tier",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
-CONFIG_KEYS = ("vars", "runners", "env_deps", "code_roots")
+CONFIG_KEYS = ("vars", "runners", "env_deps")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -507,14 +506,12 @@ class ReproConfig:
     variables: dict[str, str] = field(default_factory=dict)
     runners: dict[str, str] = field(default_factory=dict)
     env_deps: list[str] = field(default_factory=list)
-    code_roots: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
             "vars": dict(self.variables),
             "runners": dict(self.runners),
             "env_deps": list(self.env_deps),
-            "code_roots": list(self.code_roots),
         }
 
 
@@ -1100,12 +1097,11 @@ def build_graph(
 
     ``resolve_vars=False`` skips ``reproduction.vars`` resolution entirely —
     no ``env:``/``shell:`` evaluation, so no subprocess and no environment
-    lookups — for callers that only need `code_roots` and literal
-    (non-``${VAR}``) dep/script paths, such as the reminder hook's relevance
-    check. In that mode a dep, out, cmd, or script that still references an
-    unresolved ``${VAR}`` keeps the placeholder text (so it matches no real
-    file) instead of raising the usual unknown-variable finding; `code_roots`
-    is unaffected either way, since it is never `${VAR}`-interpolated.
+    lookups — for callers that only need literal (non-``${VAR}``) dep/script
+    paths, such as the reminder hook's relevance check. In that mode a dep,
+    out, cmd, or script that still references an unresolved ``${VAR}`` keeps
+    the placeholder text (so it matches no real file) instead of raising the
+    usual unknown-variable finding.
     """
     plan_root = Path(plan_root)
     project_root = Path(project_root) if project_root else plan_root.resolve().parent
@@ -1143,7 +1139,6 @@ def build_graph(
         variables=variables,
         runners={str(k): str(v) for k, v in runners.items()},
         env_deps=[_norm(p) for p in _string_list(raw_config.get("env_deps"))],
-        code_roots=[_norm(p) for p in _string_list(raw_config.get("code_roots"))],
     )
     if resolve_vars:
         for raw in graph.config.env_deps:
@@ -1182,14 +1177,7 @@ def build_graph(
             )
             continue
         for key in document:
-            if key in RETIRED_SECTION_KEYS:
-                _finding(
-                    task.path,
-                    "warning",
-                    f"## {REPRO_SECTION}: {key!r} is retired and ignored; remove the key "
-                    "and name task targets instead",
-                )
-            elif key not in SECTION_KEYS:
+            if key not in SECTION_KEYS:
                 _finding(
                     task.path,
                     "error",

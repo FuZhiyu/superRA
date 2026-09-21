@@ -49,25 +49,9 @@ For a shared specification, a cheap producer can emit deterministic per-consumer
 
 ## Reviewed acceptance is evidence distinct from execution
 
-Provide `repro accept <step...>` with dry-run preview, reason and evidence references, JSON output, and a corresponding revoke action. A task target expands to a concrete step list in the preview; do not implicitly accept a downstream closure. Acceptance records the exact before/after state of selected steps and why their existing outputs remain valid.
+`repro accept` establishes or replaces the reviewed current baseline, including newly registered producers and changed outputs from direct runs. Require a reason; evidence files and per-node notes are optional. Preserve exact preview/apply, revoke, saved-input scope, downstream invalidation, forced execution, and truthful execution history. Never-run checks still require execution.
 
-Accept only previously successful steps whose required inputs and outputs exist, outputs match the successful baseline, graph is valid, upstream producers are fresh or covered by valid acceptance, and every changed dependency or specification item is covered by the review. Never clear a failed execution, establish a never-built baseline, accept missing inputs/outputs, or silently bless changed output bytes. A recovered source revision must match baseline hashes before its diff can support the review; unavailable history is disclosed, not reconstructed by guesswork. Capture small source/config snapshots or equivalent verified receipts after successful product verification for future explanations, including runs from dirty checkouts. Missing historical snapshots allow other documented evidence; they do not trigger an automatic whole-pipeline rebuild.
-
-Store a committed, reviewable acceptance record separately from the successful-run lock. Bind it to the baseline identity, current dependency and specification hashes, output fingerprints, any upstream acceptance on which it relies, reason, evidence, and recording time/actor when available. Validate current state again when applying it; concurrent edits or malformed/unavailable evidence fail without partial application. Preserve the last actual run time, log, exit outcome, and successful lock entry.
-
-A valid acceptance makes the step `fresh` in status, task read, the dashboard, exports, and completion checks. There is no additional status enum, palette, or mandatory acceptance badge. `explain` and inspector details expose the acceptance reason, evidence, and last actual run. Valid acceptance stops an upstream-uncertainty cascade, but does not erase independently changed dependencies on a downstream step. Ordinary incremental builds skip a valid accepted step while continuing eligible descendants; `--force` and `--force-all` bypass acceptance within their existing scopes. A real successful rerun supersedes the record. Further relevant changes, output changes, a failed run, or explicit revocation make the acceptance ineffective.
-
-Valid acceptance satisfies routine build/status completion as fresh. An explicitly requested forced reproduction or selected verification run still executes its targets; acceptance cannot be presented as fresh execution evidence. Check-step acceptance preserves its last successful check stamp and does not claim the check ran again. Verify actual output equality against trustworthy successful digests before accepting sidecar-backed outputs; unchanged arbitrary sidecar text alone is insufficient.
-
-### Agent protocol
-
-1. Inspect the stale reasons, verified baseline diff, include/import path, and affected consumers.
-2. Reduce recurring fan-out through meaningful module or artifact boundaries when that is within scope.
-3. For each proposed acceptance, explain why every changed item leaves that step's behavior and outputs unchanged; cite the inspected diff/call sites or a focused check. Split changed batches when only some consumers are unaffected.
-4. Preview the exact step set and apply acceptance with its evidence. Report accepted and executed work separately, and commit the record with the code change.
-5. Uncertain effect, changed analytical specification, changed assertions, or insufficient baseline evidence: rerun the affected step/check rather than infer equivalence from unchanged output files.
-
-The protocol belongs in the reproduction skill's existing authoring/rerun/completion references; CLI and record schemas belong in task-tree. No per-acceptance user confirmation is introduced for an agent already authorized to make and verify the code change.
+The [acceptance task](../02-runner/reviewed-acceptance/task.md) owns implementation and validation. The [record contract](../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records) defines persistence; the [reproducibility skill](../../../skills/reproducibility/SKILL.md#build-and-status) owns agent behavior. Acceptance introduces no additional user-confirmation gate within authorized work.
 
 ## Verification and upgrade
 

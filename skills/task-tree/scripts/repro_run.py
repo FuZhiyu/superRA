@@ -62,7 +62,6 @@ from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
 NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every registered step"
-TARGET_HINT = "name task or task#step targets ('.' selects every registered step)"
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +370,7 @@ def run_build(
                               + '; select the producer or use --upstream')
     forced = set(force_names or ())
     tasks = make_tasks(graph, names, paths, cache, force_names=forced)
+    order = {name: index for index, name in enumerate(names)}
     options: dict[str, Any] = {}
     if n_workers > 1:
         # Threads, not processes: steps are subprocesses, so the GIL is free
@@ -395,6 +395,15 @@ def run_build(
         )
         session = pytask.build(**config)
     cache.flush()
+    if dry_run:
+        from _pytask.outcomes import WouldBeExecuted
+        pending = sorted(
+            (r.task.name for r in session.execution_reports
+             if r.task.name in order
+             and r.exc_info and isinstance(r.exc_info[1], WouldBeExecuted)),
+            key=order.__getitem__,
+        )
+        print(format_cost(pending, paths))
     root = session.config.get("root")
     if root is not None and Path(root).resolve() != paths.project_root.resolve():
         print(
@@ -406,12 +415,92 @@ def run_build(
 
 
 # ---------------------------------------------------------------------------
+# Decision support
+# ---------------------------------------------------------------------------
+
+def format_cost(names: list[str], paths: RunnerPaths) -> str:
+    """What a `build --dry-run` would cost, from each step's last recorded run."""
+    if not names:
+        return "Nothing to execute: every selected step is fresh."
+    width = max(len(name) for name in names)
+    lines = [f"Would execute {len(names)} step(s):"]
+    total = 0.0
+    unknown = 0
+    for name in names:
+        duration = read_run_record(paths, name).get("duration")
+        if duration is None:
+            unknown += 1
+            lines.append(f"  {name:<{width}}  unknown")
+        else:
+            total += duration
+            lines.append(f"  {name:<{width}}  {duration:.1f}s")
+    known = len(names) - unknown
+    tail = f", plus {unknown} step(s) with no recorded duration" if unknown else ""
+    lines.append(
+        f"Last recorded cost: {total:.1f}s{tail}." if known
+        else f"No step has a recorded duration; {unknown} step(s) never ran."
+    )
+    lines.append(
+        "Alternatives: `superra repro explain <task>#<step>` for why a step is stale; "
+        "`superra repro accept <target> --reason ...` to record the current results "
+        "as reviewed instead of rerunning."
+    )
+    return "\n".join(lines)
+
+
+def format_accept(result: dict) -> str:
+    """Exactly which steps the acceptance covered, and what changed under each."""
+    rows = result["steps"]
+    applied = result.get("applied", False)
+    lines = [
+        f"Accepted {len(rows)} step(s) as the reviewed baseline."
+        if applied else
+        f"Would accept {len(rows)} step(s); no record was written."
+    ]
+    reason = rows[0]["record"]["reason"] if rows else ""
+    if reason:
+        lines.append(f"  reason: {reason}")
+    width = max((len(row["step"]) for row in rows), default=0)
+    for row in rows:
+        changes = ", ".join(f"{c['kind']} {c['node']}" for c in row["changes"])
+        lines.append(f"  {row['step']:<{width}}  {changes or 'unchanged since the recorded baseline'}")
+    if not applied:
+        lines.append(f"  Apply this exact preview with --apply {result['token']}.")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
+MODEL = """\
+Steps belong to tasks: a task's `## Reproduction` section registers its steps.
+pytask 0.6 executes them, generated in memory — a project holds no task_*.py.
+A step is fresh when the content hashes of its deps, definition, and outs match
+its last successful build or its reviewed acceptance.
+Targets scope every command: a task path selects its own and descendant steps,
+`task#step` selects one step, `.` selects the whole active tree. Files read from
+producers outside the scope are saved inputs, used as they sit on disk.
+A stale step is resolved two ways: execute it with `build`, or record the
+current results as reviewed with `accept --reason ...`.
+"""
+
+
+def _sub(sub, name: str, purpose: str, examples: list[str]):
+    return sub.add_parser(
+        name,
+        help=purpose,
+        description=purpose + ".",
+        epilog="Examples:\n" + "".join(f"  {line}\n" for line in examples),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="superra repro", description="Build and inspect the reproduction graph"
+        prog="superra repro",
+        description="Build and inspect the reproduction graph.\n\n" + MODEL,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--plan-root",
@@ -422,60 +511,68 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    build = sub.add_parser("build", help="Rebuild stale steps")
+    build = _sub(sub, "build", "Execute every stale step in the target scope", [
+        "superra repro build 02-merge -j 4",
+        "superra repro build 02-merge --upstream    # also its stale producers",
+        "superra repro build 02-merge --dry-run     # what would run, and what it last cost",
+        "superra repro build '02-merge#check-panel' --force",
+    ])
     build.add_argument("targets", nargs="*", help="Task paths (including descendants) or task#step selectors")
-    build.add_argument("--tier", help=argparse.SUPPRESS)
     build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
     build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
-    build.add_argument("--force-all", action="store_true", help=argparse.SUPPRESS)
-    build.add_argument("--dry-run", action="store_true", help="Report what would run")
+    build.add_argument("--dry-run", action="store_true", help="Report what would run and its last recorded cost")
 
-    status = sub.add_parser("status", help="Report each step's freshness")
+    status = _sub(sub, "status", "Report each selected step's freshness and outside readers", [
+        "superra repro status .",
+        "superra repro status 02-merge '02-merge#check-panel'",
+        "superra repro status . --upstream --json",
+    ])
     status.add_argument("targets", nargs="*", help="Task paths or task#step selectors; saved inputs outside scope")
-    status.add_argument("--tier", help=argparse.SUPPRESS)
     status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
-    explain = sub.add_parser("explain", help="Explain one step's state")
-    explain.add_argument("step")
+    explain = _sub(sub, "explain", "Explain one step's state, changes, and consumers", [
+        "superra repro explain '02-merge#build-panel'",
+        "superra repro explain '02-merge#build-panel' --json",
+    ])
+    explain.add_argument("step", help="A task#step selector")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
-    impact = sub.add_parser("impact", help="Inspect conservative dependency fan-out")
+    impact = _sub(sub, "impact", "Inspect conservative dependency fan-out from a file", [
+        "superra repro impact Code/helpers.jl",
+        "superra repro impact Code/helpers.jl --scope 02-merge --json",
+    ])
     impact.add_argument("paths", nargs="+")
-    impact.add_argument("--scope", action="append", default=[])
+    impact.add_argument("--scope", action="append", default=[], help="Repeatable task or task#step selection")
     impact.add_argument("--json", action="store_true", dest="as_json")
 
-    accept = sub.add_parser("accept", help="Preview or apply exact-state reviewed acceptance")
-    accept.add_argument("targets", nargs="+")
-    accept.add_argument("--reason", default="")
-    accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE")
-    accept.add_argument("--evidence", action="append", default=[], metavar="FILE")
+    accept = _sub(sub, "accept", "Record the current results as the reviewed baseline", [
+        "superra repro accept 02-merge --reason 'Ran interactively and reviewed the panel'",
+        "superra repro accept 02-merge --dry-run    # preview; writes nothing",
+        "superra repro accept 02-merge --reason '...' --apply <preview-token>",
+    ])
+    accept.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
+    accept.add_argument("--reason", default="", help="Why the current results are valid (required to accept)")
+    accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE", help="Optional per-node review note")
+    accept.add_argument("--evidence", action="append", default=[], metavar="FILE", help="Optional existing evidence file")
     mode = accept.add_mutually_exclusive_group()
-    mode.add_argument("--apply", metavar="PREVIEW_TOKEN")
-    mode.add_argument("--dry-run", action="store_true")
+    mode.add_argument("--apply", metavar="PREVIEW_TOKEN", help="Apply the exact preview a --dry-run printed")
+    mode.add_argument("--dry-run", action="store_true", help="Preview and print a token; write nothing")
     accept.add_argument("--json", action="store_true", dest="as_json")
 
-    revoke = sub.add_parser("revoke", help="Revoke selected step acceptances")
-    revoke.add_argument("targets", nargs="+")
+    revoke = _sub(sub, "revoke", "Revoke selected step acceptances", [
+        "superra repro revoke 02-merge",
+    ])
+    revoke.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
     revoke.add_argument("--json", action="store_true", dest="as_json")
 
-    dag = sub.add_parser("dag", help="Render the step graph")
+    dag = _sub(sub, "dag", "Render the step graph", [
+        "superra repro dag",
+        "superra repro dag --mermaid",
+    ])
     dag.add_argument("--mermaid", action="store_true")
     return parser
-
-
-def _command_word(argv: list[str]) -> str | None:
-    """The subcommand token, skipping ``--plan-root`` / ``--root <path>``."""
-    skip = False
-    for token in argv:
-        if skip:
-            skip = False
-        elif token in ("--plan-root", "--root"):
-            skip = True
-        elif not token.startswith("-"):
-            return token
-    return None
 
 
 def _unsupported_here(command: str) -> bool:
@@ -521,16 +618,9 @@ def _reexec(argv: list[str], command: str) -> int:
 
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if _command_word(argv) == "tier":
-        build_parser().error(f'reproduction tiers are retired; {TARGET_HINT}')
     args = build_parser().parse_args(argv)
-    if args.command in ('build', 'status'):
-        if args.tier is not None:
-            build_parser().error(f'--tier is retired; {TARGET_HINT}')
-        if not args.targets:
-            build_parser().error(NO_TARGET_ERROR)
-    if getattr(args, 'force_all', False):
-        build_parser().error('--force-all is retired; use --upstream --force')
+    if args.command in ('build', 'status') and not args.targets:
+        build_parser().error(NO_TARGET_ERROR)
 
     if _unsupported_here(args.command):
         sys.exit(_reexec(argv, args.command))
@@ -572,8 +662,12 @@ def main(argv: list[str] | None = None) -> None:
                     if not sep or not rationale.strip():
                         raise ReproStateError("--review expects NODE=RATIONALE")
                     reviews[node] = rationale
-                result = accept(graph, paths, args.targets, args.reason, reviews, args.evidence, args.apply)
-            print(json.dumps(result, indent=2))
+                result = accept(graph, paths, args.targets, args.reason, reviews,
+                                args.evidence, args.apply, dry_run=args.dry_run)
+            if args.command == "accept" and not args.as_json:
+                print(format_accept(result))
+            else:
+                print(json.dumps(result, indent=2))
             return
         except ReproStateError as exc:
             print(f"Error: {exc}", file=sys.stderr)

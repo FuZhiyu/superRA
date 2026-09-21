@@ -26,7 +26,7 @@ The frontmatter field set is **closed**: `title`, `status`, `depends_on`. Any ot
 - **`## Details`** — planner-owned, optional: planning findings, domain surveys, a suggested route. Implementers may deviate when another route satisfies `## Objective`; reviewers flag details only when they mislead, contradict the objective, or would fail to achieve it.
 - **`## Results`** — implementer-owned findings record. See §Results Shape.
 - **`## Revision Notes`** — temporary update delta: what changed, why, how significant (trivial/mechanical vs. substantive). Planner- or orchestrator-authored on an objective rewrite (`task-tree-design.md` §Objective rewrites on scope expansion); the implementer removes it once incorporated, in the same commit that sets `status: implemented` (`implement-task` §Execution) — whether or not review follows.
-- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register a step, and when to opt a task into `required`, is discipline owned by the `reproducibility` skill.
+- **`## Reproduction`** — implementer-owned build-graph declaration; presence registers the task in the reproduction graph. See §Reproduction Section. When to register or retire a step is discipline owned by the `reproducibility` skill.
 - **`## Review Notes`** — reviewer-owned. Present while any item remains: open `[BLOCKING]` findings at `revise`, or the tier/focus header and any un-actioned `[ADVISORY]` items at `approved`. A task may sit at `revise` with deferred findings while the orchestrator advances dependent work.
 - **`## Sync Impact`** — temporary, integration-phase-only. Added by the sync author during `superintegrate` Sync to tasks whose post-sync diff needs task-specific context; removed at Integrate closeout. Format owned by `semantic-merge/references/workflow-sync-author.md`.
 
@@ -178,18 +178,15 @@ reproduction:
       env: PROJECT_SCRATCH
   runners:
     julia: julia --project=. {script}
-  code_roots:
-    - Code
 ```
 
 | Key | Value |
 |---|---|
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
-| `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/SKILL.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `code_roots` | Directories the reminder hook watches for producer edits. |
+| `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
 
-`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`; `code_roots` is read literally. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
 
 ### The YAML subset
 
@@ -215,7 +212,9 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a retired `tier:` section key, which is ignored; a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
+
+**Unregistered results artifact** — an advisory `[WARNING]`, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Not every retained artifact belongs in the graph, so it never blocks. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
@@ -226,18 +225,19 @@ The project-root `repro-acceptance.json` is committed separately from `pytask.lo
 | Field | Binding |
 | --- | --- |
 | `id` | SHA-256 of the canonical JSON record excluding `id` |
-| `baseline` | Successful lock dependency/product maps, verified actual output digests, saved-input boundaries, receipt identity, step specification, and actual-run metadata |
-| `boundary_inputs` | Actual saved-input fingerprints at acceptance, including inputs between steps accepted together |
+| `basis` | `reviewed`; the only accepted value |
+| `baseline` | Preceding successful lock and available execution evidence; `lock: null` when the runner has never built the step |
+| `boundary_inputs` | Actual saved-input fingerprints by logical path at acceptance, including inputs between steps accepted together; a resolved root never enters the committed record |
 | `state` | Reviewed dependency/specification hashes, engine product hashes, and actual output fingerprints |
-| `upstream` | Direct upstream acceptance ids on which this decision relies |
-| `reason`, `reviews` | Overall rationale and a rationale for every changed dependency/specification node |
-| `evidence` | Existing evidence-file references mapped to their content hashes at review time |
+| `upstream` | Producers accepted in the same decision, with their acceptance ids at that time |
+| `reason`, `reviews` | Required overall rationale and optional per-node notes |
+| `evidence` | Optional existing evidence-file references mapped to content hashes at review time |
 | `recorded_at`, `actor` | Recording time and available local account name |
 
-A record applies only to its exact successful baseline, reviewed state, and upstream acceptance identities. Invalid graphs, missing inputs/products, changed output bytes, and unsuccessful executions cannot be covered. Acceptance does not change workflow task statuses, successful lock entries, check stamps, or actual-run metadata. The status vocabulary remains `fresh`, `stale`, `missing`, `failed`, and `external`.
+A reviewed record establishes or replaces the current baseline, including never-built producers and changed outputs. It binds the preceding successful lock if any, reviewed input/product/output state, and the producers accepted with it. Each bound producer must keep an acceptance or a successful lock; re-accepting one leaves this record valid, because its reviewed dependency hashes already pin that producer's output bytes. Outside producers remain saved-input boundaries. Changes after acceptance invalidate that state. Invalid graphs, missing inputs/products, and unsuccessful executions cannot be covered. Acceptance does not change workflow task statuses, successful lock entries, check stamps, or actual-run metadata. The status vocabulary remains `fresh`, `stale`, `missing`, `failed`, and `external`.
 
-Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After engine product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and boundary bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Accepted records embed baseline identities, output digests, and saved-input fingerprints, preserving reuse checks after local cache loss. Raw source snapshots remain local and never enter the committed ledger or status payload; absent historical source text and execution logs remain unavailable.
+Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After engine product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and boundary bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Accepted records embed the preceding execution identity if any, reviewed state, output digests, and saved-input fingerprints, preserving reuse checks after local cache loss. Raw source snapshots remain local and never enter the committed ledger or status payload; absent historical source text and execution logs remain unavailable.
 
 Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance retains its separate preview/apply consistency guard.
 
-Older normal-output lock entries supply successful output hashes even without source snapshots. `explain` labels those diffs unavailable. Older sidecar locks supply only sidecar hashes, so acceptance requires a verified receipt for the actual output bytes. Check acceptance retains the existing successful stamp; deleting the stamp requires rerunning the check.
+Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. `explain` discloses unavailable source text. Check acceptance requires its previous successful baseline and unchanged stamp; missing stamps require execution.
