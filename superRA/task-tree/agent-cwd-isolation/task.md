@@ -1,6 +1,6 @@
 ---
 title: "Agent Cross-Checkout Isolation: a Session Outside This Repo Committed Into It"
-status: revise
+status: approved
 depends_on:  []
 ---
 
@@ -14,7 +14,7 @@ Diagnose and close the path by which an agent session running with its cwd outsi
 - Deliverable: the reproduction, the identified path, and the fix or guard that prevents a session from mutating a checkout it was not pointed at. A guard that makes the escape loud (refuse, or warn on a task root outside cwd's repo) is acceptable if the root cause sits outside this repo's control.
 - The session anchor is `CLAUDE_PROJECT_DIR` where the harness sets it, else the payload `cwd`. The researcher accepts the Claude-specific name in the shared `_checkout_scope.py`: protection against a session whose cwd drifted into another checkout holds on Claude Code only, and the other harnesses get the payload-`cwd` rule.
 - Until this closes, live agent-SDK traces against a fixture are unsafe to run from a dirty working tree of this repo.
-- Once the guard is in place, run the two v0.4 traces the escape blocked: `workflow-defaults` trace 2 (a broad frontier produces a subagent-mode recommendation) and trace 3 (a completed high-stakes task produces a review recommendation naming tier and focuses). They are that task's acceptance bar, recorded there as validation debt; this task carries them because it owns the blocker.
+- The two v0.4 traces the escape blocked stay with [workflow-defaults](../../v04-lean-workflow/workflow-defaults/task.md) as its validation debt; this task closes on the guard.
 
 ## Details
 
@@ -65,9 +65,3 @@ The decision is `ask`, not `deny`: a researcher who deliberately pointed a sessi
 ### Suite status
 
 `tests/hooks/*.sh` pass except two that fail identically at `b2985c68` (`test-codex-hooks.sh` "Codex manifest command executes task PostToolUse hook", `test-codex-e2e-cli.sh` "missing hook evidence"). `tests/harness-instruction-following` is 128 passed / 1 failed, the failure (`test_bundle_fixture.py::test_task_read_json_carries_comments_and_dependency_status`, a `slug` shape mismatch) also reproducing at `b2985c68`. `check-harness-compatibility.sh` exits 0.
-
-## Review Notes
-
-Tier: thorough; narrow re-review. Focus: correctness. Reviewer: main agent. The four first-pass findings are confirmed fixed. Deferred by the orchestrator, pending the researcher's disposition:
-
-1. `[BLOCKING]` **The objective's last bullet is unmet: the two v0.4 traces have not run.** `workflow-defaults` trace 2 and trace 3 need API credentials the implementer's session lacked, plus new fixtures and graders. The guard that blocked them is in place. The researcher decides whether the traces move back to [workflow-defaults](../../v04-lean-workflow/workflow-defaults/task.md) as its validation debt, letting this task close on the guard, or stay owed here.
