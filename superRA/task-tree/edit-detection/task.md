@@ -1,6 +1,6 @@
 ---
 title: "Detect File Edits Regardless of the Tool That Made Them"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -77,6 +77,18 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 ### Validation
 
 [test_edit_detect.py](../../../skills/task-tree/scripts/test_edit_detect.py) adds 20 cases, each a file changed on disk followed by a `Bash` payload whose command does not name it: every fixture the objective lists, plus the advisory approval feedback, a newly registered dep seeded silently, the reminder collapse, a corrupt baseline, the oversized-root guard, and the repository-top stop. The `code_roots` tests in [test_task_tree.py](../../../skills/task-tree/scripts/test_task_tree.py) were rewritten onto registered deps and the companion-script rule. Full script suite with pytask: 1131 passed, 10 skipped (the browser suite under `tests/` deselected). The check step below was run by its command; its stamp was not built here, since `repro build` rewrites the committed `pytask.lock` from a worktree that is not merged yet. `task_hook.py` is also a dep of four existing check steps, which the full suite covers; the browser check `dashboard-dag-design-interaction-check`, whose config fixture changed, passes by its own command (54 cases).
+
+## Review Notes
+
+Thorough pass on correctness and scope-fidelity. No blocking findings. Verified by re-running the script suite (1088 passed, 140 skipped without pytask), by re-measuring the reported latencies, and by driving [task_hook.py](../../../skills/task-tree/scripts/task_hook.py) with payloads on scratch trees.
+
+1. `[ADVISORY]` A structural Bash `rm` or `mv` draws a spurious "Markdown edited" communicate reminder. `_bash_structural_feedback` runs before `_detected_paths` ([task_hook.py:956-964](../../../skills/task-tree/scripts/task_hook.py#L956-L964)), so the ancestor statuses its reconcile rewrites are still unabsorbed when detection runs and get reported as an agent edit. Probe: seed a three-task tree, `rm -rf` a child, send the `rm` command as a Bash payload — the feedback is the communicate reminder, and the following call is silent because the absorb pass caught up. Computing `_detected_paths` before `_bash_structural_feedback` closes it.
+2. `[ADVISORY]` A command that only *mentions* an absolute path inside another project gives that project a baseline and, later, hook writes. `_edit_detect.plan_roots` walks up from every absolute path in the command ([_edit_detect.py:70-95](../../../skills/task-tree/scripts/_edit_detect.py#L70-L95)), so `grep -rn foo /other/proj/README.md` from an unrelated cwd creates `/other/proj/.superra-repro/` and baselines that tree; a later call naming the path again reconciles it and rewrites its ancestor statuses. The state self-ignores (a `.gitignore` holding `*`), so git stays quiet, and the reach is the design call that finds another worktree — worth a line in §Known limits saying the reach is by mention, not by edit.
+3. `[ADVISORY]` A Bash-made edit inside a registered *directory* dep draws no reminder, while an `Edit` of the same file still does through the tool-supplied path. `_repro_watched_files` keeps only `path.is_file()` deps ([task_hook.py:820-833](../../../skills/task-tree/scripts/task_hook.py#L820-L833)). Verified on a fixture declaring `deps: [Data/raw]`: a heredoc rewrite of `Data/raw/a.csv` is silent. [internals.md](../../../skills/task-tree/references/internals.md) records "Directory deps are not walked"; §Known limits does not.
+4. `[ADVISORY]` The objective's per-harness live-session check ran for Claude Code only. The Codex half is unrun for the reason §Results gives, and the rerun instruction it carries is the follow-up to track.
+5. `[ADVISORY]` Seeding hashes every watched file up to `HASH_MAX_BYTES` with no aggregate cap ([_edit_detect.py:110-118](../../../skills/task-tree/scripts/_edit_detect.py#L110-L118)). On this repository that is 49 ms, but a tree registering a few hundred sub-4 MB data deps reads hundreds of megabytes on the first tool call of every session.
+
+Cost claims check out: steady detection is 2.8–3.8 ms over the 159 watched files, and the whole hook process takes about 240 ms on a `task.md` change both before and after this change, so the detector adds roughly 40 ms there rather than a new reconcile cost.
 
 ## Reproduction
 
