@@ -30,7 +30,6 @@ unresolvable path): a gate must never wedge a session.
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 import sys
@@ -118,18 +117,21 @@ def _is_task_md(path: Path) -> bool:
     )
 
 
-def _is_foreign(path: Path, cwd: Path) -> bool:
-    """True when *path* belongs to neither the session's cwd nor its repository.
-
-    The rule lives in `_checkout_scope.is_foreign`, shared with the PostToolUse
-    edit detector. An unimportable module is an uncertainty: fail open.
-    """
+def _scope():
+    """The shared checkout-scope module, or None when it cannot be imported —
+    an uncertainty like any other, so every caller fails open on None."""
     try:
         _ensure_scripts_on_path()
-        from _checkout_scope import is_foreign
+        import _checkout_scope
     except Exception:
-        return False
-    return is_foreign(path, cwd)
+        return None
+    return _checkout_scope
+
+
+def _is_foreign(path: Path, cwd: Path) -> bool:
+    """True when *path* belongs to neither the session's cwd nor its repository."""
+    scope = _scope()
+    return scope.is_foreign(path, cwd) if scope is not None else False
 
 
 def _git_toplevel(directory: Path) -> Path | None:
@@ -240,16 +242,9 @@ def main() -> None:
         _empty()
         return
     tool_input = data.get("tool_input", {}) or {}
-    # The project dir the session was started in, which a `cd` earlier in the
-    # session cannot move; the payload cwd is the fallback for harnesses that do
-    # not set it.
-    try:
-        cwd = Path(
-            os.environ.get("CLAUDE_PROJECT_DIR", "")
-            or data.get("cwd", "")
-            or os.getcwd()
-        )
-    except (TypeError, ValueError):
+    scope = _scope()
+    cwd = scope.session_anchor(data) if scope is not None else None
+    if cwd is None:
         _empty()
         return
 

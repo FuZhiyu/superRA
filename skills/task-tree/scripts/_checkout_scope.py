@@ -5,10 +5,12 @@ One membership rule, shared by the `guard-foreign-checkout` PreToolUse gate
 (`_edit_detect.py`), so a path the gate would prompt about is also a path the
 hook declines to touch.
 
-A path is the session's own when it sits under the session cwd, or in a checkout
-sharing the cwd's git common dir — every worktree of one repository shares that
-dir, and superRA dispatches implementers into sibling worktrees. Everything else
-is foreign.
+A path is the session's own when it sits under the session anchor, or in a
+checkout sharing the anchor's git common dir — every worktree of one repository
+shares that dir, and superRA dispatches implementers into sibling worktrees.
+Everything else is foreign. Both callers take that anchor from
+:func:`session_anchor`, so a `cd` into a foreign checkout cannot move it for one
+surface while leaving it for the other.
 
 Stdlib only.
 """
@@ -19,6 +21,25 @@ import os
 import subprocess
 from functools import lru_cache
 from pathlib import Path
+
+
+def session_anchor(data: dict) -> Path | None:
+    """The checkout a hook payload's session belongs to.
+
+    `CLAUDE_PROJECT_DIR` is the directory the session was started in, which a
+    `cd` during the session cannot move; the payload `cwd` is the fallback for
+    harnesses that do not set it, and the process cwd the last resort. None when
+    no anchor resolves, which every caller treats as an uncertainty.
+    """
+    payload_cwd = data.get("cwd") if isinstance(data, dict) else None
+    try:
+        return Path(
+            os.environ.get("CLAUDE_PROJECT_DIR", "")
+            or (payload_cwd if isinstance(payload_cwd, str) else "")
+            or os.getcwd()
+        )
+    except (OSError, TypeError, ValueError):
+        return None
 
 
 @lru_cache(maxsize=64)
