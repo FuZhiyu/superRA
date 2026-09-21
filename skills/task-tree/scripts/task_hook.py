@@ -50,6 +50,8 @@ LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 CODEX_EMPTY_JSON_ENV = "SUPERRA_TASK_HOOK_EMPTY_JSON"
 _CODEX_EMPTY_JSON_MODE = False
+# Set once a reconcile ran in this process: it may have rewritten task files.
+_RECONCILED = False
 
 # Reproduction reminder: a gitignored state dir, sibling of the task root, that
 # holds one empty marker file per (session, resolved producer path) already
@@ -488,6 +490,8 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     whole tree rather than along a single ancestor chain. The dashboard is not
     regenerated here; it is produced only on explicit `superra dashboard export`.
     """
+    global _RECONCILED
+    _RECONCILED = True
     _ensure_scripts_on_path()
     import _task_io as task_io
     import _task_validate as task_validate
@@ -955,17 +959,18 @@ def main() -> None:
         _exit_success()
 
     feedback: list[str] = []
-    if tool_name == "Bash":
-        feedback.extend(_bash_structural_feedback(data))
-
     tool_paths = _tool_paths(data, tool_name)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # parse_task warns on a bad status
+        # Detect before any reconcile runs, so only the tool call's own writes
+        # are reported.
         changed = _unique_paths(
             tool_paths + _detected_paths(data, tool_name, tool_paths)
         )
+        if tool_name == "Bash":
+            feedback.extend(_bash_structural_feedback(data))
         feedback.extend(_process_paths(data, changed))
-        if any(path.name == "task.md" for path in changed):
+        if _RECONCILED:
             # Reconcile rewrites ancestor statuses; absorb the hook's own writes
             # so the next call does not report them as an edit.
             _detected_paths(data, tool_name, tool_paths)
