@@ -47,6 +47,7 @@ Before commit:
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
 2. **Results.** `## Results` and the return hold to `superRA:communicate` and §Reporting — nothing left in `## Results` is stale.
 3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
+4. **Reproduction.** A result you recorded from retained code: `superRA:reproducibility` §Gates.
 
 ## Commit
 

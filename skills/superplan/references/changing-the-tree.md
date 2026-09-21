@@ -39,7 +39,7 @@ Update task files inline; never start a parallel tree, append an "Addendum", or 
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization — confirm with `AskUserQuestion`. Decisions the change leaves unsettled run through `superplan §Grilling`.
-2. **Update `superRA/` inline.** Place, rewrite, split, merge, or remove tasks by `task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. Reconcile reproduction coverage per `reproducibility` §What Gets a Step. Then rewrite any governing-ancestor field that no longer matches the new tree.
+2. **Update `superRA/` inline.** Place, rewrite, split, merge, or remove tasks by `task-tree-design.md` §Placing Work in the Existing Tree and §Objective rewrites on scope expansion. Reconcile reproduction coverage per `reproducibility/references/designing-the-graph.md` §What earns a step. Then rewrite any governing-ancestor field that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment, per `task-tree-design.md` §Objective rewrites on scope expansion.
 4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files plus any code the change touched, one commit. PLAN is one multi-step phase, so the subject carries the sub-step in scope per `using-superra` §Commits: `plan(<sub-step>): <summary>`, `<sub-step>` ∈ `add` (tree authoring), `revise` (this path), `rollup` (status rollup), `review` (a planning-review verdict commit, which carries its `<STATE>`: `plan(review): APPROVE|REVISE — <summary>`). This path commits `plan(revise): <one-line scope change>`.
