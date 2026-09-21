@@ -1,6 +1,6 @@
 ---
 title: "Agent Cross-Checkout Isolation: a Session Outside This Repo Committed Into It"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -67,13 +67,6 @@ The decision is `ask`, not `deny`: a researcher who deliberately pointed a sessi
 
 ## Review Notes
 
-Tier: thorough (read [checkout_isolation_gate.py](../../../hooks/checkout_isolation_gate.py) in full; ran `tests/hooks/test-guard-foreign-checkout.sh`, all checks pass; fed four command forms to the gate against a disposable foreign checkout). Focus: correctness. Reviewer: main agent.
+Tier: thorough; narrow re-review. Focus: correctness. Reviewer: main agent. The four first-pass findings are confirmed fixed. Deferred by the orchestrator, pending the researcher's disposition:
 
-1. `[BLOCKING]` **A subshell reaches the foreign checkout unguarded.** `(cd <foreign> && git commit -m x)` returns `{}` while `cd <foreign> && git commit -m x` is denied: the segment boundary in `_CD_RE` ([checkout_isolation_gate.py:35-37](../../../hooks/checkout_isolation_gate.py#L35-L37)) admits `;`, `&`, `|`, `do`, `then` and the command start, not `(` or `{`. The subshell form is ordinary agent usage, and the commit is the damaging half of the escape. Fix the boundary and add both forms to the test script.
-   → implemented: [checkout_isolation_gate.py:43-48](../../../hooks/checkout_isolation_gate.py#L43-L48) — the boundary now admits `(`, `{`, `}`, and the quote that opens a `bash -c` payload, and the path class excludes them so the opener is not swallowed; the subshell and brace-group forms join the chain form in [test-guard-foreign-checkout.sh](../../../tests/hooks/test-guard-foreign-checkout.sh), with a sibling-worktree subshell added to Part 3 so the wider boundary cannot start over-firing.
-2. `[BLOCKING]` **The gate hard-denies with no way through for work the researcher authorized.** A session the researcher deliberately points at a second repository — an added working directory, a cross-project fix — gets `permissionDecision: deny` ([checkout_isolation_gate.py:56](../../../hooks/checkout_isolation_gate.py#L56)) on every foreign `task.md` write and history-writing git command, and the message's only route is a new session. Orchestrator decision: the plugin gate returns `ask`, so an interactive researcher can approve and an unattended session still cannot proceed; the in-process hook in `sdk_load_harness.py` keeps `deny`, since a trace has no approver. Reword both reasons for a reader who may approve.
-   → implemented: [checkout_isolation_gate.py:60-72](../../../hooks/checkout_isolation_gate.py#L60-L72) — the plugin gate emits `ask`; `confinement_hook` in [sdk_load_harness.py](../../../tests/harness-instruction-following/sdk_load_harness.py#L167) still wraps the same `deny_reason()` in a `deny`. Both messages ([:75-92](../../../hooks/checkout_isolation_gate.py#L75-L92)) now open on what the call would do, then give the approve and reject cases, so the reader decides rather than being told to start over. The test script's `expect` helper distinguishes all three decisions and Part 2 asserts `ask`.
-3. `[ADVISORY]` `bash -c "cd <foreign> && git commit"` and `git --git-dir=<foreign>/.git --work-tree=<foreign> commit` also return `{}`. Cover them if the boundary fix makes it cheap; otherwise name them in `## Results` as known gaps.
-   → implemented: both covered. The `bash -c` form falls out of the boundary fix; `--git-dir`/`--work-tree` gets [`_GIT_DIR_RE`](../../../hooks/checkout_isolation_gate.py#L48), and [`_retargeted_dirs`](../../../hooks/checkout_isolation_gate.py#L249) maps a `--git-dir` ending in `.git` to its parent checkout so the task-root test sees a work tree. Both forms are asserted, plus a `bash -c` commit in a foreign repo with no task tree that must stay silent.
-4. `[ADVISORY]` A `task.md` written through Bash (a Python heredoc, `sed -i`) into a foreign tree is outside the gate; `## Results` should say so, since most agent edits now take that route ([edit-detection](../edit-detection/task.md) §Details).
-   → implemented: named first in `## Results` §Boundaries, with the reason closing it belongs to `edit-detection`'s command-parsing surface rather than a second parser here.
+1. `[BLOCKING]` **The objective's last bullet is unmet: the two v0.4 traces have not run.** `workflow-defaults` trace 2 and trace 3 need API credentials the implementer's session lacked, plus new fixtures and graders. The guard that blocked them is in place. The researcher decides whether the traces move back to [workflow-defaults](../../v04-lean-workflow/workflow-defaults/task.md) as its validation debt, letting this task close on the guard, or stay owed here.
