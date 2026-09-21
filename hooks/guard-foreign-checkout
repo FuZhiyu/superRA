@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse gate: a session cannot mutate a task tree in a foreign checkout.
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+gate="checkout_isolation_gate.py"
+. "$script_dir/run-python-gate"
