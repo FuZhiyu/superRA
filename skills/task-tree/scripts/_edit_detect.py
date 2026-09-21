@@ -35,6 +35,9 @@ _SKIP_DIRS = frozenset({"__pycache__", "node_modules"})
 # Above this size a file is compared by stat alone: a large data dep is not
 # read on every seed.
 HASH_MAX_BYTES = 4 << 20
+# Bytes hashed in one call; past it, files are compared by stat alone, so a
+# tree registering many mid-sized data deps does not stall a session's first call.
+HASH_BUDGET_BYTES = 64 << 20
 # A tree this large is not a task tree (a mis-resolved root); stay silent.
 MAX_TREE_FILES = 5000
 BASELINE_MAX_AGE_SECONDS = 7 * 86400
@@ -187,6 +190,7 @@ def detect(
 
     files: dict[str, list] = {}
     changed: list[str] = []
+    hashed_bytes = 0
 
     def visit(path: str, *, new_counts: bool) -> None:
         try:
@@ -199,8 +203,13 @@ def detect(
         if previous and previous[0] == info.st_size and previous[1] == info.st_mtime_ns:
             files[path] = previous
             return
+        nonlocal hashed_bytes
         try:
-            digest = _content_hash(path, info.st_size)
+            if hashed_bytes + info.st_size > HASH_BUDGET_BYTES:
+                digest = None
+            else:
+                digest = _content_hash(path, info.st_size)
+                hashed_bytes += info.st_size
         except OSError:
             return
         files[path] = [info.st_size, info.st_mtime_ns, digest]

@@ -145,6 +145,15 @@ class TestBashMadeEdits:
         assert "status: approved" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
         assert _bash(project) == ""  # the Edit refreshed the baseline
 
+    def test_structural_rm_does_not_report_the_hooks_own_rollup(self, project):
+        assert _bash(project) == ""
+        import shutil
+        shutil.rmtree(project / "superRA" / "01-first")
+        context = _bash(project, "rm -rf superRA/01-first")
+        assert "Markdown edited" not in context
+        assert "status: approved" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
+        assert _bash(project) == ""
+
     def test_edit_in_another_worktree_is_found_through_the_command(self, project, tmp_path_factory):
         elsewhere = tmp_path_factory.mktemp("session-cwd")
         command = f"cd {project} && {HEREDOC}"
@@ -275,6 +284,14 @@ class TestBaseline:
         _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
         assert _bash(project) == ""
         assert json.loads(state_file.read_text(encoding="utf-8"))["version"] == _edit_detect.BASELINE_VERSION
+
+    def test_hash_budget_falls_back_to_stat(self, project, monkeypatch):
+        monkeypatch.setattr(_edit_detect, "HASH_BUDGET_BYTES", 1)
+        root = project / "superRA"
+        assert _edit_detect.detect(root, "s", lambda: []) == []
+        task_md = root / "01-first" / "task.md"
+        _rewrite(task_md, "in-progress", "approved")
+        assert _edit_detect.detect(root, "s", lambda: []) == [task_md.resolve()]
 
     def test_oversized_directory_is_not_watched(self, project, monkeypatch):
         monkeypatch.setattr(_edit_detect, "MAX_TREE_FILES", 2)
