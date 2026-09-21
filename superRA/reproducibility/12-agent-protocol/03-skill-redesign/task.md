@@ -1,6 +1,6 @@
 ---
 title: "Restructure the Reproducibility Skill by Moment and Wire the Role Skills"
-status: implemented
+status: approved
 depends_on:
   - 01-cli-decision-support
   - 02-agent-signals
@@ -97,25 +97,6 @@ No `## Reproduction` step is registered for this task: it ships no executable co
 
 ## Review Notes
 
-Tier: thorough (read all six skill files and every wiring edit in full; ran the link check; grepped the repository for links to the deleted references). Focus: correctness, scope-fidelity, and the [CLAUDE.md](../../../../CLAUDE.md) three-test gate. Reviewer: main agent.
+Tier: thorough; narrow re-review. Focus: correctness, scope-fidelity, and the three-test gate. Reviewer: main agent. Deferred by the orchestrator to the group's fold-back at integration:
 
-1. `[BLOCKING]` **A named command fails.** [designing-the-graph.md:64](../../../../skills/reproducibility/references/designing-the-graph.md#L64) tells the agent to rerun `superra repro status` with no target; `status` requires one. Name the target form.
-
-   → implemented: [designing-the-graph.md:60](../../../../skills/reproducibility/references/designing-the-graph.md#L60) — now `superra repro status <task>`, the form a step comment's owning task takes.
-2. `[BLOCKING]` **Four lines fail the three-test gate.**
-   - [designing-the-graph.md:28](../../../../skills/reproducibility/references/designing-the-graph.md#L28) — same-file restatement and DRY: rung 3 of the ladder already tells the implementer to split the scripts its task owns, and [build-and-review.md](../../../../skills/superplan/references/build-and-review.md) already tells the planner to draw the boundaries. Cut the sentence.
-
-     → implemented: [designing-the-graph.md:24-26](../../../../skills/reproducibility/references/designing-the-graph.md#L24-L26) — sentence cut; the section now ends on the start-up-cost line.
-   - [designing-the-graph.md:15](../../../../skills/reproducibility/references/designing-the-graph.md#L15) — Necessity: the `task check` warning and the `implemented` reminder both already end "leave it if the file has none". Cut the paragraph.
-
-     → implemented: [designing-the-graph.md:13-15](../../../../skills/reproducibility/references/designing-the-graph.md#L13-L15) — paragraph cut; §What earns a step now ends on the companion line.
-   - [task-companion-files.md:8](../../../../skills/using-superra/references/task-companion-files.md#L8), [21](../../../../skills/using-superra/references/task-companion-files.md#L21), [23](../../../../skills/using-superra/references/task-companion-files.md#L23) — one fact three times: the Classify clause, the permanent-artifact definition ("consumed by another task"), and the second §Promote paragraph, whose last sentence is rationale. Keep the Classify clause and make §Promote one imperative that carries the timing.
-
-     → implemented: [task-companion-files.md:21](../../../../skills/using-superra/references/task-companion-files.md#L21) — §Promote is one imperative carrying the timing ("as soon as it meets the permanent-project definition, not at integration review"); the second paragraph is gone and the Classify clause stands.
-   - [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) — the clause after the dash is rationale. Cut it.
-
-     → implemented: [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) — clause cut; the bullet ends at the stale-rule link.
-3. `[ADVISORY]` The [CATEGORIES.md:52](../../../../skills/CATEGORIES.md#L52) row lists every reference and its contents, a second copy of the skill's routing table. One sentence on what the skill provides is enough.
-
-   → implemented: [CATEGORIES.md:52](../../../../skills/CATEGORIES.md#L52) — the row names the skill's concerns and drops the per-reference enumeration, matching the shape of its sibling rows.
-4. `[ADVISORY]` Seven task files under `superRA/reproducibility/` still link to the three deleted references, [06-skill](../../06-skill/task.md) and the [group task](../task.md) among them. `task check --category links` validates step citations only, so it passes over them.
+1. `[ADVISORY]` Eight task files under `superRA/reproducibility/` still link to the three deleted references, [06-skill](../../06-skill/task.md), the [group task](../task.md), and this task's own `## Details` among them. `task check --category links` validates step citations only, so it passes over them.
