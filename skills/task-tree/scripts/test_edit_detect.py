@@ -35,7 +35,10 @@ def _task(path: Path, title: str, status: str, body: str = "") -> None:
 
 def _hook(project: Path, payload: dict, env: dict | None = None):
     payload = {"session_id": "s1", "cwd": str(project), **payload}
-    run_env = {**os.environ, **(env or {})}
+    # The harness sets CLAUDE_PROJECT_DIR per session; a case that cares supplies
+    # its own, and no ambient value from the session running the suite leaks in.
+    run_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    run_env.update(env or {})
     return subprocess.run(
         [sys.executable, str(SCRIPTS_DIR / "task_hook.py")],
         input=json.dumps(payload),
@@ -46,9 +49,11 @@ def _hook(project: Path, payload: dict, env: dict | None = None):
     )
 
 
-def _bash(project: Path, command: str = HEREDOC, **extra) -> str:
+def _bash(project: Path, command: str = HEREDOC, env: dict | None = None, **extra) -> str:
     """Run the hook on a Bash payload; return its feedback text ('' when silent)."""
-    result = _hook(project, {"tool_name": "Bash", "tool_input": {"command": command}, **extra})
+    result = _hook(
+        project, {"tool_name": "Bash", "tool_input": {"command": command}, **extra}, env
+    )
     assert result.returncode == 0
     assert result.stderr == ""
     if not result.stdout.strip():
@@ -200,6 +205,20 @@ class TestBashMadeEdits:
         _rewrite(session / "superRA" / "01-first" / "task.md", "in-progress", "approved")
 
         assert "Markdown edited" in _bash(session, command)  # the session's own tree still reconciles
+        assert _dirty(foreign) == {"superRA/01-first/task.md"}
+        assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
+        assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
+
+    def test_a_payload_cwd_inside_the_foreign_checkout_does_not_unlock_it(self, tmp_path):
+        """A session that `cd`s into another checkout keeps the anchor it started
+        with: `CLAUDE_PROJECT_DIR` outranks the payload cwd, as in the gate."""
+        session = _checkout(tmp_path / "session")
+        foreign = _checkout(tmp_path / "foreign")
+        env = {"CLAUDE_PROJECT_DIR": str(session)}
+        assert _bash(foreign, "ls", env=env) == ""
+        _rewrite(foreign / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+
+        assert _bash(foreign, "ls", env=env) == ""
         assert _dirty(foreign) == {"superRA/01-first/task.md"}
         assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
         assert not (foreign / _edit_detect.STATE_DIRNAME).exists()

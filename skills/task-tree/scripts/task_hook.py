@@ -882,13 +882,20 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
     """Watched files changed on disk since this session's baseline. Fails open."""
     try:
         _ensure_scripts_on_path()
+        import _checkout_scope
         import _edit_detect
         tool_input = data.get("tool_input", {}) or {}
         command = tool_input.get("command", "") if tool_name == "Bash" else ""
         session_key = _repro_session_key(data)
+        # The session anchor, not the payload cwd: a `cd` into another checkout
+        # must not make that checkout the session's own. Same resolution the
+        # `guard-foreign-checkout` gate uses.
+        anchor = _checkout_scope.session_anchor(data)
+        if anchor is None:
+            return []
         changed: list[Path] = []
         for plan_root in _edit_detect.plan_roots(
-            _cwd(data), tool_paths, command if isinstance(command, str) else ""
+            anchor, tool_paths, command if isinstance(command, str) else ""
         ):
             try:
                 changed.extend(
