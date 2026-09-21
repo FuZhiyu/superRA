@@ -227,7 +227,7 @@ class TestPyyamlAgreement:
             "  env_deps:\n"
             "    - Project.toml\n"
             "    - Manifest.toml\n"
-            "  code_roots: [Code, test]\n"
+            "  flow_list: [Code, test]\n"
         ),
     ]
 

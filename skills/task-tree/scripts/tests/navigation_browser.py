@@ -25,7 +25,7 @@ def fixture(base):
     root = base / 'superRA'
     root.mkdir()
     (root / 'task.md').write_text('---\ntitle: Navigation acceptance\nstatus: in-progress\n---\n\n## Objective\n\nInspect task dependencies.\n')
-    (root / 'config.yaml').write_text('reproduction:\n  code_roots:\n    - code\n')
+    (root / 'config.yaml').write_text('reproduction:\n  runners:\n    sh: sh {script}\n')
     owners = []
     for group in range(5):
         owners += [f'group-{group}'] + [f'group-{group}/task-{child}' for child in range(1, 10)]

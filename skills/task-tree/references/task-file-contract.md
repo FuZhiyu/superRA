@@ -178,8 +178,6 @@ reproduction:
       env: PROJECT_SCRATCH
   runners:
     julia: julia --project=. {script}
-  code_roots:
-    - Code
 ```
 
 | Key | Value |
@@ -187,9 +185,8 @@ reproduction:
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
 | `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `code_roots` | Directories the reminder hook watches for producer edits. |
 
-`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`; `code_roots` is read literally. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
 
 ### The YAML subset
 
@@ -217,7 +214,7 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 
 **`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
 
-**Unregistered results artifact** — an advisory `[WARNING]`, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Not every retained artifact belongs in the graph, so it never blocks. Silent for a tree with no `## Reproduction` section and no `code_roots`, for prose and source links, and for scratch paths.
+**Unregistered results artifact** — an advisory `[WARNING]`, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Not every retained artifact belongs in the graph, so it never blocks. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
