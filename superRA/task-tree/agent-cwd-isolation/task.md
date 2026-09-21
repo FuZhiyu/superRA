@@ -1,6 +1,6 @@
 ---
 title: "Agent Cross-Checkout Isolation: a Session Outside This Repo Committed Into It"
-status: implemented
+status: revise
 depends_on:  []
 ---
 
@@ -62,3 +62,12 @@ Membership is the git common dir, so sibling worktrees of the session's own repo
 ### Suite status
 
 `tests/hooks/*.sh` pass except two that fail identically at `b2985c68` (`test-codex-hooks.sh` "Codex manifest command executes task PostToolUse hook", `test-codex-e2e-cli.sh` "missing hook evidence"). `tests/harness-instruction-following` is 128 passed / 1 failed, the failure (`test_bundle_fixture.py::test_task_read_json_carries_comments_and_dependency_status`, a `slug` shape mismatch) also reproducing at `b2985c68`. `check-harness-compatibility.sh` exits 0.
+
+## Review Notes
+
+Tier: thorough (read [checkout_isolation_gate.py](../../../hooks/checkout_isolation_gate.py) in full; ran `tests/hooks/test-guard-foreign-checkout.sh`, all checks pass; fed four command forms to the gate against a disposable foreign checkout). Focus: correctness. Reviewer: main agent.
+
+1. `[BLOCKING]` **A subshell reaches the foreign checkout unguarded.** `(cd <foreign> && git commit -m x)` returns `{}` while `cd <foreign> && git commit -m x` is denied: the segment boundary in `_CD_RE` ([checkout_isolation_gate.py:35-37](../../../hooks/checkout_isolation_gate.py#L35-L37)) admits `;`, `&`, `|`, `do`, `then` and the command start, not `(` or `{`. The subshell form is ordinary agent usage, and the commit is the damaging half of the escape. Fix the boundary and add both forms to the test script.
+2. `[BLOCKING]` **The gate hard-denies with no way through for work the researcher authorized.** A session the researcher deliberately points at a second repository — an added working directory, a cross-project fix — gets `permissionDecision: deny` ([checkout_isolation_gate.py:56](../../../hooks/checkout_isolation_gate.py#L56)) on every foreign `task.md` write and history-writing git command, and the message's only route is a new session. Orchestrator decision: the plugin gate returns `ask`, so an interactive researcher can approve and an unattended session still cannot proceed; the in-process hook in `sdk_load_harness.py` keeps `deny`, since a trace has no approver. Reword both reasons for a reader who may approve.
+3. `[ADVISORY]` `bash -c "cd <foreign> && git commit"` and `git --git-dir=<foreign>/.git --work-tree=<foreign> commit` also return `{}`. Cover them if the boundary fix makes it cheap; otherwise name them in `## Results` as known gaps.
+4. `[ADVISORY]` A `task.md` written through Bash (a Python heredoc, `sed -i`) into a foreign tree is outside the gate; `## Results` should say so, since most agent edits now take that route ([edit-detection](../edit-detection/task.md) §Details).
