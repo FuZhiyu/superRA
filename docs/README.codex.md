@@ -52,8 +52,8 @@ rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.
 Run `/hooks` in Codex after installing the plugin. When plugin hooks
 are enabled, Codex should list superRA hooks from `hooks/hooks-codex.json`.
 The Codex hook list should include `autoload-superra`, `agent-model-guard`,
-`guard-task-approval`, `ensure-communicate`, `merge-guard`, task-tree
-`PostToolUse` hooks, and `codex-plan-stop`.
+`guard-task-approval`, `guard-foreign-checkout`, `ensure-communicate`,
+`merge-guard`, task-tree `PostToolUse` hooks, and `codex-plan-stop`.
 
 ## Hook Coverage
 
@@ -65,6 +65,7 @@ uses Codex-native events. Runtime-specific coverage limits are documented per ho
 | `autoload-superra` | `UserPromptSubmit` | Injects a reminder to load `superRA:using-superra` on superRA prompts. |
 | `agent-model-guard` | `PreToolUse` on `Agent` | Rejects generic dispatches unless their raw call explicitly sets both `model` and `reasoning_effort`. Codex CLI 0.147.0 starts `spawn_agent` without emitting this event, so that runtime cannot enforce the gate; deterministic manifest tests still protect the documented hook contract. |
 | `guard-task-approval` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Hard-denies setting `status: approved` on a task whose `## Review Notes` retains `[BLOCKING]`. Fails closed when the mutation result cannot be reconstructed (unmatchable patches, in-place shell mutations) and the change sets `status: approved` onto blocking notes. |
+| `guard-foreign-checkout` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Returns `ask` for a `task.md` write whose task root belongs to neither the session's cwd nor its repository, and for a git history-writing command redirected (`cd`, `git -C`, `--work-tree`) into another task-tree checkout, so deliberate cross-checkout work is approvable while an unattended session cannot proceed. Worktrees of the session's own repository are not foreign. A runtime that does not honor `ask` falls through to allow, and Codex shell interception is incomplete, so the `Bash` half is best-effort there. |
 | `ensure-communicate` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Hard-denies main-thread Markdown mutations until `superRA:communicate` is loaded; only read evidence in the transcript (a skill load or a read of the SKILL.md) clears it. Subagents are exempt. |
 | `merge-guard` | `PreToolUse` on `Bash` | Reminds agents to use `superRA:semantic-merge` before bare merge/rebase/cherry-pick commands. Codex shell interception is incomplete, so this is advisory coverage. |
 | `task-tree` | `PostToolUse` on `Edit\|Write\|Bash\|apply_patch` | Reconciles `.plan/` or `superRA/` task trees after direct task edits (`Edit`/`Write`/`apply_patch`) and structural shell changes (`Bash`). Codex shell interception remains incomplete, so shell-side coverage is best-effort reconcile rather than a complete enforcement boundary. |
