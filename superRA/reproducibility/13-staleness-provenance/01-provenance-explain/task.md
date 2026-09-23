@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: approved
+status: revise
 depends_on: []
 ---
 
@@ -8,7 +8,7 @@ depends_on: []
 
 Build the provenance resolver and make `superra repro explain <target>` report, for every changed node, its recorded and current hash, where each came from, a named cause, and a runnable next command. Fix the two misleading statuses the case exposed.
 
-- **Targets.** A task gives causes grouped across its stale steps; `task#step` or a unique bare step name gives one row per changed node; a path gives that file's provenance with its producer and consumers. `build`, `accept`, and `revoke` keep rejecting bare step names.
+- **Targets.** A task gives causes grouped across its stale steps; `task#step` or a unique bare step name gives one row per changed node; a path gives that file's provenance with its producer and consumers. Every `repro` subcommand that takes a step target (`build`, `status`, `explain`, `accept`, `revoke`) accepts a unique bare step name; an ambiguous one errors with its qualified forms. `status` ends with one line naming `superra repro explain <target>` when any reported step is non-fresh.
 - **Sources.** Local receipt, acceptance ledger, lock history (`git log --all -- pytask.lock`, cached per revision in `.superra-repro/`), git blob history of each changed tracked dependency (sha256 of each blob until one matches the recorded hash, depth-capped), and Dropbox conflicted copies beside the file. A dependency matched on both sides shows `git <rev> → <rev>` with a diffstat and a capped diff.
 - **Three causes, keyed by the node's role in the step.** JSON `cause` and text use the same words; everything finer is a `source` fact on the row, never a cause.
   - `input-changed` — a dependency (including another step's output) or the step definition differs from the last build. Source: the commit(s) or `uncommitted`, or the producer's lock entry the bytes match. Pointer: the `git diff` command.
@@ -20,6 +20,10 @@ Build the provenance resolver and make `superra repro explain <target>` report, 
 - **Check stamps (report §5).** A check with no local stamp whose lock entry matches the current inputs reports `passed at these inputs in lock <rev>; not run here`, distinct from a never-run check; its status stays non-fresh.
 - **Output budget and cost** per the group constraints; the raw JSON dump in text output is gone.
 - **Validation:** a fixture replays the report's case — two clones, a coauthor lock commit, older output bytes restored to fake sync lag, a lock hash introduced by a merged side branch, a docstring edit to a tracked dependency, the §4 accept-then-sync sequence, and a check run only in the other clone — and asserts each cause, command, and footer; the full task-tree suite passes; [commands.md §Reproduction](../../../../skills/task-tree/references/commands.md#reproduction) documents the new targets, flags, and cause set.
+
+## Revision Notes
+
+- 2026-09-23: the fresh-agent evaluation in [03-diagnosis-guidance](../03-diagnosis-guidance/task.md) found two frictions. Bare step names are now accepted by every step-target subcommand when unique, reversing the ambiguity-driven deletion in [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md); `status` gains the `explain` pointer line.
 
 ## Details
 

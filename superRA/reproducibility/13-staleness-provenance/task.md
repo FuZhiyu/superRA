@@ -19,7 +19,7 @@ depends_on: []
 
 ### Constraints
 
-- **Cheap by construction.** Resolve only changed nodes; `status` stays unchanged except for reason strings; never hash a file outside this checkout; cache the per-revision lock index under `.superra-repro/` (a revision never changes, so the cache never invalidates).
+- **Cheap by construction.** Resolve only changed nodes; `status` gains only reason strings and one `explain` pointer line, and spawns no git; never hash a file outside this checkout; cache the per-revision lock index under `.superra-repro/` (a revision never changes, so the cache never invalidates).
 - **Replace, don't add, output.** Default text is one line per changed node with 8-character hashes; environment details only on mismatch; diffs capped with the full diff behind `--diff`; `--json` carries full hashes and the same rows.
 - This group folds back into [02-runner](../02-runner/task.md) and [06-skill](../06-skill/task.md) at integration.
 
