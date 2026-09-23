@@ -867,8 +867,8 @@ def test_explain_names_the_changed_dependency(project, capsys):
     out = capsys.readouterr().out
 
     assert "build-b  [stale]  dependency Code/b.sh changed" in out
-    assert "dependency edited, not committed" in out
-    assert "snapshot from the build here → working copy" in out
+    assert "input-changed" in out
+    assert "recorded snapshot from the build here; current no known source" in out
     assert "-cat output/a.txt output/a.txt > output/b.txt" in out
     assert "next: superra repro explain '02-b#build-b' --diff" in out
     assert "upstream: build-a fresh" in out

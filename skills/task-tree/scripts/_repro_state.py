@@ -653,9 +653,9 @@ def _compare(
         result.status = "missing"
         result.reason = _plural(f"output {absent[0]} is missing", len(absent) - 1)
         if step.kind == "check" and not _changed_nodes(step, entry, paths, cache, deps, []):
-            # The stamp is machine-local; the committed lock says it passed here-equal inputs.
+            # The stamp is machine-local; the committed lock says it passed at these inputs.
             from _repro_provenance import check_elsewhere_reason
-            result.reason = check_elsewhere_reason(paths, step.name, entry, memo)
+            result.reason = check_elsewhere_reason(paths, memo)
         result.changes = [
             Change(node=p, kind="output", change="missing") for p in absent
         ]

@@ -149,28 +149,19 @@ Changes after acceptance invalidate its exact state, including actual sidecar-ba
 
 ### Explain
 
-`explain <target>` reports, for every changed node, its recorded and current hash, where each came from, one cause, and a runnable next command. It states facts and a likely reading, never whether to build or accept.
+`explain <target>` reports, for every changed node, its recorded and current hash, where each came from, a cause keyed on the node's role in the step, and one tool pointer. It states facts and a hint, never whether to build or accept.
 
-- **Targets.** A task path groups causes across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives that file's provenance, producer, and readers.
-- **Sources.** The local receipt, the acceptance ledger, `pytask.lock` at every revision on local branches and HEAD, the last 50 revisions of each changed git-tracked file, and Dropbox conflicted copies beside the file. Only changed nodes are resolved; nothing outside the checkout is hashed. A tracked dependency matched on both sides shows `git <rev> → <rev>`, its diffstat, and the first 20 diff lines; `--diff` shows all.
-- **Output.** One line per changed node with 8-character hashes, then `next:` per cause, then a `searched:` footer naming the lock revisions, branches, and files examined. `--json` carries full hashes, every matched source, and the same rows and groups, keyed by `cause`.
+- **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives that file's provenance, producer, and readers.
+- **Sources.** Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, date, and its relation to HEAD: `in HEAD's lock`, `earlier commit, N behind HEAD`, or `not in HEAD's history; on <branch>, …` naming up to three containing branches), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file. Lock history covers every revision on local and remote-tracking branches and HEAD, without fetching; tracked files, their newest 50 revisions (versions over 16 MiB are skipped). Only changed nodes are resolved; nothing outside the checkout is hashed.
+- **Output.** One line per changed node with 8-character hashes, a `next:` pointer per cause, and a `searched:` footer naming the lock revisions and files examined. A tracked dependency shows its diffstat and first 20 diff lines; `--diff` shows all. `--json` carries full hashes, every source, rows, and groups.
 
-| `cause` | Text | Next command |
-|---|---|---|
-| `older-build` | older build synced here | `repro status` — recheck once the newer build syncs |
-| `recorded-from-branch` | recorded build from another branch | `repro build` |
-| `current-from-branch` | current bytes from another branch | `repro build` |
-| `dependency-edited` | dependency edited in commit X | `git diff <recorded> <current> -- <path>` |
-| `uncommitted-edit` | dependency edited, not committed | `git diff <recorded> -- <path>`, or `explain --diff` without git history |
-| `reviewed-replaced` | reviewed bytes replaced | `repro accept --dry-run` |
-| `conflicted-copy` | recorded bytes in a Dropbox conflicted copy | `ls -l` of the file and the copy |
-| `local-build` | built here; lock records another build | `repro build` |
-| `definition-changed` | step definition changed | `git diff <rev> -- <task.md> superRA/config.yaml` |
-| `check-elsewhere` | check passed elsewhere, not run here | `repro build` |
-| `upstream` | upstream step not fresh | `repro explain <upstream step>` |
-| `failed` | last execution failed | `tail` of the step log |
-| `missing` | missing on disk | `repro build`, or `repro status` for an external input |
-| `no-known-source` | no known source | `repro build` |
+| `cause` | Node | Hint | Pointer |
+|---|---|---|---|
+| `input-changed` | a dependency (including another step's output) or the step definition | an input or the step definition differs from the last build | `git diff <recorded> [<current>] -- <path>`; the producer's `explain` for a produced input |
+| `other-build` | an output | the output holds bytes from another recorded build | `git show --stat <rev>` of the matched revision |
+| `unknown-output` | an output | the output matches no recorded build | `explain <path> --json` |
+
+A missing out, a failed run, an upstream step, and a check that passed elsewhere are status reasons, listed without a cause.
 
 Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/diagnosing.md#what-makes-a-step-rerun).
 
