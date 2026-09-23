@@ -25,8 +25,9 @@ Warm file hashing costs one `stat` per file; variable discovery and graph constr
 | Row | Act |
 |---|---|
 | `input-changed` on a tracked file or the step definition | Read the diff the pointer prints and apply [the stale rule](rerun-or-accept.md#the-stale-rule). A changed file the script does not read, under a declared directory: narrow the declaration. |
-| `other-build`, current side an earlier commit behind HEAD | Sync lag: the recorded build exists elsewhere and has not arrived. Wait for the sync, then recheck `status`; never accept the older bytes. |
+| `other-build`, current side an earlier commit behind HEAD | Sync lag: the recorded build exists elsewhere and has not arrived. Wait for the sync, or rebuild when outputs are not shared, then recheck `status`; never accept the older bytes. |
 | `other-build`, current side off HEAD's history | A build from another branch: rebuild here, or wait for that branch to merge. |
+| `other-build`, any other current side | Rebuild; accept only current bytes you have reviewed. |
 | `unknown-output` | Rebuild. Repeated builds that disagree: make the producer deterministic ([What stops a cascade](#what-stops-a-cascade)). |
 | `env: differs` on any row | A rebuild here may not reproduce the recorded bytes; name the difference when you report. |
 | `passed at these inputs in lock <rev>; not run here` | Run the check here. |
