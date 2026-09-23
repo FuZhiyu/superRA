@@ -73,15 +73,15 @@ A successful build now writes the step's entry in the committed project-root `re
 
 ### The record
 
-- **Shape:** `{step: {lock_id, built_at, platform, env: {deps, probe | probe_error}}}` ([record_build](../../../../skills/task-tree/scripts/_repro_builds.py#L65-L77)).
+- **Shape:** `{step: {lock_id, built_at, platform, env: {deps, probe | probe_error}}, _probes: {digest: stdout}}` ([record_build](../../../../skills/task-tree/scripts/_repro_builds.py#L74-L94)).
   - `lock_id` is the first 16 hex characters of the SHA-256 of the step's `depends_on` and `produces`, taken from the verified receipt. It equals the lock entry pytask writes (`test_record_is_written_on_success_only`).
   - `platform` is `platform.system()` plus `platform.machine()`, e.g. `Darwin arm64`. No host or user name is recorded.
-  - `env.deps` holds the configured `env_deps` hashes; `env.probe` holds the stdout of `env_probe`, a new optional `reproduction:` key run once per build from the project root.
+  - `env.deps` holds the configured `env_deps` hashes; `env.probe` holds a 16-hex digest of the stdout of `env_probe`, a new optional `reproduction:` key run once per build from the project root under a lock, so `-j` teardowns share one run. The text itself is stored once under `_probes`; texts no step references are dropped. The config docs require the probe to print no paths or user-identifying text, since its stdout is committed.
 - **Written** in the teardown hook right after the receipt, under a thread lock for `-j` builds ([_repro_hooks.py:80-81](../../../../skills/task-tree/scripts/_repro_hooks.py#L80-L81)). A failed run leaves the entry unchanged.
 
 ### In `explain`
 
-[_env](../../../../skills/task-tree/scripts/_repro_provenance.py#L481-L508) runs for rows whose bytes came from a build: an output row, or an input that another step produces.
+[_env](../../../../skills/task-tree/scripts/_repro_provenance.py#L481-L509) runs for rows whose bytes came from a build: an output row, or an input that another step produces.
 - **Builder:** the row's step for an output; the producer for a produced input.
 - **Record lookup:** the first `lock` or `working-lock` source on the row, recorded side first. A lock source at revision X reads `git show X:repro-builds.json`, memoized per revision ([builds_at](../../../../skills/task-tree/scripts/_repro_provenance.py#L251-L257)); the working lock reads the file on disk.
 - **Row fact**, appended to the evidence:
@@ -101,11 +101,12 @@ A successful build now writes the step's entry in the committed project-root `re
 
 - [test_repro_builds.py](../../../../skills/task-tree/scripts/test_repro_builds.py), registered as `build-record-check`:
   - the record is written on success, matches the lock entry, carries no host or user name, and is unchanged by a failed run;
+  - a `-j 3` build runs the probe once, and every step entry shares one digest whose text appears once in the file;
   - two clones with different `env_probe` output. A rebuilds `est` under `openblas`, then force-rebuilds it with identical bytes under `mkl`, so HEAD's record says `mkl`. B's row names the rebuild revision and reports `env_probe line 1: 'blas: openblas' there, 'blas: accelerate' here`, which proves the lookup reads the named revision, not HEAD. Matching probes give `env: same as lock builder`;
   - a committed `panel` record with a wrong `lock_id` is reported as not matching;
   - a source-file input row carries no `env`;
   - the check-stamp reason names the builder's platform.
-- Full task-tree suite: 1277 passed.
+- Full task-tree suite: 1278 passed.
 - **IntermediaryDemand (read-only):** there is no `repro-builds.json` there yet, so `explain .` prints no `env:` and is otherwise unchanged (0.4 s).
 - **This repo:** building `build-record-check` and `provenance-explain-check` wrote its first `repro-builds.json`, committed here with `pytask.lock`.
 
@@ -117,6 +118,9 @@ A successful build now writes the step's entry in the committed project-root `re
 Tier: quick. Focus: correctness (write on success only, binding to the lock entry, lookup at the row's lock revision, mismatch display), host/user leakage, cost, and agent usability of `env:` facts. All advisory.
 
 1. **[ADVISORY] Probe output is committed verbatim.** The record itself names no host or user. [record_build](../../../../skills/task-tree/scripts/_repro_builds.py#L65-L77), however, commits whatever `env_probe` prints. `numpy.show_config()` prints only paths from the wheel's build machine, but probes such as `julia -e 'versioninfo()'` or `which python` print home-directory paths. Add one clause to the `env_probe` row in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#project-config): its stdout is committed, so keep it free of paths.
+   → implemented: the `env_probe` row in [task-file-contract.md §Project config](../../../../skills/task-tree/references/task-file-contract.md#project-config) states that its stdout is committed and must print no paths or user-identifying text.
 2. **[ADVISORY] The full probe stdout repeats in every step's entry.** `numpy.show_config()` is about 60 lines, so `repro-builds.json` grows by that much per step, and each rebuild rewrites it in the diff. Consider storing the stdout once, or a hash plus the stdout.
+   → implemented: each step entry carries a 16-hex probe digest, and the text is stored once under the top-level `_probes` key, pruned to referenced digests ([record_build](../../../../skills/task-tree/scripts/_repro_builds.py#L74-L94)). [differences](../../../../skills/task-tree/scripts/_repro_builds.py#L110-L129) looks the text up in the same file revision, so `env: differs` still names the first differing line (`test_probe_runs_once_per_build_and_its_text_is_stored_once`).
 3. **[ADVISORY] Parallel builds can run the probe twice.** [probe_once](../../../../skills/task-tree/scripts/_repro_builds.py#L43-L48) is not guarded by `_write_lock`, so two `-j` teardowns can both run it. The result is the same; only the time is duplicated.
+   → implemented: [probe_once](../../../../skills/task-tree/scripts/_repro_builds.py#L52-L58) runs under its own lock; a `-j 3` build runs the probe once (same test).
 4. **[ADVISORY] 01's registered check is missing a dependency.** `provenance-explain-check` in [01-provenance-explain](../01-provenance-explain/task.md) does not declare `skills/task-tree/scripts/_repro_builds.py`, which `_repro_provenance.py` now imports. This is for the planner, as the implementer noted.

@@ -31,6 +31,17 @@ def test_record_is_written_on_success_only(project):
 
 
 @needs_pytask
+def test_probe_runs_once_per_build_and_its_text_is_stored_once(project):
+    project.write("superRA/config.yaml", CONFIG + '  env_probe: "echo run >> probe-runs.txt; echo blas: accelerate"\n')
+    assert project.run("build", *CHAIN, "-j", "3") == 0
+    assert project.read("probe-runs.txt") == "run\n"
+    builds = json.loads(project.read("repro-builds.json"))
+    digests = {builds[name]["env"]["probe"] for name in ("build-a", "build-b", "check-b")}
+    assert len(digests) == 1 and builds["_probes"] == {digests.pop(): "blas: accelerate"}
+    assert project.read("repro-builds.json").count("blas: accelerate") == 1
+
+
+@needs_pytask
 def test_explain_compares_the_lock_builders_environment(clones, capsys):
     a, b, first = clones
     a.write("superRA/config.yaml", PROBE_CONFIG)
@@ -54,7 +65,9 @@ def test_explain_compares_the_lock_builders_environment(clones, capsys):
     a.write("probe.txt", "blas: mkl\nthreads: 8\n")
     assert a.run("build", "01-est", "--force") == 0
     git(a.root, "commit", "-qam", "force est under mkl")
-    assert json.loads(a.read("repro-builds.json"))["est"]["env"]["probe"].startswith("blas: mkl")
+    builds = json.loads(a.read("repro-builds.json"))
+    assert builds["_probes"][builds["est"]["env"]["probe"]] == "blas: mkl\nthreads: 8"
+    assert "blas: openblas" not in json.dumps(builds)  # an unreferenced probe text is dropped
 
     # A panel record that no longer matches its lock entry.
     a.write("Code/panel.sh", "mkdir -p output\necho v2 > output/panel.txt\n")

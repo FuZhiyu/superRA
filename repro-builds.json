@@ -1,18 +1,18 @@
 {
   "build-record-check": {
-    "built_at": 1790201210.334649,
+    "built_at": 1790201704.207642,
     "env": {
       "deps": {}
     },
-    "lock_id": "31c07c143170fdc4",
+    "lock_id": "6f4b6403dd5487d0",
     "platform": "Darwin arm64"
   },
   "provenance-explain-check": {
-    "built_at": 1790201290.150041,
+    "built_at": 1790201701.341655,
     "env": {
       "deps": {}
     },
-    "lock_id": "e23221953c7b145a",
+    "lock_id": "bb12370152c6b254",
     "platform": "Darwin arm64"
   }
 }

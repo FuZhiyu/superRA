@@ -488,23 +488,24 @@ class Resolver:
         from _repro_builds import BUILDS, differences, env_here, lock_id, read_builds
         if source['source'] == 'lock':
             where = f"lock {source['rev']}"
-            record = self.history.builds_at(source['sha']).get(builder)
+            builds = self.history.builds_at(source['sha'])
             entry = self.history.entries.get(source['sha'], {}).get(builder, {})
             locked = lock_id(entry.get('deps', {}), entry.get('products', {})) if entry else None
         else:
             where = 'the working lock'
             try:
-                record = read_builds((self.paths.project_root / BUILDS).read_text(encoding='utf-8')).get(builder)
+                builds = read_builds((self.paths.project_root / BUILDS).read_text(encoding='utf-8'))
             except OSError:
-                record = None
+                builds = {}
             entry = self.lock.get(builder)
             locked = lock_id(entry.depends_on, entry.produces) if entry else None
+        record = builds.get(builder)
         if not record:
             return None
         env = dict(builder=builder, where=where, record=record)
         if record.get('lock_id') != locked:
             return dict(env, status='record-mismatch')
-        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record))
+        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record), builds)
         return dict(env, status='differs' if diffs else 'same', differences=diffs)
 
     def _evidence(self, row) -> str:
