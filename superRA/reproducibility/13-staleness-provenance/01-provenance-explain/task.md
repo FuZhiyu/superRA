@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -20,10 +20,6 @@ Build the provenance resolver and make `superra repro explain <target>` report, 
 - **Check stamps (report §5).** A check with no local stamp whose lock entry matches the current inputs reports `passed at these inputs in lock <rev>; not run here`, distinct from a never-run check; its status stays non-fresh.
 - **Output budget and cost** per the group constraints; the raw JSON dump in text output is gone.
 - **Validation:** a fixture replays the report's case — two clones, a coauthor lock commit, older output bytes restored to fake sync lag, a lock hash introduced by a merged side branch, a docstring edit to a tracked dependency, the §4 accept-then-sync sequence, and a check run only in the other clone — and asserts each cause, command, and footer; the full task-tree suite passes; [commands.md §Reproduction](../../../../skills/task-tree/references/commands.md#reproduction) documents the new targets, flags, and cause set.
-
-## Revision Notes
-
-- 2026-09-23: the fresh-agent evaluation in [03-diagnosis-guidance](../03-diagnosis-guidance/task.md) found two frictions. Bare step names are now accepted by every step-target subcommand when unique, reversing the ambiguity-driven deletion in [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md); `status` gains the `explain` pointer line.
 
 ## Details
 
@@ -85,7 +81,8 @@ steps:
 
 ### What `explain` reports
 
-- **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives its provenance, producer, and readers. `build`, `accept`, and `revoke` still reject bare names (`test_bare_names_stay_rejected_for_build_accept_and_revoke`).
+- **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives its provenance, producer, and readers. Every step-target subcommand (`build`, `status`, `explain`, `accept`, `revoke`) accepts a unique bare step name ([bare_step](../../../../skills/task-tree/scripts/_repro_state.py#L764-L770)). A task path wins over a step of the same name. A name shared with another step, archived ones included, fails with `step name 'est' is ambiguous; select one of '01-est#est', '08-old#est'` (`test_unique_bare_names_select_their_step_for_every_command`).
+- **`status` points at `explain`.** When any reported step is not fresh, text `status` ends with `Why not fresh: superra repro explain <target>` for each given target, joined by `; ` since `explain` takes one target ([format_status](../../../../skills/task-tree/scripts/_repro_state.py#L888-L891)). It is built from the report alone and spawns no git (`test_status_points_at_explain_when_a_step_is_not_fresh`).
 - **Causes** ([row](../../../../skills/task-tree/scripts/_repro_provenance.py#L413-L422)):
   - `input-changed`: a dependency, including another step's output, or the step definition. Pointer: `git diff <recorded> [<current>] -- <path>` for a tracked file, `git diff [<rev>] -- <task.md> superRA/config.yaml` for the definition, or, for a produced input, the producer's `explain` while the producer is not fresh and `build <this step>` once it is ([_command](../../../../skills/task-tree/scripts/_repro_provenance.py#L464-L487)).
   - `other-build`: an output whose current bytes match another recorded state. Pointer: `git show --stat <rev>` of the lock or git revision the row prints.
@@ -131,7 +128,7 @@ steps:
   - It covers a lock revision off HEAD's history, on a local branch (`on wip`) and on a fetched coauthor branch (`on origin/wip`).
   - It checks that a repeat `status` reuses the cached lock commit without spawning git.
   - Registered as `provenance-explain-check`.
-- Full task-tree suite: 1275 passed.
+- Full task-tree suite: 1279 passed.
 
 ### IntermediaryDemand smoke test (read-only; wrote only gitignored `.superra-repro/` caches)
 

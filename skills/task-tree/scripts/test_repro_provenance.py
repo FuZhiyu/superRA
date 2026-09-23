@@ -306,12 +306,19 @@ def test_status_reuses_the_lock_commit_without_git(clones, monkeypatch):
 
 
 @needs_pytask
-def test_bare_names_stay_rejected_for_build_accept_and_revoke(clones, capsys):
+def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     _, b, _ = clones
-    for command in (["build", "est"], ["accept", "est", "--reason", "x"], ["revoke", "est"]):
-        capsys.readouterr()
-        assert b.run(*command) == 1
-        assert "'01-est#est'" in capsys.readouterr().err
+    assert b.status("est").entry("est") is not None
+    assert b.run("build", "est") == 0
+    assert b.run("accept", "est", "--reason", "reviewed") == 0
+    assert b.run("revoke", "est") == 0
+
+    # A name two steps share (here an archived copy) lists both qualified forms.
+    b.write("superRA/08-old/task.md", b.read("superRA/01-est/task.md").replace("status: not-started", "status: archived")
+            .replace("${OUT}/est.txt", "${OUT}/old-est.txt"))
+    capsys.readouterr()
+    assert b.run("build", "est") == 1
+    assert "step name 'est' is ambiguous; select one of '01-est#est', '08-old#est'" in capsys.readouterr().err
 
 
 @needs_pytask

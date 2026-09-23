@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import stat
 import sys
 import time
@@ -760,14 +761,22 @@ def _plural(head: str, extra: int) -> str:
 # Target selection
 # ---------------------------------------------------------------------------
 
+def bare_step(graph: Graph, name: str) -> Step | None:
+    """The active step a bare name selects; an ambiguous name raises with its qualified forms."""
+    matches = [s for s in graph.steps + graph.archived_steps if s.name == name]
+    if len(matches) > 1:
+        forms = ", ".join(f"'{s.task_path or '.'}#{s.name}'" for s in matches)
+        raise ReproStateError(f"step name {name!r} is ambiguous; select one of {forms}")
+    return graph.step(name) if matches else None
+
+
 def select_steps(
     graph: Graph, targets: Iterable[str], *, include_ancestors: bool = False
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
-    A target is a task path (that task and its descendants) or a qualified
-    ``task#step``. A bare step name is rejected with its qualified form.
-    Ancestors are opt-in. No targets selects every active step; the CLI
+    A target is a task path (that task and its descendants), a qualified
+    ``task#step``, or a bare step name that is unique. Ancestors are opt-in. No targets selects every active step; the CLI
     requires explicit targets.
     """
     targets = [t for t in targets if t]
@@ -800,13 +809,11 @@ def select_steps(
             elif task_exists:
                 raise ReproStateError(f"task {target!r} selects no steps; no result verified")
             else:
-                step = graph.step(target)
+                step = bare_step(graph, target)
                 if step is not None:
-                    raise ReproStateError(
-                        f"{target!r} is a step name, not a target; select it as "
-                        f"'{step.task_path or '.'}#{step.name}'"
-                    )
-                unknown.append(target)
+                    selected.add(step.name)
+                else:
+                    unknown.append(target)
     else:
         selected = {s.name for s in graph.steps}
 
@@ -879,6 +886,9 @@ def format_status(report: StatusReport) -> str:
     if errors:
         lines.append("")
         lines.append(f"{len(errors)} graph error(s); run `superra task check`.")
+    if any(e.status != "fresh" for e in entries):
+        lines.append("Why not fresh: " + "; ".join(
+            f"superra repro explain {shlex.quote(t)}" for t in (report.targets or ["."])))
     return "\n".join(lines)
 
 
