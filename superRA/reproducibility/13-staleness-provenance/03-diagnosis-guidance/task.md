@@ -73,4 +73,8 @@ Pass bar: every step above diagnosed correctly, at most three `repro` calls, no 
 ### Validation
 
 - `diagnosis-scenario-check` passes; `explain .` on the materialized `you/` clone prints each row above.
-- Fresh-agent evaluation: pending, run by the orchestrator.
+- **Fresh-agent evaluation (Sonnet, prompt "several steps are stale; decide what to do", 2026-09-23): passed on decisions, with two CLI frictions.**
+  - All six non-fresh steps got a correct action: `figure` accepted with a docstring-only reason; `summary` rebuilt over the hand edit; `check-robust` run; `est`, `panel`, `paper` rebuilt, never accepted. Rebuilding the sync-lag steps is the key's tolerated option: the scratch scenario has no Dropbox to wait on, and every step is a sub-second `echo`.
+  - 11 shell commands in total against the ~20-call baseline; 3 were `repro` diagnosis calls (one failed `status`, one `status .`, one shell loop of six per-step `explain`s). No `git log -S`, `shasum`, or `stat`. Three commands read scripts, task files, and `git log`, one of them to confirm `figure.sh` never reads `Code/style.py`.
+  - **Friction 1:** `status` never points at `explain .`, so the agent explained each step separately instead of reading the grouped view.
+  - **Friction 2:** `explain` accepts bare step names but `build` rejects them; the agent copied bare names into `build`, which failed once before it used the qualified form the error named.
