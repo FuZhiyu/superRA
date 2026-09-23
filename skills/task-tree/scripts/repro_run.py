@@ -45,7 +45,6 @@ from _repro_state import (  # noqa: E402
     dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
-    format_explain,
     format_status,
     read_run_record,
     render_dag,
@@ -532,11 +531,15 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
-    explain = _sub(sub, "explain", "Explain one step's state, changes, and consumers", [
-        "superra repro explain '02-merge#build-panel'",
-        "superra repro explain '02-merge#build-panel' --json",
+    explain = _sub(sub, "explain", "Explain where each changed hash came from, with a next command per cause", [
+        "superra repro explain 02-merge                 # causes grouped across the task's steps",
+        "superra repro explain '02-merge#build-panel'   # one row per changed node",
+        "superra repro explain build-panel              # a unique bare step name",
+        "superra repro explain Output/panel.parquet     # a file's provenance, producer, and readers",
+        "superra repro explain 02-merge --json --diff",
     ])
-    explain.add_argument("step", help="A task#step selector")
+    explain.add_argument("target", help="A task path, task#step, unique step name, or declared file path")
+    explain.add_argument("--diff", action="store_true", help="Show full dependency diffs instead of the first lines")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
     impact = _sub(sub, "impact", "Inspect conservative dependency fan-out from a file", [
@@ -614,6 +617,28 @@ def _reexec(argv: list[str], command: str) -> int:
         [uv, "run", "--script", str(Path(__file__).resolve()), *argv], env=env, check=False
     )
     return completed.returncode
+
+
+def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
+    from _repro_provenance import explain, format_explain, resolve_target, target_ref
+    kind, value = resolve_target(graph, args.target, paths.project_root)
+    if kind == "step":
+        targets = [target_ref(graph.step(value))]
+    elif kind == "task":
+        targets = [target_ref(graph.step(name)) for name in value[1]]
+    else:
+        targets = [target_ref(s) for s in ([value["producer"]] if value["producer"] else []) + value["consumers"]]
+    cache = HashCache(paths.cache_file)
+    report = compute_status(graph, paths, targets=targets, cache=cache, upstream=True)
+    result = explain(report, paths, cache, kind, value, full_diff=args.diff, plan_name=plan_name)
+    cache.flush()
+    if args.as_json:
+        if kind == "step":
+            step = result.pop("steps")[0]
+            result = dict(step, **result)
+        print(json.dumps(result, indent=2))
+    else:
+        print(format_explain(result, report))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -712,31 +737,10 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(result)
 
     try:
-        explain_targets = ()
-        if args.command == 'explain':
-            matches, unknown = select_steps(graph, [args.step])
-            if unknown or len(matches) != 1:
-                raise ReproStateError(f"unknown step or non-single-step target {args.step!r}")
-            args.step = matches[0]
-            step = graph.step(args.step)
-            explain_targets = [f'{step.task_path or "."}#{step.name}']
-        report = compute_status(
-            graph, paths,
-            targets=args.targets if args.command == "status" else explain_targets,
-            upstream=args.upstream if args.command == 'status' else True,
-        )
         if args.command == "explain":
-            from _repro_acceptance import inspect_baseline
-            entry = report.entry(args.step)
-            if entry is None:
-                raise ReproStateError(f"unknown step {args.step!r}")
-            details = inspect_baseline(graph, entry.step, paths)
-            if args.as_json:
-                print(json.dumps(dict(entry.to_dict(), baseline=details), indent=2))
-            else:
-                print(format_explain(report, args.step))
-                print("  baseline: " + json.dumps(details, indent=2))
+            _explain(args, graph, paths, plan_root.name)
             return
+        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream)
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

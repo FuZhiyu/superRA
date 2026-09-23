@@ -294,7 +294,7 @@ def test_cli_preview_apply_explain_revoke_and_scope(project, capsys):
     explanation = json.loads(capsys.readouterr().out)
     assert explanation['status'] == 'fresh'
     assert explanation['acceptance']['reason'] == 'Harmless comment'
-    assert explanation['baseline']['diffs'][0]['history'] == 'verified snapshot'
+    assert explanation['rows'] == [] and explanation['groups'] == []
     assert project.run('impact', 'Code/a.sh', '--scope', '02-b', '--json') == 0
     assert not json.loads(capsys.readouterr().out)['direct'][0]['in_scope']
     assert project.run('revoke', '01-a', '--json') == 0
