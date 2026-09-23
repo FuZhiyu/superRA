@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -155,3 +155,8 @@ The report's six steps had already been accepted or revoked there; the fixture c
 
 - Run `explain` on the fixture (`test_explain_names_each_cause_across_two_clones`) and judge the text as a fresh agent would.
 - Edits to `_repro_state.py`, `_repro_acceptance.py`, `repro_run.py`, and the runner tests stale other tasks' checks (`reviewed-baseline-regression-check`, `task-scoped-builds-check`, `task-scoped-builds-pilot`, `unified-dependency-workflow-check`, the dashboard checks); this task did not rebuild them.
+
+## Review Notes
+Tier: quick. Focus: bare step names across `build`, `status`, `explain`, `accept`, and `revoke`, and the `status` "Why not fresh:" pointer.
+
+1. **[ADVISORY] An archived step with the same name blocks the bare name of an active step.** [bare_step](../../../../skills/task-tree/scripts/_repro_state.py#L764-L770) counts archived steps as matches. The error then offers `'08-old#est'`, a form `build` cannot select. This fails safe. Consider listing only the forms each command can select.
