@@ -453,6 +453,10 @@ def test_status_points_at_explain_when_a_step_is_not_fresh(project, capsys):
     assert project.run("status", "01-a", "build-b") == 1
     assert capsys.readouterr().out.rstrip().endswith(
         "Why not fresh: superra repro explain 01-a; superra repro explain build-b")
+    assert project.run("build", "01-a") == 0
+    capsys.readouterr()
+    assert project.run("status", "01-a", "build-b") == 1  # only the target holding a non-fresh step
+    assert capsys.readouterr().out.rstrip().endswith("Why not fresh: superra repro explain build-b")
     assert project.run("build", *CHAIN) == 0
     capsys.readouterr()
     assert project.run("status", *CHAIN) == 0
