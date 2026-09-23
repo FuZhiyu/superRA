@@ -186,7 +186,7 @@ reproduction:
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
 | `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `env_probe` | Optional shell command run once per build from the project root; its stdout enters each step's build record. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
+| `env_probe` | Optional shell command run once per build from the project root; its stdout is committed in `repro-builds.json`, so it must print no paths or user-identifying text. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
 
 `${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
 
@@ -245,7 +245,9 @@ The project-root `repro-builds.json` is committed with `pytask.lock` and holds w
 | `lock_id` | First 16 hex characters of the SHA-256 of the step's lock entry (`depends_on` and `produces`); a record whose `lock_id` differs from its lock entry describes another build |
 | `built_at` | Build time |
 | `platform` | OS and CPU architecture |
-| `env` | `deps`: the configured `env_deps` hashes; `probe`: the `env_probe` stdout, or `probe_error` |
+| `env` | `deps`: the configured `env_deps` hashes; `probe`: a 16-hex digest of the `env_probe` stdout, or `probe_error` |
+
+Probe text is stored once, under the top-level `_probes` key (digest → stdout); texts no step references are dropped.
 
 No host or user name enters the record.
 
