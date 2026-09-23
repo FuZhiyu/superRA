@@ -886,9 +886,11 @@ def format_status(report: StatusReport) -> str:
     if errors:
         lines.append("")
         lines.append(f"{len(errors)} graph error(s); run `superra task check`.")
-    if any(e.status != "fresh" for e in entries):
-        lines.append("Why not fresh: " + "; ".join(
-            f"superra repro explain {shlex.quote(t)}" for t in (report.targets or ["."])))
+    stale = {e.step.name for e in entries if e.status != "fresh"}
+    pointed = [t for t in (report.targets or ["."])
+               if stale & set(select_steps(report.graph, [t], include_ancestors=report.upstream)[0])]
+    if pointed:
+        lines.append("Why not fresh: " + "; ".join(f"superra repro explain {shlex.quote(t)}" for t in pointed))
     return "\n".join(lines)
 
 
