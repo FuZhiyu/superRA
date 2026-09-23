@@ -1,6 +1,6 @@
 ---
 title: "Staleness Provenance: Explain Where a Changed Hash Came From"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

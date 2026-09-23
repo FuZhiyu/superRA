@@ -7,6 +7,14 @@
     "lock_id": "6f4b6403dd5487d0",
     "platform": "Darwin arm64"
   },
+  "diagnosis-scenario-check": {
+    "built_at": 1790201971.399085,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "71623808274b31a1",
+    "platform": "Darwin arm64"
+  },
   "provenance-explain-check": {
     "built_at": 1790201701.341655,
     "env": {

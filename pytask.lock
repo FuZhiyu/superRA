@@ -190,6 +190,22 @@ state = "1"
 ".superra-repro/stamps/dashboard-navigation-projection-check.stamp" = "d0ae5a21c149a8204e85494a278514da3bcc945c1ff9cba2a26c31f6dbbd82ee"
 
 [[task]]
+id = "diagnosis-scenario-check"
+state = "1"
+
+[task.depends_on]
+"diagnosis-scenario-check::spec" = "a669332faddd6ceaef55cfa83cec22e78721356e07151d30aede4a025aa6dc5f:49e0e76157c16e75be5bf9dee04a26b83758e69af3b67d7d0f820a7849e3043d"
+"skills/task-tree/scripts/_repro_builds.py" = "11be40f9fffdf87e8a3e10c6f3927236f791d4f223ab65ed186b5476287fb76a"
+"skills/task-tree/scripts/_repro_provenance.py" = "f9618a4c6d01967b82cba4fa3f0c40c2b2ffa3aa3f46f506272bb5ec5d7ee893"
+"skills/task-tree/scripts/_repro_state.py" = "82468c9917c620c5a75141c863bb73ba0cf5304f4514d2625e1e39c71bcd7dbb"
+"skills/task-tree/scripts/cli.py" = "3b392aaf0efb59f00d512a2ac6462122044c93d5dcbacd4b3653384e646df9c5"
+"skills/task-tree/scripts/repro_run.py" = "385a6a4e37ac4f31633cf2f837a8463f6276a3c1eafbc640f9d8d7149ea77eab"
+"superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py" = "821eb45ae9926849d45e27f2d698ff7c09ebe6d4103cc08569d1b7e247b7501d"
+
+[task.produces]
+".superra-repro/stamps/diagnosis-scenario-check.stamp" = "0223cef3c79d27218937f8c89a2b3a8efdf5dca4965629e82085a1607cf04bc9"
+
+[[task]]
 id = "provenance-explain-check"
 state = "1"
 
