@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -126,3 +126,30 @@ searched: … pytask.lock at 10 revision(s) […] on 66 local branch(es) (…); 
 
 - Run `explain` on the fixture (`test_explain_names_each_cause_across_two_clones`) and judge the text as a fresh agent would, per Details.
 - Changing `_repro_state.py`, `_repro_acceptance.py`, `repro_run.py`, and the runner tests stales other tasks' registered checks (`reviewed-baseline-regression-check`, `task-scoped-builds-check`, `task-scoped-builds-pilot`, `unified-dependency-workflow-check`, and the dashboard checks); this task did not rebuild them.
+
+## Review Notes
+Tier: thorough. Focus: correctness (§4 fallback, cause classification), agent usability of text and JSON output, cost on large histories. The §4 and §5 status changes are correct: the fallback compares actual output bytes against the successful baseline, so a sidecar lock alone cannot make a step fresh. The blocking problems are in cause selection: in three reproducible cases the cause and `next:` command point the wrong way.
+
+1. **[BLOCKING] The most common staleness case is reported backwards.** When a producer is rebuilt and committed but its consumer is not, the consumer's changed dependency is classified `older-build`, with `next: superra repro status`. The current bytes are actually the newest build, and the consumer needs a rebuild. Reproduced from the `clones` fixture. In A, rebuild only `01-est` and commit. In B, pull and sync `output/est.txt`, then run `explain 02-paper`. The output reads `older build synced here — the newer build recorded in the lock has not synced here yet`, with `recorded lock d543cc9 … current superseded lock 5d393a7`, but 5d393a7 is HEAD.
+   - **Cause.** [_repro_provenance.py:306](../../../../skills/task-tree/scripts/_repro_provenance.py#L306) sets `relation='working'` only when the value is in *this step's* lock entry. A produced dependency's current hash sits in the producer's working entry, so it is labelled `older`, and [line 456](../../../../skills/task-tree/scripts/_repro_provenance.py#L456) then picks `older-build`.
+   - **Same case with a local receipt snapshot (clone A).** [line 443](../../../../skills/task-tree/scripts/_repro_provenance.py#L443) takes the snapshot path, and the row reads `dependency edited, not committed` for `${OUT}/est.txt`, a produced output that nobody edited.
+   - **Fix.** Compute `working` against every working-lock entry for the node. Allow `older-build` only when the current revision is an ancestor of the recorded one. Keep produced dependencies (`graph.producers`) off the snapshot/`uncommitted-edit` path. Give this case its own reading, for example "producer rebuilt in lock X; this step has not run on it", with `repro build <consumer>`. Add it to the fixture in both clones.
+
+2. **[BLOCKING] `recorded-from-branch` takes merge parentage as proof that the bytes are elsewhere, and it outranks `older-build`.**
+   - **The fixture shows it.** In `04-panel`, A builds on `side` into the shared `output/` and merges. Once B's sync delivers `panel.txt`, the step is fresh with no rebuild. Before that sync, `explain` says `that build's bytes are not here` and recommends `repro build` ([_repro_provenance.py:38](../../../../skills/task-tree/scripts/_repro_provenance.py#L38), [:433](../../../../skills/task-tree/scripts/_repro_provenance.py#L433), [:454](../../../../skills/task-tree/scripts/_repro_provenance.py#L454)), even though the current bytes match an older HEAD lock, which is the sync-lag signature.
+   - **Real projects make it the default.** Under a PR-merge workflow, every lock commit made on a PR branch is off HEAD's first-parent chain. On IntermediaryDemand, all 7 output rows from PR #142 (`via merge 617b66f`) get this cause. A feature branch that has merged main in the same way classifies main's lock commits as another branch's builds.
+   - **Fix.** Report the merge as a fact and name the source branch; the merge subject or `branch --contains` gives it. Let `older-build` win when the current bytes match an ancestor lock. Keep the "bytes are not here, build" reading only for a missing output, or phrase it conditionally: "if that branch built in another worktree or checkout, its bytes live there."
+
+3. **[BLOCKING] Git-tracked outputs get dependency wording, and the `git` path ignores direction.** [_repro_provenance.py:447-450](../../../../skills/task-tree/scripts/_repro_provenance.py#L447-L450) apply to any row with a git blob match, whatever its `kind`.
+   - **A hand-edited tracked output** reads `dependency edited, not committed`. Once committed, it reads `dependency edited in commit X — the step last ran on the version before this edit`.
+   - **A tracked output holding older bytes** (recorded = newer commit, current = older commit) reads `dependency edited in commit <older commit>`, with a reversed diff (`-v2 +v1`).
+   - **Why it matters.** Research projects often commit tables and figures, and an agent reading "the step last ran on the version before this edit" will treat an output change as a code edit.
+   - **Fix.** Limit `dependency-edited`/`uncommitted-edit` to `kind == 'dependency'`. For outputs, keep the git revision as evidence and classify through lock and receipt. Name "edited in commit X" only when X descends from the recorded revision.
+
+4. **[ADVISORY] Unbounded blob reads on large tracked files.** [blob_history](../../../../skills/task-tree/scripts/_repro_provenance.py#L270-L284) loads up to 50 full blobs of every changed tracked file into memory in one `cat-file --batch`. Fix: filter with `--batch-check` sizes first; only a blob whose size equals the recorded file's size can match.
+
+5. **[ADVISORY] `git branch --contains` runs once per source and is not memoized.** [containing_branches](../../../../skills/task-tree/scripts/_repro_provenance.py#L210-L211) is called from `describe` for each other-branch source on both sides of every row. Memoize it per sha, as `merge_into_head` already is.
+
+6. **[ADVISORY] `status` now spawns git.** A missing check stamp makes [_compare](../../../../skills/task-tree/scripts/_repro_state.py#L657) build a full `LockHistory`: `rev-list HEAD`, first-parent, `for-each-ref`, and lock parsing, repeated on every `compute_status` call, including dashboard refreshes. It cost 0.24 s on IntermediaryDemand, which is acceptable today. Consider loading the history lazily from the lock-index cache.
+
+7. **[ADVISORY] The 14-cause set.** Each cause maps to one command, and the text reads plainly, so the set is acceptable at this size. `failed`, `upstream`, and `missing` are status facts rather than provenance and belong in the set for completeness. The unstable members are `recorded-from-branch` against `older-build`/`missing` (finding 2) and the missing "producer rebuilt" reading (finding 1). Once those are fixed, the set should come out the same size or smaller; no further merge is needed.
