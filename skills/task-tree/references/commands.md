@@ -152,13 +152,13 @@ Changes after acceptance invalidate its exact state, including actual sidecar-ba
 `explain <target>` reports, for every changed node, its recorded and current hash, where each came from, a cause keyed on the node's role in the step, and one tool pointer. It states facts and a hint, never whether to build or accept.
 
 - **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives that file's provenance, producer, and readers.
-- **Sources.** Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, date, and its relation to HEAD: `in HEAD's lock`, `earlier commit, N behind HEAD`, or `not in HEAD's history; on <branch>, …` naming up to three containing branches), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file. Lock history covers every revision on local and remote-tracking branches and HEAD, without fetching; tracked files, their newest 50 revisions (versions over 16 MiB are skipped). Only changed nodes are resolved; nothing outside the checkout is hashed.
+- **Sources.** Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, date, and its relation to HEAD: `in HEAD's lock, entry <step>` naming the steps whose HEAD entry holds it, `earlier commit, N behind HEAD`, or `not in HEAD's history; on <branch>, …` naming up to three containing branches), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file. Lock history covers every revision on local and remote-tracking branches and HEAD, without fetching; tracked files, their newest 50 revisions (versions over 16 MiB are skipped). Only changed nodes are resolved; nothing outside the checkout is hashed.
 - **Output.** One line per changed node with 8-character hashes, a `next:` pointer per cause, and a `searched:` footer naming the lock revisions and files examined. A tracked dependency shows its diffstat and first 20 diff lines; `--diff` shows all. `--json` carries full hashes, every source, rows, and groups.
 
 | `cause` | Node | Hint | Pointer |
 |---|---|---|---|
-| `input-changed` | a dependency (including another step's output) or the step definition | an input or the step definition differs from the last build | `git diff <recorded> [<current>] -- <path>`; the producer's `explain` for a produced input |
-| `other-build` | an output | the output holds bytes from another recorded build | `git show --stat <rev>` of the matched revision |
+| `input-changed` | a dependency (including another step's output) or the step definition | an input or the step definition differs from the last build | `git diff <recorded> [<current>] -- <path>`; for a produced input, the producer's `explain`, or `build <step>` once the producer is fresh |
+| `other-build` | an output | the output holds bytes from another recorded build | `git show --stat <rev>` of the revision the row prints |
 | `unknown-output` | an output | the output matches no recorded build | `explain <path> --json` |
 
 A missing out, a failed run, an upstream step, and a check that passed elsewhere are status reasons, listed without a cause.

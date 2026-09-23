@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -81,14 +81,14 @@ steps:
 ### What `explain` reports
 
 - **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives its provenance, producer, and readers. `build`, `accept`, and `revoke` still reject bare names (`test_bare_names_stay_rejected_for_build_accept_and_revoke`).
-- **Causes** ([row](../../../../skills/task-tree/scripts/_repro_provenance.py#L409-L418)):
-  - `input-changed`: a dependency, including another step's output, or the step definition. Pointer: `git diff <recorded> [<current>] -- <path>` for a tracked file, `git diff [<rev>] -- <task.md> superRA/config.yaml` for the definition, or the producer's `explain` for a produced input.
-  - `other-build`: an output whose current bytes match another recorded state. Pointer: `git show --stat <rev>`.
+- **Causes** ([row](../../../../skills/task-tree/scripts/_repro_provenance.py#L413-L422)):
+  - `input-changed`: a dependency, including another step's output, or the step definition. Pointer: `git diff <recorded> [<current>] -- <path>` for a tracked file, `git diff [<rev>] -- <task.md> superRA/config.yaml` for the definition, or, for a produced input, the producer's `explain` while the producer is not fresh and `build <this step>` once it is ([_command](../../../../skills/task-tree/scripts/_repro_provenance.py#L464-L487)).
+  - `other-build`: an output whose current bytes match another recorded state. Pointer: `git show --stat <rev>` of the lock or git revision the row prints.
   - `unknown-output`: an output whose current bytes match nothing recorded. Pointer: `explain <path> --json`.
   - A missing out, a failed run, an upstream step, or a check that passed elsewhere is a status reason, listed under `status (no hash to resolve)` in a task view.
 - **Source facts.** Each side of a row names the first matching state:
-  - a lock revision, as `lock <rev> (<author>, <date>; <relation>)` ([LockHistory.match](../../../../skills/task-tree/scripts/_repro_provenance.py#L225-L249)). `<rev>` is the introducing commit, preferring one in HEAD's history. `<relation>` is one fact:
-    - `in HEAD's lock`: HEAD's lock records that hash for the node in some step's entry;
+  - a lock revision, as `lock <rev> (<author>, <date>; <relation>)` ([LockHistory.match](../../../../skills/task-tree/scripts/_repro_provenance.py#L228-L253)). `<rev>` is the introducing commit, preferring one in HEAD's history. `<relation>` is one fact:
+    - `in HEAD's lock, entry <step>` (or `entries <step>, …`): the steps whose entry in HEAD's lock records that hash for the node, so a produced input's two sides read `entry <consumer>` and `entry <producer>`;
     - `earlier commit, N behind HEAD`: an ancestor of HEAD;
     - `not in HEAD's history; on <branch>, …`: up to three containing local or remote-tracking branches, then `and N more`.
   - `git <rev>`, or `uncommitted` for a tracked file;
@@ -96,12 +96,12 @@ steps:
   - `also in conflicted copy <path>` when a Dropbox copy holds the recorded bytes.
 
   JSON carries every source.
-- **Output.** One line per node with 8-character hashes and a diffstat for tracked inputs, the first 20 diff lines (`--diff` for all), one `next:` per cause with step targets merged, and a `searched:` footer naming the lock revisions and tracked-file histories.
+- **Output.** One line per node with 8-character hashes and a diffstat for tracked inputs, the first 20 diff lines (`--diff` for all), `next:` pointers per cause, with targets merged only for `build`/`status` (each `explain` pointer is its own line; the fixture parses every printed pointer with the real argparse), and a `searched:` footer naming the lock revisions and tracked-file histories.
 - **The two status fixes.**
   - §4: an acceptance that no longer validates no longer overrides a step whose output bytes match its successful build. The step stays `fresh`, and its reason names the invalid acceptance and `superra repro revoke '<task>#<step>'`. The fallback compares actual output bytes, so a corrupted sidecar-tracked out still goes stale ([apply_to_status](../../../../skills/task-tree/scripts/_repro_acceptance.py#L246-L253)).
   - §5: a check with no local stamp whose lock entry matches its inputs reports `passed at these inputs in lock <rev>; not run here` (or `in the working lock`) and stays `missing` ([_compare](../../../../skills/task-tree/scripts/_repro_state.py#L655-L658)).
     - `<rev>` is the last commit touching the lock when the working lock equals HEAD's.
-    - [lock_commit](../../../../skills/task-tree/scripts/_repro_provenance.py#L118-L147) caches that commit by lock content in `.superra-repro/lock-commit.json`. Git runs only for lock bytes not yet seen committed; a repeat `status` or dashboard refresh spawns none (`test_status_reuses_the_lock_commit_without_git`).
+    - [lock_commit](../../../../skills/task-tree/scripts/_repro_provenance.py#L119-L148) caches that commit by lock content in `.superra-repro/lock-commit.json`. Git runs only for lock bytes not yet seen committed; a repeat `status` or dashboard refresh spawns none (`test_status_reuses_the_lock_commit_without_git`).
 
 ### Code
 
@@ -161,7 +161,10 @@ Tier: quick re-review of the three earlier blocking findings, plus the objective
    - **Where it shows up.** The objective requires a runnable pointer, so this breaks any task or `.` view with more than one produced input. On the fixture, `explain .` prints `next: superra repro explain '01-est#est' '02-paper#paper'`, and running it fails with `unrecognized arguments: 02-paper#paper`.
    - **Same failure for outputs.** Two `unknown-output` rows would merge into `explain <path> <path> --json`, which fails the same way.
    - **Fix.** Merge targets only for verbs that take several, such as `build` and `status`; print one `explain` line per target. Alternatively, let `explain` accept several targets. Assert the merged command's runnability in the fixture.
+   → implemented: [group_rows](../../../../skills/task-tree/scripts/_repro_provenance.py#L552-L581) merges targets only for `build` and `status`; each `explain` pointer prints on its own line. The fixture's `explain` helper parses every printed `next: superra repro …` with `repro_run.build_parser()` ([test helper](../../../../skills/task-tree/scripts/test_repro_provenance.py#L107-L117)).
 
 2. **[ADVISORY] The pointer for a produced input can lead nowhere.** When the producer has been rebuilt and is fresh, which is the producer-rebuilt case from the first review, the row points to `explain '01-est#est'`, and that reports nothing changed. Both sides of the row also read `in HEAD's lock`, so the row does not tell which build is the current one. Consider pointing at `git show --stat <current rev>`, or noting "producer fresh".
+   → implemented: with the producer fresh, the pointer is `superra repro build '<this step>'` ([_command](../../../../skills/task-tree/scripts/_repro_provenance.py#L474-L480)). A lock source in HEAD's lock names the entries holding the hash, so the row reads `recorded … in HEAD's lock, entry paper; current … in HEAD's lock, entry est`.
 
 3. **[ADVISORY] An `other-build` pointer can name a revision absent from the row.** For a git-tracked output the row reads `recorded git 0cb4126; current git fddaaa7`, but `next: git show --stat dc35e51` points at a lock revision the text never mentions. Point at a revision the row prints.
+   → implemented: the `other-build` pointer uses the current source the row prints first, so a git-tracked output points at `git show --stat <current git rev>` (`test_tracked_output_edits_are_output_causes`).

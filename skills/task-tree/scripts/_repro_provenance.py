@@ -30,6 +30,7 @@ BLOB_MAX_BYTES = 16 << 20   # larger historical versions are not read
 BLOB_TOTAL_BYTES = 64 << 20
 DIFF_LINES = 20
 BRANCHES_SHOWN = 3
+ENTRIES_SHOWN = 3
 CHECK_ELSEWHERE = 'passed at these inputs in'
 
 CAUSES = {
@@ -177,7 +178,7 @@ class LockHistory:
         self.by_sha: dict[str, dict] = {}
         self.capped = False
         self.on_head: set[str] = set()
-        self.head_values: dict[str, set[str]] = {}
+        self.head_values: dict[str, dict[str, list[str]]] = {}  # node -> hash -> step entries
         self.index: dict[str, dict[str, list[str]]] = {}
         self._behind: dict[str, int] = {}
         self._branches: dict[str, list[str]] = {}
@@ -190,10 +191,12 @@ class LockHistory:
         self.by_sha = {r['sha']: r for r in self.revs}
         self.on_head = set((git.text('rev-list', 'HEAD') or '').split())
         head = git.blobs([f'HEAD:{spec}']).get(f'HEAD:{spec}')
-        for groups in _parse_lock(head.decode('utf-8', 'replace') if head else '').values():
+        for step_id, groups in _parse_lock(head.decode('utf-8', 'replace') if head else '').items():
             for group in groups.values():
                 for node, value in group.items():
-                    self.head_values.setdefault(node, set()).add(value)
+                    entries = self.head_values.setdefault(node, {}).setdefault(value, [])
+                    if step_id not in entries:
+                        entries.append(step_id)
         self._load(spec)
 
     def _load(self, spec):
@@ -229,7 +232,8 @@ class LockHistory:
             return None
         sha = ([s for s in shas if s in self.on_head] or shas)[-1]
         behind = self.behind(sha)
-        return dict(self.by_sha[sha], head=value in self.head_values.get(node, ()), behind=behind,
+        entries = self.head_values.get(node, {}).get(value, [])
+        return dict(self.by_sha[sha], head=bool(entries), head_entries=entries, behind=behind,
                     branches=self.branches(sha) if behind is None else [])
 
     def branches(self, sha) -> list[str]:
@@ -469,13 +473,16 @@ class Resolver:
                 return f"git diff {rec_git['rev']} {cur_git['rev'] + ' ' if cur_git else ''}-- {shlex.quote(path)}"
             producer = self.graph.producers.get(path or '')
             if producer:
+                entry = self.report.entry(producer)
+                if entry is not None and entry.status == 'fresh':  # nothing left to explain upstream
+                    return f'superra repro build {shlex.quote(target_ref(step))}'
                 return f'superra repro explain {shlex.quote(target_ref(self.graph.step(producer)))}'
             if row['diff']:
                 return f'superra repro explain {shlex.quote(target_ref(step))} --diff'
         elif row['cause'] == 'other-build':
-            rev = _first(row['current_sources'], 'lock') or cur_git
-            if rev:
-                return f"git show --stat {rev['rev']}"
+            shown = row['current_sources'][0]  # the source the row prints
+            if shown['source'] in ('lock', 'git'):
+                return f"git show --stat {shown['rev']}"
         return f"superra repro explain {shlex.quote(path or row['node'])} --json"
 
     def searched(self) -> dict:
@@ -488,6 +495,10 @@ class Resolver:
             'blob_histories': {path: len(rows) for path, rows in self.blob_histories.items() if rows},
             'conflicted_copies_beside': sorted(set(self.copies_searched)),
         }
+
+
+def _capped(names, shown) -> str:
+    return ', '.join(names[:shown]) + (f" and {len(names) - shown} more" if len(names) > shown else '')
 
 
 def _first(sources, name):
@@ -506,15 +517,14 @@ def _label(s) -> str:
     kind = s['source']
     if kind == 'lock':
         if s['head']:
-            relation = "in HEAD's lock"
+            names = s['head_entries']
+            relation = (f"in HEAD's lock, {'entry' if len(names) == 1 else 'entries'} "
+                        + _capped(names, ENTRIES_SHOWN))
         elif s['behind'] is not None:
             relation = f"earlier commit, {s['behind']} behind HEAD"
         else:
             names = s['branches']
-            relation = "not in HEAD's history" + (
-                f"; on {', '.join(names[:BRANCHES_SHOWN])}"
-                + (f" and {len(names) - BRANCHES_SHOWN} more" if len(names) > BRANCHES_SHOWN else '')
-                if names else '')
+            relation = "not in HEAD's history" + (f"; on {_capped(names, BRANCHES_SHOWN)}" if names else '')
         return f"lock {s['rev']} ({s['author']}, {s['date']}; {relation})"
     if kind == 'git':
         return f"git {s['rev']}"
@@ -535,11 +545,12 @@ def _label(s) -> str:
 # Grouping and rendering
 # ---------------------------------------------------------------------------
 
+MULTI_TARGET_VERBS = ('build', 'status')  # `explain` takes one target
 _STEP_COMMAND = re.compile(r"^(superra repro \w+) (\S+)((?: --\S+)*)$")
 
 
 def group_rows(rows) -> list[dict]:
-    """One group per cause, in cause order; step-target commands merge their targets."""
+    """One group per cause, in cause order; multi-target commands merge their targets."""
     groups = []
     for cause, hint in CAUSES.items():
         members = [row for row in rows if row['cause'] == cause]
@@ -549,6 +560,10 @@ def group_rows(rows) -> list[dict]:
         for row in members:
             match = _STEP_COMMAND.match(row['command'])
             if not match:
+                if row['command'] not in commands:
+                    commands.append(row['command'])
+                continue
+            if match.group(1).split()[-1] not in MULTI_TARGET_VERBS:
                 if row['command'] not in commands:
                     commands.append(row['command'])
                 continue
