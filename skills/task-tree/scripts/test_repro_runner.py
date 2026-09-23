@@ -497,7 +497,7 @@ def test_status_and_explain_name_consumers_outside_the_owning_task(project, caps
     assert not re.search(r"task-local|\bshared\b", text)
 
     assert project.run("explain", "01-a#build-a") == 0
-    assert "  outs read outside 01-a:\n    02-b#build-b" in capsys.readouterr().out
+    assert "  outs read outside 01-a: 02-b#build-b" in capsys.readouterr().out
     assert project.run("explain", "03-x#build-x") == 0
     assert "  no step outside 03-x reads its outs" in capsys.readouterr().out
 
@@ -866,9 +866,14 @@ def test_explain_names_the_changed_dependency(project, capsys):
     assert project.run("explain", "02-b#build-b") == 0
     out = capsys.readouterr().out
 
-    assert "build-b  [stale]" in out
-    assert "dependency: Code/b.sh (changed)" in out
-    assert "build-a: fresh" in out
+    assert "build-b  [stale]  dependency Code/b.sh changed" in out
+    assert "dependency edited, not committed" in out
+    assert "snapshot from the build here → working copy" in out
+    assert "-cat output/a.txt output/a.txt > output/b.txt" in out
+    assert "next: superra repro explain '02-b#build-b' --diff" in out
+    assert "upstream: build-a fresh" in out
+    assert "no git history (not a git checkout)" in out
+    assert "  baseline:" not in out
 
 
 @needs_pytask

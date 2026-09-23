@@ -97,12 +97,13 @@ superra repro build 02-merge --dry-run   # what would run, why, and what it last
 superra repro build '02-merge#check-panel' --force # force just the check
 superra repro build 02-merge --upstream --force # force the full producer chain
 superra repro build . --force            # rerun every registered step
-superra repro explain '02-merge#build-panel' --json # changes, baseline diffs, acceptance, actual run
+superra repro explain 02-merge            # where each changed hash came from, grouped by cause
+superra repro explain Output/panel.parquet --json # one file's provenance, producer, and readers
 superra repro impact Code/helpers.jl --scope 02-merge --json # includes affected steps outside scope
 superra repro dag --mermaid               # the step graph
 ```
 
-Every target is a task path or a `task#step` selector; multiple targets select the deduplicated union. A task path includes its own and descendant steps. Paths are task-root-relative; `.` selects the whole active tree and `.#step` selects a root-owned step. A bare step name is rejected and names its qualified form. Unknown targets and tasks with no steps fail. `build` and `status` require at least one target.
+Every target is a task path or a `task#step` selector; multiple targets select the deduplicated union. A task path includes its own and descendant steps. Paths are task-root-relative; `.` selects the whole active tree and `.#step` selects a root-owned step. A bare step name is rejected and names its qualified form; only `explain` accepts a unique one. Unknown targets and tasks with no steps fail. `build` and `status` require at least one target.
 
 Inputs from out-of-scope producers use existing files without requiring a successful baseline or override. Missing saved inputs block and identify their producer. `--upstream` adds transitive file-producer ancestors; it never selects unrelated steps in their owning tasks. `--force` reruns every step in the resulting scope.
 
@@ -116,13 +117,13 @@ Status JSON also records `targets`, `upstream`, and `boundary_inputs` (paths, pr
 
 | State | Meaning |
 |---|---|
-| `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. |
+| `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. Bytes matching the successful build stay fresh when an acceptance no longer validates; the reason names it and the `revoke` that clears it. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
-| `missing` | Never built, or an out is gone. |
+| `missing` | Never built, or an out is gone. A check whose lock entry matches its current inputs but has no local stamp reports `passed at these inputs in lock <rev>; not run here`. |
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
-`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, and check stamps live there, and `repro` creates it and adds it to `.gitignore` on first run.
+`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, check stamps, and the per-revision lock index `explain` reads live there, and `repro` creates it and adds it to `.gitignore` on first run.
 
 ### Reviewed acceptance
 
@@ -146,7 +147,30 @@ Commit the project-root `repro-acceptance.json` with the declarations and review
 
 Changes after acceptance invalidate its exact state, including actual sidecar-backed output bytes and saved-input bytes. A matching scoped status does not certify upstream producers; add `--upstream` to assess the chain.
 
-`explain --json` reports verified successful-source snapshots when available, including dirty-checkout runs. Reviewed baselines supply recorded hashes; source text not captured at execution is explicitly unavailable. Raw source snapshots remain local. See [the record contract](task-file-contract.md#acceptance-and-successful-baseline-records).
+### Explain
+
+`explain <target>` reports, for every changed node, its recorded and current hash, where each came from, one cause, and a runnable next command. It states facts and a likely reading, never whether to build or accept.
+
+- **Targets.** A task path groups causes across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives that file's provenance, producer, and readers.
+- **Sources.** The local receipt, the acceptance ledger, `pytask.lock` at every revision on local branches and HEAD, the last 50 revisions of each changed git-tracked file, and Dropbox conflicted copies beside the file. Only changed nodes are resolved; nothing outside the checkout is hashed. A tracked dependency matched on both sides shows `git <rev> → <rev>`, its diffstat, and the first 20 diff lines; `--diff` shows all.
+- **Output.** One line per changed node with 8-character hashes, then `next:` per cause, then a `searched:` footer naming the lock revisions, branches, and files examined. `--json` carries full hashes, every matched source, and the same rows and groups, keyed by `cause`.
+
+| `cause` | Text | Next command |
+|---|---|---|
+| `older-build` | older build synced here | `repro status` — recheck once the newer build syncs |
+| `recorded-from-branch` | recorded build from another branch | `repro build` |
+| `current-from-branch` | current bytes from another branch | `repro build` |
+| `dependency-edited` | dependency edited in commit X | `git diff <recorded> <current> -- <path>` |
+| `uncommitted-edit` | dependency edited, not committed | `git diff <recorded> -- <path>`, or `explain --diff` without git history |
+| `reviewed-replaced` | reviewed bytes replaced | `repro accept --dry-run` |
+| `conflicted-copy` | recorded bytes in a Dropbox conflicted copy | `ls -l` of the file and the copy |
+| `local-build` | built here; lock records another build | `repro build` |
+| `definition-changed` | step definition changed | `git diff <rev> -- <task.md> superRA/config.yaml` |
+| `check-elsewhere` | check passed elsewhere, not run here | `repro build` |
+| `upstream` | upstream step not fresh | `repro explain <upstream step>` |
+| `failed` | last execution failed | `tail` of the step log |
+| `missing` | missing on disk | `repro build`, or `repro status` for an external input |
+| `no-known-source` | no known source | `repro build` |
 
 Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/diagnosing.md#what-makes-a-step-rerun).
 

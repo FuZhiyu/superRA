@@ -243,7 +243,16 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
             if entry.last_run is None:
                 run = record['baseline'].get('run', {})
                 entry.last_run, entry.duration, entry.log = run.get('ended_at'), run.get('duration'), run.get('log')
+        elif record and invalid and entry.status == 'fresh' and baseline(
+                entry.step, paths, lock.get(name), required=False)['outputs'] == current_state(
+                    report.graph, entry.step, paths, cache)['outputs']:
+            # Bytes that match the successful build stand on their own; a sidecar
+            # lock alone does not verify them.
+            entry.acceptance_invalid = invalid
+            ref = f"{entry.step.task_path or '.'}#{name}"
+            entry.reason = f"up to date with the lock; acceptance no longer valid ({invalid}), clear it with `superra repro revoke '{ref}'`"
         elif record and invalid:
+            entry.acceptance_invalid = invalid
             state = current_state(report.graph, entry.step, paths, cache)
             entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
                              for c in state_differences(record['state'], state)] + [
