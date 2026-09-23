@@ -313,12 +313,10 @@ def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     assert b.run("accept", "est", "--reason", "reviewed") == 0
     assert b.run("revoke", "est") == 0
 
-    # A name two steps share (here an archived copy) lists both qualified forms.
+    # An archived step sharing the name does not block the active one.
     b.write("superRA/08-old/task.md", b.read("superRA/01-est/task.md").replace("status: not-started", "status: archived")
             .replace("${OUT}/est.txt", "${OUT}/old-est.txt"))
-    capsys.readouterr()
-    assert b.run("build", "est") == 1
-    assert "step name 'est' is ambiguous; select one of '01-est#est', '08-old#est'" in capsys.readouterr().err
+    assert b.status("est").entry("est").step.task_path == "01-est"
 
 
 @needs_pytask

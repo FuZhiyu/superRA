@@ -762,8 +762,8 @@ def _plural(head: str, extra: int) -> str:
 # ---------------------------------------------------------------------------
 
 def bare_step(graph: Graph, name: str) -> Step | None:
-    """The active step a bare name selects; an ambiguous name raises with its qualified forms."""
-    matches = [s for s in graph.steps + graph.archived_steps if s.name == name]
+    """The active step a bare name selects; archived steps never compete for it."""
+    matches = [s for s in graph.steps if s.name == name]
     if len(matches) > 1:
         forms = ", ".join(f"'{s.task_path or '.'}#{s.name}'" for s in matches)
         raise ReproStateError(f"step name {name!r} is ambiguous; select one of {forms}")
