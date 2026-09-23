@@ -173,6 +173,15 @@ def check(b):
     assert statuses["robust"][0] == "fresh", statuses  # synced
     assert statuses["check-robust"][0] == "missing" and "not run here" in statuses["check-robust"][1], statuses
 
+    # The sync-lag rows carry the relation fact diagnosing.md keys on.
+    text = subprocess.run([str(b / "superRA/superra"), "repro", "explain", "."], cwd=b, env=ENV, check=True,
+                          capture_output=True, text=True).stdout
+    for name, node in (("est", "est.txt"), ("paper", "est.txt"), ("paper", "paper.txt"), ("panel", "panel.txt")):
+        row = next(line for line in text.splitlines()
+                   if line.strip().startswith(f"{name} ") and f"${{OUT}}/{node}" in line)
+        current = row.split("; current ", 1)[1]
+        assert "; earlier commit, " in current and " behind HEAD)" in current, row
+
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a != "--check"]

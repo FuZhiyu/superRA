@@ -1,6 +1,6 @@
 ---
 title: "Teach Agents to Act on Provenance, and Verify They Do"
-status: revise
+status: implemented
 depends_on:
   - 01-provenance-explain
   - 02-build-record
@@ -27,11 +27,38 @@ steps:
     cmd: "sh -c 'python3 superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py \"$(mktemp -d)/scenario\" --check'"
     deps:
       - superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py
-      - skills/task-tree/scripts/cli.py
-      - skills/task-tree/scripts/repro_run.py
-      - skills/task-tree/scripts/_repro_state.py
-      - skills/task-tree/scripts/_repro_provenance.py
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_repro_builds.py
+      - skills/task-tree/scripts/_repro_hooks.py
+      - skills/task-tree/scripts/_repro_provenance.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/plan_migrate.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_add_result.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_comment.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/wrapper_resolver.py
 ```
 
 ## Results
@@ -42,8 +69,9 @@ steps:
 
 - **[diagnosing.md §Read what explain names](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names)** is one `Row | Act` table over the shipped causes and status reasons ([commands.md §Explain](../../../../skills/task-tree/references/commands.md#explain)):
   - `input-changed` on a tracked file or the step definition → read the pointer's diff, apply the stale rule; narrow an over-broad directory dep.
-  - `other-build` with the current side an earlier commit behind HEAD → sync lag: wait for the sync and recheck; never accept the older bytes.
+  - `other-build` with the current side an earlier commit behind HEAD → sync lag: wait for the sync, or rebuild when outputs are not shared; never accept the older bytes.
   - `other-build` with the current side off HEAD's history → rebuild or wait for the branch to merge.
+  - `other-build` with any other current side (`built here`, `reviewed`, `git <rev>`, in HEAD's lock) → rebuild; accept only reviewed bytes.
   - `unknown-output` → rebuild; fix determinism when repeated builds disagree.
   - `env: differs` → report the difference; a rebuild here may not reproduce the recorded bytes.
   - a check `passed at these inputs in lock <rev>; not run here` → run it here.
@@ -54,13 +82,13 @@ steps:
 
 ### Evaluation scenario
 
-[two_clone_scenario.py](attachments/two_clone_scenario.py) `<empty-dir>` builds `coauthor/` and `you/` clones and prints the `you/` path; each clone's `superRA/superra` shim runs this checkout's CLI. `--check` asserts the causes below, registered as `diagnosis-scenario-check`.
+[two_clone_scenario.py](attachments/two_clone_scenario.py) `<empty-dir>` builds `coauthor/` and `you/` clones and prints the `you/` path; each clone's `superRA/superra` shim runs this checkout's CLI. `--check` asserts the causes below and the `earlier commit, N behind HEAD` fact on the sync-lag rows; it is registered as `diagnosis-scenario-check`, which declares the same task-tree module set as `provenance-explain-check`.
 
 Grading key for `you/` (`explain .` groups all six non-fresh steps in one call):
 
 | Step | Row(s) | Correct diagnosis and action |
 |---|---|---|
-| `est` | `other-build`; current = lock "Build all results", earlier commit 5 behind HEAD | Sync lag of the coauthor's rebuild. Do not accept; wait for the sync (a local rebuild is tolerable, not preferred). |
+| `est` | `other-build`; current = lock "Build all results", earlier commit 5 behind HEAD | Sync lag of the coauthor's rebuild. Do not accept; wait for the sync, or rebuild (the scenario shares no outputs). |
 | `paper` | `input-changed` on `${OUT}/est.txt` + own `other-build`, same revisions | Same sync lag, downstream of `est`. Do not accept. |
 | `panel` | `other-build`; recorded = lock from the merged `panel-fix` branch, in HEAD's lock | Sync lag of a build merged into main, not a branch conflict. Do not accept. |
 | `figure` | `input-changed` on `Code/style.py`, diff is one docstring word | Cannot move the result: accept with the reason recorded (or rerun; it is cheap). |
@@ -83,6 +111,10 @@ Pass bar: every step above diagnosed correctly, at most three `repro` calls, no 
 Tier: quick. Focus: the CLAUDE.md §Teach the Protocol gate, applied line by line to the `skills/reproducibility` diff; whether the table rows match the shipped causes and facts; the scenario script and its registered check. The skill diff passes the gate. `diagnosis-scenario-check` passes, and `explain .` on the materialized `you/` clone prints every row in the grading key.
 
 1. **[BLOCKING] `diagnosis-scenario-check` does not declare most of the code it runs.** The check runs the task-tree CLI end to end, including `build` and `explain`. Its deps list only `cli.py`, `repro_run.py`, `_repro_state.py`, `_repro_provenance.py`, and `_repro_builds.py`. The modules those import are missing, among them `_repro.py`, `_repro_acceptance.py`, `_repro_hooks.py`, and `_repro_scope.py`, so an edit to any of them leaves the check fresh. [designing-the-graph.md §Declare every true read](../../../../skills/reproducibility/references/designing-the-graph.md) treats a missing dep as a silently wrong result. Fix: declare the same module set that `provenance-explain-check` and `build-record-check` declare.
+   → implemented: [§Reproduction](#reproduction) declares the 32 non-test task-tree modules that `build-record-check` declares; the rebuilt check is fresh.
 2. **[ADVISORY] Some `other-build` rows match no row in the table.** [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names) keys `other-build` only on the two lock relations, "earlier commit behind HEAD" and "off HEAD's history". `explain` also prints `other-build` rows whose current side is `built here …`, `reviewed …`, `git <rev>` (a tracked output), or `in HEAD's lock`, and those have no row. Add one fallback row for any other current source.
+   → implemented: fallback row `other-build`, any other current side → rebuild; accept only reviewed bytes ([diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names)).
 3. **[ADVISORY] The sync-lag row assumes a sync exists.** "Wait for the sync" has no end when outputs are not shared, for example with no Dropbox and a single machine. Add "or rebuild when outputs are not shared", which is the option the fresh agent took.
+   → implemented: the sync-lag row reads "Wait for the sync, or rebuild when outputs are not shared" ([diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names)).
 4. **[ADVISORY] The check does not assert the relation facts the table keys on.** [two_clone_scenario.py `check`](attachments/two_clone_scenario.py) asserts only the set of causes per step. Asserting `earlier commit, N behind HEAD` on `est`, `paper`, and `panel` would catch a wording change that silently breaks the table mapping.
+   → implemented: [check](attachments/two_clone_scenario.py) asserts `; earlier commit, … behind HEAD)` on the current side of the `est`, `paper` (both rows), and `panel` rows in the text output.
