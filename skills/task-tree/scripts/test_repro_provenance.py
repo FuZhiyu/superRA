@@ -7,11 +7,13 @@ different true cause, and `explain` must name it with a runnable next command.
 from __future__ import annotations
 
 import json
+import shlex
 import shutil
 import subprocess
 
 import pytest
 
+import repro_run
 from test_repro_runner import CHAIN, CONFIG, Project, needs_pytask, project  # noqa: F401
 
 
@@ -107,6 +109,11 @@ def explain(project, capsys, *argv):
     code = project.run("explain", *argv)
     out = capsys.readouterr().out
     assert code == 0, out
+    parser = repro_run.build_parser()
+    for line in out.splitlines():
+        command = line.strip().removeprefix("next: ")
+        if line.strip().startswith("next: superra repro "):
+            parser.parse_args(shlex.split(command)[2:])  # every pointer parses as printed
     return out
 
 
@@ -149,7 +156,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     out = explain(b, capsys, "01-est")
     assert out.startswith("01-est: 1 of 1 step(s) not fresh")
     assert "other-build — the output holds bytes from another recorded build" in out
-    assert f"recorded lock {rebuilt} (Co Author," in out and "; in HEAD's lock)" in out
+    assert f"recorded lock {rebuilt} (Co Author," in out and "; in HEAD's lock, entries est, paper)" in out
     assert f"current lock {first} (Co Author," in out and "; earlier commit, 5 behind HEAD)" in out
     assert f"next: git show --stat {first}" in out
     body = out.split("searched:")[0]
@@ -160,7 +167,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     out = explain(b, capsys, "02-paper")
     assert out.startswith("02-paper: 2 of 2 step(s) not fresh")
     assert "input-changed — an input or the step definition differs from the last build" in out
-    assert "next: superra repro explain '01-est#est' '02-paper#paper'" in out
+    assert "next: superra repro explain '01-est#est'\n" in out and "next: superra repro explain '02-paper#paper'\n" in out
     assert "other-build" in out and f"next: git show --stat {first}" in out
 
     # A docstring edit to a tracked dependency.
@@ -174,7 +181,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     # A lock hash from a merged side branch: stated as a revision in HEAD's lock, no branch story.
     out = explain(b, capsys, "04-panel#panel")
     assert "other-build" in out
-    assert f"recorded lock {side} (Co Author," in out and "; in HEAD's lock)" in out
+    assert f"recorded lock {side} (Co Author," in out and "; in HEAD's lock, entry panel)" in out
     assert f"current lock {first} (Co Author," in out
     assert "branch" not in out.split("searched:")[0] and "merge" not in out
 
@@ -236,8 +243,9 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     for clone in (a, b):
         out = explain(clone, capsys, "02-paper#paper")
         dep = next(line for line in out.splitlines() if "dependency ${OUT}/est.txt" in line and "→" in line)
-        assert f"current lock {producer} (Co Author," in dep and "; in HEAD's lock)" in dep
-        assert "input-changed" in out and "next: superra repro explain '01-est#est'" in out
+        assert f"current lock {producer} (Co Author," in dep and "; in HEAD's lock, entry est)" in dep
+        assert "; in HEAD's lock, entry paper)" in dep  # the recorded side: this step's own entry
+        assert "input-changed" in out and "next: superra repro build '02-paper#paper'" in out  # est is fresh
         assert "uncommitted" not in dep and "snapshot" not in dep
 
 
@@ -256,6 +264,7 @@ def test_tracked_output_edits_are_output_causes(clones, capsys):
     git(a.root, "commit", "-qam", "commit the edit")
     out = explain(a, capsys, "07-table#table")
     assert "other-build" in out and f"current git {head(a.root)}" in out
+    assert f"next: git show --stat {head(a.root)}" in out  # the revision the row prints
     assert "input-changed" not in out
 
 
