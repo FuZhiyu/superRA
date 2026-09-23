@@ -8,11 +8,11 @@
     "platform": "Darwin arm64"
   },
   "provenance-explain-check": {
-    "built_at": 1790201207.71348,
+    "built_at": 1790201290.150041,
     "env": {
       "deps": {}
     },
-    "lock_id": "7510ae3474188b6c",
+    "lock_id": "e23221953c7b145a",
     "platform": "Darwin arm64"
   }
 }

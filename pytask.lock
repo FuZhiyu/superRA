@@ -194,12 +194,13 @@ id = "provenance-explain-check"
 state = "1"
 
 [task.depends_on]
-"provenance-explain-check::spec" = "f63f798fac04afe22cc13e74b183d49a609a65ae0f57a0382c54d26a6b39b88b:023ac88bd13e2c9535c919b37d690cd23f582af4a72538726f6f01d64f13a063"
+"provenance-explain-check::spec" = "78b0693b100d537cb95117aee1004990389771ca83d8741fa6604625e0eb9516:023ac88bd13e2c9535c919b37d690cd23f582af4a72538726f6f01d64f13a063"
 "skills/task-tree/scripts/_apply_patch.py" = "98beeef22daafd8f5a134c7b77f8705ade7e2e5e2e45f5fd8c90c1a0a8cc350f"
 "skills/task-tree/scripts/_artifacts.py" = "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e"
 "skills/task-tree/scripts/_comments.py" = "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a"
 "skills/task-tree/scripts/_repro.py" = "be4c95d31465df7993034792e5b452355bcb92ba7af3c259427d84887acd47af"
 "skills/task-tree/scripts/_repro_acceptance.py" = "65571fd105bc052958360208421982499383791aade328637de8aeb319ea7b85"
+"skills/task-tree/scripts/_repro_builds.py" = "2808db9fbb524eaa8ef35d7611a45e1f6a361de49febf1352b3a7e161664349e"
 "skills/task-tree/scripts/_repro_hooks.py" = "75c2a2f3e522156294c6b124f6dc31d3a68a750ac164e918798c5ee9a02fcdbb"
 "skills/task-tree/scripts/_repro_provenance.py" = "60813b01bc3d00519057ddcc436a0680c4202306150bf77b0af9fbaee3b18828"
 "skills/task-tree/scripts/_repro_scope.py" = "54f27dd97896d88e5f5018f7bdb6a9d5baa7d040fafc54361d7353e5036e86f0"
@@ -231,7 +232,7 @@ state = "1"
 "skills/task-tree/scripts/wrapper_resolver.py" = "6817538dc99ea03ce5ffec90a3d2f6ef70d7139a5ec489977047a42376c8f19b"
 
 [task.produces]
-".superra-repro/stamps/provenance-explain-check.stamp" = "dbac3fb1144a5e0ee93b128768a0ea213a8d8e7e4ff5d9b119b4ad4e98e7cb7c"
+".superra-repro/stamps/provenance-explain-check.stamp" = "c867a3c217db95601b6a82c313df9d703c642c147d92cf3bb05fbd091c8f7809"
 
 [[task]]
 id = "reviewed-baseline-regression-check"
