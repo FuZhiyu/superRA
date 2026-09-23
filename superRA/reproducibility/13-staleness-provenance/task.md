@@ -1,6 +1,6 @@
 ---
 title: "Staleness Provenance: Explain Where a Changed Hash Came From"
-status: in-progress
+status: revise
 depends_on: []
 ---
 
@@ -15,7 +15,7 @@ depends_on: []
 - **The committed build record carries only what git cannot know:** per-step build time, platform, and environment fingerprint. Details: [02-build-record](02-build-record/task.md).
 - **No worktree scanning.** A recorded hash built in a worktree resolves through the lock history of that worktree's branch; whoever builds in a worktree handles its merge.
 - **A check that passed elsewhere stays non-fresh** with a distinct reason naming the lock revision where it passed.
-- **Agent usability is the acceptance bar.** One command, `explain <target>`, where the target is a task, a step, or a path; a closed set of plain-language causes; a runnable next command per cause; a footer stating what was searched. Facts and a likely reading, never a build/accept verdict: that judgment stays in [rerun-or-accept](../../../skills/reproducibility/references/rerun-or-accept.md).
+- **Agent usability is the acceptance bar.** One command, `explain <target>`, where the target is a task, a step, or a path; three causes (input changed, output from another recorded build, output of unknown source) with the finer provenance as source facts; one hint and one tool pointer per cause; a footer stating what was searched. Facts and a likely reading, never a build/accept verdict: that judgment stays in [rerun-or-accept](../../../skills/reproducibility/references/rerun-or-accept.md).
 
 ### Constraints
 

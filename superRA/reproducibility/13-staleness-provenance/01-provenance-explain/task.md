@@ -10,7 +10,12 @@ Build the provenance resolver and make `superra repro explain <target>` report, 
 
 - **Targets.** A task gives causes grouped across its stale steps; `task#step` or a unique bare step name gives one row per changed node; a path gives that file's provenance with its producer and consumers. `build`, `accept`, and `revoke` keep rejecting bare step names.
 - **Sources.** Local receipt, acceptance ledger, lock history (`git log --all -- pytask.lock`, cached per revision in `.superra-repro/`), git blob history of each changed tracked dependency (sha256 of each blob until one matches the recorded hash, depth-capped), and Dropbox conflicted copies beside the file. A dependency matched on both sides shows `git <rev> → <rev>` with a diffstat and a capped diff.
-- **Closed cause set** in JSON `cause` and the same words in text, at least: older build synced here; recorded build from another branch; dependency edited in commit X; reviewed bytes replaced; no known source. Each group or row ends with an exact runnable command. A `searched:` footer names the revisions, branches, and paths examined.
+- **Three causes, keyed by the node's role in the step.** JSON `cause` and text use the same words; everything finer is a `source` fact on the row, never a cause.
+  - `input-changed` — a dependency (including another step's output) or the step definition differs from the last build. Source: the commit(s) or `uncommitted`, or the producer's lock entry the bytes match. Pointer: the `git diff` command.
+  - `other-build` — an output's current bytes match a different recorded state: another lock revision, the acceptance, a conflicted copy, or this machine's receipt. Source states the revision and whether it is the lock at `HEAD`; no inferred direction or branch story.
+  - `unknown-output` — an output's current bytes match no recorded state. Pointer: `explain <path> --json`.
+  - `missing`, `failed`, `upstream`, and a check passed elsewhere stay status reasons, outside the cause set.
+- **Tools and a basic hint, not a diagnosis.** Each cause carries one hint line and one tool pointer; the agent digs further with git itself. A `searched:` footer names the revisions and paths examined.
 - **Acceptance fallback (report §4).** An acceptance that no longer validates no longer overrides a step whose bytes match its successful lock entry: the step is fresh, and its reason names the invalid acceptance and `repro revoke`.
 - **Check stamps (report §5).** A check with no local stamp whose lock entry matches the current inputs reports `passed at these inputs in lock <rev>; not run here`, distinct from a never-run check; its status stays non-fresh.
 - **Output budget and cost** per the group constraints; the raw JSON dump in text output is gone.
