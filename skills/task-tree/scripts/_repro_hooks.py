@@ -77,6 +77,8 @@ def pytask_execute_task_teardown(session, task):
             record = read_run_record(paths, step.name)
             record['outcome'] = 'success'
             write_run_record(paths, step.name, record)
+            from _repro_builds import record_build
+            record_build(graph, step, paths, receipt)
     return result
 
 
