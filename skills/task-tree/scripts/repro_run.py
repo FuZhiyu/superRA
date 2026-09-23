@@ -478,7 +478,7 @@ pytask 0.6 executes them, generated in memory — a project holds no task_*.py.
 A step is fresh when the content hashes of its deps, definition, and outs match
 its last successful build or its reviewed acceptance.
 Targets scope every command: a task path selects its own and descendant steps,
-`task#step` selects one step, `.` selects the whole active tree. Files read from
+`task#step` or a unique step name selects one step, `.` selects the whole active tree. Files read from
 producers outside the scope are saved inputs, used as they sit on disk.
 A stale step is resolved two ways: execute it with `build`, or record the
 current results as reviewed with `accept --reason ...`.
@@ -516,7 +516,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro build 02-merge --dry-run     # what would run, and what it last cost",
         "superra repro build '02-merge#check-panel' --force",
     ])
-    build.add_argument("targets", nargs="*", help="Task paths (including descendants) or task#step selectors")
+    build.add_argument("targets", nargs="*", help="Task paths (including descendants), task#step selectors, or unique step names")
     build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
     build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
@@ -527,7 +527,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro status 02-merge '02-merge#check-panel'",
         "superra repro status . --upstream --json",
     ])
-    status.add_argument("targets", nargs="*", help="Task paths or task#step selectors; saved inputs outside scope")
+    status.add_argument("targets", nargs="*", help="Task paths, task#step selectors, or unique step names; saved inputs outside scope")
     status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
@@ -555,7 +555,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro accept 02-merge --dry-run    # preview; writes nothing",
         "superra repro accept 02-merge --reason '...' --apply <preview-token>",
     ])
-    accept.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
+    accept.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     accept.add_argument("--reason", default="", help="Why the current results are valid (required to accept)")
     accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE", help="Optional per-node review note")
     accept.add_argument("--evidence", action="append", default=[], metavar="FILE", help="Optional existing evidence file")
@@ -567,7 +567,7 @@ def build_parser() -> argparse.ArgumentParser:
     revoke = _sub(sub, "revoke", "Revoke selected step acceptances", [
         "superra repro revoke 02-merge",
     ])
-    revoke.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
+    revoke.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     revoke.add_argument("--json", action="store_true", dest="as_json")
 
     dag = _sub(sub, "dag", "Render the step graph", [

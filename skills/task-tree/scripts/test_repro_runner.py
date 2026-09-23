@@ -444,9 +444,19 @@ def test_an_unknown_target_is_reported(project):
     assert unknown == ["build-z"]
 
 
-def test_a_bare_step_name_names_its_qualified_target(project):
-    with pytest.raises(ReproStateError, match=r"select it as '01-a#build-a'"):
-        select_steps(project.graph(), ["build-a"])
+def test_a_unique_bare_step_name_selects_its_step(project):
+    assert select_steps(project.graph(), ["build-a"]) == (["build-a"], [])
+
+
+def test_status_points_at_explain_when_a_step_is_not_fresh(project, capsys):
+    capsys.readouterr()
+    assert project.run("status", "01-a", "build-b") == 1
+    assert capsys.readouterr().out.rstrip().endswith(
+        "Why not fresh: superra repro explain 01-a; superra repro explain build-b")
+    assert project.run("build", *CHAIN) == 0
+    capsys.readouterr()
+    assert project.run("status", *CHAIN) == 0
+    assert "Why not fresh" not in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("command", ["build", "status"])

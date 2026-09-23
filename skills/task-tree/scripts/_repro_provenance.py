@@ -686,20 +686,17 @@ def render_searched(searched) -> str:
 
 def resolve_target(graph, target, project_root):
     """('step', name) | ('task', (task_path, names)) | ('path', path_target dict)."""
-    from _repro_state import select_steps
+    from _repro_state import bare_step, select_steps
     if '#' in target:
         names, unknown = select_steps(graph, [target])
         if unknown:
             raise ReproStateError(f'no step matches {target!r}')
         return 'step', names[0]
-    try:
-        names, unknown = select_steps(graph, [target])
-    except ReproStateError as exc:
-        if 'is a step name' not in str(exc):
-            raise
-        if len([s for s in graph.steps + graph.archived_steps if s.name == target]) > 1:
-            raise
-        return 'step', target
+    names, unknown = select_steps(graph, [target])
+    if not unknown and names == [target] and '/' not in target and target != '.' and bare_step(graph, target):
+        owned = [s for s in graph.steps if s.task_path == target or s.task_path.startswith(target + '/')]
+        if not owned:
+            return 'step', target
     if not unknown:
         task = target.removeprefix('./').rstrip('/')
         return 'task', ('' if task == '.' else task, names)
