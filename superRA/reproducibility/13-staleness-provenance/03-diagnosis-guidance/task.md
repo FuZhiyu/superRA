@@ -1,6 +1,6 @@
 ---
 title: "Teach Agents to Act on Provenance, and Verify They Do"
-status: implemented
+status: approved
 depends_on:
   - 01-provenance-explain
   - 02-build-record
@@ -106,15 +106,3 @@ Pass bar: every step above diagnosed correctly, at most three `repro` calls, no 
   - 11 shell commands in total against the ~20-call baseline; 3 were `repro` diagnosis calls (one failed `status`, one `status .`, one shell loop of six per-step `explain`s). No `git log -S`, `shasum`, or `stat`. Three commands read scripts, task files, and `git log`, one of them to confirm `figure.sh` never reads `Code/style.py`.
   - **Friction 1:** `status` never points at `explain .`, so the agent explained each step separately instead of reading the grouped view.
   - **Friction 2:** `explain` accepts bare step names but `build` rejects them; the agent copied bare names into `build`, which failed once before it used the qualified form the error named.
-
-## Review Notes
-Tier: quick. Focus: the CLAUDE.md §Teach the Protocol gate, applied line by line to the `skills/reproducibility` diff; whether the table rows match the shipped causes and facts; the scenario script and its registered check. The skill diff passes the gate. `diagnosis-scenario-check` passes, and `explain .` on the materialized `you/` clone prints every row in the grading key.
-
-1. **[BLOCKING] `diagnosis-scenario-check` does not declare most of the code it runs.** The check runs the task-tree CLI end to end, including `build` and `explain`. Its deps list only `cli.py`, `repro_run.py`, `_repro_state.py`, `_repro_provenance.py`, and `_repro_builds.py`. The modules those import are missing, among them `_repro.py`, `_repro_acceptance.py`, `_repro_hooks.py`, and `_repro_scope.py`, so an edit to any of them leaves the check fresh. [designing-the-graph.md §Declare every true read](../../../../skills/reproducibility/references/designing-the-graph.md) treats a missing dep as a silently wrong result. Fix: declare the same module set that `provenance-explain-check` and `build-record-check` declare.
-   → implemented: [§Reproduction](#reproduction) declares the 32 non-test task-tree modules that `build-record-check` declares; the rebuilt check is fresh.
-2. **[ADVISORY] Some `other-build` rows match no row in the table.** [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names) keys `other-build` only on the two lock relations, "earlier commit behind HEAD" and "off HEAD's history". `explain` also prints `other-build` rows whose current side is `built here …`, `reviewed …`, `git <rev>` (a tracked output), or `in HEAD's lock`, and those have no row. Add one fallback row for any other current source.
-   → implemented: fallback row `other-build`, any other current side → rebuild; accept only reviewed bytes ([diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names)).
-3. **[ADVISORY] The sync-lag row assumes a sync exists.** "Wait for the sync" has no end when outputs are not shared, for example with no Dropbox and a single machine. Add "or rebuild when outputs are not shared", which is the option the fresh agent took.
-   → implemented: the sync-lag row reads "Wait for the sync, or rebuild when outputs are not shared" ([diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md#read-what-explain-names)).
-4. **[ADVISORY] The check does not assert the relation facts the table keys on.** [two_clone_scenario.py `check`](attachments/two_clone_scenario.py) asserts only the set of causes per step. Asserting `earlier commit, N behind HEAD` on `est`, `paper`, and `panel` would catch a wording change that silently breaks the table mapping.
-   → implemented: [check](attachments/two_clone_scenario.py) asserts `; earlier commit, … behind HEAD)` on the current side of the `est`, `paper` (both rows), and `panel` rows in the text output.
