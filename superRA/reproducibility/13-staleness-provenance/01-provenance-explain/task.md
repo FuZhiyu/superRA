@@ -1,6 +1,6 @@
 ---
 title: "Resolve Hash Provenance and Rebuild `explain` Around It"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -153,18 +153,3 @@ The report's six steps had already been accepted or revoked there; the fixture c
 
 - Run `explain` on the fixture (`test_explain_names_each_cause_across_two_clones`) and judge the text as a fresh agent would.
 - Edits to `_repro_state.py`, `_repro_acceptance.py`, `repro_run.py`, and the runner tests stale other tasks' checks (`reviewed-baseline-regression-check`, `task-scoped-builds-check`, `task-scoped-builds-pilot`, `unified-dependency-workflow-check`, the dashboard checks); this task did not rebuild them.
-
-## Review Notes
-Tier: quick re-review of the three earlier blocking findings, plus the objective change in `e29db9f3` (three role-keyed causes, source facts, lock relation to HEAD). Findings 1–3 are fixed; I re-ran the scratch scenarios for each against `ffcba90f`. One new blocking problem comes from how the new pointers are grouped.
-
-1. **[BLOCKING] A merged `explain` pointer does not run.** [group_rows](../../../../skills/task-tree/scripts/_repro_provenance.py#L541-L567) merges every `superra repro <verb> <target>` command in a cause group into one command with several targets. `explain` takes exactly one `target` ([repro_run.py:541](../../../../skills/task-tree/scripts/repro_run.py#L541)).
-   - **Where it shows up.** The objective requires a runnable pointer, so this breaks any task or `.` view with more than one produced input. On the fixture, `explain .` prints `next: superra repro explain '01-est#est' '02-paper#paper'`, and running it fails with `unrecognized arguments: 02-paper#paper`.
-   - **Same failure for outputs.** Two `unknown-output` rows would merge into `explain <path> <path> --json`, which fails the same way.
-   - **Fix.** Merge targets only for verbs that take several, such as `build` and `status`; print one `explain` line per target. Alternatively, let `explain` accept several targets. Assert the merged command's runnability in the fixture.
-   → implemented: [group_rows](../../../../skills/task-tree/scripts/_repro_provenance.py#L552-L581) merges targets only for `build` and `status`; each `explain` pointer prints on its own line. The fixture's `explain` helper parses every printed `next: superra repro …` with `repro_run.build_parser()` ([test helper](../../../../skills/task-tree/scripts/test_repro_provenance.py#L107-L117)).
-
-2. **[ADVISORY] The pointer for a produced input can lead nowhere.** When the producer has been rebuilt and is fresh, which is the producer-rebuilt case from the first review, the row points to `explain '01-est#est'`, and that reports nothing changed. Both sides of the row also read `in HEAD's lock`, so the row does not tell which build is the current one. Consider pointing at `git show --stat <current rev>`, or noting "producer fresh".
-   → implemented: with the producer fresh, the pointer is `superra repro build '<this step>'` ([_command](../../../../skills/task-tree/scripts/_repro_provenance.py#L474-L480)). A lock source in HEAD's lock names the entries holding the hash, so the row reads `recorded … in HEAD's lock, entry paper; current … in HEAD's lock, entry est`.
-
-3. **[ADVISORY] An `other-build` pointer can name a revision absent from the row.** For a git-tracked output the row reads `recorded git 0cb4126; current git fddaaa7`, but `next: git show --stat dc35e51` points at a lock revision the text never mentions. Point at a revision the row prints.
-   → implemented: the `other-build` pointer uses the current source the row prints first, so a git-tracked output points at `git show --stat <current git rev>` (`test_tracked_output_edits_are_output_causes`).
