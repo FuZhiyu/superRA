@@ -10,6 +10,8 @@ import shlex
 import sys
 from pathlib import Path
 
+import skill_ledger
+
 
 COMMUNICATE = "superRA:communicate"
 _SKILL_MD_RE = re.compile(r"skills[/\\]communicate[/\\]SKILL\.md", re.IGNORECASE)
@@ -179,6 +181,10 @@ def main() -> None:
 
     targets = markdown_targets(data)
     if not targets:
+        _empty()
+        return
+
+    if COMMUNICATE.lower() in skill_ledger.loaded(data):
         _empty()
         return
 

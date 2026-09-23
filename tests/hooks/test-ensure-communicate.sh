@@ -47,7 +47,7 @@ print(json.dumps({
     **({"agent_id": sys.argv[6]} if sys.argv[6] else {}),
 }))
 ' "tool-$RANDOM" "$transcript_path" "$project" "$tool_name" "$tool_input_json" "$agent_id")
-  out=$(env SUPERRA_COMMUNICATE_STATE_DIR="$TMPROOT/state" bash "$HOOK" <<<"$input")
+  out=$(env SUPERRA_COMMUNICATE_STATE_DIR="$TMPROOT/state" SUPERRA_SKILL_LEDGER_DIR="$TMPROOT/ledger" bash "$HOOK" <<<"$input")
 
   if ! printf '%s' "$out" | python3 -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null; then
     got="invalid-json"
@@ -88,6 +88,13 @@ run_case "Task Markdown requires Communicate" deny Edit "{\"file_path\":\"$proje
 run_case "Task Markdown passes with Communicate load" silent Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$loaded"
 run_case "Prose mention is not load evidence" deny Edit "{\"file_path\":\"$project/superRA/alpha/task.md\"}" "$mentioned"
 run_case "Retry passes when evidence appears" silent Edit "{\"file_path\":\"$project/README.md\"}" "$loaded"
+
+# The transcript lags a Skill call by seconds; the companion gate's ledger
+# entry for this session counts as a load.
+mkdir -p "$TMPROOT/ledger"
+printf 'superRA:communicate\n' >"$TMPROOT/ledger/session"
+run_case "Ledger load passes on stale transcript" silent Edit "{\"file_path\":\"$project/README.md\"}" "$other"
+rm -rf "$TMPROOT/ledger"
 
 read_tool='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"skills/communicate/SKILL.md"}}]}}'
 grep_tool='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Grep","input":{"path":"skills/communicate/SKILL.md","pattern":"pyramid"}}]}}'
