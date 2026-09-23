@@ -1,0 +1,18 @@
+{
+  "build-record-check": {
+    "built_at": 1790201210.334649,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "31c07c143170fdc4",
+    "platform": "Darwin arm64"
+  },
+  "provenance-explain-check": {
+    "built_at": 1790201207.71348,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "7510ae3474188b6c",
+    "platform": "Darwin arm64"
+  }
+}

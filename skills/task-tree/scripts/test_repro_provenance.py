@@ -14,6 +14,7 @@ import subprocess
 import pytest
 
 import repro_run
+from _repro_builds import platform_name
 from test_repro_runner import CHAIN, CONFIG, Project, needs_pytask, project  # noqa: F401
 
 
@@ -326,7 +327,7 @@ def test_check_stamp_lost_outside_git_names_the_working_lock(project):
     assert project.run("build", *CHAIN) == 0
     shutil.rmtree(project.paths.stamps_dir)
     check = project.status(*CHAIN).entry("check-b")
-    assert (check.status, check.reason) == ("missing", "passed at these inputs in the working lock; not run here")
+    assert (check.status, check.reason) == ("missing", f"passed at these inputs in the working lock on {platform_name()}; not run here")
     project.write("output/b.txt", "changed\n")
     assert project.status(*CHAIN).entry("check-b").reason == "output .superra-repro/stamps/check-b.stamp is missing"
 

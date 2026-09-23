@@ -119,11 +119,11 @@ Status JSON also records `targets`, `upstream`, and `boundary_inputs` (paths, pr
 |---|---|
 | `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. Bytes matching the successful build stay fresh when an acceptance no longer validates; the reason names it and the `revoke` that clears it. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
-| `missing` | Never built, or an out is gone. A check whose lock entry matches its current inputs but has no local stamp reports `passed at these inputs in lock <rev>; not run here`. |
+| `missing` | Never built, or an out is gone. A check whose lock entry matches its current inputs but has no local stamp reports `passed at these inputs in lock <rev>; not run here`, adding `on <platform>` when the committed build record matches that lock entry. |
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
-`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, check stamps, and the per-revision lock index `explain` reads live there, and `repro` creates it and adds it to `.gitignore` on first run.
+`pytask.lock` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout. Commit `repro-builds.json` with it: each step's build time, platform, and environment ([record](task-file-contract.md#acceptance-and-successful-baseline-records)). `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, check stamps, and the per-revision lock index `explain` reads live there, and `repro` creates it and adds it to `.gitignore` on first run.
 
 ### Reviewed acceptance
 
@@ -153,6 +153,7 @@ Changes after acceptance invalidate its exact state, including actual sidecar-ba
 
 - **Targets.** A task path groups rows by cause across its non-fresh steps; `task#step` or a unique bare step name gives one row per changed node; a declared file path gives that file's provenance, producer, and readers.
 - **Sources.** Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, date, and its relation to HEAD: `in HEAD's lock, entry <step>` naming the steps whose HEAD entry holds it, `earlier commit, N behind HEAD`, or `not in HEAD's history; on <branch>, …` naming up to three containing branches), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file. Lock history covers every revision on local and remote-tracking branches and HEAD, without fetching; tracked files, their newest 50 revisions (versions over 16 MiB are skipped). Only changed nodes are resolved; nothing outside the checkout is hashed.
+- **Builder environment.** A row whose bytes came from a build (an output, or a produced input) reads the builder's `repro-builds.json` entry at the lock revision the row names (`git show <rev>:repro-builds.json`), or the working file for the working lock. It adds `env: same as lock builder`, `env: differs — <field>` (platform, an `env_deps` path, or the first differing `env_probe` line; the probe runs once per call), or a note that the record does not match its lock entry; with no record, nothing.
 - **Output.** One line per changed node with 8-character hashes, a `next:` pointer per cause, and a `searched:` footer naming the lock revisions and files examined. A tracked dependency shows its diffstat and first 20 diff lines; `--diff` shows all. `--json` carries full hashes, every source, rows, and groups.
 
 | `cause` | Node | Hint | Pointer |

@@ -148,10 +148,19 @@ def lock_commit(paths, memo) -> str | None:
     return memo['lock_commit']
 
 
-def check_elsewhere_reason(paths, memo) -> str:
+def check_elsewhere_reason(paths, memo, name, entry) -> str:
     """Status reason for a check whose lock entry matches its inputs but has no local stamp."""
+    from _repro_builds import BUILDS, lock_id, read_builds
     commit = lock_commit(paths, memo)
-    return f"{CHECK_ELSEWHERE} {'lock ' + commit if commit else 'the working lock'}; not run here"
+    if 'builds' not in memo:
+        try:
+            memo['builds'] = read_builds((paths.project_root / BUILDS).read_text(encoding='utf-8'))
+        except OSError:
+            memo['builds'] = {}
+    record = memo['builds'].get(name) or {}
+    built = (f" on {record['platform']}" if record.get('platform')
+             and record.get('lock_id') == lock_id(entry.depends_on, entry.produces) else '')
+    return f"{CHECK_ELSEWHERE} {'lock ' + commit if commit else 'the working lock'}{built}; not run here"
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +190,8 @@ class LockHistory:
         self.head_values: dict[str, dict[str, list[str]]] = {}  # node -> hash -> step entries
         self.index: dict[str, dict[str, list[str]]] = {}
         self._behind: dict[str, int] = {}
+        self._builds: dict[str, dict] = {}
+        self.entries: dict[str, dict] = {}
         self._branches: dict[str, list[str]] = {}
         if not git.ok or tomllib is None:
             return
@@ -217,6 +228,7 @@ class LockHistory:
                     atomic_json(cache_dir / f'{sha}.json', entries[sha])
                 except OSError:
                     pass
+        self.entries = entries
         for rev in self.revs:
             for groups in entries[rev['sha']].values():
                 for group in groups.values():
@@ -235,6 +247,14 @@ class LockHistory:
         entries = self.head_values.get(node, {}).get(value, [])
         return dict(self.by_sha[sha], head=bool(entries), head_entries=entries, behind=behind,
                     branches=self.branches(sha) if behind is None else [])
+
+    def builds_at(self, sha) -> dict:
+        """`repro-builds.json` as committed at *sha*."""
+        if sha not in self._builds:
+            from _repro_builds import BUILDS, read_builds
+            raw = self.git.blobs([f'{sha}:./{BUILDS}']).get(f'{sha}:./{BUILDS}')
+            self._builds[sha] = read_builds(raw.decode('utf-8', 'replace') if raw else '')
+        return self._builds[sha]
 
     def branches(self, sha) -> list[str]:
         """Local and remote-tracking branches whose history holds *sha*."""
@@ -425,6 +445,7 @@ class Resolver:
                    cause=cause, hint=CAUSES[cause], diffstat=None, diff=None)
         if role == 'input':
             self._input_diff(row, step)
+        row['env'] = self._env(row, step)
         row['evidence'] = self._evidence(row)
         row['command'] = self._command(step, row)
         return row
@@ -457,8 +478,44 @@ class Resolver:
         row['diff_lines'] = len(lines)
         row['diff'] = '\n'.join(lines if self.full_diff else lines[:DIFF_LINES]) or None
 
+    def _env(self, row, step) -> dict | None:
+        """The build record behind the row's lock source, compared with this machine."""
+        builder = step.name if row['kind'] == 'output' else self.graph.producers.get(row['path'] or '')
+        source = next((s for s in row['recorded_sources'] + row['current_sources']
+                       if s['source'] in ('lock', 'working-lock')), None)
+        if builder is None or source is None:
+            return None
+        from _repro_builds import BUILDS, differences, env_here, lock_id, read_builds
+        if source['source'] == 'lock':
+            where = f"lock {source['rev']}"
+            record = self.history.builds_at(source['sha']).get(builder)
+            entry = self.history.entries.get(source['sha'], {}).get(builder, {})
+            locked = lock_id(entry.get('deps', {}), entry.get('products', {})) if entry else None
+        else:
+            where = 'the working lock'
+            try:
+                record = read_builds((self.paths.project_root / BUILDS).read_text(encoding='utf-8')).get(builder)
+            except OSError:
+                record = None
+            entry = self.lock.get(builder)
+            locked = lock_id(entry.depends_on, entry.produces) if entry else None
+        if not record:
+            return None
+        env = dict(builder=builder, where=where, record=record)
+        if record.get('lock_id') != locked:
+            return dict(env, status='record-mismatch')
+        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record))
+        return dict(env, status='differs' if diffs else 'same', differences=diffs)
+
     def _evidence(self, row) -> str:
         text = f"recorded {label(row['recorded_sources'])}; current {label(row['current_sources'])}"
+        env = row.get('env')
+        if env and env['status'] == 'same':
+            text += '; env: same as lock builder'
+        elif env and env['status'] == 'differs':
+            text += '; env: differs — ' + ', '.join(env['differences'])
+        elif env:
+            text += f"; env: {env['where']} has a build record for {env['builder']} that does not match its lock entry"
         return text + (f"; {row['diffstat']}" if row['diffstat'] else '')
 
     def _command(self, step, row) -> str:
