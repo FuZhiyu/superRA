@@ -1,6 +1,6 @@
 ---
 title: "Commit a Per-Step Build Record: Time, Platform, Environment"
-status: implemented
+status: approved
 depends_on:
   - 01-provenance-explain
 ---
@@ -112,3 +112,11 @@ A successful build now writes the step's entry in the committed project-root `re
 ### For review
 
 - `provenance-explain-check` in [01-provenance-explain](../01-provenance-explain/task.md) does not declare `_repro_builds.py`, which `_repro_provenance.py` and its tests now import. Its planner should add the dep.
+
+## Review Notes
+Tier: quick. Focus: correctness (write on success only, binding to the lock entry, lookup at the row's lock revision, mismatch display), host/user leakage, cost, and agent usability of `env:` facts. All advisory.
+
+1. **[ADVISORY] Probe output is committed verbatim.** The record itself names no host or user. [record_build](../../../../skills/task-tree/scripts/_repro_builds.py#L65-L77), however, commits whatever `env_probe` prints. `numpy.show_config()` prints only paths from the wheel's build machine, but probes such as `julia -e 'versioninfo()'` or `which python` print home-directory paths. Add one clause to the `env_probe` row in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#project-config): its stdout is committed, so keep it free of paths.
+2. **[ADVISORY] The full probe stdout repeats in every step's entry.** `numpy.show_config()` is about 60 lines, so `repro-builds.json` grows by that much per step, and each rebuild rewrites it in the diff. Consider storing the stdout once, or a hash plus the stdout.
+3. **[ADVISORY] Parallel builds can run the probe twice.** [probe_once](../../../../skills/task-tree/scripts/_repro_builds.py#L43-L48) is not guarded by `_write_lock`, so two `-j` teardowns can both run it. The result is the same; only the time is duplicated.
+4. **[ADVISORY] 01's registered check is missing a dependency.** `provenance-explain-check` in [01-provenance-explain](../01-provenance-explain/task.md) does not declare `skills/task-tree/scripts/_repro_builds.py`, which `_repro_provenance.py` now imports. This is for the planner, as the implementer noted.
