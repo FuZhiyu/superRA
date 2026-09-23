@@ -23,8 +23,8 @@ Build the provenance resolver and make `superra repro explain <target>` report, 
 
 ## Details
 
-- **Entry points.** [repro_run.py explain wiring](../../../../skills/task-tree/scripts/repro_run.py#L715-L740), [inspect_baseline](../../../../skills/task-tree/scripts/_repro_acceptance.py#L276), [format_explain](../../../../skills/task-tree/scripts/_repro_state.py#L877), [select_steps](../../../../skills/task-tree/scripts/_repro_state.py#L755). A new `_repro_provenance.py` keeps the resolver apart from status.
-- **§4 origin.** The override is in [apply_to_status](../../../../skills/task-tree/scripts/_repro_acceptance.py#L247): `if entry.status == 'fresh' or …: entry.status = 'stale'`, added in `d4d0ca08`. Nothing in that commit's task justifies overriding a lock-fresh step.
+- **Entry points.** [repro_run.py `_explain`](../../../../skills/task-tree/scripts/repro_run.py#L623), [inspect_baseline](../../../../skills/task-tree/scripts/_repro_acceptance.py#L285), [select_steps](../../../../skills/task-tree/scripts/_repro_state.py#L763); the resolver and renderer live in [_repro_provenance.py](../../../../skills/task-tree/scripts/_repro_provenance.py).
+- **§4 origin.** The override is in [apply_to_status](../../../../skills/task-tree/scripts/_repro_acceptance.py#L225): `if entry.status == 'fresh' or …: entry.status = 'stale'`, added in `d4d0ca08`. Nothing in that commit's task justifies overriding a lock-fresh step.
 - **Bare step names were deleted on purpose** in [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md) because they were ambiguous as build targets. Explain is read-only, and a unique name is unambiguous; keep the qualified-form error for non-unique names.
 - **Lock ids are logical paths** (`${OUT}/…`), so lock-history matches key on the logical node id, not the resolved path.
 - **Directory and `saved-input:` states** are not file hashes; resolve them against lock history and ledger only.
