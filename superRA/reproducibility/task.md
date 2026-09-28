@@ -1,6 +1,6 @@
 ---
 title: "Reproducibility: Task-Declared Build Graph with Make-Like Reruns"
-status: approved
+status: in-progress
 depends_on: []
 ---
 
@@ -72,5 +72,6 @@ superRA projects now carry one reproduction graph inside the task tree, and Trea
 
 ### Open for the next round
 
+- **Design-review revisions** ([14-review-revisions](14-review-revisions/task.md)) resolve the 2026-09-28 review findings before 0.5 ships.
 - `repro trace` ([10-trace](10-trace/task.md)) stays postponed.
 - The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
