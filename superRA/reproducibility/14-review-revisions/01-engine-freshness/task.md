@@ -21,7 +21,7 @@ depends_on: []
   - `--force` and `--upstream` keep their scope; a crashed or forced attempt still retries through the `running` / `pending` run records.
   - `--dry-run` writes nothing: no lock, run record, receipt, or acceptance change.
   - Ctrl-C stops running subprocesses and marks their run records failed.
-- **The lock is written per step by one writer.** A successful step's entry is written atomically (temp file, then rename) through a single in-process writer or under a thread lock, so no `-j` worker overwrites another's entry and an interrupted build keeps every completed entry. A skipped step keeps its entry; a failed step leaves its entry unchanged.
+- **The lock is written per step by one writer.** A successful step's entry is written atomically (temp file, then rename) through a single in-process writer or under a thread lock, so no `-j` worker overwrites another's entry and an interrupted build keeps every completed entry. The same writer serializes the other read-modify-writes worker threads now reach, including `supersede` on `repro-acceptance.json`. A skipped step keeps its entry; a failed step leaves its entry unchanged.
 - **No pytask anywhere.** pytask and `pytask-parallel` leave the PEP 723 block of `repro_run.py`. The tests gated by `needs_pytask` run under the standard contributor command in [CLAUDE.md](../../../../CLAUDE.md). Registered step commands that install pytask drop it: [task-scoped-builds](../../11-scoped-verification/task-scoped-builds/task.md) (two steps), [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md), [02-build-record](../../13-staleness-provenance/02-build-record/task.md), and the command in [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md).
 - **Python 3.10 runs every command.** The `uv` re-exec remains only for reading a legacy `pytask.lock`, which needs `tomllib`.
 
@@ -37,7 +37,7 @@ depends_on: []
   One key per line with sorted keys.
 - **Freshness reads only `spec`, `deps`, and `outs`.** `built_on` feeds `explain`'s environment comparison and the "checked elsewhere" status reason ([check_elsewhere_reason](../../../../skills/task-tree/scripts/_repro_provenance.py#L151-L163)), never the fresh/stale decision.
 - **The build record folds into the lock.** `repro-builds.json` and its `lock_id` link are retired. An entry is rewritten only when `spec`, `deps`, `outs`, `platform`, or the probe result change; `built_at` and `env.deps` are not carried.
-- **`env_probe` output cannot leak paths.** Its stdout is committed verbatim today ([_repro_builds.py:88-91](../../../../skills/task-tree/scripts/_repro_builds.py#L88-L91)) and only a docs line guards it. The `probes` table commits the digest, or the rule is enforced.
+- **`env_probe` output cannot leak paths.** Its stdout is committed verbatim today ([_repro_builds.py:88-91](../../../../skills/task-tree/scripts/_repro_builds.py#L88-L91)) and only a docs line guards it (decision below).
 - **Stale entries are pruned** only by a real build on an error-free graph: entries for steps no longer in the tree are removed (decision below for archived steps).
 - **Every lock reader switches together, preferring `repro-lock.json` when both files exist:**
   - `read_lock` and its callers, including acceptance and scope;
@@ -51,7 +51,7 @@ depends_on: []
 - **Symlinked subdirectories inside a directory dependency are hashed.** [`tree_hash`](../../../../skills/task-tree/scripts/_repro_state.py#L177-L191) walks with `os.walk` without `followlinks` and silently skips unreadable files. Follow links with a cycle guard; a broken link or unreadable file under a declared directory surfaces as an error or `external`, never as a silent omission.
 - **A missing lock means never built.** With neither `repro-lock.json` nor `pytask.lock` present, `status` reports every step missing and `build` executes every step; no other local state decides a skip.
 - **A targeted build keeps a sidecar-tracked saved input's consumer fresh** when nothing changed: [`check_boundary_receipt`](../../../../skills/task-tree/scripts/_repro_scope.py#L69) records the digest when the bytes match the producer's recorded output or the sidecar matches the lock, instead of rerunning. With one freshness rule this may already hold; the regression test decides.
-- **Scoped `status` does not exit 0 while producers behind the selection are stale.** It reports the stale upstream count; `status` exits 0 when everything assessed is fresh, 1 when a selected step is not fresh, and 2 when the selection is fresh but a producer behind it is stale.
+- **Scoped `status` does not exit 0 while producers behind the selection are stale.** It reports the count of producers behind the selection that are not fresh (stale, missing, failed, or external). `status` exits 0 when everything assessed is fresh, 1 when a selected step is not fresh, and 3 when the selection is fresh but a producer behind it is not; exit 2 stays argparse's usage error. `StatusReport.ok` keeps meaning every reported step is fresh; the exit code takes the upstream count separately.
 
 ### Mechanics docs
 
@@ -64,17 +64,16 @@ depends_on: []
 - **Existing tests.** The `needs_pytask` tests pass without pytask. The tests expected to change, and why:
   - the two tests of the "needs pytask" message — the message is gone;
   - [test_repro_builds.py:19-23](../../../../skills/task-tree/scripts/test_repro_builds.py#L19-L23) — `repro-builds.json` and `lock_id` are retired;
-  - [test_repro_runner.py:576](../../../../skills/task-tree/scripts/test_repro_runner.py#L576) — the file stores `spec` apart from `deps`;
-  - [test_repro_runner.py:711](../../../../skills/task-tree/scripts/test_repro_runner.py#L711) — scoped `status` with stale producers now exits 2;
   - [test_repro_runner.py:733](../../../../skills/task-tree/scripts/test_repro_runner.py#L733) — pytask's "Would be executed" summary is gone;
   - lock file names in `test_repro_provenance.py` and `test_dashboard.py`.
 
   Any other test edit is a regression.
-- **New tests:** the lock round-trips byte-identically; under `-j`, ordering, failure skips, and every completed step's entry present; Ctrl-C mid-build; `--dry-run` writes nothing; `build` exit codes; `status` and `build` agree with the lock deleted; merges of branches that build different steps, including adjacent steps and a `probes` table change on both sides, stay conflict-free.
+- **New tests:** the lock round-trips byte-identically; under `-j`, ordering, failure skips, and every completed step's entry present; Ctrl-C mid-build; `--dry-run` writes nothing; `build` exit codes; `status` exits 3 for a fresh selection behind a missing or stale producer and 2 for a usage error; `status` and `build` agree with the lock deleted; merges of branches that build different steps, including adjacent steps and a `probes` table change on both sides, stay conflict-free.
 
 ### Researcher decisions
 
 - **Lock entries of archived steps.** Recommendation: keep them, so `explain` retains provenance; prune only steps absent from the tree.
+- **Probe text in the lock.** Commit only the digest, or keep the text and refuse probe output that contains an absolute path. Recommendation: keep the text and refuse such output with an error naming the line, since the line-level difference is what `explain` shows a coauthor.
 
 Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../11-scoped-verification/task-scoped-builds/task.md), [02-build-record](../../13-staleness-provenance/02-build-record/task.md).
 
