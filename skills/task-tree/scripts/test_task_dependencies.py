@@ -90,10 +90,8 @@ def test_cycles_cannot_be_hidden_by_frontier_or_scoped_build(tmp_path, kind):
     from _task_snapshot import require_valid
     with pytest.raises(ValueError, match="cycle"):
         require_valid(graph(root))
-    import importlib.util
-    if importlib.util.find_spec("pytask"):
-        built = run(root, "repro", "build", ".#a", "--dry-run")
-        assert built.returncode == 1 and "cycle" in built.stderr
+    built = run(root, "repro", "build", ".#a", "--dry-run")
+    assert built.returncode == 1 and "cycle" in built.stderr
 
 
 def test_parent_setup_child_report_keeps_identity_and_exposes_own_work(tmp_path):
@@ -271,9 +269,6 @@ def test_archived_logical_warning_reaches_inheriting_descendants(tmp_path):
 
 
 def test_built_parent_keeps_freshness_when_child_is_added(tmp_path):
-    import importlib.util
-    if not importlib.util.find_spec("pytask"):
-        pytest.skip("pytask is required for the execution journey")
     root = tmp_path / "superRA"
     task(root, "", steps=[("setup", [], ["setup.txt"])])
     parent = root / "task.md"

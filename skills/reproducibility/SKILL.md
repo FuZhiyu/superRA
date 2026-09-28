@@ -8,7 +8,7 @@ description: Register and verify task-declared reproduction graphs. Use when pla
 ## The Model
 
 - **Steps belong to tasks.** A step is one command with its `deps` and `outs`, declared in the owning task's `## Reproduction` section. An out feeding another step's dep orders both steps and their tasks.
-- **pytask 0.6 is the engine.** Each step becomes a pytask task generated in memory — a project holds no `task_*.py` — and freshness is pytask's content-hash comparison against the committed `pytask.lock`.
+- **`superra repro build` is the engine.** It runs each step as one subprocess in dependency order; a step is fresh when the content hashes of its deps, definition, and outs match its entry in the committed `repro-lock.json`.
 - **superRA adds two things.** Targets are task-scoped: a file from a producer outside the scope is a saved input, used as it sits on disk. And reviewed acceptance is a second route to `fresh`, recording why current results stand instead of executing them.
 
 Section schema and config keys: [task-file-contract.md §Reproduction Section](../task-tree/references/task-file-contract.md#reproduction-section). Flags, records, and step states: [commands.md §Reproduction](../task-tree/references/commands.md#reproduction).

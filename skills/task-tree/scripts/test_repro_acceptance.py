@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from test_repro_runner import CHAIN, project, dir_project, needs_pytask, _use_a_sidecar
+from test_repro_runner import CHAIN, project, dir_project, _use_a_sidecar
 from _repro_acceptance import (
     accept, preview, revoke, impact, read_ledger, receipt_path, mutation_lock,
     ReproStateError, LEDGER,
@@ -22,7 +22,6 @@ def review(project, names=('01-a#build-a',), *, apply=True):
     return accept(*args) if apply else (args, accept(*args, dry_run=True))
 
 
-@needs_pytask
 @pytest.mark.parametrize('jobs', ['1', '2'])
 def test_accepted_build_skips_producer_but_runs_independently_dirty_descendant(project, jobs):
     assert project.run('build', *CHAIN) == 0
@@ -43,7 +42,6 @@ def test_accepted_build_skips_producer_but_runs_independently_dirty_descendant(p
     assert project.run_times() == after
 
 
-@needs_pytask
 def test_dry_run_force_scope_and_real_success_supersedes(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -61,7 +59,6 @@ def test_dry_run_force_scope_and_real_success_supersedes(project):
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
 
-@needs_pytask
 def test_portable_acceptance_without_local_cache_and_receipts(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -72,7 +69,6 @@ def test_portable_acceptance_without_local_cache_and_receipts(project):
     assert not project.paths.run_file('build-a').exists()
 
 
-@needs_pytask
 @pytest.mark.parametrize('change', ['dep', 'spec', 'output', 'missing_input', 'missing_output', 'revoke'])
 def test_later_changes_invalidate_acceptance(project, change):
     assert project.run('build', *CHAIN) == 0
@@ -93,7 +89,6 @@ def test_later_changes_invalidate_acceptance(project, change):
     assert project.states()['build-a'] != 'fresh'
 
 
-@needs_pytask
 def test_failed_force_cannot_be_accepted_or_hidden_by_restored_inputs(project):
     assert project.run('build', *CHAIN) == 0
     original = project.read('Code/a.sh')
@@ -108,7 +103,6 @@ def test_failed_force_cannot_be_accepted_or_hidden_by_restored_inputs(project):
         review(project)
 
 
-@needs_pytask
 def test_sidecar_acceptance_verifies_actual_output_bytes(project):
     _use_a_sidecar(project)
     assert project.run('build', *CHAIN) == 0
@@ -122,7 +116,6 @@ def test_sidecar_acceptance_verifies_actual_output_bytes(project):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_legacy_lock_missing_history_can_accept_normal_outputs(project):
     assert project.run('build', *CHAIN) == 0
     receipt_path(project.paths, 'build-a').unlink()
@@ -133,7 +126,6 @@ def test_legacy_lock_missing_history_can_accept_normal_outputs(project):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_legacy_sidecar_can_establish_reviewed_output_baseline(project):
     _use_a_sidecar(project)
     assert project.run('build', *CHAIN) == 0
@@ -147,7 +139,6 @@ def test_legacy_sidecar_can_establish_reviewed_output_baseline(project):
     assert project.states()['build-a'] == 'stale'
 
 
-@needs_pytask
 def test_dirty_source_snapshot_is_verified_and_preview_rejects_concurrent_edit(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + '# dirty before run\n')
     assert project.run('build', *CHAIN) == 0
@@ -162,7 +153,6 @@ def test_dirty_source_snapshot_is_verified_and_preview_rejects_concurrent_edit(p
     assert not (project.root / LEDGER).exists()
 
 
-@needs_pytask
 def test_reason_required_and_optional_evidence_validated(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -180,7 +170,6 @@ def test_reason_required_and_optional_evidence_validated(project):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_check_acceptance_preserves_successful_stamp(project):
     assert project.run('build', *CHAIN) == 0
     path = project.paths.stamps_dir / 'check-b'
@@ -193,7 +182,6 @@ def test_check_acceptance_preserves_successful_stamp(project):
     assert (path.read_bytes(), path.stat().st_mtime_ns, project.run_times()['check-b']) == before
 
 
-@needs_pytask
 def test_output_verification_failure_never_creates_success_receipt(project):
     project.write('Code/a.sh', 'true\n')
     assert project.run('build', '01-a#build-a') != 0
@@ -216,7 +204,6 @@ def test_impact_preserves_outside_scope_and_origins(project):
     assert {r['step'] for r in result['affected']} == {'build-a', 'build-b', 'check-b'}
 
 
-@needs_pytask
 def test_batch_targets_and_upstream_binding(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -236,7 +223,6 @@ def test_batch_targets_and_upstream_binding(project):
     assert project.states()['build-b'] == 'stale'
 
 
-@needs_pytask
 def test_sidecar_corruption_with_restored_lock_inputs_forces_repair(project):
     _use_a_sidecar(project)
     original = project.read('Code/a.sh')
@@ -251,7 +237,6 @@ def test_sidecar_corruption_with_restored_lock_inputs_forces_repair(project):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_failure_revokes_before_execution_even_after_cache_loss(project):
     assert project.run('build', *CHAIN) == 0
     original = project.read('Code/a.sh')
@@ -265,7 +250,6 @@ def test_failure_revokes_before_execution_even_after_cache_loss(project):
     assert project.states()['build-a'] == 'stale'
 
 
-@needs_pytask
 def test_invalid_graph_never_accepts_or_builds(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -277,7 +261,6 @@ def test_invalid_graph_never_accepts_or_builds(project):
         review(project)
 
 
-@needs_pytask
 def test_cli_preview_apply_explain_revoke_and_scope(project, capsys):
     assert project.run('build', *CHAIN) == 0
     capsys.readouterr()
@@ -301,7 +284,6 @@ def test_cli_preview_apply_explain_revoke_and_scope(project, capsys):
     assert json.loads(capsys.readouterr().out)['revoked'] == ['build-a']
 
 
-@needs_pytask
 def test_source_and_evidence_edits_after_preview_reject_without_partial_write(project):
     from _repro_acceptance import bind_sources
     assert project.run('build', *CHAIN) == 0
@@ -318,7 +300,6 @@ def test_source_and_evidence_edits_after_preview_reject_without_partial_write(pr
         accept(*args, token=proposal['token'])
 
 
-@needs_pytask
 def test_input_change_during_execution_cannot_establish_baseline(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + "echo '# changed during run' >> Code/a.sh\n")
     assert project.run('build', '01-a#build-a') != 0
@@ -326,7 +307,6 @@ def test_input_change_during_execution_cannot_establish_baseline(project):
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
 
 
-@needs_pytask
 def test_directory_receipt_and_reuse(dir_project):
     project = dir_project
     assert project.run('build', '.') == 0
@@ -339,7 +319,6 @@ def test_directory_receipt_and_reuse(dir_project):
     assert project.states()['z-gen'] == 'stale'
 
 
-@needs_pytask
 @pytest.mark.parametrize('jobs', ['1', '2'])
 def test_failed_predecessor_does_not_skip_as_success_or_run_accepted_child(project, jobs):
     assert project.run('build', *CHAIN) == 0
@@ -352,25 +331,22 @@ def test_failed_predecessor_does_not_skip_as_success_or_run_accepted_child(proje
     assert project.states()['build-b'] == 'stale'
 
 
-@needs_pytask
 def test_revalidates_between_task_creation_and_engine_setup(project, monkeypatch):
     import repro_run
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     review(project)
     before = project.run_times()['build-a']
-    original = repro_run.make_tasks
+    original = repro_run._schedule
     def changed(*args, **kwargs):
-        tasks = original(*args, **kwargs)
         project.write('Code/a.sh', project.read('Code/a.sh') + '# edit after build selection\n')
-        return tasks
-    monkeypatch.setattr(repro_run, 'make_tasks', changed)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(repro_run, '_schedule', changed)
     assert project.run('build', '01-a#build-a') == 0
     assert project.run_times()['build-a'] > before
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
 
-@needs_pytask
 def test_shared_helper_fanout_accepts_only_reviewed_consumer(project):
     for task in ('01-a', '03-x'):
         filename = f'superRA/{task}/task.md'
@@ -388,7 +364,6 @@ def test_shared_helper_fanout_accepts_only_reviewed_consumer(project):
     assert project.run_times()['build-x'] > before['build-x']
 
 
-@needs_pytask
 def test_derived_configuration_stops_irrelevant_fanout(project):
     project.write('superRA/00-config/task.md', '''---
 title: Config
@@ -420,7 +395,6 @@ steps:
     assert after['build-b'] == before['build-b']
 
 
-@needs_pytask
 def test_textual_input_snapshots_stay_local_and_reuse_remains_portable(project):
     secret = 'private-research-observation-73982'
     project.write('input.csv', 'id,value\n1,' + secret + '\n')
@@ -438,7 +412,6 @@ def test_textual_input_snapshots_stay_local_and_reuse_remains_portable(project):
     assert secret not in json.dumps(project.status(*CHAIN).to_dict())
 
 
-@needs_pytask
 def test_malformed_ledger_and_missing_output_acceptance_fail(project):
     with pytest.raises(ReproStateError, match='required input or output is missing'):
         review(project)
@@ -450,7 +423,6 @@ def test_malformed_ledger_and_missing_output_acceptance_fail(project):
         review(project)
 
 
-@needs_pytask
 def test_force_dry_run_preserves_ledger_and_evidence(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -462,7 +434,6 @@ def test_force_dry_run_preserves_ledger_and_evidence(project):
     assert receipt_path(project.paths, 'build-a').read_bytes() == receipt
 
 
-@needs_pytask
 def test_precommand_forced_failure_preserves_truth_and_invalidates_cache(project, monkeypatch):
     import repro_run
     assert project.run('build', *CHAIN) == 0
@@ -470,17 +441,14 @@ def test_precommand_forced_failure_preserves_truth_and_invalidates_cache(project
     review(project)
     before = project.run_times()['build-a']
     def fail_before_command(*args, **kwargs):
-        def execute(deps, spec):
-            raise OSError('cannot initialize command log')
-        return execute
-    monkeypatch.setattr(repro_run, '_run_step', fail_before_command)
+        raise OSError('cannot initialize command log')
+    monkeypatch.setattr(repro_run, 'current_state', fail_before_command)
     assert project.run('build', '01-a#build-a', '--force') != 0
     assert project.run_times()['build-a'] == before
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'failed'
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
 
-@needs_pytask
 @pytest.mark.parametrize('jobs', ['1', '2'])
 def test_identical_upstream_rerun_preserves_independent_child_acceptance(project, jobs):
     assert project.run('build', *CHAIN) == 0
@@ -513,7 +481,6 @@ def test_impact_reports_script_include_and_environment_origins(project):
     assert script['reasons'][0]['origins'] == [{'kind': 'script'}]
 
 
-@needs_pytask
 def test_arbitrary_sidecar_tracks_reviewed_output_and_can_be_reaccepted(project):
     _use_a_sidecar(project)
     project.write('Code/a.sh', project.read('Code/a.sh') + 'echo arbitrary-version > output/a.txt.sha256\n')
@@ -531,7 +498,6 @@ def test_arbitrary_sidecar_tracks_reviewed_output_and_can_be_reaccepted(project)
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_prose_edits_and_active_rollups_do_not_invalidate_preview(project):
     from _repro_acceptance import bind_sources
     assert project.run('build', *CHAIN) == 0
@@ -543,7 +509,6 @@ def test_prose_edits_and_active_rollups_do_not_invalidate_preview(project):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_results_edit_during_real_execution_does_not_abort(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + "printf '\\n## Results\\n\\nRecorded while running.\\n' >> superRA/01-a/task.md\n")
     assert project.run('build', '01-a#build-a') == 0
@@ -569,7 +534,6 @@ def test_semantic_graph_guard_catches_validity_changes(project, change):
 
 
 @pytest.mark.parametrize('jobs', ['1', '2'])
-@needs_pytask
 def test_first_acceptance_skips_without_fabricating_execution(project, jobs):
     project.write('output/a.txt', 'interactive result\n')
     args = (project.graph(), project.paths, ['01-a'], 'Reviewed the interactive result', {}, [])
@@ -595,7 +559,6 @@ def test_first_acceptance_skips_without_fabricating_execution(project, jobs):
     assert 'build-a' not in read_ledger(project.paths)['steps']
 
 
-@needs_pytask
 def test_direct_rerun_replaces_baseline_and_refreshes_descendant(project):
     assert project.run('build', *CHAIN) == 0
     lock = project.paths.lock_file.read_bytes()
@@ -617,7 +580,6 @@ def test_direct_rerun_replaces_baseline_and_refreshes_descendant(project):
     assert project.states()['build-a'] == 'stale'
 
 
-@needs_pytask
 @pytest.mark.parametrize('change', ['input', 'output', 'spec', 'revoke'])
 def test_initial_acceptance_survives_cache_loss_and_invalidates(project, change):
     project.write('output/a.txt', 'interactive result\n')
@@ -638,7 +600,6 @@ def test_initial_acceptance_survives_cache_loss_and_invalidates(project, change)
     assert project.status('01-a').entry('build-a').status != 'fresh'
 
 
-@needs_pytask
 def test_acceptance_of_saved_inputs_does_not_certify_or_build_upstream(project):
     project.write('output/a.txt', 'saved without producer execution\n')
     project.write('output/b.txt', 'reviewed downstream result\n')
@@ -661,7 +622,6 @@ def test_never_run_check_cannot_be_accepted_from_existing_inputs(project):
     assert not (project.root / LEDGER).exists()
 
 
-@needs_pytask
 def test_one_shot_accept_applies_and_prints_what_it_accepted(project, capsys):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -675,7 +635,6 @@ def test_one_shot_accept_applies_and_prints_what_it_accepted(project, capsys):
     assert project.states()['build-a'] == 'fresh'
 
 
-@needs_pytask
 def test_one_shot_accept_rejects_a_concurrent_declaration_edit(project):
     from _repro_acceptance import bind_sources
     assert project.run('build', *CHAIN) == 0
@@ -688,7 +647,6 @@ def test_one_shot_accept_rejects_a_concurrent_declaration_edit(project):
     assert not (project.root / LEDGER).exists()
 
 
-@needs_pytask
 def test_accept_dry_run_writes_nothing_and_names_its_token(project, capsys):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -711,7 +669,6 @@ def test_initial_preview_rejects_concurrent_changes(project, change):
     assert not (project.root / LEDGER).exists()
 
 
-@needs_pytask
 def test_initial_batch_acceptance_binds_upstream_and_runs_checks(project):
     project.write('output/a.txt', 'a\n')
     project.write('output/b.txt', 'aa\n')
@@ -724,7 +681,6 @@ def test_initial_batch_acceptance_binds_upstream_and_runs_checks(project):
     assert project.states()['build-b'] != 'fresh'
 
 
-@needs_pytask
 def test_reaccepted_upstream_keeps_the_downstream_acceptance_it_bound(project):
     project.write('output/a.txt', 'a\n')
     project.write('output/b.txt', 'aa\n')
@@ -738,7 +694,6 @@ def test_reaccepted_upstream_keeps_the_downstream_acceptance_it_bound(project):
     assert project.read('output/b.txt') == 'aa\n'
 
 
-@needs_pytask
 def test_reacceptance_compares_to_reviewed_baseline_without_inventing_source_history(project):
     from _repro_acceptance import inspect_baseline
     project.write('output/a.txt', 'first interactive result\n')

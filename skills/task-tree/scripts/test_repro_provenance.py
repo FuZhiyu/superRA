@@ -1,6 +1,6 @@
 """`repro explain` provenance: the two-clone staleness case from the 2026-09-23 report.
 
-Clone A is the coauthor who builds and commits `pytask.lock`; clone B shares
+Clone A is the coauthor who builds and commits `repro-lock.json`; clone B shares
 `output/` through a simulated Dropbox that lags. Each stale step in B has a
 different true cause, and `explain` must name it with a runnable next command.
 """
@@ -15,7 +15,7 @@ import pytest
 
 import repro_run
 from _repro_builds import platform_name
-from test_repro_runner import CHAIN, CONFIG, Project, needs_pytask, project  # noqa: F401
+from test_repro_runner import CHAIN, CONFIG, Project, project  # noqa: F401
 
 
 def _task(title, steps):
@@ -95,7 +95,7 @@ def clones(tmp_path):
     git(a.root, "add", "-A")
     git(a.root, "commit", "-qm", "code")
     assert a.run("build", ".") == 0
-    git(a.root, "add", "pytask.lock")
+    git(a.root, "add", "repro-lock.json")
     git(a.root, "commit", "-qm", "first build")
     first = head(a.root)
 
@@ -118,12 +118,11 @@ def explain(project, capsys, *argv):
     return out
 
 
-@needs_pytask
 def test_explain_names_each_cause_across_two_clones(clones, capsys):
     a, b, first = clones
 
     # A check passed only in the other clone: non-fresh, with the lock revision named; a status reason.
-    reason = f"passed at these inputs in lock {first}; not run here"
+    reason = f"passed at these inputs in lock {first} on {platform_name()}; not run here"
     assert b.status(".").entry("check-paper").status == "missing"
     assert b.status(".").entry("check-paper").reason == reason
     out = explain(b, capsys, "02-paper#check-paper")
@@ -162,7 +161,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     assert f"next: git show --stat {first}" in out
     body = out.split("searched:")[0]
     assert "synced" not in body and "branch" not in body
-    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance.json; pytask.lock at 5 revision(s) on local and remote-tracking branches and HEAD" in out
+    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance.json; the lock at 5 revision(s) on local and remote-tracking branches and HEAD" in out
 
     # The consumer's dependency is an input; its output and the check's input follow the same roles.
     out = explain(b, capsys, "02-paper")
@@ -250,7 +249,6 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
         assert "uncommitted" not in dep and "snapshot" not in dep
 
 
-@needs_pytask
 def test_tracked_output_edits_are_output_causes(clones, capsys):
     a, b, first = clones
     a.write("superRA/07-table/task.md", _task("07-table", _step("table", "sh Code/table.sh", ["Code/table.sh"], ["tables/t.txt"])))
@@ -269,7 +267,6 @@ def test_tracked_output_edits_are_output_causes(clones, capsys):
     assert "input-changed" not in out
 
 
-@needs_pytask
 def test_a_lock_off_heads_history_names_its_branches(clones, capsys):
     a, b, _ = clones
     git(a.root, "checkout", "-qb", "wip")
@@ -290,22 +287,20 @@ def test_a_lock_off_heads_history_names_its_branches(clones, capsys):
     assert "on local and remote-tracking branches and HEAD" in out
 
 
-@needs_pytask
 def test_status_reuses_the_lock_commit_without_git(clones, monkeypatch):
     import _repro_provenance
 
     _, b, first = clones
     b.paths.state_dir.mkdir()  # caches persist only into an existing state directory
-    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first}; not run here")
+    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first} on {platform_name()}; not run here")
 
     def no_git(*args, **kwargs):
         raise AssertionError("status spawned git")
 
     monkeypatch.setattr(_repro_provenance.Git, "raw", no_git)
-    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first}; not run here")
+    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first} on {platform_name()}; not run here")
 
 
-@needs_pytask
 def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     _, b, _ = clones
     assert b.status("est").entry("est") is not None
@@ -319,7 +314,6 @@ def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     assert b.status("est").entry("est").step.task_path == "01-est"
 
 
-@needs_pytask
 def test_lock_index_is_cached_per_revision(clones, capsys):
     _, b, first = clones
     explain(b, capsys, "01-est")
@@ -327,7 +321,6 @@ def test_lock_index_is_cached_per_revision(clones, capsys):
     assert (b.paths.state_dir / "lock-index" / f"{full}.json").is_file()
 
 
-@needs_pytask
 def test_check_stamp_lost_outside_git_names_the_working_lock(project):
     assert project.run("build", *CHAIN) == 0
     shutil.rmtree(project.paths.stamps_dir)
@@ -337,7 +330,6 @@ def test_check_stamp_lost_outside_git_names_the_working_lock(project):
     assert project.status(*CHAIN).entry("check-b").reason == "output .superra-repro/stamps/check-b.stamp is missing"
 
 
-@needs_pytask
 def test_upstream_is_a_status_and_a_definition_change_an_input_without_git(project, capsys):
     assert project.run("build", *CHAIN) == 0
     project.write("superRA/01-a/task.md", project.read("superRA/01-a/task.md").replace("sh Code/a.sh", "sh Code/a.sh && true"))

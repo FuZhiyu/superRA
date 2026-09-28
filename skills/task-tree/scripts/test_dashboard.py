@@ -6805,7 +6805,7 @@ class TestReproViewWiring:
 
 
 class TestReproLockWatch:
-    """A build rewrites `pytask.lock` at the project root, outside the watched
+    """A build rewrites `repro-lock.json` at the project root, outside the watched
     plan root, so the watcher adds that one file and turns a change to it into
     the `repro-updated` broadcast the view refreshes on."""
 
@@ -6831,7 +6831,7 @@ class TestReproLockWatch:
 
         async def _test():
             state = plan_dashboard._worktree_cache["wt-a"]
-            lock = tmp_path / "pytask.lock"
+            lock = tmp_path / "repro-lock.json"
             await plan_dashboard._rebuild_and_broadcast(
                 state, {(watchfiles.Change.modified, str(lock))}
             )
@@ -6953,11 +6953,11 @@ class TestReproLockWatch:
             assert sessions[0]["paths"] == (root,)
             # No lock to watch: the session ticks so its arrival is noticed.
             assert sessions[0]["yield_on_timeout"] is True
-            (tmp_path / "pytask.lock").write_text("", encoding="utf-8")
+            (tmp_path / "repro-lock.json").write_text("", encoding="utf-8")
             loop.run_until_complete(
                 plan_dashboard._watch_worktree("wt-a", asyncio.Event())
             )
-            assert sessions[1]["paths"] == (root, tmp_path / "pytask.lock")
+            assert sessions[1]["paths"] == (root, tmp_path / "repro-lock.json")
             # Watching the lock is event-driven; no tick needed.
             assert sessions[1]["yield_on_timeout"] is False
             assert all(s["closed"] for s in sessions)
@@ -6971,7 +6971,7 @@ class TestReproLockWatch:
         has to announce that build itself, then re-enter watching it."""
         self._reset()
         root = self._seed(tmp_path)
-        lock = tmp_path / "pytask.lock"
+        lock = tmp_path / "repro-lock.json"
 
         def _first_build():
             lock.write_text("", encoding="utf-8")
@@ -6990,6 +6990,32 @@ class TestReproLockWatch:
             assert sessions[1]["paths"] == (root, lock)
             assert all(s["closed"] for s in sessions)
             assert not queue.empty()
+            assert "event: repro-updated" in queue.get_nowait()
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_a_rebuild_re_arms_the_watch_on_the_replaced_lock(self, tmp_path, monkeypatch):
+        """A build replaces the lock by rename; the watch re-enters so it follows
+        the new file instead of the inode it started on."""
+        import watchfiles
+
+        self._reset()
+        root = self._seed(tmp_path)
+        lock = tmp_path / "repro-lock.json"
+        lock.write_text("{}", encoding="utf-8")
+        sessions = self._stub_awatch(
+            monkeypatch, [[{(watchfiles.Change.added, str(lock))}], []]
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
+            )
+            assert [s["paths"] for s in sessions] == [(root, lock), (root, lock)]
+            assert all(s["closed"] for s in sessions)
             assert "event: repro-updated" in queue.get_nowait()
         finally:
             self._reset()

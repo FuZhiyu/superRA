@@ -54,6 +54,29 @@ def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
     return list(rows.values())
 
 
+def _bytes_verified(graph, paths, item):
+    """A sidecar-tracked saved input whose current bytes are the recorded ones.
+
+    Either the producer's successful build recorded these bytes, or its sidecar
+    (`<sha256>  <path>`) names them.
+    """
+    if item['digest'] is None:
+        return False
+    if item['provenance'] == 'matches successful output':
+        return True
+    owners = [(s, out) for s, out in _owners(graph, item['resolved']) if out.sidecar is not None]
+    if not owners:
+        return False
+    _, out = max(owners, key=lambda pair: len(pair[1].path.resolved))
+    if out.path.resolved != item['resolved']:
+        return False
+    try:
+        named = absolute(paths.project_root, out.sidecar.resolved).read_text(encoding='utf-8').split()
+    except (OSError, UnicodeError):
+        return False
+    return bool(named) and named[0] == item['digest']
+
+
 def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
     """Compare saved input bytes even when ordinary graph tracking uses a sidecar."""
     from _repro_acceptance import identity, lock_state, read_json, receipt_path
@@ -71,7 +94,11 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
     verified_paths = {item['logical'] for item in recorded}
     if lock is not None:
         for item in boundary:
-            if item['sidecar'] and item['logical'] not in verified_paths:
+            if not item['sidecar'] or item['logical'] in verified_paths:
+                continue
+            if _bytes_verified(graph, paths, item):
+                entry.boundary_verified.append(item)
+            else:
                 entry.changes.append(Change(item['logical'], 'boundary', 'unverified'))
                 if entry.status == 'fresh':
                     entry.status = 'stale'
@@ -88,6 +115,22 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
         if entry.status == 'fresh':
             entry.status = 'stale'
             entry.reason = f"saved input {item['logical']} {'missing' if current is None else 'changed'}"
+
+
+def record_verified_inputs(paths, name, lock, items):
+    """Add saved-input digests a skipped step's check verified to its successful receipt."""
+    from _repro_acceptance import atomic_json, identity, lock_state, read_json, receipt_path
+    path = receipt_path(paths, name)
+    receipt = read_json(path, {})
+    state = receipt.get('state', {})
+    if (not receipt or receipt.get('id') != identity({k: v for k, v in receipt.items() if k != 'id'})
+            or {key: state.get(key) for key in ('deps', 'products')} != lock_state(lock)):
+        return
+    rows = {row['logical']: row for row in receipt.get('boundary_inputs', [])}
+    rows.update({item['logical']: dict(item, consumers=[name]) for item in items})
+    receipt['boundary_inputs'] = list(rows.values())
+    receipt['id'] = identity({k: v for k, v in receipt.items() if k != 'id'})
+    atomic_json(path, receipt)
 
 
 def _execution_contract(graph, names):

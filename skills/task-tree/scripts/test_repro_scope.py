@@ -5,7 +5,7 @@ import pytest
 
 from _repro_state import ReproStateError, compute_status, read_run_record, select_steps
 from _repro_acceptance import receipt_path
-from test_repro_runner import CHAIN, project, dir_project, needs_pytask, TASK_X
+from test_repro_runner import CHAIN, project, dir_project, TASK_X
 
 
 def test_task_and_qualified_step_targets(project):
@@ -15,7 +15,6 @@ def test_task_and_qualified_step_targets(project):
     assert set(select_steps(project.graph(), ['.'])[0]) == {'build-a', 'build-b', 'check-b', 'build-x'}
 
 
-@needs_pytask
 def test_scoped_build_uses_existing_unverified_inputs(project):
     project.write('output/a.txt', 'saved without a build record\n')
     assert project.run('build', '02-b') == 0
@@ -24,7 +23,6 @@ def test_scoped_build_uses_existing_unverified_inputs(project):
     assert not compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).ok
 
 
-@needs_pytask
 def test_scoped_build_survives_failed_upstream_and_rebuilds_changed_inputs(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', 'exit 1\n')
@@ -37,7 +35,6 @@ def test_scoped_build_survives_failed_upstream_and_rebuilds_changed_inputs(proje
     assert compute_status(project.graph(), project.paths, targets=['02-b']).ok
 
 
-@needs_pytask
 def test_missing_boundary_does_not_expand_but_upstream_does(project):
     assert project.run('build', '02-b') != 0
     assert not (project.root / 'output/a.txt').exists()
@@ -45,7 +42,6 @@ def test_missing_boundary_does_not_expand_but_upstream_does(project):
     assert set(project.run_times()) == {'build-a', 'build-b', 'check-b'}
 
 
-@needs_pytask
 @pytest.mark.parametrize('upstream,expected', [(False, {'check-b'}), (True, {'build-a', 'build-b', 'check-b'})])
 def test_force_applies_to_effective_scope(project, upstream, expected):
     assert project.run('build', '.') == 0
@@ -54,7 +50,6 @@ def test_force_applies_to_effective_scope(project, upstream, expected):
     assert {name for name, value in project.run_times().items() if before[name] != value} == expected
 
 
-@needs_pytask
 @pytest.mark.parametrize('jobs', ['1', '2'])
 def test_unrelated_task_creation_during_execution_is_allowed(project, jobs):
     project.write('new-task.txt', TASK_X.replace('build-x', 'build-new').replace('x.txt', 'new.txt'))
@@ -63,14 +58,12 @@ def test_unrelated_task_creation_during_execution_is_allowed(project, jobs):
     assert read_run_record(project.paths, 'build-a')['outcome'] == 'success'
 
 
-@needs_pytask
 def test_unused_config_change_during_execution_is_allowed(project):
     project.write('new-config.txt', project.read('superRA/config.yaml') + '    unused: echo {script}\n')
     project.write('Code/a.sh', project.read('Code/a.sh') + 'cp new-config.txt superRA/config.yaml\n')
     assert project.run('build', '01-a') == 0
 
 
-@needs_pytask
 def test_selected_command_change_during_execution_is_rejected(project):
     project.write('new-task.txt', project.read('superRA/01-a/task.md').replace('sh Code/a.sh', 'sh Code/a.sh changed'))
     project.write('Code/a.sh', project.read('Code/a.sh') + 'cp new-task.txt superRA/01-a/task.md\n')
@@ -90,7 +83,6 @@ def test_nested_union_root_and_a_task_named_like_a_step(project):
     assert select_steps(project.graph(), ['01-a#build-a'])[0] == ['build-a']
 
 
-@needs_pytask
 def test_saved_input_evidence_and_unchanged_repeat(project):
     project.write('output/a.txt', 'unverified\n')
     assert project.run('build', '02-b') == 0
@@ -101,11 +93,10 @@ def test_saved_input_evidence_and_unchanged_repeat(project):
     project.write('Code/a.sh', 'exit 1\n')
     assert project.run('build', '02-b') == 0
     assert project.run_times() == before
-    assert project.run('status', '02-b') == 0
+    assert project.run('status', '02-b') == 3
     assert project.run('status', '02-b', '--upstream') == 1
 
 
-@needs_pytask
 def test_task_reader_preserves_global_freshness_and_local_evidence(project):
     from task_read import _reproduction_view, _render_reproduction_human
     project.write('output/a.txt', 'saved\n')
@@ -120,7 +111,6 @@ def test_task_reader_preserves_global_freshness_and_local_evidence(project):
     assert 'for saved inputs: fresh' in '\n'.join(_render_reproduction_human(view))
 
 
-@needs_pytask
 def test_saved_input_mutation_during_execution_rejects_receipt(project):
     project.write('output/a.txt', 'old\n')
     project.write('Code/b.sh', project.read('Code/b.sh') + 'echo new > output/a.txt\n')
@@ -128,7 +118,6 @@ def test_saved_input_mutation_during_execution_rejects_receipt(project):
     assert not receipt_path(project.paths, 'build-b').exists()
 
 
-@needs_pytask
 def test_sidecar_does_not_hide_saved_input_change(project):
     from test_repro_runner import _use_a_sidecar
     _use_a_sidecar(project)
@@ -145,13 +134,12 @@ def test_sidecar_does_not_hide_saved_input_change(project):
     assert project.run_times() == after
 
 
-@needs_pytask
 def test_saved_sidecar_artifact_without_metadata(project):
     from test_repro_runner import _use_a_sidecar
     _use_a_sidecar(project)
     project.write('output/a.txt', 'saved without a build record\n')
     assert project.run('build', '02-b') == 0
-    assert project.run('status', '02-b') == 0
+    assert project.run('status', '02-b') == 3
     report = compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True)
     assert report.entry('build-b').local_status == 'fresh'
     assert not report.ok
@@ -161,7 +149,6 @@ def test_saved_sidecar_artifact_without_metadata(project):
     assert not (project.root / 'output/a.txt.sha256').exists()
 
 
-@needs_pytask
 @pytest.mark.parametrize('upstream', [False, True])
 def test_new_sidecar_preserves_unchanged_saved_byte_evidence(project, upstream):
     from test_repro_runner import _use_a_sidecar
@@ -181,19 +168,17 @@ def test_new_sidecar_preserves_unchanged_saved_byte_evidence(project, upstream):
     assert project.run('status', '02-b', '--upstream') == 0
 
 
-@needs_pytask
 def test_saved_directory_without_sidecar(dir_project):
     path = 'superRA/01-gen/task.md'
     dir_project.write(path, dir_project.read(path).replace(
         '      - "${OUT}/parts"', '      - path: "${OUT}/parts"\n        sidecar: "${OUT}/parts.sha256"'))
     dir_project.write('output/parts/a.txt', 'saved directory\n')
     assert dir_project.run('build', '02-use') == 0
-    assert dir_project.run('status', '02-use') == 0
+    assert dir_project.run('status', '02-use') == 3
     assert dir_project.read('output/used.txt') == 'saved directory\n'
     assert set(dir_project.run_times()) == {'a-use'}
 
 
-@needs_pytask
 @pytest.mark.parametrize('drop_receipt', [False, True])
 def test_acceptance_cannot_hide_changed_saved_bytes(project, drop_receipt):
     from test_repro_runner import _use_a_sidecar
@@ -215,7 +200,6 @@ def test_acceptance_cannot_hide_changed_saved_bytes(project, drop_receipt):
     assert project.read('output/b.txt') == 'changed with unchanged sidecar\n' * 2
 
 
-@needs_pytask
 def test_batch_acceptance_tracks_inputs_between_accepted_steps(project):
     from test_repro_runner import _use_a_sidecar
     from test_repro_acceptance import review
@@ -229,7 +213,6 @@ def test_batch_acceptance_tracks_inputs_between_accepted_steps(project):
     assert project.run('status', '02-b') == 1
 
 
-@needs_pytask
 @pytest.mark.parametrize('accepted', [False, True])
 def test_saved_input_evidence_follows_logical_path_relocation(project, accepted):
     import shutil
@@ -249,7 +232,6 @@ def test_saved_input_evidence_follows_logical_path_relocation(project, accepted)
     assert project.run('status', '02-b', '--upstream') == 1
 
 
-@needs_pytask
 def test_partial_selection_leaves_intervening_producer_untouched(project):
     assert project.run('build', *CHAIN) == 0
     before = project.run_times()
@@ -257,11 +239,10 @@ def test_partial_selection_leaves_intervening_producer_untouched(project):
     assert project.run('build', '01-a', '02-b#check-b', '--force') == 0
     assert project.run_times()['build-b'] == before['build-b']
     assert project.read('output/b.txt') == 'hello\nhello\n'
-    assert project.run('status', '02-b#check-b') == 0
+    assert project.run('status', '02-b#check-b') == 3
     assert project.run('status', '02-b#check-b', '--upstream') == 1
 
 
-@needs_pytask
 @pytest.mark.parametrize('change', ['path', 'ownership', 'archive'])
 def test_relevant_declaration_change_during_execution_is_rejected(project, change):
     if change == 'path':
@@ -278,7 +259,6 @@ def test_relevant_declaration_change_during_execution_is_rejected(project, chang
     assert not receipt_path(project.paths, 'build-a').exists()
 
 
-@needs_pytask
 def test_new_step_in_selected_task_waits_for_next_build(project):
     original = project.read('superRA/01-a/task.md')
     added = original.replace('```\n', '  - name: new-step\n    kind: check\n    cmd: touch new-step-ran\n    deps: [output/a.txt]\n```\n')
