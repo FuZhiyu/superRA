@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from _repro_state import (
-    Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
+    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
     output_nodes, read_lock, read_run_record, select_steps, spec_hash,
     spec_node_id, step_nodes, _topological,
 )
@@ -217,9 +217,10 @@ def validate_record(graph, step, paths, record, locks, ledger, cache=None):
 
 
 def supersede(paths, name):
-    ledger = read_ledger(paths)
-    if ledger['steps'].pop(name, None) is not None:
-        atomic_json(paths.project_root / LEDGER, ledger)
+    with RECORD_LOCK:
+        ledger = read_ledger(paths)
+        if ledger['steps'].pop(name, None) is not None:
+            atomic_json(paths.project_root / LEDGER, ledger)
 
 
 def apply_to_status(report, paths, cache, ledger=None, lock=None):

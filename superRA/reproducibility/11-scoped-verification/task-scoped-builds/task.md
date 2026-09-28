@@ -23,14 +23,13 @@ The [CLI and evidence design](attachments/design.md) records the researcher deci
 steps:
   - name: task-scoped-builds-check
     kind: check
-    cmd: uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_repro_scope.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_task_dependencies.py -q
+    cmd: uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_repro_scope.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_task_dependencies.py -q
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
       - skills/task-tree/scripts/_step_links.py
@@ -61,14 +60,13 @@ steps:
       - skills/task-tree/scripts/test_repro_acceptance.py
       - skills/task-tree/scripts/test_task_dependencies.py
   - name: task-scoped-builds-pilot
-    cmd: uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel python superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot.py --output superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json
+    cmd: uv run --with pytest --with pyyaml python superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot.py --output superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
       - skills/task-tree/scripts/_step_links.py

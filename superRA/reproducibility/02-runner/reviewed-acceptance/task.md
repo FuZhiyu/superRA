@@ -27,14 +27,13 @@ Provide impact inspection and exact-state acceptance for retained results, inclu
 steps:
   - name: reviewed-baseline-regression-check
     kind: check
-    cmd: "uv run --with pytest --with 'pytask>=0.6,<0.7' --with pytask-parallel --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
       - skills/task-tree/scripts/_step_links.py

@@ -592,7 +592,9 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     # ``awatch``. So while the lock is absent, ask ``awatch`` to yield on its
     # timeout as well: that tick is what notices the first build, announces it,
     # and re-enters with the lock in the set. Once the lock is watched the tick
-    # is off and the loop is event-driven again.
+    # is off and the loop is event-driven again. A build replaces the lock by
+    # rename, so a change to it also re-enters: a watch on the old file would
+    # not see the next build on an inode-based backend.
     lock_file = Path(state.project_root) / LOCK_FILENAME
 
     while not stop_event.is_set():
@@ -610,6 +612,9 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
                     # coalesce.
                     await asyncio.sleep(0.2)
                     await _rebuild_and_broadcast(state, changes)
+                    if watching_lock and any(Path(path).name == LOCK_FILENAME for _, path in changes):
+                        rearm = True
+                        break
                 if not watching_lock and lock_file.is_file():
                     # The first build just wrote the lock. Its write is not in
                     # this watch set, so announce it here rather than waiting

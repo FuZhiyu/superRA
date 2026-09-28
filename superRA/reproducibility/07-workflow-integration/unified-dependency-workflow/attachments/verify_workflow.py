@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pytask>=0.6,<0.7", "pytask-parallel", "pyyaml"]
+# dependencies = ["pyyaml"]
 # ///
 """Exercise dependency-guided work and reviewed reuse through the public CLI."""
 from __future__ import annotations
@@ -77,7 +77,7 @@ def verify(base: Path) -> None:
     assert [row["path"] for row in context["dependencies"]] == ["source"]
     run(root, "task", "check", "--category", "dependency", "--json")
     run(root, "repro", "build", ".")
-    lock = (root / "pytask.lock").read_bytes()
+    lock = (root / "repro-lock.json").read_bytes()
     events = (root / "events.txt").read_text()
 
     write(root, "Code/shared.sh", (root / "Code/shared.sh").read_text()
@@ -94,7 +94,7 @@ def verify(base: Path) -> None:
             "--evidence", "review.md", "--json"]
     proposal = json.loads(run(root, *args, "--dry-run"))  # accept without it applies at once
     run(root, *args, "--apply", proposal["token"])
-    assert (root / "pytask.lock").read_bytes() == lock
+    assert (root / "repro-lock.json").read_bytes() == lock
     assert (root / "events.txt").read_text() == events
     run(root, "repro", "status", "source#source", "--json")
 

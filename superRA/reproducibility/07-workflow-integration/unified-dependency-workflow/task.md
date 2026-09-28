@@ -35,7 +35,6 @@ steps:
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
       - skills/task-tree/scripts/_step_links.py
@@ -83,5 +82,5 @@ The harness companion-route test required a retired duplicate pointer in `commun
 The companion is hand-authored from the task's verification requirements and the approved [dependency](../../01-section-contract/unified-dependencies/task.md) and [acceptance](../../02-runner/reviewed-acceptance/task.md) contracts. `unified-dependency-workflow-check` above runs it; the focused suite runs from the repository root:
 
 ```bash
-uv run --with pytest --with pyyaml --with 'pytask>=0.6,<0.7' --with pytask-parallel --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py skills/task-tree/scripts/test_repro_acceptance.py tests/harness-instruction-following/test_contract.py -q
+uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py skills/task-tree/scripts/test_repro_acceptance.py tests/harness-instruction-following/test_contract.py -q
 ```

@@ -33,7 +33,6 @@ steps:
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_repro_builds.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_provenance.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py

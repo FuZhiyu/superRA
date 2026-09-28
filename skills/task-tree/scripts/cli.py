@@ -14,7 +14,7 @@ below stays the single home for the user-facing-surface translation;
 `plan_dashboard.py` delegates back to it when the wrapper routes `dashboard`
 there, so the translation has one home. `repro` forwards its arguments verbatim
 to `repro_run.py`, which owns that flag surface and re-execs itself under uv
-when a build needs the pytask its own PEP 723 block declares.
+only to read a legacy `pytask.lock` on Python 3.10.
 """
 
 from __future__ import annotations

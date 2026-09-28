@@ -186,7 +186,7 @@ reproduction:
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
 | `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `env_probe` | Optional shell command run once per build from the project root; its stdout is committed in `repro-builds.json`, so it must print no paths or user-identifying text. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
+| `env_probe` | Optional shell command run once per build from the project root; its stdout is committed in the lock's `probes` table, so it must print no paths or user-identifying text: output with an absolute path is refused, recorded as `probe_error`, and its line printed. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
 
 `${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
 
@@ -220,9 +220,27 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
+### The lock
+
+The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived. Keys are sorted, one per line.
+
+| Field | Binding |
+| --- | --- |
+| `version` | `1` |
+| `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
+| `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
+| `steps.<name>.built_on` | `platform` (OS and CPU architecture), and `probe` (a 16-hex digest of the `env_probe` stdout) or `probe_error` |
+| `probes` | Digest → `env_probe` stdout, once per distinct output; texts no entry references are dropped |
+
+Freshness reads `spec`, `deps`, and `outs` only; `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason. No host or user name enters the lock.
+
+Branches that build different steps merge without conflict, except when each adds a different probe text to `probes`: keep both lines, then any build prunes the unused one.
+
+Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record joins its entry only when its `lock_id` still names that entry.
+
 ### Acceptance and successful baseline records
 
-The project-root `repro-acceptance.json` is committed separately from `pytask.lock`. Its version-1 object has `version: 1` and a `steps` mapping by stable step name. Each record contains:
+The project-root `repro-acceptance.json` is committed separately from `repro-lock.json`. Its version-1 object has `version: 1` and a `steps` mapping by stable step name. Each record contains:
 
 | Field | Binding |
 | --- | --- |
@@ -237,19 +255,6 @@ The project-root `repro-acceptance.json` is committed separately from `pytask.lo
 | `recorded_at`, `actor` | Recording time and available local account name |
 
 A reviewed record establishes or replaces the current baseline, including never-built producers and changed outputs. It binds the preceding successful lock if any, reviewed input/product/output state, and the producers accepted with it. Each bound producer must keep an acceptance or a successful lock; re-accepting one leaves this record valid, because its reviewed dependency hashes already pin that producer's output bytes. Outside producers remain saved-input boundaries. Changes after acceptance invalidate that state. Invalid graphs, missing inputs/products, and unsuccessful executions cannot be covered. Acceptance does not change workflow task statuses, successful lock entries, check stamps, or actual-run metadata. The status vocabulary remains `fresh`, `stale`, `missing`, `failed`, and `external`.
-
-The project-root `repro-builds.json` is committed with `pytask.lock` and holds what git cannot know about each step's last successful build. The runner overwrites a step's entry when its receipt is written; a failed run leaves it unchanged, and older entries live in git history.
-
-| Field | Binding |
-| --- | --- |
-| `lock_id` | First 16 hex characters of the SHA-256 of the step's lock entry (`depends_on` and `produces`); a record whose `lock_id` differs from its lock entry describes another build |
-| `built_at` | Build time |
-| `platform` | OS and CPU architecture |
-| `env` | `deps`: the configured `env_deps` hashes; `probe`: a 16-hex digest of the `env_probe` stdout, or `probe_error` |
-
-Probe text is stored once, under the top-level `_probes` key (digest → stdout); texts no step references are dropped.
-
-No host or user name enters the record.
 
 Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After engine product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and boundary bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Accepted records embed the preceding execution identity if any, reviewed state, output digests, and saved-input fingerprints, preserving reuse checks after local cache loss. Raw source snapshots remain local and never enter the committed ledger or status payload; absent historical source text and execution logs remain unavailable.
 

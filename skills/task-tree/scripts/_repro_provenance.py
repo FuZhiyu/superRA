@@ -20,8 +20,9 @@ import subprocess
 from pathlib import Path
 
 from _repro_state import (
-    STATE_DIRNAME, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
-    output_nodes, spec_hash, stamp_ref, step_nodes, tomllib, _stamp,
+    LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, STATE_DIRNAME, ReproStateError,
+    absolute, convert_legacy, dependency_state, directory_dep_nodes, node_state, output_nodes,
+    parse_lock, spec_hash, stamp_ref, step_nodes, tomllib, _stamp,
 )
 
 LOCK_REV_CAP = 200
@@ -123,8 +124,9 @@ def lock_commit(paths, memo) -> str | None:
     only for lock bytes it has not seen committed.
     """
     if 'lock_commit' not in memo:
+        lock_file = paths.legacy_lock_file if paths.reads_legacy_lock else paths.lock_file
         try:
-            digest = hashlib.sha256(paths.lock_file.read_bytes()).hexdigest()
+            digest = hashlib.sha256(lock_file.read_bytes()).hexdigest()
         except OSError:
             digest = None
         cache_file = paths.state_dir / 'lock-commit.json'
@@ -135,7 +137,7 @@ def lock_commit(paths, memo) -> str | None:
         commit = known.get(digest) if digest else None
         if commit is None and digest:
             git = Git(paths.project_root)
-            spec = './' + paths.lock_file.name
+            spec = './' + lock_file.name
             clean = git.ok and git.raw('diff', '--quiet', 'HEAD', '--', spec) is not None
             commit = (git.text('log', '-1', '--format=%h', '--', spec) or None) if clean else None
             if commit and paths.state_dir.is_dir():  # committed bytes keep their commit
@@ -150,16 +152,9 @@ def lock_commit(paths, memo) -> str | None:
 
 def check_elsewhere_reason(paths, memo, name, entry) -> str:
     """Status reason for a check whose lock entry matches its inputs but has no local stamp."""
-    from _repro_builds import BUILDS, lock_id, read_builds
     commit = lock_commit(paths, memo)
-    if 'builds' not in memo:
-        try:
-            memo['builds'] = read_builds((paths.project_root / BUILDS).read_text(encoding='utf-8'))
-        except OSError:
-            memo['builds'] = {}
-    record = memo['builds'].get(name) or {}
-    built = (f" on {record['platform']}" if record.get('platform')
-             and record.get('lock_id') == lock_id(entry.depends_on, entry.produces) else '')
+    platform = entry.built_on.get('platform')
+    built = f" on {platform}" if platform else ''
     return f"{CHECK_ELSEWHERE} {'lock ' + commit if commit else 'the working lock'}{built}; not run here"
 
 
@@ -167,19 +162,35 @@ def check_elsewhere_reason(paths, memo, name, entry) -> str:
 # Lock history
 # ---------------------------------------------------------------------------
 
-def _parse_lock(text) -> dict:
+LOCK_INDEX_VERSION = 2
+
+
+def _parse_revision(lock_text, legacy_text, builds_text) -> dict:
+    """One revision's lock as {'steps': {name: {deps, products, built_on}}, 'probes': {...}}."""
     try:
-        document = tomllib.loads(text) if text else {}
-    except ValueError:
-        document = {}
-    return {item['id']: {'deps': dict(item.get('depends_on') or {}),
-                         'products': dict(item.get('produces') or {})}
-            for item in document.get('task', []) or []
-            if isinstance(item, dict) and isinstance(item.get('id'), str)}
+        if lock_text is not None:
+            document = parse_lock(lock_text)
+        elif legacy_text is not None and tomllib is not None:
+            document = convert_legacy(legacy_text, builds_text)
+        else:
+            document = {'steps': {}, 'probes': {}}
+    except (ValueError, ReproStateError):
+        document = {'steps': {}, 'probes': {}}
+    steps = {}
+    for name, raw in document['steps'].items():
+        deps = dict(raw.get('deps') or {})
+        if raw.get('spec') is not None:
+            deps[f'{name}::spec'] = raw['spec']
+        steps[name] = {'deps': deps, 'products': dict(raw.get('outs') or {}),
+                       'built_on': dict(raw.get('built_on') or {})}
+    return {'steps': steps, 'probes': dict(document.get('probes') or {})}
 
 
 class LockHistory:
-    """Every committed `pytask.lock` on local and remote-tracking branches and HEAD, indexed by (node, hash)."""
+    """Every committed lock on local and remote-tracking branches and HEAD, indexed by (node, hash).
+
+    A revision holds `repro-lock.json`, or, before it, `pytask.lock` with `repro-builds.json`.
+    """
 
     def __init__(self, paths, git: Git):
         self.paths, self.git = paths, git
@@ -190,48 +201,60 @@ class LockHistory:
         self.head_values: dict[str, dict[str, list[str]]] = {}  # node -> hash -> step entries
         self.index: dict[str, dict[str, list[str]]] = {}
         self._behind: dict[str, int] = {}
-        self._builds: dict[str, dict] = {}
         self.entries: dict[str, dict] = {}
+        self.probes: dict[str, dict] = {}
         self._branches: dict[str, list[str]] = {}
-        if not git.ok or tomllib is None:
+        if not git.ok:
             return
-        spec = './' + paths.lock_file.name
-        revs = git.revs(f'--max-count={LOCK_REV_CAP + 1}', '--full-history', '--topo-order', '--branches', '--remotes', 'HEAD', '--', spec)
+        files = (LOCK_FILENAME, LEGACY_LOCK_FILENAME)
+        revs = git.revs(f'--max-count={LOCK_REV_CAP + 1}', '--full-history', '--topo-order', '--branches', '--remotes', 'HEAD',
+                        '--', *(f'./{name}' for name in files))
         self.capped = len(revs) > LOCK_REV_CAP
         self.revs = revs[:LOCK_REV_CAP]
         self.by_sha = {r['sha']: r for r in self.revs}
         self.on_head = set((git.text('rev-list', 'HEAD') or '').split())
-        head = git.blobs([f'HEAD:{spec}']).get(f'HEAD:{spec}')
-        for step_id, groups in _parse_lock(head.decode('utf-8', 'replace') if head else '').items():
-            for group in groups.values():
-                for node, value in group.items():
+        head = self._read(['HEAD'])['HEAD']
+        for step_id, groups in head['steps'].items():
+            for key in ('deps', 'products'):
+                for node, value in groups[key].items():
                     entries = self.head_values.setdefault(node, {}).setdefault(value, [])
                     if step_id not in entries:
                         entries.append(step_id)
-        self._load(spec)
+        self._load()
 
-    def _load(self, spec):
+    def _read(self, shas) -> dict[str, dict]:
+        """Each revision's lock, read from git in one batch."""
+        names = (LOCK_FILENAME, LEGACY_LOCK_FILENAME, LEGACY_BUILDS_FILENAME)
+        blobs = self.git.blobs([f'{sha}:./{name}' for sha in shas for name in names])
+        text = lambda sha, name: (lambda raw: raw.decode('utf-8', 'replace') if raw is not None else None)(
+            blobs.get(f'{sha}:./{name}'))
+        return {sha: _parse_revision(*(text(sha, name) for name in names)) for sha in shas}
+
+    def _load(self):
         cache_dir = self.paths.state_dir / 'lock-index'
         entries, missing = {}, []
         for rev in self.revs:
             try:
-                entries[rev['sha']] = json.loads((cache_dir / f"{rev['sha']}.json").read_text(encoding='utf-8'))
+                cached = json.loads((cache_dir / f"{rev['sha']}.json").read_text(encoding='utf-8'))
             except (OSError, ValueError):
+                cached = None
+            if isinstance(cached, dict) and cached.get('version') == LOCK_INDEX_VERSION:
+                entries[rev['sha']] = cached['lock']
+            else:
                 missing.append(rev['sha'])
-        blobs = self.git.blobs([f'{sha}:{spec}' for sha in missing])
-        for sha in missing:
-            raw = blobs.get(f'{sha}:{spec}')
-            entries[sha] = _parse_lock(raw.decode('utf-8', 'replace') if raw else '')
+        for sha, parsed in self._read(missing).items():
+            entries[sha] = parsed
             if self.paths.state_dir.is_dir():  # a revision never changes, so neither does its entry
                 from _repro_acceptance import atomic_json
                 try:
-                    atomic_json(cache_dir / f'{sha}.json', entries[sha])
+                    atomic_json(cache_dir / f'{sha}.json', {'version': LOCK_INDEX_VERSION, 'lock': parsed})
                 except OSError:
                     pass
-        self.entries = entries
+        self.probes = {sha: parsed['probes'] for sha, parsed in entries.items()}
+        self.entries = {sha: parsed['steps'] for sha, parsed in entries.items()}
         for rev in self.revs:
-            for groups in entries[rev['sha']].values():
-                for group in groups.values():
+            for groups in self.entries[rev['sha']].values():
+                for group in (groups['deps'], groups['products']):
                     for node, value in group.items():
                         shas = self.index.setdefault(node, {}).setdefault(value, [])
                         if not shas or shas[-1] != rev['sha']:
@@ -247,14 +270,6 @@ class LockHistory:
         entries = self.head_values.get(node, {}).get(value, [])
         return dict(self.by_sha[sha], head=bool(entries), head_entries=entries, behind=behind,
                     branches=self.branches(sha) if behind is None else [])
-
-    def builds_at(self, sha) -> dict:
-        """`repro-builds.json` as committed at *sha*."""
-        if sha not in self._builds:
-            from _repro_builds import BUILDS, read_builds
-            raw = self.git.blobs([f'{sha}:./{BUILDS}']).get(f'{sha}:./{BUILDS}')
-            self._builds[sha] = read_builds(raw.decode('utf-8', 'replace') if raw else '')
-        return self._builds[sha]
 
     def branches(self, sha) -> list[str]:
         """Local and remote-tracking branches whose history holds *sha*."""
@@ -280,12 +295,13 @@ class LockHistory:
 class Resolver:
     def __init__(self, report, paths, cache, *, full_diff=False, plan_name='superRA'):
         from _repro_acceptance import read_ledger
-        from _repro_state import read_lock
+        from _repro_state import lock_entry, read_lock_document
         self.report, self.graph, self.paths, self.cache = report, report.graph, paths, cache
         self.full_diff, self.plan_name = full_diff, plan_name
         self.git = Git(paths.project_root)
         self.history = LockHistory(paths, self.git)
-        self.lock = read_lock(paths.lock_file)
+        self.lock_document = read_lock_document(paths.lock_file)
+        self.lock = {name: lock_entry(name, raw) for name, raw in self.lock_document['steps'].items()}
         self.ledger = read_ledger(paths)['steps']
         self.blob_histories: dict[str, list[tuple[dict, str]]] = {}
         self.copies_searched: list[str] = []
@@ -485,38 +501,30 @@ class Resolver:
                        if s['source'] in ('lock', 'working-lock')), None)
         if builder is None or source is None:
             return None
-        from _repro_builds import BUILDS, differences, env_here, lock_id, read_builds
+        from _repro_builds import builder_record, differences, env_here
         if source['source'] == 'lock':
             where = f"lock {source['rev']}"
-            builds = self.history.builds_at(source['sha'])
-            entry = self.history.entries.get(source['sha'], {}).get(builder, {})
-            locked = lock_id(entry.get('deps', {}), entry.get('products', {})) if entry else None
+            probes = self.history.probes.get(source['sha'], {})
+            entry = self.history.entries.get(source['sha'], {}).get(builder)
         else:
             where = 'the working lock'
-            try:
-                builds = read_builds((self.paths.project_root / BUILDS).read_text(encoding='utf-8'))
-            except OSError:
-                builds = {}
-            entry = self.lock.get(builder)
-            locked = lock_id(entry.depends_on, entry.produces) if entry else None
-        record = builds.get(builder)
+            probes = self.lock_document['probes']
+            entry = self.lock_document['steps'].get(builder)
+            entry = entry and {'deps': entry.get('deps', {}), 'built_on': entry.get('built_on', {})}
+        record = builder_record(self.graph, entry)
         if not record:
             return None
-        env = dict(builder=builder, where=where, record=record)
-        if record.get('lock_id') != locked:
-            return dict(env, status='record-mismatch')
-        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record), builds)
-        return dict(env, status='differs' if diffs else 'same', differences=diffs)
+        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record), probes)
+        return dict(builder=builder, where=where, record=record, status='differs' if diffs else 'same',
+                    differences=diffs)
 
     def _evidence(self, row) -> str:
         text = f"recorded {label(row['recorded_sources'])}; current {label(row['current_sources'])}"
         env = row.get('env')
         if env and env['status'] == 'same':
             text += '; env: same as lock builder'
-        elif env and env['status'] == 'differs':
-            text += '; env: differs — ' + ', '.join(env['differences'])
         elif env:
-            text += f"; env: {env['where']} has a build record for {env['builder']} that does not match its lock entry"
+            text += '; env: differs — ' + ', '.join(env['differences'])
         return text + (f"; {row['diffstat']}" if row['diffstat'] else '')
 
     def _command(self, step, row) -> str:
@@ -671,7 +679,7 @@ def render_searched(searched) -> str:
         revs = searched['lock_revisions']
         shown = ', '.join(revs[:10]) + (f', … {len(revs) - 10} more' if len(revs) > 10 else '')
         capped = f' (newest {len(revs)} only)' if searched['lock_history_capped'] else ''
-        parts.append(f"pytask.lock at {len(revs)} revision(s){capped} on local and remote-tracking branches and HEAD"
+        parts.append(f"the lock at {len(revs)} revision(s){capped} on local and remote-tracking branches and HEAD"
                      + (f" [{shown}]" if revs else ''))
         for path, count in searched['blob_histories'].items():
             parts.append(f"git history of {path} ({count} revision(s))")

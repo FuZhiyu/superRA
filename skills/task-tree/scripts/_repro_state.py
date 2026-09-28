@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Runner state for the reproduction graph: hashes, lock reading, status.
+"""Runner state for the reproduction graph: hashes, the lock, status.
 
-Stdlib only, so ``repro status`` / ``explain`` / ``dag`` — and the
-`task read` and dashboard views that consume their JSON — run without pytask.
-Only ``repro build`` needs the engine; it lives in ``repro_run.py``.
+Stdlib only. ``repro build`` (in ``repro_run.py``) decides run-or-skip with
+the same ``compute_status`` that ``repro status`` / ``explain``, `task read`,
+and the dashboard use.
 
-The committed ``pytask.lock`` is the record of what each step last built. Its
-node ids are the logical (``${VAR}``-form) paths this module also uses, so a
-lock written on one checkout reads on another; the states it stores are the
-hashes ``node_state`` computes here, which is what lets a build-free reader
-recompute freshness with the same rule pytask applies.
+The committed ``repro-lock.json`` is the record of what each step last built.
+Its node ids are the logical (``${VAR}``-form) paths this module also uses, so
+a lock written on one checkout reads on another. A project without it reads a
+legacy ``pytask.lock`` (with ``repro-builds.json``) converted in memory.
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ import re
 import shlex
 import stat
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,13 +34,20 @@ else:  # pragma: no cover - direct-script path
 
 try:  # Python 3.11+
     import tomllib
-except ModuleNotFoundError:  # pragma: no cover - 3.10 falls back to repro_run.py
+except ModuleNotFoundError:  # pragma: no cover - 3.10 re-execs to read a legacy lock
     tomllib = None  # type: ignore[assignment]
 
 TOML_AVAILABLE = tomllib is not None
 
 STATE_DIRNAME = ".superra-repro"
-LOCK_FILENAME = "pytask.lock"
+LOCK_FILENAME = "repro-lock.json"
+LOCK_VERSION = 1
+LEGACY_LOCK_FILENAME = "pytask.lock"
+LEGACY_BUILDS_FILENAME = "repro-builds.json"
+
+# Serializes every read-modify-write of a committed record (the lock, the
+# acceptance ledger) across `-j` worker threads.
+RECORD_LOCK = threading.RLock()
 
 # Step states. A step takes the first one its own evidence supports, in this
 # order; the cascade then lifts a `fresh` step whose upstream is not fresh.
@@ -82,6 +89,19 @@ class RunnerPaths:
     def lock_file(self) -> Path:
         return self.project_root / LOCK_FILENAME
 
+    @property
+    def legacy_lock_file(self) -> Path:
+        return self.project_root / LEGACY_LOCK_FILENAME
+
+    @property
+    def legacy_builds_file(self) -> Path:
+        return self.project_root / LEGACY_BUILDS_FILENAME
+
+    @property
+    def reads_legacy_lock(self) -> bool:
+        """No ``repro-lock.json`` yet, but a ``pytask.lock`` to convert."""
+        return not self.lock_file.is_file() and self.legacy_lock_file.is_file()
+
     def log_file(self, step: str) -> Path:
         return self.logs_dir / f"{step}.log"
 
@@ -116,7 +136,7 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
 
 
 def stamp_ref(step_name: str) -> str:
-    """Logical path of a check step's stamp — its product, so pytask can skip it."""
+    """Logical path of a check step's stamp — its product, so a passed check can skip."""
     return f"{STATE_DIRNAME}/stamps/{step_name}.stamp"
 
 
@@ -136,6 +156,7 @@ class HashCache:
         self.full_reads = 0
         self._entries: dict[str, list] = {}
         self._dirty = False
+        self._flush_lock = threading.Lock()
         if path is not None and path.is_file():
             try:
                 loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -175,17 +196,37 @@ class HashCache:
         return value
 
     def tree_hash(self, path: Path) -> str | None:
-        """One hash over every file under a directory, by relative path."""
+        """One hash over every file under a directory, by relative path.
+
+        Symlinked files and subdirectories are followed, each real directory
+        once. A broken link or an unreadable file makes the whole directory
+        unreadable (None) rather than silently leaving it out.
+        """
         digest = hashlib.sha256()
         entries: list[tuple[str, str]] = []
-        for parent, dirnames, filenames in os.walk(path):
+        visited: set[tuple[int, int]] = set()
+        unreadable: list[OSError] = []
+        for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
+            info = os.stat(parent)
+            if (info.st_dev, info.st_ino) in visited:
+                dirnames[:] = []
+                continue
+            visited.add((info.st_dev, info.st_ino))
             dirnames.sort()
             for filename in sorted(filenames):
                 child = Path(parent) / filename
-                child_hash = self.file_hash(child)
-                if child_hash is None:
+                try:
+                    child_info = child.stat()
+                except OSError:
+                    return None  # a broken link
+                if not stat.S_ISREG(child_info.st_mode):
                     continue
+                child_hash = self._hashed(child, child_info)
+                if child_hash is None:
+                    return None  # unreadable
                 entries.append((os.path.relpath(child, path).replace(os.sep, "/"), child_hash))
+        if unreadable:
+            return None
         for name, value in sorted(entries):
             digest.update(f"{name}\0{value}\n".encode())
         return f"dir:{digest.hexdigest()}"
@@ -208,11 +249,12 @@ class HashCache:
         that, so a tree with no steps stays untouched."""
         if self.path is None or not self._dirty or not self.path.parent.is_dir():
             return
-        try:
-            self.path.write_text(json.dumps(self._entries), encoding="utf-8")
-        except OSError:
-            return
-        self._dirty = False
+        with self._flush_lock:  # `-j` workers share one cache
+            try:
+                self.path.write_text(json.dumps(dict(self._entries)), encoding="utf-8")
+            except OSError:
+                return
+            self._dirty = False
 
 
 Node = tuple[str, str, str | None]  # lock id, path to hash, path that must exist
@@ -356,34 +398,150 @@ def _payload_hash(payload: dict) -> str:
 
 @dataclass
 class LockEntry:
-    """One step's record in ``pytask.lock``, keyed by logical node id."""
+    """One step's record in the lock, keyed by logical node id.
+
+    ``depends_on`` carries the step spec as its ``<step>::spec`` node. What the
+    step was built on never decides freshness, so it takes no part in equality.
+    """
 
     depends_on: dict[str, str] = field(default_factory=dict)
     produces: dict[str, str] = field(default_factory=dict)
+    built_on: dict = field(default_factory=dict, compare=False)
 
 
-def read_lock(path: Path) -> dict[str, LockEntry]:
-    """Parse ``pytask.lock`` into step name -> recorded node states."""
-    if tomllib is None:  # pragma: no cover - 3.10 routes through repro_run.py
+def lock_entry(name: str, raw: dict) -> LockEntry:
+    """A ``repro-lock.json`` step entry as the in-memory lock entry."""
+    depends_on = dict(raw.get("deps") or {})
+    if raw.get("spec") is not None:
+        depends_on[spec_node_id(name)] = raw["spec"]
+    return LockEntry(depends_on=depends_on, produces=dict(raw.get("outs") or {}),
+                     built_on=dict(raw.get("built_on") or {}))
+
+
+def lock_record(name: str, entry: LockEntry) -> dict:
+    """The ``repro-lock.json`` step entry for an in-memory lock entry."""
+    spec_id = spec_node_id(name)
+    return {
+        "spec": entry.depends_on.get(spec_id),
+        "deps": {k: v for k, v in entry.depends_on.items() if k != spec_id},
+        "outs": dict(entry.produces),
+        "built_on": dict(entry.built_on),
+    }
+
+
+def empty_lock() -> dict:
+    return {"version": LOCK_VERSION, "steps": {}, "probes": {}}
+
+
+def parse_lock(text: str | None) -> dict:
+    """A ``repro-lock.json`` document, normalized; raises ValueError when malformed."""
+    document = json.loads(text) if text else empty_lock()
+    if not isinstance(document, dict) or not isinstance(document.get("steps", {}), dict):
+        raise ValueError("expected an object with a 'steps' object")
+    if document.get("version", LOCK_VERSION) != LOCK_VERSION:
+        raise ValueError(f"unsupported lock version {document.get('version')!r}")
+    return {
+        "version": LOCK_VERSION,
+        "steps": {name: raw for name, raw in document.get("steps", {}).items() if isinstance(raw, dict)},
+        "probes": dict(document.get("probes") or {}),
+    }
+
+
+def legacy_lock_id(depends_on: dict, produces: dict) -> str:
+    """How ``repro-builds.json`` linked a record to its ``pytask.lock`` entry."""
+    blob = json.dumps({"depends_on": depends_on, "produces": produces}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+
+def convert_legacy(lock_text: str | None, builds_text: str | None = None) -> dict:
+    """``pytask.lock`` plus ``repro-builds.json`` as a ``repro-lock.json`` document.
+
+    pytask's ``state`` field is dropped; a build record joins its entry only
+    when its ``lock_id`` still names that entry.
+    """
+    if tomllib is None:
         raise ReproStateError(
             "reading pytask.lock needs Python 3.11+ (tomllib); run `superra repro` "
             "through uv so the runner picks a newer interpreter"
         )
-    if not path.is_file():
-        return {}
+    raw_lock = tomllib.loads(lock_text) if lock_text else {}
     try:
-        document = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        raise ReproStateError(f"{path} could not be read: {exc}") from None
-    entries: dict[str, LockEntry] = {}
-    for raw in document.get("task", []) or []:
+        builds = json.loads(builds_text) if builds_text else {}
+    except ValueError:
+        builds = {}
+    builds = builds if isinstance(builds, dict) else {}
+    document = empty_lock()
+    for raw in raw_lock.get("task", []) or []:
         if not isinstance(raw, dict) or not isinstance(raw.get("id"), str):
             continue
-        entries[raw["id"]] = LockEntry(
-            depends_on=dict(raw.get("depends_on") or {}),
-            produces=dict(raw.get("produces") or {}),
-        )
-    return entries
+        name = raw["id"]
+        entry = LockEntry(depends_on=dict(raw.get("depends_on") or {}), produces=dict(raw.get("produces") or {}))
+        record = builds.get(name)
+        if isinstance(record, dict) and record.get("lock_id") == legacy_lock_id(entry.depends_on, entry.produces):
+            env = record.get("env") or {}
+            entry.built_on = {"platform": record.get("platform"),
+                              **{k: env[k] for k in ("probe", "probe_error") if k in env}}
+        document["steps"][name] = lock_record(name, entry)
+    used = {raw["built_on"].get("probe") for raw in document["steps"].values()}
+    document["probes"] = {k: v for k, v in (builds.get("_probes") or {}).items() if k in used}
+    return document
+
+
+def read_lock_document(path: Path) -> dict:
+    """The lock at *path* (``repro-lock.json``), or the legacy pair beside it, as one document."""
+    legacy = path.parent / LEGACY_LOCK_FILENAME
+    try:
+        if path.is_file():
+            return parse_lock(path.read_text(encoding="utf-8"))
+        if legacy.is_file():
+            builds = path.parent / LEGACY_BUILDS_FILENAME
+            return convert_legacy(legacy.read_text(encoding="utf-8"),
+                                  builds.read_text(encoding="utf-8") if builds.is_file() else None)
+    except (OSError, ValueError) as exc:
+        source = path if path.is_file() else legacy
+        raise ReproStateError(f"{source} could not be read: {exc}") from None
+    return empty_lock()
+
+
+def read_lock(path: Path) -> dict[str, LockEntry]:
+    """Step name -> recorded node states, from ``repro-lock.json`` or a legacy ``pytask.lock``."""
+    document = read_lock_document(path)
+    return {name: lock_entry(name, raw) for name, raw in document["steps"].items()}
+
+
+def _write_lock_document(paths: RunnerPaths, document: dict) -> None:
+    from _repro_acceptance import atomic_json
+    used = {raw.get("built_on", {}).get("probe") for raw in document["steps"].values()}
+    document["probes"] = {k: v for k, v in document["probes"].items() if k in used}
+    atomic_json(paths.lock_file, document)
+
+
+def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry, probe_text: str | None = None) -> None:
+    """Record one step's successful build; the file is rewritten only when the entry changes."""
+    with RECORD_LOCK:
+        document = read_lock_document(paths.lock_file)
+        record = lock_record(name, entry)
+        probe = record["built_on"].get("probe")
+        if document["steps"].get(name) == record and paths.lock_file.is_file() and (
+                probe is None or probe in document["probes"]):
+            return
+        document["steps"][name] = record
+        if probe is not None and probe_text is not None:
+            document["probes"][probe] = probe_text
+        _write_lock_document(paths, document)
+
+
+def prune_lock(paths: RunnerPaths, keep: set[str]) -> None:
+    """Drop entries of steps no longer in the tree; convert a legacy lock on the way."""
+    with RECORD_LOCK:
+        if not paths.lock_file.is_file() and not paths.legacy_lock_file.is_file():
+            return
+        document = read_lock_document(paths.lock_file)
+        pruned = {name: raw for name, raw in document["steps"].items() if name in keep}
+        if paths.lock_file.is_file() and pruned == document["steps"]:
+            return
+        document["steps"] = pruned
+        _write_lock_document(paths, document)
 
 
 def write_run_record(paths: RunnerPaths, step: str, record: dict) -> None:
@@ -432,6 +590,7 @@ class StepStatus:
     boundary_inputs: list[dict] = field(default_factory=list)
     external_consumers: list[str] = field(default_factory=list)
     acceptance_invalid: str | None = None
+    boundary_verified: list[dict] = field(default_factory=list)  # sidecar saved inputs whose bytes checked out
 
     def to_dict(self) -> dict:
         return {
@@ -526,8 +685,14 @@ def compute_status(
     acceptance_ledger: dict | None = None,
     completed_locks: dict[str, LockEntry] | None = None,
     upstream: bool = False,
+    scope: Iterable[str] | None = None,
 ) -> StatusReport:
-    """Classify a selection against saved inputs, optionally including producers."""
+    """Classify a selection against saved inputs, optionally including producers.
+
+    *scope* widens what counts as in scope for saved inputs beyond the selection:
+    a build checks one step at a time, but a producer anywhere in its build
+    selection is never a saved input.
+    """
     targets = list(targets)
     names, unknown = select_steps(graph, targets, include_ancestors=upstream)
     if unknown:
@@ -554,7 +719,7 @@ def compute_status(
         entry.external_consumers = external_consumers(graph, step)
         report.entries.append(entry)
     from _repro_scope import boundary_inputs, check_boundary_receipt
-    report.boundary_inputs = boundary_inputs(graph, names, paths, cache, lock)
+    report.boundary_inputs = boundary_inputs(graph, needed | set(scope or ()), paths, cache, lock, consumers=needed)
     for entry in report.entries:
         current_boundary = [b for b in report.boundary_inputs if entry.step.name in b['consumers']]
         check_boundary_receipt(entry, graph, paths, cache, lock.get(entry.step.name), current_boundary)
@@ -938,6 +1103,7 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
 __all__ = [
     "Change",
     "HashCache",
+    "LOCK_FILENAME",
     "LockEntry",
     "ReproStateError",
     "RunnerPaths",
@@ -954,7 +1120,11 @@ __all__ = [
     "format_status",
     "node_state",
     "path_state",
+    "lock_entry",
+    "prune_lock",
     "read_lock",
+    "read_lock_document",
+    "write_lock_entry",
     "read_run_record",
     "render_dag",
     "runner_paths",
