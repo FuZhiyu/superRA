@@ -105,50 +105,8 @@ superRA already decided freshness, forcing, acceptance skips, and saved inputs, 
 
 ## Review Notes
 
-Planning review, design-review mode: the revised engine design and its fit with the runtime components and siblings 02–09. Claims checked against code at `603dfa60` and pytask 0.6.0 source.
+Planning re-review, design-review mode, at `841c69f2..bf6afcd4`. The three earlier blocking findings are fixed. One new blocking finding concerns the `status` exit codes.
 
-1. **[BLOCKING] Reshaping the lock entry silently invalidates every existing acceptance record and local receipt.** The design renames the in-memory entry (`<step>::spec` moves out of deps into `spec`, `produces` becomes `outs`), but acceptance and receipts compare against the pytask shape.
-   - [_repro_acceptance.py:91](../../../../skills/task-tree/scripts/_repro_acceptance.py#L91) `lock_state` returns `{deps: depends_on, products: produces}`; [:106](../../../../skills/task-tree/scripts/_repro_acceptance.py#L106) puts the spec hash inside `deps` under `<step>::spec`; [:190-214](../../../../skills/task-tree/scripts/_repro_acceptance.py#L190-L214) invalidates a record when `baseline.lock` or `state` differs; [:184](../../../../skills/task-tree/scripts/_repro_acceptance.py#L184) classifies spec rows by the `::spec` suffix.
-   - Receipts in `.superra-repro/baselines/` are checked the same way ([_repro_scope.py:63](../../../../skills/task-tree/scripts/_repro_scope.py#L63), [:68](../../../../skills/task-tree/scripts/_repro_scope.py#L68)).
-   - After conversion, every committed acceptance reads "successful baseline changed". Reviewed steps then rerun, which is the cost the researcher chose to avoid. Sidecar consumers lose their receipt and rerun with "needs a full-byte baseline", and `accept` on a sidecar producer raises "no verified output digest".
-   - Fix: state which shape `LockEntry`, `lock_state`, and `current_state` carry. Either keep the internal shape and change only serialization, or normalize legacy records and receipts on read. Settle with [02](../02-portable-records/task.md) who migrates committed acceptance records; 02 now reshapes them after 01, so the interim must still validate. Pin it with the fixture in item 3.
-
-2. **[BLOCKING] "Under the existing mutation lock" gives the per-step writes no protection under `-j`.** `mutation_lock` is one non-blocking `flock` that the build process holds for the whole session ([repro_run.py:381](../../../../skills/task-tree/scripts/repro_run.py#L381), [_repro_acceptance.py:44-56](../../../../skills/task-tree/scripts/_repro_acceptance.py#L44-L56)). Worker threads writing `repro-lock.json` read-modify-write it unguarded, and a lost update drops a completed entry, so that step reruns next time. The build record already needs a thread lock for this reason ([_repro_builds.py:22](../../../../skills/task-tree/scripts/_repro_builds.py#L22), [:84](../../../../skills/task-tree/scripts/_repro_builds.py#L84)). Fix: name an in-process single writer, or a thread lock around each lock write, and have the `-j` test assert that every completed step's entry is present.
-
-3. **[BLOCKING] The Validation list states one false claim and cannot catch the migration regressions.**
-   - **"Only the two tests of the needs-pytask message change" is false.** These tests also change:
-     - [test_repro_builds.py:19-23](../../../../skills/task-tree/scripts/test_repro_builds.py#L19-L23) asserts `repro-builds.json` and `lock_id`.
-     - [test_repro_runner.py:576](../../../../skills/task-tree/scripts/test_repro_runner.py#L576) asserts `build-a::spec` in `depends_on`.
-     - [:733](../../../../skills/task-tree/scripts/test_repro_runner.py#L733) asserts pytask's "Would be executed" summary.
-     - [:711](../../../../skills/task-tree/scripts/test_repro_runner.py#L711) asserts `.ok` for a scoped status with stale ancestors, which the scoped-status fix contradicts.
-     - `test_repro_provenance.py` (:98, :165) and `test_dashboard.py` (:6834–6974) name `pytask.lock`.
-   - Fix: list the tests expected to change and why, so any other test edit reads as a regression.
-   - **"On this repo, status matches before and after conversion" cannot discriminate.** This repo has no `repro-acceptance.json`. Its check steps depend on the scripts 01 rewrites (`build-record-check` in [pytask.lock](../../../../pytask.lock) depends on `repro_run.py` and `_repro_state.py`), so they go stale for real.
-   - Fix: build a fixture with the pytask engine at `7d5fa992` holding an acceptance, a sidecar out with a scoped-build receipt, a check step, and `repro-builds.json`. Under the new code, `status --json` and `explain` must match before and after the first new-engine build.
-   - **Missing:** `explain` across the transition, on a history with `pytask.lock` revisions followed by `repro-lock.json` revisions.
-
-4. **[ADVISORY] Unnamed contracts that pytask or the hooks supply today.** Name each so the inline loop keeps it:
-   - **Pre-run input check.** pytask raises `NodeNotFoundError` before running a step with a missing dependency (`_pytask/execute.py` ~l.200). Map each `compute_status` state to an action; `external` fails the step without running it.
-   - **Frozen selection scope.** The per-step `compute_status` call must evaluate against the whole build selection. The hook's single-step target ([_repro_hooks.py:38](../../../../skills/task-tree/scripts/_repro_hooks.py#L38), [:46](../../../../skills/task-tree/scripts/_repro_hooks.py#L46)) turns in-selection sidecar producers into saved inputs.
-   - **Per-step checks.** `check_sources` mid-build declaration guard ([_repro_hooks.py:18](../../../../skills/task-tree/scripts/_repro_hooks.py#L18), [:70](../../../../skills/task-tree/scripts/_repro_hooks.py#L70)); the missing-out-after-run failure from `capture_receipt`.
-   - **Dry-run writes nothing**, including no `supersede` ([_repro_hooks.py:30-32](../../../../skills/task-tree/scripts/_repro_hooks.py#L30-L32)).
-   - **Output and exits.** Define the build summary and exit codes, and give the value of the new scoped-status exit, which [08](../08-workflow-wiring/task.md) must document.
-
-5. **[ADVISORY] The "every lock reader" list misses readers.**
-   - **Status path.** `check_elsewhere_reason` reads `repro-builds.json` and `lock_id` ([_repro_provenance.py:151-163](../../../../skills/task-tree/scripts/_repro_provenance.py#L151-L163)), contradicting "`built_on` feeds explain and nothing else".
-   - **Lock-index cache.** `.superra-repro/lock-index/<sha>.json` caches parsed entries by sha ([:212-226](../../../../skills/task-tree/scripts/_repro_provenance.py#L212-L226)), so a shape change needs a cache version.
-   - **Both files present.** While both files exist (the build deletes neither), history and the working read must prefer `repro-lock.json`.
-   - **Dashboard watcher.** It now fires once per step, and a temp-file-plus-rename write may drop a single-file watch on Linux (*inferred*).
-
-6. **[ADVISORY] Removing the `uv` re-exec also removes the Python 3.10 path.** The re-exec also serves `status`, `explain`, `accept`, and `revoke` without `tomllib` ([repro_run.py:581](../../../../skills/task-tree/scripts/repro_run.py#L581)), while `cli.py` requires Python 3.10 or newer. Reading a legacy `pytask.lock` still needs `tomllib`. State what Python 3.10 does with a legacy lock, and `repro_run.py`'s `requires-python`.
-
-7. **[ADVISORY] Gaps in the `repro-lock.json` shape.**
-   - **`built_on.platform` can go stale.** The rewrite-only-when rule omits platform, so `built_on` can name the wrong builder.
-   - **`probe_error` has no home.**
-   - **Stamp key.** The check-step stamp is keyed by `.superra-repro/stamps/…`, which 02's per-machine-state move would re-key; choose a location-independent key now.
-   - **Merge test coverage.** JSON commas and the shared `probes` table can conflict when each branch adds a step or records different probe output; extend the merge test to those cases.
-   - **Pruning.** Prune only on an error-free graph (03 may relax build refusal) and never under `--dry-run`.
-
-8. **[ADVISORY] Ownership overlaps with siblings.**
-   - **`probes` table.** 02's `env_probe` leak bullet decides whether this table, which 01 creates, keeps probe text. The two share an edit surface, so move that decision into 01.
-   - **Registered steps still pull pytask, and no task owns them.** This repo's step `cmd`s still carry `--with 'pytask>=0.6,<0.7' --with pytask-parallel`: [task-scoped-builds](../../11-scoped-verification/task-scoped-builds/task.md) :26/:64, [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md) :39, [02-build-record](../../13-staleness-provenance/02-build-record/task.md) :30, and [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md) :86. 09's stale-content list omits them; assign them to 01.
+1. **[BLOCKING] Exit code 2 already means a usage error, so a caller can read a mistyped command as "selection fresh".** `repro status` with no targets exits through `build_parser().error(NO_TARGET_ERROR)` ([repro_run.py:648](../../../../skills/task-tree/scripts/repro_run.py#L648)). argparse's `error` exits with status 2, and so does any unknown flag or bad argument. Under the new contract, an agent at a completion gate that gets 2 from a malformed `status` call would conclude that its targets are fresh. That is the false-fresh outcome this task exists to remove.
+   - Fix: give "selection fresh, producer behind it not fresh" a code argparse never uses (for example 3), or remap usage errors away from 2 in `main`, and add a test that a usage error and the upstream-stale case exit differently.
+   - Also define the case by "not fresh" rather than "stale", so a `missing`, `failed`, or `external` producer behind the selection also triggers it.
