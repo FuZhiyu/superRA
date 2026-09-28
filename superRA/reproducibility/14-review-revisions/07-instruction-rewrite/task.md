@@ -19,6 +19,7 @@ The agent-loaded reproduction text passes [CLAUDE.md](../../../../CLAUDE.md) §T
 - **One drift-test rule, in §Gates.** [designing-the-graph.md:9](../../../../skills/reproducibility/references/designing-the-graph.md#L9) blocks on every drift test protecting registered outs; [protect-and-completion.md:8](../../../../skills/reproducibility/references/protect-and-completion.md#L8) registers only researcher-selected ones.
 - **Named anti-patterns are cut:** output descriptions (the 251-word §Explain layout, `rerun-or-accept.md` §Preview), wrapper lines, and background-only lines in `SKILL.md` §The Model.
 - **Unparseable lines are rewritten** ([gate-audit.md](../attachments/gate-audit.md) §2 item 4).
+- **Engine lines are rewritten, not compressed.** Gate-audit items that cite pytask or `pytask.lock` (SK:11, CMD:148, TFC:225, DX:40) are resolved against [01](../01-engine-freshness/task.md)'s engine and `repro-lock.json`.
 - **The load surface matches CLAUDE.md §Agent Load Surface** (decision below).
 
 Validation: words measured before and after (the audit estimates about −30% across the three documents); every gate, enum, default, and ordering constraint survives; one realistic harness session exercises registration and the stale rule.

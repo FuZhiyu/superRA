@@ -24,6 +24,6 @@ Evidence behind the summary, with file:line and reproduction steps (scratch fixt
 
 The engine and dashboard reviews returned inline; their evidence is in the Details of 01, 02, 05, and 06.
 
-Suggested order: 01–04 are independent code fixes. 05 follows 02 (record formats) and 06 follows 03 (snapshot payload). 07 rewrites the instructions once the mechanics settle, 08 rewires the call sites on 07's terms, and 09 closes the upgrade path and the records.
+Suggested order: 01 goes first; it replaces the engine and settles `repro-lock.json`, which 02 builds on. 03 and 04 are independent code fixes. 05 follows 02 (record formats) and 06 follows 03 (snapshot payload). 07 rewrites the instructions once the mechanics settle, 08 rewires the call sites on 07's terms, and 09 closes the upgrade path and the records.
 
-High stakes: 01 (false `fresh`) and 03 (readiness and validity) warrant a thorough independent review with a correctness focus.
+High stakes: 01 (engine replacement and false `fresh`) and 03 (readiness and validity) warrant a thorough independent review with a correctness focus.
