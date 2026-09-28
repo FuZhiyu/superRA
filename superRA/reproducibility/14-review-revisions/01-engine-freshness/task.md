@@ -31,13 +31,12 @@ depends_on: []
 - **File shape:** a `version` field; per-step entries keyed and sorted by step name, each with
   - `spec` — the two-half definition hash from `spec_hash`;
   - `deps` and `outs` — logical path to content hash (the sidecar digest for a sidecar-tracked out, the stamp for a check step);
-  - `built_on` — `platform`, and the `env_probe` digest or `probe_error` of the last successful build;
-  - a top-level `probes` table mapping digest to probe text.
+  - `built_on` — the `platform` of the last successful build.
 
   One key per line with sorted keys.
 - **Freshness reads only `spec`, `deps`, and `outs`.** `built_on` feeds `explain`'s environment comparison and the "checked elsewhere" status reason ([check_elsewhere_reason](../../../../skills/task-tree/scripts/_repro_provenance.py#L151-L163)), never the fresh/stale decision.
-- **The build record folds into the lock.** `repro-builds.json` and its `lock_id` link are retired. An entry is rewritten only when `spec`, `deps`, `outs`, `platform`, or the probe result change; `built_at` and `env.deps` are not carried.
-- **`env_probe` output cannot leak paths** (decision below).
+- **The build record folds into the lock.** `repro-builds.json` and its `lock_id` link are retired. An entry is rewritten only when `spec`, `deps`, `outs`, or `platform` change; `built_at` and `env.deps` are not carried.
+- **`env_probe` is removed.** Its only use was one `explain` hint, while its committed text risked leaking paths and made the lock conflict in merges. `built_on.platform` and the `env_deps` hashes remain `explain`'s environment comparison; a config still setting `env_probe` gets `task check`'s unknown-key error.
 - **Stale entries are pruned** only by a real build on an error-free graph: entries for steps no longer in the tree are removed (decision below).
 - **Every lock reader switches together, preferring `repro-lock.json` when both files exist:**
   - `read_lock` and its callers, including acceptance and scope;
@@ -68,26 +67,25 @@ depends_on: []
   - lock file names in `test_repro_provenance.py` and `test_dashboard.py`.
 
   Any other test edit is a regression.
-- **New tests:** the lock round-trips byte-identically; under `-j`, ordering, failure skips, and every completed step's entry present; Ctrl-C mid-build; `--dry-run` writes nothing; `build` exit codes; `status` exits 3 for a fresh selection behind a missing or stale producer and 2 for a usage error; `status` and `build` agree with the lock deleted; merges of branches that build different steps, including adjacent steps and a `probes` table change on both sides, stay conflict-free.
+- **New tests:** the lock round-trips byte-identically; under `-j`, ordering, failure skips, and every completed step's entry present; Ctrl-C mid-build; `--dry-run` writes nothing; `build` exit codes; `status` exits 3 for a fresh selection behind a missing or stale producer and 2 for a usage error; `status` and `build` agree with the lock deleted; merges of branches that build different steps, including adjacent steps, stay conflict-free.
 
 ### Decisions
 
 - **Lock entries of archived steps are kept,** so `explain` retains provenance; pruning drops only steps absent from the tree.
-- **Probe text stays in the lock.** Probe output holding an absolute path is refused with an error naming the line, since the line-level difference is what `explain` shows a coauthor.
 
 Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../11-scoped-verification/task-scoped-builds/task.md), [02-build-record](../../13-staleness-provenance/02-build-record/task.md).
 
 ## Results
 
-`superra repro build` now runs on superRA's own loop in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) and writes `repro-lock.json`; pytask, `_repro_hooks.py`, and the adapter types are gone. The whole task-tree suite passes without pytask, and a project built by the pytask engine migrates with identical step states and nothing rerun. One contract item holds only partly: two branches that add *different* probe texts conflict in `probes` (below).
+`superra repro build` now runs on superRA's own loop in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) and writes `repro-lock.json`; pytask, `_repro_hooks.py`, and the adapter types are gone. The whole task-tree suite passes without pytask, and a project built by the pytask engine migrates with identical step states and nothing rerun. `env_probe` is removed.
 
 ### Verification
 
-- **Suite.** The standard contributor command in [CLAUDE.md](../../../../CLAUDE.md), with no pytask: 1,299 passed, 0 skipped. The pytask baseline before the change was 1,279 passed.
+- **Suite.** The standard contributor command in [CLAUDE.md](../../../../CLAUDE.md), with no pytask: 1,296 passed, 0 skipped. The pytask baseline before the change was 1,279 passed.
 - **Python 3.10.** The six `test_repro*` modules pass (197 tests); the two in-process legacy-lock tests skip there, since the CLI re-execs under `uv` for a legacy `pytask.lock`.
-- **Migration fixture.** A scratch project was built by the pytask engine at `7d5fa992`: a chain with a sidecar-tracked out, a check step, an accepted step, and an `env_probe` build record.
+- **Migration fixture.** A scratch project was built by the pytask engine at `7d5fa992`: a chain with a sidecar-tracked out, a check step, an accepted step, and a build record.
   - The new engine's `status . --json` matched the old one step for step (status, reason, local status, acceptance id), both before and after its first build.
-  - That first build executed nothing, wrote `repro-lock.json` with every entry's `built_on` and probe text, printed the `git rm` hint, and deleted neither legacy file.
+  - That first build executed nothing, wrote `repro-lock.json` with every entry's `built_on`, printed the `git rm` hint, and deleted neither legacy file.
   - `explain` output was identical except the footer now reads "the lock at N revision(s)".
   - A targeted `build 02-est 03-report` over the sidecar-tracked saved input reran nothing.
 - **This repo.** The new engine built the ten checks these edits staled, under `-j 3`, including the dashboard browser interaction check; the committed [repro-lock.json](../../../../repro-lock.json) is its output. `pytask.lock` and `repro-builds.json` stay until someone runs `git rm`.
@@ -100,23 +98,23 @@ Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../1
   - Ctrl-C kills each running step's process group and records the step failed; `build` exits 1.
   - The run and skip semantics of the hooks carry over, including supersede on attempt and sticky `forced` retries.
 - **Lock.** Lock writing lives in [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py): `write_lock_entry` and `prune_lock` run under `RECORD_LOCK`, which also serializes `supersede`. `read_lock` falls back to the legacy pair converted in memory. `LockEntry` gained `built_on`, excluded from equality, so acceptance records and receipts validate unchanged.
-- **Build record.** [_repro_builds.py](../../../../skills/task-tree/scripts/_repro_builds.py) now produces `built_on` and refuses probe output holding an absolute path. `explain` reads `built_on` from the lock at the row's revision.
+- **Build record.** `explain` reads `built_on` from the lock at the row's revision ([_repro_builds.py](../../../../skills/task-tree/scripts/_repro_builds.py)).
   - `env_deps` hashes come from the entry's `deps`, so `explain` still shows them.
   - The "record does not match its lock entry" case is gone with `lock_id`.
-- **Lock history.** The index behind `explain` reads both lock files per revision; its `lock-index/<sha>.json` cache is now version 2.
+- **Lock history.** The index behind `explain` reads both lock files per revision; its `lock-index/<sha>.json` cache is now version 3.
 - **Dashboard.** The watcher re-arms after a lock change, so it follows the file across rename writes.
 - **Freshness fixes.**
   - `tree_hash` follows symlinks with a cycle guard; a broken link or an unreadable file makes the directory unreadable (reported as `missing`).
   - A sidecar saved input counts as verified when its bytes match the producer's recorded output or the digest its sidecar names. A skip records those digests into the consumer's receipt.
   - A scoped `status` exits 3 and names the producers behind the selection that are not fresh.
-- **Tests.** [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) (18 tests) covers every "New tests" item plus the fixes, the legacy read, and `explain` across the switch; `engine-freshness-check` below runs it.
+- **`env_probe` removed** from the config keys, the lock, and `explain`; legacy probe fields are ignored on read.
+- **Tests.** [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) (17 tests) covers every "New tests" item plus the fixes, the legacy read, and `explain` across the switch; `engine-freshness-check` below runs it.
 - **Docs and steps.**
   - The mechanics docs name the new engine, the lock, and the exit codes; commands.md labels the dry-run total an upper bound.
   - Every registered step command and companion that installed pytask or depended on `_repro_hooks.py` no longer does, including `reviewed-baseline-regression-check` and `diagnosis-scenario-check`.
 
 ### Deviations
 
-- **Different probe texts on both branches conflict.** Two branches that each add a new, different probe text insert at the same point in `probes`, and git conflicts; the same new text on both sides merges cleanly (tested). No line-based layout of one shared table avoids this. The fix is keeping both lines, and [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#the-lock) says so. Storing each step's probe text in its own entry would make every such merge clean, at about one extra line per step; it would drop the shared `probes` table.
 - **Test edits beyond the expected list.**
   - Removing the pytask gates: the `needs_pytask` markers, and two runtime `find_spec("pytask")` gates in `test_task_dependencies.py`.
   - Tests that patched deleted engine internals now patch equivalent seams:
@@ -125,10 +123,7 @@ Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../1
   - `test_legacy_alias_lock_requires_only_affected_consumer_rebuild` edits the JSON lock instead of TOML.
   - Four scoped-`status` assertions in `test_repro_scope.py` move from 0 to 3, the new exit code, because each selection is fresh with a never-built or stale producer behind it.
   - Two check-elsewhere reasons in `test_repro_provenance.py` now include `on <platform>`, because every lock entry carries `built_on`.
-  - `test_repro_builds.py` follows the folded record beyond lines 19-23:
-    - the probe table's location changed;
-    - the `lock_id` mismatch case is gone;
-    - identical-rebuild and absolute-path checks are new.
+  - `test_repro_builds.py` follows the folded record beyond lines 19-23: the probe tests and the `lock_id` mismatch case are gone, the `explain` environment test compares platforms, and an identical-rebuild check is new.
 - **Minor findings.** The dry-run upper bound is now documented. The rest are untouched: exit 1 on a fresh clone until checks run, the lingering invalid acceptance, and untracked Python imports.
 
 ## Details

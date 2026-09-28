@@ -37,7 +37,7 @@ STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("steps",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
-CONFIG_KEYS = ("vars", "runners", "env_deps", "env_probe")
+CONFIG_KEYS = ("vars", "runners", "env_deps")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -506,14 +506,12 @@ class ReproConfig:
     variables: dict[str, str] = field(default_factory=dict)
     runners: dict[str, str] = field(default_factory=dict)
     env_deps: list[str] = field(default_factory=list)
-    env_probe: str | None = None
 
     def to_dict(self) -> dict:
         return {
             "vars": dict(self.variables),
             "runners": dict(self.runners),
             "env_deps": list(self.env_deps),
-            "env_probe": self.env_probe,
         }
 
 
@@ -1137,15 +1135,10 @@ def build_graph(
     if not isinstance(runners, dict):
         _finding("", "error", f"{CONFIG_FILENAME}: 'runners' must be a mapping")
         runners = {}
-    env_probe = raw_config.get("env_probe")
-    if env_probe is not None and not isinstance(env_probe, str):
-        _finding("", "error", f"{CONFIG_FILENAME}: 'env_probe' must be one shell command string")
-        env_probe = None
     graph.config = ReproConfig(
         variables=variables,
         runners={str(k): str(v) for k, v in runners.items()},
         env_deps=[_norm(p) for p in _string_list(raw_config.get("env_deps"))],
-        env_probe=env_probe or None,
     )
     if resolve_vars:
         for raw in graph.config.env_deps:

@@ -162,20 +162,20 @@ def check_elsewhere_reason(paths, memo, name, entry) -> str:
 # Lock history
 # ---------------------------------------------------------------------------
 
-LOCK_INDEX_VERSION = 2
+LOCK_INDEX_VERSION = 3
 
 
 def _parse_revision(lock_text, legacy_text, builds_text) -> dict:
-    """One revision's lock as {'steps': {name: {deps, products, built_on}}, 'probes': {...}}."""
+    """One revision's lock as {name: {deps, products, built_on}}."""
     try:
         if lock_text is not None:
             document = parse_lock(lock_text)
         elif legacy_text is not None and tomllib is not None:
             document = convert_legacy(legacy_text, builds_text)
         else:
-            document = {'steps': {}, 'probes': {}}
+            document = {'steps': {}}
     except (ValueError, ReproStateError):
-        document = {'steps': {}, 'probes': {}}
+        document = {'steps': {}}
     steps = {}
     for name, raw in document['steps'].items():
         deps = dict(raw.get('deps') or {})
@@ -183,7 +183,7 @@ def _parse_revision(lock_text, legacy_text, builds_text) -> dict:
             deps[f'{name}::spec'] = raw['spec']
         steps[name] = {'deps': deps, 'products': dict(raw.get('outs') or {}),
                        'built_on': dict(raw.get('built_on') or {})}
-    return {'steps': steps, 'probes': dict(document.get('probes') or {})}
+    return steps
 
 
 class LockHistory:
@@ -202,7 +202,6 @@ class LockHistory:
         self.index: dict[str, dict[str, list[str]]] = {}
         self._behind: dict[str, int] = {}
         self.entries: dict[str, dict] = {}
-        self.probes: dict[str, dict] = {}
         self._branches: dict[str, list[str]] = {}
         if not git.ok:
             return
@@ -214,7 +213,7 @@ class LockHistory:
         self.by_sha = {r['sha']: r for r in self.revs}
         self.on_head = set((git.text('rev-list', 'HEAD') or '').split())
         head = self._read(['HEAD'])['HEAD']
-        for step_id, groups in head['steps'].items():
+        for step_id, groups in head.items():
             for key in ('deps', 'products'):
                 for node, value in groups[key].items():
                     entries = self.head_values.setdefault(node, {}).setdefault(value, [])
@@ -250,8 +249,7 @@ class LockHistory:
                     atomic_json(cache_dir / f'{sha}.json', {'version': LOCK_INDEX_VERSION, 'lock': parsed})
                 except OSError:
                     pass
-        self.probes = {sha: parsed['probes'] for sha, parsed in entries.items()}
-        self.entries = {sha: parsed['steps'] for sha, parsed in entries.items()}
+        self.entries = entries
         for rev in self.revs:
             for groups in self.entries[rev['sha']].values():
                 for group in (groups['deps'], groups['products']):
@@ -504,17 +502,15 @@ class Resolver:
         from _repro_builds import builder_record, differences, env_here
         if source['source'] == 'lock':
             where = f"lock {source['rev']}"
-            probes = self.history.probes.get(source['sha'], {})
             entry = self.history.entries.get(source['sha'], {}).get(builder)
         else:
             where = 'the working lock'
-            probes = self.lock_document['probes']
             entry = self.lock_document['steps'].get(builder)
             entry = entry and {'deps': entry.get('deps', {}), 'built_on': entry.get('built_on', {})}
         record = builder_record(self.graph, entry)
         if not record:
             return None
-        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record), probes)
+        diffs = differences(record, env_here(self.graph, self.paths, self.cache, record))
         return dict(builder=builder, where=where, record=record, status='differs' if diffs else 'same',
                     differences=diffs)
 

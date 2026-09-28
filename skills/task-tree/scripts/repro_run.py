@@ -35,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from _repro import Graph, Out, Step, build_graph  # noqa: E402
 from _repro_acceptance import capture_receipt, check_sources, current_state, mutation_lock, supersede  # noqa: E402
-from _repro_builds import built_on  # noqa: E402
+from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_state import (  # noqa: E402
     LOCK_FILENAME,
@@ -212,9 +212,9 @@ def _run_step(build: Build, step: Step, entry) -> str:
         record.update(outcome="failed", forced=must_retry or record.get("forced", False), error=str(exc))
         write_run_record(paths, step.name, record)
         raise
-    on, probe_text = built_on(graph, paths.project_root)
-    entry = LockEntry(depends_on=receipt["state"]["deps"], produces=receipt["state"]["products"], built_on=on)
-    write_lock_entry(paths, step.name, entry, probe_text)
+    entry = LockEntry(depends_on=receipt["state"]["deps"], produces=receipt["state"]["products"],
+                      built_on={"platform": platform_name()})
+    write_lock_entry(paths, step.name, entry)
     build.completed[step.name] = entry
     record = read_run_record(paths, step.name)
     record["outcome"] = "success"
@@ -368,10 +368,6 @@ def run_build(
         f"{counts[k]} {k}" for k in ("executed", "unchanged", "failed", "skipped") if counts.get(k)))
     if interrupted:
         print("Interrupted: running steps were stopped and recorded as failed.", file=sys.stderr)
-    probe = getattr(graph, "_env_probe_result", None) or {}
-    if "refused_line" in probe:
-        print(f"Error: env_probe output {probe['probe_error']}; not recorded: {probe['refused_line']}",
-              file=sys.stderr)
     legacy = [p.name for p in (paths.legacy_lock_file, paths.legacy_builds_file) if p.is_file()]
     if paths.lock_file.is_file() and legacy:
         print(f"{LOCK_FILENAME} now holds the build records; {', '.join(legacy)} no longer read. "
