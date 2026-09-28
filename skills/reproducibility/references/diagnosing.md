@@ -20,15 +20,18 @@ Warm file hashing costs one `stat` per file; variable discovery and graph constr
 
 ## Read what explain names
 
-`superra repro explain '<task>#<step>' --json` separates own changes from upstream uncertainty and exposes verified baseline diffs when available. `superra repro impact <path...>` predicts invalidation, not changed output values.
+`superra repro explain <target>` resolves where each changed hash came from; act on its rows instead of reconstructing them with `git log -S`, `shasum`, or `stat`. Row format and pointers: [commands.md §Explain](../../task-tree/references/commands.md#explain). `superra repro impact <path...>` predicts invalidation, not changed output values.
 
-| It names | Read it as |
+| Row | Act |
 |---|---|
-| An out you did not edit | Check concurrent writers, synchronization, and path routing; test determinism by comparing repeated outputs. |
-| A dep under a directory you declared | Check whether the changed file is a real input; narrow the directory when it holds unrelated files. |
-| A file you did not know the step read | The include closure or `env_deps` reached it — correct, if the script really reads it. |
-| An upstream step is stale | Follow that producer with its own `explain`. |
-| `external` on a generated file | Confirm the boundary: retrieve an agreed saved input, or register an in-scope producer. |
+| `input-changed` on a tracked file or the step definition | Read the diff the pointer prints and apply [the stale rule](rerun-or-accept.md#the-stale-rule). A changed file the script does not read, under a declared directory: narrow the declaration. |
+| `other-build`, current side an earlier commit behind HEAD | Sync lag: the recorded build exists elsewhere and has not arrived. Wait for the sync, or rebuild when outputs are not shared, then recheck `status`; never accept the older bytes. |
+| `other-build`, current side off HEAD's history | A build from another branch: rebuild here, or wait for that branch to merge. |
+| `other-build`, any other current side | Rebuild; accept only current bytes you have reviewed. |
+| `unknown-output` | Rebuild. Repeated builds that disagree: make the producer deterministic ([What stops a cascade](#what-stops-a-cascade)). |
+| `env: differs` on any row | A rebuild here may not reproduce the recorded bytes; name the difference when you report. |
+| `passed at these inputs in lock <rev>; not run here` | Run the check here. |
+| `external` on a generated file | Retrieve an agreed saved input, or register an in-scope producer. |
 
 A locally fresh result can stay stale in the full graph: default status assesses saved inputs, `--upstream` assesses their producers. Runtime declaration guards freeze the selected commands, paths, and output ownership, so unrelated tree edits do not invalidate running work; a relevant edit or changed input during execution requires retrying the affected work.
 

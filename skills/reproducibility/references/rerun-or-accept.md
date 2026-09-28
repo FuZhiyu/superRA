@@ -3,7 +3,7 @@
 ## Preview the cost and the cause
 
 - `superra repro build <targets> --dry-run` lists what would execute, each with its last recorded duration — `unknown` when the step has never run.
-- `superra repro explain '<task>#<step>'` separates the step's own changes from upstream uncertainty and names the steps in other tasks that read its outs.
+- `superra repro explain <target>` names each changed node's cause and source; act on it per [diagnosing.md §Read what explain names](diagnosing.md#read-what-explain-names) before applying the rule below.
 - `superra repro status <targets>` reports each selected step's freshness and its `outside readers: N` count.
 
 ## Classify the step's role

@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import stat
 import sys
 import time
@@ -430,6 +431,7 @@ class StepStatus:
     local_reason: str | None = None
     boundary_inputs: list[dict] = field(default_factory=list)
     external_consumers: list[str] = field(default_factory=list)
+    acceptance_invalid: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -537,6 +539,7 @@ def compute_status(
     lock.update(completed_locks or {})
     outputs = output_nodes(graph)
     missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
+    memo: dict = {}
     report = StatusReport(
         project_root=paths.project_root, graph=graph,
         targets=targets, selected=selected, upstream=upstream,
@@ -546,7 +549,7 @@ def compute_status(
         if step.name not in needed:
             continue
         entry = _classify(
-            step, lock.get(step.name), paths, cache, outputs, missing_external
+            step, lock.get(step.name), paths, cache, outputs, missing_external, memo
         )
         entry.external_consumers = external_consumers(graph, step)
         report.entries.append(entry)
@@ -586,6 +589,7 @@ def _classify(
     cache: HashCache,
     outputs: dict[str, Node],
     missing_external: set[str],
+    memo: dict,
 ) -> StepStatus:
     result = StepStatus(step=step)
     record = read_run_record(paths, step.name)
@@ -609,7 +613,7 @@ def _classify(
         result.status = "missing"
         result.reason = "never built"
     else:
-        _compare(result, step, entry, paths, cache, outputs)
+        _compare(result, step, entry, paths, cache, outputs, memo)
 
     if record.get("outcome") in ("running", "pending"):
         result.status = "failed"
@@ -637,6 +641,7 @@ def _compare(
     paths: RunnerPaths,
     cache: HashCache,
     outputs: dict[str, Node],
+    memo: dict,
 ) -> None:
     """Set *result* from the lock entry against what is on disk now."""
     deps, products = step_nodes(step, outputs)
@@ -648,6 +653,10 @@ def _compare(
     if absent:
         result.status = "missing"
         result.reason = _plural(f"output {absent[0]} is missing", len(absent) - 1)
+        if step.kind == "check" and not _changed_nodes(step, entry, paths, cache, deps, []):
+            # The stamp is machine-local; the committed lock says it passed at these inputs.
+            from _repro_provenance import check_elsewhere_reason
+            result.reason = check_elsewhere_reason(paths, memo, step.name, entry)
         result.changes = [
             Change(node=p, kind="output", change="missing") for p in absent
         ]
@@ -752,14 +761,22 @@ def _plural(head: str, extra: int) -> str:
 # Target selection
 # ---------------------------------------------------------------------------
 
+def bare_step(graph: Graph, name: str) -> Step | None:
+    """The active step a bare name selects; archived steps never compete for it."""
+    matches = [s for s in graph.steps if s.name == name]
+    if len(matches) > 1:
+        forms = ", ".join(f"'{s.task_path or '.'}#{s.name}'" for s in matches)
+        raise ReproStateError(f"step name {name!r} is ambiguous; select one of {forms}")
+    return graph.step(name) if matches else None
+
+
 def select_steps(
     graph: Graph, targets: Iterable[str], *, include_ancestors: bool = False
 ) -> tuple[list[str], list[str]]:
     """Resolve build targets to step names, returning (selected, unknown targets).
 
-    A target is a task path (that task and its descendants) or a qualified
-    ``task#step``. A bare step name is rejected with its qualified form.
-    Ancestors are opt-in. No targets selects every active step; the CLI
+    A target is a task path (that task and its descendants), a qualified
+    ``task#step``, or a bare step name that is unique. Ancestors are opt-in. No targets selects every active step; the CLI
     requires explicit targets.
     """
     targets = [t for t in targets if t]
@@ -792,13 +809,11 @@ def select_steps(
             elif task_exists:
                 raise ReproStateError(f"task {target!r} selects no steps; no result verified")
             else:
-                step = graph.step(target)
+                step = bare_step(graph, target)
                 if step is not None:
-                    raise ReproStateError(
-                        f"{target!r} is a step name, not a target; select it as "
-                        f"'{step.task_path or '.'}#{step.name}'"
-                    )
-                unknown.append(target)
+                    selected.add(step.name)
+                else:
+                    unknown.append(target)
     else:
         selected = {s.name for s in graph.steps}
 
@@ -871,57 +886,11 @@ def format_status(report: StatusReport) -> str:
     if errors:
         lines.append("")
         lines.append(f"{len(errors)} graph error(s); run `superra task check`.")
-    return "\n".join(lines)
-
-
-def format_explain(report: StatusReport, step_name: str) -> str:
-    entry = report.entry(step_name)
-    if entry is None:
-        known = ", ".join(sorted(s.name for s in report.graph.steps)) or "(none)"
-        raise ReproStateError(f"unknown step {step_name!r}; registered steps: {known}")
-    step = entry.step
-    lines = [
-        f"{step.name}  [{entry.status}]  {entry.reason}",
-        f"  task:  {step.task_path or '(root)'}",
-        f"  kind:  {step.kind}",
-        f"  cmd:   {step.cmd_logical}",
-    ]
-    if step.cmd != step.cmd_logical:
-        lines.append(f"  runs:  {step.cmd}")
-    if step.params:
-        lines.append(f"  params: {json.dumps(step.params, sort_keys=True)}")
-    if entry.duration:
-        lines.append(f"  last:  {entry.duration:.1f}s at {_stamp(entry.last_run)}")
-    if entry.log:
-        lines.append(f"  log:   {entry.log}")
-    if entry.acceptance:
-        lines.append(f"  reviewed acceptance: {entry.acceptance['reason']}")
-        lines.extend(f"    evidence: {ref}" for ref in entry.acceptance["evidence"])
-    if entry.changes:
-        lines.append("  own changes since the last build:")
-        lines.extend(f"    {c.kind}: {c.node} ({c.change})" for c in entry.changes)
-    upstream = sorted(
-        {src for src, dst, _ in report.graph.step_edges if dst == step.name}
-    )
-    if upstream:
-        lines.append("  upstream steps:")
-        for name in upstream:
-            parent = report.entry(name)
-            lines.append(f"    {name}: {parent.status if parent else 'unknown'}")
-    owner = step.task_path or "(root)"
-    if entry.external_consumers:
-        lines.append(f"  outs read outside {owner}:")
-        lines.extend(f"    {ref}" for ref in entry.external_consumers)
-    else:
-        lines.append(f"  no step outside {owner} reads its outs")
-    lines.append("  deps:")
-    lines.extend(f"    {d.logical}" for d in step.deps)
-    lines.append("  outs:")
-    if step.kind == "check":
-        lines.append(f"    {stamp_ref(step.name)} (check stamp)")
-    for out in step.outs:
-        suffix = f"  (sidecar {out.sidecar.logical})" if out.sidecar else ""
-        lines.append(f"    {out.path.logical}{suffix}")
+    stale = {e.step.name for e in entries if e.status != "fresh"}
+    pointed = [t for t in (report.targets or ["."])
+               if stale & set(select_steps(report.graph, [t], include_ancestors=report.upstream)[0])]
+    if pointed:
+        lines.append("Why not fresh: " + "; ".join(f"superra repro explain {shlex.quote(t)}" for t in pointed))
     return "\n".join(lines)
 
 
@@ -982,7 +951,6 @@ __all__ = [
     "directory_dep_nodes",
     "ensure_state_dir",
     "external_consumers",
-    "format_explain",
     "format_status",
     "node_state",
     "path_state",

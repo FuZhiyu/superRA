@@ -444,9 +444,23 @@ def test_an_unknown_target_is_reported(project):
     assert unknown == ["build-z"]
 
 
-def test_a_bare_step_name_names_its_qualified_target(project):
-    with pytest.raises(ReproStateError, match=r"select it as '01-a#build-a'"):
-        select_steps(project.graph(), ["build-a"])
+def test_a_unique_bare_step_name_selects_its_step(project):
+    assert select_steps(project.graph(), ["build-a"]) == (["build-a"], [])
+
+
+def test_status_points_at_explain_when_a_step_is_not_fresh(project, capsys):
+    capsys.readouterr()
+    assert project.run("status", "01-a", "build-b") == 1
+    assert capsys.readouterr().out.rstrip().endswith(
+        "Why not fresh: superra repro explain 01-a; superra repro explain build-b")
+    assert project.run("build", "01-a") == 0
+    capsys.readouterr()
+    assert project.run("status", "01-a", "build-b") == 1  # only the target holding a non-fresh step
+    assert capsys.readouterr().out.rstrip().endswith("Why not fresh: superra repro explain build-b")
+    assert project.run("build", *CHAIN) == 0
+    capsys.readouterr()
+    assert project.run("status", *CHAIN) == 0
+    assert "Why not fresh" not in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("command", ["build", "status"])
@@ -497,7 +511,7 @@ def test_status_and_explain_name_consumers_outside_the_owning_task(project, caps
     assert not re.search(r"task-local|\bshared\b", text)
 
     assert project.run("explain", "01-a#build-a") == 0
-    assert "  outs read outside 01-a:\n    02-b#build-b" in capsys.readouterr().out
+    assert "  outs read outside 01-a: 02-b#build-b" in capsys.readouterr().out
     assert project.run("explain", "03-x#build-x") == 0
     assert "  no step outside 03-x reads its outs" in capsys.readouterr().out
 
@@ -866,9 +880,14 @@ def test_explain_names_the_changed_dependency(project, capsys):
     assert project.run("explain", "02-b#build-b") == 0
     out = capsys.readouterr().out
 
-    assert "build-b  [stale]" in out
-    assert "dependency: Code/b.sh (changed)" in out
-    assert "build-a: fresh" in out
+    assert "build-b  [stale]  dependency Code/b.sh changed" in out
+    assert "input-changed" in out
+    assert "recorded snapshot from the build here; current no known source" in out
+    assert "-cat output/a.txt output/a.txt > output/b.txt" in out
+    assert "next: superra repro explain '02-b#build-b' --diff" in out
+    assert "upstream: build-a fresh" in out
+    assert "no git history (not a git checkout)" in out
+    assert "  baseline:" not in out
 
 
 @needs_pytask

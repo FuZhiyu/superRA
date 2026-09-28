@@ -45,7 +45,6 @@ from _repro_state import (  # noqa: E402
     dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
-    format_explain,
     format_status,
     read_run_record,
     render_dag,
@@ -479,7 +478,7 @@ pytask 0.6 executes them, generated in memory — a project holds no task_*.py.
 A step is fresh when the content hashes of its deps, definition, and outs match
 its last successful build or its reviewed acceptance.
 Targets scope every command: a task path selects its own and descendant steps,
-`task#step` selects one step, `.` selects the whole active tree. Files read from
+`task#step` or a unique step name selects one step, `.` selects the whole active tree. Files read from
 producers outside the scope are saved inputs, used as they sit on disk.
 A stale step is resolved two ways: execute it with `build`, or record the
 current results as reviewed with `accept --reason ...`.
@@ -517,7 +516,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro build 02-merge --dry-run     # what would run, and what it last cost",
         "superra repro build '02-merge#check-panel' --force",
     ])
-    build.add_argument("targets", nargs="*", help="Task paths (including descendants) or task#step selectors")
+    build.add_argument("targets", nargs="*", help="Task paths (including descendants), task#step selectors, or unique step names")
     build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
     build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
@@ -528,15 +527,19 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro status 02-merge '02-merge#check-panel'",
         "superra repro status . --upstream --json",
     ])
-    status.add_argument("targets", nargs="*", help="Task paths or task#step selectors; saved inputs outside scope")
+    status.add_argument("targets", nargs="*", help="Task paths, task#step selectors, or unique step names; saved inputs outside scope")
     status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
     status.add_argument("--json", action="store_true", dest="as_json")
 
-    explain = _sub(sub, "explain", "Explain one step's state, changes, and consumers", [
-        "superra repro explain '02-merge#build-panel'",
-        "superra repro explain '02-merge#build-panel' --json",
+    explain = _sub(sub, "explain", "Explain where each changed hash came from, with a next command per cause", [
+        "superra repro explain 02-merge                 # causes grouped across the task's steps",
+        "superra repro explain '02-merge#build-panel'   # one row per changed node",
+        "superra repro explain build-panel              # a unique bare step name",
+        "superra repro explain Output/panel.parquet     # a file's provenance, producer, and readers",
+        "superra repro explain 02-merge --json --diff",
     ])
-    explain.add_argument("step", help="A task#step selector")
+    explain.add_argument("target", help="A task path, task#step, unique step name, or declared file path")
+    explain.add_argument("--diff", action="store_true", help="Show full dependency diffs instead of the first lines")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
     impact = _sub(sub, "impact", "Inspect conservative dependency fan-out from a file", [
@@ -552,7 +555,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro accept 02-merge --dry-run    # preview; writes nothing",
         "superra repro accept 02-merge --reason '...' --apply <preview-token>",
     ])
-    accept.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
+    accept.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     accept.add_argument("--reason", default="", help="Why the current results are valid (required to accept)")
     accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE", help="Optional per-node review note")
     accept.add_argument("--evidence", action="append", default=[], metavar="FILE", help="Optional existing evidence file")
@@ -564,7 +567,7 @@ def build_parser() -> argparse.ArgumentParser:
     revoke = _sub(sub, "revoke", "Revoke selected step acceptances", [
         "superra repro revoke 02-merge",
     ])
-    revoke.add_argument("targets", nargs="+", help="Task paths or task#step selectors")
+    revoke.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     revoke.add_argument("--json", action="store_true", dest="as_json")
 
     dag = _sub(sub, "dag", "Render the step graph", [
@@ -614,6 +617,28 @@ def _reexec(argv: list[str], command: str) -> int:
         [uv, "run", "--script", str(Path(__file__).resolve()), *argv], env=env, check=False
     )
     return completed.returncode
+
+
+def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
+    from _repro_provenance import explain, format_explain, resolve_target, target_ref
+    kind, value = resolve_target(graph, args.target, paths.project_root)
+    if kind == "step":
+        targets = [target_ref(graph.step(value))]
+    elif kind == "task":
+        targets = [target_ref(graph.step(name)) for name in value[1]]
+    else:
+        targets = [target_ref(s) for s in ([value["producer"]] if value["producer"] else []) + value["consumers"]]
+    cache = HashCache(paths.cache_file)
+    report = compute_status(graph, paths, targets=targets, cache=cache, upstream=True)
+    result = explain(report, paths, cache, kind, value, full_diff=args.diff, plan_name=plan_name)
+    cache.flush()
+    if args.as_json:
+        if kind == "step":
+            step = result.pop("steps")[0]
+            result = dict(step, **result)
+        print(json.dumps(result, indent=2))
+    else:
+        print(format_explain(result, report))
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -712,31 +737,10 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(result)
 
     try:
-        explain_targets = ()
-        if args.command == 'explain':
-            matches, unknown = select_steps(graph, [args.step])
-            if unknown or len(matches) != 1:
-                raise ReproStateError(f"unknown step or non-single-step target {args.step!r}")
-            args.step = matches[0]
-            step = graph.step(args.step)
-            explain_targets = [f'{step.task_path or "."}#{step.name}']
-        report = compute_status(
-            graph, paths,
-            targets=args.targets if args.command == "status" else explain_targets,
-            upstream=args.upstream if args.command == 'status' else True,
-        )
         if args.command == "explain":
-            from _repro_acceptance import inspect_baseline
-            entry = report.entry(args.step)
-            if entry is None:
-                raise ReproStateError(f"unknown step {args.step!r}")
-            details = inspect_baseline(graph, entry.step, paths)
-            if args.as_json:
-                print(json.dumps(dict(entry.to_dict(), baseline=details), indent=2))
-            else:
-                print(format_explain(report, args.step))
-                print("  baseline: " + json.dumps(details, indent=2))
+            _explain(args, graph, paths, plan_root.name)
             return
+        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream)
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

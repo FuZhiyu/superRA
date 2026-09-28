@@ -1,0 +1,58 @@
+{
+  "build-record-check": {
+    "built_at": 1790206480.939029,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "0137380ba2c7571d",
+    "platform": "Darwin arm64"
+  },
+  "diagnosis-scenario-check": {
+    "built_at": 1790206521.6843362,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "1f178dd523d110be",
+    "platform": "Darwin arm64"
+  },
+  "provenance-explain-check": {
+    "built_at": 1790206451.0523489,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "e4f57f7bd54efb92",
+    "platform": "Darwin arm64"
+  },
+  "reviewed-baseline-regression-check": {
+    "built_at": 1790206476.472693,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "188271747a8f0436",
+    "platform": "Darwin arm64"
+  },
+  "task-scoped-builds-check": {
+    "built_at": 1790206508.27715,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "118602a53f293e69",
+    "platform": "Darwin arm64"
+  },
+  "task-scoped-builds-pilot": {
+    "built_at": 1790206517.012786,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "b0829cf89dfd7e39",
+    "platform": "Darwin arm64"
+  },
+  "unified-dependency-workflow-check": {
+    "built_at": 1790206453.23594,
+    "env": {
+      "deps": {}
+    },
+    "lock_id": "4c08cc8a462b4cc1",
+    "platform": "Darwin arm64"
+  }
+}

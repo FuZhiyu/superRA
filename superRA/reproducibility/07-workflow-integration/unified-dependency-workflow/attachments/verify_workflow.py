@@ -92,7 +92,7 @@ def verify(base: Path) -> None:
     args = ["repro", "accept", "source#source", "--reason", "Helper documentation only",
             "--review", "Code/shared.sh=Only a trailing comment changed; value and its call site are identical",
             "--evidence", "review.md", "--json"]
-    proposal = json.loads(run(root, *args))
+    proposal = json.loads(run(root, *args, "--dry-run"))  # accept without it applies at once
     run(root, *args, "--apply", proposal["token"])
     assert (root / "pytask.lock").read_bytes() == lock
     assert (root / "events.txt").read_text() == events

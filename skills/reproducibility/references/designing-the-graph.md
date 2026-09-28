@@ -16,7 +16,7 @@ Unregistered: findings that are not retained, anything regenerated per machine, 
 
 One step per script is the default, so shaping scripts shapes the graph.
 
-- **Split a script at a saved artifact when its stages differ in cost and edit frequency.** An expensive estimation that reruns because a plotting tweak shares its file is a script-boundary problem, not a declaration problem: write the estimates out, let the plot read them.
+- **Split a script at a saved artifact when its stages differ in cost and edit frequency.** Expensive computation feeding a table or figure is the standing case — exhibits get restyled often: the computing script saves full results, not the current exhibit's subset; a cheap script reads them and writes the exhibit. Computation cheap enough to rerun on every restyle stays with its exhibit.
 - **Merge only scripts that always run together.**
 - **Split helper modules by consumer set.** Unrelated helpers in one file couple independent consumers, since separate functions in one file still share a file-level dependency. Import the module a step needs, not an entry point that loads them all.
 - **Derive configuration per consumer.** A cheap producer emitting deterministic per-consumer artifacts stops the cascade on unchanged bytes.
