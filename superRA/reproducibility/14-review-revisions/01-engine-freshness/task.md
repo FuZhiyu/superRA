@@ -6,50 +6,71 @@ depends_on: []
 
 ## Objective
 
-`superra repro build` runs on superRA's own build loop with no pytask dependency and writes one committed lock, `repro-lock.json`; `status` and `build` then agree with the current bytes in every journey below, each pinned by a test in the `test_repro*.py` suite.
+`superra repro build` runs on superRA's own build loop with no pytask dependency and writes one committed lock, `repro-lock.json`. Every command keeps its current behavior, and `status` and `build` agree with the current bytes in every journey below, each pinned by a test in the `test_repro*.py` suite.
 
 ### One engine, one freshness rule
 
-- **`build` decides run or skip through the rule `status` uses.** Each selected step is checked with `_repro_state.compute_status`, counting steps completed earlier in the same run, so a rerun that regenerates identical bytes still stops the cascade. [_repro_hooks.py](../../../../skills/task-tree/scripts/_repro_hooks.py) and the pytask adapter types in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) (`FileNode`, `SpecNode`, `StepTask`, the `_pytask` imports) are deleted; their acceptance, saved-input, receipt, and build-record logic runs inline in the loop.
-- **Execution semantics carry over unchanged:**
+- **`build` decides run or skip through the rule `status` uses.** Each step is checked with `_repro_state.compute_status` over the whole build selection, counting steps completed earlier in the same run, so a producer inside the selection is never treated as a saved input and a rerun that regenerates identical bytes still stops the cascade. [_repro_hooks.py](../../../../skills/task-tree/scripts/_repro_hooks.py) and the pytask adapter types in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) (`FileNode`, `SpecNode`, `StepTask`, the `_pytask` imports) are deleted; their logic runs inline in the loop.
+- **The CLI is unchanged:** the same subcommands, flags, and `--json` shapes. `build` exits 0 on success and 1 when a step fails or the build cannot start. Only `build`'s progress lines and summary, and the lock file names, change.
+- **Execution semantics carry over:**
   - Steps run in dependency order; a failed step skips its descendants while unrelated branches continue.
+  - A step with a missing input fails before its command runs; an `external` input is reported the way `status` reports it.
+  - After each run the step's declarations are rechecked, and a declared out the command did not write fails the step.
+  - Acceptance skips, saved-input receipts, successful baselines, and supersede-on-attempt behave as the hooks do today.
   - `-j N` runs ready steps on a thread pool sharing one hash cache.
-  - `--force`, `--upstream`, and `--dry-run` keep their current scope; a crashed or forced attempt still retries through the `running` / `pending` run records.
+  - `--force` and `--upstream` keep their scope; a crashed or forced attempt still retries through the `running` / `pending` run records.
+  - `--dry-run` writes nothing: no lock, run record, receipt, or acceptance change.
   - Ctrl-C stops running subprocesses and marks their run records failed.
-- **The lock is written per step.** A successful step's entry is written atomically (temp file, then rename) under the existing mutation lock, so an interrupted build keeps every completed entry. A skipped step keeps its entry; a failed step leaves its entry unchanged.
-- **No pytask anywhere.** pytask and `pytask-parallel` leave the PEP 723 block of `repro_run.py`, and the `uv` re-exec and "needs pytask" paths go with them. The tests gated by `needs_pytask` run under the standard contributor command in [CLAUDE.md](../../../../CLAUDE.md).
+- **The lock is written per step by one writer.** A successful step's entry is written atomically (temp file, then rename) through a single in-process writer or under a thread lock, so no `-j` worker overwrites another's entry and an interrupted build keeps every completed entry. A skipped step keeps its entry; a failed step leaves its entry unchanged.
+- **No pytask anywhere.** pytask and `pytask-parallel` leave the PEP 723 block of `repro_run.py`. The tests gated by `needs_pytask` run under the standard contributor command in [CLAUDE.md](../../../../CLAUDE.md). Registered step commands that install pytask drop it: [task-scoped-builds](../../11-scoped-verification/task-scoped-builds/task.md) (two steps), [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md), [02-build-record](../../13-staleness-provenance/02-build-record/task.md), and the command in [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md).
+- **Python 3.10 runs every command.** The `uv` re-exec remains only for reading a legacy `pytask.lock`, which needs `tomllib`.
 
 ### `repro-lock.json`
 
-- **Shape:** a `version` field; per-step entries keyed and sorted by step name, each with
+- **Only the file format changes.** `LockEntry` and everything compared against it — `lock_state`, `current_state`, acceptance `baseline.lock`, and the receipts under `.superra-repro/baselines/` — keep today's in-memory shape, the step spec included as the `<step>::spec` dependency. Existing acceptance records and receipts therefore validate unchanged; [02](../02-portable-records/task.md) owns reshaping the committed acceptance record.
+- **File shape:** a `version` field; per-step entries keyed and sorted by step name, each with
   - `spec` — the two-half definition hash from `spec_hash`;
   - `deps` and `outs` — logical path to content hash (the sidecar digest for a sidecar-tracked out, the stamp for a check step);
-  - `built_on` — `platform` and the `env_probe` digest of the last successful build;
+  - `built_on` — `platform`, and the `env_probe` digest or `probe_error` of the last successful build;
   - a top-level `probes` table mapping digest to probe text.
 
-  One key per line with sorted keys, so two branches that build different steps merge without conflict.
-- **Freshness reads only `spec`, `deps`, and `outs`.** `built_on` feeds `explain`'s environment comparison and nothing else.
-- **The build record folds into the lock.** `repro-builds.json` and its `lock_id` link are retired. An entry is rewritten only when `spec`, `deps`, `outs`, or the probe digest change; `built_at` and `env.deps` are not carried.
-- **Stale entries are pruned.** A build removes entries for steps no longer in the tree (decision below for archived steps).
-- **Every lock reader switches together:** `read_lock` and its callers, the per-revision lock index behind `explain` (which reads `repro-lock.json` and, at older revisions, `pytask.lock` with `repro-builds.json`), `explain`'s environment comparison, and the dashboard watcher that emits `repro-updated` ([internals.md:258](../../../../skills/task-tree/references/internals.md#L258)).
-- **Older projects read unchanged.** Without `repro-lock.json`, `pytask.lock` and `repro-builds.json` are read and converted in memory (pytask's `<step>::spec` dependency becomes `spec`; its `state` field is dropped). The first build writes `repro-lock.json` and prints that `pytask.lock` and `repro-builds.json` can be removed with `git rm`; it deletes neither. Nothing creates `.pytask/`.
+  One key per line with sorted keys.
+- **Freshness reads only `spec`, `deps`, and `outs`.** `built_on` feeds `explain`'s environment comparison and the "checked elsewhere" status reason ([check_elsewhere_reason](../../../../skills/task-tree/scripts/_repro_provenance.py#L151-L163)), never the fresh/stale decision.
+- **The build record folds into the lock.** `repro-builds.json` and its `lock_id` link are retired. An entry is rewritten only when `spec`, `deps`, `outs`, `platform`, or the probe result change; `built_at` and `env.deps` are not carried.
+- **`env_probe` output cannot leak paths.** Its stdout is committed verbatim today ([_repro_builds.py:88-91](../../../../skills/task-tree/scripts/_repro_builds.py#L88-L91)) and only a docs line guards it. The `probes` table commits the digest, or the rule is enforced.
+- **Stale entries are pruned** only by a real build on an error-free graph: entries for steps no longer in the tree are removed (decision below for archived steps).
+- **Every lock reader switches together, preferring `repro-lock.json` when both files exist:**
+  - `read_lock` and its callers, including acceptance and scope;
+  - the per-revision lock index behind `explain`, which reads `repro-lock.json` and, at older revisions, `pytask.lock` with `repro-builds.json`; its `lock-index/<sha>.json` cache gets a version bump;
+  - `check_elsewhere_reason` and `explain`'s environment comparison;
+  - the dashboard watcher that emits `repro-updated` ([internals.md:258](../../../../skills/task-tree/references/internals.md#L258)), which follows the file across rename-based writes.
+- **Older projects read unchanged.** Without `repro-lock.json`, `pytask.lock` and `repro-builds.json` are read and converted in memory; pytask's `state` field is dropped. The first build writes `repro-lock.json` and prints that `pytask.lock` and `repro-builds.json` can be removed with `git rm`; it deletes neither. Nothing creates `.pytask/`.
 
 ### Freshness fixes, on the new loop
 
 - **Symlinked subdirectories inside a directory dependency are hashed.** [`tree_hash`](../../../../skills/task-tree/scripts/_repro_state.py#L177-L191) walks with `os.walk` without `followlinks` and silently skips unreadable files. Follow links with a cycle guard; a broken link or unreadable file under a declared directory surfaces as an error or `external`, never as a silent omission.
 - **A missing lock means never built.** With neither `repro-lock.json` nor `pytask.lock` present, `status` reports every step missing and `build` executes every step; no other local state decides a skip.
 - **A targeted build keeps a sidecar-tracked saved input's consumer fresh** when nothing changed: [`check_boundary_receipt`](../../../../skills/task-tree/scripts/_repro_scope.py#L69) records the digest when the bytes match the producer's recorded output or the sidecar matches the lock, instead of rerunning. With one freshness rule this may already hold; the regression test decides.
-- **Scoped `status` does not exit 0 while producers behind the selection are stale.** Report the stale upstream count and give it a distinct nonzero exit.
+- **Scoped `status` does not exit 0 while producers behind the selection are stale.** It reports the stale upstream count; `status` exits 0 when everything assessed is fresh, 1 when a selected step is not fresh, and 2 when the selection is fresh but a producer behind it is stale.
 
 ### Mechanics docs
 
-[internals.md](../../../../skills/task-tree/references/internals.md), [commands.md](../../../../skills/task-tree/references/commands.md) §Reproduction, the record sections of [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md), and the engine line of [reproducibility/SKILL.md](../../../../skills/reproducibility/SKILL.md#L11) name the new engine and `repro-lock.json`. Factual edits only; [07-instruction-rewrite](../07-instruction-rewrite/task.md) owns the gate rewrite.
+[internals.md](../../../../skills/task-tree/references/internals.md), [commands.md](../../../../skills/task-tree/references/commands.md) §Reproduction, the record sections of [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md), and the engine line of [reproducibility/SKILL.md](../../../../skills/reproducibility/SKILL.md#L11) name the new engine, `repro-lock.json`, and the `status` exit codes. Factual edits only; [07-instruction-rewrite](../07-instruction-rewrite/task.md) owns the gate rewrite.
 
 ### Validation
 
-- The `needs_pytask` tests pass without pytask installed; only the two tests of the "needs pytask" message change.
-- On this repo, `repro status .` reports the same state per step before and after the first new-engine build converts `pytask.lock`.
-- New tests: the lock round-trips byte-identically; ordering and failure skips under `-j`; Ctrl-C mid-build; two branches building different steps merge cleanly; `status` and `build` agree with the lock deleted.
+- **Migration fixture.** Build a scratch project with the pytask engine at `7d5fa992`: a chain with a sidecar-tracked out and its receipt, a check step, an accepted step, and a build record. Record `status --json` and `explain` output, run the first new-engine build, and require the same per-step state, acceptance validity, and receipts, with no step executed that the old engine would have skipped.
+- **History across the switch.** `explain` names the right lock revision in a git history whose older commits hold `pytask.lock` and newer ones `repro-lock.json`.
+- **Existing tests.** The `needs_pytask` tests pass without pytask. The tests expected to change, and why:
+  - the two tests of the "needs pytask" message — the message is gone;
+  - [test_repro_builds.py:19-23](../../../../skills/task-tree/scripts/test_repro_builds.py#L19-L23) — `repro-builds.json` and `lock_id` are retired;
+  - [test_repro_runner.py:576](../../../../skills/task-tree/scripts/test_repro_runner.py#L576) — the file stores `spec` apart from `deps`;
+  - [test_repro_runner.py:711](../../../../skills/task-tree/scripts/test_repro_runner.py#L711) — scoped `status` with stale producers now exits 2;
+  - [test_repro_runner.py:733](../../../../skills/task-tree/scripts/test_repro_runner.py#L733) — pytask's "Would be executed" summary is gone;
+  - lock file names in `test_repro_provenance.py` and `test_dashboard.py`.
+
+  Any other test edit is a regression.
+- **New tests:** the lock round-trips byte-identically; under `-j`, ordering, failure skips, and every completed step's entry present; Ctrl-C mid-build; `--dry-run` writes nothing; `build` exit codes; `status` and `build` agree with the lock deleted; merges of branches that build different steps, including adjacent steps and a `probes` table change on both sides, stay conflict-free.
 
 ### Researcher decisions
 
