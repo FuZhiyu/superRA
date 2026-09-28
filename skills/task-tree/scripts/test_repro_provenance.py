@@ -121,12 +121,12 @@ def explain(project, capsys, *argv):
 def test_explain_names_each_cause_across_two_clones(clones, capsys):
     a, b, first = clones
 
-    # A check passed only in the other clone: non-fresh, with the lock revision named; a status reason.
+    # A check passed only in the other clone: fresh on the lock's word, naming the revision and that it did not run here.
     reason = f"passed at these inputs in lock {first} on {platform_name()}; not run here"
-    assert b.status(".").entry("check-paper").status == "missing"
+    assert b.status(".").entry("check-paper").status == "fresh"
     assert b.status(".").entry("check-paper").reason == reason
     out = explain(b, capsys, "02-paper#check-paper")
-    assert f"check-paper  [missing]  {reason}" in out
+    assert f"check-paper  [fresh]  {reason}" in out
     assert "input-changed" not in out and "other-build" not in out
 
     # Coauthor: rebuild est, edit a docstring, build panel on a merged side branch, rebuild robust.
@@ -325,7 +325,7 @@ def test_check_stamp_lost_outside_git_names_the_working_lock(project):
     assert project.run("build", *CHAIN) == 0
     shutil.rmtree(project.paths.stamps_dir)
     check = project.status(*CHAIN).entry("check-b")
-    assert (check.status, check.reason) == ("missing", f"passed at these inputs in the working lock on {platform_name()}; not run here")
+    assert (check.status, check.reason) == ("fresh", f"passed at these inputs in the working lock on {platform_name()}; not run here")
     project.write("output/b.txt", "changed\n")
     assert project.status(*CHAIN).entry("check-b").reason == "output .superra-repro/stamps/check-b.stamp is missing"
 

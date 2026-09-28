@@ -253,6 +253,39 @@ def test_scoped_status_exits_3_for_a_fresh_selection_behind_a_producer_that_is_n
     assert project.run("status", "02-b#check-b") == 3  # build-a missing; build-b still fresh
 
 
+def test_a_check_passed_at_these_inputs_elsewhere_reads_fresh(project):
+    assert project.run("build", *CHAIN) == 0
+    for stamp in project.paths.stamps_dir.iterdir():  # a fresh clone: the lock, not the stamp, travels
+        stamp.unlink()
+    check = project.status(*CHAIN).entry("check-b")
+    assert (check.status, check.reason) == (
+        "fresh", f"passed at these inputs in the working lock on {platform_name()}; not run here")
+    assert project.run("status", *CHAIN) == 0
+    before = project.run_times()
+    assert project.run("build", *CHAIN) == 0
+    assert project.run_times() == before  # build and status share the rule
+
+    project.write("superRA/02-b/task.md", project.read("superRA/02-b/task.md").replace(
+        "cmd: test -s output/b.txt", "cmd: test -s output/b.txt && true"))
+    assert project.status(*CHAIN).entry("check-b").status == "missing"  # a spec change: must run here
+
+
+def test_a_check_that_failed_here_outweighs_its_pass_elsewhere(project, monkeypatch):
+    project.write("Code/check.sh", 'test "$CHECK_OK" = yes\n')
+    project.write("superRA/02-b/task.md", project.read("superRA/02-b/task.md").replace(
+        "cmd: test -s output/b.txt", "cmd: sh Code/check.sh"))
+    monkeypatch.setenv("CHECK_OK", "yes")
+    assert project.run("build", *CHAIN) == 0
+    for stamp in project.paths.stamps_dir.iterdir():
+        stamp.unlink()
+    assert project.status(*CHAIN).entry("check-b").status == "fresh"
+    monkeypatch.setenv("CHECK_OK", "no")  # this machine disagrees
+    assert project.run("build", "02-b#check-b", "--force") == 1
+    check = project.status(*CHAIN).entry("check-b")
+    assert check.status == "failed" and "last run failed" in check.reason
+    assert project.run("status", *CHAIN) == 1
+
+
 # ---------------------------------------------------------------------------
 # Legacy pytask.lock projects
 # ---------------------------------------------------------------------------

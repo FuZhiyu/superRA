@@ -30,7 +30,7 @@ Warm file hashing costs one `stat` per file; variable discovery and graph constr
 | `other-build`, any other current side | Rebuild; accept only current bytes you have reviewed. |
 | `unknown-output` | Rebuild. Repeated builds that disagree: make the producer deterministic ([What stops a cascade](#what-stops-a-cascade)). |
 | `env: differs` on any row | A rebuild here may not reproduce the recorded bytes; name the difference when you report. |
-| `passed at these inputs in lock <rev>; not run here` | Run the check here. |
+| `passed at these inputs in lock <rev> on <platform>; not run here` | Fresh on the lock's record. Run the check here before reporting its result from this machine. |
 | `external` on a generated file | Retrieve an agreed saved input, or register an in-scope producer. |
 
 A locally fresh result can stay stale in the full graph: default status assesses saved inputs, `--upstream` assesses their producers. Runtime declaration guards freeze the selected commands, paths, and output ownership, so unrelated tree edits do not invalidate running work; a relevant edit or changed input during execution requires retrying the affected work.

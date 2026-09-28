@@ -763,20 +763,22 @@ def _classify(
         ]
         return result
 
+    elsewhere = False
     if entry is None:
         result.status = "missing"
         result.reason = "never built"
     else:
-        _compare(result, step, entry, paths, cache, outputs, memo)
+        elsewhere = _compare(result, step, entry, paths, cache, outputs, memo)
 
     if record.get("outcome") in ("running", "pending"):
         result.status = "failed"
         result.reason = "previous execution was interrupted; rerun required"
 
     # Restoring inputs can clear an ordinary failure. A forced failure must be
-    # retried even with unchanged bytes: it invalidates the cached success.
+    # retried even with unchanged bytes: it invalidates the cached success. A
+    # check that failed here outweighs its pass on another machine.
     if record.get("outcome") == "failed" and (
-        result.status != "fresh" or record.get("forced", False)
+        result.status != "fresh" or record.get("forced", False) or elsewhere
     ):
         if result.status == "fresh":
             result.reason = "forced rerun required"
@@ -796,8 +798,11 @@ def _compare(
     cache: HashCache,
     outputs: dict[str, Node],
     memo: dict,
-) -> None:
-    """Set *result* from the lock entry against what is on disk now."""
+) -> bool:
+    """Set *result* from the lock entry against what is on disk now.
+
+    Returns whether the step is a check that passed at these inputs only elsewhere.
+    """
     deps, products = step_nodes(step, outputs)
     absent = [
         node[0]
@@ -805,20 +810,21 @@ def _compare(
         if node_state(cache, paths.project_root, node) is None
     ]
     if absent:
-        result.status = "missing"
-        result.reason = _plural(f"output {absent[0]} is missing", len(absent) - 1)
         if step.kind == "check" and not _changed_nodes(step, entry, paths, cache, deps, []):
             # The stamp is machine-local; the committed lock says it passed at these inputs.
             from _repro_provenance import check_elsewhere_reason
             result.reason = check_elsewhere_reason(paths, memo, step.name, entry)
+            return True
+        result.status = "missing"
+        result.reason = _plural(f"output {absent[0]} is missing", len(absent) - 1)
         result.changes = [
             Change(node=p, kind="output", change="missing") for p in absent
         ]
-        return
+        return False
 
     changes = _changed_nodes(step, entry, paths, cache, deps, products)
     if not changes:
-        return
+        return False
     result.status = "stale"
     result.changes = changes
     first = changes[0]
@@ -831,6 +837,7 @@ def _compare(
     else:
         head = f"{first.kind} {first.node} {first.change}"
     result.reason = _plural(head, len(changes) - 1)
+    return False
 
 
 def _changed_nodes(

@@ -171,7 +171,7 @@ def check(b):
     assert got == EXPECTED, got
     statuses = {e["name"]: (e["status"], e["reason"]) for e in data["steps"]}
     assert statuses["robust"][0] == "fresh", statuses  # synced
-    assert statuses["check-robust"][0] == "missing" and "not run here" in statuses["check-robust"][1], statuses
+    assert statuses["check-robust"][0] == "fresh" and "not run here" in statuses["check-robust"][1], statuses  # passed in the lock
 
     # The sync-lag rows carry the relation fact diagnosing.md keys on.
     text = subprocess.run([str(b / "superRA/superra"), "repro", "explain", "."], cwd=b, env=ENV, check=True,
