@@ -13,7 +13,7 @@
         "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
         "skills/task-tree/scripts/_repro_provenance.py": "37bb242dc22477168e8b08de0430acb9e2953b79aac28ebeaefe2d28ec257c09",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -37,7 +37,7 @@
         "skills/task-tree/scripts/task_rename.py": "e4c35c919c81a348005931700998021ec6a5b0dc6c674b0f70f9929fee29ea4c",
         "skills/task-tree/scripts/task_update.py": "c9405041bd628a7d3f21673617868d404eca5858641fa9b804b7f3fb94f0716d",
         "skills/task-tree/scripts/test_repro_builds.py": "1581ddcb2f2f9def90ac36709f30078fd2ce64301ff7aba6a7a09c4671648c3b",
-        "skills/task-tree/scripts/test_repro_provenance.py": "1c73c03e5328865c1f610422d323e5525ffc2f4255c7415a99a3b1a5defe1fcb",
+        "skills/task-tree/scripts/test_repro_provenance.py": "05f46def2349083e9d65077692aeb643c7ad29b88014442056e2ed5d6ac29f74",
         "skills/task-tree/scripts/test_repro_runner.py": "f81371933ee950f7cc2297be25a78564a0a9be9864d47fb2050e07ad8cd54117",
         "skills/task-tree/scripts/wrapper_resolver.py": "6817538dc99ea03ce5ffec90a3d2f6ef70d7139a5ec489977047a42376c8f19b"
       },
@@ -82,7 +82,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -143,7 +143,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
         "skills/task-tree/scripts/_task_snapshot.py": "eae566c4c03b8b74ccd5a6cdb09ce019090fd993e1eed97e93e64503a42bdbf9",
@@ -176,7 +176,7 @@
         "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
         "skills/task-tree/scripts/_repro_provenance.py": "37bb242dc22477168e8b08de0430acb9e2953b79aac28ebeaefe2d28ec257c09",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -199,7 +199,7 @@
         "skills/task-tree/scripts/task_rename.py": "e4c35c919c81a348005931700998021ec6a5b0dc6c674b0f70f9929fee29ea4c",
         "skills/task-tree/scripts/task_update.py": "c9405041bd628a7d3f21673617868d404eca5858641fa9b804b7f3fb94f0716d",
         "skills/task-tree/scripts/wrapper_resolver.py": "6817538dc99ea03ce5ffec90a3d2f6ef70d7139a5ec489977047a42376c8f19b",
-        "superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py": "d9164c50512bb7af75eaf0d290d99a2f658c589111c95fcd93974d04229f15bb"
+        "superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py": "84647ddfd6e2cc2c986d199185a739badbe640d678bb2c8000e8fa08442ceb94"
       },
       "outs": {
         ".superra-repro/stamps/diagnosis-scenario-check.stamp": "994f338166d32efcfb921644dd74dfced7b712dc69ce56796c7fb06c81678210"
@@ -219,7 +219,7 @@
         "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
         "skills/task-tree/scripts/_repro_provenance.py": "37bb242dc22477168e8b08de0430acb9e2953b79aac28ebeaefe2d28ec257c09",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -231,8 +231,8 @@
         "skills/task-tree/scripts/repro_run.py": "e2daeb85c2b575cfc4b2e27ab25842613c77f496be1ca36f83813231983e0c18",
         "skills/task-tree/scripts/task_read.py": "f98a8ae0e94aff52c7338acf6cd0986a139b2958adeb3880b0d88185fea74d4c",
         "skills/task-tree/scripts/test_repro_acceptance.py": "f2d3a34f064c2ff40e8233762d71caca93c196da211892f493521ffc4d3362c4",
-        "skills/task-tree/scripts/test_repro_engine.py": "6b765776819dc8c28f147da58d611309219e68f93aaf2205191b8adaeb4ac312",
-        "skills/task-tree/scripts/test_repro_provenance.py": "1c73c03e5328865c1f610422d323e5525ffc2f4255c7415a99a3b1a5defe1fcb",
+        "skills/task-tree/scripts/test_repro_engine.py": "afb7ac2b1d51d00aacb07e6ef06e2c0a138dfaacd7c1b98b1b73ebb968e467cf",
+        "skills/task-tree/scripts/test_repro_provenance.py": "05f46def2349083e9d65077692aeb643c7ad29b88014442056e2ed5d6ac29f74",
         "skills/task-tree/scripts/test_repro_runner.py": "f81371933ee950f7cc2297be25a78564a0a9be9864d47fb2050e07ad8cd54117"
       },
       "outs": {
@@ -253,7 +253,7 @@
         "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
         "skills/task-tree/scripts/_repro_provenance.py": "37bb242dc22477168e8b08de0430acb9e2953b79aac28ebeaefe2d28ec257c09",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -276,7 +276,7 @@
         "skills/task-tree/scripts/task_read.py": "f98a8ae0e94aff52c7338acf6cd0986a139b2958adeb3880b0d88185fea74d4c",
         "skills/task-tree/scripts/task_rename.py": "e4c35c919c81a348005931700998021ec6a5b0dc6c674b0f70f9929fee29ea4c",
         "skills/task-tree/scripts/task_update.py": "c9405041bd628a7d3f21673617868d404eca5858641fa9b804b7f3fb94f0716d",
-        "skills/task-tree/scripts/test_repro_provenance.py": "1c73c03e5328865c1f610422d323e5525ffc2f4255c7415a99a3b1a5defe1fcb",
+        "skills/task-tree/scripts/test_repro_provenance.py": "05f46def2349083e9d65077692aeb643c7ad29b88014442056e2ed5d6ac29f74",
         "skills/task-tree/scripts/test_repro_runner.py": "f81371933ee950f7cc2297be25a78564a0a9be9864d47fb2050e07ad8cd54117",
         "skills/task-tree/scripts/wrapper_resolver.py": "6817538dc99ea03ce5ffec90a3d2f6ef70d7139a5ec489977047a42376c8f19b"
       },
@@ -296,7 +296,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -339,7 +339,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -384,7 +384,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",
@@ -417,7 +417,7 @@
         "superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot.py": "59f1a8191a331a32d265d58f2f3f6529bda2dbf2a350ec2f7b8f5a5dc0abdf49"
       },
       "outs": {
-        "superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json": "d2cfa2b233e302b7453c594e237848c442815e42ab011e8166a08cf12f74f71d"
+        "superRA/reproducibility/11-scoped-verification/task-scoped-builds/attachments/pilot-results.json": "2a3979a9f887907198980a323d77592d34cc3a914691ac866e7ae84d3259b460"
       },
       "spec": "6ce27e5c3e25b819e3d4ab8067a2e8ef111c1fb15b87db36fc6b8cde59ab4962:67e57ba877b0e613e23f23e66bbbc6649ce9ec223986e1c461c149a543d9d8de"
     },
@@ -432,7 +432,7 @@
         "skills/task-tree/scripts/_repro.py": "f486a019a34e4f7871869db62f2b52a56270fc8c2ee47b0836e7c82c6671e2ce",
         "skills/task-tree/scripts/_repro_acceptance.py": "0a8fc978fa625a9af99156e0733b84ef05d2ed966062132d714d5b696074c793",
         "skills/task-tree/scripts/_repro_scope.py": "e42cdd867dcfc19d6745080495df3647af9dbe8d88c5441594da4a4d7f82731e",
-        "skills/task-tree/scripts/_repro_state.py": "42d03f6f2983b0491b2398bc81807cd08e62c0620471b1bfd11b794bfc8306f1",
+        "skills/task-tree/scripts/_repro_state.py": "38f11db8a92b4da3ff07973f086d92d2792447df1d1f59464ab164fa018f515a",
         "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
         "skills/task-tree/scripts/_task_dependencies.py": "29d700a9ec6168ec8661d0288714fa2ef04bb11b9ec2dae4af12cdfca1d79a3f",
         "skills/task-tree/scripts/_task_io.py": "d6842b88d198aec91f5db0940a2d8d0240212d7a05d9ae7efa8220217990a85e",

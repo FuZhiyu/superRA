@@ -119,9 +119,9 @@ Status JSON also records `targets`, `upstream`, and `boundary_inputs` (paths, pr
 
 | State | Meaning |
 |---|---|
-| `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. Bytes matching the successful build stay fresh when an acceptance no longer validates; the reason names it and the `revoke` that clears it. |
+| `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. Bytes matching the successful build stay fresh when an acceptance no longer validates; the reason names it and the `revoke` that clears it. A check whose lock entry matches its current inputs but has no local stamp is fresh with the reason `passed at these inputs in lock <rev> on <platform>; not run here`, unless it last failed here. |
 | `stale` | A dep, an out, the step definition, or an upstream step changed. |
-| `missing` | Never built, or an out is gone. A check whose lock entry matches its current inputs but has no local stamp reports `passed at these inputs in lock <rev>; not run here`, adding `on <platform>` from that entry's `built_on`. |
+| `missing` | Never built, or an out is gone. |
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
