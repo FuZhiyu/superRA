@@ -178,7 +178,6 @@ reproduction:
       env: PROJECT_SCRATCH
   runners:
     julia: julia --project=. {script}
-  env_probe: "python -c 'import numpy; numpy.show_config()'"
 ```
 
 | Key | Value |
@@ -186,7 +185,6 @@ reproduction:
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
 | `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `env_probe` | Optional shell command run once per build from the project root; its stdout is committed in the lock's `probes` table, so it must print no paths or user-identifying text: output with an absolute path is refused, recorded as `probe_error`, and its line printed. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
 
 `${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
 
@@ -229,14 +227,11 @@ The project-root `repro-lock.json` records each step's last successful build. `b
 | `version` | `1` |
 | `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
 | `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
-| `steps.<name>.built_on` | `platform` (OS and CPU architecture), and `probe` (a 16-hex digest of the `env_probe` stdout) or `probe_error` |
-| `probes` | Digest → `env_probe` stdout, once per distinct output; texts no entry references are dropped |
+| `steps.<name>.built_on` | `platform` (OS and CPU architecture) |
 
 Freshness reads `spec`, `deps`, and `outs` only; `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason. No host or user name enters the lock.
 
-Branches that build different steps merge without conflict, except when each adds a different probe text to `probes`: keep both lines, then any build prunes the unused one.
-
-Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record joins its entry only when its `lock_id` still names that entry.
+Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry.
 
 ### Acceptance and successful baseline records
 

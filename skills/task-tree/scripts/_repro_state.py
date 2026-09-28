@@ -430,7 +430,7 @@ def lock_record(name: str, entry: LockEntry) -> dict:
 
 
 def empty_lock() -> dict:
-    return {"version": LOCK_VERSION, "steps": {}, "probes": {}}
+    return {"version": LOCK_VERSION, "steps": {}}
 
 
 def parse_lock(text: str | None) -> dict:
@@ -443,7 +443,6 @@ def parse_lock(text: str | None) -> dict:
     return {
         "version": LOCK_VERSION,
         "steps": {name: raw for name, raw in document.get("steps", {}).items() if isinstance(raw, dict)},
-        "probes": dict(document.get("probes") or {}),
     }
 
 
@@ -478,12 +477,8 @@ def convert_legacy(lock_text: str | None, builds_text: str | None = None) -> dic
         entry = LockEntry(depends_on=dict(raw.get("depends_on") or {}), produces=dict(raw.get("produces") or {}))
         record = builds.get(name)
         if isinstance(record, dict) and record.get("lock_id") == legacy_lock_id(entry.depends_on, entry.produces):
-            env = record.get("env") or {}
-            entry.built_on = {"platform": record.get("platform"),
-                              **{k: env[k] for k in ("probe", "probe_error") if k in env}}
+            entry.built_on = {"platform": record.get("platform")}
         document["steps"][name] = lock_record(name, entry)
-    used = {raw["built_on"].get("probe") for raw in document["steps"].values()}
-    document["probes"] = {k: v for k, v in (builds.get("_probes") or {}).items() if k in used}
     return document
 
 
@@ -511,23 +506,17 @@ def read_lock(path: Path) -> dict[str, LockEntry]:
 
 def _write_lock_document(paths: RunnerPaths, document: dict) -> None:
     from _repro_acceptance import atomic_json
-    used = {raw.get("built_on", {}).get("probe") for raw in document["steps"].values()}
-    document["probes"] = {k: v for k, v in document["probes"].items() if k in used}
     atomic_json(paths.lock_file, document)
 
 
-def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry, probe_text: str | None = None) -> None:
+def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry) -> None:
     """Record one step's successful build; the file is rewritten only when the entry changes."""
     with RECORD_LOCK:
         document = read_lock_document(paths.lock_file)
         record = lock_record(name, entry)
-        probe = record["built_on"].get("probe")
-        if document["steps"].get(name) == record and paths.lock_file.is_file() and (
-                probe is None or probe in document["probes"]):
+        if document["steps"].get(name) == record and paths.lock_file.is_file():
             return
         document["steps"][name] = record
-        if probe is not None and probe_text is not None:
-            document["probes"][probe] = probe_text
         _write_lock_document(paths, document)
 
 

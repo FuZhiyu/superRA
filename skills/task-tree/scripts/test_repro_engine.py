@@ -22,7 +22,7 @@ from _repro_state import (
 )
 from test_repro_acceptance import review
 from test_repro_provenance import explain, git, head
-from test_repro_runner import CHAIN, CONFIG, TASK_X, Project, _use_a_sidecar, project  # noqa: F401
+from test_repro_runner import CHAIN, TASK_X, Project, _use_a_sidecar, project  # noqa: F401
 
 SCRIPTS = Path(__file__).parent
 # In process, a legacy lock needs tomllib; the CLI re-execs under uv instead.
@@ -37,7 +37,7 @@ def test_the_lock_is_sorted_one_key_per_line_and_round_trips(project):
     assert project.run("build", ".") == 0
     text = project.read("repro-lock.json")
     document = json.loads(text)
-    assert list(document) == ["probes", "steps", "version"]
+    assert list(document) == ["steps", "version"]
     assert list(document["steps"]) == sorted(document["steps"])
     entry = document["steps"]["build-b"]
     assert entry["spec"] and entry["deps"] == {
@@ -63,7 +63,7 @@ def test_status_and_build_agree_when_the_lock_is_deleted(project):
 
 
 def _merge_repo(project):
-    project.write(".gitignore", "output/\n.superra-repro/\nprobe.txt\n")
+    project.write(".gitignore", "output/\n.superra-repro/\n")
     git(project.root, "init", "-q")
     git(project.root, "add", "-A")
     git(project.root, "commit", "-qm", "code")
@@ -88,23 +88,6 @@ def test_branches_that_build_different_steps_merge_cleanly(project, left, right)
     git(project.root, "merge", "-q", "--no-edit", "right")  # raises on a conflict
     assert set(json.loads(project.read("repro-lock.json"))["steps"]) == {"build-a", "build-b", "check-b", "build-x"}
     assert project.status(".").ok
-
-
-def test_the_same_new_probe_text_on_both_branches_merges_cleanly(project):
-    project.write("superRA/config.yaml", CONFIG + '  env_probe: "cat probe.txt"\n')
-    project.write("probe.txt", "blas: openblas\n")
-    _merge_repo(project)
-    for branch, (task, script) in (("left", ("01-a", "Code/a.sh")), ("right", ("03-x", "Code/x.sh"))):
-        git(project.root, "checkout", "-qb", branch, "main")
-        project.write("probe.txt", "blas: accelerate\n")  # both machines moved to the same backend
-        project.write(script, project.read(script) + f"# {branch}\n")
-        assert project.run("build", task) == 0
-        git(project.root, "commit", "-qam", branch)
-    git(project.root, "checkout", "-q", "left")
-    git(project.root, "merge", "-q", "--no-edit", "right")
-    lock = json.loads(project.read("repro-lock.json"))
-    texts = {lock["probes"][lock["steps"][name]["built_on"]["probe"]] for name in lock["steps"]}
-    assert texts == {"blas: openblas", "blas: accelerate"}
 
 
 # ---------------------------------------------------------------------------
