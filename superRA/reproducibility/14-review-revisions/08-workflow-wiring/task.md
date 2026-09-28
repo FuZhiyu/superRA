@@ -7,31 +7,62 @@ depends_on:
 
 ## Objective
 
-Every workflow and role call site that touches reproduction points to the owning skill, applies its gates in the right order, and uses 07's terms, so an agent loading only what the manifest names acts correctly in both interactive and autonomous mode.
+Every workflow step that touches reproduction points to the reproducibility skill for the rule, applies its gates in the right order, and uses 07's terms. An agent loading only what the Skill-Load Manifest names then acts correctly in both interactive and autonomous mode. The steps in scope are planning, the IMPLEMENT completion check, INTEGRATE, and the implementer and reviewer roles.
 
-- **The completion gate applies the stale rule before building.** [completion.md:18](../../../../skills/superimplement/references/completion.md#L18), [integrate.md:9](../../../../skills/superintegrate/references/integrate.md#L9), and [finish.md:39](../../../../skills/superintegrate/references/finish.md#L39) build `--upstream` first, running costly stale producers the stale rule says to ask about. Order: status, the stale rule with `--dry-run` cost, then build; add the costly-rerun ask to `main-agent.md` §Proceeding and Pausing; one owner holds the command pair and the others point to it.
-- **Planner seeding produces valid steps.** [build-and-review.md:13](../../../../skills/superplan/references/build-and-review.md#L13) seeds outs-only steps; a step without `cmd` is an `[ERROR]` that fails `task check`, `task frontier`, and `task create`. Reconcile with the implementer ownership at [task-file-contract.md:29](../../../../skills/task-tree/references/task-file-contract.md#L29).
-- **Trees with no reproduction steps pass completion.** `repro status` and `build` exit 1 with "selects no steps"; the condition and fallback are stated once, in `protect-and-completion.md`, instead of three wordings ([main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10), `using-superra/SKILL.md` §Task Interface, finish.md:39).
-- **The manifest carries the load trigger.** A Domain row in the `using-superra` Skill-Load Manifest (mirrored in CLAUDE.md §Agent Load Surface and the load contract); interactive self-review ([interactive-mode.md:17](../../../../skills/using-superra/references/interactive-mode.md#L17)) applies every loaded skill's gates; [implement-task:50](../../../../skills/implement-task/SKILL.md#L50) and [review-task:28](../../../../skills/review-task/SKILL.md#L28) become pointers.
-- **Reviewers verify evidence.** A review item covers all reproduction gates, including stale-step resolution, and names the evidence: `status <targets> --upstream` output and the committed `repro-lock.json` and acceptance records.
-- **Parallel work and Sync handle the root records.** [parallel-dispatch.md:15](../../../../skills/agent-orchestration/references/parallel-dispatch.md#L15) promises branches that "typically merge cleanly"; `semantic-merge` gets resolution guidance for `repro-lock.json` ([01](../01-engine-freshness/task.md)) and the acceptance format [02](../02-portable-records/task.md) settles; the implement-task commit guidance names the records.
-- **Protect records its reproduction decisions.** The researcher template and commit body in `superintegrate/references/protect.md` include completion targets, selected checks, and the input boundary; completion targets get a durable home in the task tree, with a defined first-cycle default.
-- **One escalation status** for a costly stale step a subagent cannot resolve.
-- **One name per concept:** kept / key / retained / maintained / canonical result, and "final deliverable tasks" versus "completion targets"; "canon" is gone.
-- **The harness contract is current:** `load_contract.json` anchors (off by two since `3a548e98`; LC008 now lands on the planning-review row), LC008 citing routing rather than model text, `ALL_STAGE_SKILLS` not counting a conditional `reproducibility` load at `Stage: implementation` as an over-load, and a live run of the protection row.
+### The completion check asks before costly reruns
 
-Validation: a realistic harness session walks the three scenarios in [wiring.md](../attachments/wiring.md) (a new regression table; a shared-helper edit fanning out to a costly estimation from a subagent; the completion gate and Protect with a check step), and the harness-instruction-following tests pass.
+- **Status first, then the stale rule, then build.** [completion.md:18](../../../../skills/superimplement/references/completion.md#L18), [integrate.md:9](../../../../skills/superintegrate/references/integrate.md#L9), and [finish.md:39](../../../../skills/superintegrate/references/finish.md#L39) run `repro build <targets> --upstream` first, which executes every stale producer, including costly ones the stale rule says to ask the researcher about. In autonomous mode, a subagent correctly escalates a costly rerun, and the completion check then runs it anyway.
+  - Order the check: `status`; the stale rule, with cost from `build --dry-run`'s recorded durations; then `build`.
+  - Add the costly-rerun question to `main-agent.md` §Proceeding and Pausing.
+  - One file holds the commands; the other two point to it.
+- **Trees with no reproduction steps pass.** `repro status` and `build` exit 1 with "selects no steps", and `completion.md` treats that as a failure, so a theory or prose-only tree cannot finish. State the condition and its fallback once, in `protect-and-completion.md`. Today it is worded three ways: [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10), `using-superra/SKILL.md` §Task Interface, and `finish.md:39`.
+
+### Planning produces valid steps
+
+- [build-and-review.md:13](../../../../skills/superplan/references/build-and-review.md#L13) tells the planner to seed each producing task's `## Reproduction` section with its outputs only. A step without `cmd` is an error, so `task check`, `task frontier`, and `task create` then fail. Either seed name, command, and outputs, or keep the planned artifacts in `## Details` for the implementer; reconcile with [task-file-contract.md:29](../../../../skills/task-tree/references/task-file-contract.md#L29), which makes the section implementer-owned.
+
+### Every role loads and applies the gates
+
+- **The manifest carries the load trigger.** The trigger to load `reproducibility` is a prose sentence in `using-superra/SKILL.md` §Task Interface; the Skill-Load Manifest, CLAUDE.md §Agent Load Surface, and the harness load contract do not list it. Add a Domain row: load when a task produces, changes, or reviews a result from executable code.
+- **Interactive self-review applies the gates.** In the default interactive mode, [interactive-mode.md:17](../../../../skills/using-superra/references/interactive-mode.md#L17) self-reviews against "active domain skills" only, so the reproducibility gates are skipped.
+- **Role skills point instead of restating.** [implement-task:50](../../../../skills/implement-task/SKILL.md#L50) and [review-task:28](../../../../skills/review-task/SKILL.md#L28) paraphrase the gates.
+- **Reviewers check evidence.** `review-task` drops the stale-step gate and names no evidence. A review item covers every gate and names the evidence: `status <targets> --upstream` output and the committed `repro-lock.json` and acceptance records.
+- **One escalation status** for a costly stale step a subagent cannot resolve. Today it could be BLOCKED or DONE_WITH_CONCERNS.
+
+### Parallel work, Sync, and Protect handle the records
+
+- **Merges of the committed records have guidance.** [parallel-dispatch.md:15](../../../../skills/agent-orchestration/references/parallel-dispatch.md#L15) promises parallel branches "typically merge cleanly", but every branch writes the same root records. `semantic-merge` gets resolution guidance for `repro-lock.json` and for the acceptance format [02](../02-portable-records/task.md) settles, and implement-task's commit guidance names the records.
+- **Protect records its reproduction decisions.** The researcher template and commit body in `superintegrate/references/protect.md` omit the completion targets, selected checks, and input boundary, and the targets then live only in a commit body. Give them a durable home in the task tree, with a default for the first IMPLEMENT exit, before Protect has run.
+
+### One name per concept, and a current harness contract
+
+- **Terminology.** Pick one of kept, key, retained, maintained, or canonical result; one of "final deliverable tasks" or "completion targets"; remove "canon".
+- **Harness contract.**
+  - `load_contract.json` anchors are two lines off since `3a548e98`, so LC008 lands on the planning-review row.
+  - LC008 cites model text instead of routing.
+  - `ALL_STAGE_SKILLS` counts a correct conditional load of `reproducibility` at `Stage: implementation` as an over-load.
+  - The protection row is not yet verified in a live run.
+
+### Validation
+
+A realistic harness session walks the three scenarios in [wiring.md](../attachments/wiring.md):
+
+1. An implementer on an econ task produces a regression table from a new script.
+2. A subagent edits a shared helper that fans out to a costly estimation.
+3. The main agent runs the completion check and Protect on a tree with a check step.
+
+The harness-instruction-following tests pass.
 
 Owning task: [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md).
 
 ## Details
 
-Prose fixes from [wiring.md](../attachments/wiring.md):
+Smaller prose fixes from [wiring.md](../attachments/wiring.md):
 
-- `completion.md` §Verify Pipeline and Reproducibility is still headed "Pipeline", and `econ-data-analysis/SKILL.md:151` cites it.
+- `completion.md` §Verify Pipeline and Reproducibility still says "Pipeline", and `econ-data-analysis/SKILL.md:151` cites it.
 - `integrate.md:9` "among them" has no clear referent.
-- `CATEGORIES.md:52` states the trigger more narrowly than `using-superra`.
-- `changing-the-tree.md:42` points to §What earns a step for moves and removals, which live in §Step lifecycle.
+- `CATEGORIES.md:52` states the load trigger more narrowly than `using-superra`.
+- `changing-the-tree.md:42` points to §What earns a step for moves and removals, which §Step lifecycle covers.
 - `result-protection/SKILL.md:8` counts "a registered step with its committed lock" as protection; only a check step guards values.
-- `completion.md:19` "not ad-hoc REPL state" sits against accepting interactive runs.
-- `main-agent.md:10` routes session-start status through the stale rule, implying builds before the first response.
+- `completion.md:19` "not ad-hoc REPL state" sits against accepting results from interactive runs.
+- `main-agent.md:10` routes the session-start status through the stale rule, implying builds before the first response.

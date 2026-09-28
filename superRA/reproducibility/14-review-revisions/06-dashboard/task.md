@@ -7,24 +7,30 @@ depends_on:
 
 ## Objective
 
-The dashboard's task/step DAG meets the [navigation contract](../../04-dashboard-view/scalable-navigation/attachments/design.md) at scale and carries no code from retired modes.
+The dashboard's dependency graph, where task nodes expand into their steps, opens at a readable size, draws each kind of edge distinctly, flags broken tasks, and carries no code from retired modes. The [navigation contract](../../04-dashboard-view/scalable-navigation/attachments/design.md) is the specification.
 
-- **Readable initial scale.** The first render fits to the canvas with no zoom floor (`reproFit`), opening at 27–58%. Open near 80% anchored on the selection; keep Fit as an explicit button.
-- **Logical-only edges look different** from file edges (for example dashed); both now share the `rp-wire` class, and the "Logical prerequisite" label appears only in the click popup.
-- **A malformed task's card shows an error marker**, not "0 steps".
-- **Dead code from retired trace, scope, and tier modes is gone**, with the tests that pin it: `reproSearch` (never called), `reproBranchExpansion`, `reproBoundaryHTML`, `reproLogicalBoundaryHTML`, the walk/anchor/mode/roots state in `reproProject`, the "Outside scope" labels, and the "Use Whole project to recover" notice naming a removed control.
-- **The `/api/repro/graph` payload carries each fact once:** `task_edges` duplicates `dependencies.edges`, `boundaries` repeats the evidence, findings appear twice (deduplicated client-side by an O(n²) `JSON.stringify` comparison), and one cycle is reported both as a step cycle and a dependency cycle.
-- **The layout code is maintainable.** `reproHierarchyLayout` runs about 80 lines of 300–900 characters each.
+### What the reader sees
 
-Validation: a headless-browser pass on a 50-task / 200-step fixture, collapsed and fully expanded, plus an invalid-graph fixture.
+- **Readable on open.** The first render fits the whole graph to the canvas with no minimum zoom: 58% with 7 top-level tasks, 27% with 10 collapsed groups, where task titles are about 3 px tall. The contract asks for a readable initial scale plus an explicit Fit. Open near 80% on the selection; Fit stays a button.
+- **Logical edges look different from file edges.** Both use the `rp-wire` style, and "Logical prerequisite" appears only in the popup after a click. Draw logical edges distinctly, for example dashed.
+- **A task with malformed steps shows an error marker.** Its card reads "0 steps".
+
+### What the code carries
+
+- **No code from retired modes.** About 100 lines of [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js) serve the removed trace, scope, and tier modes: `reproSearch` (never called), `reproBranchExpansion`, `reproBoundaryHTML`, and `reproLogicalBoundaryHTML` (called only from tests), the walk, anchor, mode, and roots state in `reproProject`, the "Outside scope" labels, and a notice naming a control that no longer exists ("Use Whole project to recover"). Remove them with the tests that pin them.
+- **Each fact appears once in `/api/repro/graph`.** At 200 steps the payload is 352 KB, about 40% of it duplicated:
+  - `task_edges` repeats `dependencies.edges`, and `boundaries` repeats the edge evidence.
+  - Findings appear twice, and the client deduplicates them with an O(n²) `JSON.stringify` comparison.
+  - One cycle is reported both as a step cycle and as a dependency cycle.
+- **Readable layout code.** `reproHierarchyLayout` is about 80 lines of 300–900 characters each.
+
+### Validation
+
+A headless browser runs a 50-task, 200-step fixture collapsed and fully expanded, plus an invalid-graph fixture, with no page errors. The contract items the review found met stay met: one hierarchy with task nodes expanding to steps; logical edges ending at the task boundary, even for expanded or step-less tasks; labeled cycles under a "graph blocked" header, with nothing offered for execution; diagnostics that separate omitted malformed steps from steps in a cycle.
 
 ### Researcher decisions
 
-- **Layout code: reformat or vendor a layered-layout library** and drop the hand-written port and channel router. Recommendation: reformat; layout already runs in 16 ms and draws in 38 ms at 200 expanded steps.
-- **Pre-existing dependency views** (the `/dag` Mermaid route and `dag.html`, reached only by tests; the `buildChildFlow` mini-graph) duplicate the new workspace. Recommendation: remove them here.
+- **Layout code: reformat it, or replace the hand-written layout and edge router with a layered-layout library.** Recommendation: reformat. Layout takes 16 ms and drawing 38 ms at 200 expanded steps, so the cost is maintenance only.
+- **Older dependency views.** The `/dag` Mermaid route and `dag.html` are reached only by tests, and the `buildChildFlow` mini-graph duplicates the new graph. Recommendation: remove them here.
 
 Owning task: [scalable-navigation](../../04-dashboard-view/scalable-navigation/task.md).
-
-## Details
-
-Contract items the review found met in a headless browser: one hierarchy with task nodes expanding to steps; logical edges ending at the task boundary even for expanded or step-less tasks; labeled cycles with a "graph blocked" header and nothing offered for execution; diagnostics separating omitted malformed steps from steps in a cycle; no page errors. At 200 steps the payload is 352 KB, about 40% duplicated.

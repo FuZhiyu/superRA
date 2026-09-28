@@ -6,20 +6,31 @@ depends_on: []
 
 ## Objective
 
-The PostToolUse reproduction reminder fires for every edit to a registered producer file, whatever tool made it, and its task-edit feedback stays scoped to the edited task.
+When an agent edits a file that a registered step depends on, the hook reminds it to check that step's declaration, whatever tool made the edit, and the hook's other feedback concerns only the task being edited.
 
-- **Paths behind a `${VAR}` are checked.** [task_hook.py:872](../../../../skills/task-tree/scripts/task_hook.py#L872) skips every variable, even a plain literal like `CODE: Code`, and its docstring claim that such a path "cannot name a real producer file" is wrong. Resolve literal and `env:` variables without running shell resolvers.
-- **Files inside a declared dependency directory are checked** on Bash edits; the `is_file()` filter at [task_hook.py:875](../../../../skills/task-tree/scripts/task_hook.py#L875) drops them. Walk directory deps with a size cap.
-- **The first hooked call of a session is covered.** It currently only seeds the content baseline; seed at session start or prompt submit.
-- **Tree-wide warnings do not repeat on every `task.md` edit.** Warnings such as "archived prerequisite 'G2'" and the communicate reminder recur whichever task was edited ([task_hook.py:538-540](../../../../skills/task-tree/scripts/task_hook.py#L538-L540)).
-- **Cost stays in range:** about 40–57 ms per no-op Bash call and 160–200 ms per `task.md` edit on a 99-task tree today.
+The hook runs after every tool call and compares file contents against a saved baseline, so it already catches edits made through Bash heredocs as well as the Edit tool. Keep that design.
 
-### Researcher decisions
+### Every edit to a declared file is caught
 
-- **New scripts outside `superRA/`.** A new `Code/new_producer.py` never draws a "register a step" reminder. Recommendation: remind on new files whose extension matches a configured runner, under the project's code directories.
+- **Paths written with a variable.** A dependency declared as `${CODE}/est.jl` is never checked, even when `CODE` is a plain literal. The hook in [task_hook.py](../../../../skills/task-tree/scripts/task_hook.py) builds the graph without resolving variables and skips every path containing one; its docstring's claim that such a path "cannot name a real producer file" is wrong. Resolve literal and `env:` variables in the hook; never run `shell:` resolvers there.
+- **Files inside a declared directory.** A Bash edit under a declared directory such as `Code/lib/` is missed, because the hook checks only declared paths that are files; the Edit tool's path catches it. Walk declared directories, with a size cap.
+- **The first tool call of a session.** That call only records the baseline, so an edit made in it is missed. Record the baseline at session start or prompt submit.
+
+### Feedback stays scoped
+
+- **A `task.md` edit reports warnings for that task.** Every edit repeats tree-wide warnings, such as "archived prerequisite 'G2'", plus the communicate reminder, whichever task was edited.
+- **Cost stays in range:** about 40–57 ms per no-op Bash call and 160–200 ms per `task.md` edit on a 99-task tree.
+
+### Validation
+
+On a scratch tree, each of these fires exactly one reminder: a heredoc edit to a literal path, a `sed -i` edit to `${CODE}/est.jl`, a Bash edit inside a declared directory, and an edit in a session's first tool call. A `task.md` edit shows only that task's warnings, and timings stay in range.
+
+### Researcher decision
+
+- **New scripts outside `superRA/`.** Creating `Code/new_producer.py` draws no reminder to register a step. Recommendation: remind on a new file whose extension matches a configured runner (`.jl` for a `julia` runner), under the project's code directories, skipping scratch and temporary folders.
 
 Owning tasks: [05-reminder-hook](../../05-reminder-hook/task.md), [02-agent-signals](../../12-agent-protocol/02-agent-signals/task.md).
 
 ## Details
 
-Full evidence: [deps-report.md](../attachments/deps-report.md) M5 and Minor. The hook compares file contents against a baseline rather than parsing commands, so a Bash heredoc edit to a literal producer path already fires; keep that design.
+Evidence with the scratch scenarios: [deps-report.md](../attachments/deps-report.md) M5 and Minor.

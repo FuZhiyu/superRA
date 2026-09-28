@@ -7,22 +7,37 @@ depends_on:
 
 ## Objective
 
-`repro explain` and `repro impact` print, accurately and at bounded cost, the facts [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md) and [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) tell agents to act on.
+`superra repro explain` and `superra repro impact` print, accurately and at bounded cost, the facts the reproducibility skill tells agents to act on.
 
-- **The relation to HEAD is always printed.** `label()` prints only the first source ([_repro_provenance.py:566-571](../../../../skills/task-tree/scripts/_repro_provenance.py#L566-L571)), and the git source is ordered before the lock source ([:350-358](../../../../skills/task-tree/scripts/_repro_provenance.py#L350-L358)); with git-tracked outputs the text loses "not in HEAD's history; on wip", the fact diagnosing.md branches on.
-- **Graph errors are reported.** On an invalid graph `explain` exits 0, never mentions the cycle, and shows a blocked step as "never built".
-- **Rows are grouped by changed file**, matching the `(same row)` compaction [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md)'s Results already describe.
-- **Cost is bounded per call:** one byte budget per call (the 64 MiB budget applies per path today), one history pass, and a cache keyed on HEAD and path. Blob history and lock history search the same refs (blob history: local branches only; lock history: remote-tracking branches too).
-- **`impact` covers configuration and speaks text.** `impact superRA/config.yaml` reports the steps a runner or variable change stales; text is the default with `--json` optional; recorded durations appear, as [03-skill-redesign](../../12-agent-protocol/03-skill-redesign/task.md) promises; the fan-out reuses `_repro_signals.downstream_steps` instead of its own O(E²) loop.
+- **`explain <target>`** says where each changed hash came from (a lock revision, a git revision, a local receipt) and how that revision relates to HEAD. [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md) branches on that relation: a build synced from an older commit calls for waiting, a build from another branch for rebuilding.
+- **`impact <path>`** predicts which steps a change to a file would make stale.
+
+This task starts by confirming each finding on [01](../01-engine-freshness/task.md)'s engine and `repro-lock.json`; the evidence predates them.
+
+### `explain` states the facts agents branch on
+
+- **Text output always states the relation to HEAD.** When outputs are tracked in git, text prints only the first matching source, the git revision (`current git c591900`), and drops the lock source that carries the relation; the JSON row for the same output holds `lock c591900 … not in HEAD's history; on wip`. `label()` in [_repro_provenance.py](../../../../skills/task-tree/scripts/_repro_provenance.py) prints one source, and git sources sort before lock sources.
+- **Graph errors are reported.** On an invalid graph, `explain` exits 0, never mentions the cycle, and shows a step that `build` refuses to run as "never built". Print the findings line `status` prints.
+- **One row per changed file.** `explain .` on this repository printed 22 rows for 7 changed files (154 lines, with a 1,176-character `searched:` footer), one row per consuming step. [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md)'s Results already describe a `(same row)` compaction the code lacks.
+- **Cost is bounded per call.** Each changed tracked file costs its own `git log` walk: 14 s per walk on a synthetic 200,000-commit repository, against 0.87 s for `explain .` on this repository's 3,172 commits. The 64 MiB blob budget applies per path rather than per call. Use one budget per call, one history pass, and a cache keyed on HEAD and path. Blob history and lock history search the same refs; today blob history covers local branches only, while lock history also covers remote-tracking branches.
+- **What already works stays:** the three causes, the relation facts, the per-revision lock index, and a `status` that spawns no git.
+
+### `impact` covers configuration and reads as text
+
+- **Configuration changes are covered.** `impact superRA/config.yaml` reports nothing, although changing a runner template stales every step that uses it.
+- **Text by default, with durations.** Output is always JSON, so `--json` has no effect, and it carries no durations, although [03-skill-redesign](../../12-agent-protocol/03-skill-redesign/task.md) tells agents to measure fan-out "with impact and recorded durations".
+- **One downstream computation.** `impact` runs its own O(E²) fan-out loop instead of `downstream_steps` in [_repro_signals.py](../../../../skills/task-tree/scripts/_repro_signals.py).
+
+### Validation
+
+Scratch fixtures cover a git-tracked output built on a side branch, an invalid graph, one changed file read by several steps, a runner edit in `config.yaml`, and timing on a large synthetic history.
 
 Owning tasks: [01-provenance-explain](../../13-staleness-provenance/01-provenance-explain/task.md), [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md).
 
 ## Details
 
-### Evidence (dashboard and provenance review, reproduced on scratch projects)
+Evidence (provenance and dashboard review, reproduced on scratch projects before 01):
 
-- **Relation to HEAD.** With outputs committed to git, text printed `current git c591900` while the JSON row held `lock c591900 … not in HEAD's history; on wip`. With untracked outputs, text was accurate: "not in HEAD's history; on wip" and "earlier commit, 4 behind HEAD".
-- **Row repetition.** `explain .` on this repo printed 22 rows for 7 changed files (13 KB, 154 lines); the `searched:` footer alone was 1,176 characters.
-- **Cost.** Each walk is one path-limited `git log` for the lock plus one per changed tracked file (`_repro_provenance.py:199`, `:320`). On a synthetic 200,000-commit repo each walk took 14 s (0.7 s with changed-path Bloom filters); on this repo (3,172 commits) `explain .` took 0.87 s. `status` spawns no git (0.11 s); keep that.
-- **Impact.** Include closures are followed transitively, `env_deps` fan out to every step, and `--scope` marks steps correctly.
-- **Keep:** the three causes, the relation facts, the per-revision lock index, and the cached lock commit.
+- With untracked outputs the text was accurate: "not in HEAD's history; on wip" and "earlier commit, 4 behind HEAD".
+- `impact` already follows Julia `include` closures transitively, fans `env_deps` out to every step, and marks `--scope` correctly.
+- With changed-path Bloom filters enabled, the 200,000-commit walk fell from 14 s to 0.7 s.
