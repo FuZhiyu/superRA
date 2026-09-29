@@ -146,6 +146,13 @@ Tier: thorough. Focus: correctness — false `fresh`, needless reruns, `status`/
 6. **[ADVISORY] The dashboard can miss a lock write while its watcher re-arms (inferred).** After a lock change, the watcher breaks and `aclose`s the watch ([plan_dashboard.py:616](../../../../skills/task-tree/scripts/plan_dashboard.py#L616)), which discards events buffered during the 0.2 s sleep and the rebuild. It then opens a new watch. A `-j` build's last per-step lock write can land in that window, and the dashboard then shows the previous state until the next change. Not reproduced.
 7. **[ADVISORY] `engine-freshness-check` misses two modules the test imports.** Its `deps` omit `task_query.py` (imported by [task_read.py:26](../../../../skills/task-tree/scripts/task_read.py#L26)) and `dashboard_artifact_workflow.py` (imported by [cli.py:52](../../../../skills/task-tree/scripts/cli.py#L52)). An edit to either leaves the check fresh.
 
+Orchestrator adjudication: 1 and 2 accepted; advisories 3, 4, 5, and 7 accepted as fix-now; 6 fixed if a test reproduces it, otherwise recorded. Added from the real-project migration check (ElasticityBound-Local, 111 steps, 35 accepted; step states, acceptance, and reasons identical across engines; first build executed nothing):
+
+8. **[ADVISORY] Before the first new build, each accepted step re-parses the legacy `pytask.lock`.** `current_state` calls `read_lock` per acceptance record, and `convert_legacy` parses the TOML each time: 72 parses and 1.5 s of `status`'s 2.3 s, against 1.4 s on the old engine. Convert once per process.
+9. **[ADVISORY] `status .` labels the whole tree "(selected steps only)".** Print the label only for a narrower selection.
+10. **[ADVISORY] From 10's review:** a check that failed locally without `--force` reads "forced rerun required; last run failed"; drop "forced" when the run was not forced. 10's Objective says a spec edit makes a check passed elsewhere "stale"; the code correctly reports `missing` (no local stamp), so correct the Objective's wording.
+11. **[ADVISORY] Results say this repo keeps `pytask.lock` and `repro-builds.json` until `git rm`;** commit 4adac714 removed them. Update the line.
+
 ## Details
 
 ### Why superRA owns the engine
