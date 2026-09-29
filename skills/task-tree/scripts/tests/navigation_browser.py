@@ -71,7 +71,7 @@ def routing_fixture(kind):
         pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (2, 3), (2, 4), (3, 4)]
     return {'steps': [{'name': name, 'task': name, 'kind': 'command'} for name in ids],
             'step_edges': [{'from': ids[a], 'to': ids[b], 'via': 'output.csv'} for a, b in pairs],
-            'dependencies': {'tasks': [{'path': name, 'title': title, 'status': 'in-progress'} for name, title in zip(ids, titles)], 'boundaries': {}}}
+            'dependencies': {'tasks': [{'path': name, 'title': title, 'status': 'in-progress'} for name, title in zip(ids, titles)], 'logical': []}}
 
 
 def run(evidence, snapshot=None):
@@ -136,10 +136,8 @@ def run(evidence, snapshot=None):
                     page.locator('#workspace-filter-summary').get_by_role('button',name='Clear filters').click()
                     page.click('#btn-reproduction')
                     results['sharedTaskFilter'] = True
-                    scope = page.evaluate('JSON.stringify(_reproNav.roots)')
                     page.locator('[data-rp-action=task][data-value="group-0"]').click()
                     assert page.evaluate('activePath') == 'group-0'
-                    assert page.evaluate('JSON.stringify(_reproNav.roots)') == scope
                     page.locator('[data-rp-action=fold][data-value="group-0"]').click()
                     assert page.locator('.rp-task').count() == 14
                     assert page.locator('.repro-node').count() == 10
@@ -159,10 +157,10 @@ def run(evidence, snapshot=None):
                     page.click('#btn-find')
                     page.fill('#search-palette-input', 'group-1')
                     page.locator('#search-palette-input').press('Enter')
-                    assert page.evaluate('_reproNav.roots') == []
+                    assert page.evaluate('Object.keys(_reproNav).sort()') == ['expanded', 'selected']
                     click_graph_action(page, '[data-rp-action=overview]')
                     # Repeated pure UI timings after both payloads are loaded.
-                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],overview:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();renderSearchResults('step-499');r.search.push(performance.now()-t);t=performance.now();reproNavigate({expanded:[]},true);r.overview.push(performance.now()-t);}reproNavigate({roots:[],expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
+                    results['timingsMs'] = page.evaluate('''(() => {let r={search:[],overview:[],full:[]};for(let i=0;i<5;i++){let t=performance.now();renderSearchResults('step-499');r.search.push(performance.now()-t);t=performance.now();reproNavigate({expanded:[]},true);r.overview.push(performance.now()-t);}reproNavigate({expanded:[]},true);for(let i=0;i<3;i++){let t=performance.now();reproNavigate({expanded:reproTasks(_reproData.graph)},false);r.full.push(performance.now()-t);reproNavigate({expanded:[]},false);}return r;})()''')
                     assert max(results['timingsMs']['search']) < 200
                     assert max(results['timingsMs']['overview']) < 200
                     assert max(results['timingsMs']['full']) < 2000
@@ -275,7 +273,7 @@ def run(evidence, snapshot=None):
                     # Diagnostics are disclosed on demand; open them for the record.
                     page.locator('.rp-diagnostics > summary').click()
                     assert 'cycle' in page.locator('.repro-findings').inner_text()
-                    assert page.evaluate('_reproNav.mode') == 'scope'
+                    assert page.evaluate('Object.keys(_reproNav).sort()') == ['expanded', 'selected']
                     page.screenshot(path=str(evidence / 'dag-real-step.png'), full_page=True)
                     page.locator('.rp-diagnostics > summary').click()
                     results['realGraphMixedInspection'] = True
@@ -353,7 +351,7 @@ def run(evidence, snapshot=None):
                 if routing.locator('#task-preview').is_visible(): routing.locator('#navigation-toggle').click()
                 for kind in ('cycle', 'fan', 'components'):
                     routing.evaluate("""graph => {
-                        _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
+                        _reproData.graph=graph;_reproNav={expanded:[],selected:''};
                         _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
                     }""", routing_fixture(kind))
                     routing.locator('[data-rp-action=fit]').click()

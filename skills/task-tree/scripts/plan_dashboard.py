@@ -1024,13 +1024,7 @@ def _children_graph_payload(root_task: Task, graph) -> dict:
     for edge in graph.dependencies.edges:
         if edge["from"] in child_paths and edge["to"] in child_paths:
             edges.setdefault(edge["to"], []).append(edge["from"])
-    return {
-        "children": nodes,
-        "edges": edges,
-        "boundary": graph.dependencies.boundaries.get(root_task.path),
-        "valid": graph.dependencies.valid,
-        "findings": [f.to_dict() for f in graph.findings],
-    }
+    return {"children": nodes, "edges": edges}
 
 
 def _render_summary(root_task: Task | None) -> str:
@@ -1379,22 +1373,6 @@ async def sse_events(request: Request):
     )
 
 
-# --- Route: GET /dag ---------------------------------------------------------
-
-@app.get("/dag", response_class=HTMLResponse)
-async def dag_view(request: Request):
-    """Render the DAG mermaid diagram — the global view over the whole tree,
-    clustered by subtree. The children dependency panel no longer scopes this
-    route to a subtree; it fetches GET /api/children-graph instead."""
-    state = await resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.get_template("dag.html")
-    all_tasks = collect_all_tasks(state.root_task)
-    return HTMLResponse(content=template.render(root_task=state.root_task, all_tasks=all_tasks))
-
-
 # --- Route: GET /api/children-graph ------------------------------------------
 
 @app.get("/api/children-graph")
@@ -1496,7 +1474,6 @@ def _repro_status_payload(state: WorktreeState) -> dict:
     project_root = Path(state.project_root)
     graph = _repro_graph(state)
     paths = runner_paths(project_root)
-    findings = [f.to_dict() for f in graph.findings]
     try:
         report = compute_status(graph, paths, upstream=True)
         report.selected = {e.step.name for e in report.entries}
@@ -1509,10 +1486,10 @@ def _repro_status_payload(state: WorktreeState) -> dict:
             "summary": summary,
             "steps": [],
             "external_inputs": [],
-            "findings": findings,
             "unavailable": str(exc),
         }
     payload = report.to_dict()
+    del payload["findings"]  # the graph payload carries them
     for entry in payload["steps"]:
         # Address the log by step name rather than by the path the on-disk run
         # record carries, so nothing this route reads decides what it opens.

@@ -1047,66 +1047,22 @@ REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
 
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
 var _reproSelected = '', _reproLinkOwner = null;
-var _reproNav = { roots: [], view: 'graph', mode: 'scope', anchor: '', selected: '', expanded: [] };
+var _reproNav = { selected: '', expanded: [] };
 var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = false, _reproLegacyReveal = false;
-var _reproContext = [], _reproNotice = '', _reproLayoutCache = null;
+var _reproNotice = '', _reproLayoutCache = null;
 var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
-var _reproInspectorClosed = false, _reproFitNext = true;
+/* How the next draw places the viewport: 'open' (readable scale on the selection), 'fit', or '' (keep). */
+var _reproInspectorClosed = false, _reproViewNext = 'open';
 
-/* Pure projection: filters select matches; tracing retains actual dependencies. */
 function reproWithin(path, root) { return root === '' || path === root || path.indexOf(root + '/') === 0; }
-function reproRoots(roots) {
-  return Array.from(new Set(roots)).sort().filter(function(root, i, all) {
-    return !all.some(function(other) { return other !== root && reproWithin(root, other); });
-  });
-}
-function reproMatches(step, nav) {
-  return (!nav.roots.length || nav.roots.some(function(root) { return reproWithin(step.task, root); }));
-}
-function reproProject(graph, nav, context) {
-  var byName = {}, incoming = {}, outgoing = {};
+/* Step lookup plus each step's incoming and outgoing edges. */
+function reproProject(graph) {
+  var byName = {}, incoming = {}, outgoing = {}, edges = [];
   (graph.steps || []).forEach(function(s) { byName[s.name] = s; incoming[s.name] = []; outgoing[s.name] = []; });
   (graph.step_edges || []).forEach(function(e) {
-    if (byName[e.from] && byName[e.to]) { outgoing[e.from].push(e); incoming[e.to].push(e); }
+    if (byName[e.from] && byName[e.to]) { outgoing[e.from].push(e); incoming[e.to].push(e); edges.push(e); }
   });
-  var matches = (graph.steps || []).filter(function(s) { return reproMatches(s, nav); });
-  var visible = new Set(nav.mode === 'scope' ? matches.map(function(s) { return s.name; }) : []);
-  function walk(start, edges, direction, recurse) {
-    var queue = [start], visited = new Set(queue);
-    while (queue.length) {
-      var name = queue.shift(); visible.add(name);
-      (edges[name] || []).forEach(function(e) {
-        var next = e[direction]; visible.add(next);
-        if (recurse && !visited.has(next)) { visited.add(next); queue.push(next); }
-      });
-    }
-  }
-  if (nav.anchor && byName[nav.anchor] && nav.mode !== 'scope') {
-    if (['nearby', 'upstream', 'both'].indexOf(nav.mode) !== -1) walk(nav.anchor, incoming, 'from', nav.mode !== 'nearby');
-    if (['nearby', 'downstream', 'both'].indexOf(nav.mode) !== -1) walk(nav.anchor, outgoing, 'to', nav.mode !== 'nearby');
-  }
-  (context || []).forEach(function(n) { if (byName[n]) visible.add(n); });
-  var boundary = [];
-  (graph.step_edges || []).forEach(function(e) {
-    if (visible.has(e.from) === visible.has(e.to)) return;
-    var hidden = byName[visible.has(e.from) ? e.to : e.from];
-    if (!hidden) return;
-    var reasons = [];
-    if (nav.roots.length && !nav.roots.some(function(r) { return reproWithin(hidden.task, r); })) reasons.push('subtree');
-    if (!reasons.length) reasons.push('focus');
-    boundary.push({ edge: e, hidden: hidden.name, visible: visible.has(e.from) ? e.from : e.to,
-      direction: visible.has(e.from) ? 'Downstream' : 'Upstream', reasons: reasons });
-  });
-  return { matches: matches, steps: (graph.steps || []).filter(function(s) { return visible.has(s.name); }),
-    edges: (graph.step_edges || []).filter(function(e) { return visible.has(e.from) && visible.has(e.to); }),
-    boundary: boundary, incoming: incoming, outgoing: outgoing, byName: byName };
-}
-function reproSearch(steps, query) {
-  query = query.toLowerCase().trim();
-  return steps.filter(function(s) {
-    return [s.name, s.task, reproTaskTitle(s.task)].concat((s.outs || []).map(reproOutLabel))
-      .join(' ').toLowerCase().indexOf(query) !== -1;
-  });
+  return { steps: graph.steps || [], edges: edges, incoming: incoming, outgoing: outgoing, byName: byName };
 }
 function reproHash() {
   var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
@@ -1123,15 +1079,14 @@ function reproReadHash() {
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
-    _reproNav={roots:[],view:'graph',mode:'scope',anchor:'',
-      expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
+    _reproNav={expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
       selected:step||(typeof n.selected==='string'?n.selected:'')};
-    _reproSelected=_reproNav.selected;_reproContext=[];_reproNotice='';
+    _reproSelected=_reproNav.selected;_reproNotice='';
     _reproLinkOwner=step?parseHash():null;
     _reproInspectorClosed=false;_reproEntered=true;
     _reproLegacyReveal=!!step||!!(n.roots||n.mode||n.tier)||!Array.isArray(n.expanded);
-    _reproFitNext=!(history.state&&history.state.rpViewport);
-    if(!_reproFitNext)_reproViewport=Object.assign({},history.state.rpViewport);
+    _reproViewNext=history.state&&history.state.rpViewport?'':'open';
+    if(!_reproViewNext)_reproViewport=Object.assign({},history.state.rpViewport);
     var previous=restoring;restoring=true;showView(n.layout==='tree'?'workspace':'reproduction');restoring=previous;
     applyWorkspaceFilters(false);
     if(n.layout==='tree')loadReproData(false).then(function(){renderReproDetail(_reproSelected);syncTreeSteps();});
@@ -1141,9 +1096,8 @@ function reproReadHash() {
 function reproNavigate(patch, overview) {
   if(patch.expanded)_reproNav.expanded=patch.expanded;
   if(typeof patch.selected==='string')_reproNav.selected=patch.selected;
-  _reproNav.roots=[];_reproNav.mode='scope';_reproNav.anchor='';
-  _reproSelected=_reproNav.selected;_reproContext=[];_reproNotice='';
-  if(overview)_reproFitNext=true;
+  _reproSelected=_reproNav.selected;_reproNotice='';
+  if(overview)_reproViewNext='fit';
   var hash=reproHash();
   if(location.hash!==hash)history.pushState({wt:ACTIVE_WT},'',hash);
   if(currentView==='reproduction')drawReproView(document.getElementById('view-reproduction'),_reproData);
@@ -1217,56 +1171,83 @@ function reproTasks(graph) {
   return Array.from(paths).sort();
 }
 
+/* Strongly connected groups (Tarjan) over `ids`, with `next[id]` the targets
+   of id's edges, in completion order. */
+function reproStronglyConnected(ids, next) {
+  var index = {}, low = {}, stack = [], onStack = new Set(), groups = [], serial = 0;
+  function visit(id) {
+    index[id] = low[id] = serial++;
+    stack.push(id);
+    onStack.add(id);
+    next[id].forEach(function(to) {
+      if (index[to] === undefined) { visit(to); low[id] = Math.min(low[id], low[to]); }
+      else if (onStack.has(to)) low[id] = Math.min(low[id], index[to]);
+    });
+    if (low[id] !== index[id]) return;
+    var group = [], member;
+    do { member = stack.pop(); onStack.delete(member); group.push(member); } while (member !== id);
+    groups.push(group);
+  }
+  ids.forEach(function(id) { if (index[id] === undefined) visit(id); });
+  return groups;
+}
+/* Each node on a cycle of `edges`, mapped to a key its cycle's members share. */
+function reproCycleMembers(edges) {
+  var next = {}, member = {};
+  edges.forEach(function(e) { (next[e.from] || (next[e.from] = [])).push(e.to); next[e.to] = next[e.to] || []; });
+  reproStronglyConnected(Object.keys(next).sort(), next).forEach(function(group) {
+    if (group.length > 1 || next[group[0]].indexOf(group[0]) >= 0) group.forEach(function(id) { member[id] = group[0]; });
+  });
+  return member;
+}
+
 /* Project real endpoints through the nearest folded ancestor. Logical edges
-   terminate at task boundaries; file edges retain their exact step evidence. */
+   terminate at task boundaries; file edges retain their exact step evidence.
+   Only step cycles and depends_on cycles are marked: a loop that appears only
+   once file edges are grouped by task is a view, not an error. */
 function reproHierarchy(graph, nav, project) {
   var tasks = {}, children = {}, own = {}, nodes = [], edges = [], reps = {}, taskReps = {};
   var paths = reproTasks(graph), expanded = new Set(nav.expanded || []);
-  var wanted = new Set(project.steps.map(function(s) { return s.name; }));
+  var logical = graph.dependencies && graph.dependencies.logical || [];
+  var stepCycle = reproCycleMembers(project.edges), taskCycle = reproCycleMembers(logical);
+  var errors = (graph.findings || []).filter(function(f) { return f.severity === 'error' && typeof f.task_path === 'string'; });
   (graph.dependencies && graph.dependencies.tasks || []).forEach(function(t) { tasks[t.path] = t; });
   paths.forEach(function(p) { tasks[p] = tasks[p] || {path:p, title:reproTaskTitle(p), status:''}; children[p] = []; own[p] = []; });
   paths.forEach(function(p) { var parent = parentPath(p); if (p && children[parent]) children[parent].push(p); });
   project.steps.forEach(function(s) { (own[s.task] || (own[s.task] = [])).push(s); });
-  function matchesTask(p) { return !nav.roots.length || nav.roots.some(function(r) { return reproWithin(p,r); }); }
-  var needed = new Set();
-  paths.forEach(function(p) { if (nav.mode === 'scope' && matchesTask(p)) needed.add(p); });
-  project.steps.forEach(function(s) { needed.add(s.task); });
-  /* Logical prerequisites remain boundary context in a narrower scope. */
-  var logical = [];
-  Object.values(graph.dependencies && graph.dependencies.boundaries || {}).forEach(function(b) {
-    b.edges.forEach(function(e) { (e.evidence || []).forEach(function(r) {
-      if (r.kind === 'logical' && !logical.some(function(o) {return o.declaration === r.declaration;})) logical.push(r);
-    }); });
-  });
-  var previousSize=-1;
-  while(previousSize!==needed.size){previousSize=needed.size;Array.from(needed).forEach(function(p){while(p){p=parentPath(p);if(tasks[p])needed.add(p);}});logical.forEach(function(e){if(needed.has(e.to))needed.add(e.from);});}
+  function stepNode(s, parent) {
+    var kind = stepCycle[s.name] !== undefined ? 'Step cycle' : '';
+    var n = {id:s.name, type:'step', step:s, parent:parent, children:[], cycle:!!kind, cycleKind:kind};
+    nodes.push(n); reps[s.name] = s.name;
+    return n;
+  }
+  /* A folded task shows the cycles and declaration errors inside it. */
+  function taskMarks(p, folded, descendants) {
+    var kind = taskCycle[p] !== undefined ? 'depends_on cycle' : '';
+    if (!kind && folded && descendants.some(function(s) { return stepCycle[s.name] !== undefined; })) kind = 'Step cycle';
+    if (!kind && folded && paths.some(function(t) { return taskCycle[t] !== undefined && reproWithin(t, p); })) kind = 'depends_on cycle';
+    var count = errors.filter(function(f) { return folded ? reproWithin(f.task_path, p) : f.task_path === p; }).length;
+    return {cycle:!!kind, cycleKind:kind, errors:count};
+  }
   function visit(p, parent) {
-    if (!needed.has(p)) return null;
     var id = 'task:' + p, descendants = project.steps.filter(function(s) { return reproWithin(s.task,p); });
-    var kids = (children[p] || []).filter(function(c) {return needed.has(c);});
-    var node = {id:id, task:p, type:'task', title:tasks[p].title, status:tasks[p].status,
-      parent:parent, steps:descendants, outside:!matchesTask(p), expandable:kids.length > 0 || (own[p] || []).length > 0,
-      expanded:expanded.has(p), children:[]};
+    var kids = children[p] || [], expandable = kids.length > 0 || (own[p] || []).length > 0;
+    var node = Object.assign({id:id, task:p, type:'task', title:tasks[p].title, status:tasks[p].status,
+      parent:parent, steps:descendants, expandable:expandable, expanded:expanded.has(p), children:[]},
+      taskMarks(p, !(expanded.has(p) && expandable), descendants));
     nodes.push(node); taskReps[p] = id;
     if (node.expanded && node.expandable) {
-      (own[p] || []).forEach(function(s) { var n = {id:s.name, type:'step', step:s, parent:id, children:[]}; nodes.push(n); node.children.push(n); reps[s.name] = s.name; });
-      kids.forEach(function(c) { var n = visit(c,id); if (n) node.children.push(n); });
+      (own[p] || []).forEach(function(s) { node.children.push(stepNode(s, id)); });
+      kids.forEach(function(c) { node.children.push(visit(c,id)); });
     } else {
       descendants.forEach(function(s) {reps[s.name] = id;});
       paths.forEach(function(c) {if (reproWithin(c,p)) taskReps[c] = id;});
     }
     return node;
   }
-  // Scope roots are the forest's visible boundary, while context keeps its owner.
-  var roots = nav.roots.length ? nav.roots.slice() : paths.filter(function(p) { return p && !tasks[parentPath(p)]; });
-  if (!nav.roots.length && tasks['']) roots = (children[''] || []).slice();
-  project.steps.forEach(function(s) { if (!nav.roots.length && !s.task) return; if (!roots.some(function(r) {return reproWithin(s.task,r);})) roots.push(s.task); });
-  logical.forEach(function(e) { if (needed.has(e.from) && !roots.some(function(r) {return reproWithin(e.from,r);})) roots.push(e.from); });
-  if (!nav.roots.length && (own[''] || []).length) {
-    (own[''] || []).forEach(function(s) { nodes.push({id:s.name,type:'step',step:s,parent:null,children:[]}); reps[s.name] = s.name; });
-  }
+  var roots = paths.filter(function(p) { return p && (parentPath(p) === '' || !tasks[parentPath(p)]); }).sort();
+  (own[''] || []).forEach(function(s) { stepNode(s, null); });
   if (!roots.length && tasks[''] && !(own[''] || []).length) roots.push('');
-  roots = reproRoots(roots).filter(function(p) {return tasks[p];});
   roots.forEach(function(p) { visit(p,null); });
   var bundled = {};
   function edge(from,to,evidence) {
@@ -1277,113 +1258,302 @@ function reproHierarchy(graph, nav, project) {
   }
   project.edges.forEach(function(e) { edge(reps[e.from],reps[e.to],e); });
   logical.forEach(function(e) { edge(taskReps[e.from],taskReps[e.to],e); });
-  return {nodes:nodes,edges:edges,reps:reps,taskReps:taskReps,logicalBoundary:logical.filter(function(e){return needed.has(e.to)&&(!taskReps[e.from]||!taskReps[e.to]);})};
+  function onCycle(r) {
+    var members = r.kind === 'logical' ? taskCycle : stepCycle;
+    return members[r.from] !== undefined && members[r.from] === members[r.to];
+  }
+  edges.forEach(function(e) {
+    e.cycleKind = e.evidence.some(function(r) { return r.kind !== 'logical' && onCycle(r); }) ? 'Step cycle'
+      : e.evidence.some(function(r) { return r.kind === 'logical' && onCycle(r); }) ? 'depends_on cycle' : '';
+    e.cycle = !!e.cycleKind;
+  });
+  return {nodes:nodes,edges:edges,reps:reps,taskReps:taskReps};
 }
 
-function reproBranchExpansion(graph, nav, context, path, depth) {
-  var project=reproProject(graph,nav,context), current=reproHierarchy(graph,nav,project);
-  var visible=current.nodes.some(function(n){return n.type==='task'&&n.task===path&&!n.outside;})
-    || (path===''&&!nav.roots.length);
-  var levels=depth==='all'?Infinity:Number(depth), base=path?path.split('/').length:0;
-  var expanded=(nav.expanded||[]).filter(function(p){return !reproWithin(p,path);});
-  reproTasks(graph).forEach(function(p){
-    var relative=(p?p.split('/').length:0)-base;
-    if(reproWithin(p,path)&&relative<levels)expanded.push(p);
-  });
-  var candidate=reproHierarchy(graph,Object.assign({},nav,{expanded:expanded}),project);
-  var branch=candidate.nodes.filter(function(n){return reproWithin(n.type==='task'?n.task:n.step.task,path);});
-  return {visible:visible,expanded:expanded,total:candidate.nodes.length,
-    tasks:branch.filter(function(n){return n.type==='task';}).length,
-    steps:branch.filter(function(n){return n.type==='step';}).length};
-}
 function reproCloseGraphDetail() {
   var host=document.getElementById('repro-edge-detail');if(!host||!host.firstChild)return;
   host.innerHTML='';var canvas=document.querySelector('.repro-canvas');if(canvas)canvas.focus({preventScroll:true});
 }
+/* Lay out the folded hierarchy. Each expanded task lays out its own children:
+   siblings are ranked left to right along their projected edges, grouped into
+   bands of connected siblings, and sized bottom-up. Edges then route through
+   the gutter beside each card and the track above each band. */
 function reproHierarchyLayout(model) {
-  var pos={},byId={},nodeParent={},levels={},routes=[];
-  model.nodes.forEach(function(n){byId[n.id]=n;nodeParent[n.id]=n.parent;n.cycle=false;n.cycleKind='';});
-  function direct(id,parent){while(byId[id]&&nodeParent[id]!==parent)id=nodeParent[id];return id;}
-  function level(items,parent){
-    var ids=items.map(function(n){return n.id;}).sort(),next={},index={},low={},stack=[],on=new Set(),groups=[],serial=0,groupOf={};
-    ids.forEach(function(id){next[id]=[];});
-    model.edges.forEach(function(e){var a=direct(e.from,parent),b=direct(e.to,parent);if(a&&b&&a!==b&&next[a]&&next[b]&&next[a].indexOf(b)<0)next[a].push(b);});
-    function visit(id){index[id]=low[id]=serial++;stack.push(id);on.add(id);next[id].sort().forEach(function(to){if(index[to]===undefined){visit(to);low[id]=Math.min(low[id],low[to]);}else if(on.has(to))low[id]=Math.min(low[id],index[to]);});if(low[id]===index[id]){var group=[],v;do{v=stack.pop();on.delete(v);group.push(v);}while(v!==id);groups.push(group);}}
-    ids.forEach(function(id){if(index[id]===undefined)visit(id);});
-    groups.forEach(function(g,i){g.forEach(function(id){groupOf[id]=i;});});
-    var incoming=groups.map(function(){return 0;}),out=groups.map(function(){return new Set();}),base=groups.map(function(){return 0;}),rank={};
-    ids.forEach(function(id){next[id].forEach(function(to){var a=groupOf[id],b=groupOf[to];if(a!==b&&!out[a].has(b)){out[a].add(b);incoming[b]++;}});});
-    var queue=groups.map(function(_,i){return i;}).filter(function(i){return !incoming[i];});
-    while(queue.length){var gi=queue.shift(),remaining=groups[gi].slice(),ordered=[];
-      while(remaining.length){remaining.sort(function(a,b){function score(id){return next[id].filter(function(to){return remaining.indexOf(to)>=0;}).length-remaining.filter(function(from){return next[from].indexOf(id)>=0;}).length;}return score(b)-score(a)||a.localeCompare(b);});ordered.push(remaining.shift());}
-      ordered.forEach(function(id,i){rank[id]=base[gi]+i;if(ordered.length>1){byId[id].cycle=true;byId[id].cycleKind=ordered.some(function(key){return byId[key].type==='task';})?'Task-group cycle':'Step cycle';}});
-      out[gi].forEach(function(to){base[to]=Math.max(base[to],base[gi]+ordered.length);if(!--incoming[to])queue.push(to);});
-    }
-    // Connectivity is projected between siblings; containment itself adds no edge.
-    var neighbors={},incident=new Set(),visited=new Set(),bands=[],isolated=[];
-    ids.forEach(function(id){neighbors[id]=new Set();});
-    ids.forEach(function(id){next[id].forEach(function(to){neighbors[id].add(to);neighbors[to].add(id);});});
-    model.edges.forEach(function(e){[direct(e.from,parent),direct(e.to,parent)].forEach(function(id){if(neighbors[id])incident.add(id);});});
-    ids.forEach(function(id){if(visited.has(id))return;var pending=[id],members=[];visited.add(id);while(pending.length){var member=pending.shift();members.push(member);neighbors[member].forEach(function(to){if(!visited.has(to)){visited.add(to);pending.push(to);}});}members.sort();if(members.length===1&&!incident.has(id))isolated.push(id);else bands.push({ids:members,isolated:false});});
-    if(isolated.length)bands.push({ids:isolated,isolated:true});
-    var bandOf={};bands.forEach(function(band,i){band.tracks=[];band.channels={left:{},right:{}};band.showLabel=bands.length>1||band.isolated;band.label=band.isolated?'No connections in this view':(bands.filter(function(b){return !b.isolated;}).length>1?'Dependency group '+(i+1):'Connected dependencies');band.ids.forEach(function(id){bandOf[id]=band;});});
-    var info={items:items,parent:parent,rank:rank,bands:bands,bandOf:bandOf,left:{},right:{}};levels[parent||'']=info;
-    items.forEach(function(n){if(n.children.length)level(n.children,n.id);});
-    model.edges.forEach(function(e){var a=direct(e.from,parent),b=direct(e.to,parent);if(a&&b&&a!==b&&groupOf[a]!==undefined&&groupOf[a]===groupOf[b]&&groups[groupOf[a]].length>1){e.cycle=true;if(!e.cycleKind)e.cycleKind=groups[groupOf[a]].some(function(id){return byId[id].type==='task';})?'Task-group cycle':'Step cycle';}});
+  var HEAD = 108; /* task header height, and a leaf card's minimum height */
+  var pos = {}, byId = {}, nodeParent = {}, levels = {}, routes = [], ports = {};
+  model.nodes.forEach(function(n) { byId[n.id] = n; nodeParent[n.id] = n.parent; });
+
+  /* The ancestor of `id`, or `id` itself, that is a direct child of `parent`. */
+  function direct(id, parent) {
+    while (byId[id] && nodeParent[id] !== parent) id = nodeParent[id];
+    return id;
   }
-  model.edges.forEach(function(e){e.cycle=false;e.cycleKind='';});level(model.nodes.filter(function(n){return !n.parent;}),null);
-  model.edges.forEach(function(e){if(e.cycle)[e.from,e.to].forEach(function(id){byId[id].cycle=true;byId[id].cycleKind=byId[id].cycleKind||e.cycleKind;});});
-  function chain(id,common){var result=[];while(id&&id!==common){result.push(id);id=nodeParent[id];}return result;}
-  var ports={};
-  function port(id,side,i){var key=id+'|'+side;if(!ports[key])ports[key]=[];ports[key].push(i);}
-  model.edges.forEach(function(e,i){var ancestors=chain(nodeParent[e.from],null),p=nodeParent[e.to];while(p&&ancestors.indexOf(p)<0)p=nodeParent[p];var common=p;
-    var source=chain(e.from,common),target=chain(e.to,common),boundary=levels[common||''];
-    var directRoute=source.length===1&&target.length===1&&boundary.rank[e.to]===boundary.rank[e.from]+1;
-    var route={edge:e,index:i,common:common,source:source,target:target,direct:directRoute};routes.push(route);port(e.from,'right',i);port(e.to,'left',i);
-    source.forEach(function(id){var list=levels[nodeParent[id]||''].right; (list[id]||(list[id]=[])).push(i);});
-    target.forEach(function(id){var list=levels[nodeParent[id]||''].left; (list[id]||(list[id]=[])).push(i);});
-    if(!directRoute){source.concat(target).forEach(function(id){var tracks=levels[nodeParent[id]||''].bandOf[id].tracks;if(tracks.indexOf(i)<0)tracks.push(i);});}
-  });
-  function size(parent){
-    var info=levels[parent||''],offset=0;info.width=320;
-    info.items.forEach(function(n){if(n.children.length)size(n.id);else{n.width=260;n.height=108;}n.height=Math.max(n.height,80+7*(ports[n.id+'|left']||[]).length,47+7*(ports[n.id+'|right']||[]).length);});
-    info.bands.forEach(function(band){
-      var widths={},heights={},xs={},x=24,top=(band.showLabel?48:24)+band.tracks.length*6;
-      band.y=offset;band.trackTop=offset+(band.showLabel?36:12);
-      ['left','right'].forEach(function(side){band.ids.forEach(function(id){var r=info.rank[id],channel=band.channels[side][r]||(band.channels[side][r]=[]);(info[side][id]||[]).forEach(function(i){channel.push(id+'|'+i);});});});
-      if(band.isolated){
-        var columns=Math.min(3,band.ids.length),rowY=0;
-        for(var start=0;start<band.ids.length;start+=columns){var row=band.ids.slice(start,start+columns),rowHeight=0,rowX=24;row.forEach(function(id){var n=byId[id];n.x=rowX;n.y=offset+top+rowY;n.routeLeft=n.x-10;n.routeRight=n.x+n.width+10;rowX+=n.width+24;rowHeight=Math.max(rowHeight,n.height);});x=Math.max(x,rowX);rowY+=rowHeight+24;}
-        band.height=top+rowY;band.width=x;
-      }else{
-        band.ids.forEach(function(id){var n=byId[id],r=info.rank[id];widths[r]=Math.max(widths[r]||0,n.width);});
-        Object.keys(widths).map(Number).sort(function(a,b){return a-b;}).forEach(function(r){x+=12+band.channels.left[r].length*5;xs[r]=x;x+=widths[r]+12+band.channels.right[r].length*5+24;});
-        band.ids.forEach(function(id){var n=byId[id],r=info.rank[id];n.x=xs[r];n.y=offset+top+(heights[r]||0);n.routeRight=xs[r]+widths[r]+10;n.routeLeft=xs[r]-10;heights[r]=(heights[r]||0)+n.height+28;});
-        band.height=top+Math.max(0,...Object.values(heights))+12;band.width=x;
-      }
-      info.width=Math.max(info.width,band.width);offset+=band.height+36;
+  /* `id` and its ancestors up to, not including, `common`. */
+  function chain(id, common) {
+    var result = [];
+    while (id && id !== common) { result.push(id); id = nodeParent[id]; }
+    return result;
+  }
+
+  /* Rank siblings left to right: groups in topological order, and a group's
+     members on consecutive ranks, highest out-minus-in degree among those left first. */
+  function rankSiblings(ids, next) {
+    var groups = reproStronglyConnected(ids, next), groupOf = {}, rank = {};
+    groups.forEach(function(group, i) { group.forEach(function(id) { groupOf[id] = i; }); });
+    var incoming = groups.map(function() { return 0; });
+    var out = groups.map(function() { return new Set(); });
+    var base = groups.map(function() { return 0; });
+    ids.forEach(function(id) {
+      next[id].forEach(function(to) {
+        var a = groupOf[id], b = groupOf[to];
+        if (a !== b && !out[a].has(b)) { out[a].add(b); incoming[b]++; }
+      });
     });
-    info.height=Math.max(48,offset);if(parent){byId[parent].width=info.width;byId[parent].height=108+info.height;}
+    var queue = groups.map(function(_, i) { return i; }).filter(function(i) { return !incoming[i]; });
+    while (queue.length) {
+      var gi = queue.shift(), remaining = groups[gi].slice(), ordered = [];
+      while (remaining.length) {
+        remaining.sort(function(a, b) {
+          function score(id) {
+            var outgoing = next[id].filter(function(to) { return remaining.indexOf(to) >= 0; }).length;
+            var incomingLeft = remaining.filter(function(from) { return next[from].indexOf(id) >= 0; }).length;
+            return outgoing - incomingLeft;
+          }
+          return score(b) - score(a) || a.localeCompare(b);
+        });
+        ordered.push(remaining.shift());
+      }
+      ordered.forEach(function(id, i) { rank[id] = base[gi] + i; });
+      out[gi].forEach(function(to) {
+        base[to] = Math.max(base[to], base[gi] + ordered.length);
+        if (!--incoming[to]) queue.push(to);
+      });
+    }
+    return rank;
+  }
+
+  /* One band per connected set of siblings, then one band for siblings with no
+     edge at this level. Containment adds no edge. */
+  function bandSiblings(ids, next, parent) {
+    var neighbors = {}, incident = new Set(), visited = new Set(), bands = [], isolated = [];
+    ids.forEach(function(id) { neighbors[id] = new Set(); });
+    ids.forEach(function(id) {
+      next[id].forEach(function(to) { neighbors[id].add(to); neighbors[to].add(id); });
+    });
+    model.edges.forEach(function(e) {
+      [direct(e.from, parent), direct(e.to, parent)].forEach(function(id) {
+        if (neighbors[id]) incident.add(id);
+      });
+    });
+    ids.forEach(function(id) {
+      if (visited.has(id)) return;
+      var pending = [id], members = [];
+      visited.add(id);
+      while (pending.length) {
+        var member = pending.shift();
+        members.push(member);
+        neighbors[member].forEach(function(to) {
+          if (!visited.has(to)) { visited.add(to); pending.push(to); }
+        });
+      }
+      members.sort();
+      if (members.length === 1 && !incident.has(id)) isolated.push(id);
+      else bands.push({ids: members, isolated: false});
+    });
+    if (isolated.length) bands.push({ids: isolated, isolated: true});
+    var connected = bands.filter(function(b) { return !b.isolated; }).length;
+    bands.forEach(function(band, i) {
+      band.tracks = [];
+      band.channels = {left: {}, right: {}};
+      band.showLabel = bands.length > 1 || band.isolated;
+      band.label = band.isolated ? 'No connections in this view'
+        : connected > 1 ? 'Dependency group ' + (i + 1) : 'Connected dependencies';
+    });
+    return bands;
+  }
+
+  /* Rank and band one container's children, then recurse into expanded ones. */
+  function level(items, parent) {
+    var ids = items.map(function(n) { return n.id; }).sort(), next = {}, bandOf = {};
+    ids.forEach(function(id) { next[id] = []; });
+    model.edges.forEach(function(e) {
+      var a = direct(e.from, parent), b = direct(e.to, parent);
+      if (a && b && a !== b && next[a] && next[b] && next[a].indexOf(b) < 0) next[a].push(b);
+    });
+    ids.forEach(function(id) { next[id].sort(); });
+    var rank = rankSiblings(ids, next), bands = bandSiblings(ids, next, parent);
+    bands.forEach(function(band) { band.ids.forEach(function(id) { bandOf[id] = band; }); });
+    levels[parent || ''] = {items: items, parent: parent, rank: rank, bands: bands, bandOf: bandOf,
+      left: {}, right: {}};
+    items.forEach(function(n) { if (n.children.length) level(n.children, n.id); });
+  }
+  level(model.nodes.filter(function(n) { return !n.parent; }), null);
+
+  /* Reserve ports and gutter channels. An edge leaves its source's right side
+     and enters its target's left side. Between adjacent ranks of one container
+     it bends once in the source's gutter; otherwise it runs through the gutter
+     and band track of every container it leaves or enters. */
+  function port(id, side, i) {
+    var key = id + '|' + side;
+    (ports[key] || (ports[key] = [])).push(i);
+  }
+  model.edges.forEach(function(e, i) {
+    var ancestors = chain(nodeParent[e.from], null), common = nodeParent[e.to];
+    while (common && ancestors.indexOf(common) < 0) common = nodeParent[common];
+    var source = chain(e.from, common), target = chain(e.to, common), boundary = levels[common || ''];
+    var directRoute = source.length === 1 && target.length === 1
+      && boundary.rank[e.to] === boundary.rank[e.from] + 1;
+    routes.push({edge: e, index: i, source: source, target: target, direct: directRoute});
+    port(e.from, 'right', i);
+    port(e.to, 'left', i);
+    source.forEach(function(id) {
+      var list = levels[nodeParent[id] || ''].right;
+      (list[id] || (list[id] = [])).push(i);
+    });
+    target.forEach(function(id) {
+      var list = levels[nodeParent[id] || ''].left;
+      (list[id] || (list[id] = [])).push(i);
+    });
+    if (!directRoute) source.concat(target).forEach(function(id) {
+      var tracks = levels[nodeParent[id] || ''].bandOf[id].tracks;
+      if (tracks.indexOf(i) < 0) tracks.push(i);
+    });
+  });
+
+  /* Isolated siblings: a grid of up to three columns. */
+  function placeGrid(band, top, offset) {
+    var columns = Math.min(3, band.ids.length), rowY = 0, x = 24;
+    for (var start = 0; start < band.ids.length; start += columns) {
+      var rowHeight = 0, rowX = 24;
+      band.ids.slice(start, start + columns).forEach(function(id) {
+        var n = byId[id];
+        n.x = rowX;
+        n.y = offset + top + rowY;
+        n.routeLeft = n.x - 10;
+        n.routeRight = n.x + n.width + 10;
+        rowX += n.width + 24;
+        rowHeight = Math.max(rowHeight, n.height);
+      });
+      x = Math.max(x, rowX);
+      rowY += rowHeight + 24;
+    }
+    band.height = top + rowY;
+    band.width = x;
+  }
+  /* Connected siblings: one column per rank, widened by its gutter channels. */
+  function placeRanks(band, info, top, offset) {
+    var widths = {}, heights = {}, xs = {}, x = 24;
+    band.ids.forEach(function(id) {
+      var r = info.rank[id];
+      widths[r] = Math.max(widths[r] || 0, byId[id].width);
+    });
+    Object.keys(widths).map(Number).sort(function(a, b) { return a - b; }).forEach(function(r) {
+      x += 12 + band.channels.left[r].length * 5;
+      xs[r] = x;
+      x += widths[r] + 12 + band.channels.right[r].length * 5 + 24;
+    });
+    band.ids.forEach(function(id) {
+      var n = byId[id], r = info.rank[id];
+      n.x = xs[r];
+      n.y = offset + top + (heights[r] || 0);
+      n.routeRight = xs[r] + widths[r] + 10;
+      n.routeLeft = xs[r] - 10;
+      heights[r] = (heights[r] || 0) + n.height + 28;
+    });
+    band.height = top + Math.max(0, ...Object.values(heights)) + 12;
+    band.width = x;
+  }
+  /* Size bottom-up: a leaf card grows with its ports; a container wraps its bands. */
+  function size(parent) {
+    var info = levels[parent || ''], offset = 0;
+    info.width = 320;
+    info.items.forEach(function(n) {
+      if (n.children.length) size(n.id);
+      else { n.width = 260; n.height = HEAD; }
+      n.height = Math.max(n.height, 80 + 7 * (ports[n.id + '|left'] || []).length,
+        47 + 7 * (ports[n.id + '|right'] || []).length);
+    });
+    info.bands.forEach(function(band) {
+      var top = (band.showLabel ? 48 : 24) + band.tracks.length * 6;
+      band.y = offset;
+      band.trackTop = offset + (band.showLabel ? 36 : 12);
+      ['left', 'right'].forEach(function(side) {
+        band.ids.forEach(function(id) {
+          var r = info.rank[id], channel = band.channels[side][r] || (band.channels[side][r] = []);
+          (info[side][id] || []).forEach(function(i) { channel.push(id + '|' + i); });
+        });
+      });
+      if (band.isolated) placeGrid(band, top, offset);
+      else placeRanks(band, info, top, offset);
+      info.width = Math.max(info.width, band.width);
+      offset += band.height + 36;
+    });
+    info.height = Math.max(48, offset);
+    if (parent) { byId[parent].width = info.width; byId[parent].height = HEAD + info.height; }
   }
   size(null);
-  function place(n,x,y){pos[n.id]={x:x+n.x,y:y+n.y,width:n.width,height:n.height,routeRight:x+n.routeRight,routeLeft:x+n.routeLeft};n.children.forEach(function(c){place(c,x+n.x,y+n.y+108);});}
-  model.nodes.filter(function(n){return !n.parent;}).forEach(function(n){place(n,0,0);});
-  function portY(id,side,i){var list=ports[id+'|'+side];return pos[id].y+(side==='right'?28:61.5)+7*(list.indexOf(i)+1);}
-  function gutter(id,side,i){var info=levels[nodeParent[id]||''],list=info.bandOf[id].channels[side][info.rank[id]];return pos[id][side==='right'?'routeRight':'routeLeft']+(side==='right'?1:-1)*5*list.indexOf(id+'|'+i);}
-  function track(id,i){var parent=nodeParent[id],band=levels[parent||''].bandOf[id];return (parent?pos[parent].y+108:0)+band.trackTop+band.tracks.indexOf(i)*6;}
-  var routed=routes.map(function(route){var e=route.edge,i=route.index,a=pos[e.from],b=pos[e.to],points;
-    if(route.direct){var x=gutter(e.from,'right',i);points=[[a.x+a.width,portY(e.from,'right',i)],[x,portY(e.from,'right',i)],[x,portY(e.to,'left',i)],[b.x,portY(e.to,'left',i)]];}
-    else {function climb(ids,side){var id=ids[0],box=pos[id],points=[[side==='right'?box.x+box.width:box.x,portY(id,side,i)]];ids.forEach(function(current){var x=gutter(current,side,i);points.push([x,points[points.length-1][1]]);points.push([x,track(current,i)]);});return points;}points=climb(route.source,'right').concat(climb(route.target,'left').reverse());}
-    points=points.filter(function(p,j){return !j||p[0]!==points[j-1][0]||p[1]!==points[j-1][1];});
-    return Object.assign({},e,{points:points,d:points.map(function(p,j){return(j?'L':'M')+p[0]+','+p[1];}).join(' ')});
+  function place(n, x, y) {
+    pos[n.id] = {x: x + n.x, y: y + n.y, width: n.width, height: n.height,
+      routeRight: x + n.routeRight, routeLeft: x + n.routeLeft};
+    n.children.forEach(function(c) { place(c, x + n.x, y + n.y + HEAD); });
+  }
+  model.nodes.filter(function(n) { return !n.parent; }).forEach(function(n) { place(n, 0, 0); });
+
+  /* Route: port y on a card side, gutter x beside a card, track y above its band. */
+  function portY(id, side, i) {
+    return pos[id].y + (side === 'right' ? 28 : 61.5) + 7 * (ports[id + '|' + side].indexOf(i) + 1);
+  }
+  function gutter(id, side, i) {
+    var info = levels[nodeParent[id] || ''], channel = info.bandOf[id].channels[side][info.rank[id]];
+    return pos[id][side === 'right' ? 'routeRight' : 'routeLeft']
+      + (side === 'right' ? 1 : -1) * 5 * channel.indexOf(id + '|' + i);
+  }
+  function track(id, i) {
+    var parent = nodeParent[id], band = levels[parent || ''].bandOf[id];
+    return (parent ? pos[parent].y + HEAD : 0) + band.trackTop + band.tracks.indexOf(i) * 6;
+  }
+  /* Leave `ids[0]` on `side`, then for each container: out to its gutter, then to its track. */
+  function climb(ids, side, i) {
+    var box = pos[ids[0]];
+    var points = [[side === 'right' ? box.x + box.width : box.x, portY(ids[0], side, i)]];
+    ids.forEach(function(id) {
+      var x = gutter(id, side, i);
+      points.push([x, points[points.length - 1][1]]);
+      points.push([x, track(id, i)]);
+    });
+    return points;
+  }
+  var edges = routes.map(function(route) {
+    var e = route.edge, i = route.index, points;
+    if (route.direct) {
+      var x = gutter(e.from, 'right', i), fromY = portY(e.from, 'right', i), toY = portY(e.to, 'left', i);
+      points = [[pos[e.from].x + pos[e.from].width, fromY], [x, fromY], [x, toY], [pos[e.to].x, toY]];
+    } else {
+      points = climb(route.source, 'right', i).concat(climb(route.target, 'left', i).reverse());
+    }
+    points = points.filter(function(p, j) {
+      return !j || p[0] !== points[j - 1][0] || p[1] !== points[j - 1][1];
+    });
+    var d = points.map(function(p, j) { return (j ? 'L' : 'M') + p[0] + ',' + p[1]; }).join(' ');
+    return Object.assign({}, e, {points: points, d: d});
   });
-  var bands=[];Object.values(levels).forEach(function(info){var x=info.parent?pos[info.parent].x:0,y=info.parent?pos[info.parent].y+108:0;info.bands.forEach(function(band){bands.push({parent:info.parent,ids:band.ids,isolated:band.isolated,label:band.showLabel?band.label:'',x:x+24,y:y+band.y,width:band.width-48,height:band.height});});});
-  return {pos:pos,bands:bands,edges:routed,width:levels[''].width,height:levels[''].height,cycles:Object.fromEntries(model.nodes.filter(function(n){return n.cycle;}).map(function(n){return[n.id,n.cycleKind];})),model:model};
+  var bands = [];
+  Object.values(levels).forEach(function(info) {
+    var x = info.parent ? pos[info.parent].x : 0, y = info.parent ? pos[info.parent].y + HEAD : 0;
+    info.bands.forEach(function(band) {
+      bands.push({parent: info.parent, ids: band.ids, isolated: band.isolated,
+        label: band.showLabel ? band.label : '', x: x + 24, y: y + band.y,
+        width: band.width - 48, height: band.height});
+    });
+  });
+  return {pos: pos, bands: bands, edges: edges, width: levels[''].width, height: levels[''].height,
+    model: model};
 }
 function reproEdgeLabel(lay,e){
   function name(id){var n=lay.model.nodes.find(function(n){return n.id===id;});return n&&n.type==='task'?(n.title||reproTaskTitle(n.task)):id;}
-  return name(e.from)+' → '+name(e.to)+(e.cycle?' · '+e.cycleKind:'');
+  return name(e.from)+' → '+name(e.to)+(reproLogicalOnly(e)?' · depends_on':'')+(e.cycle?' · '+e.cycleKind:'');
 }
+function reproLogicalOnly(e){return e.evidence.every(function(r){return r.kind==='logical';});}
 function reproHighlightEdge(container,wire){
   container.querySelectorAll('.is-edge-endpoint,.is-edge-active').forEach(function(el){el.classList.remove('is-edge-endpoint','is-edge-active');});
   container.classList.toggle('has-edge-focus',!!wire);
@@ -1399,14 +1569,15 @@ function reproBindEdges(container){
 function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
 function reproGraphHTML(lay,statuses) {
   var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
-  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
+  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
-    if(n.type==='step') {var st=reproStateOf(statuses[n.id]);return '<button class="repro-node rp-'+st+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'" id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state">'+(REPRO_GLYPHS[st]||'?')+' '+st+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':'')+(!reproMatches(n.step,_reproNav)?' · Outside scope':'')+'</span></button>';}
+    if(n.type==='step') {var st=reproStateOf(statuses[n.id]);return '<button class="repro-node rp-'+st+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'" id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state">'+(REPRO_GLYPHS[st]||'?')+' '+st+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':'')+'</span></button>';}
     var counts={};n.steps.forEach(function(s){var st=reproStateOf(statuses[s.name]);counts[st]=(counts[st]||0)+1;});
     var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;});
-    var summary=(n.outside?'Outside scope · ':'')+n.steps.length+' steps'+(n.steps.length?' · ':'')+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ');
-    return '<section class="rp-task'+(n.cycle?' is-cycle':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(!_reproSelected&&n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button></div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+'<span class="rp-task-summary"'+(containsSelected?' hidden':'')+'>'+escapeHtml(summary)+'</span><span class="rp-selected-inside"'+(containsSelected?'':' hidden')+'>Contains selected step</span></span>'+'</div></section>';
+    var summary=n.steps.length+' steps'+(n.steps.length?' · ':'')+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ');
+    var errorLabel=n.errors+' error'+(n.errors===1?'':'s');
+    return '<section class="rp-task'+(n.cycle?' is-cycle':'')+(n.errors?' is-error':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(!_reproSelected&&n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button></div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+(n.errors?'<button class="rp-error-link" data-rp-action="finding" data-value="'+escapeAttr(n.task)+'" title="Show '+errorLabel+'">✕ '+errorLabel+'</button> · ':'')+'<span class="rp-task-summary"'+(containsSelected?' hidden':'')+'>'+escapeHtml(summary)+'</span><span class="rp-selected-inside"'+(containsSelected?'':' hidden')+'>Contains selected step</span></span>'+'</div></section>';
   }).join('');return html;
 }
 function reproHeadHTML() {
@@ -1421,26 +1592,23 @@ function drawReproView(container,data) {
   var focused=document.activeElement,focusId=focused&&focused.id;
   var openMenu=container.querySelector('.rp-menu[open]');
   var menuKey=openMenu&&openMenu.dataset.rpMenu;
-  var visibleGraph=workspaceGraph(data.graph),project=reproProject(visibleGraph,_reproNav,_reproContext),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
+  var visibleGraph=workspaceGraph(data.graph),project=reproProject(visibleGraph),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
   if(_reproSelected&&!(data.graph.steps||[]).some(function(s){return s.name===_reproSelected;})){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
-  if(_reproNav.anchor&&!project.byName[_reproNav.anchor]){_reproNav.anchor='';_reproNav.mode='scope';project=reproProject(data.graph,_reproNav,[]);}
-  var missing=_reproNav.roots.filter(function(r){return paths.indexOf(r)<0;});
   var model=reproHierarchy(visibleGraph,_reproNav,project);
   var signature=JSON.stringify([model.nodes.map(function(n){return [n.id,n.parent,n.expanded];}),model.edges]);
   var oldCanvas=container.querySelector('.repro-canvas'),same=_reproLayoutCache&&_reproLayoutCache.signature===signature&&oldCanvas;
   if(oldCanvas){_reproViewport.x-=oldCanvas.scrollLeft;_reproViewport.y-=oldCanvas.scrollTop;oldCanvas.scrollLeft=0;oldCanvas.scrollTop=0;}
   var oldLayout=_reproLayoutCache&&_reproLayoutCache.layout, lay=same?_reproLayoutCache.layout:reproHierarchyLayout(model);
-  lay.model=model;model.nodes.forEach(function(n){n.cycle=!!lay.cycles[n.id];n.cycleKind=lay.cycles[n.id]||'';});
+  lay.model=model;
   var anchor=_reproPreserve||_reproSelected||'task:'+activePath;_reproPreserve='';
-  if(!same&&oldLayout&&oldLayout.pos[anchor]&&lay.pos[anchor]&&!_reproFitNext){_reproViewport.x+=(oldLayout.pos[anchor].x-lay.pos[anchor].x)*_reproViewport.zoom;_reproViewport.y+=(oldLayout.pos[anchor].y-lay.pos[anchor].y)*_reproViewport.zoom;}
+  if(!same&&oldLayout&&oldLayout.pos[anchor]&&lay.pos[anchor]&&!_reproViewNext){_reproViewport.x+=(oldLayout.pos[anchor].x-lay.pos[anchor].x)*_reproViewport.zoom;_reproViewport.y+=(oldLayout.pos[anchor].y-lay.pos[anchor].y)*_reproViewport.zoom;}
   _reproLayoutCache={signature:signature,layout:lay};
-  var findings=(data.graph.findings||[]).concat(data.status.findings||[]).filter(function(f,i,a){return a.findIndex(function(o){return JSON.stringify(o)===JSON.stringify(f);})===i;});
-  var notice=missing.length?'Selected subtree was removed or archived: '+missing.join(', ')+'. Use Whole project to recover.':!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
+  var findings=data.graph.findings||[];
+  var notice=!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
   var errors=findings.filter(function(f){return f.severity==='error';}).length;
   var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
-  var outside=project.steps.filter(function(s){return !reproMatches(s,_reproNav);}).length;
   container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
-    +'<div class="repro-summary"><span>'+project.matches.length+' steps'+(outside?' · '+outside+' outside scope':'')+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+reproLegendHTML(project.matches,statuses,data.status)+'</div></details>'
+    +'<div class="repro-summary"><span>'+project.steps.length+' steps'+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+reproLegendHTML(project.steps,statuses,data.status)+'</div></details>'
     +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
@@ -1456,26 +1624,45 @@ function drawReproView(container,data) {
   container.onkeydown=function(e){if(e.key==='Escape'){container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
   reproBindHead(container);reproBindViewport(container);renderReproDetail(_reproSelected);reproReaderControls();reproSizeWorkspace();
   if(menuKey){var menu=container.querySelector('[data-rp-menu="'+menuKey+'"]');if(menu)menu.open=true;}
-  if(_reproFitNext){_reproFitNext=false;reproFit();}else reproTransform();
+  var place=_reproViewNext;_reproViewNext='';
+  if(place==='fit')reproFit();else if(place==='open')reproOpen();else reproTransform();
   if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
 }
 var _reproPreserve='';
 function reproEvidenceHTML(evidence){
   return '<ul>'+evidence.map(function(e){return '<li>'+escapeHtml(e.kind==='logical'?'Logical prerequisite · '+e.declaration:(e.producer||e.from)+' → '+(e.consumer||e.to)+' via '+e.via)+'</li>';}).join('')+'</ul>';
 }
-function reproLogicalBoundaryHTML(model){
-  if(!model.logicalBoundary.length)return '';
-  return '<details class="repro-boundaries" open><summary>Inherited logical prerequisites outside this view</summary>'+model.logicalBoundary.map(function(e){return '<div>'+reproButton(reproTaskTitle(e.from),'task',e.from)+' → '+reproButton(reproTaskTitle(e.to),'task',e.to)+'<p>'+escapeHtml(e.declaration)+' · Applies to scoped descendant work.</p></div>';}).join('')+'</details>';
-}
 function reproReaderControls(){
   var toggle=document.getElementById('navigation-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show details':'Hide details';toggle.title=_reproReaderClosed?'Show details':'Hide details';}
   var selection=document.getElementById('repro-selection');if(selection){selection.textContent=_reproSelected||reproTaskTitle(activePath);selection.title=_reproSelected||activePath;}
   updateNavigationToggle();
   var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Show in graph','show-selected',activePath)+reproButton((_reproReaderFull||_reproReaderCompact)?'Back to graph':'Read full width','full-reader')+reproButton('Hide details','close-reader');
-  if(host&&_reproData){var edges=(_reproData.graph.dependencies&&_reproData.graph.dependencies.edges||[]).filter(function(e){return e.from===activePath||e.to===activePath;});
+  if(host&&_reproData){var edges=reproTaskDependencies(_reproData.graph,activePath);
     if(edges.length)host.innerHTML+='<details class="rp-task-deps"><summary>Task dependencies ('+edges.length+')</summary>'+edges.map(function(e){var other=e.to===activePath?e.from:e.to;return '<div>'+reproButton((e.to===activePath?'Prerequisite: ':'Dependent: ')+reproTaskTitle(other),'task',other)+reproEvidenceHTML(e.evidence||[])+'</div>';}).join('')+'</details>';
   }
   if(host)host.parentElement.style.setProperty('--dag-reader-offset',(host.offsetHeight+12+parseFloat(getComputedStyle(host.parentElement).paddingTop||0))+'px');
+}
+/* The active task's connections to its siblings: each sibling's `depends_on`
+   edges and the step edges between the two subtrees, grouped per sibling. */
+function reproTaskDependencies(graph,path) {
+  if(!path)return [];
+  var parent=parentPath(path),owner={},grouped={},edges=[];
+  (graph.steps||[]).forEach(function(s){owner[s.name]=s.task;});
+  function sibling(task){
+    if(task===parent||!reproWithin(task,parent))return null;
+    var tail=parent?task.slice(parent.length+1):task;
+    return (parent?parent+'/':'')+tail.split('/')[0];
+  }
+  function add(from,to,evidence){
+    var a=sibling(from),b=sibling(to);
+    if(!a||!b||a===b||(a!==path&&b!==path))return;
+    var key=a+'\n'+b;
+    if(!grouped[key]){grouped[key]={from:a,to:b,evidence:[]};edges.push(grouped[key]);}
+    grouped[key].evidence.push(evidence);
+  }
+  (graph.dependencies&&graph.dependencies.logical||[]).forEach(function(e){add(e.from,e.to,e);});
+  (graph.step_edges||[]).forEach(function(e){if(owner[e.from]!==undefined&&owner[e.to]!==undefined)add(owner[e.from],owner[e.to],e);});
+  return edges;
 }
 async function reproOpenDeclaration() {
   var selected=_reproSelected;
@@ -1562,18 +1749,6 @@ function reproSetReader(open) {
 function reproBindHead(container) {
   container.querySelectorAll('.rp-menu').forEach(function(menu){menu.ontoggle=function(){if(menu.open)container.querySelectorAll('.rp-menu').forEach(function(other){if(other!==menu)other.open=false;});};});
 }
-function reproBoundaryHTML(project) {
-  var groups = {};
-  project.boundary.forEach(function(b) { var key = b.visible + '|' + b.direction; (groups[key] = groups[key] || []).push(b); });
-  return '<div class="repro-boundaries">' + Object.keys(groups).map(function(key) {
-    var items = groups[key];
-    return '<details><summary>' + escapeHtml(items[0].visible) + ' · ' + items[0].direction + ' · '
-      + new Set(items.map(function(b) { return b.hidden; })).size + ' hidden neighbors ('
-      + Array.from(new Set(items.flatMap(function(b) { return b.reasons; }))).join(', ') + ')</summary>'
-      + items.map(function(b) { return '<div>' + reproButton('Reveal ' + b.hidden, 'reveal', b.hidden)
-        + ' via ' + escapeHtml(b.edge.via || '') + '</div>'; }).join('') + '</details>';
-  }).join('') + '</div>';
-}
 function reproTransform() {
   var plot = document.querySelector('#view-reproduction .repro-plot');
   if (!plot) return;
@@ -1587,6 +1762,26 @@ function reproFit() {
   if (!canvas || !_reproLayoutCache) return;
   var lay = _reproLayoutCache.layout;
   _reproViewport = { x: 12, y: 12, zoom: Math.min(1, (canvas.clientWidth - 24) / lay.width, (canvas.clientHeight - 24) / lay.height) };
+  reproTransform();
+}
+/* Open at a readable scale: the whole graph when it fits at 80% or more,
+   otherwise 80% on the selected step or task (centered when it fits, else from
+   its top-left corner), clamped to the graph's edges. */
+var REPRO_OPEN_ZOOM = 0.8;
+function reproOpen() {
+  var canvas = document.querySelector('#view-reproduction .repro-canvas');
+  if (!canvas || !_reproLayoutCache) return;
+  var lay = _reproLayoutCache.layout, w = canvas.clientWidth, h = canvas.clientHeight;
+  var fit = Math.min(1, (w - 24) / lay.width, (h - 24) / lay.height);
+  if (fit >= REPRO_OPEN_ZOOM) { reproFit(); return; }
+  var zoom = REPRO_OPEN_ZOOM, pos = lay.pos[(_reproSelected && lay.model.reps[_reproSelected]) || lay.model.taskReps[activePath]];
+  var x = 12, y = 12;
+  if (pos) {
+    x = pos.width * zoom <= w - 48 ? w / 2 - (pos.x + pos.width / 2) * zoom : 24 - pos.x * zoom;
+    y = pos.height * zoom <= h - 48 ? h / 2 - (pos.y + pos.height / 2) * zoom : 24 - pos.y * zoom;
+  }
+  _reproViewport = { x: Math.min(12, Math.max(w - 12 - lay.width * zoom, x)),
+    y: Math.min(12, Math.max(h - 12 - lay.height * zoom, y)), zoom: zoom };
   reproTransform();
 }
 function reproCenter() {
@@ -1668,13 +1863,17 @@ function reproLegendHTML(steps, byName, status) {
     ? '<div class="repro-findings">Runner state is unavailable, so every step reads <code>unknown</code>: '
       + escapeHtml(status.unavailable) + '</div>'
     : '';
-  return '<div class="repro-legend">' + items.join('') + '</div>' + banner;
+  var wires = '<div class="repro-legend">'
+    + '<span class="repro-legend-item"><svg class="repro-legend-wire" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>file dependency</span>'
+    + '<span class="repro-legend-item"><svg class="repro-legend-wire is-logical" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>depends_on only</span></div>';
+  return '<div class="repro-legend">' + items.join('') + '</div>' + wires + banner;
 }
 
 function reproFindingsHTML(findings) {
   if (!findings || !findings.length) return '';
   var rows = findings.map(function(f) {
-    return '<li><span class="repro-sev' + (f.severity === 'warning' ? ' is-warning' : '') + '">['
+    return '<li tabindex="-1"' + (typeof f.task_path === 'string' ? ' data-finding-task="' + escapeAttr(f.task_path) + '"' : '')
+      + '><span class="repro-sev' + (f.severity === 'warning' ? ' is-warning' : '') + '">['
       + escapeHtml(String(f.severity).toUpperCase()) + ']</span>'
       + (typeof f.task_path==='string' ? reproButton(f.task_path||'Project root','task',f.task_path) : '')
       + escapeHtml(f.message) + '</li>';
@@ -1683,7 +1882,7 @@ function reproFindingsHTML(findings) {
   var warnings = findings.length - errors;
   var parts = [];
   if (errors) parts.push(errors + ' error' + (errors === 1 ? '' : 's')
-    + ' — graph is not executable. Dependency cycles retain parsed steps for inspection; malformed declarations can omit steps');
+    + ' — builds of the steps they touch are blocked. Step cycles keep their parsed steps for inspection; a malformed declaration registers none of its steps');
   if (warnings) parts.push(warnings + ' warning' + (warnings === 1 ? '' : 's')
     + ' — valid active steps are drawn; inspect the dependency evidence below');
   return '<div class="repro-findings">' + escapeHtml(parts.join('; ')) + '.<ul>'
@@ -1708,8 +1907,7 @@ function onReproClick(event) {
     var action = control.dataset.rpAction, value = control.dataset.value;
     var menu=control.closest('.rp-menu');if(menu)menu.open=false;
     if(action==='task')reproSelectTask(value);
-    else if(action==='find-task'||action==='focus'||action==='explore')reproFocus(value);
-    else if(action==='overview'||action==='clear'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
+    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
     else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
@@ -1727,6 +1925,7 @@ function onReproClick(event) {
       host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(reproEdgeLabel(_reproLayoutCache.layout,edge))+'</h3>'+reproEvidenceHTML(edge.evidence);
     }
     else if(action==='close-edge')reproCloseGraphDetail();
+    else if(action==='finding')reproShowFinding(value);
     else if(action==='refresh')renderReproView(true);
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
@@ -1751,6 +1950,13 @@ function onReproClick(event) {
   if (link && link.dataset.path !== undefined) reproSelectTask(link.dataset.path);
 }
 
+/* Open the diagnostics and focus the first finding filed on *path*. */
+function reproShowFinding(path) {
+  var menu=document.querySelector('#view-reproduction .rp-diagnostics');if(!menu)return;
+  menu.open=true;
+  var row=Array.from(menu.querySelectorAll('li[data-finding-task]')).find(function(li){return li.dataset.findingTask===path;});
+  if(row){row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});}
+}
 function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
   _reproSelected = name;
@@ -1802,7 +2008,7 @@ function renderReproDetail(name) {
   document.getElementById('task-preview').classList.toggle('step-reading',visible);
   if(!visible){host.innerHTML='';host.removeAttribute('data-step');return;}
   var same=host.dataset.step===name, previousState=host.dataset.state, opened=new Set(Array.from(host.querySelectorAll('details[open]')).map(function(el){return el.dataset.detailSection;}));
-  var entry=reproStatusIndex(_reproData)[name], state=reproStateOf(entry), related=reproProject(_reproData.graph,_reproNav,[]);
+  var entry=reproStatusIndex(_reproData)[name], state=reproStateOf(entry), related=reproProject(_reproData.graph);
   var external={};(_reproData.graph.external_inputs||[]).filter(function(e){return (e.consumers||[]).indexOf(name)!==-1;}).forEach(function(e){external[e.logical]=e;});
   var inputs=(step.deps||[]).map(function(d){
     var origins=(step.dependency_origins&&step.dependency_origins[d.logical]||[]).map(function(o){return typeof o==='string'?o:({declared:'Declared input',script:'Script',include:'Included source',environment:'Environment'}[o.kind]||o.kind)+(o.via?' via '+o.via:'');});
@@ -1875,7 +2081,6 @@ function revealReproStep(name, owner) {
       if(currentView!=='reproduction')showView('reproduction');
       drawReproView(document.getElementById('view-reproduction'),data);return;
     }
-    _reproNav.roots=[];_reproNav.mode='scope';_reproNav.anchor='';
     _reproInspectorClosed=false;reproRevealOwner(step.task);
     selectReproStep(name);
     if(currentView==='reproduction'){drawReproView(document.getElementById('view-reproduction'),data);_reproViewport.zoom=1;reproCenter();}
@@ -3155,9 +3360,8 @@ function patchTabTitleWhenReady(path, token) {
    child set (path, slug, title, status) and the inter-child dependency edges
    as JSON — no mermaid source, no text parsing; the root is special-cased
    (empty root would return the global graph, unrelated to this panel).
-   Children with no inter-dependency get a flat grid; children with at least
-   one inter-child dependency get the same cards in a layered topological flow
-   with per-card `↳ after:` footers. Output is cached per (path,
+   Children render as a flat grid; the Graph view draws their dependencies.
+   Output is cached per (path,
    child-status+edge-signature) so navigating back to an unchanged node
    restores the built HTML; a child whose status or sibling deps changed busts
    the cache and re-renders. */
@@ -3235,8 +3439,8 @@ function renderChildren(region, path, sig, build) {
 }
 
 /* Turn a GET /api/children-graph?root=<path> JSON payload into the
-   direct-children set plus the inter-child dependency edges the flow/grid
-   builders consume. `edges[childPath]` is the list of sibling paths that
+   direct-children set plus the inter-child dependency edges the cache
+   signature reads. `edges[childPath]` is the list of sibling paths that
    child directly depends on, straight off the server payload — no text
    parsing, no separate color->status map to keep in sync. Titles prefer the
    payload's own (non-lossy) title, falling back to the shared pathTitles
@@ -3277,23 +3481,12 @@ function rootChildrenFromNav() {
 }
 
 /* One clickable child card: slug + title + status badge, descending via the
-   delegated onChildCardClick on the enclosing container. `depPaths` (optional)
-   appends a `↳ after: <slug…>` footer naming the card's direct sibling deps. */
-function childCardHTML(c, depPaths) {
-  var deps = '';
-  if (depPaths && depPaths.length) {
-    var slugs = depPaths.map(function(d) {
-      return '<span class="dep-slug">' + escapeHtml(d.split('/').pop()) + '</span>';
-    }).join('<span class="dep-label">, </span>');
-    deps = '<span class="child-card-deps"><span class="dep-arrow">↳</span>'
-      + '<span class="dep-label">after: </span>' + slugs + '</span>';
-  }
-  return '<button class="child-card' + (depPaths && depPaths.length ? ' has-deps' : '')
-    + '" data-path="' + escapeAttr(c.path) + '">'
+   delegated onChildCardClick on the enclosing container. */
+function childCardHTML(c) {
+  return '<button class="child-card" data-path="' + escapeAttr(c.path) + '">'
     + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
     + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
     + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
-    + deps
     + '</button>';
 }
 
@@ -3302,52 +3495,12 @@ var SUBTASK_HEADER = '<div class="dag-controls"><strong>Subtasks</strong>'
 
 /* Flat clickable grid for children with no inter-dependency. */
 function buildChildGrid(children) {
-  var cards = children.map(function(c) { return childCardHTML(c, null); }).join('');
+  var cards = children.map(function(c) { return childCardHTML(c); }).join('');
   return SUBTASK_HEADER
     + '<div class="child-grid" onclick="onChildCardClick(event)">' + cards + '</div>';
 }
 
-/* Layered dependency flow: the same cards grouped into topological tiers in
-   execution order (tier 0 = children depending on no sibling; tier k = children
-   whose sibling deps all sit in earlier tiers), stacked top->bottom with a
-   subtle inter-tier flow cue. Each dependent card footers `↳ after:` with its
-   direct sibling deps. Cycle-safe: a pass that places no remaining child drops
-   the leftovers into the final tier instead of looping. */
-function buildChildFlow(children, edges) {
-  var byPath = {};
-  children.forEach(function(c) { byPath[c.path] = c; });
-  /* Keep only deps that point at an actual sibling in this child set. */
-  var deps = {};
-  children.forEach(function(c) {
-    deps[c.path] = (edges[c.path] || []).filter(function(d) { return byPath[d]; });
-  });
-
-  var placed = {};
-  var remaining = children.map(function(c) { return c.path; });
-  var tiers = [];
-  while (remaining.length) {
-    var tier = remaining.filter(function(p) {
-      return deps[p].every(function(d) { return placed[d]; });
-    });
-    if (tier.length === 0) tier = remaining.slice();   /* cycle -> flush rest */
-    tier.forEach(function(p) { placed[p] = true; });
-    tiers.push(tier);
-    remaining = remaining.filter(function(p) { return !placed[p]; });
-  }
-
-  var tierHTML = tiers.map(function(tier, i) {
-    var cards = tier.map(function(p) {
-      return childCardHTML(byPath[p], deps[p]);
-    }).join('');
-    var sep = i < tiers.length - 1 ? '<div class="flow-sep" aria-hidden="true"></div>' : '';
-    return '<div class="flow-tier">' + cards + '</div>' + sep;
-  }).join('');
-
-  return SUBTASK_HEADER
-    + '<div class="child-flow" onclick="onChildCardClick(event)">' + tierHTML + '</div>';
-}
-
-/* Delegated click for both the grid and the flow: descend to the clicked child. */
+/* Delegated click for the grid: descend to the clicked child. */
 function onChildCardClick(event) {
   var card = event.target.closest('.child-card');
   if (card && card.dataset.path !== undefined) setActive(card.dataset.path);
@@ -4613,18 +4766,18 @@ function switchWorktree(token) {
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
 async function applyWorktree(wtId, path, artifactPath) {
-  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,context:_reproContext.slice(),inspectorClosed:_reproInspectorClosed,notice:_reproNotice,filters:JSON.parse(JSON.stringify(_workspaceFilters))};
+  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,inspectorClosed:_reproInspectorClosed,notice:_reproNotice,filters:JSON.parse(JSON.stringify(_workspaceFilters))};
   ACTIVE_WT = wtId || '';
   var remembered=_reproWorktrees[ACTIVE_WT];
   _workspaceFilters=normalizeWorkspaceFilters(remembered&&remembered.filters);
-  _reproNav=remembered?remembered.nav:{roots:[],view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
+  _reproNav=remembered?remembered.nav:{selected:'',expanded:[]};
   _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
   _reproReaderFull=!!(remembered&&remembered.readerFull&&_reproReaderPreference!==false);
   reproSizeWorkspace();
   document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
   document.getElementById('workspace').classList.toggle('dag-reader-closed',_reproReaderClosed);
   _reproEntered=!!remembered;_reproSelected=_reproNav.selected;
-  _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproContext=remembered?remembered.context:[];_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproFitNext=!remembered;
+  _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproViewNext=remembered?'':'open';
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */
   _childrenDagCache = {};
