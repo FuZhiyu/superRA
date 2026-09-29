@@ -96,6 +96,7 @@ All six problems are fixed. The [review script](attachments/graph_review.py) pas
 
 - The review script's 17 checks: 11 fail at the base commit `7acbc7f7`, all pass here. The before figures above come from that base run.
 - New regression tests: [depends_on and step cycles only](../../../../skills/task-tree/scripts/tests/test_navigation_projection.py), declaration errors on folded ancestors, the error card and dashed edge in [test_dashboard.py](../../../../skills/task-tree/scripts/test_dashboard.py), findings sent once, and the [80% open](../../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py) in a browser.
+- Deferred advisories: `workspaceGraph` filters `dependencies.logical` (the payload's edge list) and no longer touches the removed `edges`/`boundaries`; the unreferenced `reader`, `refresh`, and `center` click handlers are gone.
 - The task-tree suite and harness tests: 1,433 passed, 9 skipped, and the intermittent browser test above failed once.
 
 ## Reproduction
