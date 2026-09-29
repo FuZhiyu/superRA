@@ -1004,15 +1004,13 @@ def _render_node_body(task: Task, project_root: str) -> str:
     return template.render(task=task, project_root=project_root)
 
 
-def _children_graph_payload(root_task: Task, graph=None) -> dict:
+def _children_graph_payload(root_task: Task, graph) -> dict:
     """Direct-children graph for *root_task*: nodes (path, slug, title, status)
-    plus sibling dependency edges. Feeds the children dependency panel — GET
-    /api/children-graph and its matching standalone fragment — straight from
-    Task data, with no mermaid source and no client-side text parsing."""
-    children = [c for c in root_task.children
-                if graph is None or c.path not in graph.dependencies.archived]
+    plus the shared snapshot's edges between them. Feeds the children dependency
+    panel — GET /api/children-graph and its matching standalone fragment — with
+    no mermaid source and no client-side text parsing."""
+    children = [c for c in root_task.children if c.path not in graph.dependencies.archived]
     child_paths = {c.path for c in children}
-    prefix = f"{root_task.path}/" if root_task.path else ""
     nodes = [
         {
             "path": c.path,
@@ -1023,20 +1021,16 @@ def _children_graph_payload(root_task: Task, graph=None) -> dict:
         for c in children
     ]
     edges: dict[str, list[str]] = {}
-    for c in children:
-        deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
-        if deps:
-            edges[c.path] = deps
-    payload = {"children": nodes, "edges": edges}
-    if graph is not None:
-        payload["edges"] = {}
-        for edge in graph.dependencies.edges:
-            if edge["from"] in child_paths and edge["to"] in child_paths:
-                payload["edges"].setdefault(edge["to"], []).append(edge["from"])
-        payload["boundary"] = graph.dependencies.boundaries.get(root_task.path)
-        payload["valid"] = graph.dependencies.valid
-        payload["findings"] = [f.to_dict() for f in graph.findings]
-    return payload
+    for edge in graph.dependencies.edges:
+        if edge["from"] in child_paths and edge["to"] in child_paths:
+            edges.setdefault(edge["to"], []).append(edge["from"])
+    return {
+        "children": nodes,
+        "edges": edges,
+        "boundary": graph.dependencies.boundaries.get(root_task.path),
+        "valid": graph.dependencies.valid,
+        "findings": [f.to_dict() for f in graph.findings],
+    }
 
 
 def _render_summary(root_task: Task | None) -> str:

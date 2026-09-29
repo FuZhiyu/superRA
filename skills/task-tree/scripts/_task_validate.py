@@ -120,69 +120,7 @@ def validate_review_notes(task: Task) -> list[str]:
     ]
 
 
-def validate_dependencies(task: Task, siblings: list[str]) -> list[str]:
-    """Check that all depends_on entries reference existing sibling directory names.
-
-    siblings: list of sibling directory names at the same level as task.
-    Returns a list of warning strings for missing references.
-    """
-    sibling_set = set(siblings)
-    warnings_out: list[str] = []
-    for dep in task.depends_on:
-        if dep not in sibling_set:
-            warnings_out.append(
-                f"depends_on {dep!r} does not match any sibling task"
-            )
-    return warnings_out
-
-
-def detect_cycles(tasks: list[Task]) -> list[str]:
-    """Detect circular dependencies among a list of sibling Tasks using DFS.
-
-    Returns a list of cycle description strings.
-    """
-    slug_to_deps: dict[str, list[str]] = {}
-    slug_set = {t.slug for t in tasks}
-    for t in tasks:
-        # Only include deps that exist within this sibling group
-        slug_to_deps[t.slug] = [d for d in t.depends_on if d in slug_set]
-
-    warnings_out: list[str] = []
-    # DFS state: WHITE=0 (unvisited), GRAY=1 (in stack), BLACK=2 (done)
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color: dict[str, int] = {slug: WHITE for slug in slug_to_deps}
-    stack: list[str] = []
-
-    def dfs(node: str) -> bool:
-        """Return True if a cycle was found from node."""
-        color[node] = GRAY
-        stack.append(node)
-        for neighbor in slug_to_deps.get(node, []):
-            if color[neighbor] == GRAY:
-                # Found a cycle — extract the cycle portion from the stack
-                cycle_start = stack.index(neighbor)
-                cycle = stack[cycle_start:] + [neighbor]
-                warnings_out.append("cycle detected: " + " -> ".join(cycle))
-                stack.pop()
-                color[node] = BLACK
-                return True
-            if color[neighbor] == WHITE:
-                if dfs(neighbor):
-                    stack.pop()
-                    color[node] = BLACK
-                    return True
-        stack.pop()
-        color[node] = BLACK
-        return False
-
-    for slug in sorted(slug_to_deps):
-        if color[slug] == WHITE:
-            dfs(slug)
-
-    return warnings_out
-
-
-def validate_plan(plan_root: Path, *, dependencies: bool = True) -> list[str]:
+def validate_plan(plan_root: Path) -> list[str]:
     """Walk the entire plan tree and run all validations at each level.
 
     Returns aggregated list of warning strings, each prefixed with the task path.
@@ -201,8 +139,6 @@ def validate_plan(plan_root: Path, *, dependencies: bool = True) -> list[str]:
                 continue
             tasks_at_level.append(task)
 
-        sibling_names = [t.slug for t in tasks_at_level]
-
         for task in tasks_at_level:
             prefix = task.path if task.path else task.slug
 
@@ -214,14 +150,6 @@ def validate_plan(plan_root: Path, *, dependencies: bool = True) -> list[str]:
 
             for w in validate_review_notes(task):
                 warnings_out.append(f"{prefix}: {w}")
-
-            if dependencies:
-                for w in validate_dependencies(task, sibling_names):
-                    warnings_out.append(f"{prefix}: {w}")
-
-        if dependencies:
-            for w in detect_cycles(tasks_at_level):
-                warnings_out.append(f"{directory.name}: {w}")
 
         for subdir in subdirs:
             _validate_level(subdir)

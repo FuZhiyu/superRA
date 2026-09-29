@@ -898,7 +898,7 @@ class TestFindings:
         assert _has(graph, "warning", "which no step produces and which is not on disk")
         assert graph.external_inputs[0].exists is False
 
-    def test_derived_edge_contradicting_sibling_depends_on(self, tmp_path):
+    def test_depends_on_against_file_flow_is_a_warning_naming_the_file(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(
             plan / "01-build",
@@ -918,11 +918,11 @@ class TestFindings:
             "    deps: [output/panel.parquet]\n"
             "    outs: [output/table.tex]\n",
         )
-        assert _has(
-            _graph(plan),
-            "error",
-            "dependency cycle",
-        )
+        graph = _graph(plan)
+        assert _messages(graph, "error") == []
+        assert _has(graph, "warning",
+                    "depends_on '02-estimate' runs against the file flow: 02-estimate reads "
+                    "this task's output output/panel.parquet")
 
     def test_consistent_depends_on_raises_nothing(self, tmp_path):
         assert _messages(_graph(_two_task_pipeline(tmp_path)), "warning") == []
