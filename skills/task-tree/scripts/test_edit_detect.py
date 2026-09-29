@@ -159,6 +159,11 @@ class TestBashMadeEdits:
         assert "Markdown render-integrity issue" in context
         assert "notes.md" in context
 
+    def test_the_hook_state_folder_stays_on_this_machine(self, project):
+        from test_repro_acceptance import _dropbox_ignored
+        assert _bash(project) == ""
+        assert _dropbox_ignored(project / _edit_detect.STATE_DIRNAME)
+
     def test_unchanged_content_is_silent(self, project):
         assert _bash(project) == ""
         task_md = project / "superRA" / "01-first" / "task.md"

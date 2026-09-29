@@ -378,7 +378,7 @@ class Resolver:
             found.append({'source': 'receipt', 'at': run.get('ended_at') or receipt.get('recorded_at')})
         record = self.ledger.get(step.name)
         if record and any(group.get(node) == value for group in record.get('state', {}).values()):
-            found.append({'source': 'acceptance', 'actor': record.get('actor'), 'at': record.get('recorded_at')})
+            found.append({'source': 'acceptance'})
         if recorded_side and is_file:
             for copy in self.conflicted_copies(resolved):
                 if self.cache.file_hash(copy) == value:
@@ -447,9 +447,7 @@ class Resolver:
     def row(self, step, node, kind, recorded, current, resolved, *, reviewed=False) -> dict:
         rec = self.sources(step, node, recorded, resolved=resolved, recorded_side=True)
         if reviewed:
-            record = self.ledger[step.name]
-            rec = [{'source': 'acceptance', 'actor': record.get('actor'), 'at': record.get('recorded_at')}] + [
-                s for s in rec if s['source'] != 'acceptance']
+            rec = [{'source': 'acceptance'}] + [s for s in rec if s['source'] != 'acceptance']
         cur = self.sources(step, node, current, resolved=resolved)
         role = 'output' if kind == 'output' else 'input'
         other = [s for s in cur if s['source'] != 'uncommitted']
@@ -550,7 +548,7 @@ class Resolver:
     def searched(self) -> dict:
         return {
             'receipts': f'{STATE_DIRNAME}/baselines',
-            'ledger': 'repro-acceptance.json',
+            'ledger': 'repro-acceptance/',
             'lock_revisions': [r['rev'] for r in self.history.revs],
             'lock_history_capped': self.history.capped,
             'git_available': self.git.ok,
@@ -599,7 +597,7 @@ def _label(s) -> str:
     if kind == 'receipt':
         return f"built here {_stamp(s['at'])}"
     if kind == 'acceptance':
-        return f"reviewed {_stamp(s['at'])}"
+        return 'reviewed acceptance'
     return f"conflicted copy {s['path']}"
 
 

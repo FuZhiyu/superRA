@@ -412,21 +412,20 @@ def format_cost(names: list[str], paths: RunnerPaths) -> str:
 def format_accept(result: dict) -> str:
     """Exactly which steps the acceptance covered, and what changed under each."""
     rows = result["steps"]
-    applied = result.get("applied", False)
+    written = sum(row["record"] is not None for row in rows)
     lines = [
-        f"Accepted {len(rows)} step(s) as the reviewed baseline."
-        if applied else
-        f"Would accept {len(rows)} step(s); no record was written."
+        f"Accepted {written} step(s) as the reviewed baseline."
+        if result.get("applied") else
+        f"Would accept {written} step(s); no record was written."
     ]
-    reason = rows[0]["record"]["reason"] if rows else ""
-    if reason:
-        lines.append(f"  reason: {reason}")
+    if result["reason"]:
+        lines.append(f"  reason: {result['reason']}")
     width = max((len(row["step"]) for row in rows), default=0)
     for row in rows:
         changes = ", ".join(f"{c['kind']} {c['node']}" for c in row["changes"])
+        if row["record"] is None:
+            changes = "already fresh; its evidence stays as it is"
         lines.append(f"  {row['step']:<{width}}  {changes or 'unchanged since the recorded baseline'}")
-    if not applied:
-        lines.append(f"  Apply this exact preview with --apply {result['token']}.")
     return "\n".join(lines)
 
 
@@ -515,15 +514,11 @@ def build_parser() -> argparse.ArgumentParser:
     accept = _sub(sub, "accept", "Record the current results as the reviewed baseline", [
         "superra repro accept 02-merge --reason 'Ran interactively and reviewed the panel'",
         "superra repro accept 02-merge --dry-run    # preview; writes nothing",
-        "superra repro accept 02-merge --reason '...' --apply <preview-token>",
     ])
     accept.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     accept.add_argument("--reason", default="", help="Why the current results are valid (required to accept)")
     accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE", help="Optional per-node review note")
-    accept.add_argument("--evidence", action="append", default=[], metavar="FILE", help="Optional existing evidence file")
-    mode = accept.add_mutually_exclusive_group()
-    mode.add_argument("--apply", metavar="PREVIEW_TOKEN", help="Apply the exact preview a --dry-run printed")
-    mode.add_argument("--dry-run", action="store_true", help="Preview and print a token; write nothing")
+    accept.add_argument("--dry-run", action="store_true", help="Preview; write nothing")
     accept.add_argument("--json", action="store_true", dest="as_json")
 
     revoke = _sub(sub, "revoke", "Revoke selected step acceptances", [
@@ -641,8 +636,7 @@ def main(argv: list[str] | None = None) -> None:
                     if not sep or not rationale.strip():
                         raise ReproStateError("--review expects NODE=RATIONALE")
                     reviews[node] = rationale
-                result = accept(graph, paths, args.targets, args.reason, reviews,
-                                args.evidence, args.apply, dry_run=args.dry_run)
+                result = accept(graph, paths, args.targets, args.reason, reviews, dry_run=args.dry_run)
             if args.command == "accept" and not args.as_json:
                 print(format_accept(result))
             else:

@@ -2,22 +2,23 @@
 from __future__ import annotations
 
 import difflib
-import getpass
 import hashlib
 import json
 import os
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 from _repro_state import (
-    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, node_state,
-    output_nodes, read_lock, read_run_record, select_steps, spec_hash,
+    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, dropbox_ignore,
+    node_state, output_nodes, read_lock, read_run_record, select_steps, spec_hash,
     spec_node_id, step_nodes, _topological,
 )
 
-LEDGER = 'repro-acceptance.json'
+LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
+LEGACY_LEDGER = 'repro-acceptance.json'
 SNAPSHOT_LIMIT = 128 * 1024
 
 
@@ -45,6 +46,7 @@ def mutation_lock(paths):
     """Reject concurrent builds/record changes, releasing even after interruption."""
     import fcntl
     paths.state_dir.mkdir(parents=True, exist_ok=True)
+    dropbox_ignore(paths.state_dir)
     with (paths.state_dir / 'mutation.lock').open('a') as handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -68,28 +70,127 @@ def read_json(path, default):
     return value
 
 
-def read_ledger(paths):
-    value = read_json(paths.project_root / LEDGER, {'version': 1, 'steps': {}})
-    if value.get('version') != 1 or not isinstance(value.get('steps'), dict):
-        raise ReproStateError(f'{LEDGER}: unsupported or malformed record')
-    for name, record in value['steps'].items():
-        if (not isinstance(record, dict)
-                or not all(isinstance(record.get(key), dict) for key in ('baseline', 'state', 'reviews', 'evidence', 'upstream'))
-                or not isinstance(record.get('reason'), str)
-                or not isinstance(record.get('boundary_inputs'), list)
-                or record.get('basis') != 'reviewed'
-                or record.get('id') != identity({k: v for k, v in record.items() if k != 'id'})):
-            raise ReproStateError(f'{LEDGER}: malformed acceptance for {name}')
+_WARNED = set()
+
+
+def _warn(message):
+    if message not in _WARNED:
+        _WARNED.add(message)
+        print(f'warning: {message}', file=sys.stderr)
+
+
+def _normalize(record):
+    """The in-memory record from either committed shape; None when it cannot be trusted."""
+    if (not isinstance(record, dict)
+            or record.get('id') != identity({k: v for k, v in record.items() if k != 'id'})
+            or record.get('basis') != 'reviewed'
+            or not isinstance(record.get('reason'), str)
+            or not isinstance(record.get('reviews'), dict)
+            or not isinstance(record.get('boundary_inputs'), list)
+            or not isinstance(record.get('state'), dict)
+            or not all(isinstance(record['state'].get(key), dict) for key in ('deps', 'products'))):
+        return None
+    if 'baseline' in record:  # written before the reshape: bound the whole lock entry
+        lock = record['baseline'].get('lock') if isinstance(record['baseline'], dict) else None
+        lock = identity(lock) if lock else None
+    else:
+        lock = record.get('lock')
+    if lock is not None and not isinstance(lock, str):
+        return None
+    state = record['state']
+    return {'basis': 'reviewed', 'lock': lock, 'state': dict(state, outputs=state.get('outputs', state['products'])),
+            'boundary_inputs': record['boundary_inputs'], 'reason': record['reason'],
+            'reviews': record['reviews'], 'id': record['id']}
+
+
+def portable_record(record):
+    """The committed form: the reviewed hashes and the decision, sealed by its id."""
+    state = {key: record['state'][key] for key in ('deps', 'products')}
+    if record['state']['outputs'] != state['products']:
+        state['outputs'] = record['state']['outputs']
+    value = {'basis': 'reviewed', 'lock': record['lock'], 'state': state,
+             'boundary_inputs': portable_rows(record['boundary_inputs']),
+             'reason': record['reason'], 'reviews': record['reviews']}
+    value['id'] = identity(value)
     return value
 
 
-def logical_rows(rows):
-    """Committed saved-input rows key on the logical path; a resolved root is per-checkout."""
-    return [{key: value for key, value in row.items() if key != 'resolved'} for row in rows]
+def portable_rows(rows):
+    """Saved-input rows as committed: logical path, producer, and bytes; nothing per checkout."""
+    return [{key: row[key] for key in ('logical', 'producer', 'digest') if key in row} for row in rows]
+
+
+def _read_legacy(paths):
+    path = paths.project_root / LEGACY_LEDGER
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(value, dict) or value.get('version') != 1 or not isinstance(value.get('steps'), dict):
+            raise ValueError('unsupported or malformed ledger')
+    except (OSError, ValueError) as exc:
+        _warn(f'{LEGACY_LEDGER} is unreadable ({exc}); its acceptances are ignored')
+        return None
+    return value['steps']
+
+
+def read_ledger(paths):
+    """Every trusted acceptance; a malformed or conflicted record is set aside alone, with a warning."""
+    records = dict(_read_legacy(paths) or {})
+    for path in sorted((paths.project_root / LEDGER).glob('*.json')):
+        try:
+            records[path.stem] = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            records[path.stem] = None
+    steps, set_aside = {}, []
+    for name, record in records.items():
+        steps[name] = _normalize(record)
+        if steps[name] is None:
+            del steps[name]
+            set_aside.append(name)
+            _warn(f'the acceptance record for {name} is malformed or conflicted; {name} is not accepted '
+                  f'until `superra repro accept` or `revoke` replaces it')
+    return {'steps': steps, 'set_aside': set_aside}
+
+
+def _convert_legacy(paths):
+    """Before the first record write, move pre-reshape records into per-step files."""
+    legacy = _read_legacy(paths)
+    if legacy is None:
+        return
+    directory = paths.project_root / LEDGER
+    directory.mkdir(exist_ok=True)
+    for name, record in legacy.items():
+        normalized = _normalize(record)
+        if normalized is not None and not (directory / f'{name}.json').exists():
+            atomic_json(directory / f'{name}.json', portable_record(normalized))
+    (paths.project_root / LEGACY_LEDGER).unlink()
+    _warn(f'converted {LEGACY_LEDGER} into {LEDGER}/; commit the removal with the new files')
+
+
+def write_record(paths, name, value):
+    """Write one step's committed record, or remove it when *value* is None; equal content stays."""
+    with RECORD_LOCK:
+        _convert_legacy(paths)
+        path = paths.project_root / LEDGER / f'{name}.json'
+        if value is None:
+            path.unlink(missing_ok=True)
+            return
+        try:
+            if json.loads(path.read_text(encoding='utf-8')) == value:
+                return
+        except (OSError, ValueError):
+            pass
+        atomic_json(path, value)
 
 
 def lock_state(entry):
     return {'deps': entry.depends_on, 'products': entry.produces} if entry else None
+
+
+def lock_digest(entry):
+    """What a record binds of the preceding successful lock entry: its freshness fields."""
+    return identity(lock_state(entry)) if entry else None
 
 
 def current_state(graph, step, paths, cache=None, *, recorded=True):
@@ -172,9 +273,6 @@ def baseline(step, paths, entry, *, required=True):
             return {'lock': recorded, 'outputs': state['outputs'], 'receipt': receipt['id'],
                     'snapshots': receipt.get('snapshots', {}), 'spec': receipt.get('spec'), 'run': receipt.get('run', {}),
                     'boundary_inputs': receipt.get('boundary_inputs', [])}
-    accepted = read_ledger(paths)['steps'].get(step.name, {}).get('baseline', {})
-    if accepted.get('lock') == recorded:
-        return accepted
     sidecar = any(out.sidecar for out in step.outs)
     if sidecar and required:
         raise ReproStateError(f'{step.name}: no verified output digest for sidecar baseline; rerun this step')
@@ -187,21 +285,14 @@ def differences(before, after):
             for key in sorted(before.keys() | after.keys()) if before.get(key) != after.get(key)]
 
 
-def validate_record(graph, step, paths, record, locks, ledger, cache=None):
+def validate_record(graph, step, paths, record, locks, cache=None):
     """Return the reason reuse is invalid; callers already validate upstream state."""
     if not record:
         return 'no acceptance'
-    if record.get('baseline', {}).get('lock') != lock_state(locks.get(step.name)):
+    if record['lock'] != lock_digest(locks.get(step.name)):
         return 'successful baseline changed'
     if read_run_record(paths, step.name).get('outcome') in ('failed', 'running', 'pending'):
         return 'last execution did not succeed'
-    # A bound producer that still holds an acceptance or a successful lock keeps
-    # this record: the reviewed dep hashes below already pin its output bytes, so
-    # re-accepting it is not a change here. Losing its every baseline is.
-    revoked = next((name for name in record.get('upstream', {})
-                    if name not in ledger['steps'] and name not in locks), None)
-    if revoked:
-        return f'upstream acceptance for {revoked!r} was revoked'
     cache = cache or HashCache()
     current_paths = {dep.logical: dep.resolved for dep in step.deps}
     for item in record.get('boundary_inputs', []):
@@ -211,16 +302,13 @@ def validate_record(graph, step, paths, record, locks, ledger, cache=None):
     state = current_state(graph, step, paths, cache)
     if any(value is None for group in state.values() for value in group.values()):
         return 'required input or output missing'
-    if state != record.get('state'):
+    if state != record['state']:
         return 'reviewed state changed'
     return None
 
 
 def supersede(paths, name):
-    with RECORD_LOCK:
-        ledger = read_ledger(paths)
-        if ledger['steps'].pop(name, None) is not None:
-            atomic_json(paths.project_root / LEDGER, ledger)
+    write_record(paths, name, None)
 
 
 def apply_to_status(report, paths, cache, ledger=None, lock=None):
@@ -237,13 +325,10 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
         entry = by_name[name]
         record = ledger['steps'].get(name)
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
-        invalid = validate_record(report.graph, entry.step, paths, record, lock, ledger, cache) if record else None
+        invalid = validate_record(report.graph, entry.step, paths, record, lock, cache) if record else None
         if valid_graph and record and not invalid:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
             entry.changes = []
-            if entry.last_run is None:
-                run = record['baseline'].get('run', {})
-                entry.last_run, entry.duration, entry.log = run.get('ended_at'), run.get('duration'), run.get('log')
         elif record and invalid and entry.status == 'fresh' and baseline(
                 entry.step, paths, lock.get(name), required=False)['outputs'] == current_state(
                     report.graph, entry.step, paths, cache)['outputs']:
@@ -316,32 +401,18 @@ def inspect_baseline(graph, step, paths):
     return {'available': True, 'receipt': before['receipt'], 'diffs': diffs, 'reviewed': reviewed}
 
 
-def evidence_files(paths, references):
-    result = {}
-    for reference in references:
-        filename = reference.split('#', 1)[0]
-        path = absolute(paths.project_root, filename)
-        digest = HashCache().file_hash(path)
-        if digest is None:
-            raise ReproStateError(f'evidence is unavailable: {reference}')
-        result[reference] = digest
-    return result
-
-
-def preview(graph, paths, targets, reason, reviews, evidence):
+def preview(graph, paths, targets, reason, reviews):
     if any(f.severity == 'error' for f in graph.findings):
         raise ReproStateError('invalid graph; acceptance is unavailable')
     names, unknown = select_steps(graph, targets, include_ancestors=False)
     if unknown or not names or not targets:
         raise ReproStateError('select exact step or task targets: ' + ', '.join(unknown))
     ledger = read_ledger(paths)
-    original = identity(ledger)
     lock = read_lock(paths.lock_file)
     parents = {s.name: [] for s in graph.steps}
     for src, dst, _ in graph.step_edges:
         parents[dst].append(src)
     rows = []
-    evidence_hashes = evidence_files(paths, evidence) if evidence else {}
     for name in _topological({s.name: s for s in graph.steps}, parents):
         if name not in names:
             continue
@@ -368,58 +439,34 @@ def preview(graph, paths, targets, reason, reviews, evidence):
             if previous and previous['digest'] != item['digest']:
                 changes.append({'node': item['logical'] + '::boundary', 'kind': 'boundary',
                                 'before': previous['digest'], 'after': item['digest']})
+        # Already fresh on its own evidence: the step keeps what it has.
+        unchanged = not changes and name not in ledger['set_aside'] and (
+            previous_record is None or validate_record(graph, step, paths, previous_record, lock) is None)
         coverage = {change['node']: reviews[change['node']] for change in changes if change['node'] in reviews}
-        portable_baseline = {key: value for key, value in before.items() if key != 'snapshots'}
-        if 'boundary_inputs' in portable_baseline:
-            portable_baseline['boundary_inputs'] = logical_rows(portable_baseline['boundary_inputs'])
-        record = {'basis': 'reviewed', 'baseline': portable_baseline, 'state': state,
-                  'reason': reason, 'reviews': coverage, 'evidence': evidence_hashes,
-                  'boundary_inputs': logical_rows(boundary),
-                  # Only producers accepted alongside this one bind it; the rest
-                  # stay saved inputs, recorded above by their actual bytes.
-                  'upstream': {p: ledger['steps'][p]['id'] for p in parents[name]
-                               if p in names and p in ledger['steps']}}
-        # Deterministic provisional ids also bind downstream batch acceptances.
-        record['id'] = identity(record)
-        ledger['steps'][name] = record
+        record = None if unchanged else portable_record(
+            {'lock': lock_digest(lock.get(name)), 'state': state, 'boundary_inputs': boundary,
+             'reason': reason, 'reviews': coverage})
         rows.append({'step': name, 'changes': changes, 'record': record,
                      'baseline_details': inspect_baseline(graph, step, paths)})
-    ready = bool(reason.strip())
-    result = {'steps': rows, 'ledger_before': original, 'ready': ready}
-    result['token'] = identity(result)
-    return result
+    return {'steps': rows, 'reason': reason, 'ready': bool(reason.strip())}
 
 
-def accept(graph, paths, targets, reason, reviews, evidence, token=None, *, dry_run=False):
-    """Apply the reviewed baseline in one call; *dry_run* previews, *token* re-applies one."""
+def accept(graph, paths, targets, reason, reviews, *, dry_run=False):
+    """Record the reviewed current state in one call; *dry_run* previews and writes nothing."""
     with mutation_lock(paths):
         check_sources(graph)
-        result = preview(graph, paths, targets, reason, reviews, evidence)
+        result = preview(graph, paths, targets, reason, reviews)
         if dry_run:
             return result
-        if token is not None and token != result['token']:
-            raise ReproStateError('preview no longer matches current state; inspect a new preview')
         if not result['ready']:
             raise ReproStateError('acceptance requires --reason describing the reviewed current results')
-        # Re-read hashes and evidence immediately before the atomic write.
+        # Re-read hashes immediately before writing.
         check_sources(graph)
-        if preview(graph, paths, targets, reason, reviews, evidence)['token'] != result['token']:
+        if preview(graph, paths, targets, reason, reviews) != result:
             raise ReproStateError('state changed during acceptance; inspect a new preview')
-        ledger = read_ledger(paths)
-        replacements = {}
         for row in result['steps']:
-            record = row['record']
-            record['upstream'] = {p: replacements.get(v, v) for p, v in record['upstream'].items()}
-            old = record.pop('id')
-            try:
-                actor = getpass.getuser()
-            except (KeyError, OSError):
-                actor = None
-            record.update(recorded_at=time.time(), actor=actor)
-            record['id'] = identity(record)
-            replacements[old] = record['id']
-            ledger['steps'][row['step']] = record
-        atomic_json(paths.project_root / LEDGER, ledger)
+            if row['record'] is not None:
+                write_record(paths, row['step'], row['record'])
         return dict(result, applied=True)
 
 
@@ -427,12 +474,14 @@ def revoke(graph, paths, targets):
     names, unknown = select_steps(graph, targets, include_ancestors=False)
     with mutation_lock(paths):
         ledger = read_ledger(paths)
-        names += [name for name in unknown if name in ledger['steps']]
-        unknown = [name for name in unknown if name not in ledger['steps']]
+        stored = set(ledger['steps']) | set(ledger['set_aside'])
+        names += [name for name in unknown if name in stored]
+        unknown = [name for name in unknown if name not in stored]
         if unknown or not targets:
             raise ReproStateError('select known step, task, or stored record names: ' + ', '.join(unknown))
-        removed = [name for name in names if ledger['steps'].pop(name, None)]
-        atomic_json(paths.project_root / LEDGER, ledger)
+        removed = [name for name in names if name in stored]
+        for name in removed:
+            write_record(paths, name, None)
     return {'revoked': removed}
 
 

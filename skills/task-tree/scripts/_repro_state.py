@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
@@ -118,10 +119,34 @@ def runner_paths(project_root: Path) -> RunnerPaths:
     return RunnerPaths(project_root=root, state_dir=root / STATE_DIRNAME)
 
 
+def dropbox_ignore(path: Path) -> None:
+    """Set Dropbox's ignore flag, so each machine keeps its own copy; inert outside Dropbox."""
+    try:
+        if hasattr(os, "setxattr"):  # Linux
+            try:
+                if os.getxattr(path, "user.com.dropbox.ignored") == b"1":
+                    return
+            except OSError:
+                pass
+            os.setxattr(path, "user.com.dropbox.ignored", b"1")
+        elif sys.platform == "darwin":
+            import ctypes
+            libc = ctypes.CDLL(None, use_errno=True)
+            args = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint32, ctypes.c_int]
+            libc.getxattr.argtypes, libc.getxattr.restype = args, ctypes.c_ssize_t
+            libc.setxattr.argtypes, libc.setxattr.restype = args, ctypes.c_int
+            name, raw = b"com.dropbox.ignored", os.fsencode(path)
+            if libc.getxattr(raw, name, None, 0, 0, 0) < 0:
+                libc.setxattr(raw, name, b"1", 1, 0, 0)
+    except (OSError, AttributeError):  # no xattr support: nothing to sync away from
+        pass
+
+
 def ensure_state_dir(paths: RunnerPaths) -> None:
-    """Create the state directory and keep it out of git."""
+    """Create the state directory, keep it out of git, and keep it on this machine."""
     for directory in (paths.state_dir, paths.logs_dir, paths.runs_dir, paths.stamps_dir):
         directory.mkdir(parents=True, exist_ok=True)
+    dropbox_ignore(paths.state_dir)
     gitignore = paths.project_root / ".gitignore"
     entry = f"{STATE_DIRNAME}/"
     try:
@@ -533,19 +558,32 @@ def prune_lock(paths: RunnerPaths, keep: set[str]) -> None:
         _write_lock_document(paths, document)
 
 
+@lru_cache(maxsize=None)
+def machine_id() -> str:
+    """A stable local tag for this machine: the hardware address, else the host name."""
+    import socket
+    import uuid
+    node = uuid.getnode()
+    raw = f"{node:012x}" if not node >> 40 & 1 else socket.gethostname()  # bit set: random fallback
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
 def write_run_record(paths: RunnerPaths, step: str, record: dict) -> None:
     """Record one step's outcome; one file per step keeps parallel runs race-free."""
     paths.runs_dir.mkdir(parents=True, exist_ok=True)
     from _repro_acceptance import atomic_json
-    atomic_json(paths.run_file(step), record)
+    atomic_json(paths.run_file(step), dict(record, host=machine_id()))
 
 
 def read_run_record(paths: RunnerPaths, step: str) -> dict:
+    """This machine's record of the step's last run; another machine's is not evidence here."""
     try:
         loaded = json.loads(paths.run_file(step).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    return loaded if isinstance(loaded, dict) else {}
+    if not isinstance(loaded, dict) or loaded.get("host", machine_id()) != machine_id():
+        return {}
+    return loaded
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +637,7 @@ class StepStatus:
             "log": self.log,
             "acceptance": (
                 {key: self.acceptance[key] for key in
-                 ("id", "basis", "reason", "reviews", "evidence", "recorded_at", "actor")
+                 ("id", "basis", "reason", "reviews")
                  if key in self.acceptance}
                 if self.acceptance else None
             ),
