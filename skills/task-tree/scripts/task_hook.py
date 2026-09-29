@@ -12,14 +12,18 @@ Edit (`_process_paths`). A changed task.md gets the best-effort reconcile —
 validate the tree and propagate parent status — as does a Bash call that
 structurally mutates a task tree (mv, rm, cp, mkdir, ...). It also carries two
 advisory reproduction signals, both non-blocking: a reminder, once per file
-per session, when a changed file is a registered step's dep/script or an
-unregistered script under a task root, naming the steps the edit
-stales (`_reproduction_reminder`, emitted through `_repro_emit`); and, once
+per session, when a changed file is a registered step's dep/script (or sits in
+a declared dependency directory), an unregistered script under a task root, or
+a new script of a configured runner's language beside the registered scripts,
+naming the steps the edit stales (`_reproduction_reminder`, emitted through
+`_repro_emit`); and, once
 per transition, a reminder when a leaf reaches `implemented` with results
 files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
-Validation warnings and non-fatal reconcile failures are injected through
+A UserPromptSubmit event only seeds the session's edit baseline, so an edit in
+the session's first tool call is still seen. A task.md edit reports validation
+warnings for the edited task only. Validation warnings and non-fatal reconcile failures are injected through
 PostToolUse JSON on stdout; successful/ignored paths stay silent except in
 Codex empty-JSON mode, where no-feedback paths emit `{}` because Codex
 requires parseable hook JSON.
@@ -57,6 +61,8 @@ _RECONCILED = False
 # holds one empty marker file per (session, resolved producer path) already
 # reminded. `02-runner`'s own state directory is expected to reuse this name.
 REPRO_STATE_DIRNAME = ".superra-repro"
+# Paths the detector found newly created in this call (see `_detected_paths`).
+_CREATED: set[str] = set()
 REPRO_MARKER_SUBDIR = "hook-markers"
 # The `implemented` reminder tracks a status transition rather than a session,
 # so its markers live under one fixed key instead of a per-session one.
@@ -189,6 +195,20 @@ def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str)
     return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
 
 
+def _no_shell(command: str, cwd: Path) -> str:
+    """Stand-in for a `shell:` resolver: an inert placeholder no real path matches."""
+    return "${shell}"
+
+
+def _hook_graph(plan_root: Path):
+    """The reproduction graph for matching edits: literal and `env:` variables
+    resolve; a `shell:` resolver never runs and its paths match nothing."""
+    import _repro
+    return _repro.build_graph(
+        plan_root, project_root=plan_root.parent, shell_runner=_no_shell
+    )
+
+
 def _repro_owning_steps(graph, rel: str) -> list[str]:
     """Names of steps whose deps (declared, script, or Julia closure) reach rel."""
     names = []
@@ -242,14 +262,26 @@ def _repro_fan_out(graph, project_root: Path, owners: list[str]) -> str:
         return ""
 
 
+def _repro_soft_message(rel: str) -> str:
+    return (
+        f"Reproduction: new script {rel}. If it produces retained results it may "
+        "need a step (`superRA:reproducibility` has the call); many scripts never do."
+    )
+
+
 def _repro_emit(
-    data: dict, graph, project_root: Path, rel_paths: list[str]
+    data: dict,
+    graph,
+    project_root: Path,
+    rel_paths: list[str],
+    soft: frozenset[str] = frozenset(),
 ) -> list[str]:
     """Message each changed path once per session, with its staleness fan-out.
 
     Takes project-relative paths from whichever detector found them, so every
     detector draws the identical reminder under one marker per file per
-    session.
+    session. Paths in *soft* are new scripts no step owns: they draw the
+    lighter reminder.
     """
     feedback: list[str] = []
     session_key: str | None = None
@@ -260,14 +292,17 @@ def _repro_emit(
         if marker.exists():
             continue
         owners = _repro_owning_steps(graph, rel)
-        feedback.append(
-            _repro_message(
-                rel,
-                owners,
-                _repro_fan_out(graph, project_root, owners),
-                _repro_status_targets(graph, owners),
+        if rel in soft:
+            feedback.append(_repro_soft_message(rel))
+        else:
+            feedback.append(
+                _repro_message(
+                    rel,
+                    owners,
+                    _repro_fan_out(graph, project_root, owners),
+                    _repro_status_targets(graph, owners),
+                )
             )
-        )
         try:
             marker.parent.mkdir(parents=True, exist_ok=True)
             marker.touch()
@@ -280,14 +315,12 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
     """Remind once per file per session when an edit touches a producer input.
 
     Fires when the file is a dep or script of a registered step (including a
-    Julia include closure), or is a script under the task root that no step
-    registers. A step's out and a task file never trigger. The graph used for
-    matching is built with
-    `resolve_vars=False` (`_repro.build_graph`) — no `${VAR}` resolution, so no
-    `env:`/`shell:` evaluation and no subprocess for *any* edit, producer or
-    not; a dep/out/script that still references an unresolved `${VAR}` simply
-    matches nothing, which is fine since it cannot name a real producer file
-    edited in this turn. Built at most once per distinct plan_root, so a
+    Julia include closure or a file in a declared directory), is a script under
+    the task root that no step registers, or is a script newly created beside
+    the registered scripts (`.jl` for a `julia` runner). A step's out and a task
+    file never trigger. The graph used for matching resolves literal and `env:`
+    variables and never runs a `shell:` resolver (`_hook_graph`), so no
+    subprocess for *any* edit. Built at most once per distinct plan_root, so a
     multi-file apply_patch does not rebuild per file. Fails open: no task tree
     beside the file, no reproduction config anywhere, or any
     graph-construction problem is silence, never a block.
@@ -312,16 +345,16 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
             import _edit_detect
             import _repro
             import _repro_signals
-            graph = _repro.build_graph(
-                plan_root, project_root=project_root, resolve_vars=False
-            )
+            graph = _hook_graph(plan_root)
             if not _repro_signals.has_reproduction(graph):
                 continue  # no reproduction config anywhere: nothing to match
+            script_suffixes = set(_edit_detect.runner_suffixes(graph.config.runners))
         except Exception:
             continue
 
         task_root_prefix = plan_root.name + "/"
         relevant: list[str] = []
+        soft: set[str] = set()
         for file_path in paths:
             try:
                 rel = file_path.resolve().relative_to(project_root.resolve())
@@ -333,9 +366,18 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
             unregistered_companion = rel_str.startswith(
                 task_root_prefix
             ) and _edit_detect.is_script(file_path)
-            if _repro_owning_steps(graph, rel_str) or unregistered_companion:
+            owned = bool(_repro_owning_steps(graph, rel_str))
+            new_script = (
+                not owned
+                and not unregistered_companion
+                and file_path.suffix.lower() in script_suffixes
+                and str(file_path.resolve()) in _CREATED
+            )
+            if owned or unregistered_companion or new_script:
                 relevant.append(rel_str)
-        feedback.extend(_repro_emit(data, graph, project_root, relevant))
+                if new_script:
+                    soft.add(rel_str)
+        feedback.extend(_repro_emit(data, graph, project_root, relevant, frozenset(soft)))
 
     if len(feedback) > REPRO_REMINDER_CAP:
         return [
@@ -371,10 +413,9 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
     """Clear reminder markers for files this task's `## Reproduction` section names.
 
     Runs only when the just-edited task currently declares the section, so an
-    ordinary task.md edit costs nothing extra. `resolve_vars=False` (see
-    `_reproduction_reminder`) keeps this subprocess-free and consistent: a
-    marker is only ever set for a literal (non-`${VAR}`) path, so clearing
-    with the same resolution mode looks up the identical resolved path.
+    ordinary task.md edit costs nothing extra. It builds the graph the same way
+    as `_reproduction_reminder` (`_hook_graph`), so clearing looks up the
+    identical resolved path a reminder marked.
     Best-effort: any problem reading the task or building the graph is
     silence, never a block.
     """
@@ -391,9 +432,7 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
         _, body = task_io.parse_frontmatter(text)
         if _repro.REPRO_SECTION not in task_io.parse_body_sections(body):
             return
-        graph = _repro.build_graph(
-            plan_root, project_root=plan_root.parent, resolve_vars=False
-        )
+        graph = _hook_graph(plan_root)
     except Exception:
         return
 
@@ -436,9 +475,7 @@ def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]
             return []
         import _repro
         import _repro_signals
-        graph = _repro.build_graph(
-            plan_root, project_root=project_root, resolve_vars=False
-        )
+        graph = _hook_graph(plan_root)
         if not _repro_signals.has_reproduction(graph):
             return []
         files = _repro_signals.uncovered_results_files(graph, task, project_root)
@@ -496,13 +533,17 @@ def _exit_success(feedback: list[str] | None = None) -> None:
     sys.exit(0)
 
 
-def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
+def _reconcile(
+    plan_root: Path, task_path: str | None, scope: list[str] | None = None
+) -> list[str]:
     """Validate and propagate parent status for a plan tree.
 
     Each step is best-effort in its own try/except so a failure in one never
     aborts the others or the process. When task_path is None (a structural move
     whose precise location is unknown), parent status is recomputed across the
-    whole tree rather than along a single ancestor chain. The dashboard is not
+    whole tree rather than along a single ancestor chain. `scope` (the edited
+    task paths) limits the validation warnings to those tasks; None reports the
+    whole tree. The dashboard is not
     regenerated here; it is produced only on explicit `superra dashboard export`.
     """
     global _RECONCILED
@@ -536,8 +577,15 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
             validation_warnings = task_validate.validate_plan(plan_root, dependencies=False)
             from _repro import build_graph
             graph = build_graph(plan_root, resolve_vars=False)
-            validation_warnings.extend(f.to_text() for f in graph.findings
-                                       if f.severity == "error" or f.category == "dependency")
+            findings = [f for f in graph.findings
+                        if f.severity == "error" or f.category == "dependency"]
+            if scope is not None:
+                # validate_plan prefixes each warning `<task path>:`, `(root):` for the root.
+                wanted = {path or "(root)" for path in scope}
+                validation_warnings = [w for w in validation_warnings
+                                       if w.split(": ", 1)[0] in wanted]
+                findings = [f for f in findings if f.task_path in scope]
+            validation_warnings.extend(f.to_text() for f in findings)
         if validation_warnings:
             for w in validation_warnings:
                 feedback.append(f"Validation warning in {plan_root}: {w}")
@@ -861,21 +909,34 @@ def _tool_paths(data: dict, tool_name: str) -> list[Path]:
     return paths
 
 
-def _repro_watched_files(plan_root: Path) -> list[str]:
-    """Literal-path deps, scripts, and include closures of registered steps,
-    minus step outs — the watched files that live outside the task root."""
-    import _repro
+def _repro_watch(plan_root: Path) -> tuple[list[str], list[list]]:
+    """What the baseline watches beyond the task root: (files, dirs).
+
+    `files` are the literal-path deps and scripts of registered steps, minus step
+    outs. `dirs` are `[directory, suffixes | None]` scanned on every call: each
+    declared directory dependency (every file) and each script's directory (new
+    scripts of a configured runner's language), skipping the task root.
+    """
+    import _edit_detect
     project_root = plan_root.parent
-    graph = _repro.build_graph(plan_root, project_root=project_root, resolve_vars=False)
+    graph = _hook_graph(plan_root)
+    suffixes = _edit_detect.runner_suffixes(graph.config.runners)
     files: list[str] = []
+    dirs: dict[str, list[str] | None] = {}
     for step in graph.steps:
         for dep in step.deps:
             if "${" in dep.resolved or _repro_is_out(graph, dep.resolved):
                 continue
             path = project_root / dep.resolved
-            if path.is_file():
+            if path.is_dir():
+                dirs[str(path)] = None
+            elif path.is_file():
                 files.append(str(path))
-    return files
+                parent = path.parent
+                if (suffixes and path.suffix.lower() in suffixes
+                        and plan_root != parent and plan_root not in parent.parents):
+                    dirs.setdefault(str(parent), suffixes)
+    return files, [[path, suffix] for path, suffix in dirs.items()]
 
 
 def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[Path]:
@@ -894,6 +955,13 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
         if anchor is None:
             return []
         changed: list[Path] = []
+        watch: dict[Path, tuple] = {}
+
+        def watched(root: Path) -> tuple:
+            if root not in watch:
+                watch[root] = _repro_watch(root)
+            return watch[root]
+
         for plan_root in _edit_detect.plan_roots(
             anchor, tool_paths, command if isinstance(command, str) else ""
         ):
@@ -902,7 +970,9 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
                     _edit_detect.detect(
                         plan_root,
                         session_key,
-                        lambda root=plan_root: _repro_watched_files(root),
+                        lambda root=plan_root: watched(root)[0],
+                        lambda root=plan_root: watched(root)[1],
+                        _CREATED,
                     )
                 )
             except Exception:
@@ -936,7 +1006,11 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
         # One edited task reconciles along its ancestor chain; several recompute
         # the whole tree once.
         feedback.extend(
-            _reconcile(plan_root, task_path=task_paths[0] if len(task_paths) == 1 else None)
+            _reconcile(
+                plan_root,
+                task_path=task_paths[0] if len(task_paths) == 1 else None,
+                scope=task_paths,
+            )
         )
         for task_path in task_paths:
             _clear_reproduction_markers_for_task(plan_root, task_path)
@@ -972,6 +1046,13 @@ def main() -> None:
         data = {}
 
     tool_name = data.get("tool_name", "") or data.get("tool", "")
+    if data.get("hook_event_name") == "UserPromptSubmit":
+        # Seed the session's edit baseline so the first tool call is compared
+        # against it; never reports.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _detected_paths(data, "", [])
+        _exit_success()
     _CODEX_EMPTY_JSON_MODE = (
         _truthy_env(CODEX_EMPTY_JSON_ENV)
         or tool_name == "apply_patch"

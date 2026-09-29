@@ -3297,11 +3297,11 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stdout == ""
 
-    def test_reproduction_reminder_never_resolves_vars(self, tmp_path, monkeypatch):
-        """A configured `shell:`/`env:` var never runs for any edit (no subprocess).
+    def test_reproduction_reminder_never_runs_shell_vars(self, tmp_path, monkeypatch):
+        """A configured `shell:` var never runs for any edit (no subprocess).
 
         Calls `_reproduction_reminder` in-process (not via subprocess) so a
-        monkeypatched `_repro.resolve_variables` sentinel can prove it is
+        monkeypatched `_repro._default_shell_runner` sentinel can prove it is
         never invoked, for both an irrelevant edit and a real producer edit.
         """
         plan_root = tmp_path / "superRA"
@@ -3332,7 +3332,7 @@ class TestTaskHook:
         import _repro
         calls: list = []
         monkeypatch.setattr(
-            _repro, "resolve_variables", lambda *a, **k: calls.append((a, k))
+            _repro, "_default_shell_runner", lambda *a, **k: calls.append((a, k)) or ""
         )
 
         feedback = task_hook._reproduction_reminder({"session_id": "s1"}, [irrelevant])
@@ -3388,7 +3388,7 @@ class TestTaskHook:
         `.jl` producer with a transitively-included helper. Records the timing
         in `## Results` — it should track the "no config" baseline (tens of
         ms, dominated by the tree walk), not add a per-shell-var subprocess
-        cost, since `resolve_vars=False` skips `shell:`/`env:` entirely.
+        cost, since the hook never runs a `shell:` resolver.
         """
         import time as time_module
 
@@ -3436,7 +3436,7 @@ class TestTaskHook:
             assert "build-panel" in feedback[0]
 
         avg_ms = 1000 * sum(elapsed) / len(elapsed)
-        # No subprocess ever runs for this path (resolve_vars=False), so this
+        # No subprocess ever runs for this path (the hook never runs shell:), so this
         # should be tree-walk-bound (tens of ms), never dominated by a shell
         # round-trip (which alone measured ~12ms in the review that raised
         # this finding, and would multiply per shell: var if it ran at all).
