@@ -1,6 +1,6 @@
 ---
 title: "Committed Records Stay Portable Across Machines and Branches"
-status: implemented
+status: approved
 depends_on:
   - 01-engine-freshness
 ---
@@ -82,30 +82,6 @@ Committed acceptance records are now portable, small, and mergeable, and `.super
 
 - **Other checks over the changed files are not rebuilt here.** `reviewed-baseline-regression-check`, `provenance-explain-check`, `edit-detection-check`, `engine-freshness-check`, and the other steps that list these modules are stale or missing in this worktree; their commands pass in the full-suite run.
 - Contributor and agent docs updated: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), [commands.md](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [internals.md](../../../../skills/task-tree/references/internals.md), [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#accept).
-
-## Review Notes
-Tier: thorough. Focus: correctness (acceptance validity after the reshape, legacy migration, clean merges, local-state isolation) and minimal mechanism. Verified by rerunning the full suite, re-deriving the conversion on the real project's 35 legacy records, and scratch fixtures against the base commit `3c12ad54`.
-
-1. **[BLOCKING] `accept` refuses a step that status reports stale for an unverified saved input, and prints "already fresh".** [_repro_acceptance.py:443](../../../../skills/task-tree/scripts/_repro_acceptance.py#L443) skips the write when `changes` is empty, but `changes` only diffs the lock state and a *previously recorded* boundary row. A saved input with no recorded row, which status marks `stale — saved input ${OUT}/a.txt needs a full-byte baseline` ([_repro_scope.py:104](../../../../skills/task-tree/scripts/_repro_scope.py#L104)), produces no change.
-   - Reproduced: sidecar producer built with its consumer, `output/a.txt` edited without the sidecar, `.superra-repro/` deleted (a fresh worktree or another machine). Status of `02-b#build-b` is stale; `accept` returns `record: None`; status stays stale. At `3c12ad54` the same accept writes a record and status reads `fresh — reviewed baseline`.
-   - This removes the accept branch of the stale rule in exactly the multi-machine case this task targets. It is safe in direction (no false fresh), but the output misreports the step.
-   - Fix: skip only when the step is locally fresh by the same rule status uses, or count a current boundary row absent from the previous record/receipt as a change. Add the scenario above as a regression test.
-   → implemented: [_repro_acceptance.py:449-457](../../../../skills/task-tree/scripts/_repro_acceptance.py#L449-L457) skips only when the step's own scoped `status` reads locally fresh with no invalid acceptance, and lists status's boundary changes; the reviewer's scenario is [test_accept_records_a_saved_input_status_reports_unverified](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L825), which fails on the previous rule.
-2. **[BLOCKING] The run-record machine tag is not stable on one machine and not distinct across machines.** [machine_id](../../../../skills/task-tree/scripts/_repro_state.py#L562) trusts `uuid.getnode()` unless the multicast bit is set ([_repro_state.py:567](../../../../skills/task-tree/scripts/_repro_state.py#L567)). On `home-studio` (macOS 27) every interface reports `ether 02:00:00:00:00:00`, and the result depends on the interpreter:
-   - `uv run --script` from this worktree (Python 3.14.1): `getnode()` = `0x020000000000`, which passes the bit test; tag `fb9813158e025b24` = sha256 of `020000000000`. Every Mac on this OS and interpreter gets the same tag, so the cross-machine separation the Results claim does not hold.
-   - `uv run --script` from the Dropbox checkout (resolves `~/.venv`, Python 3.12.12): `getnode()` is random per process, so the tag falls back to the host name, `667b88a55e437580`.
-   - Consequence: switching interpreter within a checkout makes this machine's own `failed`, forced, `running`, and `pending` records read as absent ([_repro_state.py:584](../../../../skills/task-tree/scripts/_repro_state.py#L584)). A failed forced rerun then reads `fresh` instead of "forced rerun required", and the next failure drops the carried `forced` flag ([repro_run.py:212](../../../../skills/task-tree/scripts/repro_run.py#L212)), reopening guarantees 01 established.
-   - Judged against the Objective: the Objective's mechanism is the Dropbox ignore flag, which the live check already validates, so the tag is beyond minimal. Fix: drop the tag and let the flag carry "a remote `running` record does not make a step failed here"; if a tag stays, it needs a per-machine ID that is stable across interpreters and networks (for example the macOS `IOPlatformUUID` or Linux `/etc/machine-id`), not `uuid.getnode()` or a DHCP-dependent host name.
-   → implemented: tag removed; [write_run_record and read_run_record](../../../../skills/task-tree/scripts/_repro_state.py#L568-L580) are as at the base, and its test is gone. Results record that the live Dropbox check is the only evidence for the remote-`running` item.
-3. **[ADVISORY] Stale term in contributor docs.** [internals.md:304](../../../../skills/task-tree/references/internals.md#L304) still says the process lock "coordinates builds, apply, and revoke"; `--apply` is gone.
-   → implemented: [internals.md:301](../../../../skills/task-tree/references/internals.md#L301) now reads "builds, accept, and revoke".
-4. **[ADVISORY] Mixed-version checkouts lose every acceptance after conversion.** A coauthor on pre-reshape superRA reads no `repro-acceptance.json` once the conversion commit lands, so all 35 accepted ElasticityBound steps read stale there. Name the conversion in the upgrade notes ([09-upgrade-and-records](../09-upgrade-and-records/task.md)).
-
-Design choices, judged against the Objective:
-
-- **Per-step files with convert-and-delete: accepted.** The legacy file is superRA-owned with no other reader, unlike 01's `pytask.lock`. For all 35 real records, `_normalize(portable_record(_normalize(r)))` equals `_normalize(r)` on every field validation reads, the converted records hold no absolute path or user name, and they average 2.2 KB (maximum 3.9 KB).
-- **Cutting `upstream`: accepted.** The Objective orders the cut. A consumer record still pins its producer's output bytes through its dependency hashes, so no changed input reads fresh; full-chain status still reports it stale.
-- **Machine tag: not accepted as implemented** (finding 2).
 
 ## Details
 
