@@ -237,13 +237,13 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
     for src, dst, _ in report.graph.step_edges:
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
-    valid_graph = not any(f.severity == 'error' for f in report.graph.findings)
+    from _repro import step_errors
     for name in _topological(by_name, parents):
         entry = by_name[name]
         record = ledger['steps'].get(name)
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
         invalid = validate_record(report.graph, entry.step, paths, record, lock, ledger, cache) if record else None
-        if valid_graph and record and not invalid:
+        if record and not invalid and not step_errors(report.graph, [name])[0]:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
             entry.changes = []
             if entry.last_run is None:
@@ -334,11 +334,12 @@ def evidence_files(paths, references):
 
 
 def preview(graph, paths, targets, reason, reviews, evidence):
-    if any(f.severity == 'error' for f in graph.findings):
-        raise ReproStateError('invalid graph; acceptance is unavailable')
+    from _repro import step_errors
     names, unknown = select_steps(graph, targets, include_ancestors=False)
     if unknown or not names or not targets:
         raise ReproStateError('select exact step or task targets: ' + ', '.join(unknown))
+    if step_errors(graph, names)[0]:
+        raise ReproStateError('invalid graph; acceptance is unavailable')
     ledger = read_ledger(paths)
     original = identity(ledger)
     lock = read_lock(paths.lock_file)

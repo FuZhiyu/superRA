@@ -644,9 +644,9 @@ class StatusReport:
 
     @property
     def ok(self) -> bool:
+        from _repro import step_errors
         stale = any(e.status != "fresh" for e in self.reported)
-        errors = any(f.severity == "error" for f in self.graph.findings)
-        return not stale and not errors
+        return not stale and not step_errors(self.graph, {e.step.name for e in self.reported})[0]
 
     def entry(self, name: str) -> StepStatus | None:
         for candidate in self.entries:

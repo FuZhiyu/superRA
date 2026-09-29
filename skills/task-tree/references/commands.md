@@ -49,7 +49,8 @@ superra task dep add 01-data/03-filter 02-merge
 superra task dep remove 01-data/03-filter 02-merge
 ```
 
-Removing an explicit edge preserves inferred evidence for the same prerequisite. Dependency-changing commands preflight the proposed effective graph before writing; an invalid proposal leaves task files and directories unchanged.
+- **`dep remove` removes only the `depends_on`:** a file edge between the same tasks remains, and the command names its file.
+- **Preflight refuses only a new `depends_on` error** (a cycle or an unresolved slug), leaving task files and directories unchanged. Otherwise the command prints each new warning — a `depends_on` against the file flow, a postponed or archived prerequisite — and each task it takes off the frontier.
 
 ## Move / rename a task
 
@@ -66,7 +67,7 @@ superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 
 It re-points every relative Markdown link the move would break: links inside the moved files, and links anywhere else in the tree pointing into the moved subtree.
 
-Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the resulting hierarchy must remain acyclic before filesystem writes. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
+Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the move is refused before filesystem writes if it adds a `depends_on` error. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
 
 The PostToolUse hook still revalidates raw filesystem moves and keeps the same-parent auto-cascade guardrail, but is not the canonical move mechanism. Raw `mv` / `git mv` only for recovery from tool failure, then `superra task check`.
 
@@ -115,7 +116,7 @@ When any reported step is not fresh, `status` ends with `Why not fresh: superra 
 
 Status JSON also records `targets`, `upstream`, `boundary_inputs` (paths, producer, fingerprints, provenance, consumers), and `behind` (the producers behind the selection that are not fresh, each with `name`, `task`, `status`). Step entries retain full-scope `status`/`reason` and expose `local_status`/`local_reason` before upstream staleness propagation. Default status certifies only selected work against saved inputs; `status --upstream` assesses the chain. The task reader and dashboard retain global freshness while exposing local evidence.
 
-`task read <path>` shows effective prerequisite tasks, including inherited group barriers, and a registered task's owned-step states. Its JSON includes the dependency snapshot and global findings. `task frontier --json` additionally exposes actionable parent-owned steps with `kind: own-work`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity.
+`task read <path>` lists prerequisites (`depends_on`, own or inherited) apart from inputs (file, producer, state), and a registered task's owned-step states. Its JSON adds the dependency snapshot, global findings, and `readiness` (`ready`, `blockers`, `inputs`). `task frontier --json` rows carry the `inputs` that are not fresh. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity.
 
 | State | Meaning |
 |---|---|

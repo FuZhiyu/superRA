@@ -49,16 +49,15 @@ Key properties:
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
 | `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Task Anatomy`. |
-| `compute_frontier(root, dependencies, step_states)` | Task objects selected by the shared dependency snapshot; command callers use `frontier_rows` to retain parent own-work details. The single-argument legacy helper handles logical-only trees. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 
 ### Effective dependency snapshot
 
-`_repro.build_graph()` parses once, resolves configuration once, infers file edges, and calls pure `_task_dependencies.compose()`. `Graph.dependencies` owns effective edges, evidence, active task paths, per-parent boundary graphs, validation, ordering, and readiness. `Graph.steps` contains active steps; `Graph.archived_steps` retains excluded declarations. `Step.dependency_origins` records each dependency's `script`, `declared`, `include` (with entry path), or `environment` origins.
+`_repro.build_graph()` parses once, resolves configuration once, infers file edges, and calls pure `_task_dependencies.compose()`. `Graph.dependencies` owns effective edges, evidence, active task paths, per-parent boundary graphs, `depends_on` validation, ordering, readiness (`logical` edges), and task inputs (`files` edges, archived producers included). Its `findings` hold dependency findings only; `Graph.findings` adds reproduction findings. `Graph.steps` contains active steps; `Graph.archived_steps` retains excluded declarations. `Step.dependency_origins` records each dependency's `script`, `declared`, `include` (with entry path), or `environment` origins.
 
 The serialized `dependencies` object carries `valid`, `complete`, `tasks`, `edges`, `boundaries`, `archived_tasks`, and `findings`. Boundary node IDs are `task:<path>` and `step:<name>`. Each edge retains an `evidence` list: inferred records carry actual owner paths, producer/consumer step names, and `via`; logical records carry the authored declaration. Graph semantics are defined in [the task-file contract](task-file-contract.md#effective-dependencies).
 
-`_task_snapshot.py` adapts filesystem/state operations: mutation preflight edits an in-memory tree, then requires a valid graph before writes; frontier state reads only the parent-owned steps and their producer closure. Parsing never imports reproduction or runs configured shell commands. Structural tree JSON marks `dependencies_complete: false` and leaves `effective_depends_on: null` until a resolved snapshot is available. Unreadable tasks remain parse-error nodes so a partial tree cannot advertise readiness. Hook relevance/reconciliation uses unresolved graph inspection; explicit dependency commands perform authoritative resolved validation.
+`_task_snapshot.py` adapts filesystem/state operations. Mutation preflight builds the current and the edited in-memory tree without resolving variables, refuses new `depends_on` errors, and prints new dependency warnings and tasks leaving the frontier. `step_states` runs one status pass per command over the steps it reports; `task_inputs` joins those states to file edges for `task read` and `frontier_rows`. Parsing never imports reproduction or runs configured shell commands. Structural tree JSON computes `effective_depends_on` from `depends_on` alone. Unreadable tasks remain parse-error nodes so a partial tree cannot advertise readiness. Hook relevance/reconciliation uses unresolved graph inspection.
 
 ### Validation suite: `_task_validate.py`
 
@@ -70,8 +69,6 @@ Validation rules live in their own module: one owner and one message source per 
 | `validate_frontmatter(task)` | Validate status enums, title non-empty, list types. Returns list of warning strings. |
 | `validate_revision_notes(task)` | Warn when a task past `implemented` still carries a `## Revision Notes` section. A note is legitimate on `not-started`, `in-progress`, and `revise` — a fresh note on `revise` is the prescribed planner-to-implementer handoff. |
 | `validate_review_notes(task)` | Warn when an `approved` task retains a `[BLOCKING]` item in `## Review Notes`. |
-| `validate_dependencies(task, siblings)` | Check that all `depends_on` entries reference existing sibling directory names. |
-| `detect_cycles(tasks)` | DFS-based cycle detection among sibling tasks. Returns cycle description strings. |
 | `validate_plan(plan_root)` | Walk the entire plan tree, run all validations at each level. Returns aggregated prefixed warnings. |
 
 ### Enum constants

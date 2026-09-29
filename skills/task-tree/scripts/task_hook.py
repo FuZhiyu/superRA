@@ -574,7 +574,7 @@ def _reconcile(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            validation_warnings = task_validate.validate_plan(plan_root, dependencies=False)
+            validation_warnings = task_validate.validate_plan(plan_root)
             from _repro import build_graph
             graph = build_graph(plan_root, resolve_vars=False)
             findings = [f for f in graph.findings
