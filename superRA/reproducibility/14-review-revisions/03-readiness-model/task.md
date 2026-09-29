@@ -1,6 +1,6 @@
 ---
 title: "Readiness Follows depends_on; File Dependencies Inform"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -138,32 +138,14 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 
 ## Review Notes
 
-Tier: thorough. Focus: correctness of the readiness rule and frontier on nested trees; no reproduction error freezes planning; agent-facing docs pass the CLAUDE.md §Teach the Protocol gate.
+Tier: thorough (first pass); quick re-review of `250eadc0..6100c89d`. Focus: correctness of the readiness rule and frontier on nested trees; no reproduction error freezes planning; agent-facing docs pass the CLAUDE.md §Teach the Protocol gate.
 
-1. **[BLOCKING] One reproduction error anywhere still refuses every `repro build`.** The objective's table says errors block "builds of the steps they touch"; [repro_run.py:661-669](../../../../skills/task-tree/scripts/repro_run.py#L661-L669) refuses on any error in the tree. On scratch trees, `repro build a` (a step with no errors, no edges to the broken task) exits 1 for each of: the unset `OUT` variable used only by task `c`, a malformed `## Reproduction` block in `c`, a step cycle between unrelated tasks `x`/`y`, and a duplicate step name in `b`. Flaw 3's multi-machine case therefore still freezes all builds on the machines without the variable. The Results defer this to "the engine", but [01-engine-freshness](../01-engine-freshness/task.md) does not own it, and [task-file-contract.md:107](../../../../skills/task-tree/references/task-file-contract.md#L107) now codifies the refusal.
-   - Fix: refuse only on errors that touch the selected steps (their owning tasks, a step cycle through them, a variable they reference; with `--upstream`, the same for the pulled-in producers), and update the contract line.
-   - Guard: a task whose section fails to parse drops its steps, so a file it produces reads as an external input. Do not let a selected step build silently on such a file; refuse or report it.
+1. **[BLOCKING] A second step cycle escapes the scoped check, and a build of it exits 0 having run nothing.** [step_errors](../../../../skills/task-tree/scripts/_repro.py) decides "a step cycle through a selected step" from the single cycle that `build_graph` reports (`cycle_path` returns the first cycle found). Scratch tree: `a`, cycle `x1 ↔ y1`, cycle `p1 ↔ q1`.
+   - `task check` reports only the `p1 → q1` cycle.
+   - `repro build x --upstream` passes `step_errors` and prints `2 step(s): 2 skipped`, with exit 0 and no witness. `--dry-run` shows `cannot run: dependency cycle` and exits 1.
+   - This breaks the Validation item "a step cycle blocks builds of its steps with its witness". Before the scope change, any cycle refused every build, so this path was unreachable.
+   - Fix: have `build_graph` report every step cycle (for example, each strongly connected component), and let `step_errors` match a selected step against any reported cycle.
    → implemented: [_repro.py step_errors](../../../../skills/task-tree/scripts/_repro.py) scopes errors to the selection for build, accept, status, and baselines; a read of a failed step's out is refused and an unparsed section warns; [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) and the 0.5 design updated.
-
-2. **[BLOCKING] Two doc lines fail the §Teach the Protocol gate.**
-   - [commands.md:52](../../../../skills/task-tree/references/commands.md#L52) restates [task-tree/SKILL.md:14](../../../../skills/task-tree/SKILL.md#L14), which every reader of `commands.md` has already loaded (DRY). Delete the bullet; the other two bullets carry the command-specific behavior.
-   - [main-agent.md:29](../../../../skills/using-superra/references/main-agent.md#L29): "does not block; rebuild it before relying on it" repeats the note the frontier prints on every such input ([_task_snapshot.py:10](../../../../skills/task-tree/scripts/_task_snapshot.py#L10)). Keep only the non-default clause, for example "Proceeding on or accepting an input the frontier reports as not fresh is decided with the researcher."
-   → implemented: [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies) bullet deleted; [main-agent.md:29](../../../../skills/using-superra/references/main-agent.md#L29) keeps only the suggested clause.
-
-3. **[ADVISORY] Inputs print duplicate lines.** Rows are keyed by file, producer, and consumer ([_task_snapshot.py:90](../../../../skills/task-tree/scripts/_task_snapshot.py#L90)), but [format_input](../../../../skills/task-tree/scripts/_task_snapshot.py#L99) omits the consumer. On the ElasticityBound tree, `task read 16-equity-market-bound/11-bound-slackness` prints each of its four inputs twice, once per reading step. Collapse on file and producer for display, or print the consumer.
-   → implemented: [_task_snapshot.py task_inputs](../../../../skills/task-tree/scripts/_task_snapshot.py) keys rows by file and producer and lists `consumers`.
-
-4. **[ADVISORY] `task read` lists fresh inputs too.** The objective says read reports inputs that are not fresh. On the ElasticityBound tree, `task read 14-reproduce-paper/09-compile-paper` prints 46 input lines, all fresh. Show only the inputs that are not fresh in the human view, plus a count of fresh ones; keep all in JSON.
-   → implemented: [task_read.py render_human](../../../../skills/task-tree/scripts/task_read.py) prints `Inputs Not Fresh` and `N input(s) fresh`; JSON keeps all.
-
-5. **[ADVISORY] `task read` gives no reason when the depends_on graph is invalid elsewhere.** With a dangling `depends_on` in sibling `a`, `task read b --json` returns `ready: false, blockers: []`, and the human view prints nothing, since only blockers render ([task_read.py:345](../../../../skills/task-tree/scripts/task_read.py#L345)). Print the invalid-graph reason.
-   → implemented: [task_read.py main](../../../../skills/task-tree/scripts/task_read.py) sets `readiness.reason` (invalid graph with its errors, or archived) and prints `Not ready: <reason>`.
-
-6. **[ADVISORY] Contract wording.** "A `depends_on` error or unparseable task empties the frontier" ([task-file-contract.md:107](../../../../skills/task-tree/references/task-file-contract.md#L107)): `task frontier` actually exits 1 with `depends_on graph is invalid`. Say "makes `task frontier` fail".
-   → implemented: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) reworded.
-
-7. **[ADVISORY, out of focus] An unset variable marks every step stale.** On a scratch copy of the ElasticityBound tree, adding `OUT: {env: NOPE_UNSET_VAR}`, a variable no step references, turns `construction-trades` stale ("the step definition changed", spec `45242fb0 → 6870a448`). With the variable set, it stays fresh. On the machines in Flaw 3's case, every input then reads `stale`. The defect is in spec hashing, which belongs to 01 or 02, not this task.
-   → implemented: the spec hash never includes variables; any error voided reviewed baselines in [apply_to_status](../../../../skills/task-tree/scripts/_repro_acceptance.py), which now checks only errors touching the step.
 
 ## Reproduction
 
