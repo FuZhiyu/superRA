@@ -462,11 +462,9 @@ function workspaceGraph(graph) {
   if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
   if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length)return graph;
   var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task);}),names=new Set(steps.map(function(s){return s.name;}));
-  var dependencies=Object.assign({},graph.dependencies),boundaries={};
-  Object.keys(dependencies.boundaries||{}).forEach(function(k){var b=dependencies.boundaries[k];boundaries[k]=Object.assign({},b,{edges:(b.edges||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);})});});
+  var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
-  dependencies.edges=(dependencies.edges||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
-  dependencies.boundaries=boundaries;
+  dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
   return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to);})});
 }
 function workspaceWriteHistory() {
@@ -1911,7 +1909,6 @@ function onReproClick(event) {
     else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
-    else if(action==='reader')reproSetReader(_reproReaderClosed);
     else if(action==='declaration')reproOpenDeclaration();
     else if(action==='copy-command')reproCopyCommand(control);
     else if(action==='fold'){
@@ -1926,11 +1923,9 @@ function onReproClick(event) {
     }
     else if(action==='close-edge')reproCloseGraphDetail();
     else if(action==='finding')reproShowFinding(value);
-    else if(action==='refresh')renderReproView(true);
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
     else if (action === 'fit') reproFit();
-    else if (action === 'center') reproCenter();
     else if (action === 'zoom-in' || action === 'zoom-out') {
       var canvas = document.querySelector('#view-reproduction .repro-canvas');
       if (canvas) {

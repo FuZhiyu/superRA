@@ -154,7 +154,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
     # A rerun an acceptance or an unverified saved input required stays owed
     # if it fails, like a forced one: restored bytes must not read as fresh.
     must_retry = forced or bool(entry.acceptance_invalid) or any(c.kind == "boundary" for c in entry.changes)
-    supersede(paths, step.name)
+    committed = False
     try:
         log_path = paths.log_file(step.name)
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -178,6 +178,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
             with build.running_lock:
                 if build.stopping.is_set():
                     raise StepFailed(f"step {step.name!r} was interrupted before it started")
+                supersede(paths, step.name)  # acceptance survives until the step is committed to run
+                committed = True
                 process = subprocess.Popen(  # noqa: S602 - a declared shell step
                     step.cmd, shell=True, cwd=str(paths.project_root),
                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
@@ -217,6 +219,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
         check_sources(graph)
         receipt = capture_receipt(graph, step, paths, before)
     except BaseException as exc:
+        if committed or not build.stopping.is_set():
+            supersede(paths, step.name)  # a failed step owes a rerun; an interrupt before its start does not
         record = read_run_record(paths, step.name)
         record.update(outcome="failed", forced=must_retry or record.get("forced", False), error=str(exc))
         write_run_record(paths, step.name, record)

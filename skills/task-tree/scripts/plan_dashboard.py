@@ -611,6 +611,7 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
         watching_lock = lock_file.is_file()
         watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
         rearm = False
+        first_only = watching_lock and refreshed is not None  # the timeout yield serves only the first check
         watcher = watchfiles.awatch(
             *watch_paths, stop_event=stop_event,
             yield_on_timeout=not watching_lock or refreshed is not None,
@@ -621,6 +622,10 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
                     if _lock_signature() != refreshed:
                         changes = set(changes) | {(watchfiles.Change.modified, str(lock_file))}
                     refreshed = None
+                if first_only and not changes:
+                    rearm = True  # re-arm without the timeout yield
+                    break
+                first_only = False
                 if changes:
                     # watchfiles already debounces (default 1600ms); the sleep
                     # adds a short extra window so rapid back-to-back writes
