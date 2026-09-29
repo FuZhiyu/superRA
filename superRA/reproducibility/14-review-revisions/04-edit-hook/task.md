@@ -6,7 +6,7 @@ depends_on: []
 
 ## Objective
 
-When an agent edits a file that a registered step depends on, the hook reminds it to check that step's declaration, whatever tool made the edit, and the hook's other feedback concerns only the task being edited.
+When an agent edits a file that a registered step depends on, the hook reminds it to check that step's declaration, whatever tool made the edit. A new script draws a softer reminder, and the hook's other feedback concerns only the task being edited.
 
 The hook runs after every tool call and compares file contents against a saved baseline, so it already catches edits made through Bash heredocs as well as the Edit tool. Keep that design.
 
@@ -16,6 +16,10 @@ The hook runs after every tool call and compares file contents against a saved b
 - **Files inside a declared directory.** A Bash edit under a declared directory such as `Code/lib/` is missed, because the hook checks only declared paths that are files; the Edit tool's path catches it. Walk declared directories, with a size cap.
 - **The first tool call of a session.** That call only records the baseline, so an edit made in it is missed. Record the baseline at session start or prompt submit.
 
+### A new script draws a reminder, not an instruction
+
+Creating `Code/new_producer.py` draws no reminder today. Remind on a new file whose extension matches a configured runner (`.jl` for a `julia` runner), under the project's code directories, skipping scratch and temporary folders. The reminder says the file may need a step if it produces retained results; many new scripts never do, so it does not tell the agent to register one.
+
 ### Feedback stays scoped
 
 - **A `task.md` edit reports warnings for that task.** Every edit repeats tree-wide warnings, such as "archived prerequisite 'G2'", plus the communicate reminder, whichever task was edited.
@@ -23,11 +27,7 @@ The hook runs after every tool call and compares file contents against a saved b
 
 ### Validation
 
-On a scratch tree, each of these fires exactly one reminder: a heredoc edit to a literal path, a `sed -i` edit to `${CODE}/est.jl`, a Bash edit inside a declared directory, and an edit in a session's first tool call. A `task.md` edit shows only that task's warnings, and timings stay in range.
-
-### Researcher decision
-
-- **New scripts outside `superRA/`.** Creating `Code/new_producer.py` draws no reminder to register a step. Recommendation: remind on a new file whose extension matches a configured runner (`.jl` for a `julia` runner), under the project's code directories, skipping scratch and temporary folders.
+On a scratch tree, each of these fires exactly one reminder: a heredoc edit to a literal path, a `sed -i` edit to `${CODE}/est.jl`, a Bash edit inside a declared directory, an edit in a session's first tool call, and a new `.jl` script under the code directory. A `task.md` edit shows only that task's warnings, and timings stay in range.
 
 Owning tasks: [05-reminder-hook](../../05-reminder-hook/task.md), [02-agent-signals](../../12-agent-protocol/02-agent-signals/task.md).
 

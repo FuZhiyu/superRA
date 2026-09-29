@@ -28,7 +28,8 @@ Fix six problems in the dashboard's Graph view, where task nodes expand into the
 
 4. **Dead code from removed views.** About 100 lines of [dashboard.js](../../../../skills/task-tree/scripts/templates/dashboard.js) serve the trace, scope, and tier modes, which no longer exist. Tests still exercise that code, so every dashboard change has to keep dead code working. One piece still shows users a notice naming a control that is gone: "Use Whole project to recover".
    - The code: `reproSearch` (never called); `reproBranchExpansion`, `reproBoundaryHTML`, and `reproLogicalBoundaryHTML` (called only from tests); the walk, anchor, mode, and roots state in `reproProject`, which navigation always resets; and the "Outside scope" labels.
-   - **Fix:** remove it with the tests that pin it.
+   - The older dependency views: the `/dag` Mermaid page and `dag.html`, reached only by tests, and the `buildChildFlow` mini-graph, which duplicates the Graph view.
+   - **Fix:** remove all of it with the tests that pin it.
 
 5. **The graph data repeats itself.** `/api/repro/graph`, the endpoint the Graph view loads, returns 352 KB at 200 steps, and about 40% of it is repeated:
    - `task_edges` repeats `dependencies.edges`, and `boundaries` repeats the edge evidence.
@@ -37,7 +38,7 @@ Fix six problems in the dashboard's Graph view, where task nodes expand into the
    - **Fix:** send each fact once.
 
 6. **The layout code cannot be reviewed.** `reproHierarchyLayout` is about 80 lines of 300–900 characters each, so a change to the layout cannot be read in a diff. Speed is fine: layout takes 16 ms and drawing 38 ms at 200 expanded steps.
-   - **Fix:** per the decision below.
+   - **Fix:** reformat the layout and edge router so a diff can be read; keep the algorithm.
 
 ### Validation
 
@@ -47,13 +48,5 @@ A headless browser runs a 50-task, 200-step fixture collapsed and fully expanded
 - logical edges ending at the task boundary, even for expanded tasks or tasks with no steps;
 - labeled cycles under a "graph blocked" header, with nothing offered for execution;
 - diagnostics that separate malformed steps from steps caught in a cycle.
-
-### Researcher decisions
-
-- **Layout code (problem 6).**
-  - (a) Reformat the existing layout and edge router.
-  - (b) Replace them with a layered-layout library.
-  - Recommendation: (a). The cost is readability only, not speed.
-- **Older dependency views.** The `/dag` Mermaid page and `dag.html` are reached only by tests, and the `buildChildFlow` mini-graph duplicates the Graph view. Recommendation: remove them here.
 
 Owning task: [scalable-navigation](../../04-dashboard-view/scalable-navigation/task.md).

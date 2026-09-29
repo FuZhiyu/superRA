@@ -13,6 +13,7 @@ Every workflow step that touches reproduction points to the reproducibility skil
 
 - **Status first, then the stale rule, then build.** [completion.md:18](../../../../skills/superimplement/references/completion.md#L18), [integrate.md:9](../../../../skills/superintegrate/references/integrate.md#L9), and [finish.md:39](../../../../skills/superintegrate/references/finish.md#L39) run `repro build <targets> --upstream` first, which executes every stale producer, including costly ones the stale rule says to ask the researcher about. In autonomous mode, a subagent correctly escalates a costly rerun, and the completion check then runs it anyway.
   - Order the check: `status`; the stale rule, with cost from `build --dry-run`'s recorded durations; then `build`.
+  - Run it over the whole tree (`.`), not a target list ([07](../07-instruction-rewrite/task.md) drops completion targets).
   - Add the costly-rerun question to `main-agent.md` §Proceeding and Pausing.
   - One file holds the commands; the other two point to it.
 - **Trees with no reproduction steps pass.** `repro status` and `build` exit 1 with "selects no steps", and `completion.md` treats that as a failure, so a theory or prose-only tree cannot finish. State the condition and its fallback once, in `protect-and-completion.md`. Today it is worded three ways: [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10), `using-superra/SKILL.md` §Task Interface, and `finish.md:39`.
@@ -32,11 +33,11 @@ Every workflow step that touches reproduction points to the reproducibility skil
 ### Parallel work, Sync, and Protect handle the records
 
 - **Merges of the committed records have guidance.** [parallel-dispatch.md:15](../../../../skills/agent-orchestration/references/parallel-dispatch.md#L15) promises parallel branches "typically merge cleanly", but every branch writes the same root records. `semantic-merge` gets resolution guidance for `repro-lock.json` and for the acceptance format [02](../02-portable-records/task.md) settles, and implement-task's commit guidance names the records.
-- **Protect records its reproduction decisions.** The researcher template and commit body in `superintegrate/references/protect.md` omit the completion targets, selected checks, and input boundary, and the targets then live only in a commit body. Give them a durable home in the task tree, with a default for the first IMPLEMENT exit, before Protect has run.
+- **Protect keeps no target list.** Today [protect-and-completion.md](../../../../skills/reproducibility/references/protect-and-completion.md) has Protect name completion targets and record them in the `integrate(protect)` commit body, the only place they live. With the completion check covering the whole tree, nothing needs recording: selected checks are registered check steps, and `status` reports external inputs as `external`. The researcher still agrees at Protect which inputs are external.
 
 ### One name per concept, and a current harness contract
 
-- **Terminology.** Pick one of kept, key, retained, maintained, or canonical result; one of "final deliverable tasks" or "completion targets"; remove "canon".
+- **Terminology.** A result's importance is its position in the task DAG, so no call site names a class of important results. "Completion targets" and "final deliverable tasks" go from [completion.md](../../../../skills/superimplement/references/completion.md) and `protect.md`. The results the researcher picks for drift tests at Protect keep one name, "key result", as in `result-protection`; `protect.md` and [result-protection/SKILL.md:23](../../../../skills/result-protection/SKILL.md#L23) say "kept result" instead. "Retained" keeps its separate meaning of a file that is not scratch.
 - **Harness contract.**
   - `load_contract.json` anchors are two lines off since `3a548e98`, so LC008 lands on the planning-review row.
   - LC008 cites model text instead of routing.
