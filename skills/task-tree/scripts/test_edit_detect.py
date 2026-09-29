@@ -291,6 +291,117 @@ class TestReproductionReminder:
         assert "`superra repro status .`" in context
 
 
+VAR_STEPS = """
+## Reproduction
+
+```yaml
+steps:
+  - name: est
+    runner: julia
+    script: ${CODE}/est.jl
+    deps:
+      - ${CODE}/lib
+    outs:
+      - out/est.csv
+```
+"""
+
+CONFIG = """reproduction:
+  vars:
+    CODE: Code
+    SECRET:
+      shell: "echo never-run"
+  runners:
+    julia: "julia --project=. {script}"
+"""
+
+
+@pytest.fixture
+def var_project(project):
+    (project / "superRA" / "config.yaml").write_text(CONFIG, encoding="utf-8")
+    _task(project / "superRA" / "03-pipeline" / "task.md", "Pipeline", "in-progress", VAR_STEPS)
+    (project / "Code" / "lib").mkdir(parents=True)
+    (project / "Code" / "est.jl").write_text("# est\n", encoding="utf-8")
+    (project / "Code" / "lib" / "helper.jl").write_text("# helper\n", encoding="utf-8")
+    return project
+
+
+def _seed_event(project: Path) -> None:
+    result = _hook(project, {"hook_event_name": "UserPromptSubmit", "prompt": "go"})
+    assert result.returncode == 0 and result.stdout.strip() == ""
+
+
+class TestEveryProducerEdit:
+    def test_variable_path_edit_reminds_once(self, var_project):
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
+        context = _bash(var_project)
+        assert context.count("Code/est.jl changed") == 1
+        assert "owning step(s): est" in context
+
+    def test_shell_variable_is_never_run(self, var_project):
+        marker = var_project / "ran"
+        (var_project / "superRA" / "config.yaml").write_text(
+            CONFIG.replace("echo never-run", f"touch {marker}"), encoding="utf-8"
+        )
+        _bash(var_project)
+        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
+        _bash(var_project)
+        assert not marker.exists()
+
+    def test_bash_edit_inside_a_declared_directory_reminds(self, var_project):
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "lib" / "helper.jl").write_text("# v2\n", encoding="utf-8")
+        assert _bash(var_project).count("Code/lib/helper.jl changed") == 1
+
+    def test_new_file_in_a_declared_directory_reminds(self, var_project):
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "lib" / "more.jl").write_text("# new\n", encoding="utf-8")
+        assert "Code/lib/more.jl changed" in _bash(var_project)
+
+    def test_edit_in_the_first_tool_call_is_seen_after_a_prompt_seed(self, var_project):
+        _seed_event(var_project)
+        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
+        assert _bash(var_project).count("Code/est.jl changed") == 1
+
+    def test_prompt_seed_reports_nothing_even_after_an_edit(self, var_project):
+        _seed_event(var_project)
+        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
+        _seed_event(var_project)  # a later prompt swallows nothing it reports
+
+    def test_new_runner_script_draws_the_soft_reminder(self, var_project):
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "new_producer.jl").write_text("# new\n", encoding="utf-8")
+        context = _bash(var_project)
+        assert context.count("new script Code/new_producer.jl") == 1
+        assert "register" not in context
+        assert "many scripts never do" in context
+
+    def test_new_script_in_scratch_or_of_another_language_is_silent(self, var_project):
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "scratch").mkdir()
+        (var_project / "Code" / "scratch" / "try.jl").write_text("1\n", encoding="utf-8")
+        (var_project / "Code" / "notes.py").write_text("1\n", encoding="utf-8")
+        assert _bash(var_project) == ""
+
+    def test_editing_an_existing_unregistered_script_is_silent(self, var_project):
+        (var_project / "Code" / "other.jl").write_text("# other\n", encoding="utf-8")
+        assert _bash(var_project) == ""
+        (var_project / "Code" / "other.jl").write_text("# other v2\n", encoding="utf-8")
+        assert _bash(var_project) == ""
+
+
+class TestScopedWarnings:
+    def test_task_edit_reports_only_that_tasks_warnings(self, project):
+        _rewrite(project / "superRA" / "02-second" / "task.md", "status: approved", "status: bogus")
+        _bash(project)  # seeds
+        _rewrite(project / "superRA" / "01-first" / "task.md", "Do First", "Do it")
+        context = _bash(project)
+        assert "02-second" not in context
+        _rewrite(project / "superRA" / "02-second" / "task.md", "Do Second", "Do it")
+        assert "02-second" in _bash(project)
+
+
 class TestCodexPayloads:
     ENV = {"SUPERRA_TASK_HOOK_EMPTY_JSON": "1"}
 
