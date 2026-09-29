@@ -138,6 +138,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
                                    entry.boundary_verified)
         return "unchanged"
     if build.dry_run:
+        if entry.status == "external":
+            raise ReproStateError(f"step {step.name!r} cannot start: {entry.reason}")
         return "would execute"
     blocked = _missing_inputs(build, step, entry)
     if blocked:
@@ -359,8 +361,12 @@ def run_build(
     cache.flush()
     if dry_run:
         pending = [name for name in names if build.outcomes.get(name, ("",))[0] == "would execute"]
-        print(format_cost(pending, paths))
-        return 0
+        blocked = [name for name in names if build.outcomes.get(name, ("",))[0] in ("failed", "skipped")]
+        for name in blocked:
+            print(f"{_MARKS['failed']} {name}  cannot run\n  {build.outcomes[name][1]}")
+        if pending or not blocked:
+            print(format_cost(pending, paths))
+        return 1 if blocked else 0
     counts = {}
     for outcome, _ in build.outcomes.values():
         counts[outcome] = counts.get(outcome, 0) + 1

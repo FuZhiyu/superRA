@@ -11,7 +11,7 @@ user-invocable: true
 - **Task** — an immediate subdirectory of a task directory or the rootless `./superRA` forest that contains `task.md`. `attachments/` is always an asset container, never a task. A leaf task has no child task directories.
 - **Filesystem hierarchy is the task hierarchy.** `walk_plan()` discovers children by scanning subdirectories.
 - Retained files are companions, not task nodes — classification, placement, and lifecycle in `../using-superra/references/task-companion-files.md`.
-- **Logical prerequisites use sibling directory names in `depends_on`.** The [effective dependencies](references/task-file-contract.md#effective-dependencies) govern ordering, readiness, and validation.
+- **`depends_on` decides readiness; file dependencies inform.** `depends_on` names sibling directories; a task can start once each one, own or inherited, is `implemented`, `approved`, or `revise`. File edges between steps order builds and are reported as inputs, never gating: [Effective Dependencies](references/task-file-contract.md#effective-dependencies).
 - **Parent status rolls up** from children automatically — `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded.
 - **DAG order vs. display order.** The dependency DAG controls execution order; numeric directory prefixes (`01-load`, `02-merge`) control display order only. Independent.
 
@@ -30,7 +30,7 @@ Run the committed `./superRA/superra` wrapper created above — contributors ins
 
 ```bash
 ./superRA/superra task tree            # tree with status badges
-./superRA/superra task frontier        # ready tasks and actionable parent-owned steps
+./superRA/superra task frontier        # ready tasks, each with its inputs that are not fresh
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
 ./superRA/superra dashboard --no-open  # idempotent; starts or reuses a server and prints this worktree's scoped URL

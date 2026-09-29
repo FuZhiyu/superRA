@@ -1,6 +1,6 @@
 ---
 title: "Readiness Follows depends_on; File Dependencies Inform"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -98,3 +98,76 @@ Owning task: [unified-dependencies](../../01-section-contract/unified-dependenci
 ## Details
 
 Evidence for every flaw, with the scratch scenarios that reproduced it: [deps-report.md](../attachments/deps-report.md) M1–M4 and Minor. The unset-variable failure was also reproduced directly. The own-work example is from `task frontier` and `repro status .` on this repository on 2026-09-28.
+
+## Results
+
+Readiness now reads only `depends_on`; file edges are reported as inputs and never gate. [Dependencies](../../../../skills/task-tree/scripts/_task_dependencies.py) keeps `logical` edges for `prerequisites`, `blockers`, `ready`, and `frontier`, and `files` edges (archived producers included) for `inputs`. Boundary views still project both kinds for `task dag` and the dashboard.
+
+### Each flaw is removed
+
+- **Flaw 1, two readiness rules.** The frontier lists ready leaves only; own-work rows are gone. `P/c` stays on the frontier after a `setup.sh` edit, with `setup.txt from .#setup: stale` as an input.
+- **Flaw 2, invented cycles and over-blocking.** Each boundary checks cycles over `depends_on` edges only; step cycles stay errors in [build_graph](../../../../skills/task-tree/scripts/_repro.py). The `paper` chain has no error, and each task reports its inputs. A `depends_on` against the file flow is a warning: `depends_on 'b' runs against the file flow: b reads this task's output a.txt; not blocking, but best avoided`.
+- **Flaw 3, errors freeze planning.** `Dependencies.findings` holds dependency findings only, so `valid` ignores reproduction errors. [Preflight](../../../../skills/task-tree/scripts/_task_snapshot.py) builds the current and edited trees without resolving variables and refuses only a new `depends_on` error. With `OUT: {env: NOPE_UNSET_VAR}`, `create`, `dep add`, `move`, and `frontier` succeed; the frontier notes the reproduction errors on stderr, and `repro status` and `repro build` report them.
+- **Flaw 4, archived producer.** The consumer's input reads `missing` with `archived producer; file is missing`. `build --dry-run` now reports a step whose input is missing as `cannot run` and exits 1 instead of claiming freshness ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)).
+- **Adding a subtask.** `task create`, `move`, `dep add`, and archive transitions print, after writing, each task they take off the frontier (`Now blocked: analysis waits on data (not-started)`) and each new dependency warning.
+
+### Every view reads one snapshot
+
+- **Removed parallel paths:** `compute_frontier` / `_collect_frontier`, `detect_cycles` / `validate_dependencies` with `validate_plan(dependencies=)`, `print_frontier`, and the dashboard's authored-`depends_on` fallback.
+- **One status pass per command:** `task read` and `task frontier` call `step_states` once for the task's own steps and its input producers; `task_inputs` joins those states to file edges.
+- **`task tree --json`** reports `effective_depends_on` from `depends_on` and `dependencies_complete: true` without resolving variables.
+- **Messages name the evidence.** `task read` shows `Prerequisites (depends_on)` with `(inherited)` marks, a `Not ready: waits on …` line, and an `Inputs` section; its JSON `readiness` carries `ready`, `blockers` (with `declared_by`), and `inputs`. `dep remove` names the file of a remaining or file-only edge.
+- **The bundle-fixture test passes unchanged:** `dependencies[].slug` is again the sibling directory name, and `path` carries the full path.
+
+### Deviations and limits
+
+- `repro build` still refuses on any reproduction error in the tree rather than only on the steps it touches; the engine owns that scope.
+- A build blocked by an archived producer's missing file says `external input old.txt is missing` without naming the producer; `task read` and the frontier name it.
+- [task_hook.py](../../../../skills/task-tree/scripts/task_hook.py) changed one line, dropping the removed `dependencies=False` argument.
+- Tests whose expectation encoded the old rule were rewritten: grouped and mixed cycles, own-work rows, `tree --json` incompleteness, and invalid-graph fixtures that used a `depends_on` against the file flow now use a real `depends_on` cycle.
+
+### Verification
+
+- The [regression tests](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover each scenario in the Validation list. Run against the base commit `caecfc02`, 16 of them fail; all 26 pass here.
+- The task-tree suite and harness fixture tests pass: **1,378 passed, 10 skipped**.
+- `readiness-model-check` built fresh. The edited scripts are declared deps of 14 other tasks' checks, which read `missing` or `stale` in this worktree (most were never stamped here); they were not rebuilt, and their test files pass in the suite above.
+- Agent-facing docs: [main-agent.md](../../../../skills/using-superra/references/main-agent.md#resuming-work), [task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md), [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies), [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), and [internals.md](../../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).
+
+## Reproduction
+
+```yaml
+steps:
+  - name: readiness-model-check
+    kind: check
+    cmd: "uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py tests/harness-instruction-following/test_bundle_fixture.py -q -p no:cacheprovider"
+    deps:
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_builds.py
+      - skills/task-tree/scripts/_repro_provenance.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_signals.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/conftest.py
+      - skills/task-tree/scripts/plan_dashboard.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_check.py
+      - skills/task-tree/scripts/task_create.py
+      - skills/task-tree/scripts/task_link.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/task_rename.py
+      - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/test_task_dependencies.py
+      - tests/harness-instruction-following/test_bundle_fixture.py
+      - tests/fixtures/task-trees/bundle-two-tasks
+```
