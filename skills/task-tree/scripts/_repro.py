@@ -561,7 +561,8 @@ class Graph:
 
 
 def graph_to_dict(graph: Graph) -> dict:
-    """Serialize a graph to the JSON shape the CLI and dashboard consume."""
+    """Serialize a graph to the JSON shape the dashboard consumes."""
+    dependencies = graph.dependencies.to_dict() if graph.dependencies else None
     return {
         "config": graph.config.to_dict(),
         "tasks": [
@@ -575,9 +576,13 @@ def graph_to_dict(graph: Graph) -> dict:
         "step_edges": [
             {"from": src, "to": dst, "via": via} for src, dst, via in graph.step_edges
         ],
-        "task_edges": (graph.dependencies.edges if graph.dependencies else
-                       [{"from": src, "to": dst} for src, dst in graph.task_edges]),
-        "dependencies": graph.dependencies.to_dict() if graph.dependencies else None,
+        # Task nodes and `depends_on` edges only: grouped edges, boundary views,
+        # and dependency findings repeat `step_edges` and `findings`.
+        "dependencies": dependencies and {
+            "tasks": dependencies["tasks"],
+            "archived_tasks": dependencies["archived_tasks"],
+            "logical": graph.dependencies.logical,
+        },
         "archived_steps": [s.to_dict() for s in graph.archived_steps],
         "external_inputs": [e.to_dict() for e in graph.external_inputs],
         "findings": [f.to_dict() for f in graph.findings],
