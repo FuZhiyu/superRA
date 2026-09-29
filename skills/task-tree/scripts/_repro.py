@@ -548,6 +548,7 @@ class Graph:
     # Task path -> outs of its steps that failed to register; None when its
     # whole section failed, so what it produces is unknown.
     unregistered: dict[str, list[PathRef] | None] = field(default_factory=dict)
+    step_cycles: dict[str, set[str]] = field(default_factory=dict)  # finding message -> its steps
 
     def step(self, name: str) -> Step | None:
         for step in self.steps:
@@ -1238,16 +1239,58 @@ def build_graph(
             _finding(finding.task_path, "warning", finding.message)
     graph.section_tasks = [p for p in graph.section_tasks if p not in archived]
     _link(graph, project_root)
-    cycle = cycle_path([(a, b) for a, b, _ in graph.step_edges])
-    if cycle:
+    for component in _cyclic_components(graph.step_edges):
+        inner = [(a, b) for a, b, _ in graph.step_edges if a in component and b in component]
+        cycle = cycle_path(inner)
         witness = [f"{a} -> {b} via {via}" for a, b, via in graph.step_edges
                    if (a, b) in set(zip(cycle, cycle[1:]))]
-        _finding("", "error", "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness))
+        message = "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness)
+        _finding("", "error", message)
+        graph.step_cycles[message] = component
     graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels)
     graph.findings.extend(Finding(**f) for f in graph.dependencies.findings)
     graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
     graph.dependencies.order_tree()
     return graph
+
+
+def _cyclic_components(edges) -> list[set[str]]:
+    """Strongly connected components that hold a cycle, in a stable order."""
+    adjacency: dict[str, list[str]] = {}
+    for a, b, _ in edges:
+        adjacency.setdefault(a, []).append(b)
+        adjacency.setdefault(b, [])
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    components: list[set[str]] = []
+
+    def visit(node: str) -> None:
+        index[node] = low[node] = len(index)
+        stack.append(node)
+        on_stack.add(node)
+        for target in sorted(adjacency[node]):
+            if target not in index:
+                visit(target)
+                low[node] = min(low[node], low[target])
+            elif target in on_stack:
+                low[node] = min(low[node], index[target])
+        if low[node] == index[node]:
+            component = set()
+            while True:
+                member = stack.pop()
+                on_stack.discard(member)
+                component.add(member)
+                if member == node:
+                    break
+            if len(component) > 1 or node in adjacency[node]:
+                components.append(component)
+
+    for node in sorted(adjacency):
+        if node not in index:
+            visit(node)
+    return sorted(components, key=min)
 
 
 def _unregister(graph: Graph, task_path: str, outs: list[PathRef]) -> None:
@@ -1269,26 +1312,26 @@ def _raw_outs(raw: Any, variables: dict[str, str]) -> list[PathRef]:
 def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]]:
     """Errors that touch these steps, and notes on inputs the graph cannot vouch for.
 
-    An error touches a step when it sits on the step's owning task, is a step
-    cycle through it, is project-wide configuration (not one variable: a step
-    using a broken variable fails on its own task), or leaves unregistered a
-    step producing a file it reads. *tasks* adds target task subtrees, so a
-    target whose steps failed still refuses. `depends_on` errors never touch builds.
+    An error touches a step when it sits on the step's owning task (the root
+    task included), is a step cycle through it, is project-wide configuration
+    (not one variable: a step using a broken variable fails on its own task),
+    or leaves unregistered a step producing a file it reads. *tasks* adds
+    target task subtrees, so a target whose steps failed still refuses.
+    `depends_on` errors never touch builds.
     """
     names = set(names)
     steps = [graph.step(n) for n in names if graph.step(n) is not None]
     owners = {s.task_path for s in steps} | set(tasks)
-    in_cycle = bool(names & set(cycle_path([(a, b) for a, b, _ in graph.step_edges]) or ()))
     errors = []
     for f in graph.findings:
         if f.severity != "error" or f.category != CATEGORY:
             continue
-        if f.message.startswith("step cycle"):
-            touches = in_cycle
-        elif not f.task_path and f.message.startswith(f"{CONFIG_FILENAME}: variable "):
-            touches = False
+        if f.message in graph.step_cycles:
+            touches = bool(names & graph.step_cycles[f.message])
+        elif not f.task_path and f.message.startswith(f"{CONFIG_FILENAME}"):
+            touches = not f.message.startswith(f"{CONFIG_FILENAME}: variable ")
         else:
-            touches = not f.task_path or f.task_path in owners or any(within(f.task_path, t) for t in tasks)
+            touches = f.task_path in owners or any(within(f.task_path, t) for t in tasks)
         if touches:
             errors.append(f)
     notes = []

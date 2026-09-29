@@ -292,7 +292,7 @@
       "deps": {
         "skills/task-tree/scripts/_artifacts.py": "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e",
         "skills/task-tree/scripts/_comments.py": "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a",
-        "skills/task-tree/scripts/_repro.py": "f49cc7320d2ccb79f9831b6def2b5172f1e01a62d794ca18b3b020db540c100c",
+        "skills/task-tree/scripts/_repro.py": "7b5d56bff396c34212073ac01d4900c0ebe841fd4d32c72e99f8c96a4795eefa",
         "skills/task-tree/scripts/_repro_acceptance.py": "8f34609c3808e4893df03c86bfd743d105484ab4d6fda4e1f604605d1dc73178",
         "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
         "skills/task-tree/scripts/_repro_provenance.py": "37bb242dc22477168e8b08de0430acb9e2953b79aac28ebeaefe2d28ec257c09",
@@ -308,7 +308,7 @@
         "skills/task-tree/scripts/cli.py": "b312171288860adcfcdac62ceeb00d3f97178f6daae9937664160472c45106f8",
         "skills/task-tree/scripts/conftest.py": "e1e3ec0c5df2224bce0b1492c1ebfa1b40a9bfa08b6fdd216fe1b7df5761dea6",
         "skills/task-tree/scripts/plan_dashboard.py": "a57f7f5e2cfc4edf3937de44d360de75f563efca83dabffaad20f6418d9726c2",
-        "skills/task-tree/scripts/repro_run.py": "920cd65b09b4de3c53c103177941027c9dadc32ab83faec30ddba2c2cc0a94f0",
+        "skills/task-tree/scripts/repro_run.py": "c2a349934fd43586cce2c8a7241d81af5ec9e0c6c888d4ff5a6defc15d771e85",
         "skills/task-tree/scripts/task_check.py": "3bc7cd468dcb7e18d7433c3e179e41bbd8274093e4b9c5ef14a254e33833f1fd",
         "skills/task-tree/scripts/task_create.py": "fbab167e90d47e252de8ea04761f2db9884f1c58e9bd9e38c589bc632ad77790",
         "skills/task-tree/scripts/task_link.py": "7add4ff216e6ab12e813673fba50b60ea88371aab85ce63de6dd44fa9449012a",
@@ -318,7 +318,7 @@
         "skills/task-tree/scripts/task_update.py": "caf56c15e235855c115489823e3c46ff57ac921996224aa999a10ada12d7575a",
         "skills/task-tree/scripts/test_repro_acceptance.py": "86cdde5aede3e48eb0b41add1466dae888a571cd3f31502c90f1246a5f2c23d2",
         "skills/task-tree/scripts/test_repro_runner.py": "f81371933ee950f7cc2297be25a78564a0a9be9864d47fb2050e07ad8cd54117",
-        "skills/task-tree/scripts/test_task_dependencies.py": "ee740b18bde76d26197a416acbbe85f862f20903238eceb99a94dbafc2daeaad",
+        "skills/task-tree/scripts/test_task_dependencies.py": "21368230f2881e54e883db5b995a2e3f390aeaacf7ae425b99d4d247195854e0",
         "tests/fixtures/task-trees/bundle-two-tasks": "dir:e6a441336cd18db951d33d087320a47a54de9ec529284633d81a3b9ba81baf5d",
         "tests/harness-instruction-following/test_bundle_fixture.py": "2b668319244dfbe39bcbeb8a348c66b872bfd6746a486f3e33c1993c11b0b469"
       },

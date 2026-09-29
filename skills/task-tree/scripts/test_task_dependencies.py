@@ -225,6 +225,29 @@ def test_unset_variable_blocks_only_the_builds(tmp_path):
     assert broken.returncode == 1 and "unknown variable ${OUT}" in broken.stderr
 
 
+def test_every_step_cycle_is_reported_and_blocks_its_builds(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    task(root, "x", steps=[("x1", ["y1.txt"], ["x1.txt"]), ("y1", ["x1.txt"], ["y1.txt"])])
+    task(root, "p", steps=[("p1", ["q1.txt"], ["p1.txt"]), ("q1", ["p1.txt"], ["q1.txt"])])
+    check = run(root, "task", "check", "--category", "reproduction").stdout
+    assert "step cycle: p1 -> q1 -> p1" in check and "step cycle: x1 -> y1 -> x1" in check
+    for args in [("x", "--upstream"), ("x", "--upstream", "--dry-run"), ("p",)]:
+        built = run(root, "repro", "build", *args)
+        assert built.returncode == 1 and "step cycle: " in built.stderr, args
+    assert "x1 -> y1 via x1.txt; y1 -> x1 via y1.txt" in run(root, "repro", "build", "x").stderr
+    assert run(root, "repro", "build", "a").returncode == 0
+
+
+def test_root_step_error_blocks_only_root_builds(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "", steps=[("r", [], ["r.txt"])])
+    (root / "task.md").write_text((root / "task.md").read_text().replace("cmd: echo r", "cmd: echo r\n    bogus: 1"))
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    assert run(root, "repro", "build", "a").returncode == 0
+    assert run(root, "repro", "build", ".").returncode == 1
+
+
 @pytest.mark.parametrize("error", ["variable", "section", "cycle", "duplicate"])
 def test_an_error_blocks_only_the_builds_it_touches(tmp_path, error):
     root = tmp_path / "superRA"
