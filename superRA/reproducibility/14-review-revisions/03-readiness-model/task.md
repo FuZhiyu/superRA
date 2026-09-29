@@ -1,6 +1,6 @@
 ---
 title: "Readiness Follows depends_on; File Dependencies Inform"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -135,18 +135,6 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 - The task-tree suite and harness fixture tests pass: **1,387 passed, 10 skipped**.
 - `readiness-model-check` built fresh. The edited scripts are declared deps of 14 other tasks' checks, which read `missing` or `stale` in this worktree (most were never stamped here); they were not rebuilt, and their test files pass in the suite above.
 - Agent-facing docs: [main-agent.md](../../../../skills/using-superra/references/main-agent.md#resuming-work), [task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md), [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies), [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), and [internals.md](../../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).
-
-## Review Notes
-
-Tier: thorough (first pass); quick re-review of `250eadc0..6100c89d`. Focus: correctness of the readiness rule and frontier on nested trees; no reproduction error freezes planning; agent-facing docs pass the CLAUDE.md §Teach the Protocol gate.
-
-1. **[BLOCKING] A second step cycle escapes the scoped check, and a build of it exits 0 having run nothing.** [step_errors](../../../../skills/task-tree/scripts/_repro.py) decides "a step cycle through a selected step" from the single cycle that `build_graph` reports (`cycle_path` returns the first cycle found). Scratch tree: `a`, cycle `x1 ↔ y1`, cycle `p1 ↔ q1`.
-   - `task check` reports only the `p1 → q1` cycle.
-   - `repro build x --upstream` passes `step_errors` and prints `2 step(s): 2 skipped`, with exit 0 and no witness. `--dry-run` shows `cannot run: dependency cycle` and exits 1.
-   - This breaks the Validation item "a step cycle blocks builds of its steps with its witness". Before the scope change, any cycle refused every build, so this path was unreachable.
-   - Fix: have `build_graph` report every step cycle (for example, each strongly connected component), and let `step_errors` match a selected step against any reported cycle.
-   → implemented: [_repro.py step_errors](../../../../skills/task-tree/scripts/_repro.py) scopes errors to the selection for build, accept, status, and baselines; a read of a failed step's out is refused and an unparsed section warns; [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) and the 0.5 design updated.
-   → implemented: [_repro.py _cyclic_components](../../../../skills/task-tree/scripts/_repro.py) reports each cyclic strongly connected component as its own `step cycle` finding with a witness, and `step_errors` matches the selection against each; `task check` lists both cycles and `repro build x --upstream` refuses with the witness, dry-run or not ([test_every_step_cycle_is_reported_and_blocks_its_builds](../../../../skills/task-tree/scripts/test_task_dependencies.py)). A build that skips steps now exits 1 ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)). Orchestrator addition: a root-task error now blocks only builds of root-owned steps; only `config.yaml` errors are project-wide ([test_root_step_error_blocks_only_root_builds](../../../../skills/task-tree/scripts/test_task_dependencies.py)).
 
 ## Reproduction
 
