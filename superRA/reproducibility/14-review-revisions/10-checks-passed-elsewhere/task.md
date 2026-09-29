@@ -1,6 +1,6 @@
 ---
 title: "Checks: A Check That Passed at These Inputs Elsewhere Reads Fresh"
-status: implemented
+status: approved
 depends_on: [01-engine-freshness]
 ---
 
