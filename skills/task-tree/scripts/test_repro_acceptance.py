@@ -255,6 +255,7 @@ def test_invalid_graph_never_accepts_or_builds(project):
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     review(project)
     project.write('superRA/01-a/task.md', project.read('superRA/01-a/task.md').replace('depends_on: []', 'depends_on: [02-b]'))
+    project.write('superRA/02-b/task.md', project.read('superRA/02-b/task.md').replace('depends_on: []', 'depends_on: [01-a]'))
     assert not project.status(*CHAIN).ok
     assert project.run('build', '01-a#build-a') == 1
     with pytest.raises(ReproStateError, match='invalid graph'):

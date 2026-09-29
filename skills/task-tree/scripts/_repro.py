@@ -1234,10 +1234,8 @@ def build_graph(
         witness = [f"{a} -> {b} via {via}" for a, b, via in graph.step_edges
                    if (a, b) in set(zip(cycle, cycle[1:]))]
         _finding("", "error", "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness))
-    graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels,
-                                 complete=resolve_vars and not any(f.severity == "error" for f in findings))
+    graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels)
     graph.findings.extend(Finding(**f) for f in graph.dependencies.findings)
-    graph.dependencies.findings = [f.to_dict() for f in graph.findings]
     graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
     graph.dependencies.order_tree()
     return graph
