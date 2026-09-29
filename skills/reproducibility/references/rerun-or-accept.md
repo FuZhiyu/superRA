@@ -33,7 +33,7 @@ Significance is inferred from the graph, never marked in the section.
 superra repro accept <targets> --reason 'Ran interactively and reviewed the panel'
 ```
 
-One call previews, revalidates, and writes. `--dry-run` prints a token and writes nothing; `--apply <token>` then accepts exactly that preview, when review and apply want separating. Flags, records, and rejection conditions: [commands.md §Reviewed acceptance](../../task-tree/references/commands.md#reviewed-acceptance).
+One call previews, revalidates, and writes; `--dry-run` previews and writes nothing. Flags, records, and rejection conditions: [commands.md §Reviewed acceptance](../../task-tree/references/commands.md#reviewed-acceptance).
 
 Accepting the same fan-out again and again is a design signal — fix it at the [script or module boundary](designing-the-graph.md#the-step-unit-follows-the-script) when that boundary is in scope.
 

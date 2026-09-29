@@ -49,7 +49,7 @@ For a shared specification, a cheap producer can emit deterministic per-consumer
 
 ## Reviewed acceptance is evidence distinct from execution
 
-`repro accept` establishes or replaces the reviewed current baseline, including newly registered producers and changed outputs from direct runs. Require a reason; evidence files and per-node notes are optional. Preserve exact preview/apply, revoke, saved-input scope, downstream invalidation, forced execution, and truthful execution history. Never-run checks still require execution.
+`repro accept` establishes or replaces the reviewed current baseline, including newly registered producers and changed outputs from direct runs. Require a reason, which cites any evidence; per-node notes are optional. Preserve a dry-run preview, the recheck under the mutation lock before writing, revoke, saved-input scope, downstream invalidation, forced execution, and truthful execution history. Never-run checks still require execution. The committed record keeps only portable, mergeable facts, one file per step: no preview token to apply, no acceptance-id binding to producers accepted in the same call, and no evidence-file hashes.
 
 The [acceptance task](../02-runner/reviewed-acceptance/task.md) owns implementation and validation. The [record contract](../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records) defines persistence; the [reproducibility skill](../../../skills/reproducibility/SKILL.md#build-and-status) owns agent behavior. Acceptance introduces no additional user-confirmation gate within authorized work.
 

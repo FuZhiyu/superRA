@@ -86,10 +86,10 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
             or {key: state.get(key) for key in ('deps', 'products')} != lock_state(lock)):
         receipt = {}
     recorded = receipt.get('boundary_inputs', [])
-    from _repro_acceptance import read_ledger
-    accepted = read_ledger(paths)['steps'].get(entry.step.name, {})
-    if accepted.get('baseline', {}).get('lock') == lock_state(lock):
-        recorded = accepted.get('boundary_inputs', accepted.get('baseline', {}).get('boundary_inputs', recorded))
+    from _repro_acceptance import lock_digest, read_ledger
+    accepted = read_ledger(paths)['steps'].get(entry.step.name)
+    if accepted and accepted['lock'] == lock_digest(lock):
+        recorded = [{'provenance': 'recorded by the acceptance', **item} for item in accepted['boundary_inputs']]
     entry.boundary_inputs = recorded
     verified_paths = {item['logical'] for item in recorded}
     if lock is not None:

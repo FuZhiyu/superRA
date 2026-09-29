@@ -118,10 +118,34 @@ def runner_paths(project_root: Path) -> RunnerPaths:
     return RunnerPaths(project_root=root, state_dir=root / STATE_DIRNAME)
 
 
+def dropbox_ignore(path: Path) -> None:
+    """Set Dropbox's ignore flag, so each machine keeps its own copy; inert outside Dropbox."""
+    try:
+        if hasattr(os, "setxattr"):  # Linux
+            try:
+                if os.getxattr(path, "user.com.dropbox.ignored") == b"1":
+                    return
+            except OSError:
+                pass
+            os.setxattr(path, "user.com.dropbox.ignored", b"1")
+        elif sys.platform == "darwin":
+            import ctypes
+            libc = ctypes.CDLL(None, use_errno=True)
+            args = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint32, ctypes.c_int]
+            libc.getxattr.argtypes, libc.getxattr.restype = args, ctypes.c_ssize_t
+            libc.setxattr.argtypes, libc.setxattr.restype = args, ctypes.c_int
+            name, raw = b"com.dropbox.ignored", os.fsencode(path)
+            if libc.getxattr(raw, name, None, 0, 0, 0) < 0:
+                libc.setxattr(raw, name, b"1", 1, 0, 0)
+    except (OSError, AttributeError):  # no xattr support: nothing to sync away from
+        pass
+
+
 def ensure_state_dir(paths: RunnerPaths) -> None:
-    """Create the state directory and keep it out of git."""
+    """Create the state directory, keep it out of git, and keep it on this machine."""
     for directory in (paths.state_dir, paths.logs_dir, paths.runs_dir, paths.stamps_dir):
         directory.mkdir(parents=True, exist_ok=True)
+    dropbox_ignore(paths.state_dir)
     gitignore = paths.project_root / ".gitignore"
     entry = f"{STATE_DIRNAME}/"
     try:
@@ -607,7 +631,7 @@ class StepStatus:
             "log": self.log,
             "acceptance": (
                 {key: self.acceptance[key] for key in
-                 ("id", "basis", "reason", "reviews", "evidence", "recorded_at", "actor")
+                 ("id", "basis", "reason", "reviews")
                  if key in self.acceptance}
                 if self.acceptance else None
             ),
