@@ -1,6 +1,6 @@
 ---
 title: "Readiness Follows depends_on; File Dependencies Inform"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -107,7 +107,10 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 
 - **Flaw 1, two readiness rules.** The frontier lists ready leaves only; own-work rows are gone. `P/c` stays on the frontier after a `setup.sh` edit, with `setup.txt from .#setup: stale` as an input.
 - **Flaw 2, invented cycles and over-blocking.** Each boundary checks cycles over `depends_on` edges only; step cycles stay errors in [build_graph](../../../../skills/task-tree/scripts/_repro.py). The `paper` chain has no error, and each task reports its inputs. A `depends_on` against the file flow is a warning: `depends_on 'b' runs against the file flow: b reads this task's output a.txt; not blocking, but best avoided`.
-- **Flaw 3, errors freeze planning.** `Dependencies.findings` holds dependency findings only, so `valid` ignores reproduction errors. [Preflight](../../../../skills/task-tree/scripts/_task_snapshot.py) builds the current and edited trees without resolving variables and refuses only a new `depends_on` error. With `OUT: {env: NOPE_UNSET_VAR}`, `create`, `dep add`, `move`, and `frontier` succeed; the frontier notes the reproduction errors on stderr, and `repro status` and `repro build` report them.
+- **Flaw 3, errors freeze planning and builds.** `Dependencies.findings` holds dependency findings only, so `valid` ignores reproduction errors. [Preflight](../../../../skills/task-tree/scripts/_task_snapshot.py) builds the current and edited trees without resolving variables and refuses only a new `depends_on` error. With `OUT: {env: NOPE_UNSET_VAR}`, `create`, `dep add`, `move`, and `frontier` succeed, and the frontier notes the reproduction errors on stderr.
+  - **An error blocks only the builds it touches.** [step_errors](../../../../skills/task-tree/scripts/_repro.py) decides for `repro build`, `accept`, `status`'s verdict, and reviewed-baseline freshness. An error touches a selection when it sits on a selected step's owning task or a target task's subtree, is a step cycle through a selected step, or is project-wide configuration. A broken variable touches only the steps using it, which fail on their own task; `depends_on` errors touch no build.
+  - **Files from failed declarations are guarded.** A selected step reading an out of a step that failed to register is refused, naming the task. A section that fails to parse registers nothing, so a build reading any external input warns.
+  - **An unrelated unset variable no longer stales accepted steps.** The cause was not the spec hash, which never includes variables; any error in the tree voided every reviewed baseline. Acceptance now checks only errors touching the step.
 - **Flaw 4, archived producer.** The consumer's input reads `missing` with `archived producer; file is missing`. `build --dry-run` now reports a step whose input is missing as `cannot run` and exits 1 instead of claiming freshness ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)).
 - **Adding a subtask.** `task create`, `move`, `dep add`, and archive transitions print, after writing, each task they take off the frontier (`Now blocked: analysis waits on data (not-started)`) and each new dependency warning.
 
@@ -116,20 +119,20 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 - **Removed parallel paths:** `compute_frontier` / `_collect_frontier`, `detect_cycles` / `validate_dependencies` with `validate_plan(dependencies=)`, `print_frontier`, and the dashboard's authored-`depends_on` fallback.
 - **One status pass per command:** `task read` and `task frontier` call `step_states` once for the task's own steps and its input producers; `task_inputs` joins those states to file edges.
 - **`task tree --json`** reports `effective_depends_on` from `depends_on` and `dependencies_complete: true` without resolving variables.
-- **Messages name the evidence.** `task read` shows `Prerequisites (depends_on)` with `(inherited)` marks, a `Not ready: waits on …` line, and an `Inputs` section; its JSON `readiness` carries `ready`, `blockers` (with `declared_by`), and `inputs`. `dep remove` names the file of a remaining or file-only edge.
+- **Messages name the evidence.** `task read` shows `Prerequisites (depends_on)` with `(inherited)` marks and a `Not ready:` line naming the blockers or, with none, the reason (an invalid `depends_on` graph, or archival). It lists only inputs that are not fresh, one line per file and producer, then a count of fresh ones. Its JSON `readiness` carries `ready`, `blockers` (with `declared_by`), `reason`, and every input with its `consumers`. `dep remove` names the file of a remaining or file-only edge.
 - **The bundle-fixture test passes unchanged:** `dependencies[].slug` is again the sibling directory name, and `path` carries the full path.
 
 ### Deviations and limits
 
-- `repro build` still refuses on any reproduction error in the tree rather than only on the steps it touches; the engine owns that scope.
 - A build blocked by an archived producer's missing file says `external input old.txt is missing` without naming the producer; `task read` and the frontier name it.
 - [task_hook.py](../../../../skills/task-tree/scripts/task_hook.py) changed one line, dropping the removed `dependencies=False` argument.
-- Tests whose expectation encoded the old rule were rewritten: grouped and mixed cycles, own-work rows, `tree --json` incompleteness, and invalid-graph fixtures that used a `depends_on` against the file flow now use a real `depends_on` cycle.
+- The [0.5 design](../../attachments/v05-design.md#hierarchy-and-task-readiness) said builds reject an invalid combined graph; it now says a build rejects errors touching its selected steps and never `depends_on` errors.
+- Tests whose expectation encoded the old rule were rewritten: grouped and mixed cycles, own-work rows, `tree --json` incompleteness, a `depends_on` cycle blocking builds, and an invalid-graph acceptance fixture, which now breaks the selected task's own section.
 
 ### Verification
 
-- The [regression tests](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover each scenario in the Validation list. Run against the base commit `caecfc02`, 16 of them fail; all 26 pass here.
-- The task-tree suite and harness fixture tests pass: **1,378 passed, 10 skipped**.
+- The [regression tests](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover each scenario in the Validation list and each review finding, plus [test_unrelated_graph_error_keeps_acceptance_and_builds](../../../../skills/task-tree/scripts/test_repro_acceptance.py). Against the base commit `caecfc02`, 23 of these 33 tests fail; all pass here.
+- The task-tree suite and harness fixture tests pass: **1,385 passed, 10 skipped**.
 - `readiness-model-check` built fresh. The edited scripts are declared deps of 14 other tasks' checks, which read `missing` or `stale` in this worktree (most were never stamped here); they were not rebuilt, and their test files pass in the suite above.
 - Agent-facing docs: [main-agent.md](../../../../skills/using-superra/references/main-agent.md#resuming-work), [task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md), [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies), [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), and [internals.md](../../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).
 
@@ -140,20 +143,27 @@ Tier: thorough. Focus: correctness of the readiness rule and frontier on nested 
 1. **[BLOCKING] One reproduction error anywhere still refuses every `repro build`.** The objective's table says errors block "builds of the steps they touch"; [repro_run.py:661-669](../../../../skills/task-tree/scripts/repro_run.py#L661-L669) refuses on any error in the tree. On scratch trees, `repro build a` (a step with no errors, no edges to the broken task) exits 1 for each of: the unset `OUT` variable used only by task `c`, a malformed `## Reproduction` block in `c`, a step cycle between unrelated tasks `x`/`y`, and a duplicate step name in `b`. Flaw 3's multi-machine case therefore still freezes all builds on the machines without the variable. The Results defer this to "the engine", but [01-engine-freshness](../01-engine-freshness/task.md) does not own it, and [task-file-contract.md:107](../../../../skills/task-tree/references/task-file-contract.md#L107) now codifies the refusal.
    - Fix: refuse only on errors that touch the selected steps (their owning tasks, a step cycle through them, a variable they reference; with `--upstream`, the same for the pulled-in producers), and update the contract line.
    - Guard: a task whose section fails to parse drops its steps, so a file it produces reads as an external input. Do not let a selected step build silently on such a file; refuse or report it.
+   → implemented: [_repro.py step_errors](../../../../skills/task-tree/scripts/_repro.py) scopes errors to the selection for build, accept, status, and baselines; a read of a failed step's out is refused and an unparsed section warns; [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) and the 0.5 design updated.
 
 2. **[BLOCKING] Two doc lines fail the §Teach the Protocol gate.**
    - [commands.md:52](../../../../skills/task-tree/references/commands.md#L52) restates [task-tree/SKILL.md:14](../../../../skills/task-tree/SKILL.md#L14), which every reader of `commands.md` has already loaded (DRY). Delete the bullet; the other two bullets carry the command-specific behavior.
    - [main-agent.md:29](../../../../skills/using-superra/references/main-agent.md#L29): "does not block; rebuild it before relying on it" repeats the note the frontier prints on every such input ([_task_snapshot.py:10](../../../../skills/task-tree/scripts/_task_snapshot.py#L10)). Keep only the non-default clause, for example "Proceeding on or accepting an input the frontier reports as not fresh is decided with the researcher."
+   → implemented: [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies) bullet deleted; [main-agent.md:29](../../../../skills/using-superra/references/main-agent.md#L29) keeps only the suggested clause.
 
 3. **[ADVISORY] Inputs print duplicate lines.** Rows are keyed by file, producer, and consumer ([_task_snapshot.py:90](../../../../skills/task-tree/scripts/_task_snapshot.py#L90)), but [format_input](../../../../skills/task-tree/scripts/_task_snapshot.py#L99) omits the consumer. On the ElasticityBound tree, `task read 16-equity-market-bound/11-bound-slackness` prints each of its four inputs twice, once per reading step. Collapse on file and producer for display, or print the consumer.
+   → implemented: [_task_snapshot.py task_inputs](../../../../skills/task-tree/scripts/_task_snapshot.py) keys rows by file and producer and lists `consumers`.
 
 4. **[ADVISORY] `task read` lists fresh inputs too.** The objective says read reports inputs that are not fresh. On the ElasticityBound tree, `task read 14-reproduce-paper/09-compile-paper` prints 46 input lines, all fresh. Show only the inputs that are not fresh in the human view, plus a count of fresh ones; keep all in JSON.
+   → implemented: [task_read.py render_human](../../../../skills/task-tree/scripts/task_read.py) prints `Inputs Not Fresh` and `N input(s) fresh`; JSON keeps all.
 
 5. **[ADVISORY] `task read` gives no reason when the depends_on graph is invalid elsewhere.** With a dangling `depends_on` in sibling `a`, `task read b --json` returns `ready: false, blockers: []`, and the human view prints nothing, since only blockers render ([task_read.py:345](../../../../skills/task-tree/scripts/task_read.py#L345)). Print the invalid-graph reason.
+   → implemented: [task_read.py main](../../../../skills/task-tree/scripts/task_read.py) sets `readiness.reason` (invalid graph with its errors, or archived) and prints `Not ready: <reason>`.
 
 6. **[ADVISORY] Contract wording.** "A `depends_on` error or unparseable task empties the frontier" ([task-file-contract.md:107](../../../../skills/task-tree/references/task-file-contract.md#L107)): `task frontier` actually exits 1 with `depends_on graph is invalid`. Say "makes `task frontier` fail".
+   → implemented: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) reworded.
 
 7. **[ADVISORY, out of focus] An unset variable marks every step stale.** On a scratch copy of the ElasticityBound tree, adding `OUT: {env: NOPE_UNSET_VAR}`, a variable no step references, turns `construction-trades` stale ("the step definition changed", spec `45242fb0 → 6870a448`). With the variable set, it stays fresh. On the machines in Flaw 3's case, every input then reads `stale`. The defect is in spec hashing, which belongs to 01 or 02, not this task.
+   → implemented: the spec hash never includes variables; any error voided reviewed baselines in [apply_to_status](../../../../skills/task-tree/scripts/_repro_acceptance.py), which now checks only errors touching the step.
 
 ## Reproduction
 
@@ -161,7 +171,7 @@ Tier: thorough. Focus: correctness of the readiness rule and frontier on nested 
 steps:
   - name: readiness-model-check
     kind: check
-    cmd: "uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py tests/harness-instruction-following/test_bundle_fixture.py -q -p no:cacheprovider"
+    cmd: "uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_dependencies.py skills/task-tree/scripts/test_repro_acceptance.py::test_unrelated_graph_error_keeps_acceptance_and_builds tests/harness-instruction-following/test_bundle_fixture.py -q -p no:cacheprovider"
     deps:
       - skills/task-tree/scripts/_artifacts.py
       - skills/task-tree/scripts/_comments.py
@@ -189,6 +199,8 @@ steps:
       - skills/task-tree/scripts/task_read.py
       - skills/task-tree/scripts/task_rename.py
       - skills/task-tree/scripts/task_update.py
+      - skills/task-tree/scripts/test_repro_acceptance.py
+      - skills/task-tree/scripts/test_repro_runner.py
       - skills/task-tree/scripts/test_task_dependencies.py
       - tests/harness-instruction-following/test_bundle_fixture.py
       - tests/fixtures/task-trees/bundle-two-tasks

@@ -33,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _repro import Graph, Out, Step, build_graph  # noqa: E402
+from _repro import Graph, Out, Step, build_graph, step_errors  # noqa: E402
 from _repro_acceptance import capture_receipt, check_sources, current_state, mutation_lock, supersede  # noqa: E402
 from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
@@ -602,6 +602,16 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
         print(format_explain(result, report))
 
 
+def _refuse(errors) -> None:
+    """Exit on reproduction errors that touch the build selection."""
+    if errors:
+        print(f"Error: {len(errors)} reproduction error(s) touch the selected steps; "
+              "run `superra task check`.", file=sys.stderr)
+        for finding in errors:
+            print(f"  {finding.to_text()}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     args = build_parser().parse_args(argv)
@@ -659,20 +669,18 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
 
     if args.command == "build":
-        errors = [f for f in graph.findings if f.severity == "error"]
-        if errors:
-            print(
-                f"Error: {len(errors)} reproduction error(s); run `superra task check`.",
-                file=sys.stderr,
-            )
-            for finding in errors:
-                print(f"  {finding.to_text()}", file=sys.stderr)
-            sys.exit(1)
+        tasks = {"" if t in (".", "./") else t.partition("#")[0].removeprefix("./").rstrip("/")
+                 for t in args.targets}
         try:
             names, unknown = select_steps(graph, args.targets, include_ancestors=args.upstream)
         except ReproStateError as exc:
+            _refuse(step_errors(graph, [], tasks)[0])
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
+        errors, notes = step_errors(graph, names, tasks)
+        _refuse(errors)
+        for note in notes:
+            print(f"Warning: {note}", file=sys.stderr)
         if unknown:
             print(
                 f"Error: no step or task matches {', '.join(unknown)}", file=sys.stderr

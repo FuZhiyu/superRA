@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
 from _repro import REPRO_SECTION, build_graph
-from _task_snapshot import format_input, input_producers, step_states, task_inputs
+from _task_snapshot import CURRENT, format_input, input_producers, step_states, task_inputs
 from _task_io import (
     Task,
     autodetect_plan_root,
@@ -345,10 +345,16 @@ def render_human(
         if readiness["blockers"]:
             parts.append("Not ready: waits on " + ", ".join(
                 f"{b['path']} ({b['status']})" for b in readiness["blockers"]))
-        if readiness["inputs"]:
+        elif not readiness["ready"]:
+            parts.append(f"Not ready: {readiness['reason']}")
+        pending = [row for row in readiness["inputs"] if row["state"] not in CURRENT]
+        current = len(readiness["inputs"]) - len(pending)
+        if pending:
             parts.append("")
-            parts.append("=== Inputs ===\n")
-            parts.extend(f"- {format_input(row)}" for row in readiness["inputs"])
+            parts.append("=== Inputs Not Fresh ===\n")
+            parts.extend(f"- {format_input(row)}" for row in pending)
+        if current:
+            parts.append(f"{current} {'other ' if pending else ''}input(s) fresh")
 
     if repro is not None:
         parts.append("")
@@ -527,6 +533,9 @@ def main(argv: list[str] | None = None) -> None:
     repro = _reproduction_view(plan_root, target_task, root, graph=graph, states=states, unavailable=unavailable)
     readiness = {"ready": deps.ready(path), "blockers": deps.blockers(path),
                  "inputs": task_inputs(graph, path, states, unavailable)}
+    if not readiness["ready"] and not readiness["blockers"]:
+        readiness["reason"] = ("archived" if path in deps.archived else "depends_on graph is invalid: "
+                               + "; ".join(f["message"] for f in deps.findings if f["severity"] == "error"))
     if unavailable:
         readiness["unavailable"] = unavailable
 

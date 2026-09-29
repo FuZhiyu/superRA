@@ -104,7 +104,7 @@ Commit figures to `attachments/` beside the task's `task.md` and embed relative 
 
 **Exclude archived tasks and their subtrees from the active graph.** Keep declarations for direct/transitive downstream warnings. Their consumed artifacts become boundary inputs: available files remain usable, missing files still block execution, and the consumer reports a missing one with its archived producer. Archival itself does not create a blocking dependency or cycle.
 
-**Reproduction errors block builds, never planning.** An unresolved variable or malformed step makes `repro build` refuse and leaves inputs unknown; frontier, read, and tree edits proceed. A `depends_on` error or unparseable task empties the frontier; mutation preflight refuses only an edit that adds one. `task read`, frontier, DAG, dependency checks, and mutation preflight share one snapshot. Invalid declarations stay readable with their findings.
+**Reproduction errors block only the builds they touch, never planning.** `repro build` and `accept` refuse, and `status` exits non-zero, on an error in a selected step's owning task, a step cycle through a selected step, project-wide configuration, or a failed declaration of a step producing a file a selected step reads. A broken variable touches only the steps that use it. A section that fails to parse registers nothing, so a build reading an external input warns. Frontier, read, and tree edits proceed with inputs unknown. A `depends_on` error or unparseable task makes `task frontier` fail and never blocks a build; mutation preflight refuses only an edit that adds one. `task read`, frontier, DAG, dependency checks, and mutation preflight share one snapshot. Invalid declarations stay readable with their findings.
 
 ## Reproduction Section
 

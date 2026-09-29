@@ -254,12 +254,24 @@ def test_invalid_graph_never_accepts_or_builds(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     review(project)
-    project.write('superRA/01-a/task.md', project.read('superRA/01-a/task.md').replace('depends_on: []', 'depends_on: [02-b]'))
-    project.write('superRA/02-b/task.md', project.read('superRA/02-b/task.md').replace('depends_on: []', 'depends_on: [01-a]'))
+    project.write('superRA/01-a/task.md', project.read('superRA/01-a/task.md').replace('steps:', 'bogus: 1\nsteps:'))
     assert not project.status(*CHAIN).ok
     assert project.run('build', '01-a#build-a') == 1
     with pytest.raises(ReproStateError, match='invalid graph'):
         review(project)
+
+
+def test_unrelated_graph_error_keeps_acceptance_and_builds(project):
+    assert project.run('build', *CHAIN) == 0
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    review(project)
+    assert project.states()['build-a'] == 'fresh'
+    project.write('superRA/config.yaml', project.read('superRA/config.yaml').replace(
+        '  vars:\n', '  vars:\n    UNUSED:\n      env: NOPE_UNSET_VAR\n'))
+    assert any('NOPE_UNSET_VAR' in f.message for f in project.graph().findings)
+    assert project.states()['build-a'] == 'fresh'
+    assert project.status(*CHAIN).ok
+    assert project.run('build', '01-a#build-a') == 0
 
 
 def test_cli_preview_apply_explain_revoke_and_scope(project, capsys):

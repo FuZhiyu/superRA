@@ -49,7 +49,6 @@ superra task dep add 01-data/03-filter 02-merge
 superra task dep remove 01-data/03-filter 02-merge
 ```
 
-- **Readiness follows `depends_on` alone;** file edges are reported as inputs: [Effective Dependencies](task-file-contract.md#effective-dependencies).
 - **`dep remove` removes only the `depends_on`:** a file edge between the same tasks remains, and the command names its file.
 - **Preflight refuses only a new `depends_on` error** (a cycle or an unresolved slug), leaving task files and directories unchanged. Otherwise the command prints each new warning — a `depends_on` against the file flow, a postponed or archived prerequisite — and each task it takes off the frontier.
 

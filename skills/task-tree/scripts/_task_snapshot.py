@@ -75,8 +75,12 @@ def task_inputs(graph, path, states, unavailable=None):
     exists = {e.path.logical: e.exists for e in graph.external_inputs}
     rows = {}
     for edge in deps.inputs(path):
-        row = {"file": edge["via"], "producer": f"{edge['from'] or '.'}#{edge['producer']}",
-               "consumer": f"{edge['to'] or '.'}#{edge['consumer']}"}
+        key = edge["via"], f"{edge['from'] or '.'}#{edge['producer']}"
+        consumer = f"{edge['to'] or '.'}#{edge['consumer']}"
+        if key in rows:
+            rows[key]["consumers"] = sorted({*rows[key]["consumers"], consumer})
+            continue
+        row = {"file": key[0], "producer": key[1], "consumers": [consumer]}
         if edge["from"] in deps.archived:
             missing = not exists.get(edge["via"], True)
             row.update(state="missing" if missing else "saved",
@@ -87,7 +91,7 @@ def task_inputs(graph, path, states, unavailable=None):
             row.update(state=entry.status if entry else "unknown",
                        reason=entry.reason if entry else (unavailable or "producer state unavailable"),
                        build=f"superra repro build {edge['to'] or '.'} --upstream")
-        rows[row["file"], row["producer"], row["consumer"]] = row
+        rows[key] = row
     return [rows[k] for k in sorted(rows)]
 
 
