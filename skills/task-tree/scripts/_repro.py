@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from _task_io import VALID_STATUSES, Task, parse_body_sections, walk_plan
-from _task_dependencies import Dependencies, archived_paths, compose, cycle_path
+from _task_dependencies import Dependencies, archived_paths, compose, cycle_path, within
 from _task_validate import Finding
 
 
@@ -545,6 +545,9 @@ class Graph:
     findings: list[Finding] = field(default_factory=list)
     dependencies: Dependencies | None = None
     archived_steps: list[Step] = field(default_factory=list)
+    # Task path -> outs of its steps that failed to register; None when its
+    # whole section failed, so what it produces is unknown.
+    unregistered: dict[str, list[PathRef] | None] = field(default_factory=dict)
 
     def step(self, name: str) -> Step | None:
         for step in self.steps:
@@ -1168,6 +1171,7 @@ def build_graph(
             document = parse_yaml_subset(extract_repro_block(section))
         except YamlSubsetError as exc:
             _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
+            graph.unregistered[task.path] = None
             continue
         if document is None:
             document = {}
@@ -1175,6 +1179,7 @@ def build_graph(
             _finding(
                 task.path, "error", f"## {REPRO_SECTION}: the block must be a mapping"
             )
+            graph.unregistered[task.path] = None
             continue
         for key in document:
             if key not in SECTION_KEYS:
@@ -1189,6 +1194,7 @@ def build_graph(
         raw_steps = document.get("steps") or []
         if not isinstance(raw_steps, list):
             _finding(task.path, "error", f"## {REPRO_SECTION}: 'steps' must be a list")
+            graph.unregistered[task.path] = None
             continue
         for raw_step in raw_steps:
             try:
@@ -1202,16 +1208,19 @@ def build_graph(
                 )
             except _StepError as exc:
                 _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
+                _unregister(graph, task.path, _raw_outs(raw_step, graph.config.variables))
                 continue
             if task.path not in archived:
                 owner = step_names.get(step.name)
                 if owner is not None:
                     _finding(task.path, "error", f"step name {step.name!r} is already used by task "
                              f"{owner or '(root)'}; active step names are unique across the tree")
+                    _unregister(graph, task.path, [o.path for o in step.outs])
                     continue
                 step_names[step.name] = task.path
             graph.steps.append(step)
 
+    graph.unregistered = {p: outs for p, outs in graph.unregistered.items() if p not in archived}
     graph.archived_steps = [s for s in graph.steps if s.task_path in archived]
     graph.steps = [s for s in graph.steps if s.task_path not in archived]
     # Diagnostic identities keep archived name collisions out of active lookup.
@@ -1239,6 +1248,64 @@ def build_graph(
     graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
     graph.dependencies.order_tree()
     return graph
+
+
+def _unregister(graph: Graph, task_path: str, outs: list[PathRef]) -> None:
+    if graph.unregistered.get(task_path, []) is not None:
+        graph.unregistered.setdefault(task_path, []).extend(outs)
+
+
+def _raw_outs(raw: Any, variables: dict[str, str]) -> list[PathRef]:
+    """Outs a step that failed to build still names, read leniently."""
+    entries = raw.get("outs") if isinstance(raw, dict) else None
+    refs = []
+    for entry in entries if isinstance(entries, list) else [entries] if entries else []:
+        path = entry.get("path") if isinstance(entry, dict) else entry
+        if isinstance(path, str) and path.strip():
+            refs.append(_path_ref(path, variables)[0])
+    return refs
+
+
+def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]]:
+    """Errors that touch these steps, and notes on inputs the graph cannot vouch for.
+
+    An error touches a step when it sits on the step's owning task, is a step
+    cycle through it, is project-wide configuration (not one variable: a step
+    using a broken variable fails on its own task), or leaves unregistered a
+    step producing a file it reads. *tasks* adds target task subtrees, so a
+    target whose steps failed still refuses. `depends_on` errors never touch builds.
+    """
+    names = set(names)
+    steps = [graph.step(n) for n in names if graph.step(n) is not None]
+    owners = {s.task_path for s in steps} | set(tasks)
+    in_cycle = bool(names & set(cycle_path([(a, b) for a, b, _ in graph.step_edges]) or ()))
+    errors = []
+    for f in graph.findings:
+        if f.severity != "error" or f.category != CATEGORY:
+            continue
+        if f.message.startswith("step cycle"):
+            touches = in_cycle
+        elif not f.task_path and f.message.startswith(f"{CONFIG_FILENAME}: variable "):
+            touches = False
+        else:
+            touches = not f.task_path or f.task_path in owners or any(within(f.task_path, t) for t in tasks)
+        if touches:
+            errors.append(f)
+    notes = []
+    for task_path, outs in sorted(graph.unregistered.items()):
+        if outs is None:
+            if any(names & set(e.consumers) for e in graph.external_inputs):
+                notes.append(f"task {task_path or '(root)'}: ## {REPRO_SECTION} did not parse, so none of "
+                             "its files is registered; an external input of this selection may be one of them")
+            continue
+        for step in steps:
+            for dep in step.deps:
+                if any(dep.logical == o.logical or dep.resolved == o.resolved
+                       or dep.resolved.startswith(o.resolved + "/") for o in outs):
+                    errors.append(Finding(task_path=step.task_path, category=CATEGORY, severity="error",
+                        message=f"step {step.name!r} reads {dep.logical}, which task {task_path or '(root)'} "
+                                "declares in a step that failed to register"))
+    return errors, notes
 
 
 def _iter_tasks(task: Task) -> list[Task]:

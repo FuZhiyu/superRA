@@ -51,13 +51,15 @@ def read(root, path):
 def test_file_edge_informs_but_never_gates_readiness(tmp_path):
     root = tmp_path / "superRA"
     task(root, "z-source", steps=[("source", [], ["data.txt"])])
-    task(root, "a-consumer", steps=[("consumer", ["data.txt"], ["result.txt"])])
+    task(root, "a-consumer", steps=[("consumer", ["data.txt"], ["result.txt"]),
+                                    ("second", ["data.txt"], ["second.txt"])])
     rows = frontier(root)
     assert set(rows) == {"a-consumer", "z-source"}
     [item] = rows["a-consumer"]["inputs"]
     assert item["file"] == "data.txt" and item["producer"] == "z-source#source"
     assert (item["state"], item["reason"]) == ("missing", "never built")
     assert item["build"] == "superra repro build a-consumer --upstream"
+    assert item["consumers"] == ["a-consumer#consumer", "a-consumer#second"]
     human = run(root, "task", "frontier").stdout
     assert ("input data.txt from z-source#source: missing (never built) — not blocking; "
             "rebuild before relying on it: superra repro build a-consumer --upstream") in human
@@ -82,7 +84,7 @@ def test_unlink_only_removes_explicit_evidence_and_names_the_file(tmp_path):
     assert "b reads a.txt from a, a file edge that orders builds but never gates starting work" in again.stderr
 
 
-def test_depends_on_cycle_blocks_planning_reads_and_builds(tmp_path):
+def test_depends_on_cycle_blocks_planning_but_not_builds(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", deps=["b"], steps=[("a", [], ["a.txt"])])
     task(root, "b", deps=["a"])
@@ -93,8 +95,17 @@ def test_depends_on_cycle_blocks_planning_reads_and_builds(tmp_path):
     assert run(root, "task", "frontier", "--json").returncode == 1
     scoped = run(root, "task", "dag", "a", "--json")
     assert scoped.returncode == 1 and json.loads(scoped.stdout)["valid"] is False
-    built = run(root, "repro", "build", ".#a", "--dry-run")
-    assert built.returncode == 1 and "cycle" in built.stderr
+    assert run(root, "repro", "build", "a#a", "--dry-run").returncode == 0
+
+
+def test_read_explains_not_ready_without_blockers(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", deps=["missing"])
+    task(root, "b")
+    readiness = read(root, "b")["readiness"]
+    assert readiness["ready"] is False and readiness["blockers"] == []
+    assert readiness["reason"] == "depends_on graph is invalid: depends_on 'missing' does not resolve to any sibling task"
+    assert "Not ready: depends_on graph is invalid" in run(root, "task", "read", "b").stdout
 
 
 def test_step_cycle_blocks_builds_but_not_planning(tmp_path):
@@ -161,6 +172,8 @@ def test_child_stays_ready_when_parent_setup_goes_stale(tmp_path):
     assert {s.name: spec_hash(s) for s in graph(root).steps if s.name in before} == before
     assert run(root, "repro", "build", ".#setup").returncode == 0
     assert frontier(root)["child"]["inputs"] == []
+    human = run(root, "task", "read", "child").stdout
+    assert "Inputs Not Fresh" not in human and "1 input(s) fresh" in human
     (tmp_path / "setup.sh").write_text("printf changed > setup.txt\n")
     [item] = frontier(root)["child"]["inputs"]
     assert (item["file"], item["producer"], item["state"]) == ("setup.txt", ".#setup", "stale")
@@ -197,7 +210,7 @@ def test_archived_producer_with_missing_output_is_reported(tmp_path):
 def test_unset_variable_blocks_only_the_builds(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", steps=[("a", [], ["${OUT}/a.txt"])])
-    task(root, "b", steps=[("b", [], ["b.txt"])])
+    task(root, "b", steps=[("b", [], ["b.txt"], "printf b > b.txt")])
     (root / "config.yaml").write_text("reproduction:\n  vars:\n    OUT:\n      env: NOPE_UNSET_VAR\n")
     assert set(frontier(root)) == {"a", "b"}
     assert "reproduction error" in run(root, "task", "frontier").stderr
@@ -206,8 +219,49 @@ def test_unset_variable_blocks_only_the_builds(tmp_path):
         result = run(root, *args)
         assert result.returncode == 0, (args, result.stderr)
     status = run(root, "repro", "status", "b")
-    assert status.returncode == 1 and "graph error(s)" in status.stdout
-    assert run(root, "repro", "build", "b").returncode == 1
+    assert "graph error(s)" in status.stdout
+    assert run(root, "repro", "build", "b").returncode == 0
+    broken = run(root, "repro", "build", "a")
+    assert broken.returncode == 1 and "unknown variable ${OUT}" in broken.stderr
+
+
+@pytest.mark.parametrize("error", ["variable", "section", "cycle", "duplicate"])
+def test_an_error_blocks_only_the_builds_it_touches(tmp_path, error):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    task(root, "c", steps=[("c", [], ["c.txt"])])
+    if error == "variable":
+        task(root, "c", steps=[("c", [], ["${OUT}/c.txt"])])
+        (root / "config.yaml").write_text("reproduction:\n  vars:\n    OUT:\n      env: NOPE_UNSET_VAR\n")
+    elif error == "section":
+        (root / "c/task.md").write_text((root / "c/task.md").read_text().replace("steps:", "steps: [unclosed"))
+    elif error == "cycle":
+        task(root, "c", steps=[("x", ["y.txt"], ["x.txt"]), ("y", ["x.txt"], ["y.txt"])])
+    else:
+        task(root, "b", steps=[("c", [], ["b.txt"])])
+    assert any(f.severity == "error" for f in graph(root).findings)
+    built = run(root, "repro", "build", "a")
+    assert built.returncode == 0, built.stderr
+    assert run(root, "repro", "status", "a").returncode == 0
+    assert run(root, "repro", "build", "c").returncode == 1
+
+
+def test_a_file_from_a_failed_declaration_is_never_used_silently(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "p", steps=[("p", [], ["p.txt"])])
+    (root / "p/task.md").write_text((root / "p/task.md").read_text().replace("cmd: echo p", "cmd: echo p\n    bogus: 1"))
+    task(root, "q", steps=[("q", ["p.txt"], ["q.txt"], "cat p.txt > q.txt")])
+    (tmp_path / "p.txt").write_text("stale")
+    built = run(root, "repro", "build", "q")
+    assert built.returncode == 1
+    assert "step 'q' reads p.txt, which task p declares in a step that failed to register" in built.stderr
+    task(root, "r")
+    (root / "r/task.md").write_text((root / "r/task.md").read_text() + "\n## Reproduction\n\n```yaml\nsteps: [unclosed\n```\n")
+    task(root, "s", steps=[("s", ["raw.txt"], ["s.txt"], "cat raw.txt > s.txt")])
+    (tmp_path / "raw.txt").write_text("raw")
+    built = run(root, "repro", "build", "s")
+    assert built.returncode == 0, built.stderr
+    assert "Warning: task r: ## Reproduction did not parse" in built.stderr
 
 
 def test_adding_a_subtask_names_the_tasks_it_blocks(tmp_path):
