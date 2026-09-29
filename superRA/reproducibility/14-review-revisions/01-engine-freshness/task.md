@@ -1,6 +1,6 @@
 ---
 title: "Engine: superRA Runs Builds Itself, With No False Fresh and No Needless Reruns"
-status: revise
+status: approved
 depends_on: []
 ---
 
@@ -81,34 +81,36 @@ Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../1
 
 ### Verification
 
-- **Suite.** The standard contributor command in [CLAUDE.md](../../../../CLAUDE.md), with no pytask: 1,296 passed, 0 skipped. The pytask baseline before the change was 1,279 passed.
-- **Python 3.10.** The six `test_repro*` modules pass (197 tests); the two in-process legacy-lock tests skip there, since the CLI re-execs under `uv` for a legacy `pytask.lock`.
+- **Suite.** The standard contributor command in [CLAUDE.md](../../../../CLAUDE.md), with no pytask: 1,269 passed; the 10 skips need playwright, which the command does not install.
+- **Python 3.10.** The six `test_repro*` modules pass (200 tests); the two in-process legacy-lock tests skip there, since the CLI re-execs under `uv` for a legacy `pytask.lock`.
 - **Migration fixture.** A scratch project was built by the pytask engine at `7d5fa992`: a chain with a sidecar-tracked out, a check step, an accepted step, and a build record.
   - The new engine's `status . --json` matched the old one step for step (status, reason, local status, acceptance id), both before and after its first build.
   - That first build executed nothing, wrote `repro-lock.json` with every entry's `built_on`, printed the `git rm` hint, and deleted neither legacy file.
   - `explain` output was identical except the footer now reads "the lock at N revision(s)".
   - A targeted `build 02-est 03-report` over the sidecar-tracked saved input reran nothing.
-- **This repo.** The new engine built the ten checks these edits staled, under `-j 3`, including the dashboard browser interaction check; the committed [repro-lock.json](../../../../repro-lock.json) is its output. `pytask.lock` and `repro-builds.json` stay until someone runs `git rm`.
+- **This repo.** The new engine rebuilt the eleven check steps these edits staled, under `-j 4`; the committed [repro-lock.json](../../../../repro-lock.json) is its output. `dashboard-dag-design-interaction-check` failed once under that load (a toolbar control's bounding box read as none) and passed on a solo rerun. Commit 4adac714 removed `pytask.lock` and `repro-builds.json`.
+  - Left stale: the three build steps (`dashboard-dag-design-browser`, `dashboard-navigation-heterogeneity`, `task-scoped-builds-pilot`), since rerunning them rewrites committed browser artifacts and timing measurements.
 - **Speed on this repo (14 steps).** `status .` takes 0.16–0.20 s, and `build . --dry-run` 0.40 s, against ~0.8 s under pytask. The [pilot's](../../11-scoped-verification/task-scoped-builds/attachments/pilot-results.json) warm no-op build median fell from 0.394 s to 0.074 s.
 
 ### What changed
 
 - **Build loop.** Each step is decided by `compute_status` over the whole selection; `compute_status` gained a `scope` argument, so a producer anywhere in the selection is never a saved input. Steps run in dependency order on a thread pool, and a failed step skips its descendants.
   - A missing input fails the step before its command runs.
-  - Ctrl-C kills each running step's process group and records the step failed; `build` exits 1.
+  - Ctrl-C, SIGTERM, or SIGHUP kills each running step's process group and records the step failed; `build` exits 1. A step still queued is cancelled and recorded `skipped`, so its run record and acceptance stay as they were.
   - The run and skip semantics of the hooks carry over, including supersede on attempt and sticky `forced` retries.
-- **Lock.** Lock writing lives in [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py): `write_lock_entry` and `prune_lock` run under `RECORD_LOCK`, which also serializes `supersede`. `read_lock` falls back to the legacy pair converted in memory. `LockEntry` gained `built_on`, excluded from equality, so acceptance records and receipts validate unchanged.
+- **Lock.** Lock writing lives in [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py): `write_lock_entry` and `prune_lock` run under `RECORD_LOCK`, which also serializes `supersede`. `read_lock` falls back to the legacy pair, converted in memory once per process. `LockEntry` gained `built_on`, excluded from equality, so acceptance records and receipts validate unchanged. Records are written with mode `0666 & ~umask`, not `mkstemp`'s 0600.
 - **Build record.** `explain` reads `built_on` from the lock at the row's revision ([_repro_builds.py](../../../../skills/task-tree/scripts/_repro_builds.py)).
   - `env_deps` hashes come from the entry's `deps`, so `explain` still shows them.
   - The "record does not match its lock entry" case is gone with `lock_id`.
-- **Lock history.** The index behind `explain` reads both lock files per revision; its `lock-index/<sha>.json` cache is now version 3.
-- **Dashboard.** The watcher re-arms after a lock change, so it follows the file across rename writes.
+- **Lock history.** The index behind `explain` reads both lock files per revision; its `lock-index/<sha>.json` cache is now version 3. A legacy revision that Python 3.10 cannot parse is not cached.
+- **Dashboard.** The watcher re-arms after a lock change, so it follows the file across rename writes. The reopened watch ticks once and compares the lock with what the last refresh read, so a write that lands while it reopens is not lost.
 - **Freshness fixes.**
   - `tree_hash` follows symlinks with a cycle guard; a broken link or an unreadable file makes the directory unreadable (reported as `missing`).
   - A sidecar saved input counts as verified when its bytes match the producer's recorded output or the digest its sidecar names. A skip records those digests into the consumer's receipt.
-  - A scoped `status` exits 3 and names the producers behind the selection that are not fresh.
+  - A scoped `status` exits 3 and names the producers behind the selection that are not fresh; `--json` carries them as `behind`. `status .` drops the "(selected steps only)" label.
+  - A check that passed elsewhere but failed here reads "forced rerun required" only when the failed run was forced; otherwise "rerun required".
 - **`env_probe` removed** from the config keys, the lock, and `explain`; legacy probe fields are ignored on read.
-- **Tests.** [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) (17 tests) covers every "New tests" item plus the fixes, the legacy read, and `explain` across the switch; `engine-freshness-check` below runs it.
+- **Tests.** [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) (19 test functions) covers every "New tests" item plus the fixes, the legacy read, `explain` across the switch, and interruption by SIGINT, SIGTERM, and SIGHUP with queued steps; `engine-freshness-check` below runs it. The lock-write race of the dashboard watcher is pinned in [test_dashboard.py](../../../../skills/task-tree/scripts/test_dashboard.py).
 - **Docs and steps.**
   - The mechanics docs name the new engine, the lock, and the exit codes; commands.md labels the dry-run total an upper bound.
   - Every registered step command and companion that installed pytask or depended on `_repro_hooks.py` no longer does, including `reviewed-baseline-regression-check` and `diagnosis-scenario-check`.
@@ -125,33 +127,6 @@ Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../1
   - Two check-elsewhere reasons in `test_repro_provenance.py` now include `on <platform>`, because every lock entry carries `built_on`.
   - `test_repro_builds.py` follows the folded record beyond lines 19-23: the probe tests and the `lock_id` mismatch case are gone, the `explain` environment test compares platforms, and an identical-rebuild check is new.
 - **Minor findings.** The dry-run upper bound is now documented. The rest are untouched: exit 1 on a fresh clone until checks run, the lingering invalid acceptance, and untracked Python imports.
-
-## Review Notes
-
-Tier: thorough. Focus: correctness — false `fresh`, needless reruns, `status`/`build` agreement, legacy-lock migration, `-j` lock writes and Ctrl-C, acceptance and receipt compatibility. Evidence: the full suite (1,254 passed; the 10 skips are playwright-only), a scratch project built by the pytask engine at `087aa901^` and migrated, and scripted interrupt fixtures in session scratch.
-
-1. **[BLOCKING] Ctrl-C drops the committed acceptance of steps that never started.** On Ctrl-C, the handler waits on every submitted future ([repro_run.py:290-295](../../../../skills/task-tree/scripts/repro_run.py#L290-L295)), including futures queued behind the pool's workers. Each queued step then runs `_attempt`: `_run_step` calls `supersede` ([repro_run.py:148](../../../../skills/task-tree/scripts/repro_run.py#L148)) and writes a `running` record before it checks `build.stopping` ([repro_run.py:169-171](../../../../skills/task-tree/scripts/repro_run.py#L169-L171)).
-   - Reproduced on three independent accepted steps: `build . --force -j 1`, then SIGINT while `x1` runs. `repro-acceptance.json` went from `['x1', 'x2', 'x3']` to `[]`. `x2` and `x3` never ran, yet both now carry `failed` records ("interrupted before it started", `forced: true`) and read `failed`, so they must be rerun.
-   - Without `--force`, a queued stale step never started still gets a `failed` record, and `status` points to a log from an earlier run.
-   - Fix: cancel futures that have not started (`future.cancel()`) and record them `skipped / build interrupted`. Also check `build.stopping` at the top of `_run_step`, before `supersede` and the run record. Extend the Ctrl-C test to a `-j 1` build with queued accepted steps.
-2. **[BLOCKING] SIGTERM or SIGHUP to `build` leaves the step running as an orphan.** Steps start with `start_new_session=True` ([repro_run.py:172-175](../../../../skills/task-tree/scripts/repro_run.py#L172-L175)), but only `KeyboardInterrupt` routes to `_stop` ([repro_run.py:351-356](../../../../skills/task-tree/scripts/repro_run.py#L351-L356)). The pytask engine's `subprocess.run` kept steps in the build's process group.
-   - Reproduced: SIGTERM to the process group of `bash -c "… repro_run.py build 01-x1"`, which is how a harness timeout or a closed terminal ends a command. The build exited −15. The step's `sleep 30` kept running, and the run record stayed `running`.
-   - With the mutation lock released, the next `build` force-reruns the step while the orphan still writes the same outs.
-   - Fix: install SIGTERM and SIGHUP handlers for the build that raise `KeyboardInterrupt` (or call `_stop`), and restore them afterwards. Add a SIGTERM case to the interrupt test.
-3. **[ADVISORY] On Python 3.10, `explain` permanently caches legacy lock revisions as empty.** Without `tomllib`, `_parse_revision` returns no steps for a `pytask.lock` revision ([_repro_provenance.py:173](../../../../skills/task-tree/scripts/_repro_provenance.py#L173)). `_load` writes that result to `lock-index/<sha>.json` at version 3 ([_repro_provenance.py:249](../../../../skills/task-tree/scripts/_repro_provenance.py#L249)). No re-exec happens, because the working tree already holds `repro-lock.json`.
-   - Reproduced: after a Python 3.10.9 `explain`, the pre-switch revision's cache file held `{'lock': {}, 'version': 3}`. A later Python 3.12 `explain` kept reading it, until the file was deleted by hand.
-   - Fix: do not cache a revision whose legacy lock could not be parsed, or re-exec when the history holds `pytask.lock`.
-4. **[ADVISORY] `status --json` exits 3 but does not name the producers.** The producers behind the selection that are not fresh are printed only in text mode ([repro_run.py:703-711](../../../../skills/task-tree/scripts/repro_run.py#L703-L711)), so a JSON consumer gets exit 3 and no reason. An additive key, such as `behind`, would carry them.
-5. **[ADVISORY] `repro-lock.json` is written with mode 0600.** `atomic_json` renames a `mkstemp` file into place ([_repro_acceptance.py:30-37](../../../../skills/task-tree/scripts/_repro_acceptance.py#L30-L37)). The scratch fixture's `repro-lock.json` was `-rw-------`, against `-rw-r--r--` for the `pytask.lock` it replaced, which matters on a shared machine. `repro-acceptance.json` already had this mode.
-6. **[ADVISORY] The dashboard can miss a lock write while its watcher re-arms (inferred).** After a lock change, the watcher breaks and `aclose`s the watch ([plan_dashboard.py:616](../../../../skills/task-tree/scripts/plan_dashboard.py#L616)), which discards events buffered during the 0.2 s sleep and the rebuild. It then opens a new watch. A `-j` build's last per-step lock write can land in that window, and the dashboard then shows the previous state until the next change. Not reproduced.
-7. **[ADVISORY] `engine-freshness-check` misses two modules the test imports.** Its `deps` omit `task_query.py` (imported by [task_read.py:26](../../../../skills/task-tree/scripts/task_read.py#L26)) and `dashboard_artifact_workflow.py` (imported by [cli.py:52](../../../../skills/task-tree/scripts/cli.py#L52)). An edit to either leaves the check fresh.
-
-Orchestrator adjudication: 1 and 2 accepted; advisories 3, 4, 5, and 7 accepted as fix-now; 6 fixed if a test reproduces it, otherwise recorded. Added from the real-project migration check (ElasticityBound-Local, 111 steps, 35 accepted; step states, acceptance, and reasons identical across engines; first build executed nothing):
-
-8. **[ADVISORY] Before the first new build, each accepted step re-parses the legacy `pytask.lock`.** `current_state` calls `read_lock` per acceptance record, and `convert_legacy` parses the TOML each time: 72 parses and 1.5 s of `status`'s 2.3 s, against 1.4 s on the old engine. Convert once per process.
-9. **[ADVISORY] `status .` labels the whole tree "(selected steps only)".** Print the label only for a narrower selection.
-10. **[ADVISORY] From 10's review:** a check that failed locally without `--force` reads "forced rerun required; last run failed"; drop "forced" when the run was not forced. 10's Objective says a spec edit makes a check passed elsewhere "stale"; the code correctly reports `missing` (no local stamp), so correct the Objective's wording.
-11. **[ADVISORY] Results say this repo keeps `pytask.lock` and `repro-builds.json` until `git rm`;** commit 4adac714 removed them. Update the line.
 
 ## Details
 
@@ -202,7 +177,9 @@ steps:
       - skills/task-tree/scripts/_task_validate.py
       - skills/task-tree/scripts/_worktree_discovery.py
       - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
       - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_query.py
       - skills/task-tree/scripts/task_read.py
       - skills/task-tree/scripts/conftest.py
       - skills/task-tree/scripts/test_repro_runner.py

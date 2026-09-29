@@ -482,6 +482,9 @@ def convert_legacy(lock_text: str | None, builds_text: str | None = None) -> dic
     return document
 
 
+_LEGACY_DOCUMENTS: dict[tuple, dict] = {}
+
+
 def read_lock_document(path: Path) -> dict:
     """The lock at *path* (``repro-lock.json``), or the legacy pair beside it, as one document."""
     legacy = path.parent / LEGACY_LOCK_FILENAME
@@ -490,8 +493,13 @@ def read_lock_document(path: Path) -> dict:
             return parse_lock(path.read_text(encoding="utf-8"))
         if legacy.is_file():
             builds = path.parent / LEGACY_BUILDS_FILENAME
-            return convert_legacy(legacy.read_text(encoding="utf-8"),
-                                  builds.read_text(encoding="utf-8") if builds.is_file() else None)
+            key = (legacy.read_text(encoding="utf-8"),
+                   builds.read_text(encoding="utf-8") if builds.is_file() else None)
+            if key not in _LEGACY_DOCUMENTS:  # one TOML parse per process, not one per reader
+                _LEGACY_DOCUMENTS.clear()
+                _LEGACY_DOCUMENTS[key] = convert_legacy(*key)
+            document = _LEGACY_DOCUMENTS[key]
+            return dict(document, steps=dict(document["steps"]))
     except (OSError, ValueError) as exc:
         source = path if path.is_file() else legacy
         raise ReproStateError(f"{source} could not be read: {exc}") from None
@@ -781,7 +789,7 @@ def _classify(
         result.status != "fresh" or record.get("forced", False) or elsewhere
     ):
         if result.status == "fresh":
-            result.reason = "forced rerun required"
+            result.reason = "forced rerun required" if record.get("forced", False) else "rerun required"
         result.status = "failed"
         # Keep whatever moved since that run — a dep edited after the failure is
         # the trigger a rerun answers to, and the log is where the last one died.
@@ -1028,11 +1036,11 @@ def format_status(report: StatusReport) -> str:
         if any(e.status == name for e in entries)
     )
     lines.append("")
-    scope = (
-        f"for {', '.join(report.targets)}"
-        if report.targets else "for every registered step"
-    )
-    scope += " (including producer ancestors)" if report.upstream else " (selected steps only)"
+    if {s.name for s in report.graph.steps} <= {e.step.name for e in entries}:
+        scope = "for every registered step"
+    else:
+        scope = f"for {', '.join(report.targets)}"
+        scope += " (including producer ancestors)" if report.upstream else " (selected steps only)"
     lines.append(f"{len(entries)} step(s) {scope}: {counts}")
     if report.boundary_inputs:
         lines.append("Saved inputs from outside scope (upstream freshness not verified):")
