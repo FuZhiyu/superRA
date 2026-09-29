@@ -49,6 +49,9 @@ def test_the_lock_is_sorted_one_key_per_line_and_round_trips(project):
 
     _write_lock_document(project.paths, read_lock_document(project.paths.lock_file))
     assert project.read("repro-lock.json") == text
+    umask = os.umask(0)
+    os.umask(umask)
+    assert project.paths.lock_file.stat().st_mode & 0o777 == 0o666 & ~umask  # not mkstemp's 0600
 
 
 def test_status_and_build_agree_when_the_lock_is_deleted(project):
@@ -150,17 +153,19 @@ def test_dry_run_writes_no_lock_record_receipt_or_acceptance(project):
     assert sorted(p.name for p in project.paths.runs_dir.iterdir()) == ["build-a.json", "build-b.json", "check-b.json"]
 
 
-def test_ctrl_c_stops_running_steps_and_records_them_failed(project):
-    project.write("Code/x.sh", "echo $$ > pid.txt\nsleep 30\n")
+def _interrupt_build(project, sig, *argv):
+    """Start `build` in its own process group, signal the group once a step runs, and wait."""
     command = [sys.executable, str(SCRIPTS / "repro_run.py"), "--plan-root", str(project.plan_root),
-               "build", "03-x"]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               "build", *argv]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                               start_new_session=True)
     deadline = time.time() + 20
     while not (project.root / "pid.txt").exists() and time.time() < deadline:
         time.sleep(0.05)
     assert (project.root / "pid.txt").exists()
+    time.sleep(0.2)  # the step's pid lands before the build finishes registering it
     started = time.time()
-    process.send_signal(signal.SIGINT)
+    os.killpg(process.pid, sig)  # how a closed terminal or a harness timeout ends a command
     _, err = process.communicate(timeout=15)
     assert process.returncode == 1
     assert time.time() - started < 10
@@ -168,8 +173,27 @@ def test_ctrl_c_stops_running_steps_and_records_them_failed(project):
     step_pid = int(project.read("pid.txt"))
     with pytest.raises(ProcessLookupError):
         os.kill(step_pid, 0)
+
+
+@pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGHUP])
+def test_an_interrupt_stops_running_steps_and_records_them_failed(project, sig):
+    project.write("Code/x.sh", "echo $$ > pid.txt\nsleep 30\n")
+    _interrupt_build(project, sig, "03-x")
     assert json.loads(project.paths.run_file("build-x").read_text())["outcome"] == "failed"
     assert project.states()["build-x"] == "failed"
+
+
+def test_an_interrupt_leaves_queued_steps_and_their_acceptance_untouched(project):
+    assert project.run("build", ".") == 0
+    project.write("Code/x.sh", project.read("Code/x.sh") + "# harmless\n")
+    review(project, ("03-x#build-x",))
+    assert project.states()["build-x"] == "fresh"
+    record = project.paths.run_file("build-x").read_bytes()
+    project.write("Code/a.sh", "echo $$ > pid.txt\nsleep 30\n")
+    _interrupt_build(project, signal.SIGINT, ".", "--force", "-j", "1")  # build-x waits behind build-a
+    assert project.paths.run_file("build-x").read_bytes() == record
+    assert project.states()["build-x"] == "fresh"  # the acceptance still stands
+    assert project.states()["build-a"] == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -246,9 +270,14 @@ def test_scoped_status_exits_3_for_a_fresh_selection_behind_a_producer_that_is_n
     assert project.run("status", "02-b") == 3
     assert "1 producer(s) behind the selection not fresh: build-a (stale)" in capsys.readouterr().out
     assert project.run("status", "02-b", "--json") == 3
+    assert json.loads(capsys.readouterr().out)["behind"] == [{"name": "build-a", "task": "01-a", "status": "stale"}]
     assert project.run("status", "02-b", "--upstream") == 1
     assert project.run("status", "01-a") == 1
     assert project.run("status", "02-b", "--no-such-flag") == 2
+    capsys.readouterr()
+    project.run("status", ".")
+    out = capsys.readouterr().out
+    assert "for every registered step:" in out and "selected steps only" not in out
     (project.root / "output/a.txt").unlink()
     assert project.run("status", "02-b#check-b") == 3  # build-a missing; build-b still fresh
 
@@ -282,8 +311,27 @@ def test_a_check_that_failed_here_outweighs_its_pass_elsewhere(project, monkeypa
     monkeypatch.setenv("CHECK_OK", "no")  # this machine disagrees
     assert project.run("build", "02-b#check-b", "--force") == 1
     check = project.status(*CHAIN).entry("check-b")
-    assert check.status == "failed" and "last run failed" in check.reason
+    assert check.status == "failed" and check.reason.startswith("forced rerun required; last run failed")
     assert project.run("status", *CHAIN) == 1
+
+
+def test_a_check_that_failed_here_unforced_reads_rerun_required(project, monkeypatch):
+    project.write("Code/check.sh", 'test "$CHECK_OK" = yes\n')
+    project.write("superRA/02-b/task.md", project.read("superRA/02-b/task.md").replace(
+        "cmd: test -s output/b.txt", "cmd: sh Code/check.sh"))
+    monkeypatch.setenv("CHECK_OK", "yes")
+    assert project.run("build", *CHAIN) == 0
+    elsewhere = read_lock_document(project.paths.lock_file)  # the pass another machine committed
+    for stamp in project.paths.stamps_dir.iterdir():
+        stamp.unlink()
+    local = read_lock_document(project.paths.lock_file)
+    del local["steps"]["check-b"]
+    _write_lock_document(project.paths, local)
+    monkeypatch.setenv("CHECK_OK", "no")
+    assert project.run("build", "02-b#check-b") == 1  # never built here: runs unforced and fails
+    _write_lock_document(project.paths, elsewhere)
+    check = project.status(*CHAIN).entry("check-b")
+    assert check.status == "failed" and check.reason.startswith("rerun required; last run failed")
 
 
 # ---------------------------------------------------------------------------
@@ -308,12 +356,18 @@ def _as_legacy(project, *, record=True):
 
 
 @needs_tomllib
-def test_a_legacy_lock_reads_unchanged_and_the_first_build_migrates_it(project, capsys):
+def test_a_legacy_lock_reads_unchanged_and_the_first_build_migrates_it(project, capsys, monkeypatch):
     assert project.run("build", *CHAIN) == 0
     expected = read_lock(project.paths.lock_file)
     _as_legacy(project)
+    import _repro_state
+    parses = []
+    real = _repro_state.convert_legacy
+    monkeypatch.setattr(_repro_state, "convert_legacy", lambda *a: parses.append(1) or real(*a))
+    monkeypatch.setattr(_repro_state, "_LEGACY_DOCUMENTS", {})
     assert read_lock(project.paths.lock_file) == expected
     assert read_lock(project.paths.lock_file)["build-a"].built_on == {"platform": platform_name()}
+    assert len(parses) == 1  # converted once per process, not once per reader
     assert project.status(*CHAIN).ok
     before = project.run_times()
     capsys.readouterr()
@@ -327,7 +381,7 @@ def test_a_legacy_lock_reads_unchanged_and_the_first_build_migrates_it(project, 
 
 
 @needs_tomllib
-def test_explain_names_lock_revisions_across_the_switch_to_repro_lock(project, capsys):
+def test_explain_names_lock_revisions_across_the_switch_to_repro_lock(project, capsys, monkeypatch):
     project.write(".gitignore", "output/\n.superra-repro/\n")
     git(project.root, "init", "-q")
     git(project.root, "add", "-A")
@@ -343,6 +397,11 @@ def test_explain_names_lock_revisions_across_the_switch_to_repro_lock(project, c
     git(project.root, "commit", "-qam", "rebuild a on the new engine")
     rebuilt = head(project.root)
     project.write("output/a.txt", "hello\n")  # the old bytes come back, as a lagging sync would
+    import _repro_provenance
+    with monkeypatch.context() as patch:  # Python 3.10: no tomllib to read the legacy revision
+        patch.setattr(_repro_provenance, "tomllib", None)
+        explain(project, capsys, "01-a#build-a")
+    assert len(list((project.paths.state_dir / "lock-index").iterdir())) == 1  # only the readable revision
     out = explain(project, capsys, "01-a#build-a")
     assert f"recorded lock {rebuilt} " in out
     assert f"current lock {legacy} " in out

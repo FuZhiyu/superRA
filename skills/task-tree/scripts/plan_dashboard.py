@@ -594,25 +594,42 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     # and re-enters with the lock in the set. Once the lock is watched the tick
     # is off and the loop is event-driven again. A build replaces the lock by
     # rename, so a change to it also re-enters: a watch on the old file would
-    # not see the next build on an inode-based backend.
+    # not see the next build on an inode-based backend. Closing that watch drops
+    # a write that lands before the next one opens, so the reopened watch ticks
+    # once and compares the lock with what the last refresh read.
     lock_file = Path(state.project_root) / LOCK_FILENAME
 
+    def _lock_signature():
+        try:
+            stat = lock_file.stat()
+        except OSError:
+            return None
+        return (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+
+    refreshed = None  # the lock's signature when a lock change last re-armed the watch
     while not stop_event.is_set():
         watching_lock = lock_file.is_file()
         watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
         rearm = False
         watcher = watchfiles.awatch(
-            *watch_paths, stop_event=stop_event, yield_on_timeout=not watching_lock
+            *watch_paths, stop_event=stop_event,
+            yield_on_timeout=not watching_lock or refreshed is not None,
         )
         try:
             async for changes in watcher:
+                if refreshed is not None:
+                    if _lock_signature() != refreshed:
+                        changes = set(changes) | {(watchfiles.Change.modified, str(lock_file))}
+                    refreshed = None
                 if changes:
                     # watchfiles already debounces (default 1600ms); the sleep
                     # adds a short extra window so rapid back-to-back writes
                     # coalesce.
                     await asyncio.sleep(0.2)
+                    lock_read = _lock_signature()
                     await _rebuild_and_broadcast(state, changes)
                     if watching_lock and any(Path(path).name == LOCK_FILENAME for _, path in changes):
+                        refreshed = lock_read
                         rearm = True
                         break
                 if not watching_lock and lock_file.is_file():
@@ -987,15 +1004,13 @@ def _render_node_body(task: Task, project_root: str) -> str:
     return template.render(task=task, project_root=project_root)
 
 
-def _children_graph_payload(root_task: Task, graph=None) -> dict:
+def _children_graph_payload(root_task: Task, graph) -> dict:
     """Direct-children graph for *root_task*: nodes (path, slug, title, status)
-    plus sibling dependency edges. Feeds the children dependency panel — GET
-    /api/children-graph and its matching standalone fragment — straight from
-    Task data, with no mermaid source and no client-side text parsing."""
-    children = [c for c in root_task.children
-                if graph is None or c.path not in graph.dependencies.archived]
+    plus the shared snapshot's edges between them. Feeds the children dependency
+    panel — GET /api/children-graph and its matching standalone fragment — with
+    no mermaid source and no client-side text parsing."""
+    children = [c for c in root_task.children if c.path not in graph.dependencies.archived]
     child_paths = {c.path for c in children}
-    prefix = f"{root_task.path}/" if root_task.path else ""
     nodes = [
         {
             "path": c.path,
@@ -1006,20 +1021,16 @@ def _children_graph_payload(root_task: Task, graph=None) -> dict:
         for c in children
     ]
     edges: dict[str, list[str]] = {}
-    for c in children:
-        deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
-        if deps:
-            edges[c.path] = deps
-    payload = {"children": nodes, "edges": edges}
-    if graph is not None:
-        payload["edges"] = {}
-        for edge in graph.dependencies.edges:
-            if edge["from"] in child_paths and edge["to"] in child_paths:
-                payload["edges"].setdefault(edge["to"], []).append(edge["from"])
-        payload["boundary"] = graph.dependencies.boundaries.get(root_task.path)
-        payload["valid"] = graph.dependencies.valid
-        payload["findings"] = [f.to_dict() for f in graph.findings]
-    return payload
+    for edge in graph.dependencies.edges:
+        if edge["from"] in child_paths and edge["to"] in child_paths:
+            edges.setdefault(edge["to"], []).append(edge["from"])
+    return {
+        "children": nodes,
+        "edges": edges,
+        "boundary": graph.dependencies.boundaries.get(root_task.path),
+        "valid": graph.dependencies.valid,
+        "findings": [f.to_dict() for f in graph.findings],
+    }
 
 
 def _render_summary(root_task: Task | None) -> str:

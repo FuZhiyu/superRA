@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_snapshot import preflight
+from _task_snapshot import preflight, print_edit_notes
 from _task_dependencies import task_index
 from _task_io import (
     TASK_ROOT_DIRNAME,
@@ -212,7 +212,7 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             node.path = to_status_path + old_path[len(from_status_path):]
             node.dir_path = plan_root / node.path
     try:
-        preflight(plan_root, proposed)
+        graph = preflight(plan_root, proposed)
     except ValueError as exc:
         _die(str(exc))
 
@@ -244,6 +244,7 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             print(f"  Updated status rollup in {updated} ancestor task(s)")
     if link_rewrites:
         print(f"  Rewrote relative markdown links in {len(link_rewrites)} file(s)")
+    print_edit_notes(graph)
 
 
 def main(argv: list[str] | None = None) -> None:
