@@ -165,12 +165,14 @@ def check_elsewhere_reason(paths, memo, name, entry) -> str:
 LOCK_INDEX_VERSION = 3
 
 
-def _parse_revision(lock_text, legacy_text, builds_text) -> dict:
-    """One revision's lock as {name: {deps, products, built_on}}."""
+def _parse_revision(lock_text, legacy_text, builds_text) -> dict | None:
+    """One revision's lock as {name: {deps, products, built_on}}; None when this Python cannot read it."""
     try:
         if lock_text is not None:
             document = parse_lock(lock_text)
-        elif legacy_text is not None and tomllib is not None:
+        elif legacy_text is not None:
+            if tomllib is None:
+                return None
             document = convert_legacy(legacy_text, builds_text)
         else:
             document = {'steps': {}}
@@ -212,7 +214,7 @@ class LockHistory:
         self.revs = revs[:LOCK_REV_CAP]
         self.by_sha = {r['sha']: r for r in self.revs}
         self.on_head = set((git.text('rev-list', 'HEAD') or '').split())
-        head = self._read(['HEAD'])['HEAD']
+        head = self._read(['HEAD'])['HEAD'] or {}
         for step_id, groups in head.items():
             for key in ('deps', 'products'):
                 for node, value in groups[key].items():
@@ -221,8 +223,8 @@ class LockHistory:
                         entries.append(step_id)
         self._load()
 
-    def _read(self, shas) -> dict[str, dict]:
-        """Each revision's lock, read from git in one batch."""
+    def _read(self, shas) -> dict[str, dict | None]:
+        """Each revision's lock, read from git in one batch; None for a legacy lock without tomllib."""
         names = (LOCK_FILENAME, LEGACY_LOCK_FILENAME, LEGACY_BUILDS_FILENAME)
         blobs = self.git.blobs([f'{sha}:./{name}' for sha in shas for name in names])
         text = lambda sha, name: (lambda raw: raw.decode('utf-8', 'replace') if raw is not None else None)(
@@ -242,8 +244,8 @@ class LockHistory:
             else:
                 missing.append(rev['sha'])
         for sha, parsed in self._read(missing).items():
-            entries[sha] = parsed
-            if self.paths.state_dir.is_dir():  # a revision never changes, so neither does its entry
+            entries[sha] = parsed or {}
+            if parsed is not None and self.paths.state_dir.is_dir():  # a revision never changes, so neither does its entry
                 from _repro_acceptance import atomic_json
                 try:
                     atomic_json(cache_dir / f'{sha}.json', {'version': LOCK_INDEX_VERSION, 'lock': parsed})

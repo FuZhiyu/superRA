@@ -64,6 +64,8 @@ class Dependencies:
     archived: set[str] = field(default_factory=set)
     boundaries: dict[str, dict] = field(default_factory=dict)
     edges: list[dict] = field(default_factory=list)
+    logical: list[dict] = field(default_factory=list)
+    files: list[dict] = field(default_factory=list)
     findings: list[dict] = field(default_factory=list)
     complete: bool = True
 
@@ -102,61 +104,41 @@ class Dependencies:
             ranks = {n: i for i, n in enumerate(ordered)}
             task.children.sort(key=lambda c: (ranks.get("task:" + c.path, len(ranks)), c.path))
 
-    def prerequisites(self, path):
-        """Task barriers applying to this task, including enclosing groups."""
-        return sorted({edge["from"] for edge in self.edges
-                       if within(path, edge["to"])})
+    def prerequisite_edges(self, path):
+        """`depends_on` edges gating this task, declared on it or an ancestor."""
+        return [e for e in self.logical if within(path, e["to"])]
 
-    def blockers(self, path, states, step=None):
+    def prerequisites(self, path):
+        return sorted({e["from"] for e in self.prerequisite_edges(path)})
+
+    def blockers(self, path):
         blocked = []
-        for boundary, view in self.boundaries.items():
-            node = project(path, step, boundary)
-            if node is None:
-                continue
-            for edge in view["edges"]:
-                if edge["to"] != node:
-                    continue
-                source = edge["from"]
-                internal = node.startswith("step:") and all(e["kind"] == "inferred" for e in edge["evidence"])
-                if internal:
-                    unavailable = {e["producer"]: states.get(e["producer"], "unknown")
-                                   for e in edge["evidence"] if states.get(e["producer"]) != "fresh"}
-                elif source.startswith("task:"):
-                    status = self.tasks[source[5:]].effective_status()
-                    unavailable = {source: status} if status not in SATISFIED else {}
-                else:
-                    status = states.get(source[5:], "unknown")
-                    unavailable = {source: status} if status != "fresh" else {}
-                if unavailable:
-                    blocked.append({**edge, "boundary": boundary, "states": unavailable})
+        for edge in self.prerequisite_edges(path):
+            status = self.tasks[edge["from"]].effective_status()
+            if status not in SATISFIED:
+                blocked.append({"path": edge["from"], "status": status, "declared_by": edge["to"]})
         return blocked
 
-    def ready(self, path, states, step=None):
-        return self.valid and path not in self.archived and not self.blockers(path, states, step)
+    def ready(self, path):
+        return self.valid and path not in self.archived and not self.blockers(path)
 
-    def frontier(self, states=None):
-        states = states or {}
+    def inputs(self, path):
+        """File edges into this task's steps from producers outside it."""
+        return [e for e in self.files if within(e["to"], path) and not within(e["from"], path)]
+
+    def frontier(self):
         if not self.valid:
             return []
         rows = []
         for path, task in self.tasks.items():
-            if path in self.archived or task.effective_status() == "postponed":
+            if path in self.archived or not task.is_leaf or task.status not in ACTIONABLE:
                 continue
-            if any(t.status == "postponed" and within(path, p)
-                   for p, t in self.tasks.items()):
+            if not path and task.title == "(no root task.md)":
                 continue
-            if task.is_leaf and task.status in ACTIONABLE and self.ready(path, states):
-                if not path and task.title == "(no root task.md)":
-                    continue
+            if any(t.status == "postponed" and within(path, p) for p, t in self.tasks.items()):
+                continue
+            if self.ready(path):
                 rows.append({"path": path, "title": task.title, "status": task.status})
-            if task.children:
-                own = self.boundaries.get(path, {}).get("nodes", [])
-                names = [n[5:] for n in own if n.startswith("step:")
-                         and states.get(n[5:]) != "fresh"
-                         and self.ready(path, states, n[5:])]
-                if names:
-                    rows.append({"path": path, "title": task.title, "status": task.status,
-                                 "kind": "own-work", "steps": sorted(names)})
         return rows
 
 
@@ -169,15 +151,16 @@ def project(owner, step, boundary):
     return "task:" + ((boundary + "/") if boundary else "") + tail.split("/")[0]
 
 
-def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]], *, complete: bool = True, step_labels: dict[str, str] | None = None) -> Dependencies:
-    """Project actual steps alongside direct child groups at every boundary."""
-    result = Dependencies(tasks=task_index(root), archived=archived_paths(root), complete=complete)
+def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]], *, step_labels: dict[str, str] | None = None) -> Dependencies:
+    """Gate readiness on `depends_on`; project file edges onto every boundary as a view."""
+    result = Dependencies(tasks=task_index(root), archived=archived_paths(root))
     owner = {s.name: s.task_path for s in steps}
     evidence = []
     step_labels = step_labels or {}
     for source, target, via in step_edges:
         evidence.append({"kind": "inferred", "from": owner[source], "to": owner[target],
                          "producer": step_labels.get(source, source), "consumer": step_labels.get(target, target), "via": via})
+    result.files = [e for e in evidence if e["to"] not in result.archived and e["from"] != e["to"]]
     for path, task in result.tasks.items():
         if path in result.archived:
             continue
@@ -194,11 +177,12 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
                 continue
             if source == path:
                 result.findings.append(dict(task_path=path, category="dependency", severity="error",
-                    message=f"dependency cycle: task:{path} -> task:{path}; {path}/task.md depends_on: {dep}"))
+                    message=f"depends_on cycle: {path} -> {path}; {path}/task.md depends_on: {dep}"))
             evidence.append({"kind": "logical", "from": source, "to": path,
                              "declaration": f"{path}/task.md depends_on: {dep}"})
 
     active_evidence = [e for e in evidence if e["from"] not in result.archived and e["to"] not in result.archived]
+    result.logical = [e for e in active_evidence if e["kind"] == "logical" and e["from"] != e["to"]]
     for boundary, task in result.tasks.items():
         if boundary in result.archived:
             continue
@@ -213,14 +197,21 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
             edges.setdefault((source, target), []).append(item)
         result.boundaries[boundary] = {"nodes": sorted(nodes), "edges": [
             {"from": a, "to": b, "evidence": reasons} for (a, b), reasons in sorted(edges.items())]}
-        cycle = cycle_path(edges)
+        # Grouping file edges by task is a view; only `depends_on` loops are errors here.
+        logical = {pair: [e for e in reasons if e["kind"] == "logical"] for pair, reasons in edges.items()}
+        logical = {pair: reasons for pair, reasons in logical.items() if reasons}
+        cycle = cycle_path(logical)
         if cycle:
-            reasons = [e for a, b in zip(cycle, cycle[1:]) for e in edges[a, b]]
-            detail = "; ".join(e.get("declaration") or
-                               f"{e['from'] or '(root)'}:{e['producer']} -> {e['to'] or '(root)'}:{e['consumer']} via {e['via']}"
-                               for e in reasons)
+            detail = "; ".join(e["declaration"] for a, b in zip(cycle, cycle[1:]) for e in logical[a, b])
             result.findings.append(dict(task_path=boundary, category="dependency", severity="error",
-                message=f"dependency cycle at {boundary or '(root)'}: {' -> '.join(cycle)}; {detail}"))
+                message=f"depends_on cycle at {boundary or '(root)'}: {' -> '.join(cycle)}; {detail}"))
+        for (source, target), reasons in logical.items():
+            against = [e for e in edges.get((target, source), []) if e["kind"] == "inferred"]
+            if against:
+                files = ", ".join(sorted({e["via"] for e in against}))
+                result.findings.append(dict(task_path=target[5:], category="dependency", severity="warning",
+                    message=f"depends_on '{source[5:].rsplit('/', 1)[-1]}' runs against the file flow: "
+                            f"{source[5:]} reads this task's output {files}; not blocking, but best avoided"))
 
     grouped = {}
     for view in result.boundaries.values():
@@ -228,7 +219,7 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
             if edge["from"].startswith("task:") and edge["to"].startswith("task:"):
                 grouped.setdefault((edge["from"][5:], edge["to"][5:]), []).extend(edge["evidence"])
     result.edges = [{"from": a, "to": b, "evidence": reasons} for (a, b), reasons in sorted(grouped.items())]
-    for edge in result.edges:
+    for edge in result.logical:
         if result.tasks[edge["from"]].effective_status() == "postponed":
             result.findings.append(dict(task_path=edge["to"], category="dependency", severity="warning",
                 message=f"depends on postponed task {edge['from']!r} (blocked until resumed)"))

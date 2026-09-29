@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_snapshot import frontier_rows
+from _task_snapshot import format_input, frontier_rows
 from _repro import Graph, build_graph
 from _task_io import (
     TASK_ROOT_DIRNAME,
@@ -131,23 +131,6 @@ def format_focused_tree(root: Task, target_path: str) -> str:
 
     _walk(root, 0, spine_slugs)
     return "\n".join(lines)
-
-
-def print_frontier(frontier: list[Task], as_json: bool = False) -> None:
-    """Print the dispatch frontier."""
-    if as_json:
-        data = [{"path": t.path, "title": t.title, "status": t.status} for t in frontier]
-        print(json.dumps(data, indent=2))
-        return
-
-    if not frontier:
-        print("No tasks on the frontier (all approved, blocked, or parked).")
-        return
-
-    for task in frontier:
-        icon = STATUS_ICONS.get(task.status, "?")
-        deps = f" [depends: {', '.join(task.depends_on)}]" if task.depends_on else ""
-        print(f"  {icon} {task.path}: {task.title}{deps}")
 
 
 def _sanitize_mermaid_id(slug: str) -> str:
@@ -286,10 +269,15 @@ def main(argv: list[str] | None = None) -> None:
             print(json.dumps(rows, indent=2))
         else:
             for row in rows:
-                steps = " [own work: " + ", ".join(row["steps"]) + "]" if "steps" in row else ""
-                print(f"  {row['path'] or '(root)'}: {row['title']}{steps}")
+                print(f"  {row['path'] or '(root)'}: {row['title']}")
+                for item in row["inputs"]:
+                    print(f"    {format_input(item)}")
             if not rows:
                 print("No tasks on the frontier (all approved, blocked, or parked).")
+        errors = sum(f.severity == "error" and f.category == "reproduction" for f in graph.findings)
+        if errors:
+            print(f"Note: {errors} reproduction error(s) leave file inputs unknown; "
+                  "run `superra task check --category reproduction`.", file=sys.stderr)
         return
     elif args.dag is not None:
         graph = build_graph(plan_root, root=root)

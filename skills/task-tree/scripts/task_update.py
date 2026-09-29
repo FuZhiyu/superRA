@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_snapshot import preflight
+from _task_snapshot import preflight, print_edit_notes
 from _task_dependencies import within
 from _task_io import (
     TASK_ROOT_DIRNAME,
@@ -123,6 +123,7 @@ def update_task(
             file=sys.stderr,
         )
 
+    edit = None
     if status is not None and status != task.status and "archived" in {status, task.status}:
         def proposed(root, tasks):
             target = tasks[task_path]
@@ -137,7 +138,7 @@ def update_task(
             else:
                 target.status = status
         try:
-            preflight(plan_root, proposed)
+            edit = preflight(plan_root, proposed)
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
@@ -156,6 +157,8 @@ def update_task(
                 write_task(leaf)
                 n_updated += 1
         print(f"Cascaded status={status!r} to {n_updated} descendant leaf(s).")
+        if edit:
+            print_edit_notes(edit)
         return
 
     # --- Normal (non-cascade) update -----------------------------------------
@@ -175,6 +178,8 @@ def update_task(
         propagated = propagate_parent_status(plan_root, task_path)
         if propagated:
             print(f"Propagated status to {propagated} ancestor(s).")
+        if edit:
+            print_edit_notes(edit)
     else:
         print("No changes.")
 

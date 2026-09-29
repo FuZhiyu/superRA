@@ -20,8 +20,8 @@ def task(root, path, *, deps=(), status="not-started", steps=()):
     directory = root / path
     directory.mkdir(parents=True, exist_ok=True)
     block = "steps:\n" if steps else ""
-    for name, inputs, outputs in steps:
-        block += f"  - name: {name}\n    cmd: echo {name}\n    deps: {json.dumps(inputs)}\n    outs: {json.dumps(outputs)}\n"
+    for name, inputs, outputs, *cmd in steps:
+        block += f"  - name: {name}\n    cmd: {cmd[0] if cmd else 'echo ' + name}\n    deps: {json.dumps(inputs)}\n    outs: {json.dumps(outputs)}\n"
     _write_task_md(directory / "task.md", path or "Root", status,
                    depends_on=deps, reproduction=block, objective="Fixture task.")
 
@@ -36,83 +36,265 @@ def graph(root):
     return build_graph(root, env={})
 
 
-def test_public_frontier_read_and_dag_share_inferred_edge(tmp_path):
-    root = tmp_path / "superRA"
-    task(root, "z-source", steps=[("source", [], ["data.txt"])])
-    task(root, "a-consumer", steps=[("consumer", ["data.txt"], ["result.txt"])])
+def frontier(root):
     result = run(root, "task", "frontier", "--json")
     assert result.returncode == 0, result.stderr
-    assert [r["path"] for r in json.loads(result.stdout)] == ["z-source"]
-    read = json.loads(run(root, "task", "read", "a-consumer", "--json").stdout)
-    assert [d["path"] for d in read["dependencies"]] == ["z-source"]
-    assert read["dependency_graph"]["edges"][0]["evidence"][0]["via"] == "data.txt"
+    return {row["path"]: row for row in json.loads(result.stdout)}
+
+
+def read(root, path):
+    result = run(root, "task", "read", path, "--json")
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def test_file_edge_informs_but_never_gates_readiness(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "z-source", steps=[("source", [], ["data.txt"])])
+    task(root, "a-consumer", steps=[("consumer", ["data.txt"], ["result.txt"]),
+                                    ("second", ["data.txt"], ["second.txt"])])
+    rows = frontier(root)
+    assert set(rows) == {"a-consumer", "z-source"}
+    [item] = rows["a-consumer"]["inputs"]
+    assert item["file"] == "data.txt" and item["producer"] == "z-source#source"
+    assert (item["state"], item["reason"]) == ("missing", "never built")
+    assert item["build"] == "superra repro build a-consumer --upstream"
+    assert item["consumers"] == ["a-consumer#consumer", "a-consumer#second"]
+    human = run(root, "task", "frontier").stdout
+    assert ("input data.txt from z-source#source: missing (never built) — not blocking; "
+            "rebuild before relying on it: superra repro build a-consumer --upstream") in human
+    current = read(root, "a-consumer")
+    assert current["dependencies"] == [] and current["readiness"]["ready"] is True
+    assert current["readiness"]["inputs"][0]["file"] == "data.txt"
+    assert current["dependency_graph"]["edges"][0]["evidence"][0]["via"] == "data.txt"
     dag = run(root, "task", "dag")
     assert "task:z-source" in dag.stdout and "inferred" in dag.stdout
-    task(root, "z-source", status="implemented", steps=[("source", [], ["data.txt"])])
-    assert [r["path"] for r in json.loads(run(root, "task", "frontier", "--json").stdout)] == ["a-consumer", "z-source"]
 
 
-def test_unlink_only_removes_explicit_evidence(tmp_path):
+def test_unlink_only_removes_explicit_evidence_and_names_the_file(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", steps=[("a", [], ["a.txt"])])
     task(root, "b", deps=["a"], steps=[("b", ["a.txt"], ["b.txt"])])
     assert {e["kind"] for e in graph(root).dependencies.edges[0]["evidence"]} == {"logical", "inferred"}
     result = run(root, "task", "dep", "remove", "b", "a")
     assert result.returncode == 0, result.stderr
-    assert "Inferred dependency remains" in result.stdout
+    assert "File edge remains: b reads a.txt from a." in result.stdout
     assert graph(root).task_edges == [("a", "b")]
+    again = run(root, "task", "dep", "remove", "b", "a")
+    assert "b reads a.txt from a, a file edge that orders builds but never gates starting work" in again.stderr
 
 
-@pytest.mark.parametrize("kind", ["mixed", "grouping", "step", "nested"])
-def test_cycles_cannot_be_hidden_by_frontier_or_scoped_build(tmp_path, kind):
+def test_depends_on_cycle_blocks_planning_but_not_builds(tmp_path):
     root = tmp_path / "superRA"
-    if kind == "mixed":
-        task(root, "a", deps=["b"], steps=[("a", [], ["a.txt"])])
-        task(root, "b", steps=[("b", ["a.txt"], ["b.txt"])])
-    elif kind == "step":
-        task(root, "a", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["a.txt"], ["b.txt"])])
-    elif kind == "grouping":
+    task(root, "a", deps=["b"], steps=[("a", [], ["a.txt"])])
+    task(root, "b", deps=["a"])
+    check = run(root, "task", "check", "--category", "dependency", "--json")
+    assert check.returncode == 1
+    assert any("depends_on cycle" in f["message"] and "a/task.md depends_on: b" in f["message"]
+               for f in json.loads(check.stdout)["findings"])
+    assert run(root, "task", "frontier", "--json").returncode == 1
+    scoped = run(root, "task", "dag", "a", "--json")
+    assert scoped.returncode == 1 and json.loads(scoped.stdout)["valid"] is False
+    assert run(root, "repro", "build", "a#a", "--dry-run").returncode == 0
+
+
+def test_read_explains_not_ready_without_blockers(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", deps=["missing"])
+    task(root, "b")
+    readiness = read(root, "b")["readiness"]
+    assert readiness["ready"] is False and readiness["blockers"] == []
+    assert readiness["reason"] == "depends_on graph is invalid: depends_on 'missing' does not resolve to any sibling task"
+    assert "Not ready: depends_on graph is invalid" in run(root, "task", "read", "b").stdout
+
+
+def test_step_cycle_blocks_builds_but_not_planning(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["a.txt"], ["b.txt"])])
+    assert graph(root).dependencies.valid
+    assert set(frontier(root)) == {"a"}
+    built = run(root, "repro", "build", "a", "--dry-run")
+    assert built.returncode == 1 and "step cycle: a -> b -> a" in built.stderr
+
+
+@pytest.mark.parametrize("kind", ["grouping", "paper", "nested"])
+def test_loops_from_grouping_file_edges_are_views(tmp_path, kind):
+    root = tmp_path / "superRA"
+    if kind == "grouping":
         task(root, "a", steps=[("a1", [], ["a.txt"]), ("a2", ["b.txt"], ["a2.txt"])])
         task(root, "b", steps=[("b1", ["a.txt"], ["b1.txt"]), ("b2", [], ["b.txt"])])
+    elif kind == "paper":
+        task(root, "paper", steps=[("tables", [], ["tables.txt"])])
+        task(root, "robustness", steps=[("robust", ["tables.txt"], ["robust.txt"])])
+        task(root, "paper/estimate", steps=[("estimate", ["robust.txt"], ["estimate.txt"])])
     else:
         task(root, "a", deps=["b"])
         task(root, "b")
         task(root, "a/x", steps=[("a", [], ["a.txt"])])
         task(root, "b/y", steps=[("b", ["a.txt"], ["b.txt"])])
-    check = run(root, "task", "check", "--category", "dependency", "--json")
-    assert check.returncode == 1
-    assert any("cycle" in f["message"] for f in json.loads(check.stdout)["findings"])
-    assert run(root, "task", "frontier", "--json").returncode == 1
-    scoped = run(root, "task", "dag", "a", "--json")
-    assert scoped.returncode == 1
-    assert json.loads(scoped.stdout)["valid"] is False
-    # The runner's build precondition consumes Graph.findings even for a target.
-    from _task_snapshot import require_valid
-    with pytest.raises(ValueError, match="cycle"):
-        require_valid(graph(root))
-    built = run(root, "repro", "build", ".#a", "--dry-run")
-    assert built.returncode == 1 and "cycle" in built.stderr
-
-
-def test_parent_setup_child_report_keeps_identity_and_exposes_own_work(tmp_path):
-    root = tmp_path / "superRA"
-    task(root, "", steps=[("setup", [], ["setup.txt"]), ("report", ["child.txt"], ["report.txt"])])
-    before = {s.name: spec_hash(s) for s in graph(root).steps}
-    task(root, "child", steps=[("child", ["setup.txt"], ["child.txt"])])
     current = graph(root)
-    assert current.dependencies.valid
-    assert {s.name: spec_hash(s) for s in current.steps if s.name in before} == before
-    assert current.task_edges == []
-    result = run(root, "task", "frontier", "--json")
+    assert [f.message for f in current.findings if f.severity == "error"] == []
+    check = run(root, "task", "check", "--category", "dependency").stdout
+    assert "All checks passed" in check or "0 error(s)" in check
+    rows = frontier(root)
+    assert rows and "" not in rows
+    if kind == "paper":
+        assert set(rows) == {"robustness", "paper/estimate"}
+        assert [i["file"] for i in rows["paper/estimate"]["inputs"]] == ["robust.txt"]
+        assert [i["file"] for i in read(root, "robustness")["readiness"]["inputs"]] == ["tables.txt"]
+        assert read(root, "paper")["readiness"]["inputs"][0]["producer"] == "robustness#robust"
+
+
+def test_depends_on_against_the_file_flow_warns_with_the_file(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["a.txt"])])
+    task(root, "b", steps=[("b", ["a.txt"], ["b.txt"])])
+    before = {p: p.read_bytes() for p in root.rglob("task.md")}
+    result = run(root, "task", "dep", "add", "a", "b")
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == [{"path": "", "title": "Root", "status": "not-started", "kind": "own-work", "steps": ["setup"]}]
-    rows = current.dependencies.frontier({"setup": "fresh", "child": "missing", "report": "missing"})
-    assert [r["path"] for r in rows] == ["child"]
-    read = json.loads(run(root, "task", "read", "child", "--json").stdout)
-    assert read["readiness"]["blockers"][0]["states"] == {"step:setup": "missing"}
-    assert "step:setup (missing)" in run(root, "task", "read", "child").stdout
-    rows = current.dependencies.frontier({"setup": "fresh", "child": "fresh", "report": "missing"})
-    assert next(r for r in rows if r.get("kind") == "own-work")["steps"] == ["report"]
+    assert ("depends_on 'b' runs against the file flow: b reads this task's output a.txt; "
+            "not blocking, but best avoided") in result.stderr
+    check = run(root, "task", "check", "--category", "dependency")
+    assert "0 error(s), 1 warning(s)" in check.stdout and "runs against the file flow" in check.stdout
+    assert set(frontier(root)) == {"b"}
+    cycle = run(root, "task", "dep", "add", "b", "a")
+    assert cycle.returncode == 1 and "depends_on cycle" in cycle.stderr and "b/task.md depends_on: a" in cycle.stderr
+    assert (root / "b/task.md").read_bytes() == before[root / "b/task.md"]
+
+
+def test_child_stays_ready_when_parent_setup_goes_stale(tmp_path):
+    root = tmp_path / "superRA"
+    (tmp_path / "setup.sh").write_text("printf seed > setup.txt\n")
+    task(root, "", steps=[("setup", ["setup.sh"], ["setup.txt"], "sh setup.sh"),
+                          ("report", ["child.txt"], ["report.txt"])])
+    before = {s.name: spec_hash(s) for s in graph(root).steps}
+    task(root, "child", status="in-progress", steps=[("child", ["setup.txt"], ["child.txt"])])
+    assert {s.name: spec_hash(s) for s in graph(root).steps if s.name in before} == before
+    assert run(root, "repro", "build", ".#setup").returncode == 0
+    assert frontier(root)["child"]["inputs"] == []
+    human = run(root, "task", "read", "child").stdout
+    assert "Inputs Not Fresh" not in human and "1 input(s) fresh" in human
+    (tmp_path / "setup.sh").write_text("printf changed > setup.txt\n")
+    [item] = frontier(root)["child"]["inputs"]
+    assert (item["file"], item["producer"], item["state"]) == ("setup.txt", ".#setup", "stale")
+    assert "- input setup.txt from .#setup: stale" in run(root, "task", "read", "child").stdout
+
+
+def test_implemented_producer_never_built_reports_and_builds_upstream(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", status="implemented", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    task(root, "b", deps=["a"], steps=[("b", ["a.txt"], ["b.txt"], "cat a.txt > b.txt")])
+    [item] = frontier(root)["b"]["inputs"]
+    assert item["reason"] == "never built"
+    built = run(root, "repro", "build", "b", "--upstream")
+    assert built.returncode == 0, built.stdout + built.stderr
+    assert (tmp_path / "b.txt").read_text() == "a"
+    assert frontier(root)["b"]["inputs"] == []
+
+
+def test_archived_producer_with_missing_output_is_reported(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "old", status="archived", steps=[("old", [], ["old.txt"])])
+    task(root, "m", steps=[("m", ["old.txt"], ["m.txt"])])
+    [item] = frontier(root)["m"]["inputs"]
+    assert (item["producer"], item["state"], item["build"]) == ("old#old", "missing", None)
+    assert "archived producer" in item["reason"]
+    dry = run(root, "repro", "build", "m", "--dry-run")
+    assert dry.returncode == 1
+    assert "step 'm' cannot start: external input old.txt is missing" in dry.stdout
+    assert "every selected step is fresh" not in dry.stdout
+    (tmp_path / "old.txt").write_text("kept")
+    assert frontier(root)["m"]["inputs"] == []
+
+
+def test_unset_variable_blocks_only_the_builds(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["${OUT}/a.txt"])])
+    task(root, "b", steps=[("b", [], ["b.txt"], "printf b > b.txt")])
+    (root / "config.yaml").write_text("reproduction:\n  vars:\n    OUT:\n      env: NOPE_UNSET_VAR\n")
+    assert set(frontier(root)) == {"a", "b"}
+    assert "reproduction error" in run(root, "task", "frontier").stderr
+    for args in [("task", "create", "c", "--title", "C"), ("task", "dep", "add", "c", "b"),
+                 ("task", "move", "c", "d")]:
+        result = run(root, *args)
+        assert result.returncode == 0, (args, result.stderr)
+    status = run(root, "repro", "status", "b")
+    assert "graph error(s)" in status.stdout
+    assert run(root, "repro", "build", "b").returncode == 0
+    broken = run(root, "repro", "build", "a")
+    assert broken.returncode == 1 and "unknown variable ${OUT}" in broken.stderr
+
+
+def test_every_step_cycle_is_reported_and_blocks_its_builds(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    task(root, "x", steps=[("x1", ["y1.txt"], ["x1.txt"]), ("y1", ["x1.txt"], ["y1.txt"])])
+    task(root, "p", steps=[("p1", ["q1.txt"], ["p1.txt"]), ("q1", ["p1.txt"], ["q1.txt"])])
+    check = run(root, "task", "check", "--category", "reproduction").stdout
+    assert "step cycle: p1 -> q1 -> p1" in check and "step cycle: x1 -> y1 -> x1" in check
+    for args in [("x", "--upstream"), ("x", "--upstream", "--dry-run"), ("p",)]:
+        built = run(root, "repro", "build", *args)
+        assert built.returncode == 1 and "step cycle: " in built.stderr, args
+    assert "x1 -> y1 via x1.txt; y1 -> x1 via y1.txt" in run(root, "repro", "build", "x").stderr
+    assert run(root, "repro", "build", "a").returncode == 0
+
+
+def test_root_step_error_blocks_only_root_builds(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "", steps=[("r", [], ["r.txt"])])
+    (root / "task.md").write_text((root / "task.md").read_text().replace("cmd: echo r", "cmd: echo r\n    bogus: 1"))
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    assert run(root, "repro", "build", "a").returncode == 0
+    assert run(root, "repro", "build", ".").returncode == 1
+
+
+@pytest.mark.parametrize("error", ["variable", "section", "cycle", "duplicate"])
+def test_an_error_blocks_only_the_builds_it_touches(tmp_path, error):
+    root = tmp_path / "superRA"
+    task(root, "a", steps=[("a", [], ["a.txt"], "printf a > a.txt")])
+    task(root, "c", steps=[("c", [], ["c.txt"])])
+    if error == "variable":
+        task(root, "c", steps=[("c", [], ["${OUT}/c.txt"])])
+        (root / "config.yaml").write_text("reproduction:\n  vars:\n    OUT:\n      env: NOPE_UNSET_VAR\n")
+    elif error == "section":
+        (root / "c/task.md").write_text((root / "c/task.md").read_text().replace("steps:", "steps: [unclosed"))
+    elif error == "cycle":
+        task(root, "c", steps=[("x", ["y.txt"], ["x.txt"]), ("y", ["x.txt"], ["y.txt"])])
+    else:
+        task(root, "b", steps=[("c", [], ["b.txt"])])
+    assert any(f.severity == "error" for f in graph(root).findings)
+    built = run(root, "repro", "build", "a")
+    assert built.returncode == 0, built.stderr
+    assert run(root, "repro", "status", "a").returncode == 0
+    assert run(root, "repro", "build", "c").returncode == 1
+
+
+def test_a_file_from_a_failed_declaration_is_never_used_silently(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "p", steps=[("p", [], ["p.txt"])])
+    (root / "p/task.md").write_text((root / "p/task.md").read_text().replace("cmd: echo p", "cmd: echo p\n    bogus: 1"))
+    task(root, "q", steps=[("q", ["p.txt"], ["q.txt"], "cat p.txt > q.txt")])
+    (tmp_path / "p.txt").write_text("stale")
+    built = run(root, "repro", "build", "q")
+    assert built.returncode == 1
+    assert "step 'q' reads p.txt, which task p declares in a step that failed to register" in built.stderr
+    task(root, "r")
+    (root / "r/task.md").write_text((root / "r/task.md").read_text() + "\n## Reproduction\n\n```yaml\nsteps: [unclosed\n```\n")
+    task(root, "s", steps=[("s", ["raw.txt"], ["s.txt"], "cat raw.txt > s.txt")])
+    (tmp_path / "raw.txt").write_text("raw")
+    built = run(root, "repro", "build", "s")
+    assert built.returncode == 0, built.stderr
+    assert "Warning: task r: ## Reproduction did not parse" in built.stderr
+
+
+def test_adding_a_subtask_names_the_tasks_it_blocks(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "data", status="approved", steps=[("panel", [], ["panel.txt"])])
+    task(root, "analysis", deps=["data"], status="in-progress")
+    result = run(root, "task", "create", "data/extra-check", "--title", "Extra check")
+    assert result.returncode == 0, result.stderr
+    assert "Now blocked: analysis waits on data (not-started)" in result.stdout
+    assert set(frontier(root)) == {"data/extra-check"}
 
 
 def test_archived_subtree_is_boundary_and_warns_transitive_consumers(tmp_path):
@@ -133,28 +315,16 @@ def test_archived_subtree_is_boundary_and_warns_transitive_consumers(tmp_path):
     assert all(not r["path"].startswith("old") for r in frontier_rows(graph(root), root))
 
 
-def test_link_cycle_preflight_changes_no_files(tmp_path):
-    root = tmp_path / "superRA"
-    task(root, "a", steps=[("a", [], ["a.txt"])])
-    task(root, "b", steps=[("b", ["a.txt"], ["b.txt"])])
-    before = {p: p.read_bytes() for p in root.rglob("task.md")}
-    result = run(root, "task", "dep", "add", "a", "b")
-    assert result.returncode == 1 and "cycle" in result.stderr
-    assert before == {p: p.read_bytes() for p in root.rglob("task.md")}
-
-
-def test_move_preflight_rejects_new_grouping_cycle_atomically(tmp_path):
+def test_move_across_a_grouping_loop_is_allowed(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a")
     task(root, "b")
     task(root, "a/start", steps=[("start", [], ["start.txt"])])
     task(root, "b/middle", steps=[("middle", ["start.txt"], ["middle.txt"])])
     task(root, "b/end", steps=[("end", ["middle.txt"], ["end.txt"])])
-    assert graph(root).dependencies.valid
-    before = {p: p.read_bytes() for p in root.rglob("task.md")}
     result = run(root, "task", "move", "b/end", "a/end")
-    assert result.returncode == 1 and "cycle" in result.stderr
-    assert before == {p: p.read_bytes() for p in root.rglob("task.md")}
+    assert result.returncode == 0, result.stderr
+    assert graph(root).dependencies.valid
 
 
 def test_resolution_once_and_structural_repair_without_shell(tmp_path):
@@ -165,14 +335,13 @@ def test_resolution_once_and_structural_repair_without_shell(tmp_path):
     result = run(root, "task", "read", "b", "--json")
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "probes").read_text().splitlines() == ["probe"]
-    assert json.loads(result.stdout)["dependencies"][0]["path"] == "a"
+    assert json.loads(result.stdout)["readiness"]["inputs"][0]["producer"] == "a#a"
     structural = json.loads(run(root, "task", "tree", "--json").stdout)
-    assert structural["dependencies_complete"] is False
-    assert structural["effective_depends_on"] is None
-    assert all(row["effective_depends_on"] is None for row in structural["children"])
+    assert structural["dependencies_complete"] is True
+    assert [row["effective_depends_on"] for row in structural["children"]] == [[], []]
     assert (tmp_path / "probes").read_text().splitlines() == ["probe"]
     (root / "config.yaml").write_text('reproduction:\n  vars:\n    OUT:\n      shell: "false"\n')
-    assert run(root, "task", "frontier", "--json").returncode == 1
+    assert set(frontier(root)) == {"a", "b"}
     assert run(root, "task", "tree", "--json").returncode == 0
 
 
@@ -306,4 +475,6 @@ def test_archived_names_and_outputs_cannot_suppress_active_producers(tmp_path):
     assert not any("archived prerequisite" in f.message for f in current.findings)
     assert any("archived step name" in f.message for f in current.findings)
     task(root, "another-active", steps=[("build", [], ["different.txt"])])
-    assert not graph(root).dependencies.valid
+    current = graph(root)
+    assert any("already used" in f.message for f in current.findings if f.severity == "error")
+    assert current.dependencies.valid

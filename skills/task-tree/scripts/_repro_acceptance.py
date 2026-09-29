@@ -26,10 +26,15 @@ def identity(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+_UMASK = os.umask(0)
+os.umask(_UMASK)
+
+
 def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(dir=path.parent, prefix='.' + path.name)
     try:
+        os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp's 0600 would outlive the rename
         with os.fdopen(fd, 'w', encoding='utf-8') as handle:
             json.dump(value, handle, sort_keys=True, indent=2)
             handle.write('\n')
@@ -320,13 +325,13 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
     for src, dst, _ in report.graph.step_edges:
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
-    valid_graph = not any(f.severity == 'error' for f in report.graph.findings)
+    from _repro import step_errors
     for name in _topological(by_name, parents):
         entry = by_name[name]
         record = ledger['steps'].get(name)
         blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
         invalid = validate_record(report.graph, entry.step, paths, record, lock, cache) if record else None
-        if valid_graph and record and not invalid:
+        if record and not invalid and not step_errors(report.graph, [name])[0]:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
             entry.changes = []
         elif record and invalid and entry.status == 'fresh' and baseline(
@@ -402,11 +407,12 @@ def inspect_baseline(graph, step, paths):
 
 
 def preview(graph, paths, targets, reason, reviews):
-    if any(f.severity == 'error' for f in graph.findings):
-        raise ReproStateError('invalid graph; acceptance is unavailable')
+    from _repro import step_errors
     names, unknown = select_steps(graph, targets, include_ancestors=False)
     if unknown or not names or not targets:
         raise ReproStateError('select exact step or task targets: ' + ', '.join(unknown))
+    if step_errors(graph, names)[0]:
+        raise ReproStateError('invalid graph; acceptance is unavailable')
     ledger = read_ledger(paths)
     lock = read_lock(paths.lock_file)
     parents = {s.name: [] for s in graph.steps}

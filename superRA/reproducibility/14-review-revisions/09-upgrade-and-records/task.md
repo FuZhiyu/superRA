@@ -18,6 +18,7 @@ A project from 0.4 upgrades to 0.5 without losing its frontier, and the release 
 
 - They cover the result of 01–08, including the decisions those tasks settle.
 - From 01: pytask is no longer a dependency; `repro-lock.json` replaces `pytask.lock` and `repro-builds.json`, which are still read and can be removed with `git rm` after the first build; `.pytask/` can be deleted; the `env_probe` config key is gone.
+- From 02: acceptance records move to one file per step under `repro-acceptance/`; the first `accept` converts and deletes `repro-acceptance.json`. Coauthors must upgrade before that commit lands, since an older superRA reads no records from the new layout and every accepted step reads stale for them.
 
 ### The task tree matches the code
 
