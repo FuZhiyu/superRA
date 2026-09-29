@@ -822,14 +822,17 @@ def test_conflicted_record_disables_only_its_own_step(project, capsys):
     assert project.run('build', '03-x') == 0
 
 
-def test_running_record_from_another_host_is_not_a_failure_here(project):
-    from _repro_state import write_run_record
+def test_accept_records_a_saved_input_status_reports_unverified(project):
+    _use_a_sidecar(project)
     assert project.run('build', *CHAIN) == 0
-    project.paths.run_file('build-a').write_text(json.dumps(
-        {'outcome': 'running', 'forced': False, 'started_at': 1.0, 'host': 'another-machine'}))
-    assert project.states()['build-a'] == 'fresh'
-    write_run_record(project.paths, 'build-a', {'outcome': 'running', 'forced': False, 'started_at': 1.0})
-    assert project.states()['build-a'] == 'failed'
+    project.write('output/a.txt', 'edited without its sidecar\n')
+    shutil.rmtree(project.paths.state_dir)  # a fresh worktree or another machine
+    entry = project.status('02-b#build-b').entry('build-b')
+    assert entry.status == 'stale' and 'needs a full-byte baseline' in entry.reason
+    result = accept(project.graph(), project.paths, ['02-b#build-b'], 'Reviewed the saved input', {})
+    assert result['steps'][0]['record'] is not None
+    assert [c['kind'] for c in result['steps'][0]['changes']] == ['boundary']
+    assert project.status('02-b#build-b').entry('build-b').status == 'fresh'
 
 
 def test_records_written_before_the_reshape_validate_and_convert(project):

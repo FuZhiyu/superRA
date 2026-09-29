@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
-from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
@@ -566,32 +565,19 @@ def prune_lock(paths: RunnerPaths, keep: set[str]) -> None:
         _write_lock_document(paths, document)
 
 
-@lru_cache(maxsize=None)
-def machine_id() -> str:
-    """A stable local tag for this machine: the hardware address, else the host name."""
-    import socket
-    import uuid
-    node = uuid.getnode()
-    raw = f"{node:012x}" if not node >> 40 & 1 else socket.gethostname()  # bit set: random fallback
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-
-
 def write_run_record(paths: RunnerPaths, step: str, record: dict) -> None:
     """Record one step's outcome; one file per step keeps parallel runs race-free."""
     paths.runs_dir.mkdir(parents=True, exist_ok=True)
     from _repro_acceptance import atomic_json
-    atomic_json(paths.run_file(step), dict(record, host=machine_id()))
+    atomic_json(paths.run_file(step), record)
 
 
 def read_run_record(paths: RunnerPaths, step: str) -> dict:
-    """This machine's record of the step's last run; another machine's is not evidence here."""
     try:
         loaded = json.loads(paths.run_file(step).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    if not isinstance(loaded, dict) or loaded.get("host", machine_id()) != machine_id():
-        return {}
-    return loaded
+    return loaded if isinstance(loaded, dict) else {}
 
 
 # ---------------------------------------------------------------------------
