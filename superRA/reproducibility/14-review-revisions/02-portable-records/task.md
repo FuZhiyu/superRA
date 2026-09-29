@@ -1,6 +1,6 @@
 ---
 title: "Committed Records Stay Portable Across Machines and Branches"
-status: not-started
+status: implemented
 depends_on:
   - 01-engine-freshness
 ---
@@ -49,6 +49,39 @@ The [0.5 design](../../attachments/v05-design.md#reviewed-acceptance-is-evidence
 
 Owning tasks: [reviewed-acceptance](../../02-runner/reviewed-acceptance/task.md), [02-build-record](../../13-staleness-provenance/02-build-record/task.md).
 
+## Results
+
+Committed acceptance records are now portable, small, and mergeable, and `.superra-repro/` stays on its machine. Every Validation item holds under a regression test that failed before the change; [portable-records-check](#reproduction) is fresh, and the full task-tree suite passes (1,272 passed, 10 playwright-only skips).
+
+### Acceptance records: one portable file per step
+
+- **Branches that accept different steps merge cleanly.** Records live in `repro-acceptance/<step>.json` instead of one `repro-acceptance.json` ([write_record](../../../../skills/task-tree/scripts/_repro_acceptance.py#L171)). A real `git merge` of two branches accepting `build-a` and `build-x` is clean ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L771)).
+  - **Deviation from the Objective's file name.** One JSON file conflicts whenever two branches add neighbouring keys, so the records became a directory. The name `repro-acceptance/` is a proposal.
+- **A record keeps only what reuse needs** ([portable_record](../../../../skills/task-tree/scripts/_repro_acceptance.py#L106)): `id`, `basis`, `lock` (SHA-256 of the preceding lock entry's `deps` and `products`, never `built_on`), `state` (`deps`, `products`, and `outputs` only when it differs, as with a sidecar), `boundary_inputs` (logical path, producer, digest), `reason`, `reviews`.
+  - Dropped: the `baseline` copies of the spec, run record, receipt, and outputs; `actor`; `recorded_at`; `evidence`; `upstream`. `recorded_at` had to go for byte-identical records; git records who committed and when.
+  - Two clones with different absolute `${OUT}` roots and user names write byte-identical `repro-lock.json` and records ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L736)). A `cmd` that embeds a resolved root still changes the spec hash, as 01 designed.
+  - Size: 0.9 KB for a fixture step; the real project's 35 records average 2.2 KB (maximum 3.9 KB), against 8.0 KB before. The reason text is now most of each record.
+- **Records are written only when something changed.** `accept` writes no record for a selected step already fresh on its successful build or a valid acceptance, and never rewrites equal content ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L846)). Its output names such steps "already fresh".
+- **A bad record disables only itself** ([read_ledger](../../../../skills/task-tree/scripts/_repro_acceptance.py#L137)). A record that does not parse or whose `id` does not match is set aside with a warning naming its step, which then reads as not accepted. After a conflicted merge of the same step accepted on two branches, `status`, `build`, and `accept` work, and re-accepting the step fixes it ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L785)). An unreadable legacy file warns and is ignored.
+- **Records written before the reshape validate.** The legacy `repro-acceptance.json` is still read; the first record write converts it into per-step files and deletes it ([_convert_legacy](../../../../skills/task-tree/scripts/_repro_acceptance.py#L156), [test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L822)). A malformed legacy record is dropped at conversion; it was already ignored.
+  - **Real-project check** (ElasticityBound-Local, 111 steps, 35 accepted, read through a scratch copy that symlinks its data): per-step `status` and `local_status` with their reasons are identical under the old code, under the new code reading the legacy file, and after conversion. Converted records hold no absolute path or user name.
+- **Acceptance cuts, as specified.** `--apply <token>`, `--evidence`, and `upstream` are gone; `--dry-run` previews; `accept` still rechecks declarations and hashes under its lock before writing ([accept](../../../../skills/task-tree/scripts/_repro_acceptance.py#L454)); `--review` notes stay. The [0.5 design](../../attachments/v05-design.md#reviewed-acceptance-is-evidence-distinct-from-execution) is updated.
+  - **Behavior change: revoking a producer leaves a downstream record valid.** The consumer's reviewed saved-input bytes still pin the producer's output, so its local status stays fresh; full-chain status reports it stale while the producer is not fresh.
+  - **Batch acceptance is atomic per step, not per call.** An I/O failure partway through can leave the earlier steps' records written.
+  - Status JSON `acceptance` drops `evidence`, `recorded_at`, and `actor`; `explain` names the source "reviewed acceptance" without a time; the dashboard no longer lists evidence files.
+
+### Local state stays on its machine
+
+- **`.superra-repro/` carries Dropbox's ignore flag.** [dropbox_ignore](../../../../skills/task-tree/scripts/_repro_state.py#L122) sets `com.dropbox.ignored` (Linux: `user.com.dropbox.ignored`) whenever `repro` opens the folder, and the edit hook sets it when it creates the folder first ([_edit_detect.py:210](../../../../skills/task-tree/scripts/_edit_detect.py#L210)). Tests: [runner](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L890), [hook](../../../../skills/task-tree/scripts/test_edit_detect.py).
+  - **Live Dropbox check, on a scratch folder synced between `home-studio` and `julies-homeserver`:** a newly flagged folder never reached the home server, and flagging an already-synced folder removed it there while keeping the local copy. The scratch folder is deleted.
+- **A run record from another machine is not evidence here.** Run records carry a local machine tag (a hash of the hardware address, else the host name), and [read_run_record](../../../../skills/task-tree/scripts/_repro_state.py#L578) treats another machine's record as absent, so a remote `running` record no longer reads as `failed` ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L812)). This covers the time before Dropbox acts on the flag and other sync tools. Check stamps carry no tag; only the flag keeps them local.
+- **Deleting `.superra-repro/` stales no step**, with a sidecar step, a check, and an accepted step in the tree ([test](../../../../skills/task-tree/scripts/test_repro_acceptance.py#L859)).
+
+### Open items
+
+- **Other checks over the changed files are not rebuilt here.** `reviewed-baseline-regression-check`, `provenance-explain-check`, `edit-detection-check`, `engine-freshness-check`, and the other steps that list these modules are stale or missing in this worktree. Their commands pass in the full-suite run; rebuilding them here would add lock entries that collide with 01's parallel round.
+- Contributor and agent docs updated: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), [commands.md](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [internals.md](../../../../skills/task-tree/references/internals.md), [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#accept).
+
 ## Details
 
 ### Evidence (engine review, reproduced on scratch projects before 01)
@@ -59,3 +92,40 @@ Owning tasks: [reviewed-acceptance](../../02-runner/reviewed-acceptance/task.md)
 - **Duplication.** `baseline.lock` copies the lock entry, `baseline.run` the run record, and `baseline.spec` the receipt; `state.outputs` equals `state.products` when no sidecar is declared; `boundary_inputs` is stored twice.
 - **Dropbox sync.** `.superra-repro/` in this checkout has the `com.dropbox.attrs` attribute and no `com.dropbox.ignored` flag. The phantom-failure path is `compute_status` in [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py), which turns a `running` record into `failed`; the lock is `mutation_lock` in [_repro_acceptance.py](../../../../skills/task-tree/scripts/_repro_acceptance.py).
 - **Worktrees.** This repository has worktrees both outside Dropbox (`/private/tmp/superRA-worktrees/`, `~/.cache/superRA-worktrees/`) and inside it (`superRA.worktrees/`). The ones outside start with no hash cache, receipts, or stamps, so their first `status` rehashes all data and their checks report "not run here".
+
+## Reproduction
+
+```yaml
+steps:
+  - name: portable-records-check
+    kind: check
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_edit_detect.py -q -p no:cacheprovider"
+    deps:
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_checkout_scope.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_edit_detect.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_builds.py
+      - skills/task-tree/scripts/_repro_provenance.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_signals.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_hook.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/conftest.py
+      - skills/task-tree/scripts/test_edit_detect.py
+      - skills/task-tree/scripts/test_repro_acceptance.py
+      - skills/task-tree/scripts/test_repro_provenance.py
+      - skills/task-tree/scripts/test_repro_runner.py
+```

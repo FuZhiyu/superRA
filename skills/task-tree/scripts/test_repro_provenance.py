@@ -161,7 +161,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     assert f"next: git show --stat {first}" in out
     body = out.split("searched:")[0]
     assert "synced" not in body and "branch" not in body
-    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance.json; the lock at 5 revision(s) on local and remote-tracking branches and HEAD" in out
+    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance/; the lock at 5 revision(s) on local and remote-tracking branches and HEAD" in out
 
     # The consumer's dependency is an input; its output and the check's input follow the same roles.
     out = explain(b, capsys, "02-paper")
