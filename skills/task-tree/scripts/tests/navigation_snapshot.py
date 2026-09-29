@@ -26,12 +26,11 @@ def capture(source):
             'outs': [{'path': {'logical': o['path']['logical']},
                       'sidecar': {'logical': o['sidecar']['logical']} if o.get('sidecar') else None} for o in s['outs']],
         } for s in raw['steps']],
-        'step_edges': raw['step_edges'], 'task_edges': raw['task_edges'],
+        'step_edges': raw['step_edges'],
         'dependencies': dependencies, 'findings': raw['findings'], 'external_inputs': [],
     }
     clean_status = {
         'ok': status['ok'], 'summary': status['summary'],
-        'findings': status['findings'],
         'steps': [{'name': s['name'], 'status': s['status'], 'reason': s['status'],
                    'duration': s.get('duration'), 'last_run': s.get('last_run')}
                   for s in status['steps']],

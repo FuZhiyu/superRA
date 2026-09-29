@@ -387,7 +387,7 @@ def test_resume_archived_cycle_is_preflighted(tmp_path):
     assert (root / "a/task.md").read_bytes() == before
 
 
-def test_dashboard_boundary_payload_uses_global_snapshot(tmp_path):
+def test_dashboard_children_payload_uses_global_snapshot(tmp_path):
     import plan_dashboard as dashboard
     from _task_io import walk_plan
     root = tmp_path / "superRA"
@@ -399,8 +399,7 @@ def test_dashboard_boundary_payload_uses_global_snapshot(tmp_path):
     payload = dashboard._children_graph_payload(tree, current)
     assert payload["edges"] == {"b": ["a"]}
     assert {n["path"] for n in payload["children"]} == {"a", "b"}
-    assert payload["valid"] is True
-    assert payload["boundary"]["edges"][0]["evidence"][0]["via"] == "a.txt"
+    assert set(payload) == {"children", "edges"}
 
 
 def test_create_preflight_can_repair_dangling_edge_but_rejects_cycle(tmp_path):

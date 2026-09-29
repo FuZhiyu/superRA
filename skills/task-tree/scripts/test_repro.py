@@ -691,8 +691,12 @@ class TestEdges:
         assert payload["step_edges"] == [
             {"from": "build", "to": "estimate", "via": "output/panel.parquet"}
         ]
-        assert [(e["from"], e["to"]) for e in payload["task_edges"]] == [("01-build", "02-estimate")]
-        assert {e["kind"] for e in payload["task_edges"][0]["evidence"]} == {"logical", "inferred"}
+        # Each fact once: depends_on edges beside the step edges, findings only at the top.
+        assert "task_edges" not in payload
+        assert set(payload["dependencies"]) == {"tasks", "archived_tasks", "logical"}
+        assert [(e["from"], e["to"], e["kind"]) for e in payload["dependencies"]["logical"]] == [
+            ("01-build", "02-estimate", "logical")
+        ]
         assert payload["steps"][0]["outs"][0]["sidecar"] is None
 
     def test_sidecar_survives_into_the_serialized_out(self, tmp_path):

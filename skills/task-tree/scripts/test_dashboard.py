@@ -235,12 +235,6 @@ class TestServerRoutes:
         assert 'id="btn-kanban"' not in text
         assert 'id="btn-dag"' not in text
 
-    def test_dag_returns_mermaid(self, client):
-        resp = client.get("/dag")
-        assert resp.status_code == 200
-        assert "mermaid" in resp.text
-        assert "graph LR" in resp.text
-
     def test_export_returns_attachment(self, client):
         """The Share route returns standalone HTML as a file download."""
         resp = client.get("/export")
@@ -1704,19 +1698,6 @@ class TestTemplateRendering:
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
-    def test_dag_has_dependency_arrows(self, plan_root):
-        plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard.rebuild_tree()
-        env = plan_dashboard._get_jinja_env()
-        template = env.get_template("dag.html")
-        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
-        html = template.render(
-            root_task=_launch_state(plan_dashboard).root_task, all_tasks=all_tasks
-        )
-        assert "graph LR" in html
-        # 02-second depends on 01-first
-        assert "-->" in html
-
 
 # ---------------------------------------------------------------------------
 # TestCLI
@@ -2347,7 +2328,7 @@ def _run_node(harness_body):
     prints a JSON line we parse back.  Returns the decoded object."""
     defs = _extract_js_defs([
         "childrenSig", "childCardHTML", "SUBTASK_HEADER",
-        "buildChildGrid", "buildChildFlow", "escapeHtml", "escapeAttr",
+        "buildChildGrid", "escapeHtml", "escapeAttr",
     ])
     script = defs + "\n" + harness_body
     proc = subprocess.run(
@@ -2367,66 +2348,9 @@ class TestChildFlowClientLogic:
             "var html=buildChildGrid(kids);"
             "console.log(JSON.stringify({"
             "  hasCard: html.indexOf('child-card')>=0,"
-            "  hasGrid: html.indexOf('child-grid')>=0,"
-            "  hasFlow: html.indexOf('child-flow')>=0}));"
+            "  hasGrid: html.indexOf('child-grid')>=0}));"
         )
-        assert out["hasCard"] and out["hasGrid"] and not out["hasFlow"]
-
-    def test_topological_tier_order(self):
-        """buildChildFlow groups children into execution tiers: a (tier 0),
-        then b & c (depend on a), then d (depends on b)."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'approved'},"
-            "  {path:'b',slug:'b',title:'B',status:'in-progress'},"
-            "  {path:'c',slug:'c',title:'C',status:'not-started'},"
-            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
-            "var edges={b:['a'],c:['a'],d:['b']};"
-            "var html=buildChildFlow(kids, edges);"
-            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
-            "  var m=seg.match(/data-path=\"([a-d])\"/g)||[];"
-            "  return m.map(function(s){return s.match(/\"([a-d])\"/)[1];});});"
-            "console.log(JSON.stringify({tiers: tiers}));"
-        )
-        assert out["tiers"] == [["a"], ["b", "c"], ["d"]]
-
-    def test_cycle_is_safe_and_terminates(self):
-        """A cyclic edge set must still terminate and place every child; the
-        unresolvable nodes are flushed into the final tier."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'not-started'},"
-            "  {path:'b',slug:'b',title:'B',status:'not-started'},"
-            "  {path:'c',slug:'c',title:'C',status:'not-started'}];"
-            "var edges={a:['b'],b:['a'],c:[]};"  # a<->b cycle, c independent
-            "var html=buildChildFlow(kids, edges);"
-            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
-            "  var m=seg.match(/data-path=\"([a-c])\"/g)||[];"
-            "  return m.map(function(s){return s.match(/\"([a-c])\"/)[1];});});"
-            "var all=[].concat.apply([],tiers).sort().join('');"
-            "console.log(JSON.stringify({all: all, lastTier: tiers[tiers.length-1].sort()}));"
-        )
-        # Every child placed exactly once; the cyclic pair lands in the last tier.
-        assert out["all"] == "abc"
-        assert set(out["lastTier"]) == {"a", "b"}
-
-    def test_after_footer_names_direct_deps_only(self):
-        """A dependent card's `after:` footer lists only its direct sibling
-        deps (d depends on b, not transitively on a)."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'approved'},"
-            "  {path:'b',slug:'b',title:'B',status:'approved'},"
-            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
-            "var edges={b:['a'],d:['b']};"
-            "var html=buildChildFlow(kids, edges);"
-            # Isolate d's card markup, then read its dep-slug footer entries.
-            "var dCard=html.split('data-path=\"d\"')[1].split('</button>')[0];"
-            "var deps=(dCard.match(/dep-slug\">([a-d])</g)||[])"
-            "  .map(function(s){return s.match(/>([a-d])</)[1];});"
-            "console.log(JSON.stringify({deps: deps}));"
-        )
-        assert out["deps"] == ["b"]
+        assert out["hasCard"] and out["hasGrid"]
 
     def test_children_sig_busts_on_status_change(self):
         out = _run_node(
@@ -5118,8 +5042,7 @@ class TestMasterDetailPartials:
 
     def test_existing_routes_unaffected(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
-            for route in ("/", "/dag"):
-                assert c.get(route).status_code == 200
+            assert c.get("/").status_code == 200
 
 
 class TestIdleShutdown:
@@ -6702,6 +6625,21 @@ class TestReproRoutes:
         assert status["steps"] == [] and status["summary"]["total"] == 0
         assert status["ok"] is True
 
+    def test_findings_travel_once_in_the_graph_payload(self, repro_plan):
+        """The view reads findings off the graph; the status payload and the
+        dependency block do not repeat them."""
+        (repro_plan / "01-ingest" / "task.md").write_text(
+            REPRO_INGEST.replace("sh code/fetch.sh", "[unclosed"), encoding="utf-8"
+        )
+        plan_dashboard._repro_graph_cache.clear()
+        with _repro_client(repro_plan) as c:
+            graph = c.get("/api/repro/graph").json()
+            status = c.get("/api/repro/status").json()
+        assert graph["findings"]
+        assert "findings" not in status
+        assert set(graph["dependencies"]) == {"tasks", "archived_tasks", "logical"}
+        assert "task_edges" not in graph
+
 
 class TestLogTailBoundedRead:
     def test_reads_only_the_tail_and_drops_the_partial_first_line(self, tmp_path):
@@ -7074,10 +7012,11 @@ def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
         "REPRO_STATES", "REPRO_GLYPHS",
         "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
-        "reproProject", "reproMatches", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
-        "reproControlsHTML", "reproTasks", "reproLogicalBoundaryHTML", "reproHierarchy", "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "parentPath",
+        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
+        "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
+        "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
-        "onReproClick", "reproNavigate", "reproRoots", "reproHash", "reproBoundaryHTML",
+        "onReproClick", "reproNavigate", "reproHash",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness
@@ -7085,8 +7024,8 @@ def _run_repro_render_node(harness_body):
     shim = (
         "var _workspaceFilters={statuses:[],tasks:null};\n"
         "var _reproSelected='', _reproData=null, pathTitles={};\n"
-        "var window={}; var _reproNav={roots:[],mode:'scope',view:'overview'};\n"
-        "var _reproContext=[], _reproNotice='', _reproLayoutCache=null, _reproFitNext=true, _reproPreserve='';\n"
+        "var window={}; var _reproNav={selected:'',expanded:[]};\n"
+        "var _reproNotice='', _reproLayoutCache=null, _reproViewNext='open', _reproPreserve='';\n"
         "var activeArtifactPath='',currentView='reproduction',activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
         "var history={pushState:function(s,t,url){location.hash=url;}};\n"
         "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
@@ -7095,6 +7034,7 @@ def _run_repro_render_node(harness_body):
         "function reproBindEdges(){}\n"
         "function reproSizeWorkspace(){}\n"
         "function reproFit(){}\n"
+        "function reproOpen(){}\n"
         "function reproTransform(){}\n"
         "function reproBindHead(){}\n"
         "function renderReproDetail(){}\n"
@@ -7119,7 +7059,7 @@ class TestReproFindingsRendering:
             "var box={innerHTML:'',querySelector:function(){return null;}};"
             "_reproData={graph:" + json.dumps(graph) + ",status:{steps:[],findings:[]}};"
             "drawReproView(box,_reproData);"
-            "reproNavigate({roots:[" + json.dumps(owner) + "],expanded:[" + json.dumps(owner) + "]},true);"
+            "reproNavigate({expanded:[" + json.dumps(owner) + "]},true);"
             "console.log(JSON.stringify({html:box.innerHTML}));"
         )
         assert 'class="repro-canvas"' in out["html"]
@@ -7146,6 +7086,27 @@ class TestReproFindingsRendering:
         )
         assert out["strip"] and out["message"]
         assert not out["claimsNothingDeclared"]
+
+    def test_a_broken_task_card_is_marked_and_links_its_finding(self):
+        """A task whose section failed to parse draws no steps; its card must not
+        read like a task with none declared, and a depends_on-only edge must not
+        read like a file edge."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "var data={graph:{steps:[],step_edges:[],"
+            "  findings:[{severity:'error',task_path:'broken',message:'bad yaml'}],"
+            "  dependencies:{tasks:[{path:'broken',title:'Broken',status:'in-progress'},"
+            "    {path:'notes',title:'Notes',status:'in-progress'}],"
+            "  logical:[{kind:'logical',from:'broken',to:'notes',declaration:'notes/task.md depends_on: broken'}]}},"
+            "  status:{steps:[]}};"
+            "drawReproView(box, data);"
+            "console.log(JSON.stringify({html: box.innerHTML}));"
+        )
+        html = out["html"]
+        assert 'class="rp-task is-error"' in html
+        assert 'data-rp-action="finding" data-value="broken"' in html
+        assert 'data-finding-task="broken"' in html
+        assert 'class="rp-wire is-logical"' in html
 
     def test_an_empty_tree_shows_no_active_tasks(self):
         out = _run_repro_render_node(
@@ -7328,8 +7289,8 @@ class TestReproGraphChangeBroadcast:
 class TestReproNavigationRepair:
     def run_client(self, body):
         defs = _extract_js_defs([
-            "onReproClick", "reproNavigate", "reproRoots", "reproWithin",
-            "reproProject", "reproMatches", "reproHash", "reproReadHash", "normalizeWorkspaceFilters",
+            "onReproClick", "reproNavigate", "reproWithin",
+            "reproProject", "reproHash", "reproReadHash", "normalizeWorkspaceFilters",
             "revealReproStep", "selectReproStep", "reproNodeId", "initRouter", "reproRevealOwner", "parentPath", "reproFocus", "reproZoomAt",
         ])
         shim = r"""
@@ -7342,9 +7303,9 @@ var location={hash:'#/analysis'}, history={
   pushState:function(s,t,url){location.hash=url;},
   replaceState:function(s,t,url){location.hash=url;}
 };
-var _reproNav={roots:[],view:'graph',mode:'scope',anchor:'',selected:'',expanded:[]};
-var _reproSelected='', _reproContext=[];
-var _reproInspectorClosed=false, _reproFitNext=false, _reproLayoutCache=null, currentView='workspace';
+var _reproNav={selected:'',expanded:[]};
+var _reproSelected='';
+var _reproInspectorClosed=false, _reproViewNext='', _reproLayoutCache=null, currentView='workspace';
 var _reproViewport={x:0,y:0,zoom:1};
 var _reproData={graph:{steps:[
   {name:'input',task:'other'},
@@ -7354,7 +7315,7 @@ var drawn=null, opened='', selected='', transformed=0;
 var box={querySelectorAll:function(){return [];},querySelector:function(){return null;},classList:{remove:function(){}},focus:function(){}};
 var document={getElementById:function(){return box;},
   querySelector:function(){return {clientWidth:800,clientHeight:500,focus:function(){}};}};
-function drawReproView(){drawn=reproProject(_reproData.graph,_reproNav,_reproContext);}
+function drawReproView(){drawn=reproProject(_reproData.graph);}
 function showView(view){opened=view;currentView=view;}
 function renderReproDetail(name){selected=name;}
 function loadReproData(){return Promise.resolve(_reproData);}
@@ -7378,28 +7339,24 @@ function click(action,value){onReproClick({preventDefault:function(){},target:{c
 
     def test_reveal_select_and_overview_keep_all_steps(self):
         self.run_client("""
-click('explore','analysis');await Promise.resolve();
-assert.equal(_reproNav.view,'graph');
+reproFocus('analysis');await Promise.resolve();await Promise.resolve();
+assert.equal(opened,'reproduction');
 assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 click('select','result');
 assert.equal(selected,'result');
-click('mode','upstream');
-assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
-assert.equal(_reproNav.anchor,'');
-click('clear');
+click('overview');
 assert.equal(_reproNav.selected,'result');
 assert.deepEqual(_reproNav.expanded,[]);
-assert.deepEqual(_reproNav.roots,[]);
+assert.equal(_reproViewNext,'fit');
+assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 """)
 
     def test_task_link_reveals_step_without_filtering_peers(self):
         self.run_client("""
-currentView='reproduction'; _reproNav.roots=['analysis'];
+currentView='reproduction';
 await revealReproStep('input');
-assert.equal(_reproNav.view,'graph');
-assert.equal(_reproNav.mode,'scope');
 assert.equal(_reproNav.selected,'input');
-assert.deepEqual(_reproNav.roots,[]);
+assert.deepEqual(_reproNav.expanded,['other','']);
 assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 """)
 
@@ -7408,9 +7365,7 @@ assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
 var wanted={roots:['analysis'],tier:'required',view:'graph',mode:'upstream',anchor:'result',selected:'result',expanded:[]};
 location.hash='#/analysis?repro='+encodeURIComponent(JSON.stringify(wanted));
 initRouter();
-assert.deepEqual(_reproNav.roots,[]);
-assert.equal(_reproNav.mode,'scope');
-assert.equal(_reproNav.tier,undefined);
+assert.deepEqual(Object.keys(_reproNav).sort(),['expanded','selected']);
 assert.equal(_reproNav.selected,'result');
 assert.equal(opened,'reproduction');
 assert.ok(location.hash.includes('?repro='));

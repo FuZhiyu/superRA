@@ -158,14 +158,6 @@ class TestRenderIsolation:
         assert "Step one in A." in a.text and "Step one in B." not in a.text
         assert "Step one in B." in b.text and "Step one in A." not in b.text
 
-    def test_dag_isolated(self, two_worktrees):
-        client, wt_a, wt_b = two_worktrees
-        a = client.get(f"/dag?wt={wt_a}").text
-        b = client.get(f"/dag?wt={wt_b}").text
-        # The DAG labels carry each worktree's child title.
-        assert "First A" in a and "First B" not in a
-        assert "First B" in b and "First A" not in b
-
     def test_comments_route_isolated(self, two_worktrees):
         """The comment-list route reads the worktree's own task dir: a comment on
         A's 01-first is visible only under ``?wt=A``."""
