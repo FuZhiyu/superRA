@@ -1,6 +1,6 @@
 ---
 title: "Producer-Edit Reminder Catches Every Producer Edit"
-status: not-started
+status: approved
 depends_on: []
 ---
 
@@ -34,3 +34,15 @@ Owning tasks: [05-reminder-hook](../../05-reminder-hook/task.md), [02-agent-sign
 ## Details
 
 Evidence with the scratch scenarios: [deps-report.md](../attachments/deps-report.md) M5 and Minor.
+
+## Results
+
+Every case in the Validation list now fires exactly one reminder; regression tests are in [test_edit_detect.py](../../../../skills/task-tree/scripts/test_edit_detect.py) (`TestEveryProducerEdit`, `TestScopedWarnings`).
+
+- **Variables resolve in the hook.** `_hook_graph` in [task_hook.py](../../../../skills/task-tree/scripts/task_hook.py) builds the graph with literal and `env:` variables resolved and a `shell:` runner that returns an inert `${shell}` placeholder, so no subprocess runs and paths built from a shell variable match nothing (the step's literal paths still do). All hook graph builds (reminder, marker clearing, implemented-coverage, baseline watch list) use it. `${CODE}/est.jl` edits by `sed -i` are caught.
+- **Directories.** `_repro_watch` lists declared directory dependencies; [_edit_detect.py](../../../../skills/task-tree/scripts/_edit_detect.py) scans them on every call (cap `MAX_DIR_FILES` = 2000, skipping hidden and scratch folders), so edits and new files inside them report.
+- **First tool call.** The hook also handles `UserPromptSubmit` (registered in [hooks.json](../../../../hooks/hooks.json) and [hooks-codex.json](../../../../hooks/hooks-codex.json)), seeding the baseline and never reporting. A harness without that event still seeds on the first tool call, as before.
+- **New scripts.** The directories of registered scripts outside the task root are scanned for files with a configured runner's suffix (`runner_suffixes`: `julia` gives `.jl`). Only a *new* file reports, with the softer message ("may need a step … many scripts never do"); a scratch/tmp folder, another language, or an edit to an existing unregistered script stays silent. Baseline format bumped to version 2 (old baselines reseed silently).
+- **Scoped warnings.** A `task.md` edit reports validation and graph warnings for the edited tasks only (`_reconcile(scope=...)`); structural Bash moves still report the whole tree. The communicate reminder is unchanged: it concerns the edited markdown, not other tasks.
+- **Cost** on this repo's tree: 41 ms per no-op Bash call, 108 ms for the prompt seed, 150-160 ms per `task.md` edit.
+- **Test change.** `test_reproduction_reminder_never_resolves_vars` became `..._never_runs_shell_vars`: it asserted no variable resolution at all, which the design now reverses; it still proves no shell command runs.
