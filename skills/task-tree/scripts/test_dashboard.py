@@ -6997,6 +6997,24 @@ class TestReproLockWatch:
             self._reset()
             loop.close()
 
+    def test_the_reopened_watch_ticks_only_once(self, tmp_path, monkeypatch):
+        """A quiet first tick after a re-arm has done its comparison; the next
+        watch is event-driven again."""
+        import watchfiles
+
+        self._reset()
+        self._seed(tmp_path)
+        lock = tmp_path / "repro-lock.json"
+        lock.write_text("{}", encoding="utf-8")
+        sessions = self._stub_awatch(monkeypatch, [[{(watchfiles.Change.added, str(lock))}], [set()], []])
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(plan_dashboard._watch_worktree("wt-a", asyncio.Event()))
+            assert [s["yield_on_timeout"] for s in sessions[1:]] == [True, False]
+        finally:
+            self._reset()
+            loop.close()
+
 
 # ---------------------------------------------------------------------------
 # Reproduction findings + empty-state copy (node-backed)

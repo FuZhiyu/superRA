@@ -196,6 +196,27 @@ def test_an_interrupt_leaves_queued_steps_and_their_acceptance_untouched(project
     assert project.states()["build-a"] == "failed"
 
 
+def test_a_stop_after_the_check_leaves_the_steps_acceptance_standing(project, monkeypatch):
+    import repro_run
+    assert project.run("build", ".") == 0
+    project.write("Code/x.sh", project.read("Code/x.sh") + "# harmless\n")
+    review(project, ("03-x#build-x",))
+    ledger = project.root / LEDGER / "build-x.json"
+    accepted = ledger.read_bytes()
+    boundary, run_step = repro_run.boundary_inputs, repro_run._run_step
+
+    def stop_after_the_check(build, step, entry):
+        def late(*args, **kwargs):
+            build.stopping.set()  # the interrupt lands after the pre-start check
+            return boundary(*args, **kwargs)
+        monkeypatch.setattr(repro_run, "boundary_inputs", late)
+        return run_step(build, step, entry)
+
+    monkeypatch.setattr(repro_run, "_run_step", stop_after_the_check)
+    project.run("build", "03-x", "--force")
+    assert ledger.read_bytes() == accepted  # supersede waits for the step to actually start
+
+
 # ---------------------------------------------------------------------------
 # Freshness fixes
 # ---------------------------------------------------------------------------

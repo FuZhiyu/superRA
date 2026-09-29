@@ -126,6 +126,7 @@ Owning tasks: [02-runner](../../02-runner/task.md), [task-scoped-builds](../../1
   - Four scoped-`status` assertions in `test_repro_scope.py` move from 0 to 3, the new exit code, because each selection is fresh with a never-built or stale producer behind it.
   - Two check-elsewhere reasons in `test_repro_provenance.py` now include `on <platform>`, because every lock entry carries `built_on`.
   - `test_repro_builds.py` follows the folded record beyond lines 19-23: the probe tests and the `lock_id` mismatch case are gone, the `explain` environment test compares platforms, and an identical-rebuild check is new.
+- **Deferred advisories.** `_run_step` supersedes a step's acceptance only under `running_lock` after the stop check, so a step an interrupt reaches before it starts keeps its acceptance ([test](../../../../skills/task-tree/scripts/test_repro_engine.py)). The dashboard's re-armed lock watch ticks on timeout once, then reopens event-driven ([test](../../../../skills/task-tree/scripts/test_dashboard.py)).
 - **Minor findings.** The dry-run upper bound is now documented. The rest are untouched: exit 1 on a fresh clone until checks run, the lingering invalid acceptance, and untracked Python imports.
 
 ## Details
