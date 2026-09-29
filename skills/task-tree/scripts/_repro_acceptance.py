@@ -12,7 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from _repro_state import (
-    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, dependency_state, directory_dep_nodes, dropbox_ignore,
+    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state, directory_dep_nodes,
+    dropbox_ignore,
     node_state, output_nodes, read_lock, read_run_record, select_steps, spec_hash,
     spec_node_id, step_nodes, _topological,
 )
@@ -445,9 +446,15 @@ def preview(graph, paths, targets, reason, reviews):
             if previous and previous['digest'] != item['digest']:
                 changes.append({'node': item['logical'] + '::boundary', 'kind': 'boundary',
                                 'before': previous['digest'], 'after': item['digest']})
-        # Already fresh on its own evidence: the step keeps what it has.
-        unchanged = not changes and name not in ledger['set_aside'] and (
-            previous_record is None or validate_record(graph, step, paths, previous_record, lock) is None)
+        # A step its own status reads fresh keeps its evidence; anything that
+        # status reports, such as an unverified saved input, is a change.
+        local = compute_status(graph, paths, targets=[f"{step.task_path or '.'}#{name}"]).entry(name)
+        digests = {item['logical']: item['digest'] for item in boundary}
+        for change in local.changes:
+            node = change.node + '::boundary'
+            if change.kind == 'boundary' and all(c['node'] != node for c in changes):
+                changes.append({'node': node, 'kind': 'boundary', 'before': None, 'after': digests.get(change.node)})
+        unchanged = local.local_status == 'fresh' and not local.acceptance_invalid and name not in ledger['set_aside']
         coverage = {change['node']: reviews[change['node']] for change in changes if change['node'] in reviews}
         record = None if unchanged else portable_record(
             {'lock': lock_digest(lock.get(name)), 'state': state, 'boundary_inputs': boundary,
