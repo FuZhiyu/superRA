@@ -594,25 +594,42 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     # and re-enters with the lock in the set. Once the lock is watched the tick
     # is off and the loop is event-driven again. A build replaces the lock by
     # rename, so a change to it also re-enters: a watch on the old file would
-    # not see the next build on an inode-based backend.
+    # not see the next build on an inode-based backend. Closing that watch drops
+    # a write that lands before the next one opens, so the reopened watch ticks
+    # once and compares the lock with what the last refresh read.
     lock_file = Path(state.project_root) / LOCK_FILENAME
 
+    def _lock_signature():
+        try:
+            stat = lock_file.stat()
+        except OSError:
+            return None
+        return (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+
+    refreshed = None  # the lock's signature when a lock change last re-armed the watch
     while not stop_event.is_set():
         watching_lock = lock_file.is_file()
         watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
         rearm = False
         watcher = watchfiles.awatch(
-            *watch_paths, stop_event=stop_event, yield_on_timeout=not watching_lock
+            *watch_paths, stop_event=stop_event,
+            yield_on_timeout=not watching_lock or refreshed is not None,
         )
         try:
             async for changes in watcher:
+                if refreshed is not None:
+                    if _lock_signature() != refreshed:
+                        changes = set(changes) | {(watchfiles.Change.modified, str(lock_file))}
+                    refreshed = None
                 if changes:
                     # watchfiles already debounces (default 1600ms); the sleep
                     # adds a short extra window so rapid back-to-back writes
                     # coalesce.
                     await asyncio.sleep(0.2)
+                    lock_read = _lock_signature()
                     await _rebuild_and_broadcast(state, changes)
                     if watching_lock and any(Path(path).name == LOCK_FILENAME for _, path in changes):
+                        refreshed = lock_read
                         rearm = True
                         break
                 if not watching_lock and lock_file.is_file():
