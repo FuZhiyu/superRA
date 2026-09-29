@@ -1,6 +1,6 @@
 ---
 title: "Readiness Follows depends_on; File Dependencies Inform"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -108,7 +108,7 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 - **Flaw 1, two readiness rules.** The frontier lists ready leaves only; own-work rows are gone. `P/c` stays on the frontier after a `setup.sh` edit, with `setup.txt from .#setup: stale` as an input.
 - **Flaw 2, invented cycles and over-blocking.** Each boundary checks cycles over `depends_on` edges only; step cycles stay errors in [build_graph](../../../../skills/task-tree/scripts/_repro.py). The `paper` chain has no error, and each task reports its inputs. A `depends_on` against the file flow is a warning: `depends_on 'b' runs against the file flow: b reads this task's output a.txt; not blocking, but best avoided`.
 - **Flaw 3, errors freeze planning and builds.** `Dependencies.findings` holds dependency findings only, so `valid` ignores reproduction errors. [Preflight](../../../../skills/task-tree/scripts/_task_snapshot.py) builds the current and edited trees without resolving variables and refuses only a new `depends_on` error. With `OUT: {env: NOPE_UNSET_VAR}`, `create`, `dep add`, `move`, and `frontier` succeed, and the frontier notes the reproduction errors on stderr.
-  - **An error blocks only the builds it touches.** [step_errors](../../../../skills/task-tree/scripts/_repro.py) decides for `repro build`, `accept`, `status`'s verdict, and reviewed-baseline freshness. An error touches a selection when it sits on a selected step's owning task or a target task's subtree, is a step cycle through a selected step, or is project-wide configuration. A broken variable touches only the steps using it, which fail on their own task; `depends_on` errors touch no build.
+  - **An error blocks only the builds it touches.** [step_errors](../../../../skills/task-tree/scripts/_repro.py) decides for `repro build`, `accept`, `status`'s verdict, and reviewed-baseline freshness. An error touches a selection when it sits on a selected step's owning task (the root task only for its own steps) or a target task's subtree, is a step cycle through a selected step, or is project-wide `config.yaml` configuration. `build_graph` reports every step cycle, one per strongly connected component with its witness, and a build that skips steps exits 1. A broken variable touches only the steps using it, which fail on their own task; `depends_on` errors touch no build.
   - **Files from failed declarations are guarded.** A selected step reading an out of a step that failed to register is refused, naming the task. A section that fails to parse registers nothing, so a build reading any external input warns.
   - **An unrelated unset variable no longer stales accepted steps.** The cause was not the spec hash, which never includes variables; any error in the tree voided every reviewed baseline. Acceptance now checks only errors touching the step.
 - **Flaw 4, archived producer.** The consumer's input reads `missing` with `archived producer; file is missing`. `build --dry-run` now reports a step whose input is missing as `cannot run` and exits 1 instead of claiming freshness ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)).
@@ -131,8 +131,8 @@ Readiness now reads only `depends_on`; file edges are reported as inputs and nev
 
 ### Verification
 
-- The [regression tests](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover each scenario in the Validation list and each review finding, plus [test_unrelated_graph_error_keeps_acceptance_and_builds](../../../../skills/task-tree/scripts/test_repro_acceptance.py). Against the base commit `caecfc02`, 23 of these 33 tests fail; all pass here.
-- The task-tree suite and harness fixture tests pass: **1,385 passed, 10 skipped**.
+- The [regression tests](../../../../skills/task-tree/scripts/test_task_dependencies.py) cover each scenario in the Validation list and each review finding, plus [test_unrelated_graph_error_keeps_acceptance_and_builds](../../../../skills/task-tree/scripts/test_repro_acceptance.py). Against the base commit `caecfc02`, 25 of these 35 tests fail; all pass here.
+- The task-tree suite and harness fixture tests pass: **1,387 passed, 10 skipped**.
 - `readiness-model-check` built fresh. The edited scripts are declared deps of 14 other tasks' checks, which read `missing` or `stale` in this worktree (most were never stamped here); they were not rebuilt, and their test files pass in the suite above.
 - Agent-facing docs: [main-agent.md](../../../../skills/using-superra/references/main-agent.md#resuming-work), [task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md), [commands.md](../../../../skills/task-tree/references/commands.md#manage-dependencies), [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), and [internals.md](../../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).
 
@@ -146,6 +146,7 @@ Tier: thorough (first pass); quick re-review of `250eadc0..6100c89d`. Focus: cor
    - This breaks the Validation item "a step cycle blocks builds of its steps with its witness". Before the scope change, any cycle refused every build, so this path was unreachable.
    - Fix: have `build_graph` report every step cycle (for example, each strongly connected component), and let `step_errors` match a selected step against any reported cycle.
    → implemented: [_repro.py step_errors](../../../../skills/task-tree/scripts/_repro.py) scopes errors to the selection for build, accept, status, and baselines; a read of a failed step's out is refused and an unparsed section warns; [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) and the 0.5 design updated.
+   → implemented: [_repro.py _cyclic_components](../../../../skills/task-tree/scripts/_repro.py) reports each cyclic strongly connected component as its own `step cycle` finding with a witness, and `step_errors` matches the selection against each; `task check` lists both cycles and `repro build x --upstream` refuses with the witness, dry-run or not ([test_every_step_cycle_is_reported_and_blocks_its_builds](../../../../skills/task-tree/scripts/test_task_dependencies.py)). A build that skips steps now exits 1 ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py)). Orchestrator addition: a root-task error now blocks only builds of root-owned steps; only `config.yaml` errors are project-wide ([test_root_step_error_blocks_only_root_builds](../../../../skills/task-tree/scripts/test_task_dependencies.py)).
 
 ## Reproduction
 

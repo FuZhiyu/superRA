@@ -378,7 +378,7 @@ def run_build(
     if paths.lock_file.is_file() and legacy:
         print(f"{LOCK_FILENAME} now holds the build records; {', '.join(legacy)} no longer read. "
               f"Remove with `git rm {' '.join(legacy)}`.")
-    return 1 if interrupted or counts.get("failed") else 0
+    return 1 if interrupted or counts.get("failed") or counts.get("skipped") else 0
 
 
 # ---------------------------------------------------------------------------
