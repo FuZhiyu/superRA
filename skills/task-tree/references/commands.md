@@ -126,7 +126,7 @@ Status JSON also records `targets`, `upstream`, `boundary_inputs` (paths, produc
 | `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. A failed forced rerun requires a successful retry, which the next build attempts even with unchanged inputs. |
 | `external` | A dep no step produces is not on disk, so the step cannot run. |
 
-`repro-lock.json` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout, and each entry also records what the step was built on ([record](task-file-contract.md#the-lock)). A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build writes `repro-lock.json`; that build prints the `git rm` that retires them. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, check stamps, and the per-revision lock index `explain` reads live there, and `repro` creates it and adds it to `.gitignore` on first run.
+`repro-lock.json` at the project root is committed: its ids are the logical `${VAR}` paths, so it reads the same on every checkout, and each entry also records what the step was built on ([record](task-file-contract.md#the-lock)). A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build writes `repro-lock.json`; that build prints the `git rm` that retires them. `.superra-repro/` is not — the hash cache, per-step logs, run records, successful baseline receipts, check stamps, and the per-revision lock index `explain` reads live there, one folder per checkout. `repro` creates it and adds it to `.gitignore` on first run, and sets Dropbox's ignore flag (`com.dropbox.ignored`) whenever it opens the folder, so a Dropbox-synced checkout keeps one copy per machine.
 
 ### Reviewed acceptance
 
@@ -137,16 +137,14 @@ Status JSON also records `targets`, `upstream`, `boundary_inputs` (paths, produc
 ```bash
 superra repro accept 02-merge --reason 'Ran interactively and reviewed the current results'
 superra repro accept 02-merge --reason '...' --dry-run   # preview; writes nothing
-# Apply a specific preview, with the same arguments and its token:
-superra repro accept 02-merge --reason '...' --apply <preview-token>
 superra repro revoke 02-merge --json
 ```
 
-`--reason` is required to accept. Optional `--review NODE=RATIONALE` adds per-node notes; optional `--evidence FILE` binds an existing evidence file's bytes (optional `#anchor` references). Repeat either option for multiple notes/files. Without `--json`, `accept` prints the steps it covered and what changed under each.
+`--reason` is required to accept; cite any evidence file in it. Optional `--review NODE=RATIONALE` adds a per-node note; repeat it for several. Without `--json`, `accept` prints the steps it covered and what changed under each.
 
-The one-shot call runs every consistency check inside it and writes all selected records atomically. `--dry-run` previews and prints a token instead of writing; `--apply <token>` then accepts exactly that preview, for a deliberately separated review and apply. The token binds selection, current hashes, preceding successful lock if any, review notes, supplied evidence bytes, and the preceding ledger. Invalid graphs, missing declared inputs/outputs, unavailable supplied evidence, concurrent edits, and failed or interrupted runs reject acceptance. Checks require an existing successful baseline and unchanged check stamp; a never-run check must execute.
+The call runs every consistency check, rechecks hashes and declarations immediately before writing, and writes each changed step's record atomically. A selected step whose own `status` reads fresh keeps its evidence; no record is written for it. `--dry-run` previews and writes nothing. Invalid graphs, missing declared inputs/outputs, concurrent edits, and failed or interrupted runs reject acceptance. Checks require an existing successful baseline and unchanged check stamp; a never-run check must execute.
 
-Commit the project-root `repro-acceptance.json` with the declarations and reviewed changes. Valid records make ordinary builds and status `fresh`; `explain` and JSON `acceptance` retain the reason, optional notes/evidence, actor, recording time, and `basis: reviewed`. Last actual execution metadata, `repro-lock.json`, and check stamps remain unchanged. Forced execution bypasses acceptance within the target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes selected records; a downstream acceptance bound to a revoked step keeps its own reviewed state while that step retains a successful lock, and becomes ineffective otherwise.
+Commit the project-root `repro-acceptance/` records ([format](task-file-contract.md#acceptance-and-successful-baseline-records)) with the declarations and reviewed changes. Valid records make ordinary builds and status `fresh`; `explain` and JSON `acceptance` retain the reason, optional notes, and `basis: reviewed`. Last actual execution metadata, `repro-lock.json`, and check stamps remain unchanged. Forced execution bypasses acceptance within the target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes selected records; a downstream acceptance keeps its own reviewed state, and full-chain status reports it stale while the revoked producer is not fresh.
 
 Changes after acceptance invalidate its exact state, including actual sidecar-backed output bytes and saved-input bytes. A matching scoped status does not certify upstream producers; add `--upstream` to assess the chain.
 

@@ -145,7 +145,7 @@ def test_dry_run_writes_no_lock_record_receipt_or_acceptance(project):
     project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
     review(project)
     project.write("Code/b.sh", project.read("Code/b.sh") + "# edited\n")
-    watched = [project.paths.lock_file, project.root / LEDGER, *project.paths.runs_dir.iterdir(),
+    watched = [project.paths.lock_file, project.root / LEDGER / "build-a.json", *project.paths.runs_dir.iterdir(),
                *(receipt_path(project.paths, name) for name in ("build-a", "build-b", "check-b"))]
     before = {path: path.read_bytes() for path in watched}
     assert project.run("build", ".", "--dry-run", "--force", "-j", "2") == 0

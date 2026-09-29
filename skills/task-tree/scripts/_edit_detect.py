@@ -207,6 +207,8 @@ def _save(state_path: Path, payload: dict) -> None:
     ignore = state_dir / ".gitignore"
     if not ignore.exists():
         ignore.write_text("*\n", encoding="utf-8")
+        from _repro_state import dropbox_ignore  # the runner re-flags the folder whenever it opens it
+        dropbox_ignore(state_dir)
     tmp = state_path.with_name(f"{state_path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
     os.replace(tmp, state_path)
