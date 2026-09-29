@@ -25,10 +25,15 @@ def identity(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+_UMASK = os.umask(0)
+os.umask(_UMASK)
+
+
 def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(dir=path.parent, prefix='.' + path.name)
     try:
+        os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp's 0600 would outlive the rename
         with os.fdopen(fd, 'w', encoding='utf-8') as handle:
             json.dump(value, handle, sort_keys=True, indent=2)
             handle.write('\n')

@@ -28,6 +28,7 @@ import sys
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -71,6 +72,10 @@ NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every
 
 class StepFailed(RuntimeError):
     """A step command exited non-zero."""
+
+
+class NotStarted(Exception):
+    """The build was interrupted before this step's attempt began."""
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +144,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
         return "unchanged"
     if build.dry_run:
         return "would execute"
+    if build.stopping.is_set():  # before supersede and the run record touch anything
+        raise NotStarted
     blocked = _missing_inputs(build, step, entry)
     if blocked:
         raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
@@ -289,6 +296,9 @@ def _schedule(build: Build, n_workers: int) -> None:
             _stop(build)
             for future in list(futures):
                 name = futures.pop(future)
+                if future.cancel():  # still queued behind the workers
+                    build.outcomes[name] = ("skipped", "build interrupted")
+                    continue
                 try:
                     build.outcomes[name] = future.result()
                 except KeyboardInterrupt:
@@ -298,10 +308,30 @@ def _schedule(build: Build, n_workers: int) -> None:
             raise
 
 
+@contextmanager
+def _interrupt_on_termination():
+    """SIGTERM and SIGHUP stop the build as Ctrl-C does, so no step outlives it."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum, frame):
+        raise KeyboardInterrupt
+
+    previous = {sig: signal.signal(sig, interrupt) for sig in (signal.SIGTERM, signal.SIGHUP)}
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def _attempt(build: Build, step: Step) -> tuple[str, str]:
     try:
         entry = _decide(build, step)
         return _run_step(build, step, entry), ""
+    except NotStarted:
+        return "skipped", "build interrupted"
     except (StepFailed, ReproStateError, OSError) as exc:
         return "failed", f"{type(exc).__name__}: {exc}"
 
@@ -349,7 +379,7 @@ def run_build(
     )
     build = Build(graph=graph, paths=paths, names=list(names), cache=cache, forced=forced, dry_run=dry_run)
     interrupted = False
-    with mutation_lock(paths):
+    with mutation_lock(paths), _interrupt_on_termination():
         try:
             _schedule(build, n_workers)
         except KeyboardInterrupt:
@@ -701,7 +731,9 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
 
     if args.as_json:
-        print(json.dumps(report.to_dict(), indent=2))
+        result = report.to_dict()
+        result["behind"] = [{"name": e.step.name, "task": e.step.task_path, "status": e.status} for e in behind]
+        print(json.dumps(result, indent=2))
     else:
         print(format_status(report))
         if behind:
