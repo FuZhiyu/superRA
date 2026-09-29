@@ -113,7 +113,7 @@ When any reported step is not fresh, `status` ends with `Why not fresh: superra 
 
 `status` counts the steps outside the owning task that read a step's outs (`outside readers: N`); `explain` names them, or states that none does; status JSON carries the list as `external_consumers`. The count is one input to a significance judgment, never the judgment — a selected check, a maintained-path producer, and an out a document cites are significant at zero outside readers.
 
-Status JSON also records `targets`, `upstream`, and `boundary_inputs` (paths, producer, fingerprints, provenance, consumers). Step entries retain full-scope `status`/`reason` and expose `local_status`/`local_reason` before upstream staleness propagation. Default status certifies only selected work against saved inputs; `status --upstream` assesses the chain. The task reader and dashboard retain global freshness while exposing local evidence.
+Status JSON also records `targets`, `upstream`, `boundary_inputs` (paths, producer, fingerprints, provenance, consumers), and `behind` (the producers behind the selection that are not fresh, each with `name`, `task`, `status`). Step entries retain full-scope `status`/`reason` and expose `local_status`/`local_reason` before upstream staleness propagation. Default status certifies only selected work against saved inputs; `status --upstream` assesses the chain. The task reader and dashboard retain global freshness while exposing local evidence.
 
 `task read <path>` shows effective prerequisite tasks, including inherited group barriers, and a registered task's owned-step states. Its JSON includes the dependency snapshot and global findings. `task frontier --json` additionally exposes actionable parent-owned steps with `kind: own-work`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot so scope does not hide invalidity.
 
@@ -168,7 +168,7 @@ A missing out, a failed run, an upstream step, and a check that passed elsewhere
 
 Root relocation and command-resolution changes follow the [rerun model](../../reproducibility/references/diagnosing.md#what-makes-a-step-rerun).
 
-`build` runs each stale step as one subprocess from the project root, in dependency order; `-j N` runs up to N at once. A failed step skips its descendants while unrelated steps continue, and `build` exits 1; Ctrl-C stops running steps and records them failed. Every command runs on Python 3.10+; reading a legacy `pytask.lock` needs Python 3.11, and the runner re-execs itself under `uv` for it.
+`build` runs each stale step as one subprocess from the project root, in dependency order; `-j N` runs up to N at once. A failed step skips its descendants while unrelated steps continue, and `build` exits 1; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed; steps not yet started keep their records and acceptance. Every command runs on Python 3.10+; reading a legacy `pytask.lock` needs Python 3.11, and the runner re-execs itself under `uv` for it.
 
 ## Comments
 

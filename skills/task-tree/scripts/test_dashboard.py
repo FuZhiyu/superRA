@@ -7021,6 +7021,44 @@ class TestReproLockWatch:
             self._reset()
             loop.close()
 
+    def test_a_lock_write_while_the_watch_re_arms_is_not_lost(self, tmp_path, monkeypatch):
+        """A `-j` build writes the lock once per step. A write that lands while
+        the watch closes and reopens is in neither session, so the reopened
+        watch compares the lock with what the last refresh read."""
+        import watchfiles
+
+        self._reset()
+        root = self._seed(tmp_path)
+        lock = tmp_path / "repro-lock.json"
+        lock.write_text("{}", encoding="utf-8")
+        rebuild = plan_dashboard._rebuild_and_broadcast
+        writes = iter(['{"steps": 1}'])
+
+        async def _rebuild_then_a_late_write(state, changes):
+            await rebuild(state, changes)
+            for text in writes:  # the build's next step finishes during the refresh
+                lock.write_text(text, encoding="utf-8")
+
+        monkeypatch.setattr(plan_dashboard, "_rebuild_and_broadcast", _rebuild_then_a_late_write)
+        sessions = self._stub_awatch(
+            monkeypatch, [[{(watchfiles.Change.added, str(lock))}], [set()]]
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(
+                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
+            )
+            assert sessions[1]["yield_on_timeout"] is True  # its first tick runs the comparison
+            events = []
+            while not queue.empty():
+                events.append(queue.get_nowait())
+            assert sum("event: repro-updated" in e for e in events) == 2
+        finally:
+            self._reset()
+            loop.close()
+
 
 # ---------------------------------------------------------------------------
 # Reproduction findings + empty-state copy (node-backed)
