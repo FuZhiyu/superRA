@@ -91,6 +91,8 @@ The frontmatter parser handles:
 
 No YAML library — the parser is minimal and purpose-built.
 
+The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset)) reads every accepted text to the values `pyyaml` would, except for two resolvers it drops: a timestamp-shaped scalar (`1994-01-01`) becomes a date under `pyyaml` and a sexagesimal (`12:30`) an integer, where the subset keeps both as strings.
+
 ## Hook Architecture
 
 `task_hook.py` is the task tree's PostToolUse hook. `hooks/task_approval_gate.py` is the PreToolUse approval gate. Wiring lives in the harness manifests under `hooks/`.
@@ -291,6 +293,66 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 **On-demand export.** A static `dashboard.html` comes only from an explicit `superra dashboard export` (including the workflow above) — neither the mutation scripts nor the PostToolUse hook write it. The live SSE server renders on demand without writing a file.
 
 **Attachment data path.** `_task_io.py` owns the structural rule: every task scan and task-path mutation treats `attachments/` as opaque and rejects symlinked task directories, `task.md` files, and task-path components before parsing or writing. Migrations consume its structural task-file iterator, not recursive globs. `_artifacts.py` owns task-scoped attachment discovery, containment, MIME/preview classification, watcher ownership, and standalone packing. Direct files beside `task.md` are neither listed nor readable through this API. Live clients list with `/api/artifacts?task=<path>` and read with `/api/artifact?task=<path>&path=attachments/<relative-path>`; `download=true` forces attachment disposition. Default ceilings are 512 returned files, 256 KiB of manifest metadata, and 4,096 visited directory entries per task, 2 MiB per live preview, 2 MiB per standalone file, and 20 MiB total raw standalone bytes. Manifests name truncation and export-omission reasons; exports include a commit-pinned repository URL when the caller supplies one.
+
+## Reproduction records
+
+Agent-facing summary: [task-file contract §Records](task-file-contract.md#records).
+
+### The lock
+
+The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived. Keys are sorted, one per line.
+
+| Field | Binding |
+| --- | --- |
+| `version` | `1` |
+| `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
+| `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
+| `steps.<name>.built_on` | `platform` (OS and CPU architecture) |
+
+Freshness reads `spec`, `deps`, and `outs` only; `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
+
+Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry. Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes.
+
+### Acceptance records
+
+One file per step, `repro-acceptance/<step>.json`, so branches that accept different steps merge without conflict.
+
+| Field | Binding |
+| --- | --- |
+| `id` | SHA-256 of the canonical JSON record excluding `id` |
+| `basis` | `reviewed`; the only accepted value |
+| `lock` | SHA-256 of the preceding successful lock entry's `deps` and `products`; `null` when the runner has never built the step |
+| `state` | Reviewed `deps` (the `<step>::spec` node included) and `products` hashes; `outputs` only when actual output fingerprints differ from `products`, as with a sidecar |
+| `boundary_inputs` | Saved inputs at acceptance: logical path, producer, and actual digest |
+| `reason`, `reviews` | Required overall rationale and optional per-node notes |
+
+A record holds no resolved path, user or host name, or time; git records who committed it and when. Two checkouts accepting the same state write identical bytes. A record whose `id` does not match is set aside like one that does not parse.
+
+A reviewed record establishes or replaces the current baseline, including never-built producers and changed outputs. It binds the preceding successful lock if any, the reviewed input/product/output state, and the bytes of every input from another step's outputs, including a producer accepted in the same call. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. Invalid graphs, missing inputs/products, and unsuccessful executions cannot be covered.
+
+The legacy `repro-acceptance.json` ledger (`version: 1`, a `steps` mapping, records with `baseline`, `evidence`, `upstream`, `recorded_at`, and `actor`) is read with its `baseline.lock` bound as above.
+
+### Successful receipts and saved-input baselines
+
+Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and saved-input bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Raw source snapshots remain local and never enter a committed record or status payload; absent historical source text and execution logs remain unavailable.
+
+An absent upstream sidecar does not block an existing artifact: the dependency retains an explicit `saved-input:<digest>` baseline until the consumer executes again, and newly available metadata alone does not invalidate unchanged bytes. Producer products still require their declared sidecars. Reviewed acceptance checks actual output and saved-input digests; unchanged sidecar text cannot establish equality.
+
+### Build guards
+
+Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance rechecks declarations and hashes immediately before writing.
+
+### Explain sources and history
+
+`explain` diffs a git-tracked dependency from its blob history, an untracked one from a local snapshot, and otherwise names no known source. Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, and date), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file; text prints the first.
+
+Lock and tracked-file histories cover the same refs — local and remote-tracking branches and HEAD — without fetching: the newest 200 lock revisions and the newest 50 revisions of each tracked file, each on HEAD's history and again off it. One `git log` pass per call reads them, cached until HEAD or a branch tip moves; one call reads at most 64 MiB of historical versions, none over 16 MiB. Only changed nodes are resolved; nothing outside the checkout is hashed.
+
+A row whose bytes came from a build (an output, or a produced input) reads the builder's `built_on` in the lock at the revision the row names, or in the working lock, and adds `env: same as lock builder` or `env: differs — <field>` (platform, or an `env_deps` path); with no `built_on`, nothing.
+
+### Julia include closure
+
+A `.jl` dep expands through `include` arguments of these forms: a string literal; `joinpath(@__DIR__, "…")` or `joinpath` of string literals; DrWatson's `projectdir("…")`, `srcdir("…")`, and `scriptsdir("…")`, also as the head of a `joinpath`; and `joinpath(<variable>, "…")` — a variable root resolves against the project root, then against the including file, keeping whichever is on disk and warning when both exist. Any other argument is reported and left to be declared by hand.
 
 ## Reviewed reuse execution
 
