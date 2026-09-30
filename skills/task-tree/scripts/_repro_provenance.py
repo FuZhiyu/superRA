@@ -3,11 +3,11 @@
 Three causes, keyed on the node's role in the step: an input (dependency or
 step definition) changed, an output holds another recorded build, or an output
 matches nothing recorded. Everything finer is a source fact on the row, found
-in the local receipt, the acceptance ledger, the committed lock history on
-local and remote-tracking branches (parsed once per revision into
-`.superra-repro/lock-index/`),
-the git blob history of tracked files, and Dropbox conflicted copies. Only
-changed nodes are resolved; git is optional. Stdlib only.
+in the local receipt, the acceptance ledger, the committed lock history and the
+git blob history of tracked files on HEAD and local and remote-tracking branches
+(one `git log` pass per call, cached per refs in `.superra-repro/history.json`;
+each lock revision parsed once into `.superra-repro/lock-index/`), and Dropbox
+conflicted copies. Only changed nodes are resolved; git is optional. Stdlib only.
 """
 from __future__ import annotations
 
@@ -32,6 +32,8 @@ BLOB_TOTAL_BYTES = 64 << 20
 DIFF_LINES = 20
 BRANCHES_SHOWN = 3
 ENTRIES_SHOWN = 3
+STEPS_SHOWN = 8
+FILES_SHOWN = 3
 CHECK_ELSEWHERE = 'passed at these inputs in'
 
 CAUSES = {
@@ -80,14 +82,15 @@ class Git:
         out = self.raw(*args)
         return None if out is None else out.decode('utf-8', 'replace').strip()
 
-    def revs(self, *args) -> list[dict]:
-        out = self.text('log', _LOG_FORMAT, _LOG_DATE, *args) or ''
-        rows = []
-        for line in out.splitlines():
-            parts = line.split('\x1f')
+    def walk(self, ranges, specs):
+        """(revision, changed paths among *specs*) newest first; a merge lists what it resolved."""
+        out = self.raw('log', '-z', '-c', '--name-only', '--relative', '--full-history', '--topo-order',
+                       '--format=%x1e' + _LOG_FORMAT.removeprefix('--format='), _LOG_DATE, *ranges, '--', *specs)
+        for record in (out or b'').decode('utf-8', 'replace').split('\x1e')[1:]:
+            header, _, names = record.partition('\0')
+            parts = header.split('\x1f')
             if len(parts) == 4:
-                rows.append(dict(zip(('sha', 'rev', 'author', 'date'), parts)))
-        return rows
+                yield dict(zip(('sha', 'rev', 'author', 'date'), parts)), set(filter(None, names.strip('\n').split('\0')))
 
     def _batch(self, flag, specs):
         out = self.raw('cat-file', flag, stdin=('\n'.join(specs) + '\n').encode()) or b''
@@ -188,32 +191,156 @@ def _parse_revision(lock_text, legacy_text, builds_text) -> dict | None:
     return steps
 
 
+HISTORY_VERSION = 1
+LOCK_FILES = (LOCK_FILENAME, LEGACY_LOCK_FILENAME)
+_HEAD_WALK, _OTHER_WALK = ['HEAD'], ['--branches', '--remotes', '--not', 'HEAD']
+
+
+class History:
+    """Git history of the lock and of tracked files: one pass per call, one blob budget, cached per refs.
+
+    The pass walks HEAD's history, then the local and remote-tracking branches outside it, so each
+    revision is known to be on HEAD or not without a `rev-list` of all of HEAD. The result is kept in
+    `.superra-repro/history.json` keyed on HEAD and every branch tip; a repeat call with the same refs
+    and paths walks nothing. Blob digests are content-addressed and outlive a ref change.
+    """
+
+    def __init__(self, paths, git: Git):
+        self.paths, self.git = paths, git
+        self.file = paths.state_dir / 'history.json'
+        self.data = {'version': HISTORY_VERSION, 'refs': None, 'lock': None, 'paths': {}, 'revs': {},
+                     'behind': {}, 'branches': {}, 'digests': {}}
+        self.dirty = False
+        if not git.ok:
+            return
+        head = git.text('rev-parse', 'HEAD') or ''
+        refs = git.text('for-each-ref', '--format=%(objectname) %(refname)', 'refs/heads', 'refs/remotes') or ''
+        key = hashlib.sha256(f'{head}\n{refs}'.encode()).hexdigest()
+        try:
+            cached = json.loads(self.file.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            cached = None
+        if isinstance(cached, dict) and cached.get('version') == HISTORY_VERSION:
+            if cached.get('refs') == key:
+                self.data = cached
+            else:
+                self.data['digests'] = cached.get('digests', {})
+        self.data['refs'] = key
+
+    def load(self, files):
+        """Walk once for the lock (unless cached) and every file not yet cached; then digest their blobs."""
+        files = sorted(set(files) - set(self.data['paths']))
+        need_lock = self.data['lock'] is None
+        if not self.git.ok or not (files or need_lock):
+            return
+        self.dirty = True
+        specs = [f'./{name}' for name in LOCK_FILES if need_lock] + [f'./{f}' for f in files]
+        lock, capped, found = [], False, {f: [] for f in files}
+        for on_head, ranges in ((True, _HEAD_WALK), (False, _OTHER_WALK)):
+            lock_n, path_n = 0, dict.fromkeys(files, 0)
+            for rev, names in self.git.walk(ranges, specs):
+                self.data['revs'].setdefault(rev['sha'], dict(rev, on_head=on_head))
+                if need_lock and names & set(LOCK_FILES):
+                    lock_n += 1
+                    if lock_n <= LOCK_REV_CAP:
+                        lock.append(rev['sha'])
+                    capped = capped or lock_n > LOCK_REV_CAP
+                for name in names & found.keys():
+                    if path_n[name] < BLOB_DEPTH:
+                        path_n[name] += 1
+                        found[name].append(rev['sha'])
+        if need_lock:
+            self.data['lock'] = {'revs': lock, 'capped': capped}
+        specs = [f'{sha}:./{f}' for f, shas in found.items() for sha in shas] + [f'HEAD:./{f}' for f in files]
+        ids = self.git.blob_ids(specs)
+        for f, shas in found.items():
+            head = ids.get(f'HEAD:./{f}')
+            self.data['paths'][f] = {
+                'head': head and head[0],
+                'revs': [[sha, *ids[f'{sha}:./{f}']] for sha in shas if f'{sha}:./{f}' in ids],
+            }
+        self._digest(files)
+
+    def _digest(self, files):
+        """sha256 of the paths' historical blobs, newest first across paths, within one budget per call."""
+        digests, budget, wanted = self.data['digests'], BLOB_TOTAL_BYTES, {}
+        queues = [self.data['paths'][f]['revs'] for f in files]
+        for depth in range(max(map(len, queues), default=0)):
+            for revs in queues:
+                if depth < len(revs):
+                    _, blob, size = revs[depth]
+                    if blob not in digests and blob not in wanted and size <= min(BLOB_MAX_BYTES, budget):
+                        wanted[blob] = size
+                        budget -= size
+        for blob, raw in self.git.blobs(list(wanted)).items():
+            digests[blob] = hashlib.sha256(raw).hexdigest()
+
+    def lock_revs(self) -> tuple[list[dict], bool]:
+        self.load([])
+        lock = self.data['lock'] or {'revs': [], 'capped': False}
+        return [self.data['revs'][sha] for sha in lock['revs']], lock['capped']
+
+    def blob_history(self, path) -> list[tuple[dict, str, str]]:
+        """(revision, sha256, blob id): HEAD's history newest first, then other branches; unread blobs skipped."""
+        entry = self.data['paths'].get(path) or {'revs': []}
+        digests = self.data['digests']
+        return [(self.data['revs'][sha], digests[blob], blob) for sha, blob, _ in entry['revs'] if blob in digests]
+
+    def head_blob(self, path) -> str | None:
+        return (self.data['paths'].get(path) or {}).get('head')
+
+    def on_head(self, sha) -> bool:
+        return self.data['revs'].get(sha, {}).get('on_head', False)
+
+    def behind(self, sha) -> int | None:
+        """Commits HEAD has beyond *sha*; None when *sha* is not in HEAD's history."""
+        if not self.on_head(sha):
+            return None
+        if sha not in self.data['behind']:
+            self.data['behind'][sha] = int(self.git.text('rev-list', '--count', f'{sha}..HEAD') or 0)
+            self.dirty = True
+        return self.data['behind'][sha]
+
+    def branches(self, sha) -> list[str]:
+        """Local and remote-tracking branches whose history holds *sha*."""
+        if sha not in self.data['branches']:
+            out = self.git.text('for-each-ref', f'--contains={sha}', '--format=%(refname:short)',
+                                'refs/heads', 'refs/remotes') or ''
+            self.data['branches'][sha] = [name for name in out.splitlines() if not name.endswith('/HEAD')]
+            self.dirty = True
+        return self.data['branches'][sha]
+
+    def relation(self, sha) -> dict:
+        behind = self.behind(sha)
+        return {'behind': behind, 'branches': self.branches(sha) if behind is None else []}
+
+    def save(self):
+        if self.dirty and self.git.ok and self.paths.state_dir.is_dir():
+            from _repro_acceptance import atomic_json
+            try:
+                atomic_json(self.file, self.data)
+            except OSError:
+                pass
+
+
 class LockHistory:
     """Every committed lock on local and remote-tracking branches and HEAD, indexed by (node, hash).
 
     A revision holds `repro-lock.json`, or, before it, `pytask.lock` with `repro-builds.json`.
     """
 
-    def __init__(self, paths, git: Git):
-        self.paths, self.git = paths, git
+    def __init__(self, paths, git: Git, store: History):
+        self.paths, self.git, self.store = paths, git, store
         self.revs: list[dict] = []
         self.by_sha: dict[str, dict] = {}
         self.capped = False
-        self.on_head: set[str] = set()
         self.head_values: dict[str, dict[str, list[str]]] = {}  # node -> hash -> step entries
         self.index: dict[str, dict[str, list[str]]] = {}
-        self._behind: dict[str, int] = {}
         self.entries: dict[str, dict] = {}
-        self._branches: dict[str, list[str]] = {}
         if not git.ok:
             return
-        files = (LOCK_FILENAME, LEGACY_LOCK_FILENAME)
-        revs = git.revs(f'--max-count={LOCK_REV_CAP + 1}', '--full-history', '--topo-order', '--branches', '--remotes', 'HEAD',
-                        '--', *(f'./{name}' for name in files))
-        self.capped = len(revs) > LOCK_REV_CAP
-        self.revs = revs[:LOCK_REV_CAP]
+        self.revs, self.capped = store.lock_revs()
         self.by_sha = {r['sha']: r for r in self.revs}
-        self.on_head = set((git.text('rev-list', 'HEAD') or '').split())
         head = self._read(['HEAD'])['HEAD'] or {}
         for step_id, groups in head.items():
             for key in ('deps', 'products'):
@@ -265,27 +392,9 @@ class LockHistory:
         shas = self.index.get(node, {}).get(value, [])
         if not shas:
             return None
-        sha = ([s for s in shas if s in self.on_head] or shas)[-1]
-        behind = self.behind(sha)
+        sha = ([s for s in shas if self.store.on_head(s)] or shas)[-1]
         entries = self.head_values.get(node, {}).get(value, [])
-        return dict(self.by_sha[sha], head=bool(entries), head_entries=entries, behind=behind,
-                    branches=self.branches(sha) if behind is None else [])
-
-    def branches(self, sha) -> list[str]:
-        """Local and remote-tracking branches whose history holds *sha*."""
-        if sha not in self._branches:
-            out = self.git.text('for-each-ref', f'--contains={sha}', '--format=%(refname:short)',
-                                'refs/heads', 'refs/remotes') or ''
-            self._branches[sha] = [name for name in out.splitlines() if not name.endswith('/HEAD')]
-        return self._branches[sha]
-
-    def behind(self, sha) -> int | None:
-        """Commits HEAD has beyond *sha*; None when *sha* is not in HEAD's history."""
-        if sha not in self.on_head:
-            return None
-        if sha not in self._behind:
-            self._behind[sha] = int(self.git.text('rev-list', '--count', f'{sha}..HEAD') or 0)
-        return self._behind[sha]
+        return dict(self.by_sha[sha], head=bool(entries), head_entries=entries, **self.store.relation(sha))
 
 
 # ---------------------------------------------------------------------------
@@ -299,13 +408,25 @@ class Resolver:
         self.report, self.graph, self.paths, self.cache = report, report.graph, paths, cache
         self.full_diff, self.plan_name = full_diff, plan_name
         self.git = Git(paths.project_root)
-        self.history = LockHistory(paths, self.git)
+        self.store = History(paths, self.git)
+        self._history = None
         self.lock_document = read_lock_document(paths.lock_file)
         self.lock = {name: lock_entry(name, raw) for name, raw in self.lock_document['steps'].items()}
         self.ledger = read_ledger(paths)['steps']
-        self.blob_histories: dict[str, list[tuple[dict, str]]] = {}
+        self.blob_paths: set[str] = set()
         self.copies_searched: list[str] = []
         self._receipts: dict[str, dict] = {}
+        self._diffs: dict[tuple, tuple] = {}
+
+    @property
+    def history(self) -> LockHistory:
+        if self._history is None:
+            self._history = LockHistory(self.paths, self.git, self.store)
+        return self._history
+
+    def prepare(self, resolved_paths):
+        """Read the git history of every path the rows need in one pass, before any row resolves."""
+        self.store.load(path for path in resolved_paths if self.inside(path) is not None)
 
     def receipt(self, name) -> dict:
         if name not in self._receipts:
@@ -326,26 +447,14 @@ class Resolver:
             return None  # never hash a file outside this checkout
         return path
 
-    def blob_history(self, resolved) -> list[tuple[dict, str]]:
-        """(revision, sha256 of its blob) newest first, for a tracked file; oversize versions skipped."""
-        if resolved in self.blob_histories:
-            return self.blob_histories[resolved]
-        rows = []
-        if self.git.ok and self.inside(resolved) is not None:
-            spec = './' + resolved
-            revs = self.git.revs(f'-n{BLOB_DEPTH}', '--branches', 'HEAD', '--', spec)
-            ids = self.git.blob_ids([f"{r['sha']}:{spec}" for r in revs])
-            wanted, budget = [], BLOB_TOTAL_BYTES
-            for blob, size in dict.fromkeys(ids.values()):
-                if size <= min(BLOB_MAX_BYTES, budget):
-                    wanted.append(blob)
-                    budget -= size
-            digests = {blob: hashlib.sha256(raw).hexdigest() for blob, raw in self.git.blobs(wanted).items()}
-            for rev in revs:
-                blob = ids.get(f"{rev['sha']}:{spec}")
-                if blob and blob[0] in digests:
-                    rows.append((rev, digests[blob[0]]))
-        self.blob_histories[resolved] = rows
+    def blob_history(self, resolved) -> list[tuple[dict, str, str]]:
+        """(revision, sha256, blob id) for a tracked file, HEAD's history first; unread versions skipped."""
+        if not self.git.ok or self.inside(resolved) is None:
+            return []
+        self.store.load([resolved])  # no walk when `prepare` already read it
+        rows = self.store.blob_history(resolved)
+        if rows:
+            self.blob_paths.add(resolved)
         return rows
 
     def conflicted_copies(self, resolved) -> list[Path]:
@@ -364,9 +473,11 @@ class Resolver:
         is_file = resolved and not value.startswith(('dir:', 'saved-input:')) and '::' not in node
         if is_file:
             history = self.blob_history(resolved)
-            match = next((rev for rev, digest in history if digest == value), None)
+            match = next(((rev, blob) for rev, digest, blob in history if digest == value), None)
             if match:
-                found.append(dict(source='git', **match))
+                rev, blob = match
+                found.append(dict(source='git', **{k: rev[k] for k in ('sha', 'rev', 'author', 'date')},
+                                  head=blob == self.store.head_blob(resolved), **self.store.relation(rev['sha'])))
             elif history and not recorded_side:
                 found.append({'source': 'uncommitted'})
         match = self.history.match(node, value)
@@ -390,8 +501,8 @@ class Resolver:
 
     # -- rows ---------------------------------------------------------------
 
-    def step_rows(self, entry) -> list[dict]:
-        """Rows for the step's changed nodes; missing, failed, and upstream stay status reasons."""
+    def step_changes(self, entry) -> list[tuple]:
+        """`row` arguments for the step's changed nodes; missing, failed, and upstream stay status reasons."""
         step = entry.step
         if entry.status == 'fresh':
             return []
@@ -400,16 +511,16 @@ class Resolver:
             from _repro_acceptance import current_state, state_differences
             state = current_state(self.graph, step, self.paths, self.cache)
             resolved = self._resolved_paths(step)
-            return [self.row(step, d['node'].removesuffix('::product'), d['kind'], d['before'], d['after'],
-                             resolved.get(d['node'].removesuffix('::product')), reviewed=True)
+            return [(step, d['node'].removesuffix('::product'), d['kind'], d['before'], d['after'],
+                     resolved.get(d['node'].removesuffix('::product')), True)
                     for d in state_differences(record['state'], state) if d['after'] is not None]
-        return self._lock_rows(entry)
+        return self._lock_changes(entry)
 
     def _resolved_paths(self, step) -> dict[str, str]:
         deps, products = step_nodes(step, output_nodes(self.graph))
         return {node[0]: node[1] for node in deps + directory_dep_nodes(self.graph, step) + products}
 
-    def _lock_rows(self, entry) -> list[dict]:
+    def _lock_changes(self, entry) -> list[tuple]:
         step = entry.step
         lock = self.lock.get(step.name)
         deps, products = step_nodes(step, output_nodes(self.graph))
@@ -443,10 +554,10 @@ class Resolver:
                 current = node_state(self.cache, root, spec) if spec else None
                 resolved = spec and spec[1]
             if current is not None:
-                rows.append(self.row(step, node, kind, recorded, current, resolved))
+                rows.append((step, node, kind, recorded, current, resolved, False))
         return rows
 
-    def row(self, step, node, kind, recorded, current, resolved, *, reviewed=False) -> dict:
+    def row(self, step, node, kind, recorded, current, resolved, reviewed=False) -> dict:
         rec = self.sources(step, node, recorded, resolved=resolved, recorded_side=True)
         if reviewed:
             rec = [{'source': 'acceptance'}] + [s for s in rec if s['source'] != 'acceptance']
@@ -471,8 +582,12 @@ class Resolver:
             cur_git = _first(row['current_sources'], 'git')
             revs = [rec_git['rev']] + ([cur_git['rev']] if cur_git else [])
             spec = './' + path
-            row['diffstat'] = self.git.text('diff', '--shortstat', *revs, '--', spec) or None
-            self._set_diff(row, (self.git.text('diff', *revs, '--', spec) or '').splitlines())
+            key = (*revs, spec)
+            if key not in self._diffs:  # rows of several readers share one diff
+                self._diffs[key] = (self.git.text('diff', '--shortstat', *revs, '--', spec) or None,
+                                    (self.git.text('diff', *revs, '--', spec) or '').splitlines())
+            row['diffstat'], lines = self._diffs[key]
+            self._set_diff(row, lines)
             return
         snapshot = self.receipt(step.name).get('snapshots', {}).get(row['node'])
         if (snapshot is not None and path and path not in self.graph.producers
@@ -554,7 +669,7 @@ class Resolver:
             'lock_revisions': [r['rev'] for r in self.history.revs],
             'lock_history_capped': self.history.capped,
             'git_available': self.git.ok,
-            'blob_histories': {path: len(rows) for path, rows in self.blob_histories.items() if rows},
+            'blob_histories': {path: len(self.store.blob_history(path)) for path in sorted(self.blob_paths)},
             'conflicted_copies_beside': sorted(set(self.copies_searched)),
         }
 
@@ -575,21 +690,24 @@ def label(sources) -> str:
     return text + (f", also in {_label(copy)}" if copy else '')
 
 
+def _relation(s, at_head) -> str:
+    """How a lock or git source's revision relates to HEAD."""
+    if s['head']:
+        return at_head
+    if s['behind'] is not None:
+        return f"earlier commit, {s['behind']} behind HEAD"
+    names = s['branches']
+    return "not in HEAD's history" + (f"; on {_capped(names, BRANCHES_SHOWN)}" if names else '')
+
+
 def _label(s) -> str:
     kind = s['source']
     if kind == 'lock':
-        if s['head']:
-            names = s['head_entries']
-            relation = (f"in HEAD's lock, {'entry' if len(names) == 1 else 'entries'} "
-                        + _capped(names, ENTRIES_SHOWN))
-        elif s['behind'] is not None:
-            relation = f"earlier commit, {s['behind']} behind HEAD"
-        else:
-            names = s['branches']
-            relation = "not in HEAD's history" + (f"; on {_capped(names, BRANCHES_SHOWN)}" if names else '')
-        return f"lock {s['rev']} ({s['author']}, {s['date']}; {relation})"
+        names = s['head_entries']
+        at_head = f"in HEAD's lock, {'entry' if len(names) == 1 else 'entries'} " + _capped(names, ENTRIES_SHOWN)
+        return f"lock {s['rev']} ({s['author']}, {s['date']}; {_relation(s, at_head)})"
     if kind == 'git':
-        return f"git {s['rev']}"
+        return f"git {s['rev']} ({_relation(s, "HEAD's version")})"
     if kind == 'uncommitted':
         return 'uncommitted'
     if kind == 'working-lock':
@@ -612,22 +730,29 @@ _STEP_COMMAND = re.compile(r"^(superra repro \w+) (\S+)((?: --\S+)*)$")
 
 
 def group_rows(rows) -> list[dict]:
-    """One group per cause, in cause order; multi-target commands merge their targets."""
+    """One group per cause, in cause order, with one file per changed node and current hash.
+
+    A file read by several steps is one entry naming them all; its first row stands for it in text
+    and in the commands. Multi-target commands merge their targets.
+    """
     groups = []
     for cause, hint in CAUSES.items():
         members = [row for row in rows if row['cause'] == cause]
         if not members:
             continue
+        files = {}
+        for index, row in enumerate(members):
+            files.setdefault((row['node'], row['current']), []).append(index)
+        files = [dict(node=node, current=current, row=indices[0],
+                      steps=sorted(dict.fromkeys(members[i]['step'] for i in indices)),
+                      other_recorded=sum(members[i]['recorded'] != members[indices[0]]['recorded'] for i in indices))
+                 for (node, current), indices in files.items()]
         commands, merged = [], {}
-        for row in members:
-            match = _STEP_COMMAND.match(row['command'])
-            if not match:
-                if row['command'] not in commands:
-                    commands.append(row['command'])
-                continue
-            if match.group(1).split()[-1] not in MULTI_TARGET_VERBS:
-                if row['command'] not in commands:
-                    commands.append(row['command'])
+        for command in (members[f['row']]['command'] for f in files):
+            match = _STEP_COMMAND.match(command)
+            if not match or match.group(1).split()[-1] not in MULTI_TARGET_VERBS:
+                if command not in commands:
+                    commands.append(command)
                 continue
             key = match.group(1) + match.group(3)
             if key not in merged:
@@ -639,7 +764,7 @@ def group_rows(rows) -> list[dict]:
             verb, _, flags = key.partition(' --')
             commands[index] = f"{verb} {' '.join(targets)}{' --' + flags if flags else ''}"
         groups.append(dict(cause=cause, hint=hint, steps=list(dict.fromkeys(r['step'] for r in members)),
-                           rows=members, commands=commands))
+                           rows=members, files=files, commands=commands))
     return groups
 
 
@@ -654,15 +779,17 @@ def _row_lines(row, with_step, show_diff) -> list[str]:
     return lines
 
 
-def render_groups(groups, *, with_step) -> list[str]:
+def render_groups(groups, *, with_step, diffs=True) -> list[str]:
     lines = []
     for group in groups:
         lines.append(f"  {group['cause']} — {group['hint']}")
-        shown = set()
-        for row in group['rows']:
-            key = (row['node'], row['diff'])
-            lines += _row_lines(row, with_step, key not in shown)
-            shown.add(key)
+        for file in group['files']:
+            steps = file['steps']
+            lines += _row_lines(group['rows'][file['row']], with_step and len(steps) == 1, diffs)
+            if with_step and len(steps) > 1:
+                other = file['other_recorded']
+                lines.append(f"      steps: {_capped(steps, STEPS_SHOWN)}"
+                             + (f"; {other} recorded a different hash (--json lists each)" if other else ''))
         lines += [f"    next: {command}" for command in group['commands']]
     return lines
 
@@ -673,14 +800,17 @@ def render_searched(searched) -> str:
         parts.append('no git history (not a git checkout)')
     else:
         revs = searched['lock_revisions']
-        shown = ', '.join(revs[:10]) + (f', … {len(revs) - 10} more' if len(revs) > 10 else '')
         capped = f' (newest {len(revs)} only)' if searched['lock_history_capped'] else ''
-        parts.append(f"the lock at {len(revs)} revision(s){capped} on local and remote-tracking branches and HEAD"
-                     + (f" [{shown}]" if revs else ''))
-        for path, count in searched['blob_histories'].items():
-            parts.append(f"git history of {path} ({count} revision(s))")
-    if searched['conflicted_copies_beside']:
-        parts.append('conflicted copies beside ' + ', '.join(searched['conflicted_copies_beside']))
+        parts.append(f"the lock at {len(revs)} revision(s){capped} on local and remote-tracking branches and HEAD")
+        histories = searched['blob_histories']
+        if len(histories) > FILES_SHOWN:
+            parts.append(f"git history of {len(histories)} tracked files")
+        parts += [f"git history of {path} ({count} revision(s))"
+                  for path, count in histories.items() if len(histories) <= FILES_SHOWN]
+    copies = searched['conflicted_copies_beside']
+    if copies:
+        parts.append('conflicted copies beside ' + (', '.join(copies) if len(copies) <= FILES_SHOWN
+                                                    else f'{len(copies)} files'))
     return 'searched: ' + '; '.join(parts)
 
 
@@ -733,23 +863,34 @@ def path_target(graph, target, project_root):
 
 
 def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='superRA') -> dict:
+    from _repro import step_errors
     resolver = Resolver(report, paths, cache, full_diff=full_diff, plan_name=plan_name)
     if kind == 'path':
-        return _explain_path(resolver, value)
-    names = [value] if kind == 'step' else value[1]
-    steps, rows = [], []
-    for entry in (report.entry(name) for name in names):
-        step_rows = resolver.step_rows(entry)
-        rows += step_rows
-        steps.append(dict(entry.to_dict(), rows=step_rows))
-    return {'target': target_ref(report.entry(names[0]).step) if kind == 'step' else (value[0] or '.'),
-            'kind': kind, 'steps': steps, 'groups': group_rows(rows), 'searched': resolver.searched()}
+        result = _explain_path(resolver, value)
+        names = [s.name for s in ([value['producer']] if value['producer'] else []) + value['consumers']]
+    else:
+        names = [value] if kind == 'step' else value[1]
+        pending = {name: resolver.step_changes(report.entry(name)) for name in names}
+        resolver.prepare(change[5] for changes in pending.values() for change in changes)
+        steps, rows = [], []
+        for name in names:
+            step_rows = [resolver.row(*change) for change in pending[name]]
+            rows += step_rows
+            steps.append(dict(report.entry(name).to_dict(), rows=step_rows))
+        result = {'target': target_ref(report.entry(names[0]).step) if kind == 'step' else (value[0] or '.'),
+                  'kind': kind, 'steps': steps, 'groups': group_rows(rows)}
+    result['errors'] = [f.to_dict() for f in step_errors(report.graph, names)[0]]
+    result['graph_errors'] = sum(f.severity == 'error' for f in report.graph.findings)
+    result['searched'] = resolver.searched()
+    resolver.store.save()
+    return result
 
 
 def _explain_path(resolver, target) -> dict:
     node, resolved = target['node'], target['resolved']
     current = resolver.cache.path_state(absolute(resolver.paths.project_root, resolved))
     owner, readers = target['producer'], target['consumers']
+    resolver.prepare([resolved])
     rows, seen = [], set()
     if current is not None:
         for step in ([owner] if owner else []) + readers:
@@ -765,11 +906,11 @@ def _explain_path(resolver, target) -> dict:
         'current_sources': resolver.sources(owner or readers[0], node, current, resolved=resolved),
         'producer': target_ref(owner) if owner else None,
         'consumers': [target_ref(s) for s in readers],
-        'rows': rows, 'groups': group_rows(rows), 'searched': resolver.searched(),
+        'rows': rows, 'groups': group_rows(rows),
     }
 
 
-def format_explain(result, report) -> str:
+def format_explain(result, report, *, full_diff=False) -> str:
     lines = []
     if result['kind'] == 'path':
         now = ('missing here' if result['current'] is None else
@@ -790,7 +931,7 @@ def format_explain(result, report) -> str:
     else:
         stale = [s for s in result['steps'] if s['status'] != 'fresh']
         lines.append(f"{result['target']}: {len(stale)} of {len(result['steps'])} step(s) not fresh")
-        lines += render_groups(result['groups'], with_step=True)
+        lines += render_groups(result['groups'], with_step=True, diffs=full_diff)
         other = [s for s in stale if not s['rows'] or s['status'] == 'failed']
         if other:
             lines.append('  status (no hash to resolve):')
@@ -798,6 +939,11 @@ def format_explain(result, report) -> str:
         notes = [s for s in result['steps'] if s['status'] == 'fresh'
                  and s['reason'] not in ('up to date', 'reviewed baseline')]
         lines += [f"  note: {s['name']} fresh — {s['reason']}" for s in notes]
+    if result['errors']:
+        lines.append('  graph errors on these steps; `build` refuses them:')
+        lines += [f"    [{f['severity'].upper()}] {f['task_path'] or '(root)'}: {f['message']}" for f in result['errors']]
+    if result['graph_errors']:
+        lines.append(f"{result['graph_errors']} graph error(s); run `superra task check`.")
     lines.append(render_searched(result['searched']))
     return '\n'.join(lines)
 

@@ -539,8 +539,9 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--diff", action="store_true", help="Show full dependency diffs instead of the first lines")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
-    impact = _sub(sub, "impact", "Inspect conservative dependency fan-out from a file", [
+    impact = _sub(sub, "impact", "Predict which steps a change to a file would make stale, with recorded durations", [
         "superra repro impact Code/helpers.jl",
+        "superra repro impact superRA/config.yaml       # steps using a runner, a variable, or env_deps",
         "superra repro impact Code/helpers.jl --scope 02-merge --json",
     ])
     impact.add_argument("paths", nargs="+")
@@ -624,7 +625,9 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
             result = dict(step, **result)
         print(json.dumps(result, indent=2))
     else:
-        print(format_explain(result, report))
+        print(format_explain(result, report, full_diff=args.diff))
+    if result["errors"]:
+        sys.exit(1)
 
 
 def _refuse(errors) -> None:
@@ -669,10 +672,10 @@ def main(argv: list[str] | None = None) -> None:
         ensure_state_dir(paths)
 
     if args.command in ("impact", "accept", "revoke"):
-        from _repro_acceptance import accept, impact, revoke
+        from _repro_acceptance import accept, format_impact, impact, revoke
         try:
             if args.command == "impact":
-                result = impact(graph, paths, args.paths, args.scope)
+                result = impact(graph, paths, args.paths, args.scope, config_file=plan_root / "config.yaml")
             elif args.command == "revoke":
                 result = revoke(graph, paths, args.targets)
             else:
@@ -685,6 +688,8 @@ def main(argv: list[str] | None = None) -> None:
                 result = accept(graph, paths, args.targets, args.reason, reviews, dry_run=args.dry_run)
             if args.command == "accept" and not args.as_json:
                 print(format_accept(result))
+            elif args.command == "impact" and not args.as_json:
+                print(format_impact(result))
             else:
                 print(json.dumps(result, indent=2))
             return
