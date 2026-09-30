@@ -81,7 +81,7 @@ Committed acceptance records are now portable, small, and mergeable, and `.super
 ### Open items
 
 - **Other checks over the changed files are not rebuilt here.** `reviewed-baseline-regression-check`, `provenance-explain-check`, `edit-detection-check`, `engine-freshness-check`, and the other steps that list these modules are stale or missing in this worktree; their commands pass in the full-suite run.
-- Contributor and agent docs updated: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), [commands.md](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [internals.md](../../../../skills/task-tree/references/internals.md), [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#accept).
+- Contributor and agent docs updated: [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#records), [commands.md](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [internals.md](../../../../skills/task-tree/references/internals.md), [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#accept).
 
 ## Details
 

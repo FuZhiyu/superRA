@@ -1,6 +1,6 @@
 ---
 title: "Upgrade Path and Task-Tree Records Match Shipped Behavior"
-status: not-started
+status: implemented
 depends_on:
   - 08-workflow-wiring
 ---
@@ -35,3 +35,85 @@ A project from 0.4 upgrades to 0.5 without losing its frontier, and the release 
 ## Details
 
 Reproduced directly on a scratch tree before 01: a step with `tier: canon` printed `[ERROR] [reproduction] a: ## Reproduction: unknown step key 'tier'`, `task frontier` refused with "effective dependency graph is invalid", and `repro status . --tier canon` printed `superra repro: error: unrecognized arguments: --tier canon`.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: upgrade-path-check
+    kind: check
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro.py skills/task-tree/scripts/test_repro_runner.py -k tier -q -p no:cacheprovider"
+    deps:
+      - skills/task-tree/scripts/_apply_patch.py
+      - skills/task-tree/scripts/_artifacts.py
+      - skills/task-tree/scripts/_comments.py
+      - skills/task-tree/scripts/_repro.py
+      - skills/task-tree/scripts/_repro_acceptance.py
+      - skills/task-tree/scripts/_repro_builds.py
+      - skills/task-tree/scripts/_repro_provenance.py
+      - skills/task-tree/scripts/_repro_scope.py
+      - skills/task-tree/scripts/_repro_signals.py
+      - skills/task-tree/scripts/_repro_state.py
+      - skills/task-tree/scripts/_step_links.py
+      - skills/task-tree/scripts/_task_dependencies.py
+      - skills/task-tree/scripts/_task_io.py
+      - skills/task-tree/scripts/_task_snapshot.py
+      - skills/task-tree/scripts/_task_validate.py
+      - skills/task-tree/scripts/_worktree_discovery.py
+      - skills/task-tree/scripts/cli.py
+      - skills/task-tree/scripts/dashboard_artifact_workflow.py
+      - skills/task-tree/scripts/repro_run.py
+      - skills/task-tree/scripts/task_query.py
+      - skills/task-tree/scripts/task_read.py
+      - skills/task-tree/scripts/conftest.py
+      - skills/task-tree/scripts/test_repro.py
+      - skills/task-tree/scripts/test_repro_runner.py
+```
+
+## Results
+
+A project on the reproduction pre-release now upgrades with warnings instead of errors, and the release notes, README, and task tree describe what 0.5 ships. [upgrade-path-check](#reproduction) is fresh; its six tests fail on the base commit `118c9878` and pass here.
+
+### 0.4 projects keep working
+
+- **A leftover `tier:` key warns and is ignored**, in a section or in a step ([_repro.py](../../../../skills/task-tree/scripts/_repro.py), `RETIRED_KEYS`). The step still registers and builds; tier never entered the spec hash, so a built lock stays byte-identical and nothing reruns ([test](../../../../skills/task-tree/scripts/test_repro_runner.py)).
+  - **Already fixed by 03:** `task frontier` no longer refused. The key was still an error, which dropped the step and made `repro build` exit 1.
+- **`--tier`, `--tier=…`, and `repro tier` exit 2** with `reproduction tiers are retired; name task or task#step targets instead ('.' selects every registered step)`, also after `--root` / `--plan-root` ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py), `main`).
+- **Scratch fixture** (a section and a step with `tier: canon`, a dependent task): `task frontier` lists the dependent, `task check` reports two warnings and no error, `repro build a` executes, and five `--tier` and `repro tier` invocations print the message above.
+- **Kept as errors:** `env_probe` and `code_roots` under `reproduction:` in `superRA/config.yaml`. Either blocks every build, since a project-wide config error touches all steps. The release notes and README tell users to delete them; ElasticityBound-Local's config carries neither.
+
+### The release notes describe 0.5 as shipped
+
+[RELEASE-NOTES.md](../../../../RELEASE-NOTES.md#050---unreleased) is rewritten from 01–08 and 10's `## Results`:
+
+- **An upgrade section comes first**, ordered: every coauthor upgrades before the first 0.5 build or accept commit lands, since an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`. Then `task check` (tier warns; `env_probe` and `code_roots` must go), a build that writes the lock and prints the `git rm` for `pytask.lock` and `repro-builds.json`, deleting `.pytask/`, and the first `accept`, which converts `repro-acceptance.json`.
+- **Changed** is grouped into builds and freshness, readiness and dependencies, reviewed acceptance and diagnosis, agent workflow, and dashboard. It covers the own engine, lock version 2 with one line per step and conflicted-lock reading, checks passed elsewhere, readiness from `depends_on` only, errors blocking only the builds they touch, per-step portable acceptance records, the Dropbox-ignored `.superra-repro/`, `explain` and `impact`, the skill's routing and claim gate, the manifest row, the completion gate that asks before costly reruns, external inputs at Protect, the edit hook, and the dashboard fixes.
+- **Removed** lists pytask, `pytask-parallel`, `_repro_hooks.py`, `env_probe`, and `code_roots`.
+- **Corrected claims:** the combined-graph cycle rule, parent-owned frontier rows, "optional evidence", and a completion gate that "names its deliverable tasks" are gone.
+- [README.md](../../../../README.md#upgrading) §Upgrading and its banner now carry the upgrade order and the current readiness and acceptance behavior instead of the cycle audit.
+- [task-file-contract.md §Validation](../../../../skills/task-tree/references/task-file-contract.md#validation) lists the retired `tier:` key under `[WARNING]`.
+
+This resolves [wiring.md](../attachments/wiring.md) M6.
+
+### The task tree matches the code
+
+- **Tier, canon, and "queued":** the [root task](../../task.md) Results now reads as the implemented state, and its Context drops `env_probe` and the named completion targets. [07-workflow-integration](../../07-workflow-integration/task.md) describes the call sites 08 left. [task-targets-and-lifecycle](../../11-scoped-verification/task-targets-and-lifecycle/task.md) and [01-cli-decision-support](../../12-agent-protocol/01-cli-decision-support/task.md) note what 07, 08, and this task later changed.
+- **pytask as the engine:** [02-runner](../../02-runner/task.md) is retitled and its Results describe the current runner, keeping the decisions that outlived pytask; [03-task-interface](../../03-task-interface/task.md) drops the tier badge and the pytask gate.
+- **`env_probe` and `repro-builds.json`:** [02-build-record](../../13-staleness-provenance/02-build-record/task.md) Results describe `built_on` in the lock.
+- **Links:** every file link in a `task.md` under `superRA/reproducibility/` resolves, and every heading anchor into a skill reference exists.
+  - Deleted references in [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md) and [06-skill](../../06-skill/task.md) point to their current homes. [12-agent-protocol](../../12-agent-protocol/task.md)'s dated diagnosis names the old files as code spans and says what replaced them.
+  - The same class, fixed beyond the Objective's list: [reviewed-acceptance](../../02-runner/reviewed-acceptance/task.md), [11-scoped-verification](../../11-scoped-verification/task.md) and two of its children, [scalable-navigation](../../04-dashboard-view/scalable-navigation/task.md), [03-diagnosis-guidance](../../13-staleness-provenance/03-diagnosis-guidance/task.md), [03-skill-redesign](../../12-agent-protocol/03-skill-redesign/task.md), and 01, 02, and 10 of this group (10's link to `diagnosing.md` missed `skills/`).
+- **Objectives are unchanged.** Where an approved task's Objective names retired mechanics (02-runner, 03-task-interface, 02-build-record, 06-skill), its Results says what replaced them.
+
+### Verification
+
+- `task check --category links` is clean. That category checks only `#step` references, so file links and anchors were checked with a scratch script over every `.md` under `superRA/reproducibility/`.
+- Task-tree and harness suites, without `test_dag_workspace_browser.py`: 1,429 passed, 9 skipped.
+- Eleven non-browser checks these edits made `missing` were rebuilt and pass; `status .` reads 15 fresh.
+
+### Left open
+
+- **Browser and artifact steps stay stale or missing:** `dashboard-dag-design-browser`, `dashboard-dag-design-interaction-check`, `dashboard-graph-review`, `dashboard-graph-review-check`, `dashboard-navigation-heterogeneity`, and `task-scoped-builds-pilot`. They rewrite committed browser artifacts or timings, and a parallel fix owns the browser test file.
+- **Docs-site sources are stale.** [docs/site/04-utility-skills/01-task-tree](../../../../docs/site/04-utility-skills/01-task-tree/task.md) and its children still describe the combined-graph frontier, parent-owned frontier rows, and acceptance evidence files.
+- **Attachments keep dead links**, as dated records: the TreasuryGIV pilot feedback, task-scoped-builds' design, and this group's gate audit.
+- **The task-file contract's `[ERROR]` list** still names "cyclic task-group ordering", which 03 removed.

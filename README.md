@@ -1,6 +1,6 @@
 # superRA
 
-> **0.5.0 is unreleased.** The reproduction upgrade combines file-derived and logical task dependencies. Existing reproduction graphs need a cycle audit before upgrading; see [Upgrading](#upgrading) and [release notes](RELEASE-NOTES.md#050---unreleased).
+> **0.5.0 is unreleased.** The reproduction upgrade: superRA runs task-declared build steps itself and reruns only what changed. Coauthors on a shared project upgrade together; see [Upgrading](#upgrading) and [release notes](RELEASE-NOTES.md#050---unreleased).
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
@@ -71,11 +71,9 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-For the unreleased 0.5.0 upgrade, ask the agent to audit an isolated copy of your project with `superra task check` before resuming work. File-derived prerequisites and authored logical prerequisites form one graph; a cycle is rejected even when individual build steps are acyclic. Correct erroneous declarations or task boundaries while preserving real input dependencies. Projects without reproduction declarations retain their logical dependency behavior; adding a child to a task does not require moving its existing steps.
+For the unreleased 0.5.0 upgrade, every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance: an older superRA reads neither the new `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then run `superra task check`, delete any `env_probe` or `code_roots` key from `superRA/config.yaml` (each blocks every build), and run a build; it prints the `git rm` that retires `pytask.lock` and `repro-builds.json`. A leftover `tier:` key only warns. The [release notes](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release) give the steps in order.
 
-Use `repro impact` to inspect change scope. Reviewed acceptance can register results already produced interactively or keep reviewed results fresh without rerunning them; it records a reason and optional evidence separately from actual execution. Forced verification still runs its selected steps. The [reproducibility skill](skills/reproducibility/SKILL.md) owns that distinction. The dashboard upgrade uses Tree and Graph with shared search, task/status filters, selection, and one task reader; expanding tasks exposes their steps. UI and existing-project compatibility checks remain release prerequisites.
-
-`repro build <task>` builds that task and its nested tasks using saved upstream inputs. Add `--upstream` to include producers and `--force` to rerun every step in that scope. Use `task#step` for one step. Build/status require a target (`.` for every registered step) and are scoped to it; completion checks explicitly verify upstream too. `build --dry-run` reports what would run and what each step last cost. See the [command reference](skills/task-tree/references/commands.md#reproduction).
+Readiness follows `depends_on` only; file dependencies between steps order builds and are reported as inputs, never gating. `repro build <task>` builds that task and its nested tasks using saved upstream inputs. Add `--upstream` to include producers and `--force` to rerun every step in that scope. Use `task#step` for one step, or `.` for every registered step. `build --dry-run` reports what would run and what each step last cost, and `repro impact` shows what a change affects. Reviewed acceptance (`repro accept --reason`) keeps a reviewed result fresh without rerunning it and never claims the step ran; the [reproducibility skill](skills/reproducibility/SKILL.md) decides when to rerun and when to accept. See the [command reference](skills/task-tree/references/commands.md#reproduction).
 
 0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
 

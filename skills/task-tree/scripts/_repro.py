@@ -37,6 +37,8 @@ STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("steps",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
+RETIRED_KEYS = ("tier",)
+RETIRED_KEY_WARNING = "{key!r} is retired and ignored; remove the key and name task targets instead"
 CONFIG_KEYS = ("vars", "runners", "env_deps")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -929,7 +931,10 @@ def _build_step(
 ) -> Step:
     if not isinstance(raw, dict):
         raise _StepError("each entry of 'steps' must be a mapping")
-    unknown_keys = [k for k in raw if k not in STEP_KEYS]
+    for key in RETIRED_KEYS:
+        if key in raw:
+            warn(f"step {raw.get('name')!r}: " + RETIRED_KEY_WARNING.format(key=key))
+    unknown_keys = [k for k in raw if k not in STEP_KEYS + RETIRED_KEYS]
     if unknown_keys:
         raise _StepError(
             f"unknown step key {unknown_keys[0]!r}; expected one of {list(STEP_KEYS)}"
@@ -1188,7 +1193,13 @@ def build_graph(
             graph.unregistered[task.path] = None
             continue
         for key in document:
-            if key not in SECTION_KEYS:
+            if key in RETIRED_KEYS:
+                _finding(
+                    task.path,
+                    "warning",
+                    f"## {REPRO_SECTION}: " + RETIRED_KEY_WARNING.format(key=key),
+                )
+            elif key not in SECTION_KEYS:
                 _finding(
                     task.path,
                     "error",
