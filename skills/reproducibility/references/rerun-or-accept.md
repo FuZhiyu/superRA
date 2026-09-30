@@ -19,7 +19,7 @@ Classify the step from the graph:
 | Potentially significant, cheap | Run it. |
 | Potentially significant, costly | Ask the researcher, carrying the diagnosis and a build / accept / leave recommendation. |
 
-"Cheap" is about a minute, a guide rather than a cap — judge on site against what the result is worth. A subagent cannot reach the researcher: escalate through your return.
+"Cheap" is about a minute, a guide rather than a cap — judge on site against what the result is worth. A subagent cannot reach the researcher: return `DONE_WITH_CONCERNS` with the question in `## Results`.
 
 **Exception: a change that cannot move a result.** When the diff proves it — a comment, whitespace, a logging line, a docstring, a helper the consumer never calls — accept on your own with the reason recorded, and report that you did. The proof is the diff, not the file list or the commit message.
 

@@ -10,7 +10,7 @@ Artifacts planned inside a task directory follow `skills/using-superra/reference
 
 **Walk the project guidance docs, then point to or distill each relevant convention into scoped objective context** per `task-tree-design.md` §Context Distillation.
 
-**The mapped artifacts become `## Reproduction` steps.** Seed each producing task's section with the outs it should write, leaving `deps` to its implementer. Draw the script boundaries with the graph in mind, so expensive computation and the exhibits it feeds start in separate scripts: `reproducibility/references/designing-the-graph.md`.
+**Name each mapped artifact and its planned script in the producing task's `## Details`;** its implementer registers the `## Reproduction` step. Draw the script boundaries with the graph in mind, so expensive computation and the exhibits it feeds start in separate scripts: `reproducibility/references/designing-the-graph.md`.
 
 ## Task Structure
 
@@ -49,7 +49,7 @@ After writing the complete task tree:
 
 1. **Domain survey coverage.** Domain skill produced a planning survey: every item in it has task coverage.
 2. **Placeholder scan.** Vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria — fixed.
-3. **Reproduction coverage.** Every artifact mapped in §Artifact Pipeline is an `outs` entry on the task that produces it.
+3. **Reproduction coverage.** Every artifact mapped in §Artifact Pipeline is named on the task that produces it.
 4. **Validation coverage.** Every transformative task has a validation criterion in its objective.
 5. **Objective/details split.** Contract in `## Objective`; planning findings and suggested route in `## Details` (`task-tree-design.md` §Writing Objectives and Details).
 6. **Handoff test.** A new agent reading any leaf's ancestor chain could continue from here.

@@ -76,11 +76,11 @@
       "id": "LC003",
       "area": "manifest-domain-loads",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L55-L60"
+        "skills/using-superra/SKILL.md#L55-L61"
       ],
-      "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, or slide-design work.",
+      "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, slide-design work, or a result computed by code.",
       "expected_evidence": [
-        "structured table parse finds the four domain rows",
+        "structured table parse finds the five domain rows",
         "fixture prompts can include unambiguous task text for each domain",
         "live transcript shows every matching domain skill loaded, including multiple matches when applicable"
       ],
@@ -105,7 +105,7 @@
       "id": "LC004",
       "area": "harness-adapter-routing",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L62-L62",
+        "skills/using-superra/SKILL.md#L63-L63",
         "skills/using-superra/references/codex-instructions.md#L64-L77"
       ],
       "trigger": "A loaded superRA instruction names Claude-oriented tools or Codex is the active harness.",
@@ -217,7 +217,7 @@
       "source_paths": [
         "skills/using-superra/SKILL.md#L48-L48",
         "skills/result-protection/SKILL.md#L10-L23",
-        "skills/reproducibility/SKILL.md#L12-L18"
+        "skills/reproducibility/SKILL.md#L26-L26"
       ],
       "trigger": "Dispatch has Stage: protection.",
       "expected_evidence": [
@@ -239,7 +239,7 @@
         "manual_live_claude": [
           "stage_loads_live.py STAGE_ROWS[protection] (result-protection + reproducibility via Skill tool)"
         ],
-        "notes": "Claude live-verified: protection loads result-protection. The reproducibility half of the row is not live-verified yet."
+        "notes": "Claude live-verified: protection loads result-protection and reproducibility (reproducibility half confirmed 2026-09-29)."
       }
     },
     {
@@ -455,6 +455,37 @@
           "domain_loads_live.py DOMAIN_ROWS[slide-design] (Skill tool, superRA:-qualified)"
         ],
         "notes": "Claude live-verified: slide/Beamer task loads slide-design. Beamer sub-reference routing is static-only."
+      }
+    },
+    {
+      "id": "LC024",
+      "area": "domain-reproducibility",
+      "source_paths": [
+        "skills/using-superra/SKILL.md#L61-L61",
+        "skills/reproducibility/SKILL.md#L20-L30"
+      ],
+      "trigger": "Task plans, produces, changes, records, or reviews a result computed by code, at any stage.",
+      "expected_evidence": [
+        "structured table parse confirms the domain is present in the manifest",
+        "fixture task with result-from-code wording should lead transcript to load reproducibility",
+        "the implementation-stage over-load check does not count a reproducibility load as an over-load"
+      ],
+      "classification": [
+        "ci_safe_static",
+        "manual_live_claude"
+      ],
+      "covered_by": {
+        "ci_safe_static": [
+          "test_contract.py::test_skill_load_manifest_tables_match_contract (reproducibility domain row)"
+        ],
+        "fixture_unit": [
+          "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifact)",
+          "test_stage_loads_live.py::test_green_negative_stage_loaded_a_domain_row_skill"
+        ],
+        "manual_live_claude": [
+          "domain_loads_live.py DOMAIN_ROWS[reproducibility] (Skill tool, superRA:-qualified)"
+        ],
+        "notes": "Claude live-verified 2026-09-29: the reproducibility-worded fixture task loads reproducibility before its first edit."
       }
     },
     {

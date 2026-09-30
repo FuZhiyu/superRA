@@ -74,4 +74,4 @@ Every data-analysis plan includes sensitivity analysis tasks.
 
 ## Reproducibility
 
-Every script producing a maintained output is planned as a `## Reproduction` step: `superRA:reproducibility`.
+Name the script behind each retained output on the task that produces it; its implementer registers the `## Reproduction` step (`superRA:reproducibility`).

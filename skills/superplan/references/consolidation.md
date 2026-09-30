@@ -60,7 +60,7 @@ Each action sets the altitude the affected task lands at in the durable owner â€
 
 **Link:** follow [Task Dependencies](build-and-review.md#task-dependencies); use `superra task dep add` / `superra task dep remove` for logical declarations. Objective rewrite only when the dependency changes the task's scope.
 
-**Prune:** delete the task directory. Update siblings whose `depends_on` referenced it. Had dependents: reassess whether their objectives still make sense.
+**Prune:** delete the task directory once its `## Reproduction` steps are resolved per `reproducibility/references/designing-the-graph.md` Â§Step lifecycle. Update siblings whose `depends_on` referenced it. Had dependents: reassess whether their objectives still make sense.
 
 **Split:** create subtask directories under the too-large task. Move child-owned objective content into the subtasks; preserve parent-owned steps per the [hierarchy contract](../../task-tree/references/task-file-contract.md#effective-dependencies). Parent status becomes the rollup of its new children.
 

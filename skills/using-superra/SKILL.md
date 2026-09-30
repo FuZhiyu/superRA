@@ -31,8 +31,6 @@ Step citations: [task-file contract §Step references](../task-tree/references/t
 
 **Place files by lifespan and owner.** Session scratch stays outside `superRA/`, uncommitted. A retained file — code included — owned by one task solely to produce, reproduce, review, or interpret its recorded results is a **task companion**: commit it under that task's `attachments/`. Maintained code, shared or runtime-consumed files, and promised deliverables go in the project's conventional permanent paths. Load `references/task-companion-files.md` before retaining, reviewing, promoting, or maturing a companion.
 
-**Registration follows that placement.** Retained code — companion or permanent — gets a `## Reproduction` step in its owning task; scratch gets none. Load `superRA:reproducibility` when planning, producing, changing, or reviewing task results that depend on executable steps, including trees without reproduction configuration.
-
 ## Skill-Load Manifest
 
 At each stage of superRA workflow, agents load additional skills along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
@@ -60,6 +58,7 @@ At each stage of superRA workflow, agents load additional skills along three axe
 | `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
 | `academic-writing` (`superRA:academic-writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
+| `reproducibility` (`superRA:reproducibility`) | plans, produces, changes, records, or reviews a result computed by code — a new script, an edited one, or an existing script's output |
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.
 
