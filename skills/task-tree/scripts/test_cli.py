@@ -234,6 +234,31 @@ def test_task_create_uses_autodetected_root_for_legacy_wrapper(
     assert not (task_root / "serve").exists()
 
 
+def test_task_create_first_task_in_wrapper_only_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    (root / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    cli.main(["task", "create", "01-data", "--title", "Data"])
+
+    assert (root / "01-data" / "task.md").exists()
+
+
+def test_task_create_without_wrapper_or_tasks_still_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "superRA").mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(SystemExit):
+        cli.main(["task", "create", "01-data", "--title", "Data"])
+
+
 def test_task_comment_list_preserves_json_mode(
     task_root: Path,
     monkeypatch: pytest.MonkeyPatch,

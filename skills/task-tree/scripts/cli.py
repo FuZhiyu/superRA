@@ -90,6 +90,20 @@ def _resolved_root_value(root: str | None) -> str:
     return TASK_ROOT_DIRNAME
 
 
+def _wrapper_only_root() -> Path | None:
+    """A ``superRA/`` holding only the ``wrapper init`` wrapper, walking up from cwd.
+
+    Autodetect needs a ``task.md`` to recognize a root; the wrapper marks one
+    that is initialized but has no task yet, so the first ``task create`` works.
+    """
+    current = Path.cwd().resolve()
+    for directory in (current, *current.parents):
+        candidate = directory / TASK_ROOT_DIRNAME
+        if (candidate / "superra").is_file():
+            return candidate
+    return None
+
+
 def _plan_root(root: str | None) -> Path:
     """Resolved task root as a Path for direct mutator-function calls.
 
@@ -99,7 +113,7 @@ def _plan_root(root: str | None) -> Path:
     """
     if root is not None:
         return Path(root)
-    detected = resolve_plan_root_arg(None)
+    detected = resolve_plan_root_arg(None) or _wrapper_only_root()
     if detected is None:
         print("Error: could not auto-detect task root. Use --root.", file=sys.stderr)
         sys.exit(1)
