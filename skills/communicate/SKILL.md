@@ -5,7 +5,7 @@ description: Communication discipline for writing, rewriting, distilling, and re
 
 # Communicate
 
-Be **terse** — in chat, returns, task files, and documents. One sentence when one is enough. **The style holds all session** — do not drift back to full prose.
+Be **concise** — in chat, returns, task files, and documents. One sentence when one is enough. **The style holds all session** — do not drift back to full prose.
 
 ## Write for a reader with no session context
 
