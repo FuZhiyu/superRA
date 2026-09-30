@@ -1,38 +1,30 @@
 ---
 name: reproducibility
-description: Register and verify task-declared reproduction graphs. Use when planning, producing, changing, or reviewing retained results that depend on executable steps, adopting reproduction, selecting protection checks, or judging reruns or evidence-backed reuse.
+description: Register and verify task-declared reproduction graphs. Use when planning, producing, changing, or reviewing retained results that depend on executable steps, adopting reproduction, selecting protection checks, or judging whether to rerun or accept a stale result.
 ---
 
 # Reproducibility
 
+Every retained result re-runs from committed code. After any change, an agent can tell which results are no longer current and whether to rerun, accept, or report them.
+
 ## The Model
 
-- **Steps belong to tasks.** A step is one command with its `deps` and `outs`, declared in the owning task's `## Reproduction` section. An out feeding another step's dep orders both steps and their tasks.
-- **`superra repro build` is the engine.** It runs each step as one subprocess in dependency order; a step is fresh when the content hashes of its deps, definition, and outs match its entry in the committed `repro-lock.json`.
-- **superRA adds two things.** Targets are task-scoped: a file from a producer outside the scope is a saved input, used as it sits on disk. And reviewed acceptance is a second route to `fresh`, recording why current results stand instead of executing them.
-
-Section schema and config keys: [task-file-contract.md §Reproduction Section](../task-tree/references/task-file-contract.md#reproduction-section). Flags, records, and step states: [commands.md §Reproduction](../task-tree/references/commands.md#reproduction).
-
-## The Loop
-
-1. **Registration follows placement.** Exploration lives in scratch or tmp and stays unregistered; code retained in the codebase or in a task's `attachments/` is registered in its owning task.
-2. **Produce the retained result through the graph** — `superra repro build <targets>`. An expensive result already produced from the same committed code is registered and accepted with a reason instead of rerun.
-3. **Read the status you are about to claim** — `superra repro status <targets>`, with `--upstream` when the claim covers the producer chain.
-4. **State what the evidence covers in `## Results`:** the targets, the boundary inputs, the check outcomes, and which steps executed versus which were accepted. Commit changed execution and acceptance records with the work.
-
-## Gates
-
-- `[BLOCKING]` Retained code and every result recorded from it are registered, per [what earns a step](references/designing-the-graph.md#what-earns-a-step) — a finding recorded in prose with no output file of its own included.
-- `[BLOCKING]` Before claiming a result reproduces, its scoped build succeeds and every step the matching status reports is `fresh`.
-- `[BLOCKING]` A stale step is resolved by [the stale rule](references/rerun-or-accept.md#the-stale-rule) — run, accept with a recorded reason, or report it — never left silently stale.
-- `[ADVISORY]` A step whose script reads a few named files declares those files, not their directory.
+- **A step is one command with its `deps` and `outs`,** declared in its owning task's `## Reproduction` section ([schema and invalidation rules](../task-tree/references/task-file-contract.md#reproduction-section)).
+- **A step is `fresh`** when the content hashes of its deps, definition, and outs match its last successful build in the committed `repro-lock.json` or its reviewed acceptance. `superra repro build` executes steps that are not fresh; `superra repro accept --reason` records why the current results stand, executing nothing.
+- **Targets select steps:** task paths with their descendants, `task#step`, or `.` for the whole tree. Flags: `superra repro <command> --help`.
+  - **Producer chain** — the steps that produce a selection's inputs, transitively; `--upstream` adds them.
+  - **Saved input** — a file from a producer outside the selection, used as it sits on disk. A selection's status says nothing about that producer.
+  - **External input** — a dep no step produces: a licensed extract, a frozen upstream artifact, a hand-curated file. The researcher agrees which inputs are external.
+- **Readiness is not freshness.** A task is ready once its `depends_on` prerequisites are done; inputs that `task read` lists as not fresh never hold it back. [The stale rule](references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild them before building on them.
 
 ## Where to Go Next
 
+Each reference carries the gates for its situation.
+
 | Load | When |
 |---|---|
-| [designing-the-graph.md](references/designing-the-graph.md) | Planning a task's steps, or declaring them. |
-| [rerun-or-accept.md](references/rerun-or-accept.md) | A step is stale. |
-| [diagnosing.md](references/diagnosing.md) | A state is not what you expected. |
-| [protect-and-completion.md](references/protect-and-completion.md) | At `Stage: protection`, or at the IMPLEMENT completion gate. |
+| [designing-the-graph.md](references/designing-the-graph.md) | Writing or registering code that produces a retained result; planning, moving, or retiring steps. |
+| [protect-and-completion.md](references/protect-and-completion.md) | Claiming a result reproduces — in `## Results`, at the IMPLEMENT completion check, or at `Stage: protection`. |
+| [rerun-or-accept.md](references/rerun-or-accept.md) | A step is not `fresh`. |
+| [diagnosing.md](references/diagnosing.md) | A state you did not expect. |
 | [adoption.md](references/adoption.md) | First use of reproduction in a project. |

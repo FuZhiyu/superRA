@@ -1,6 +1,6 @@
 ---
 title: "Reproduction Instructions Pass the CLAUDE.md Gate"
-status: not-started
+status: implemented
 depends_on:
   - 01-engine-freshness
   - 02-portable-records
@@ -64,3 +64,80 @@ Owning tasks: [06-skill](../../06-skill/task.md), [03-skill-redesign](../../12-a
 ## Details
 
 The audit's ten highest-value edits and every file:line are in [gate-audit.md](../attachments/gate-audit.md) §5.
+
+## Results
+
+The reproduction instructions now state each rule once, in its owning file, and agent-loaded text is 21% shorter. `SKILL.md` opens with the skill's job, defines the terms agents act on, and routes each situation to the reference that carries its gate. A harness session registered a step and applied the stale rule's exception correctly.
+
+### Word counts fall 24% across the three documents
+
+| Document | Before | After | Change |
+|---|---:|---:|---:|
+| [skills/reproducibility/](../../../../skills/reproducibility/SKILL.md) (`SKILL.md` + 5 references) | 2,795 | 2,349 | −16% |
+| [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#effective-dependencies) §Effective Dependencies → end | 2,376 | 1,710 | −28% |
+| [commands.md](../../../../skills/task-tree/references/commands.md#reproduction) §Reproduction | 1,959 | 1,336 | −32% |
+| Total | 7,130 | 5,395 | −24% |
+
+- The subagent load surface (skill plus the contract's reproduction sections) falls from 5,171 to 4,059 words (−21%).
+- The skill shrank less than the audit's −26% because it gained what the objective adds: the purpose line, three defined terms, the readiness bullet, and the step states the stale rule acts on.
+- Record formats, receipts, build guards, lock history, `explain`'s source and history-search mechanics, the Julia `include` forms, and the `pyyaml` resolver note moved to [internals.md §Reproduction records](../../../../skills/task-tree/references/internals.md#reproduction-records) (+62 lines, outside every agent load).
+
+### Each gate lives in the reference loaded when it applies
+
+`SKILL.md` keeps the purpose, §The Model, and the routing table. §Gates and §The Loop are gone.
+
+| Gate, enum, or ordering constraint | New home |
+|---|---|
+| `[BLOCKING]` retained code and its results are registered | [designing-the-graph.md §What earns a step](../../../../skills/reproducibility/references/designing-the-graph.md#what-earns-a-step) |
+| `[ADVISORY]` name files, not their directory | same file, §Declare from the script |
+| `[BLOCKING]` a claimed result reads `fresh` in `status <targets>`, `--upstream` when the claim covers the producer chain; then state coverage in `## Results` and commit the records | [protect-and-completion.md §Claiming a result reproduces](../../../../skills/reproducibility/references/protect-and-completion.md#claiming-a-result-reproduces) |
+| `[BLOCKING]` a step not `fresh` is resolved by the stale rule | top of [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) |
+| Stale-rule classes and its three rows; the cannot-move-a-result exception; "cheap" ≈ a minute | rerun-or-accept.md §The stale rule, unchanged in content |
+| Step states `fresh`/`stale`/`missing`/`failed`/`external` | stale rule (what to do per state); commands.md state table (meaning) |
+| `kind` `build` (default) / `check`; one step per script (default); environment files outside graph deps (default) | contract §Step keys; designing-the-graph.md; diagnosing.md §Environment changes |
+| Inspect before accepting; dry-run and explain before the stale rule; the dependency ladder's order; retire, move, or archive order; `task check` before building | unchanged in their sections |
+
+- The claim gate drops "its scoped build succeeds": a failed build reads `failed`, and an accepted result is fresh without a build, which the old loop already allowed.
+- Anchors that call sites use are kept: `#the-stale-rule`, §What earns a step, §Step lifecycle, §The completion gate, §Reproduction choices at Protect.
+
+### Decisions this task made
+
+- **One drift-test rule:** every drift test or validation script is a `kind: check` step, because it is retained code. Protect only selects which drift tests exist.
+- **The completion gate covers `.` and runs the stale rule before building:** `status .`, the stale rule with named builds, then `status .` again. It passes when every step is `fresh`, except steps the stale rule left stale and reported to the researcher; without that exception, a task-local companion left stale would block completion forever. [08](../08-workflow-wiring/task.md) still owns the call sites.
+- **Protect makes one reproduction decision,** which inputs are external. Completion targets are gone, and so is the `integrate(protect)` commit-body record: the declarations themselves record external inputs.
+- **The stale rule classes steps from graph facts alone:** a step is task-local when its producer is under `attachments/` and `status` reports `outside readers: 0`; every other step is potentially significant.
+
+### Terms
+
+- `SKILL.md` §The Model defines **producer chain**, **saved input**, and **external input**.
+  - "Boundary" no longer appears in agent-facing text except the `boundary_inputs` JSON key, which commands.md glosses as the saved inputs.
+  - "Completion targets", "final deliverable tasks", "canonical result", "maintained producer/path", and "kept result" are gone from the skill.
+- The unparseable lines ("…included", "stops upstream uncertainty", "requested fresh execution follows the acceptance protocol", "lockfiles", "published root", "Derive configuration per consumer", "resolver") are rewritten.
+- **pytask:** the only remaining mention is commands.md's upgrade sentence and Python 3.11 note, both current; the lock-legacy details are in internals.md.
+- **Readiness versus freshness** gets one bullet in §The Model: readiness is `depends_on` only, and the stale rule decides about inputs that are not fresh.
+
+### Subagents are no longer sent into `commands.md`
+
+- The three links are dropped. `SKILL.md` names `superra repro <command> --help` for flags.
+- The contract's new §What invalidates a step carries the rerun rules, including those `diagnosing.md` used to restate. Its §Records table carries what the records are: tracked or ignored, and never hand-edited.
+- `diagnosing.md` keeps only actions.
+- commands.md's inverted link into `diagnosing.md` is removed.
+
+### Harness session
+
+A fresh implementer (Sonnet) got a scratch project: an approved `01-data` whose 75-second producer went stale from a coauthor's comment-only commit, and a `02-table` task to produce and record a table.
+
+- It registered `size-by-industry` and built it.
+- It applied the exception: it accepted `build-panel` with the commit in the reason instead of rerunning it, and reported that.
+- Its `## Results` names the saved input and which steps executed versus were accepted, and `status --upstream` reads both steps fresh.
+- **Routing miss:** it read `SKILL.md`, `rerun-or-accept.md`, and `designing-the-graph.md`, but not `protect-and-completion.md`, even though it was claiming a result; it followed the claim steps anyway. implement-task's pointer to `reproducibility` §Gates, which no longer exists, gave it no route there.
+
+### Left for 08
+
+These call sites still point at removed text or name completion targets:
+
+- [implement-task:50](../../../../skills/implement-task/SKILL.md#L50) and [review-task:28](../../../../skills/review-task/SKILL.md#L28) point to `reproducibility` §Gates.
+- [load_contract.json:220](../../../../tests/harness-instruction-following/load_contract.json#L220) cites `SKILL.md#L12-L18`.
+- `completion.md:18`, `integrate.md:9`, and `finish.md:39` run `build <targets> --upstream` before status.
+- `protect.md:15` still frames the Protect choices around targets.
+- `using-superra/SKILL.md` §Task Interface still restates "registration follows placement" (audit C8).
