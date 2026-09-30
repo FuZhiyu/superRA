@@ -99,6 +99,8 @@ All six problems are fixed. The [review script](attachments/graph_review.py) pas
 - Deferred advisories: `workspaceGraph` filters `dependencies.logical` (the payload's edge list) and no longer touches the removed `edges`/`boundaries`; the unreferenced `reader`, `refresh`, and `center` click handlers are gone.
 - The task-tree suite and harness tests: 1,433 passed, 9 skipped, and the intermittent browser test above failed once.
 
+- **Flaky check fixed:** `test_resized_desktop_preview_fits_phone_with_all_toolbar_controls` held toolbar-button handles that the reader's layout pass replaces (`reproReaderControls` rewrites `#dag-reader-controls`), so a box read returned `None` after a resize; the test now polls the boxes in the page, and `dashboard-dag-design-interaction-check` is fresh.
+
 ## Reproduction
 
 ```yaml

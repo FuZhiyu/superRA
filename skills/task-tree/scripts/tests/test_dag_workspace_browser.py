@@ -296,12 +296,11 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     page.keyboard.press('Shift+ArrowLeft')
     page.set_viewport_size({'width': 390, 'height': 844})
     page.wait_for_function("_reproReaderPlacement==='bottom' && !_reproReaderClosed")
+    # The reader rebuilds its toolbar buttons on each layout pass, so poll the boxes in the page instead of holding handles.
     for selector in ('#task-preview', '[data-rp-action=close-reader]', '[data-rp-action=overview]'):
-        for box in page.locator(selector).all():
-            box.wait_for(state='visible')
-            bounds = box.bounding_box()
-            assert bounds['x'] >= 0
-            assert bounds['x'] + bounds['width'] <= 390
+        page.wait_for_function(
+            "(s)=>{const els=[...document.querySelectorAll(s)];return els.length>0&&els.every(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.x>=0&&r.x+r.width<=390;});}",
+            arg=selector)
     reader = page.locator('#task-preview').bounding_box()
     assert reader['y'] >= 0
     assert reader['y'] + reader['height'] <= 844
