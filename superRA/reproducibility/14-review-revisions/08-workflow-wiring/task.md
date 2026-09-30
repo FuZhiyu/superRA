@@ -64,6 +64,8 @@ From 07's review, for this task:
 - `protect.md:30`'s commit-body list does not name external inputs, so the researcher's agreement on them is recorded nowhere; add it.
 - CLAUDE.md §Ownership Boundaries still says "boundary inputs"; use 07's terms (saved input, external input).
 - 07's call-site leftovers: `implement-task/SKILL.md:50` and `review-task/SKILL.md:28` point to the removed `reproducibility` §Gates; `load_contract.json:220` cites `SKILL.md#L12-L18`; `using-superra` restates "registration follows placement".
+- Point `implement-task`'s reproduction line at 07's [claiming-results.md](../../../../skills/reproducibility/references/claiming-results.md).
+- From 07's harness run: `implement-task` limits edits to `task.md` files, yet a registered step's outputs and `repro-lock.json` are committed with the work; and no Skill-Load Manifest domain row clearly covers tabulating an existing script's output.
 
 Smaller prose fixes from [wiring.md](../attachments/wiring.md):
 
