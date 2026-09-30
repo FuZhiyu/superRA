@@ -1,11 +1,11 @@
 ---
 name: reproducibility
-description: Register and verify task-declared reproduction graphs. Use when planning, producing, changing, or reviewing retained results that depend on executable steps, adopting reproduction, selecting protection checks, or judging whether to rerun or accept a stale result.
+description: Register and verify task-declared reproduction graphs. Use when planning, producing, changing, recording, or reviewing retained results that depend on executable steps, writing drift tests or validation scripts, adopting reproduction, deciding external inputs at Protect, or judging whether to rerun or accept a stale result.
 ---
 
 # Reproducibility
 
-Every retained result re-runs from committed code. After any change, an agent can tell which results are no longer current and whether to rerun, accept, or report them.
+Every retained result can be re-run from committed code. After any change, an agent can tell which results are no longer current and whether to rerun, accept, or report them.
 
 ## The Model
 
@@ -19,12 +19,11 @@ Every retained result re-runs from committed code. After any change, an agent ca
 
 ## Where to Go Next
 
-Each reference carries the gates for its situation.
-
 | Load | When |
 |---|---|
-| [designing-the-graph.md](references/designing-the-graph.md) | Writing or registering code that produces a retained result; planning, moving, or retiring steps. |
-| [protect-and-completion.md](references/protect-and-completion.md) | Claiming a result reproduces — in `## Results`, at the IMPLEMENT completion check, or at `Stage: protection`. |
+| [designing-the-graph.md](references/designing-the-graph.md) | Writing or registering retained code, drift tests and validation scripts included; planning, moving, or retiring steps. |
+| [claiming-results.md](references/claiming-results.md) | Recording a result from retained code in `## Results`. |
+| [protect-and-completion.md](references/protect-and-completion.md) | The IMPLEMENT completion check, or `Stage: protection`. |
 | [rerun-or-accept.md](references/rerun-or-accept.md) | A step is not `fresh`. |
 | [diagnosing.md](references/diagnosing.md) | A state you did not expect. |
 | [adoption.md](references/adoption.md) | First use of reproduction in a project. |

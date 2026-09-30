@@ -133,7 +133,7 @@ Cite a step with `[build-panel](../data/task.md#step-build-panel)`, relative to 
 
 Keep the step name stable when reordering or editing its command. Task moves rewrite relative links; a step rename also requires updating its citations. Citations do not create execution dependencies.
 
-The dashboard reveals and selects the step. A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selector intact.
+A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selector intact.
 
 ### Top-level keys
 
@@ -151,7 +151,7 @@ The dashboard reveals and selects the step. A shared dashboard link uses `#/<tas
 | `deps` | Files or directories the step reads. With `cmd`, list the script here. |
 | `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge. |
 | `kind` | `build` (default) or `check`. A `check` step declares no `outs` and reruns when its deps change. |
-| `params` | Flat mapping hashed into the step's state, so changing a value reruns the step. |
+| `params` | Flat mapping hashed into the step's definition. |
 
 Per-out sidecar tracking is a nested block item:
 
@@ -235,8 +235,6 @@ An out that has never been built is runner state, reported as `missing` by `repr
 | `repro-lock.json` | committed | Each step's last successful build: definition, dep, and out hashes by variable-form path, and the platform it ran on. |
 | `repro-acceptance/<step>.json` | committed | The step's reviewed acceptance: reviewed hashes, saved-input digests, reason, optional per-node notes. |
 | `.superra-repro/` | gitignored and Dropbox-ignored, one per checkout | Hash cache, logs, successful-build receipts, check stamps, `explain`'s history index. |
-
-No resolved path, host, or user name enters a committed record, so both read the same on every machine and branch.
 
 **A reviewed acceptance makes its step `fresh`** until anything it recorded changes: an input, a saved input's bytes included, the definition, or an output. It can precede the step's first build. It changes no task status, lock entry, or check stamp; a check is accepted only over its previous successful run with an unchanged stamp.
 
