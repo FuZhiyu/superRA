@@ -1,6 +1,6 @@
 ---
 title: "Reproduction Instructions Pass the CLAUDE.md Gate"
-status: revise
+status: approved
 depends_on:
   - 01-engine-freshness
   - 02-portable-records
@@ -148,13 +148,3 @@ These call sites still point at removed text or name completion targets:
 - `protect.md:15` still frames the Protect choices around targets.
 - `using-superra/SKILL.md` §Task Interface still restates "registration follows placement" (audit C8).
 - `protect.md:30`'s commit-body list names no external inputs, and CLAUDE.md §Ownership Boundaries still says "boundary inputs".
-
-## Review Notes
-
-Tier: quick re-review of `20a78f7b..8152fe0b`. Focus: the CLAUDE.md §Teach the Protocol gate and §Skill Prose Style on the edited lines, including the new `claiming-results.md`. First pass: thorough. Items 8 and 9 moved to [08](../08-workflow-wiring/task.md) §Details.
-
-1. **[BLOCKING] The fix to the stale rule's scope drops states the rule must cover and conflicts with the claim gate** ([rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9)).
-   - "`missing` (an out is gone)" drops "never built", and "steps a change left" excludes steps no change touched. A step another task registered but never built, or one reverted by `revoke` before its first build, now matches no rule. The `[BLOCKING]` gate at L3 still sends every step that is not `fresh` to this rule, and the completion check passes only on steps the rule resolved.
-   - "Your own work is built" rules out acceptance. [claiming-results.md:5](../../../../skills/reproducibility/references/claiming-results.md#L5) allows accepting a result already produced from the same committed code.
-   - "once you fix what the log its reason names shows" does not parse.
-   - Fix: restore the full scope and allow both routes, e.g. "It covers every step `status` reports as `stale`, `missing`, or `failed`. Your own work, whether a step you just registered or a failure you fixed, is built or accepted, never left stale."
