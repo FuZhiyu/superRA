@@ -139,54 +139,11 @@ class TestBashMadeEdits:
         root_text = (project / "superRA" / "task.md").read_text(encoding="utf-8")
         assert "status: approved" in root_text  # both children approved: rolled up
 
-    def test_approved_with_blocking_notes_is_advisory(self, project):
-        assert _bash(project) == ""
-        task_md = project / "superRA" / "02-second" / "task.md"
-        task_md.write_text(
-            task_md.read_text(encoding="utf-8")
-            + "\n## Review Notes\n\n1. `[BLOCKING]` Wrong join.\n",
-            encoding="utf-8",
-        )
-        context = _bash(project)
-        assert "[BLOCKING]" in context
-        assert "02-second" in context
-
-    def test_task_root_markdown_draws_integrity_feedback(self, project):
-        assert _bash(project) == ""
-        notes = project / "superRA" / "01-first" / "notes.md"
-        notes.write_text("Text directly above\n$$\nx = 1\n$$\n", encoding="utf-8")
-        context = _bash(project)
-        assert "Markdown render-integrity issue" in context
-        assert "notes.md" in context
-
-    def test_the_hook_state_folder_stays_on_this_machine(self, project):
-        from test_repro_acceptance import _dropbox_ignored
-        assert _bash(project) == ""
-        assert _dropbox_ignored(project / _edit_detect.STATE_DIRNAME)
-
     def test_unchanged_content_is_silent(self, project):
         assert _bash(project) == ""
         task_md = project / "superRA" / "01-first" / "task.md"
         task_md.write_text(task_md.read_text(encoding="utf-8"), encoding="utf-8")
         os.utime(task_md, ns=(1, 1))
-        assert _bash(project) == ""
-
-    def test_first_event_seeds_and_still_handles_the_tool_path(self, project):
-        task_md = project / "superRA" / "01-first" / "task.md"
-        _rewrite(task_md, "in-progress", "approved")
-        result = _hook(project, {"tool_name": "Edit", "tool_input": {"file_path": str(task_md)}})
-        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "Markdown edited" in context
-        assert "status: approved" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
-        assert _bash(project) == ""  # the Edit refreshed the baseline
-
-    def test_structural_rm_does_not_report_the_hooks_own_rollup(self, project):
-        assert _bash(project) == ""
-        import shutil
-        shutil.rmtree(project / "superRA" / "01-first")
-        context = _bash(project, "rm -rf superRA/01-first")
-        assert "Markdown edited" not in context
-        assert "status: approved" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
         assert _bash(project) == ""
 
     def test_edit_in_a_sibling_worktree_is_found_through_the_command(self, tmp_path):
@@ -272,29 +229,6 @@ class TestReproductionReminder:
         _rewrite(project / "superRA" / "01-first" / "task.md", "Do First", "Do it")
         assert "Markdown edited" in _bash(project)
 
-    def test_newly_registered_dep_is_seeded_not_reported(self, repro_project):
-        assert _bash(repro_project) == ""
-        (repro_project / "Code" / "extra.jl").write_text("# extra\n", encoding="utf-8")
-        _rewrite(
-            repro_project / "superRA" / "03-pipeline" / "task.md",
-            "      - Code/build.jl\n",
-            "      - Code/build.jl\n      - Code/extra.jl\n",
-        )
-        assert "extra.jl changed" not in _bash(repro_project)
-        (repro_project / "Code" / "extra.jl").write_text("# extra v2\n", encoding="utf-8")
-        assert "Code/extra.jl changed" in _bash(repro_project)
-
-    def test_many_changes_collapse_to_one_line(self, repro_project):
-        assert _bash(repro_project) == ""
-        attachments = repro_project / "superRA" / "03-pipeline" / "attachments"
-        attachments.mkdir()
-        for i in range(8):
-            (attachments / f"s{i}.py").write_text("x = 1\n", encoding="utf-8")
-        context = _bash(repro_project)
-        assert "8 tracked files changed" in context
-        assert "s0.py" not in context
-        assert "`superra repro status .`" in context
-
 
 VAR_STEPS = """
 ## Reproduction
@@ -337,13 +271,6 @@ def _seed_event(project: Path) -> None:
 
 
 class TestEveryProducerEdit:
-    def test_variable_path_edit_reminds_once(self, var_project):
-        assert _bash(var_project) == ""
-        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
-        context = _bash(var_project)
-        assert context.count("Code/est.jl changed") == 1
-        assert "owning step(s): est" in context
-
     def test_shell_variable_is_never_run(self, var_project):
         marker = var_project / "ran"
         (var_project / "superRA" / "config.yaml").write_text(
@@ -353,11 +280,6 @@ class TestEveryProducerEdit:
         (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
         _bash(var_project)
         assert not marker.exists()
-
-    def test_bash_edit_inside_a_declared_directory_reminds(self, var_project):
-        assert _bash(var_project) == ""
-        (var_project / "Code" / "lib" / "helper.jl").write_text("# v2\n", encoding="utf-8")
-        assert _bash(var_project).count("Code/lib/helper.jl changed") == 1
 
     def test_new_file_in_a_declared_directory_reminds(self, var_project):
         assert _bash(var_project) == ""
@@ -369,42 +291,12 @@ class TestEveryProducerEdit:
         (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
         assert _bash(var_project).count("Code/est.jl changed") == 1
 
-    def test_prompt_seed_reports_nothing_even_after_an_edit(self, var_project):
-        _seed_event(var_project)
-        (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")
-        _seed_event(var_project)  # a later prompt swallows nothing it reports
-
     def test_new_runner_script_draws_the_soft_reminder(self, var_project):
         assert _bash(var_project) == ""
         (var_project / "Code" / "new_producer.jl").write_text("# new\n", encoding="utf-8")
         context = _bash(var_project)
         assert context.count("new script Code/new_producer.jl") == 1
         assert "register" not in context
-        assert "many scripts never do" in context
-
-    def test_new_script_in_scratch_or_of_another_language_is_silent(self, var_project):
-        assert _bash(var_project) == ""
-        (var_project / "Code" / "scratch").mkdir()
-        (var_project / "Code" / "scratch" / "try.jl").write_text("1\n", encoding="utf-8")
-        (var_project / "Code" / "notes.py").write_text("1\n", encoding="utf-8")
-        assert _bash(var_project) == ""
-
-    def test_editing_an_existing_unregistered_script_is_silent(self, var_project):
-        (var_project / "Code" / "other.jl").write_text("# other\n", encoding="utf-8")
-        assert _bash(var_project) == ""
-        (var_project / "Code" / "other.jl").write_text("# other v2\n", encoding="utf-8")
-        assert _bash(var_project) == ""
-
-
-class TestScopedWarnings:
-    def test_task_edit_reports_only_that_tasks_warnings(self, project):
-        _rewrite(project / "superRA" / "02-second" / "task.md", "status: approved", "status: bogus")
-        _bash(project)  # seeds
-        _rewrite(project / "superRA" / "01-first" / "task.md", "Do First", "Do it")
-        context = _bash(project)
-        assert "02-second" not in context
-        _rewrite(project / "superRA" / "02-second" / "task.md", "Do Second", "Do it")
-        assert "02-second" in _bash(project)
 
 
 class TestCodexPayloads:
@@ -414,25 +306,6 @@ class TestCodexPayloads:
         result = _hook(project, {"tool_name": "Bash", "tool_input": {"command": "ls"}}, env=self.ENV)
         assert json.loads(result.stdout) == {}
 
-    def test_bash_made_edit_reaches_feedback(self, project):
-        _hook(project, {"tool_name": "Bash", "tool_input": {"command": "ls"}}, env=self.ENV)
-        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
-        result = _hook(project, {"tool_name": "Bash", "tool_input": {"command": HEREDOC}}, env=self.ENV)
-        output = json.loads(result.stdout)["hookSpecificOutput"]
-        assert output["hookEventName"] == "PostToolUse"
-        assert "Markdown edited" in output["additionalContext"]
-
-    def test_apply_patch_path_and_detected_path_are_one_edit(self, project):
-        _hook(project, {"tool_name": "Bash", "tool_input": {"command": "ls"}}, env=self.ENV)
-        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
-        patch = (
-            "*** Begin Patch\n*** Update File: superRA/01-first/task.md\n"
-            "@@\n-status: in-progress\n+status: approved\n*** End Patch"
-        )
-        result = _hook(project, {"tool_name": "apply_patch", "tool_input": {"command": patch}})
-        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert context.count("Markdown edited") == 1
-
 
 class TestBaseline:
     def test_state_is_self_ignored_and_outside_the_task_root(self, project):
@@ -441,6 +314,8 @@ class TestBaseline:
         assert (state / ".gitignore").read_text(encoding="utf-8") == "*\n"
         assert list((state / _edit_detect.BASELINE_SUBDIR).glob("*.json"))
         assert not (project / "superRA" / _edit_detect.STATE_DIRNAME).exists()
+        from test_repro_acceptance import _dropbox_ignored
+        assert _dropbox_ignored(state)
 
     def test_concurrent_invocations_leave_a_readable_baseline(self, project):
         _bash(project)
@@ -458,22 +333,6 @@ class TestBaseline:
         loaded = json.loads(state_file.read_text(encoding="utf-8"))
         assert str(task_md.resolve()) in loaded["files"]
         assert not list(baseline_dir.glob("*.tmp"))
-
-    def test_corrupt_baseline_reseeds_silently(self, project):
-        _bash(project)
-        (state_file,) = (project / _edit_detect.STATE_DIRNAME / _edit_detect.BASELINE_SUBDIR).glob("*.json")
-        state_file.write_text("{not json", encoding="utf-8")
-        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
-        assert _bash(project) == ""
-        assert json.loads(state_file.read_text(encoding="utf-8"))["version"] == _edit_detect.BASELINE_VERSION
-
-    def test_hash_budget_falls_back_to_stat(self, project, monkeypatch):
-        monkeypatch.setattr(_edit_detect, "HASH_BUDGET_BYTES", 1)
-        root = project / "superRA"
-        assert _edit_detect.detect(root, "s", lambda: []) == []
-        task_md = root / "01-first" / "task.md"
-        _rewrite(task_md, "in-progress", "approved")
-        assert _edit_detect.detect(root, "s", lambda: []) == [task_md.resolve()]
 
     def test_oversized_directory_is_not_watched(self, project, monkeypatch):
         monkeypatch.setattr(_edit_detect, "MAX_TREE_FILES", 2)

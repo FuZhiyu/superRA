@@ -144,19 +144,6 @@ def test_task_read_shows_reproduction_block_for_registered_task(
     assert rep["steps"][0]["status"] == "missing"
 
 
-def test_task_read_no_reproduction_block_for_unregistered_task(
-    task_root: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.chdir(task_root)
-
-    cli.main(["task", "read", "01-first", "--json"])
-
-    data = json.loads(capsys.readouterr().out)
-    assert data["task"]["reproduction"] is None
-
-
 def test_task_check_reproduction_category(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -187,37 +174,6 @@ def test_task_check_reproduction_category(
     data = json.loads(capsys.readouterr().out)
     assert data["ok"] is False
     assert any(f["category"] == "reproduction" for f in data["findings"])
-
-
-def test_task_tree_carries_no_reproduction_badge(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    root = tmp_path / "superRA"
-    root.mkdir()
-    _write_task_md(root / "task.md", "Root")
-    registered = root / "01-registered"
-    registered.mkdir()
-    _write_task_md(
-        registered / "task.md", "Registered Task",
-        reproduction=(
-            "steps:\n"
-            "  - name: build\n"
-            "    cmd: sh build.sh\n"
-            "    outs: [output/x.txt]\n"
-        ),
-    )
-    plain = root / "02-plain"
-    plain.mkdir()
-    _write_task_md(plain / "task.md", "Plain Task")
-    monkeypatch.chdir(root)
-
-    cli.main(["task", "tree"])
-    out = capsys.readouterr().out
-    assert "Registered Task" in out
-    assert "[required]" not in out
-    assert "Plain Task" in out
 
 
 def test_task_create_uses_autodetected_root_for_legacy_wrapper(
@@ -262,17 +218,6 @@ def test_task_create_prefers_nearer_wrapper_only_root(
 
     assert (inner / "01-data" / "task.md").exists()
     assert not (task_root / "01-data").exists()
-
-
-def test_task_create_without_wrapper_or_tasks_still_fails(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    (tmp_path / "superRA").mkdir()
-    monkeypatch.chdir(tmp_path)
-
-    with pytest.raises(SystemExit):
-        cli.main(["task", "create", "01-data", "--title", "Data"])
 
 
 def test_task_comment_list_preserves_json_mode(

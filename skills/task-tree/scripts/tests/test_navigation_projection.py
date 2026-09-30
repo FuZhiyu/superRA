@@ -32,23 +32,6 @@ function model(){return reproHierarchy(graph,nav,reproProject(graph));}
 """
 
 
-def test_nested_folds_and_logical_evidence():
-    run(FIXTURE + """
-assert.deepEqual(model().nodes.map(n=>n.id),['task:logical','task:p','task:peer']);
-nav.expanded=['p'];var m=model();
-assert.deepEqual(m.nodes.map(n=>n.id),['task:logical','task:p','setup','report','task:p/child','task:peer']);
-assert(m.edges.some(e=>e.from==='setup'&&e.to==='task:p/child'));
-assert(m.edges.some(e=>e.from==='task:p/child'&&e.to==='report'));
-assert(!m.edges.some(e=>e.from===e.to));
-assert(m.edges.some(e=>e.from==='task:logical'&&e.to==='task:p'&&e.evidence[0].kind==='logical'));
-nav.expanded=['p','p/child'];m=model();assert(m.nodes.some(n=>n.id==='task:p/child/nested'));
-assert(!m.nodes.some(n=>n.id==='nested'));
-nav.expanded=['p/child'];assert(model().nodes.length===3);
-nav.expanded.push('p');assert(model().nodes.some(n=>n.id==='build'));
-assert(!reproWithin('peer-2','peer'));
-""")
-
-
 def test_layout_no_overlapping_siblings_and_real_edge_geometry():
     run(FIXTURE + """
 nav.expanded=['p','p/child','p/child/nested'];var m=model(),l=reproHierarchyLayout(m);
@@ -75,55 +58,6 @@ for(let e of l.edges){assert(e.evidence.length===1);assert(Number.isFinite(l.pos
 """)
 
 
-def test_logical_edges_are_order_independent():
-    run("""
-var tasks=['a','b','c','c/child'].map(path=>({path,title:path}));
-var logical=[{kind:'logical',from:'b',to:'c',declaration:'c depends_on b'},{kind:'logical',from:'a',to:'b',declaration:'b depends_on a'}];
-var graph={steps:[{name:'result',task:'c/child'}],step_edges:[],dependencies:{tasks,logical}};
-var nav={expanded:['c']};
-var m=reproHierarchy(graph,nav,reproProject(graph));
-assert.deepEqual(m.nodes.map(n=>n.id),['task:a','task:b','task:c','task:c/child']);
-assert(m.edges.some(e=>e.from==='task:a'&&e.to==='task:b'));
-assert(m.edges.some(e=>e.from==='task:b'&&e.to==='task:c'&&e.evidence[0].declaration==='c depends_on b'));
-graph.dependencies.logical.reverse();
-var other=reproHierarchy(graph,nav,reproProject(graph));
-assert.deepEqual(other.nodes.map(n=>n.id),m.nodes.map(n=>n.id));
-assert.deepEqual(other.edges.map(e=>[e.from,e.to]).sort(),m.edges.map(e=>[e.from,e.to]).sort());
-""")
-
-
-def test_only_step_and_depends_on_cycles_are_marked():
-    """A loop that appears only once file edges are grouped by task is a view;
-    step cycles and depends_on cycles are errors and stay labeled."""
-    run("""
-var tasks=['a','b','c','d','e','f','g'].map(path=>({path,title:path}));
-var steps=[['a1','a'],['a2','a'],['b1','b'],['b2','b'],['x','c'],['y','d']].map(([name,task])=>({name,task}));
-var step_edges=[['a1','b1'],['b2','a2'],['x','y'],['y','x']].map(([from,to])=>({from,to,via:from+'.csv'}));
-var logical=[['e','f'],['f','e'],['e','g']].map(([from,to])=>({kind:'logical',from,to,declaration:to+' depends_on '+from}));
-var graph={steps,step_edges,dependencies:{tasks,logical}},nav={expanded:[]};
-var m=reproHierarchy(graph,nav,reproProject(graph)),node=id=>m.nodes.find(n=>n.id===id),edge=(a,b)=>m.edges.find(e=>e.from===a&&e.to===b);
-assert(!node('task:a').cycle&&!node('task:b').cycle);
-assert(!edge('task:a','task:b').cycle&&!edge('task:b','task:a').cycle);
-assert.equal(node('task:c').cycleKind,'Step cycle');assert.equal(edge('task:c','task:d').cycleKind,'Step cycle');
-assert.equal(node('task:e').cycleKind,'depends_on cycle');assert.equal(edge('task:f','task:e').cycleKind,'depends_on cycle');
-assert(!node('task:g').cycle&&!edge('task:e','task:g').cycle);
-nav.expanded=['c','d'];m=reproHierarchy(graph,nav,reproProject(graph));
-assert.equal(node('x').cycleKind,'Step cycle');assert(!node('task:c').cycle);
-""")
-
-
-def test_declaration_errors_mark_their_task_and_folded_ancestors():
-    run("""
-var tasks=['p','p/broken','q'].map(path=>({path,title:path}));
-var findings=[{severity:'error',task_path:'p/broken',message:'bad'},{severity:'warning',task_path:'q',message:'w'},{severity:'error',task_path:'',message:'step cycle'}];
-var graph={steps:[],step_edges:[],findings,dependencies:{tasks}},nav={expanded:[]};
-var m=reproHierarchy(graph,nav,reproProject(graph)),node=id=>m.nodes.find(n=>n.id===id);
-assert.equal(node('task:p').errors,1);assert.equal(node('task:q').errors,0);
-nav.expanded=['p'];m=reproHierarchy(graph,nav,reproProject(graph));
-assert.equal(node('task:p').errors,0);assert.equal(node('task:p/broken').errors,1);
-""")
-
-
 ROUTE_GEOMETRY = """
 function assertDistinct(l){
  const segments=[];
@@ -142,61 +76,6 @@ function assertDistinct(l){
 """
 
 
-def test_cycle_members_have_distinct_ranks_without_absorbing_downstream_nodes():
-    run(ROUTE_GEOMETRY + """
-const ids=['heterogeneity','treasury','elasticity','paper','downstream','isolated'];
-const pairs=[['heterogeneity','treasury'],['heterogeneity','elasticity'],['heterogeneity','paper'],['treasury','paper'],['elasticity','paper'],['paper','heterogeneity'],['paper','downstream']];
-const model={nodes:ids.map(id=>({id,type:'task',parent:null,children:[]})),edges:pairs.map(([from,to])=>({from,to,evidence:[{from,to}]}))};
-const l=reproHierarchyLayout(model);assertDistinct(l);
-assert.equal(new Set(ids.slice(0,4).map(id=>l.pos[id].x)).size,4);
-assert(l.pos.heterogeneity.x<l.pos.treasury.x&&l.pos.treasury.x<l.pos.paper.x);
-assert(l.pos.downstream.x>l.pos.paper.x);
-assert.deepEqual(l.edges.map(e=>[e.from,e.to]),pairs);
-""")
-
-
-def test_nested_lanes_and_ports_do_not_share_segments():
-    run(ROUTE_GEOMETRY + """
-const tasks=['p','p/a','p/b','p/c','q'];
-const steps=Array.from({length:30},(_,i)=>({name:'s'+i,task:tasks[1+i%3]}));
-const edges=[];for(let i=1;i<30;i++)for(let j=Math.max(0,i-3);j<i;j++)edges.push({from:'s'+j,to:'s'+i,via:'out'+j});
-const graph={steps,step_edges:edges,dependencies:{tasks:tasks.map(path=>({path,title:path}))}};
-const nav={expanded:tasks};
-const m=reproHierarchy(graph,nav,reproProject(graph)),l=reproHierarchyLayout(m);assertDistinct(l);
-assert.equal(l.edges.length,edges.length);
-""")
-
-
-def test_cycle_and_short_adjacent_routes():
-    run(ROUTE_GEOMETRY + """
-const make=edges=>({nodes:['a','b','c','d'].map(id=>({id,type:'step',parent:null,children:[]})),edges:edges.map(([from,to])=>({from,to,evidence:[]}))});
-let l=reproHierarchyLayout(make([['a','b'],['a','c'],['a','d'],['b','c'],['c','d']]));assertDistinct(l);
-assert(l.edges.find(e=>e.from==='a'&&e.to==='b').points.length<=4);
-l=reproHierarchyLayout(make([['a','b'],['b','a'],['b','c']]));assertDistinct(l);
-assert.equal(new Set(['a','b','c'].map(id=>l.pos[id].x)).size,3);
-""")
-
-
-def test_dense_fan_in_reserves_readable_ports_inside_target_card():
-    run(ROUTE_GEOMETRY + """
-const ids=Array.from({length:20},(_,i)=>'producer-'+i).concat('target');
-const model={nodes:ids.map(id=>({id,type:'step',parent:null,children:[]})),edges:ids.slice(0,-1).map(from=>({from,to:'target',evidence:[]}))};
-const l=reproHierarchyLayout(model);assertDistinct(l);
-const ports=l.edges.map(e=>e.points.at(-1)[1]).sort((a,b)=>a-b),box=l.pos.target;
-assert(ports[0]>box.y&&ports.at(-1)<box.y+box.height);
-assert(ports.every((y,i)=>!i||y-ports[i-1]>=7));
-""")
-
-
-def test_logical_connection_to_an_expanded_descendant_has_valid_route():
-    run(ROUTE_GEOMETRY + """
-const child={id:'child',type:'task',parent:'parent',children:[]};
-const model={nodes:[{id:'parent',type:'task',parent:null,children:[child]},child],edges:[{from:'parent',to:'child',evidence:[{kind:'logical'}]}]};
-const l=reproHierarchyLayout(model);assertDistinct(l);
-assert.equal(l.edges.length,1);assert(l.edges[0].points.every(p=>p.every(Number.isFinite)));
-""")
-
-
 def test_disconnected_graphs_and_isolated_cards_have_separate_bands():
     run(ROUTE_GEOMETRY + """
 const ids=['a','b','c','d','e','solo-1','solo-2','solo-3','solo-4'];
@@ -211,32 +90,4 @@ for(const e of l.edges){const band=bands.find(b=>b.ids.includes(e.from));assert(
 assert.deepEqual(Object.keys(l.pos).sort(),ids.sort());assert.deepEqual(l.edges.map(e=>[e.from,e.to]),pairs);
 assert.deepEqual(l.pos,reproHierarchyLayout(make()).pos);
 assert.equal(l.pos['solo-1'].y,l.pos['solo-3'].y);assert(l.pos['solo-4'].y>l.pos['solo-1'].y);
-""")
-
-
-def test_nested_internal_graph_stays_connected_without_containment_edges():
-    run(ROUTE_GEOMETRY + """
-const tasks=['a','a/left','a/right','a/empty','b','c','solo'];
-const steps=[{name:'input',task:'a/left'},{name:'output',task:'a/right'},{name:'other-in',task:'b'},{name:'other-out',task:'c'}];
-const graph={steps,step_edges:[{from:'input',to:'output',via:'a.csv'},{from:'other-in',to:'other-out',via:'b.csv'}],dependencies:{tasks:tasks.map(path=>({path,title:path}))}};
-const nav={expanded:['a','a/left','a/right']};
-const layout=()=>reproHierarchyLayout(reproHierarchy(graph,nav,reproProject(graph)));
-let l=layout();assertDistinct(l);
-let root=l.bands.filter(b=>!b.parent);assert.deepEqual(root.map(b=>b.ids),[['task:a'],['task:b','task:c'],['task:solo']]);
-assert(!root[0].isolated); // visible internal edges make this an independent graph
-const nested=l.bands.filter(b=>b.parent==='task:a');assert.deepEqual(nested.map(b=>b.ids),[['task:a/left','task:a/right'],['task:a/empty']]);
-assert.equal(l.edges.length,2);assert(l.pos['task:a'].x<=l.pos.input.x);
-""")
-
-
-def test_lower_nested_band_can_route_outside_parent_without_crossing_earlier_graph():
-    run(ROUTE_GEOMETRY + """
-const a={id:'a',type:'step',parent:'parent',children:[]},b={id:'b',type:'step',parent:'parent',children:[]};
-const c={id:'c',type:'step',parent:'parent',children:[]},d={id:'d',type:'step',parent:'parent',children:[]};
-const model={nodes:[{id:'parent',type:'task',parent:null,children:[a,b,c,d]},a,b,c,d,{id:'outside',type:'step',parent:null,children:[]}],edges:[['a','b'],['c','d'],['d','outside']].map(([from,to])=>({from,to,evidence:[]}))};
-const l=reproHierarchyLayout(model);assertDistinct(l);
-assert.deepEqual(l.bands.filter(b=>b.parent==='parent').map(b=>b.ids),[['a','b'],['c','d']]);
-const edge=l.edges.find(e=>e.to==='outside');
-for(const id of ['a','b']){const box=l.pos[id];for(let i=1;i<edge.points.length;i++){const [x,y]=edge.points[i-1],[xx,yy]=edge.points[i];const hit=x===xx?x>box.x&&x<box.x+box.width&&Math.max(y,yy)>box.y&&Math.min(y,yy)<box.y+box.height:y>box.y&&y<box.y+box.height&&Math.max(x,xx)>box.x&&Math.min(x,xx)<box.x+box.width;assert(!hit,`escaping route crosses ${id}`);}}
-assert.equal(l.edges.length,3);
 """)

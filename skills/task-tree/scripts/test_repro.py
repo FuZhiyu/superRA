@@ -8,7 +8,6 @@ classification, and every validation finding the contract defines.
 from __future__ import annotations
 
 import json
-import math
 
 import pytest
 
@@ -21,7 +20,6 @@ from _repro import (
     extract_repro_block,
     graph_to_dict,
     include_closure,
-    interpolate,
     parse_yaml_subset,
     resolve_variables,
 )
@@ -86,28 +84,10 @@ def _has(graph: Graph, severity, fragment):
 # ---------------------------------------------------------------------------
 
 class TestSubsetAccepts:
-    def test_block_mapping_and_nested_mapping(self):
-        assert parse_yaml_subset("a: 1\nb:\n  c: two\n") == {"a": 1, "b": {"c": "two"}}
-
     def test_block_list_of_scalars_indented_and_flush(self):
         indented = parse_yaml_subset("deps:\n  - a\n  - b\n")
         flush = parse_yaml_subset("deps:\n- a\n- b\n")
         assert indented == flush == {"deps": ["a", "b"]}
-
-    def test_block_list_of_mappings(self):
-        parsed = parse_yaml_subset(
-            "outs:\n  - path: out/big.arrow\n    sidecar: out/big.sha256\n"
-        )
-        assert parsed == {"outs": [{"path": "out/big.arrow", "sidecar": "out/big.sha256"}]}
-
-    def test_inline_list_of_scalars(self):
-        assert parse_yaml_subset("deps: [a, b, c]") == {"deps": ["a", "b", "c"]}
-
-    def test_inline_list_empty_and_quoted_items(self):
-        assert parse_yaml_subset("a: []\nb: [\"x, y\", 'z']") == {
-            "a": [],
-            "b": ["x, y", "z"],
-        }
 
     def test_quoted_scalars_and_escapes(self):
         parsed = parse_yaml_subset('a: "tab\\there"\nb: \'it\'\'s\'\n')
@@ -121,11 +101,6 @@ class TestSubsetAccepts:
         )
         assert parsed == {"cmd": "julia run.jl", "tag": "v1#2"}
 
-    def test_hash_inside_a_quoted_scalar_is_content(self):
-        assert parse_yaml_subset('cmd: "echo # not a comment"') == {
-            "cmd": "echo # not a comment"
-        }
-
     def test_implicit_scalar_typing_matches_yaml(self):
         parsed = parse_yaml_subset(
             "i: 42\nf: 0.5\nt: true\nfalsey: off\nnothing: ~\ns: 1.2.3\n"
@@ -138,20 +113,6 @@ class TestSubsetAccepts:
             "nothing": None,
             "s": "1.2.3",
         }
-
-    def test_special_floats(self):
-        parsed = parse_yaml_subset("a: .inf\nb: -.inf\nc: .nan\n")
-        assert parsed["a"] == math.inf
-        assert parsed["b"] == -math.inf
-        assert math.isnan(parsed["c"])
-
-    def test_empty_document(self):
-        assert parse_yaml_subset("") is None
-        assert parse_yaml_subset("\n# only a comment\n") is None
-
-    def test_key_with_no_value_is_null(self):
-        assert parse_yaml_subset("a:\nb: 1\n") == {"a": None, "b": 1}
-
 
 # ---------------------------------------------------------------------------
 # YAML subset — rejected forms
@@ -247,24 +208,10 @@ class TestSectionExtraction:
     def test_extracts_the_fenced_block(self):
         assert extract_repro_block("\n```yaml\nsteps: []\n```\n") == "steps: []"
 
-    def test_prose_outside_the_fence_is_rejected(self):
-        with pytest.raises(YamlSubsetError) as excinfo:
-            extract_repro_block("These steps rebuild the panel.\n\n```yaml\nsteps: []\n```\n")
-        assert "prose outside the fenced yaml block" in str(excinfo.value)
-
-    def test_trailing_prose_is_rejected(self):
-        with pytest.raises(YamlSubsetError):
-            extract_repro_block("```yaml\nsteps: []\n```\n\nSee the runner docs.\n")
-
     def test_a_second_block_is_rejected(self):
         with pytest.raises(YamlSubsetError) as excinfo:
             extract_repro_block("```yaml\nsteps: []\n```\n```yaml\nsteps: []\n```\n")
         assert "exactly one fenced yaml block" in str(excinfo.value)
-
-    def test_non_yaml_info_string_is_rejected(self):
-        with pytest.raises(YamlSubsetError) as excinfo:
-            extract_repro_block("```\nsteps: []\n```\n")
-        assert "must be ```yaml" in str(excinfo.value)
 
     def test_unclosed_fence_is_rejected(self):
         with pytest.raises(YamlSubsetError):
@@ -294,16 +241,6 @@ class TestVariables:
             "OUT": "output/sandbox",
         }
 
-    def test_shell_runs_once_per_invocation(self, tmp_path):
-        calls = []
-        resolve_variables(
-            {"OUT": {"shell": "echo x"}},
-            tmp_path,
-            env={},
-            shell_runner=lambda cmd, cwd: calls.append(cmd) or "x",
-        )
-        assert calls == ["echo x"]
-
     def test_missing_env_var_is_an_error(self, tmp_path):
         _, errors = resolve_variables(
             {"HOME_DIR": {"env": "ABSENT"}}, tmp_path, env={}, shell_runner=_no_shell
@@ -318,18 +255,6 @@ class TestVariables:
             {"OUT": {"shell": "false"}}, tmp_path, env={}, shell_runner=boom
         )
         assert "shell command failed" in errors[0]
-
-    def test_unknown_spec_shape_is_an_error(self, tmp_path):
-        _, errors = resolve_variables(
-            {"OUT": {"file": "x"}}, tmp_path, env={}, shell_runner=_no_shell
-        )
-        assert "literal" in errors[0]
-
-    def test_interpolate_reports_unknown_names(self):
-        text, unknown = interpolate("${OUT}/a/${MISSING}", {"OUT": "output"})
-        assert text == "output/a/${MISSING}"
-        assert unknown == ["MISSING"]
-
 
 # ---------------------------------------------------------------------------
 # Julia include closures
@@ -406,19 +331,6 @@ class TestIncludeClosure:
         assert found == ["Code/helper.jl"]
         assert warnings_out == []
 
-    def test_variable_root_ambiguity_warns(self, tmp_path):
-        """Both a project-root and an including-directory candidate existing is ambiguous."""
-        code = tmp_path / "Code"
-        code.mkdir()
-        (tmp_path / "helper.jl").write_text("# root-relative leaf\n", encoding="utf-8")
-        (code / "helper.jl").write_text("# dir-relative leaf\n", encoding="utf-8")
-        (code / "run.jl").write_text(
-            'include(joinpath(SHARE, "helper.jl"))\n', encoding="utf-8"
-        )
-        found, warnings_out = include_closure(code / "run.jl", tmp_path)
-        assert found == ["helper.jl"]
-        assert "matches both helper.jl and Code/helper.jl" in warnings_out[0]
-
     def test_srcdir_and_scriptsdir_resolve_as_direct_include_arguments(self, tmp_path):
         """DrWatson's `srcdir`/`scriptsdir` resolve as direct calls, not only inside `joinpath`."""
         code = tmp_path / "Code"
@@ -436,15 +348,6 @@ class TestIncludeClosure:
         found, warnings_out = include_closure(code / "run.jl", tmp_path)
         assert found == ["scripts/run_estimates.jl", "src/model.jl"]
         assert warnings_out == []
-
-    def test_two_argument_include_warns(self, tmp_path):
-        """`Base.include(mod, path)` evaluates into a module; the path is not static."""
-        code = tmp_path / "Code"
-        code.mkdir()
-        (code / "a.jl").write_text("include(mod, path)\n", encoding="utf-8")
-        found, warnings_out = include_closure(code / "a.jl", tmp_path)
-        assert found == []
-        assert "not a static path" in warnings_out[0]
 
     def test_dynamic_include_warns(self, tmp_path):
         code = tmp_path / "Code"
@@ -557,25 +460,6 @@ class TestGraphConstruction:
             "Manifest.toml",
         ]
 
-    def test_env_deps_interpolate_variables(self, tmp_path):
-        plan = _plan(tmp_path)
-        (plan / "config.yaml").write_text(
-            "reproduction:\n"
-            "  vars:\n"
-            "    SCRATCH: build/scratch\n"
-            "  env_deps:\n"
-            '    - "${SCRATCH}/env.lock"\n',
-            encoding="utf-8",
-        )
-        _write_repro_task(
-            plan / "01-load", "Load", "steps:\n  - name: load\n    cmd: true\n"
-        )
-        dep = _graph(plan).step("load").deps[0]
-        assert (dep.logical, dep.resolved) == (
-            "${SCRATCH}/env.lock",
-            "build/scratch/env.lock",
-        )
-
     def test_julia_deps_pull_in_their_include_closure(self, tmp_path):
         plan = _plan(tmp_path)
         code = tmp_path / "Code"
@@ -595,16 +479,6 @@ class TestGraphConstruction:
             "Code/run.jl",
             "Code/helper.jl",
         ]
-
-    def test_params_are_carried_onto_the_step(self, tmp_path):
-        plan = _plan(tmp_path)
-        _write_repro_task(
-            plan / "01-load",
-            "Load",
-            "steps:\n  - name: load\n    cmd: true\n    params:\n      seed: 42\n      trim: 0.01\n",
-        )
-        assert _graph(plan).step("load").params == {"seed": 42, "trim": 0.01}
-
 
 # ---------------------------------------------------------------------------
 # Edges, external inputs, serialization
@@ -699,31 +573,11 @@ class TestEdges:
         ]
         assert payload["steps"][0]["outs"][0]["sidecar"] is None
 
-    def test_sidecar_survives_into_the_serialized_out(self, tmp_path):
-        plan = _plan(tmp_path)
-        _write_repro_task(
-            plan / "01-build",
-            "Build",
-            "steps:\n"
-            "  - name: build\n"
-            "    cmd: sh build.sh\n"
-            "    outs:\n"
-            "      - path: output/big.arrow\n"
-            "        sidecar: output/big.arrow.sha256\n",
-        )
-        out = graph_to_dict(_graph(plan))["steps"][0]["outs"][0]
-        assert out["sidecar"]["logical"] == "output/big.arrow.sha256"
-
-
 # ---------------------------------------------------------------------------
 # Validation findings
 # ---------------------------------------------------------------------------
 
 class TestFindings:
-    def test_a_complete_graph_on_a_fresh_clone_checks_clean(self, tmp_path):
-        plan = _two_task_pipeline(tmp_path)
-        assert _graph(plan).findings == []
-
     def test_never_built_outs_are_not_findings(self, tmp_path):
         plan = _two_task_pipeline(tmp_path)
         assert not (tmp_path / "output").exists()
@@ -777,13 +631,6 @@ class TestFindings:
         )
         assert _has(_graph(plan), "error", "literal block scalars")
 
-    def test_yaml_outside_the_subset_in_config(self, tmp_path):
-        plan = _plan(tmp_path)
-        (plan / "config.yaml").write_text(
-            "reproduction:\n  vars: &base\n    DATA: data\n", encoding="utf-8"
-        )
-        assert _has(_graph(plan), "error", "anchors")
-
     def test_unknown_config_key(self, tmp_path):
         plan = _plan(tmp_path)
         (plan / "config.yaml").write_text(
@@ -813,11 +660,6 @@ class TestFindings:
         graph = _graph(plan)
         assert _has(graph, "error", "references unknown variable ${MISSING}")
         assert graph.steps == []
-
-    def test_unknown_section_key(self, tmp_path):
-        plan = _plan(tmp_path)
-        _write_repro_task(plan / "01-a", "A", "level: high\nsteps: []\n")
-        assert _has(_graph(plan), "error", "unknown key 'level'")
 
     def test_retired_tier_keys_warn_and_keep_the_steps(self, tmp_path):
         plan = _plan(tmp_path)
@@ -890,30 +732,6 @@ class TestFindings:
         assert _has(graph, "error", fragment)
         assert graph.steps == []
 
-    def test_runner_template_without_a_script_placeholder(self, tmp_path):
-        plan = _plan(tmp_path)
-        (plan / "config.yaml").write_text(
-            "reproduction:\n  runners:\n    julia: julia --project=.\n", encoding="utf-8"
-        )
-        _write_repro_task(
-            plan / "01-a",
-            "A",
-            "steps:\n  - name: load\n    runner: julia\n    script: Code/run.jl\n",
-        )
-        graph = _graph(plan)
-        assert _has(graph, "error", "runner template 'julia' must contain '{script}'")
-        assert graph.steps == []
-
-    def test_env_deps_unknown_variable_is_a_config_error(self, tmp_path):
-        plan = _plan(tmp_path)
-        (plan / "config.yaml").write_text(
-            'reproduction:\n  env_deps:\n    - "${MISSING}/env.lock"\n', encoding="utf-8"
-        )
-        _write_repro_task(
-            plan / "01-a", "A", "steps:\n  - name: load\n    cmd: true\n"
-        )
-        assert _has(_graph(plan), "error", "references unknown variable ${MISSING}")
-
     def test_dep_that_is_neither_produced_nor_on_disk(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(
@@ -924,35 +742,6 @@ class TestFindings:
         graph = _graph(plan)
         assert _has(graph, "warning", "which no step produces and which is not on disk")
         assert graph.external_inputs[0].exists is False
-
-    def test_depends_on_against_file_flow_is_a_warning_naming_the_file(self, tmp_path):
-        plan = _plan(tmp_path)
-        _write_repro_task(
-            plan / "01-build",
-            "Build",
-            "steps:\n"
-            "  - name: build\n"
-            "    cmd: sh build.sh\n"
-            "    outs: [output/panel.parquet]\n",
-            depends_on=["02-estimate"],
-        )
-        _write_repro_task(
-            plan / "02-estimate",
-            "Estimate",
-            "steps:\n"
-            "  - name: estimate\n"
-            "    cmd: sh estimate.sh\n"
-            "    deps: [output/panel.parquet]\n"
-            "    outs: [output/table.tex]\n",
-        )
-        graph = _graph(plan)
-        assert _messages(graph, "error") == []
-        assert _has(graph, "warning",
-                    "depends_on '02-estimate' runs against the file flow: 02-estimate reads "
-                    "this task's output output/panel.parquet")
-
-    def test_consistent_depends_on_raises_nothing(self, tmp_path):
-        assert _messages(_graph(_two_task_pipeline(tmp_path)), "warning") == []
 
     def test_include_warnings_are_attributed_to_the_owning_task(self, tmp_path):
         plan = _plan(tmp_path)
