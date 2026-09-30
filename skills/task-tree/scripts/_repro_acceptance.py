@@ -32,13 +32,16 @@ os.umask(_UMASK)
 
 
 def atomic_json(path, value):
+    atomic_text(path, json.dumps(value, sort_keys=True, indent=2) + '\n')
+
+
+def atomic_text(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(dir=path.parent, prefix='.' + path.name)
     try:
         os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp's 0600 would outlive the rename
         with os.fdopen(fd, 'w', encoding='utf-8') as handle:
-            json.dump(value, handle, sort_keys=True, indent=2)
-            handle.write('\n')
+            handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(name, path)

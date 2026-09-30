@@ -41,7 +41,7 @@ TOML_AVAILABLE = tomllib is not None
 
 STATE_DIRNAME = ".superra-repro"
 LOCK_FILENAME = "repro-lock.json"
-LOCK_VERSION = 1
+LOCK_VERSION = 2  # 2: one line per step entry; 1 (indented entries) still reads
 LEGACY_LOCK_FILENAME = "pytask.lock"
 LEGACY_BUILDS_FILENAME = "repro-builds.json"
 
@@ -462,7 +462,7 @@ def parse_lock(text: str | None) -> dict:
     document = json.loads(text) if text else empty_lock()
     if not isinstance(document, dict) or not isinstance(document.get("steps", {}), dict):
         raise ValueError("expected an object with a 'steps' object")
-    if document.get("version", LOCK_VERSION) != LOCK_VERSION:
+    if document.get("version", LOCK_VERSION) not in (1, LOCK_VERSION):
         raise ValueError(f"unsupported lock version {document.get('version')!r}")
     return {
         "version": LOCK_VERSION,
@@ -548,7 +548,7 @@ _WARNED_CONFLICTS: set[tuple[str, str]] = set()
 def resolve_conflicted_lock(text: str, source: Path | None = None) -> dict:
     """A lock holding merge-conflict markers: every entry on one side or identical on both.
 
-    An entry both sides changed is dropped, so its step reads ``missing``.
+    An entry the two sides disagree on is dropped, so its step reads ``missing``.
     """
     ours, theirs = (_parse_lock_side(side)["steps"] for side in _conflict_sides(text))
     steps, dropped = {}, []
@@ -560,9 +560,9 @@ def resolve_conflicted_lock(text: str, source: Path | None = None) -> dict:
     key = (str(source), text)
     if key not in _WARNED_CONFLICTS:
         _WARNED_CONFLICTS.add(key)
-        note = (f"; dropped {len(dropped)} {'entry' if len(dropped) == 1 else 'entries'} both sides changed: "
+        note = (f"; dropped {len(dropped)} {'entry' if len(dropped) == 1 else 'entries'} the two sides disagree on: "
                 f"{', '.join(dropped)} (their steps read missing)") if dropped else ""
-        print(f"Warning: {source.name if source else LOCK_FILENAME} holds merge-conflict markers; read "
+        print(f"Warning: {source.name if source else LOCK_FILENAME} holds merge-conflict markers; kept "
               f"{len(steps)} entries on one side or identical on both{note}. The next `superra repro build` "
               "rewrites it without markers; commit it.", file=sys.stderr)
     return {"version": LOCK_VERSION, "steps": steps}
@@ -599,9 +599,23 @@ def read_lock(path: Path) -> dict[str, LockEntry]:
     return {name: lock_entry(name, raw) for name, raw in document["steps"].items()}
 
 
+def lock_text(document: dict) -> str:
+    """The committed layout: one line per step entry, blank-line separated, in step order.
+
+    Git merges whole lines, so a step entry changed on both branches always
+    conflicts instead of line-merging into a mix no build produced; the blank
+    lines let changes to neighbouring entries merge cleanly.
+    """
+    steps = document["steps"]
+    entries = ",\n\n".join(
+        f"    {json.dumps(name)}: {json.dumps(steps[name], sort_keys=True)}" for name in sorted(steps))
+    return ('{\n  "steps": {\n' + (entries + "\n" if entries else "")
+            + f'  }},\n  "version": {LOCK_VERSION}\n}}\n')
+
+
 def _write_lock_document(paths: RunnerPaths, document: dict) -> None:
-    from _repro_acceptance import atomic_json
-    atomic_json(paths.lock_file, document)
+    from _repro_acceptance import atomic_text
+    atomic_text(paths.lock_file, lock_text(document))
 
 
 def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry) -> None:
@@ -616,16 +630,14 @@ def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry) -> None:
 
 
 def prune_lock(paths: RunnerPaths, keep: set[str]) -> None:
-    """Drop entries of steps no longer in the tree; convert a legacy or conflicted lock on the way."""
+    """Drop entries of steps no longer in the tree; rewrite a legacy, older-layout, or conflicted lock."""
     with RECORD_LOCK:
         if not paths.lock_file.is_file() and not paths.legacy_lock_file.is_file():
             return
         document = read_lock_document(paths.lock_file)
-        pruned = {name: raw for name, raw in document["steps"].items() if name in keep}
-        if (paths.lock_file.is_file() and pruned == document["steps"]
-                and not has_conflict_markers(paths.lock_file.read_text(encoding="utf-8"))):
+        document["steps"] = {name: raw for name, raw in document["steps"].items() if name in keep}
+        if paths.lock_file.is_file() and paths.lock_file.read_text(encoding="utf-8") == lock_text(document):
             return
-        document["steps"] = pruned
         _write_lock_document(paths, document)
 
 

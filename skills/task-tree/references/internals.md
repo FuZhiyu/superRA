@@ -300,11 +300,13 @@ Agent-facing summary: [task-file contract §Records](task-file-contract.md#recor
 
 ### The lock
 
-The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived. Keys are sorted, one per line.
+The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived.
+
+Each step's entry is one line, keys sorted inside, steps in name order with a blank line between entries. Git merges whole lines, so an entry both branches changed always conflicts instead of line-merging into a mix no build produced; the blank lines let changes to neighbouring entries merge cleanly. A lock holding conflict markers reads as every entry on one side or identical on both, dropping the entries the sides disagree on so their steps read `missing`; any real build rewrites it without markers. A version `1` lock, one key per line, still reads, and any real build rewrites it in this layout. Lock history reads both.
 
 | Field | Binding |
 | --- | --- |
-| `version` | `1` |
+| `version` | `2` |
 | `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
 | `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
 | `steps.<name>.built_on` | `platform` (OS and CPU architecture) |
@@ -315,7 +317,7 @@ Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` an
 
 ### Acceptance records
 
-One file per step, `repro-acceptance/<step>.json`, so branches that accept different steps merge without conflict.
+One file per step, `repro-acceptance/<step>.json`, so branches that accept different steps merge without conflict. Two branches that accept one step both rewrite its `id` line, so their records conflict, or line-merge into one whose `id` no longer seals it; either way the record is set aside with a warning.
 
 | Field | Binding |
 | --- | --- |
