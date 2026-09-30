@@ -58,7 +58,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 #### Agent workflow
 
-- **The `reproducibility` skill routes by situation.** `SKILL.md` defines the model — producer chain, saved input, external input, and readiness versus freshness — and routes each situation to one reference: designing the graph, claiming a result, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption. The claim gate has its own reference, `claiming-results.md`.
+- **The `reproducibility` skill carries the everyday path and routes the rest.** `SKILL.md` defines the model (producer chain, saved input, external input), lists the core commands, and holds the gate for recording a result. Each other situation loads one reference: designing the graph, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption.
 - **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
 - **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps the stale rule left stale and reported to the researcher. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
 - **Protect asks which inputs are external;** it no longer selects completion targets. Planners name each artifact and its planned script in the producing task's `## Details`; the implementer registers the step.
