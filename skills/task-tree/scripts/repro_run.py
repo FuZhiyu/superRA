@@ -68,6 +68,7 @@ from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
 NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every registered step"
+TIER_RETIRED_ERROR = "reproduction tiers are retired; name task or task#step targets instead ('.' selects every registered step)"
 
 
 class StepFailed(RuntimeError):
@@ -644,8 +645,20 @@ def _refuse(errors) -> None:
         sys.exit(1)
 
 
+def _command_word(argv: list[str]) -> str | None:
+    args = iter(argv)
+    for arg in args:
+        if arg in ("--plan-root", "--root"):
+            next(args, None)
+        elif not arg.startswith("-"):
+            return arg
+    return None
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if _command_word(argv) == "tier" or any(a == "--tier" or a.startswith("--tier=") for a in argv):
+        build_parser().error(TIER_RETIRED_ERROR)
     args = build_parser().parse_args(argv)
     if args.command in ('build', 'status') and not args.targets:
         build_parser().error(NO_TARGET_ERROR)

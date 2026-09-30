@@ -456,6 +456,44 @@ def test_a_command_without_targets_is_rejected(project, command, capsys):
     assert "name at least one task or task#step target" in capsys.readouterr().err
 
 
+def test_a_retired_tier_key_does_not_disturb_a_built_lock(project):
+    assert project.run("build", ".") == 0
+    lock = project.paths.lock_file.read_bytes()
+    times = project.run_times()
+    for task in ("01-a", "02-b", "03-x"):
+        path = f"superRA/{task}/task.md"
+        project.write(path, project.read(path).replace("```yaml\nsteps:\n", "```yaml\ntier: canon\nsteps:\n"))
+    assert all(state == "fresh" for state in project.states().values())
+    assert project.run("build", ".") == 0
+    assert project.paths.lock_file.read_bytes() == lock
+    assert project.run_times() == times
+
+
+def test_retired_config_keys_do_not_disturb_a_built_lock(project):
+    assert project.run("build", ".") == 0
+    lock = project.paths.lock_file.read_bytes()
+    times = project.run_times()
+    project.write("superRA/config.yaml", CONFIG.replace(
+        "reproduction:\n", "reproduction:\n  env_probe: python3 --version\n  code_roots:\n    - Code\n", 1))
+    assert all(state == "fresh" for state in project.states().values())
+    assert project.run("build", ".") == 0
+    assert project.paths.lock_file.read_bytes() == lock
+    assert project.run_times() == times
+
+
+@pytest.mark.parametrize("argv", [
+    ["status", ".", "--tier", "canon"],
+    ["build", ".", "--tier=required"],
+    ["tier", "01-a", "required"],
+    ["--root", "superRA", "tier", "01-a", "canon"],
+])
+def test_retired_tier_invocations_name_task_targets(argv, capsys):
+    with pytest.raises(SystemExit) as exc:
+        repro_run.main(argv)
+    assert exc.value.code == 2
+    assert "reproduction tiers are retired; name task or task#step targets" in capsys.readouterr().err
+
+
 # ---------------------------------------------------------------------------
 # DAG rendering
 # ---------------------------------------------------------------------------

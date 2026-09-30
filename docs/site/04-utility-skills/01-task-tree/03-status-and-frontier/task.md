@@ -33,7 +33,7 @@ The two statuses that are yours to set are scope decisions: tell the agent to dr
 
 A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded. One leaf flips and every ancestor updates.
 
-The **frontier** is what to work on next. It uses both inferred file dependencies and logical prerequisites: `implemented`, `approved`, and `revise` prerequisites permit downstream development; `not-started`, `in-progress`, and `postponed` block it. It also exposes parent-owned steps needed by a child, without making the child wait for its own parent's rolled-up completion. Ask "what's ready next?" and the agent reads this shared graph.
+The **frontier** is what to work on next: tasks whose `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`; `not-started`, `in-progress`, and `postponed` prerequisites block. Files a task reads from other tasks' reproduction steps never block it. The frontier lists those inputs that are not fresh beside the task, and the agent decides whether to rebuild them first. Ask "what's ready next?" and the agent reads this list.
 
 Task readiness does not certify an output. Reproduction freshness and selected checks provide that separate evidence; reviewed acceptance can establish freshness while preserving the last actual execution record.
 
@@ -44,7 +44,7 @@ The authoritative contract — transition ownership, the exact rollup algorithm,
 The agent runs these under the hood; run them yourself to look at the frontier or fix stored statuses directly:
 
 ```bash
-./superRA/superra task frontier      # ready tasks and parent-owned work
+./superRA/superra task frontier      # ready tasks, each with its inputs that are not fresh
 ./superRA/superra task status fix    # recompute rollups from the leaves
 ```
 
