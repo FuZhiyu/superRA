@@ -19,7 +19,7 @@
     "no page errors": true
   },
   "facts": {
-    "machine": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "machine": "macOS-27.0-arm64-arm-64bit",
     "browser": "154.0.8037.58",
     "large": {
       "counts": {
@@ -33,7 +33,7 @@
       "selectedCardInView": true,
       "timingsMs": {
         "layout": 4,
-        "draw": 15.199999928474426
+        "draw": 16.399999976158142
       },
       "logicalDash": "6px, 4px",
       "payload": {
