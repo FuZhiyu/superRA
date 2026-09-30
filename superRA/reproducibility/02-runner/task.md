@@ -1,5 +1,5 @@
 ---
-title: "Build the `superra repro` Runner"
+title: "The `superra repro` Runner: Engine, Records, Acceptance, and Diagnosis"
 status: approved
 depends_on:
   - 01-section-contract
@@ -7,53 +7,63 @@ depends_on:
 
 ## Objective
 
-Ship `superra repro`, the command that rebuilds stale steps of the graph from [01-section-contract](../01-section-contract/task.md) and reports why.
+Own `superra repro`, which builds the steps of the graph from [01-section-contract](../01-section-contract/task.md), records what each build and review established, and explains why a step is not fresh. Command semantics are documented in [commands.md §Reproduction](../../../skills/task-tree/references/commands.md#reproduction); records in [internals.md §Reproduction records](../../../skills/task-tree/references/internals.md#reproduction-records).
 
-- **Commands:** preserve build/status/explain/dag and the [scoped verification contract](../11-scoped-verification/task.md). Build/status require task or `task#step` targets (`.` for every registered step) and run only that selection against saved inputs; `--upstream` adds producers and `--force` reruns the resulting scope. The 0.5 child adds impact/accept/revoke.
-- **Engine bridge:** generate one pytask task per step in memory and run `pytask.build(tasks=…)`; never write `task_*.py` into the project. Each step depends on a hashed `PythonNode` of its resolved spec (cmd, params, resolved deps and outs) so editing one step invalidates only that step. File and directory nodes are runner-owned `PNode` classes whose id is the logical (variable-form) path and whose hashing uses the resolved path, so the lock never embeds an author or branch. The pytask root is the project root; `pytask.lock` is committed there; the per-machine hash cache, per-step logs, and check-step stamps live in one gitignored directory that `repro` creates and adds to `.gitignore` on first run.
-- **Hash cache:** file state is the content hash, looked up in a persistent cache keyed on size and mtime_ns (no inode). A cache hit costs one `stat`; a miss rehashes. Sidecar-tracked outs hash the sidecar.
-- **Execution:** each step runs from the project root with the resolved `cmd`, stdout and stderr to `<logs>/<step>.log`, duration recorded; `-j` uses `pytask-parallel`. `check` steps rerun when their deps change and record a stamp on success. A failing step stops its descendants, reports the log path, and exits non-zero.
-- **Status and explain:** per step, one of `fresh` / `stale` / `missing` / `failed` / `external` with the triggering reason (which dep or out changed, or "never built"), owner task, last duration. `--json` is the contract the dashboard and `task read` consume.
-- **Entry script:** a PEP 723 script under `skills/task-tree/scripts/` pinning `pytask>=0.6,<0.7`, `pytask-parallel`, and `pyyaml`; `cli.py` dispatches `repro` to it so the `./superRA/superra` wrapper needs no change. Every other `superra` command keeps working without pytask installed.
-- **Validation criteria:** pytest suite (pytask available via `uv run --with`) on a fixture tree with shell-script steps: first build runs all; second is a no-op; `touch` with identical bytes is a no-op; a dep edit reruns exactly the affected chain; a step edit that regenerates identical bytes does not cascade; deleting an out reports `missing` and rebuilds it; `-k`-style target selection pulls stale ancestors; `--json` matches the documented shape; the cache file is used (second `status` performs no full-file reads, asserted through a counter or a large fixture timing).
-
-- **0.5 reuse:** implement [impact and reviewed acceptance](reviewed-acceptance/task.md) while preserving successful-run evidence and the existing status vocabulary.
-
-## Details
-
-- pytask facts checked in the installed 0.6.0 source: the lock path is `config["root"] / "pytask.lock"`; portable ids are `os.path.relpath` from that root; symlinks are not resolved on non-Windows; `pytask lock accept|reset|clean` exists and covers a later seed-from-canonical adoption without new code. Task state is the hash of the task module file, so all generated tasks share it; the per-step `PythonNode` supplies the missing granularity.
-- Custom node: implement a `PNode`-compatible class whose `state()` consults the cache; pytask hashes `PathNode` content on every invocation otherwise. Keep the cache format simple (JSON, path → size, mtime_ns, sha256).
-- Check steps need a product for pytask to skip them when unchanged; a stamp file in the state directory is the intended product.
-- Machine-specific files are excluded from env deps by the contract; the runner adds nothing on its own.
-- Survey evidence for the design: pytask handled the Julia subprocess pattern, `--dry-run --explain` named the changed helper file, and `DirectoryNode` hashed files inside directories in the 2026-09-02 tool survey.
+- **Commands:** `build`, `status`, `explain`, `impact`, `accept`, `revoke`, `dag`. `build` and `status` require task or `task#step` targets (`.` for every registered step) and run only that selection against saved inputs; `--upstream` adds the producer chain and `--force` reruns the resulting scope.
+- **One freshness rule** for `status` and `build`: SHA-256 content hashes with no size cap, looked up through a size-and-mtime cache, and early cutoff when a rerun regenerates identical bytes. `status`, `explain`, and `impact` run no build and need no engine.
+- **Committed records are portable and mergeable:** `repro-lock.json` keyed by logical `${VAR}` paths, one line per step; one acceptance record per step under `repro-acceptance/`. Nothing committed names a host, user, or time; git answers who and when. Local state stays in the gitignored, Dropbox-ignored `.superra-repro/`.
+- **Reviewed acceptance is a second route to `fresh`**, distinct from execution: it never fabricates a lock entry, receipt, or check stamp, and forced execution bypasses it.
+- **`explain` reports facts, not verdicts:** for each changed node, where the recorded and current bytes came from, one of three causes, and a tool pointer. The build-or-accept judgment stays in the [reproducibility skill](../../../skills/reproducibility/references/rerun-or-accept.md).
 
 ## Results
 
-`superra repro` ships with seven subcommands — `build`, `status`, `explain`, `impact`, `accept`, `revoke`, `dag` — over the graph [01-section-contract](../01-section-contract/task.md) builds. This task first built the runner on pytask 0.6; [01-engine-freshness](../14-review-revisions/01-engine-freshness/task.md) replaced pytask with superRA's own build loop and `pytask.lock` with `repro-lock.json`, so the Objective's engine-bridge and pinning items no longer describe the code.
+`superra repro` runs builds on superRA's own loop in [repro_run.py](../../../skills/task-tree/scripts/repro_run.py), with state in [_repro_state.py](../../../skills/task-tree/scripts/_repro_state.py), acceptance and impact in [_repro_acceptance.py](../../../skills/task-tree/scripts/_repro_acceptance.py), selection evidence in [_repro_scope.py](../../../skills/task-tree/scripts/_repro_scope.py), and provenance in [_repro_provenance.py](../../../skills/task-tree/scripts/_repro_provenance.py). The entry script pins only `pyyaml`.
 
-### What later tasks call
+### superRA owns the engine
 
-- **[repro_run.py](../../../skills/task-tree/scripts/repro_run.py)** — the PEP 723 entry, pinning only `pyyaml`. [cli.py](../../../skills/task-tree/scripts/cli.py) hands it every `repro` argument before argparse runs, so the flag surface has one owner and the `./superRA/superra` wrapper needed no change. Every subcommand runs on Python 3.10 except a read of a legacy `pytask.lock`, which needs `tomllib`: `main` then re-execs the script under `uv run --script`, and `SUPERRA_REPRO_REEXEC` stops a loop.
-- **[_repro_state.py](../../../skills/task-tree/scripts/_repro_state.py)** — stdlib runner state. `compute_status(graph, paths, …)` returns a `StatusReport` whose `to_dict()` is the `--json` contract [03-task-interface](../03-task-interface/task.md) and [04-dashboard-view](../04-dashboard-view/task.md) consume; `select_steps`, `render_dag`, and `HashCache` are separately callable.
+The runner first generated pytask 0.6 tasks in memory; superRA now schedules steps itself, and pytask is no longer a dependency.
 
-### Decisions that outlived the engine switch
+- **Why.** superRA already decided freshness, forcing, acceptance skips, and saved inputs. pytask added ordering, threads, and lock writing at the cost of four private imports, a hook raising `SkippedUnchanged`, and direct reads of its lock format.
+  - Letting pytask own freshness was rejected: `task read`, `task frontier`, and the dashboard need step state on every call, and `status` ran in ~0.15 s against ~0.8 s for a pytask dry run. `pytask lock accept` also overwrites the lock, erasing the line between accepted and executed.
+  - The migration fixture, a project built by the pytask engine, read identical step states under both engines, and its first build executed nothing.
+- **Build loop.** Steps run as subprocesses in dependency order, `-j N` on threads. A missing input fails the step before its command runs; a failed step skips its descendants. Ctrl-C, SIGTERM, or SIGHUP kills each running step's process group and records it failed; queued steps keep their records and acceptance.
+- **Freshness fixes found by the 2026-09-28 design review**, each with a regression test in [test_repro_engine.py](../../../skills/task-tree/scripts/test_repro_engine.py):
+  - A directory dep follows symlinks with a cycle guard; a symlinked data folder had read `fresh` after its contents changed.
+  - A sidecar-tracked saved input counts as verified when its bytes match the producer's record or the digest its sidecar names; it had forced needless reruns on a fresh clone.
+  - A scoped `status` exits 3 and names the non-fresh producers behind a fresh selection, instead of exiting 0.
 
-- **Lock ids are logical paths.** Each node is keyed by its variable-form path and hashed at the resolved path, so the committed lock reads the same on every checkout.
-- **A step's definition is its own node.** `spec_hashes` hashes the declared half (`cmd` as written, `params`, the logical dep and out lists) and the resolved command separately, recorded as one `declared:resolved` state: a step-definition edit invalidates that step alone, a `${VAR}` that reaches only `cmd` still moves the step, and `status` can say which half moved.
-- **`status` and `build` share one freshness rule.** `status` reads the committed lock without running anything, so the task CLI and the dashboard show reproduction state on a machine that has never built.
+### Records
 
-### Behavior worth knowing
+- **A step's definition is its own node.** The spec hash records the declared half (`cmd` as written, `params`, logical deps and outs) and the resolved command as `declared:resolved`, so a definition edit invalidates only that step and `explain` can say which half moved.
+- **The lock holds one line per step** (version 2), so a git merge takes each entry whole from one side and cannot mix two builds into a false `fresh`. A conflicted lock still reads, dropping the entries the sides disagree on so their steps read `missing`. Entries record `built_on` (OS and architecture) for `explain`; no timestamp, so an identical rebuild leaves the lock byte-identical. Lock entries of archived steps are kept for provenance.
+- **Acceptance records are one small file per step,** so branches that accept different steps merge cleanly, and two clones with different data roots and user names write byte-identical records. A record that does not parse or whose `id` does not match disables only its own step. On ElasticityBound (35 accepted steps), converting the legacy ledger preserved every step's status and reason, and records fell from 8.0 KB to 2.2 KB on average.
+- **`.superra-repro/` carries Dropbox's ignore flag**, set by the runner and the edit hook. A live check between two machines confirmed a flagged folder never syncs, so another machine's in-progress run cannot mark a step failed here. Deleting the folder stales no step.
 
-- **Step states.** `fresh`, `stale`, `missing` (never built, or an out is gone), `failed`, and `external` — a dep no step produces is not on disk, so the step cannot run. A fresh step downstream of a non-fresh one becomes `stale` with an upstream reason. Restoring inputs can clear an ordinary failure when disk matches the lock again; a forced failure requires a successful retry. A `failed` step's `reason` leads with whatever moved since that run and ends at the log.
-- **The state directory is `.superra-repro/`** at the project root — hash cache, per-step logs, per-step run records, check stamps — created and appended to `.gitignore` on the first command against a tree that declares steps, and flagged for Dropbox to ignore ([02-portable-records](../14-review-revisions/02-portable-records/task.md)). One run record per step keeps `-j` runs race-free.
-- **`-j N` runs steps on threads.** Steps are subprocesses, so the GIL is free while they run.
-- **A sidecar is hashed wherever its out appears** — as the producer's product and as any consumer's dep — so both sides agree on one state and the large file is never read. It stands in for hashing, never for existence: a deleted out reports `missing`. The runner writes the sidecar after a successful run unless the step rewrote it during that run.
-- **A dep below a directory out waits for that directory's producer.** The graph infers the edge by prefix, and the scheduler orders the consumer after it.
-- **`--dry-run` lists each step it would execute with its last recorded duration**; `explain` names what changed.
-- **Forced rerun scope is explicit.** [11-scoped-verification](../11-scoped-verification/task.md) limits `--force` to the selected scope; `--upstream --force` reruns the producer chain. This addresses the [pilot's](../08-pilot-treasurygiv/task.md) unintended 40-minute upstream rebuild.
+### Reviewed acceptance
 
-### Validation
+`accept <targets> --reason '…'` previews, revalidates, and writes in one call under one lock; `--dry-run` previews. It covers first registration, harmless edits, and outputs from direct runs; never-run checks, missing files, invalid graphs, and failed runs stay blocked.
 
-[test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py) covers the objective's list — first build runs all, a second is a no-op, identical-byte `touch` and regenerated identical outputs do not cascade, a dep edit reruns exactly the affected chain, a deleted out rebuilds, target selection, the `--json` shape, and cache use — plus the review rounds' red-green cases. The engine itself is covered in [test_repro_engine.py](../../../skills/task-tree/scripts/test_repro_engine.py). Neither needs pytask.
+- A step whose own `status` already reads fresh is skipped and its record never rewritten.
+- A consumer's record pins its producer's output bytes, so re-accepting or revoking the producer leaves the consumer's record valid; full-chain status reports the consumer stale while the producer is not fresh.
+- An acceptance that no longer validates does not override a step whose bytes match its successful build: the step stays `fresh` and the reason names the `revoke` that clears the record.
 
-Command surface in [commands.md](../../../skills/task-tree/references/commands.md#reproduction), scripts in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory, and a routing row in [SKILL.md](../../../skills/task-tree/SKILL.md).
+### Diagnosis
+
+The motivating case: six stale steps on IntermediaryDemand took about 20 tool calls to diagnose by hand, and none held a result-affecting change ([report](../../../docs/plans/2026-09-23-repro-staleness-explanations-report.md)). One `explain` call on that project now covers all of its non-fresh steps.
+
+- **`explain <target>`** takes a task, a step, or a path and resolves each changed hash against the local receipt, the acceptance records, the lock history on local and remote-tracking branches, tracked-file blob history, and Dropbox conflicted copies. Every lock or git source states its relation to HEAD. Causes are `input-changed`, `other-build`, and `unknown-output`; `status` ends with the `explain` command to run when a step is not fresh and spawns no git.
+- **Cost is bounded per call:** one history pass, a 64 MiB blob budget, a cache keyed on HEAD and branch tips, one row per changed file, and diff excerpts in a task view only with `--diff`. On ElasticityBound (4,262 commits, 173 branches, 74 stale steps) `explain .` fell from 3.9 s and 153 lines to 1.6 s and 32 lines; a synthetic 200,000-commit history from 10.9 s to 1.4 s.
+- **A check that passed at these inputs elsewhere reads `fresh`**, with the lock revision and platform in its reason; a local failure still wins.
+- **`impact <path>`** lists affected steps with their last durations, including every step a `superRA/config.yaml` change reaches through runner templates, variables, or `env_deps`. `build --dry-run` prices a rebuild the same way, as an upper bound. `status` counts the outside readers of each step's outs as a fact, never a task-local verdict.
+
+### Selection and upgrade
+
+- **Task targets replaced reproduction tiers.** A bare `build` or `status` fails naming the `.` target; `--tier` and `repro tier` exit 2 naming task targets; a leftover `tier:` key warns. Scope and force compose: `--force` reruns exactly the selection, `--upstream --force` the producer chain, which fixed the [TreasuryGIV pilot's](../08-pilot-treasurygiv/task.md) unintended 40-minute upstream rebuild.
+- **Concurrent work does not abort a build.** Guards cover the selected declarations, resolved paths, artifact ownership, and input bytes; unrelated task creation, status changes, prose, and unused config edits pass ([internals.md §Build guards](../../../skills/task-tree/references/internals.md#build-guards)).
+- **A pre-release project upgrades without rebuilding:** `pytask.lock`, `repro-builds.json`, and `repro-acceptance.json` are read until the first build or accept rewrites them. [RELEASE-NOTES.md](../../../RELEASE-NOTES.md) gives the order coauthors follow.
+
+### Known limit
+
+- Batch acceptance is atomic per step, not per call: an I/O failure partway can leave the earlier steps' records written.
+
+Tests: [test_repro_engine.py](../../../skills/task-tree/scripts/test_repro_engine.py), [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py), [test_repro_scope.py](../../../skills/task-tree/scripts/test_repro_scope.py), [test_repro_acceptance.py](../../../skills/task-tree/scripts/test_repro_acceptance.py), [test_repro_provenance.py](../../../skills/task-tree/scripts/test_repro_provenance.py), and [test_repro_builds.py](../../../skills/task-tree/scripts/test_repro_builds.py).
