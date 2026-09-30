@@ -4,7 +4,7 @@ import shutil
 
 import pytest
 
-from test_repro_runner import CHAIN, project, dir_project, _use_a_sidecar
+from test_repro_runner import CHAIN, TASK_X, project, dir_project, _use_a_sidecar
 from _repro_acceptance import (
     accept, preview, revoke, impact, read_ledger, receipt_path, mutation_lock,
     ReproStateError, LEDGER,
@@ -910,3 +910,25 @@ def test_local_state_carries_the_dropbox_ignore_attribute(project):
     assert not _dropbox_ignored(project.paths.state_dir, clear=True)
     assert project.run('status', '.') in (0, 1)
     assert _dropbox_ignored(project.paths.state_dir)
+
+
+def test_impact_covers_configuration_and_prints_text_with_durations(project, capsys):
+    project.write('superRA/04-plain/task.md', TASK_X.replace('build-x', 'plain').replace('Code/x.sh', 'Code/plain.sh')
+                  .replace('"${OUT}/x.txt"', 'plain.txt'))
+    project.write('Code/plain.sh', 'echo p > plain.txt\n')
+    assert project.run('build', '.') == 0
+    result = impact(project.graph(), project.paths, ['superRA/config.yaml'])
+    direct = {row['step']: row['reasons'][0]['origins'] for row in result['direct']}
+    assert {'kind': 'config', 'via': 'runner sh'} in direct['build-b']
+    assert {'kind': 'config', 'via': 'variable OUT'} in direct['build-a']
+    assert 'plain' not in direct
+    assert {r['step'] for r in result['affected']} == {'build-a', 'build-b', 'check-b', 'build-x'}
+    assert all(isinstance(r['duration'], float) for r in result['affected'])
+
+    capsys.readouterr()
+    assert project.run('impact', 'Code/a.sh') == 0
+    out = capsys.readouterr().out
+    assert out.startswith('Code/a.sh: 3 step(s) affected')
+    assert 'build-a' in out and 'build-b' in out and 's' in out.splitlines()[1]
+    assert project.run('impact', 'Code/a.sh', '--json') == 0
+    assert json.loads(capsys.readouterr().out)['affected'][0]['step'] == 'build-a'

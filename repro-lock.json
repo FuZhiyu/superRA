@@ -333,6 +333,44 @@
       },
       "spec": "3ac9e8b0191036dd81a8fa24e2bafdeed3ff186ef7f840f59e8fbaf07c303caf:1cc05b8c3b65759590d192385d1f644a41a85745755b0712e4c34a6124e3e978"
     },
+    "explain-impact-check": {
+      "built_on": {
+        "platform": "Darwin arm64"
+      },
+      "deps": {
+        "skills/task-tree/scripts/_apply_patch.py": "98beeef22daafd8f5a134c7b77f8705ade7e2e5e2e45f5fd8c90c1a0a8cc350f",
+        "skills/task-tree/scripts/_artifacts.py": "9815dd124e221dcad6cf5afca413eb9732e064b8aea84bfba902b14ce45db49e",
+        "skills/task-tree/scripts/_checkout_scope.py": "e78340cbf8726905a7638bebf840858c26f22d42ab6da2e1ae2186894ad0c248",
+        "skills/task-tree/scripts/_comments.py": "ffb92c0c82f9346bca8e8a67a5c0bda00f3f9583538bbbaf0d88c6dbf45c082a",
+        "skills/task-tree/scripts/_edit_detect.py": "ee09b9033d81206733dd595d2154bc64a3a08edb651fdb83091fc6a60ea85713",
+        "skills/task-tree/scripts/_repro.py": "7b5d56bff396c34212073ac01d4900c0ebe841fd4d32c72e99f8c96a4795eefa",
+        "skills/task-tree/scripts/_repro_acceptance.py": "3cd0049f2d61015a21dba45cd2532b9cd8c33c28d7003846d6575a18bb1696b1",
+        "skills/task-tree/scripts/_repro_builds.py": "3f7c75ed442948aeb195ae621b39576917e461776e661cd0537528422cbcc678",
+        "skills/task-tree/scripts/_repro_provenance.py": "eded146d5a5ab071cb3c276b39f27b33cccde91a5792f88b35aa3cf84a396f7d",
+        "skills/task-tree/scripts/_repro_scope.py": "69ac9e77889e5cca31be11fa2bf2f588ac8d9b39935235a25bbd4296e0d1f3a8",
+        "skills/task-tree/scripts/_repro_signals.py": "ec291958a9322b4562ac56add74e10cdd706a968197a35c9ebb7a7f1406f10ff",
+        "skills/task-tree/scripts/_repro_state.py": "86a704de44b95e3f22ab1708bcf5fcc79f52e1736532039da7a8a321207639ce",
+        "skills/task-tree/scripts/_step_links.py": "44001000d4080ed40fed50aa7e626c01b4c8302e85d4c36d10c6a741f53314be",
+        "skills/task-tree/scripts/_task_dependencies.py": "abf9d2efc03c0e2d28cfef3f90ca7658c260a487aeef86a1cd38a8828388a4fa",
+        "skills/task-tree/scripts/_task_io.py": "f32b5c88f4bd23a180e309157b9a037d7bd9094d53dd823005c5b9815658c101",
+        "skills/task-tree/scripts/_task_snapshot.py": "3153b32713c029caa54b1a5b20f9d36494eb9a942680c4ab0e05c0d715e6c8e6",
+        "skills/task-tree/scripts/_task_validate.py": "be41e07dccab132f55304dbeda61e54b64861fccfffd344a7d88edbcca6496af",
+        "skills/task-tree/scripts/_worktree_discovery.py": "0a7a9adbf9f9edf6063ba20faac991d4ffb631e2322f8c9203c71114401d9e2b",
+        "skills/task-tree/scripts/cli.py": "b312171288860adcfcdac62ceeb00d3f97178f6daae9937664160472c45106f8",
+        "skills/task-tree/scripts/conftest.py": "e1e3ec0c5df2224bce0b1492c1ebfa1b40a9bfa08b6fdd216fe1b7df5761dea6",
+        "skills/task-tree/scripts/repro_run.py": "5edabb969f015667f175047ddbec7c994a9d4582783561a29fb793a842d6ba52",
+        "skills/task-tree/scripts/task_hook.py": "fa3bf6e79aa9b5c488418e780d096eb1999e69b6a86982b6429ea3952ae569d9",
+        "skills/task-tree/scripts/task_read.py": "abce96fa4d91a91102748eded04ade31eaf8fd944f44e18f4c150bdc896ad9b2",
+        "skills/task-tree/scripts/test_repro_acceptance.py": "7613c80b14f83981ace21588863ba732f007b6a478bcf0b7acf56716e771a60c",
+        "skills/task-tree/scripts/test_repro_builds.py": "1581ddcb2f2f9def90ac36709f30078fd2ce64301ff7aba6a7a09c4671648c3b",
+        "skills/task-tree/scripts/test_repro_provenance.py": "a94b768852bc551e9a1e1a3113bc338ce1a60c0a96ef30c0f65678943d72b0ee",
+        "skills/task-tree/scripts/test_repro_runner.py": "f81371933ee950f7cc2297be25a78564a0a9be9864d47fb2050e07ad8cd54117"
+      },
+      "outs": {
+        ".superra-repro/stamps/explain-impact-check.stamp": "420cf257e1179054ffae81e252daeee32f619b93265520c3c96470abb91b99c2"
+      },
+      "spec": "cd343dce08cd52c95843c87d97888e10c5752552d519ee4a6d951c039f000d1d:b6c5e62cb66a3a3a92de7f06a17700bf2657d797c589f68d91d28c89eae41262"
+    },
     "layout-equivalence-check": {
       "built_on": {
         "platform": "Darwin arm64"
