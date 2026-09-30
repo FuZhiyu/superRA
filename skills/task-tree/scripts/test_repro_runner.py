@@ -469,6 +469,18 @@ def test_a_retired_tier_key_does_not_disturb_a_built_lock(project):
     assert project.run_times() == times
 
 
+def test_retired_config_keys_do_not_disturb_a_built_lock(project):
+    assert project.run("build", ".") == 0
+    lock = project.paths.lock_file.read_bytes()
+    times = project.run_times()
+    project.write("superRA/config.yaml", CONFIG.replace(
+        "reproduction:\n", "reproduction:\n  env_probe: python3 --version\n  code_roots:\n    - Code\n", 1))
+    assert all(state == "fresh" for state in project.states().values())
+    assert project.run("build", ".") == 0
+    assert project.paths.lock_file.read_bytes() == lock
+    assert project.run_times() == times
+
+
 @pytest.mark.parametrize("argv", [
     ["status", ".", "--tier", "canon"],
     ["build", ".", "--tier=required"],

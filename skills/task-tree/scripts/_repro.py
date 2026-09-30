@@ -40,6 +40,7 @@ STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params"
 RETIRED_KEYS = ("tier",)
 RETIRED_KEY_WARNING = "{key!r} is retired and ignored; remove the key and name task targets instead"
 CONFIG_KEYS = ("vars", "runners", "env_deps")
+RETIRED_CONFIG_KEYS = ("env_probe", "code_roots")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -890,7 +891,7 @@ def load_project_config(plan_root: Path) -> tuple[dict, list[str]]:
         f"{CONFIG_FILENAME}: unknown '{CONFIG_KEY}' key {key!r}; "
         f"expected one of {list(CONFIG_KEYS)}"
         for key in section
-        if key not in CONFIG_KEYS
+        if key not in CONFIG_KEYS + RETIRED_CONFIG_KEYS
     ]
     return section, errors
 
@@ -1137,6 +1138,9 @@ def build_graph(
     raw_config, config_errors = load_project_config(plan_root)
     for message in config_errors:
         _finding("", "error", message)
+    for key in RETIRED_CONFIG_KEYS:
+        if key in raw_config:
+            _finding("", "warning", f"{CONFIG_FILENAME}: '{CONFIG_KEY}' key {key!r} is retired and ignored; delete it")
     if resolve_vars:
         variables, var_errors = resolve_variables(
             raw_config.get("vars"), project_root, env=env, shell_runner=shell_runner

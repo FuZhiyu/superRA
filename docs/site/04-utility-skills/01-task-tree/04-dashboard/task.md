@@ -14,9 +14,9 @@ A browser view of your whole task tree that refreshes itself as agents work, so 
 Open the superRA dashboard and point me at what is in review.
 ```
 
-The 0.5.0 workspace redesign is under development. **Tree** and **DAG** are alternative navigators sharing the selected task, reader, comments, and attachments; **Kanban** groups work by status. The DAG combines inferred file dependencies and logical prerequisites. Expand a task to reveal its own steps and immediate child groups; selecting or expanding keeps the surrounding scope. Use **Focus subtree** to narrow it explicitly.
+The 0.5.0 workspace redesign is under development. **Tree** and **DAG** are alternative navigators sharing the selected task, reader, comments, and attachments; **Kanban** groups work by status. The DAG opens readable at 80% on the selected task and draws file edges between steps as solid arrows and `depends_on` prerequisites as dashed ones. Expand a task to reveal its own steps and immediate child groups; selecting or expanding keeps the surrounding scope.
 
-Workflow status remains separate from reproduction counts. Step details show freshness, inputs, outputs, and the last actual execution; accepted results read as fresh with their review evidence available. Graph errors remain visible through filters, including cycles between task groups whose individual steps are acyclic.
+Workflow status remains separate from reproduction counts. Step details show freshness, inputs, outputs, and the last actual execution; accepted results read as fresh with their recorded reason. Graph errors remain visible through filters: a task whose declaration has an error is outlined in red, and only step cycles and `depends_on` cycles are marked.
 
 ### A shareable snapshot
 

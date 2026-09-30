@@ -11,7 +11,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 1. Upgrade superRA on every machine that works on the project.
 2. Run `superra task check`.
    - A leftover `tier:` key, in a section or a step, is a warning and is ignored. Tier never entered a step's hash, so existing builds stay fresh.
-   - An `env_probe` or `code_roots` key under `reproduction:` in `superRA/config.yaml` is an error that blocks every build. Delete it.
+   - A leftover `env_probe` or `code_roots` key under `reproduction:` in `superRA/config.yaml` is also a warning and is ignored. Delete these keys when convenient.
 3. Run a build. It writes `repro-lock.json` and prints the `git rm` that retires `pytask.lock` and `repro-builds.json`, which are read until then. Commit the lock and the removal, and delete the `.pytask/` directory.
 4. The first `superra repro accept` converts `repro-acceptance.json` into one file per step under `repro-acceptance/` and deletes it. Commit both changes.
 
@@ -77,7 +77,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 ### Removed
 
-- pytask and `pytask-parallel` as dependencies, the `_repro_hooks.py` plugin, and the `env_probe` and `code_roots` configuration keys. A lock's legacy probe fields are ignored on read.
+- pytask and `pytask-parallel` as dependencies, the `_repro_hooks.py` plugin, and the `env_probe` and `code_roots` configuration keys, which now warn and are ignored. A lock's legacy probe fields are ignored on read.
 
 ### Release Prep
 
