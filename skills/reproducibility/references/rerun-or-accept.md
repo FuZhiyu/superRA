@@ -6,7 +6,7 @@ Before applying the rule: `superra repro build <targets> --dry-run` for the cost
 
 ## The stale rule
 
-It covers steps a change left `stale`, `missing` (an out is gone), or `failed`. Your own work is built, never left stale: a step you just registered, or a `failed` step once you fix what the log its reason names shows. A step reported `external` waits on a missing external input: retrieve it, or register its producer.
+It covers every step `status` reports as `stale`, `missing`, or `failed`. Your own work, a step you just registered or a failure you fixed, is built or accepted, never left stale. A step reported `external` waits on a missing external input: retrieve it, or register its producer.
 
 Classify the step from the graph:
 
