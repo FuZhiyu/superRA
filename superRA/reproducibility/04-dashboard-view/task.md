@@ -1,6 +1,6 @@
 ---
 title: "Dashboard Reproduction View for Reviewing the Graph"
-status: approved
+status: in-progress
 depends_on:
   - 01-section-contract
   - 02-runner
@@ -8,10 +8,11 @@ depends_on:
 
 ## Objective
 
-Let the researcher review an agent-built graph in the dashboard and comment on it, so graph feedback flows through the task-comment loop agents already read.
+Let the researcher review an agent-built graph in the dashboard, comment on it, and act on it: graph feedback flows through the task-comment loop agents already read, and builds, their cost, and staleness causes are reachable without an agent or the CLI.
 
 - **DAG navigator:** integrate one hierarchical task DAG as an alternative to Tree navigation, sharing task selection, reader, comments, and attachments. Keep selection and expansion/folding distinct on one project map. Remove the duplicate reproduction tree and subtree picker. Support expandable steps, project-wide search, identifiable task ownership, a state legend (`fresh`, `stale`, `missing`, `failed`, `external`, `unknown`), and a separate check-kind indicator. Selecting a step exposes its command, deps, outs, owner task, state reason, last duration, and log tail. Layout is deterministic for the same graph; navigation and filtering follow the [scalable navigation contract](scalable-navigation/attachments/design.md).
 - **Task page:** when a task has a `## Reproduction` section, render a step table (name, state, reason, outs) above the raw YAML block and link each row to the node in the Reproduction view. The section keeps its existing comment gutter; verify that a comment on a step line round-trips through `task comment list`.
+- **Graph actions:** a Build menu, timings, and an explain hover card on every card, per [build-from-graph](build-from-graph/task.md).
 - **Data path:** `GET /api/repro/graph` and `GET /api/repro/status` serve the JSON from [01-section-contract](../01-section-contract/task.md) and [02-runner](../02-runner/task.md); state refreshes on the existing SSE reload after a build touches the lock. The standalone export embeds a snapshot of both.
 - **Validation criteria:** dashboard tests cover the two routes, the export snapshot, and rendering with no reproduction declarations (logical-only tasks and prerequisites remain visible, without errors); a tree with no task nodes shows an empty state; a manual pass on a fixture graph of at least 15 steps across 4 owner tasks is recorded with a screenshot in `attachments/`. The real-graph pass belongs to [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md).
 
