@@ -1,6 +1,6 @@
 ---
 title: "Explain and Impact Report the Facts the Skill Acts On"
-status: implemented
+status: approved
 depends_on:
   - 02-portable-records
 ---
