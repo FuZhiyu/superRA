@@ -164,8 +164,8 @@ Sessions 1 and 2 dispatched a Sonnet implementer with `Load superRA:using-superr
 | 2. Shared-helper fan-out | `04-helper-fix`: `winsorize` rounds to 4 decimals | Rebuilt the cheap `build-panel`. Left `estimate` (150 s) and `check-estimates` stale. Returned `DONE_WITH_CONCERNS` with the rebuild-or-accept question and a recommendation in `## Results`. |
 | 3. Completion and Protect | A commit tightens the leverage clip in `estimate.py` and adds a header comment to `build_panel.py` | Ran `status .`, `explain`, then `build --dry-run`. Accepted `build-panel` under the comment-only exception with the reason recorded. Raised the costly `estimate` rerun as a researcher question before building. The `integrate(protect)` body records `External inputs: Data/raw.csv` and no target list. |
 
-- **Session 2** reached the right status without opening `rerun-or-accept.md`: it read `claiming-results.md` only. It went from the dry-run cost to `implement-task` §Escalation.
-- **Sessions 1 and 2** stopped at a pending permission prompt on `git commit` in the scratch directory. Their `## Results` and staged files show the intended commit, which names `repro-lock.json`.
+- **Session 2** reached the right status although no tool call in its transcript opens `rerun-or-accept.md`; its own report lists the file as read.
+- **Sessions 1 and 2** committed their work with `repro-lock.json` (`e509369`, `bd83801` in their scratch copies), after a long wait on a `git commit` permission prompt.
 
 ### Left open
 
