@@ -14,11 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from _repro_acceptance import LEDGER, receipt_path
+from _repro_acceptance import LEDGER, read_ledger, receipt_path
 from _repro_builds import platform_name
 from _repro_state import (
     LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, TOML_AVAILABLE, legacy_lock_id, read_lock,
-    read_lock_document, _write_lock_document,
+    lock_text, read_lock_document, _write_lock_document,
 )
 from test_repro_acceptance import review
 from test_repro_provenance import explain, git, head
@@ -33,17 +33,20 @@ needs_tomllib = pytest.mark.skipif(not TOML_AVAILABLE, reason="reading pytask.lo
 # The lock file
 # ---------------------------------------------------------------------------
 
-def test_the_lock_is_sorted_one_key_per_line_and_round_trips(project):
+def test_the_lock_holds_one_line_per_step_in_step_order_and_round_trips(project):
     assert project.run("build", ".") == 0
     text = project.read("repro-lock.json")
     document = json.loads(text)
-    assert list(document) == ["steps", "version"]
+    assert list(document) == ["steps", "version"] and document["version"] == 2
     assert list(document["steps"]) == sorted(document["steps"])
     entry = document["steps"]["build-b"]
     assert entry["spec"] and entry["deps"] == {
         "${OUT}/a.txt": entry["deps"]["${OUT}/a.txt"], "Code/b.sh": entry["deps"]["Code/b.sh"]}
     assert "build-b::spec" not in entry["deps"]
-    assert text == json.dumps(document, indent=2, sort_keys=True) + "\n"
+    entry_lines = [line for line in text.splitlines() if line.startswith('    "')]
+    assert [json.loads("{" + line.rstrip(",") + "}") for line in entry_lines] == [
+        {name: raw} for name, raw in sorted(document["steps"].items())]
+    assert text == lock_text(document)
     # In memory the spec is the `<step>::spec` dependency acceptance records compare.
     assert read_lock(project.paths.lock_file)["build-b"].depends_on["build-b::spec"] == entry["spec"]
 
@@ -123,6 +126,69 @@ def test_a_lock_conflicted_by_adjacent_new_steps_reads_both_and_the_next_build_r
     assert {"build-p", "build-q"} <= set(json.loads(text)["steps"])
 
 
+def test_a_version_1_lock_reads_and_the_next_build_rewrites_it_one_line_per_step(project):
+    assert project.run("build", ".") == 0
+    document = json.loads(project.read("repro-lock.json"))
+    project.write("repro-lock.json", json.dumps(dict(document, version=1), indent=2, sort_keys=True) + "\n")
+    assert set(project.states().values()) == {"fresh"}
+    times = project.run_times()
+    assert project.run("build", ".") == 0
+    assert project.run_times() == times
+    assert project.read("repro-lock.json") == lock_text(document)
+
+
+def _mixed_check_repo(project, *, adjacent_new_steps):
+    """The review's reproduction: each branch changes a different dep of one check and rebuilds it."""
+    deps = [f"Code/m{i}.txt" for i in range(1, 5)]
+    project.write("superRA/05-m/task.md", TASK_X.replace("build-x", "check-m").replace(
+        "    cmd: sh Code/x.sh\n    deps:\n      - Code/x.sh\n    outs:\n      - \"${OUT}/x.txt\"\n",
+        "    kind: check\n    cmd: sh -c '! { grep -qx L Code/m1.txt && grep -qx R Code/m4.txt; }'\n    deps:\n"
+        + "".join(f"      - {dep}\n" for dep in deps)))
+    for dep in deps:
+        project.write(dep, "base\n")
+    _merge_repo(project)
+    for branch, dep, text, name in (("left", deps[0], "L", "build-p"), ("right", deps[3], "R", "build-q")):
+        git(project.root, "checkout", "-qb", branch, "main")
+        project.write(dep, text + "\n")
+        if adjacent_new_steps:
+            _new_step_task(project, name)
+        assert project.run("build", ".") == 0
+        git(project.root, "add", "-A")
+        git(project.root, "commit", "-qm", branch)
+    git(project.root, "checkout", "-q", "left")
+    return subprocess.run(["git", "merge", "--no-edit", "right"], cwd=project.root, capture_output=True, text=True)
+
+
+@pytest.mark.parametrize("adjacent_new_steps", [True, False])
+def test_a_check_both_branches_rebuilt_never_reads_fresh_after_a_merge(project, capsys, adjacent_new_steps):
+    merge = _mixed_check_repo(project, adjacent_new_steps=adjacent_new_steps)
+    assert merge.returncode != 0 and "<<<<<<<" in project.read("repro-lock.json")
+    capsys.readouterr()
+    assert project.states()["check-m"] == "missing"
+    assert "dropped 1 entry the two sides disagree on: check-m" in capsys.readouterr().err
+    assert project.run("build", "05-m") == 1  # the merged tree really fails the check
+    assert project.states()["check-m"] == "failed"
+    assert "<<<<<<<" not in project.read("repro-lock.json")
+
+
+def test_acceptance_records_of_one_step_never_line_merge_into_a_trusted_record(project, monkeypatch):
+    import _repro_acceptance
+    monkeypatch.setattr(_repro_acceptance, "_WARNED", set())  # leave later tests their first warning
+    _merge_repo(project)
+    script = project.read("Code/a.sh")
+    for branch, edited in (("left", "# left\n" + script), ("right", script + "# right\n")):  # merges cleanly
+        git(project.root, "checkout", "-qb", branch, "main")
+        project.write("Code/a.sh", edited)
+        assert project.run("accept", "01-a", "--reason", f"reviewed on {branch}") == 0
+        git(project.root, "add", "-A")
+        git(project.root, "commit", "-qm", branch)
+    git(project.root, "checkout", "-q", "left")
+    subprocess.run(["git", "merge", "--no-edit", "right"], cwd=project.root, capture_output=True, text=True)
+    assert "<<<<<<<" not in project.read("Code/a.sh")
+    assert project.states()["build-a"] != "fresh"
+    assert read_ledger(project.paths)["set_aside"] == ["build-a"]
+
+
 @pytest.mark.parametrize("style", [[], ["--diff3"]])
 def test_a_lock_entry_both_sides_changed_is_dropped_so_its_step_reads_missing(project, capsys, style):
     assert project.run("build", ".") == 0
@@ -141,7 +207,7 @@ def test_a_lock_entry_both_sides_changed_is_dropped_so_its_step_reads_missing(pr
     capsys.readouterr()
 
     assert set(read_lock(project.paths.lock_file)) == {"build-b", "check-b", "build-x"}
-    assert "dropped 1 entry both sides changed: build-a" in capsys.readouterr().err
+    assert "dropped 1 entry the two sides disagree on: build-a" in capsys.readouterr().err
     assert project.states()["build-a"] == "missing"
     assert project.run("build", "01-a") == 0
     assert "<<<<<<<" not in project.read("repro-lock.json")
@@ -481,6 +547,28 @@ def test_explain_names_lock_revisions_across_the_switch_to_repro_lock(project, c
     out = explain(project, capsys, "01-a#build-a")
     assert f"recorded lock {rebuilt} " in out
     assert f"current lock {legacy} " in out
+
+
+def test_explain_names_lock_revisions_across_the_switch_to_one_line_entries(project, capsys):
+    project.write(".gitignore", "output/\n.superra-repro/\n")
+    git(project.root, "init", "-q")
+    git(project.root, "add", "-A")
+    git(project.root, "commit", "-qm", "code")
+    assert project.run("build", *CHAIN) == 0
+    document = json.loads(project.read("repro-lock.json"))
+    project.write("repro-lock.json", json.dumps(dict(document, version=1), indent=2, sort_keys=True) + "\n")
+    git(project.root, "add", "repro-lock.json")
+    git(project.root, "commit", "-qm", "a version 1 lock")
+    version_1 = head(project.root)
+    project.write("Code/a.sh", "mkdir -p output\necho other > output/a.txt\n")
+    assert project.run("build", "01-a") == 0
+    assert json.loads(project.read("repro-lock.json"))["version"] == 2
+    git(project.root, "commit", "-qam", "rebuild a")
+    rebuilt = head(project.root)
+    project.write("output/a.txt", "hello\n")  # the old bytes come back
+    out = explain(project, capsys, "01-a#build-a")
+    assert f"recorded lock {rebuilt} " in out
+    assert f"current lock {version_1} " in out
 
 
 def test_a_legacy_lock_on_python_310_re_execs_through_uv(project, monkeypatch, capsys):

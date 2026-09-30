@@ -1,6 +1,6 @@
 ---
 title: "Workflow Call Sites Apply the Reproduction Gates Consistently"
-status: revise
+status: implemented
 depends_on:
   - 07-instruction-rewrite
 ---
@@ -79,14 +79,14 @@ Smaller prose fixes from [wiring.md](../attachments/wiring.md):
 
 ## Results
 
-Every workflow step that touches reproduction now points to the one reference that owns its rule, and the completion check asks before costly reruns. Three live sessions walked the [wiring.md](../attachments/wiring.md) scenarios and each applied the gates in order. A conflicted `repro-lock.json` now reads instead of failing (commit `302b6e7d`).
+Every workflow step that touches reproduction now points to the one reference that owns its rule, and the completion check asks before costly reruns. Three live sessions walked the [wiring.md](../attachments/wiring.md) scenarios and each applied the gates in order. The lock now holds one line per step, so a merge can no longer mix two builds into one entry, and a conflicted lock reads instead of failing.
 
 ### The completion gate has one home and asks first
 
-- [protect-and-completion.md §The completion gate](../../../../skills/reproducibility/references/protect-and-completion.md#the-completion-gate) holds the commands: `status .`, then the stale rule costed by `build --dry-run`, then `status .` again.
+- [protect-and-completion.md §The completion gate](../../../../skills/reproducibility/references/protect-and-completion.md#the-completion-gate) holds the commands: `status .`, then the whole [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) (its dry-run cost and `explain` pre-step, then the stale rule), then `status .` again.
   - [completion.md](../../../../skills/superimplement/references/completion.md), [integrate.md](../../../../skills/superintegrate/references/integrate.md) Step 1, and [finish.md](../../../../skills/superintegrate/references/finish.md) Step 2 only point to it. None runs `build <targets> --upstream` any more.
   - [main-agent.md §Proceeding and Pausing](../../../../skills/using-superra/references/main-agent.md#proceeding-and-pausing-in-the-autonomous-mode) lists "a costly rerun the stale rule sends to the researcher" among the pre-set gates.
-- **Trees with no steps** are stated once, in the gate: they pass only when no `## Results` rests on retained code; otherwise register the producers. The three other wordings are gone. The session-start line in `main-agent.md` now only reports steps that are not `fresh`.
+- **Trees with no steps** are stated once, in the gate: they pass only when no `## Results` rests on retained code; otherwise register the producers. The three other wordings are gone. The session-start line in `main-agent.md` reports the steps that are not `fresh` and reads "selects no steps" as nothing to report.
 - **Protect keeps no target list.** [protect.md](../../../../skills/superintegrate/references/protect.md) asks which inputs are external, adds an `External inputs:` line to the researcher template, and records "agreed external inputs" in the `integrate(protect)` commit body.
 
 ### Planning names artifacts; the implementer registers steps
@@ -107,17 +107,20 @@ Every workflow step that touches reproduction now points to the one reference th
   - Hygiene limits only *task-file* edits to assigned tasks.
   - The `git add` template names tracked outputs and changed `repro-lock.json` / `repro-acceptance/`.
 - **Reviewer.** [review-task](../../../../skills/review-task/SKILL.md) names all three gates by their references and the evidence: read-only `status <targets> --upstream` and the committed records.
-- **One escalation status.** [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#the-stale-rule) says a subagent returns `DONE_WITH_CONCERNS` with the question in `## Results`. This status keeps the finished work committed, where `BLOCKED` would drop it.
+- **One escalation status.** [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#the-stale-rule) says a subagent returns `DONE_WITH_CONCERNS` with the question in `## Results`; `implement-task` §Escalation and `superimplement` §Autonomy and Stop Points name that exception and point there. The status keeps the finished work committed, where `BLOCKED` would drop it.
 
-### Conflicted records resolve through the engine
+### A merge cannot make a lock entry read falsely fresh
 
-- **Engine.** [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py) reads a lock holding conflict markers, in merge or diff3 style. It keeps every entry that is on one side or identical on both, drops entries both sides changed so their steps read `missing`, and warns once.
-  - Any non-dry-run `build` rewrites the lock without markers.
-  - [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) reproduces the adjacent-new-steps conflict through a real `git merge`, and the changed-on-both-sides case through `git merge-file`. Both failed before the change; `engine-freshness-check` runs them.
-- **Guidance.** [semantic-merge](../../../../skills/semantic-merge/SKILL.md) gains a "Reproduction records" role:
-  - Resolve the `missing` steps by the stale rule, then commit the lock that a `build` rewrites.
-  - A conflicted `repro-acceptance/<step>.json` is removed and its step resolved the same way.
-  - [parallel-dispatch.md](../../../../skills/agent-orchestration/references/parallel-dispatch.md) no longer promises clean merges and points there.
+- **One line per step.** [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py) writes `repro-lock.json` as version 2: each step's entry on one line with sorted keys, steps in name order, a blank line between entries.
+  - Git merges whole lines, so an entry both branches changed always conflicts; a clean merge can only take each entry whole from one side.
+  - The blank lines let changes to neighbouring entries merge cleanly, so branches that rebuild different steps still merge without conflict.
+  - A version 1 lock (one key per line) still reads, and the next real build rewrites it; `explain`'s lock history reads both layouts.
+- **Conflicted lock.** The reader keeps each entry on one side or identical on both and drops entries the sides disagree on, so their steps read `missing`, with a warning. Any real build rewrites the lock without markers.
+- **Acceptance records need no change.** Every accept rewrites the record's sealing `id` line, so two branches accepting one step conflict on it, or line-merge into a record whose `id` no longer matches. Either way the record is set aside.
+- **Tests** in [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py), run by `engine-freshness-check`:
+  - The review's reproduction through a real `git merge`: `check-m` reads four deps, and the branches edit `m1` and `m4` and rebuild it. It is run once with adjacent new steps (a conflicted merge) and once without (a would-be-clean merge). `check-m` reads `missing`, and building it fails as the merged tree warrants. Both cases read `fresh` under the old layout.
+  - The adjacent-new-steps conflict, the changed-on-both-sides case through `git merge-file` (merge and diff3 styles), the version 1 read-and-rewrite, `explain` across the layout switch, and two same-step acceptances merged.
+- **Guidance.** [semantic-merge](../../../../skills/semantic-merge/SKILL.md) gains a "Reproduction records" role that states what the reader keeps and drops. It says to resolve the `missing` steps by the stale rule and commit the lock a build rewrites; a conflicted acceptance record accepts nothing and is removed. [parallel-dispatch.md](../../../../skills/agent-orchestration/references/parallel-dispatch.md) no longer promises clean merges and points there. [internals.md](../../../../skills/task-tree/references/internals.md#the-lock) records the layout and both merge guarantees.
 
 ### Terms and small fixes
 
@@ -128,7 +131,7 @@ Every workflow step that touches reproduction now points to the one reference th
 - **Result protection.** `result-protection` counts drift tests "registered as check steps", not a lock, as protection.
 - **Completion check.** In `completion.md`, "Verify Pipeline and Reproducibility" is now "Verify the Work", and `econ-data-analysis` cites the new name. The "ad-hoc REPL" line and a restated failure rule are removed.
 - **Step lifecycle pointers.** [changing-the-tree.md](../../../../skills/superplan/references/changing-the-tree.md), [consolidation.md](../../../../skills/superplan/references/consolidation.md) §Prune, and the [mature-consolidate](../../../../skills/superintegrate/references/mature-consolidate.md) prompt point to §Step lifecycle instead of restating it.
-- **Word count.** The edited instruction files total 18,852 → 18,910 words (+58). The new manifest row, the no-steps condition, and the semantic-merge role outweigh the cut restatements.
+- **Word count.** The edited instruction files total 18,852 → 18,910 words (+58) before the revise round. The new manifest row, the no-steps condition, and the semantic-merge role outweigh the cut restatements.
 
 ### The harness contract is current
 
@@ -140,7 +143,7 @@ Every workflow step that touches reproduction now points to the one reference th
 - **Live runs, 2026-09-29, Sonnet via the SDK harness:**
   - The protection row loaded both `result-protection` and `reproducibility`. The LC008 note and the README now record this.
   - The reproducibility-worded domain fixture loaded `reproducibility` before its first edit.
-- **Tests.** Harness tests: 130 passed. Task-tree suite: 1,331 passed. The 2 failures are the step-reader browser cases in `test_dag_workspace_browser.py`, which fail identically without this change.
+- **Tests.** Harness tests: 130 passed. Task-tree suite: 1,336 passed; the 2 failures are the step-reader browser cases in `test_dag_workspace_browser.py`, which fail identically without this change.
 
 ### Three live sessions walked the wiring scenarios
 
@@ -166,8 +169,7 @@ Sessions 1 and 2 dispatched a Sonnet implementer with `Load superRA:using-superr
 
 ### Left open
 
-- **Pre-existing failing check:** `unified-dependency-workflow-check` fails its `task frontier` assertion both before and after this change. Its fixture expects file edges to gate readiness, which [03](../03-readiness-model/task.md) removed.
-- **Pre-existing failing check:** `dashboard-dag-design-interaction-check` fails the two browser cases noted above.
+- **Failing checks outside this task:** `unified-dependency-workflow-check` (its frontier fixture expects file edges to gate readiness, which [03](../03-readiness-model/task.md) removed) and `dashboard-dag-design-interaction-check` (the two browser cases) fail with or without this change. They were not rebuilt in this round; a parallel fix owns them.
 - **For [09](../09-upgrade-and-records/task.md):** wiring.md's M6 (release notes on `tier:`) and its stale task-tree content were not part of this task.
 
 Owning task for the fold-back: [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md).
@@ -186,10 +188,17 @@ Tier: quick. Focuses: correctness of the conflicted-lock reader (`302b6e7d`); th
    - A fully clean merge (no markers anywhere) produces the same mixed entry through plain `parse_lock`. The objective's premise "entries are per step, so the union is the resolution" therefore does not hold for line-merged entries.
    - **Fix:** compare each entry against the true base and both sides, and drop any entry both sides changed. Options: read `:1:`/`:2:`/`:3:repro-lock.json` from the index during an unresolved merge; ship a lock merge driver through `.gitattributes`, which also covers clean merges; or lay the lock out so any two-sided change to an entry conflicts. Add the scenario above as a test.
    - **Dependent:** the [semantic-merge](../../../../skills/semantic-merge/SKILL.md#L54) "Reproduction records" line claims the reader drops "the entries both sides changed". Reword it once the fix settles what the reader and git guarantee.
+   → implemented: [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py) writes one line per step entry (lock version 2), so any two-sided change to an entry conflicts and the reader drops it; the review's scenario is a regression test for both a conflicted and a would-be-clean merge; semantic-merge reworded.
+
 2. **[BLOCKING] The completion gate restates the stale rule's pre-step (CLAUDE.md §Teach the Protocol, test 1).** [protect-and-completion.md:8](../../../../skills/reproducibility/references/protect-and-completion.md#L8) "costed by `superra repro build <steps> --dry-run`" paraphrases [rerun-or-accept.md:6](../../../../skills/reproducibility/references/rerun-or-accept.md#L6) ("Before applying the rule: `superra repro build <targets> --dry-run` for the cost"). The agent loads that file to apply the rule anyway. **Fix:** drop the clause and link [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) itself rather than its `#the-stale-rule` anchor. The anchor skips the pre-step, which also carries `explain`. The order the objective asks for still holds: status, the dry-run cost, then build.
+   → implemented: [protect-and-completion.md:8](../../../../skills/reproducibility/references/protect-and-completion.md#L8) drops the clause and links the whole `rerun-or-accept.md`.
+
 3. **[ADVISORY] Two escalation rules still compete.** [rerun-or-accept.md:22](../../../../skills/reproducibility/references/rerun-or-accept.md#L22) says `DONE_WITH_CONCERNS`. Two lines give the general rule instead:
    - [implement-task/SKILL.md:73](../../../../skills/implement-task/SKILL.md#L73) returns `BLOCKED` when "a decision belongs to the researcher".
    - [superimplement/SKILL.md:60](../../../../skills/superimplement/SKILL.md#L60) says subagents "return `NEEDS_CONTEXT` / `BLOCKED`".
 
    Session 2 picked the specific rule, so this finding is advisory. A pointer in §Escalation would make the objective's "one escalation status" hold at the source an implementer always loads.
+   → implemented: `implement-task` §Escalation and `superimplement` §Autonomy and Stop Points name `DONE_WITH_CONCERNS` for a costly stale step and point to `rerun-or-accept.md`.
+
 4. **[ADVISORY] Session start now errors on trees with no steps.** [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) runs `repro status .` on every tree. On a prose or theory tree it prints `Error: task '.' selects no steps; no result verified` and exits 1. The main agent has not loaded `protect-and-completion.md`, where that case is defined as a pass. Keep the dropped "on a tree with registered steps" condition, or say that "selects no steps" is nothing to report.
+   → implemented: [main-agent.md:10](../../../../skills/using-superra/references/main-agent.md#L10) reads "selects no steps" as nothing to report.

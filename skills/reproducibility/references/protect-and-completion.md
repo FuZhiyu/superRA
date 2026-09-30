@@ -5,7 +5,7 @@
 Run over every active step, once every task is approved:
 
 1. `superra repro status .`
-2. Resolve each step not `fresh` by [the stale rule](rerun-or-accept.md#the-stale-rule), costed by `superra repro build <steps> --dry-run`; build by name only the steps it says to run.
+2. Resolve each step not `fresh` by [the stale rule](rerun-or-accept.md), building by name only the steps it says to run.
 3. `superra repro status .` again.
 
 The gate passes when every step reads `fresh`, by execution or reviewed acceptance, except the steps the stale rule left stale and reported to the researcher. When the researcher asks for fresh execution, build the named targets with `--force`.

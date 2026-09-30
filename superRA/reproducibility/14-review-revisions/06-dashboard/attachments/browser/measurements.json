@@ -32,8 +32,8 @@
       "expandedStepNodes": 200,
       "selectedCardInView": true,
       "timingsMs": {
-        "layout": 4,
-        "draw": 16.399999976158142
+        "layout": 4.200000047683716,
+        "draw": 16.299999952316284
       },
       "logicalDash": "6px, 4px",
       "payload": {

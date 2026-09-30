@@ -70,4 +70,4 @@ Status enum + commit SHA, plus extras left out and unaddressed `[ADVISORY]` item
 
 ## Escalation
 
-STOP and return BLOCKED or NEEDS_CONTEXT when inputs or results don't match expectations, you lack upstream context, or a decision belongs to the researcher. Ask, don't guess.
+STOP and return BLOCKED or NEEDS_CONTEXT when inputs or results don't match expectations, you lack upstream context, or a decision belongs to the researcher. Ask, don't guess. A costly stale step returns DONE_WITH_CONCERNS instead: `superRA:reproducibility` `references/rerun-or-accept.md`.
