@@ -21,6 +21,9 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 - **Reproduction sections register producers and checks.** A task's `## Reproduction` section declares steps with their `deps` and `outs`; `superra repro build` reruns the steps whose inputs changed and records each successful build in the committed `repro-lock.json`.
 - **The dashboard shows how results are produced:** reproduction steps, freshness, file dependencies, and task ownership. Workflow skills register and verify retained results through the `reproducibility` skill.
+- **The `onboarding` skill brings an existing project into superRA,** even one without git. The agent writes a task tree and a reproduction graph for the work already done, touching nothing outside `superRA/` until the researcher approves. It then offers git, with a `.gitignore` that keeps data out, and an optional rerun in an isolated worktree that checks each result against its original before merging back.
+  - Session start and `superplan` offer onboarding to any project with code, data, or results but no `superRA/`. A legacy `PLAN.md` project enters the same skill, which runs the migration.
+  - `superra task create` creates the first task in a `superRA/` that holds only the wrapper.
 
 ### Changed
 
@@ -29,7 +32,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 - **superRA runs builds itself; pytask is no longer a dependency.** `repro build` runs steps as subprocesses in dependency order, `-j N` at a time. A failed step skips its descendants; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed.
   - `status` and `build` decide freshness by one rule: SHA-256 content hashes with no size cap, and a rerun that regenerates identical bytes leaves its consumers fresh.
   - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
-  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on this repository's 14 steps, against about 0.8 s under pytask.
+  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on a 14-step project, against about 0.8 s under pytask.
 - **The lock holds one line per step.** `repro-lock.json` (version 2) writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and can no longer mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
 - **Task-scoped builds by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. Builds use saved inputs outside the selection. `--upstream` adds the producer chain and `--force` reruns the selection. `--force-all` is retired.
   - A scoped `status` exits 3 and names the producers behind the selection that are not fresh (`behind` in `--json`).
