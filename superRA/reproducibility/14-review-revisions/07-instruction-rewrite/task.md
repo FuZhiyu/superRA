@@ -1,6 +1,6 @@
 ---
 title: "Reproduction Instructions Pass the CLAUDE.md Gate"
-status: implemented
+status: revise
 depends_on:
   - 01-engine-freshness
   - 02-portable-records
@@ -141,3 +141,38 @@ These call sites still point at removed text or name completion targets:
 - `completion.md:18`, `integrate.md:9`, and `finish.md:39` run `build <targets> --upstream` before status.
 - `protect.md:15` still frames the Protect choices around targets.
 - `using-superra/SKILL.md` §Task Interface still restates "registration follows placement" (audit C8).
+
+## Review Notes
+
+Tier: thorough. Focuses: the CLAUDE.md §Teach the Protocol gate and §Skill Prose Style on every edited line under `skills/*`; survival of every gate, enum, default, and ordering constraint; whether each reference is actionable in its situation; the researcher's critique. Call sites outside the skill and the task-tree references are 08's scope and were not reviewed.
+
+1. **[BLOCKING] Two edited lines fail the §Teach the Protocol gate.**
+   - [rerun-or-accept.md:40](../../../../skills/reproducibility/references/rerun-or-accept.md#L40): "**It executes nothing.**" restates [SKILL.md:13](../../../../skills/reproducibility/SKILL.md#L13) ("executing nothing"), which every reader of this reference has already loaded (test 1). Fix: lead the bullet with its new content, e.g. "**A check that has never run must run.**"
+   - [task-file-contract.md:136](../../../../skills/task-tree/references/task-file-contract.md#L136): "The dashboard reveals and selects the step." describes UI behavior that no agent acts on (test 3). Fix: delete the sentence and keep the link form.
+
+2. **[ADVISORY] The claim gate is hard to reach when an agent records a result.** The harness implementer claimed a result without opening `protect-and-completion.md`. The file name leads with Protect and completion, and the [SKILL.md:27](../../../../skills/reproducibility/SKILL.md#L27) row files `Stage: protection` under "Claiming a result reproduces", which does not describe it. Fix: split the row (claims in `## Results` or at the completion check / `Stage: protection`), or name the file for its first situation and coordinate the rename with 08.
+
+3. **[ADVISORY] Drift-test authors are routed through a paraphrase.** The designing-the-graph row ([SKILL.md:26](../../../../skills/reproducibility/SKILL.md#L26)) covers code "that produces a retained result". A drift test checks a result, so its author reaches the check-step rule only through [protect-and-completion.md:29](../../../../skills/reproducibility/references/protect-and-completion.md#L29) sentence 2. That sentence paraphrases [designing-the-graph.md:8](../../../../skills/reproducibility/references/designing-the-graph.md#L8) and keeps the old "the researcher selects" qualifier. Fix: change the row to "Writing or registering retained code", then drop that sentence. In the same line, "received rather than rebuilt, and not reproducible here" paraphrases [SKILL.md:17](../../../../skills/reproducibility/SKILL.md#L17), so "which inputs are external" is enough.
+
+4. **[ADVISORY] The registration gate gained a timing clause.** [designing-the-graph.md:5](../../../../skills/reproducibility/references/designing-the-graph.md#L5) puts "in the commit that changes the result, its inputs, or its ownership" inside the `[BLOCKING]` sentence. Before this change, the gate required registration only and the timing was ungated guidance. Fix: confirm the stricter gate with the researcher, or move the clause into its own sentence.
+
+5. **[ADVISORY] The stale rule gives no exit for the agent's own work.** It now covers `missing` and `failed` ([rerun-or-accept.md:9-18](../../../../skills/reproducibility/references/rerun-or-accept.md#L9-L18)).
+   - A step the agent has just registered reads `missing`. If it is task-local, it matches "Leave it stale".
+   - A task-local `failed` step is "fixed first" and then left stale.
+   - Fix: say the rule covers steps the agent is not producing, and that a fixed failure is rerun.
+
+6. **[ADVISORY] Borderline necessity and restatement.**
+   - [task-file-contract.md:239](../../../../skills/task-tree/references/task-file-contract.md#L239): "so both read the same on every machine and branch" leads to no action.
+   - [task-file-contract.md:193](../../../../skills/task-tree/references/task-file-contract.md#L193) repeats the `params` row at L154 ("changing a value reruns the step"), which fails test 2. Fix: trim L154's clause.
+   - [SKILL.md:22](../../../../skills/reproducibility/SKILL.md#L22): "Each reference carries the gates for its situation." describes the references and gives no instruction.
+
+7. **[ADVISORY] Wording.**
+   - [SKILL.md:8](../../../../skills/reproducibility/SKILL.md#L8): "Every retained result re-runs from committed code" reads as if results rerun on their own. The objective's "can be re-run" states the job.
+   - [SKILL.md:3](../../../../skills/reproducibility/SKILL.md#L3): the description still triggers on "selecting protection checks". The skill's Protect role is now the external-input decision.
+   - [designing-the-graph.md:40](../../../../skills/reproducibility/references/designing-the-graph.md#L40): "rehearsal build" is not defined anywhere, and the trailing rationale clause can be cut.
+
+8. **[ADVISORY] The researcher's agreement on external inputs is no longer recorded anywhere.** The `integrate(protect)` record line is gone. The body list at [protect.md:30](../../../../skills/superintegrate/references/protect.md#L30) names no external inputs, and a dep with no producer does not show that the researcher agreed to it. For 08: add external inputs to that body list.
+
+9. **[ADVISORY] A stale term remains outside this task's scope.** The reproducibility row in [CLAUDE.md](../../../../CLAUDE.md) §Ownership Boundaries still says "boundary inputs". For 08 or 09.
+
+10. **[ADVISORY] No harness evidence was retained.** `## Results` describes the session but links no transcript or scratch project, so the routing miss in item 2 cannot be rechecked.
