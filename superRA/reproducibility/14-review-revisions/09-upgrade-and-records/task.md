@@ -42,7 +42,7 @@ Reproduced directly on a scratch tree before 01: a step with `tier: canon` print
 steps:
   - name: upgrade-path-check
     kind: check
-    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro.py skills/task-tree/scripts/test_repro_runner.py -k tier -q -p no:cacheprovider"
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro.py skills/task-tree/scripts/test_repro_runner.py -k 'tier or retired' -q -p no:cacheprovider"
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
@@ -72,7 +72,7 @@ steps:
 
 ## Results
 
-A project on the reproduction pre-release now upgrades with warnings instead of errors, and the release notes, README, and task tree describe what 0.5 ships. [upgrade-path-check](#reproduction) is fresh; its six tests fail on the base commit `118c9878` and pass here.
+A project on the reproduction pre-release now upgrades with warnings instead of errors, and the release notes, README, docs-site task-tree pages, and task tree describe what 0.5 ships. [upgrade-path-check](#reproduction) is fresh; its eight tests fail without the code changes and pass here.
 
 ### 0.4 projects keep working
 
@@ -80,18 +80,19 @@ A project on the reproduction pre-release now upgrades with warnings instead of 
   - **Already fixed by 03:** `task frontier` no longer refused. The key was still an error, which dropped the step and made `repro build` exit 1.
 - **`--tier`, `--tier=…`, and `repro tier` exit 2** with `reproduction tiers are retired; name task or task#step targets instead ('.' selects every registered step)`, also after `--root` / `--plan-root` ([repro_run.py](../../../../skills/task-tree/scripts/repro_run.py), `main`).
 - **Scratch fixture** (a section and a step with `tier: canon`, a dependent task): `task frontier` lists the dependent, `task check` reports two warnings and no error, `repro build a` executes, and five `--tier` and `repro tier` invocations print the message above.
-- **Kept as errors:** `env_probe` and `code_roots` under `reproduction:` in `superRA/config.yaml`. Either blocks every build, since a project-wide config error touches all steps. The release notes and README tell users to delete them; ElasticityBound-Local's config carries neither.
+- **Leftover `env_probe` and `code_roots` under `reproduction:` also warn and are ignored** (`RETIRED_CONFIG_KEYS`). As errors they blocked every build, since a project-wide config error touches all steps. A built lock stays byte-identical when they are added ([test](../../../../skills/task-tree/scripts/test_repro_runner.py)). Researcher decision via the orchestrator: 0.5 upgrades warn, never block.
 
 ### The release notes describe 0.5 as shipped
 
 [RELEASE-NOTES.md](../../../../RELEASE-NOTES.md#050---unreleased) is rewritten from 01–08 and 10's `## Results`:
 
-- **An upgrade section comes first**, ordered: every coauthor upgrades before the first 0.5 build or accept commit lands, since an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`. Then `task check` (tier warns; `env_probe` and `code_roots` must go), a build that writes the lock and prints the `git rm` for `pytask.lock` and `repro-builds.json`, deleting `.pytask/`, and the first `accept`, which converts `repro-acceptance.json`.
+- **An upgrade section comes first**, ordered: every coauthor upgrades before the first 0.5 build or accept commit lands, since an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`. Then `task check` (`tier`, `env_probe`, and `code_roots` warn and can be deleted), a build that writes the lock and prints the `git rm` for `pytask.lock` and `repro-builds.json`, deleting `.pytask/`, and the first `accept`, which converts `repro-acceptance.json`.
 - **Changed** is grouped into builds and freshness, readiness and dependencies, reviewed acceptance and diagnosis, agent workflow, and dashboard. It covers the own engine, lock version 2 with one line per step and conflicted-lock reading, checks passed elsewhere, readiness from `depends_on` only, errors blocking only the builds they touch, per-step portable acceptance records, the Dropbox-ignored `.superra-repro/`, `explain` and `impact`, the skill's routing and claim gate, the manifest row, the completion gate that asks before costly reruns, external inputs at Protect, the edit hook, and the dashboard fixes.
-- **Removed** lists pytask, `pytask-parallel`, `_repro_hooks.py`, `env_probe`, and `code_roots`.
+- **Removed** lists pytask, `pytask-parallel`, `_repro_hooks.py`, and the `env_probe` and `code_roots` keys, which now warn.
 - **Corrected claims:** the combined-graph cycle rule, parent-owned frontier rows, "optional evidence", and a completion gate that "names its deliverable tasks" are gone.
 - [README.md](../../../../README.md#upgrading) §Upgrading and its banner now carry the upgrade order and the current readiness and acceptance behavior instead of the cycle audit.
-- [task-file-contract.md §Validation](../../../../skills/task-tree/references/task-file-contract.md#validation) lists the retired `tier:` key under `[WARNING]`.
+- [task-file-contract.md §Validation](../../../../skills/task-tree/references/task-file-contract.md#validation) lists the retired keys under `[WARNING]` and no longer lists cyclic task-group ordering, which 03 removed, as an error.
+- **Docs site.** The [task-tree pages](../../../../docs/site/04-utility-skills/01-task-tree/task.md) and their children now describe readiness from `depends_on` with not-fresh inputs beside each frontier task, a `task move` that refuses only a broken `depends_on`, acceptance with a required reason in `repro-acceptance/`, and the DAG's dashed `depends_on` arrows, red error outline, and marked cycles. The dead **Focus subtree** mention is gone.
 
 This resolves [wiring.md](../attachments/wiring.md) M6.
 
@@ -108,12 +109,10 @@ This resolves [wiring.md](../attachments/wiring.md) M6.
 ### Verification
 
 - `task check --category links` is clean. That category checks only `#step` references, so file links and anchors were checked with a scratch script over every `.md` under `superRA/reproducibility/`.
-- Task-tree and harness suites, without `test_dag_workspace_browser.py`: 1,429 passed, 9 skipped.
-- Eleven non-browser checks these edits made `missing` were rebuilt and pass; `status .` reads 15 fresh.
+- Task-tree and harness suites, without `test_dag_workspace_browser.py`: 1,431 passed, 9 skipped.
+- The eleven non-browser checks these edits made `missing` were rebuilt and pass.
 
 ### Left open
 
 - **Browser and artifact steps stay stale or missing:** `dashboard-dag-design-browser`, `dashboard-dag-design-interaction-check`, `dashboard-graph-review`, `dashboard-graph-review-check`, `dashboard-navigation-heterogeneity`, and `task-scoped-builds-pilot`. They rewrite committed browser artifacts or timings, and a parallel fix owns the browser test file.
-- **Docs-site sources are stale.** [docs/site/04-utility-skills/01-task-tree](../../../../docs/site/04-utility-skills/01-task-tree/task.md) and its children still describe the combined-graph frontier, parent-owned frontier rows, and acceptance evidence files.
 - **Attachments keep dead links**, as dated records: the TreasuryGIV pilot feedback, task-scoped-builds' design, and this group's gate audit.
-- **The task-file contract's `[ERROR]` list** still names "cyclic task-group ordering", which 03 removed.

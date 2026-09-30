@@ -791,6 +791,18 @@ class TestFindings:
         )
         assert _has(_graph(plan), "error", "unknown 'reproduction' key 'variables'")
 
+    def test_retired_config_keys_warn_and_keep_the_steps(self, tmp_path):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text(
+            "reproduction:\n  env_probe: python3 --version\n  code_roots:\n    - Code\n", encoding="utf-8"
+        )
+        _write_repro_task(plan / "01-a", "A", "steps:\n  - name: load\n    cmd: true\n")
+        graph = _graph(plan)
+        assert _has(graph, "warning", "'reproduction' key 'env_probe' is retired and ignored")
+        assert _has(graph, "warning", "'reproduction' key 'code_roots' is retired and ignored")
+        assert _messages(graph, "error") == []
+        assert [s.name for s in graph.steps] == ["load"]
+
     def test_unknown_variable(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(

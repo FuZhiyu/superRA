@@ -217,10 +217,10 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
 - **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out.
 - **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
-- **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
+- **Dependencies:** step cycles, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved; a retired `tier:` key in a section or step, which is ignored.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
 
 **Unregistered results artifact** — an advisory `[WARNING]` that never blocks, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 
