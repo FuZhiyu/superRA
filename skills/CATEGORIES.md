@@ -13,6 +13,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
 | `superimplement` | IMPLEMENT + VALIDATE | Autonomous execution mode: per-task dispatch, triggered review loop (APPROVE / REVISE), and the phase-exit gate — reproducibility verification plus the 4-option completion menu. |
 | `superintegrate` | INTEGRATE | Choose results, permanent documentation, and protection; Sync; Mature & Consolidate the protected record; derive, approve, and execute one temporary refactoring task; then Finish. |
+| `onboarding` | entry | Brings an existing project, with or without git, into superRA in six researcher-gated stages: orient, retroactive task tree, reproduction graph, offered version control, isolated reproduction run in a worktree, merge back. Explains each concept to a new user and routes legacy `PLAN.md` migration. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Role — what a dispatched seat does
