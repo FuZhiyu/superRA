@@ -274,7 +274,8 @@ def _build_task_md(
 
 def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) -> None:
     """Run the migration."""
-    if output_dir.exists() and any(output_dir.iterdir()):
+    # The `wrapper init` wrapper may already sit in an otherwise empty root.
+    if output_dir.exists() and any(p.name != "superra" for p in output_dir.iterdir()):
         raise ValueError(f"output directory is not empty: {output_dir}")
 
     plan_text = plan_md_path.read_text(encoding="utf-8")
