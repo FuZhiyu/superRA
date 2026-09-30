@@ -2,27 +2,82 @@
 
 ## [0.5.0] - Unreleased
 
-The reproduction upgrade: task-declared build steps, content-based reruns, and a dashboard for inspecting how research outputs are produced.
+The reproduction upgrade: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced.
+
+### Upgrading a project that used the reproduction pre-release
+
+**Every coauthor upgrades superRA before the first commit from steps 3 or 4 lands.** An older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so for a coauthor who has not upgraded, every step reads stale or missing and no accepted step reads fresh.
+
+1. Upgrade superRA on every machine that works on the project.
+2. Run `superra task check`.
+   - A leftover `tier:` key, in a section or a step, is a warning and is ignored. Tier never entered a step's hash, so existing builds stay fresh.
+   - An `env_probe` or `code_roots` key under `reproduction:` in `superRA/config.yaml` is an error that blocks every build. Delete it.
+3. Run a build. It writes `repro-lock.json` and prints the `git rm` that retires `pytask.lock` and `repro-builds.json`, which are read until then. Commit the lock and the removal, and delete the `.pytask/` directory.
+4. The first `superra repro accept` converts `repro-acceptance.json` into one file per step under `repro-acceptance/` and deletes it. Commit both changes.
+
+`--tier` and `repro tier` stop with an error naming task targets as the replacement.
 
 ### Added
 
-- Reproduction sections register producers and checks; the runner rebuilds changed work and records execution state.
-- The dashboard exposes reproduction steps, freshness, file dependencies, and task ownership; workflow skills register and verify maintained results.
+- **Reproduction sections register producers and checks.** A task's `## Reproduction` section declares steps with their `deps` and `outs`; `superra repro build` reruns the steps whose inputs changed and records each successful build in the committed `repro-lock.json`.
+- **The dashboard shows how results are produced:** reproduction steps, freshness, file dependencies, and task ownership. Workflow skills register and verify retained results through the `reproducibility` skill.
 
 ### Changed
 
-- **Task-scoped builds by default.** Task paths include their own and nested steps; `task#step` selects one step. Builds use saved inputs outside the selection even when upstream is stale or unverified. Add `--upstream` to include producers, `--force` to rerun the selected scope, or both for full-chain execution. `--force-all` is retired. Existing declarations and locks remain readable. Scoped status and full-chain status distinguish local execution from upstream freshness.
-- **Task targets replace reproduction tiers.** `repro build` and `repro status` require a target; `.` selects every registered step. `--tier` and `repro tier` are retired with actionable errors, the `task tree --tier` filter and badge are removed, and the completion gate names its deliverable tasks and selected checks. A leftover `tier:` section key is a warning; tier never entered a step's hash, so existing locks stay fresh.
+#### Builds and freshness
+
+- **superRA runs builds itself; pytask is no longer a dependency.** `repro build` runs steps as subprocesses in dependency order, `-j N` at a time. A failed step skips its descendants; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed.
+  - `status` and `build` decide freshness by one rule: SHA-256 content hashes with no size cap, and a rerun that regenerates identical bytes leaves its consumers fresh.
+  - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
+  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on this repository's 14 steps, against about 0.8 s under pytask.
+- **The lock holds one line per step.** `repro-lock.json` (version 2) writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and can no longer mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
+- **Task-scoped builds by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. Builds use saved inputs outside the selection. `--upstream` adds the producer chain and `--force` reruns the selection. `--force-all` is retired.
+  - A scoped `status` exits 3 and names the producers behind the selection that are not fresh (`behind` in `--json`).
+- **Task targets replace reproduction tiers.** The `task tree --tier` filter and badge are removed.
+- **A check that passed at these inputs elsewhere reads `fresh`**, with the reason `passed at these inputs in lock <rev> on <platform>; not run here`. A local failure still wins.
 - **Scoped build guards.** Unrelated task additions and unused configuration edits no longer abort running steps. Changes to the selected execution contract or input bytes still reject inconsistent success evidence.
-- **One effective dependency graph.** File-derived prerequisites and explicit logical prerequisites jointly govern task development. Combined cycles, including cycles introduced by grouping acyclic steps, block dispatch and builds. Existing reproduction projects need a `task check` audit and may need declaration or ownership repairs. Logical prerequisites do not add file inputs or unrelated producers to targeted script replay.
-- **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. The frontier exposes actionable parent-owned work without waiting on its own child-status rollup. Archived subtrees leave the active graph, with warnings for their downstream consumers.
-- **Reviewed reuse.** `repro impact` explains affected consumers; `repro accept` establishes or replaces reviewed baselines, including first registration and changed outputs from interactive runs, with a required reason and optional evidence. Valid acceptance reads as `fresh` and satisfies routine completion while preserving the successful lock and last actual run. Forced verification executes its selected targets; acceptance never claims the check or producer ran again.
-- Workflow guidance uses effective dependencies for planning, consolidation, and downstream invalidation, and narrows shared helper/configuration dependencies before considering acceptance.
+
+#### Readiness and dependencies
+
+- **Only `depends_on` decides readiness.** A task is ready once its `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`. File edges between steps order builds and appear in `task read` and `task frontier` as inputs that are not fresh; they never gate.
+  - A `depends_on` that runs against the file flow is a warning. Only step cycles and `depends_on` cycles are errors; a loop that appears only when file edges are grouped by task is not.
+  - `task create`, `move`, `dep add`, and archive transitions print each task they take off the frontier.
+- **Reproduction errors block only the builds they touch.** Planning commands and the frontier keep working, with the errors noted on stderr. `build`, `accept`, and `status` refuse on an error in a selected step's own task, a step cycle through a selected step, or project-wide configuration. `build --dry-run` reports a step whose input is missing as `cannot run`.
+- **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. Archived subtrees leave the active graph, with warnings for their downstream consumers.
+
+#### Reviewed acceptance and diagnosis
+
+- **Reviewed reuse.** `repro accept <targets> --reason '…'` records why current results stand without executing anything, including first registration and outputs from interactive runs; `--dry-run` previews. Valid acceptance reads as `fresh` and preserves the last actual run. Forced verification executes its selected steps; acceptance never claims a step ran again.
+- **Acceptance records are one portable file per step,** `repro-acceptance/<step>.json`. Branches that accept different steps merge cleanly, and two clones with different data roots or user names write byte-identical records. A record that does not parse disables only its own step, with a warning.
+  - `--apply`, `--evidence`, and the `upstream` record field are removed; records no longer carry `actor`, `recorded_at`, or evidence paths.
+  - `accept` skips steps already fresh and never rewrites an unchanged record.
+  - Revoking a producer's acceptance leaves a downstream record valid; full-chain status reports the consumer stale while the producer is not fresh.
+- **`.superra-repro/` stays on its machine.** superRA sets Dropbox's ignore flag on the folder, so another machine's in-progress run cannot mark a step failed here. Deleting the folder stales no step.
+- **`explain` states the facts the stale rule acts on.** Every lock or git source states its relation to HEAD (HEAD's version, N commits behind, or on another branch). Graph errors on the explained steps are listed and make `explain` exit 1. A file several steps read prints once. A task view prints diff excerpts only with `--diff`. A history cache in `.superra-repro/history.json` makes a repeat call run no `git log`.
+- **`impact` covers `superRA/config.yaml` and prints text by default,** one line per affected step with its last recorded duration and why it is affected; `--json` keeps the structured output.
+
+#### Agent workflow
+
+- **The `reproducibility` skill routes by situation.** `SKILL.md` defines the model — producer chain, saved input, external input, and readiness versus freshness — and routes each situation to one reference: designing the graph, claiming a result, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption. The claim gate has its own reference, `claiming-results.md`.
+- **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
+- **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps the stale rule left stale and reported to the researcher. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
+- **Protect asks which inputs are external;** it no longer selects completion targets. Planners name each artifact and its planned script in the producing task's `## Details`; the implementer registers the step.
+- **The edit hook catches every producer edit:** edits through any tool, paths built from `${VAR}` variables, files inside declared directory dependencies, and the first tool call of a session. A new script beside registered ones draws a softer reminder, and a `task.md` edit reports warnings for the edited tasks only.
+
+#### Dashboard
+
+- **The graph opens readable at 80%** on the selected task or step; Fit and Project overview still fit on request.
+- **Arrows carrying only `depends_on` edges are dashed.** A task whose declaration has an error gets a red outline and a link to its finding.
+- The unused search, trace, and scope modes and the `/dag` route are removed; legacy URLs open the full map. Each finding and edge travels once, cutting the 200-step fixture's payload by 38%.
 
 ### In preparation
 
 - The dashboard workspace offers Tree and DAG as alternative navigators sharing task selection, the reader, comments, and attachments. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
 - UI validation and existing-project compatibility evidence remain required before release. The development version does not imply publication.
+
+### Removed
+
+- pytask and `pytask-parallel` as dependencies, the `_repro_hooks.py` plugin, and the `env_probe` and `code_roots` configuration keys. A lock's legacy probe fields are ignored on read.
 
 ### Release Prep
 
