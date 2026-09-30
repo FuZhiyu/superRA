@@ -56,4 +56,4 @@ Other flags: `superra repro <command> --help`.
 | [rerun-or-accept.md](references/rerun-or-accept.md) | A step is not `fresh`, including an input that `task read` or `task frontier` flags before you build on it. |
 | [protect-and-completion.md](references/protect-and-completion.md) | The IMPLEMENT completion check, or `Stage: protection`. |
 | [diagnosing.md](references/diagnosing.md) | A state you did not expect. |
-| [adoption.md](references/adoption.md) | First use of reproduction in a project. |
+| [adoption.md](references/adoption.md) | Adopting reproduction: a whole existing project, or a first one-task trial. |
