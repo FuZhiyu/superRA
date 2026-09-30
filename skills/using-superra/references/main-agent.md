@@ -7,7 +7,7 @@ Before your first substantive response:
 - Load `superRA:communicate` before your response.
 - Check whether the CLI wrapper `./superRA/superra` exists; bootstrap it per `superRA:task-tree` §CLI Setup if not.
 - Run `./superRA/superra task tree` for the full status summary.
-- On a tree carrying reproduction config, run `./superRA/superra repro status .` and report what it finds stale through [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule).
+- Run `./superRA/superra repro status .` and report the steps that are not `fresh`.
 - Bring up the live dashboard without opening a browser: `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached). Retain its emitted scoped URL.
 - `PLAN.md` without a `superRA/` directory: the project predates the task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer `superra task migrate from-plan`, and point to the superRA docs at http://fuzhiyu.me/superRA/.
 - **Branch check.** `git branch --show-current`; on `main`/`master`, recommend a topic branch before the first commit — the researcher declining is consent to proceed on the default branch.
@@ -54,7 +54,7 @@ Append `#/<task-path>` to the scoped URL retained in §Session Start Actions; do
 Pause — `AskUserQuestion` (plain text if the harness lacks it), folding the answer into the relevant task objective before you act — in two situations:
 
 1. **A decision that materially changes a task objective.** Unsettleable from code and data, and the answer reshapes work downstream agents read from the objective: methodology, research intent, scope, sample or variable definitions, or a blocker whose only resolution shifts scope. Materiality is defined in `superplan §User Feedback and Changing the Task Tree`; an objective edit you *can* make from the data is an inline discovery edit, not a pause.
-2. **A pre-set workflow gate** — a stop the workflow deliberately places for the researcher (the IMPLEMENT completion menu in `superimplement/references/completion.md`, drift-test selection at `superintegrate` Protect, intent-changing conflict escalation in `semantic-merge`).
+2. **A pre-set workflow gate** — a stop the workflow deliberately places for the researcher (the IMPLEMENT completion menu in `superimplement/references/completion.md`, drift-test selection at `superintegrate` Protect, intent-changing conflict escalation in `semantic-merge`, a costly rerun [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) sends to the researcher).
 
 Resolve what you can from code and data first.
 

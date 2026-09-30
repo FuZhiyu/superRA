@@ -1,6 +1,6 @@
 ---
 title: "Workflow Call Sites Apply the Reproduction Gates Consistently"
-status: not-started
+status: implemented
 depends_on:
   - 07-instruction-rewrite
 ---
@@ -76,3 +76,99 @@ Smaller prose fixes from [wiring.md](../attachments/wiring.md):
 - `result-protection/SKILL.md:8` counts "a registered step with its committed lock" as protection; only a check step guards values.
 - `completion.md:19` "not ad-hoc REPL state" sits against accepting results from interactive runs.
 - `main-agent.md:10` routes the session-start status through the stale rule, implying builds before the first response.
+
+## Results
+
+Every workflow step that touches reproduction now points to the one reference that owns its rule, and the completion check asks before costly reruns. Three live sessions walked the [wiring.md](../attachments/wiring.md) scenarios and each applied the gates in order. A conflicted `repro-lock.json` now reads instead of failing (commit `302b6e7d`).
+
+### The completion gate has one home and asks first
+
+- [protect-and-completion.md §The completion gate](../../../../skills/reproducibility/references/protect-and-completion.md#the-completion-gate) holds the commands: `status .`, then the stale rule costed by `build --dry-run`, then `status .` again.
+  - [completion.md](../../../../skills/superimplement/references/completion.md), [integrate.md](../../../../skills/superintegrate/references/integrate.md) Step 1, and [finish.md](../../../../skills/superintegrate/references/finish.md) Step 2 only point to it. None runs `build <targets> --upstream` any more.
+  - [main-agent.md §Proceeding and Pausing](../../../../skills/using-superra/references/main-agent.md#proceeding-and-pausing-in-the-autonomous-mode) lists "a costly rerun the stale rule sends to the researcher" among the pre-set gates.
+- **Trees with no steps** are stated once, in the gate: they pass only when no `## Results` rests on retained code; otherwise register the producers. The three other wordings are gone. The session-start line in `main-agent.md` now only reports steps that are not `fresh`.
+- **Protect keeps no target list.** [protect.md](../../../../skills/superintegrate/references/protect.md) asks which inputs are external, adds an `External inputs:` line to the researcher template, and records "agreed external inputs" in the `integrate(protect)` commit body.
+
+### Planning names artifacts; the implementer registers steps
+
+[build-and-review.md](../../../../skills/superplan/references/build-and-review.md) now has the planner name each artifact and its planned script in the producing task's `## Details`, and self-review item 3 checks that each artifact is named. No seeded step can then lack `cmd`, and [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md#task-anatomy) keeps `## Reproduction` implementer-owned without an exception.
+
+- **Why not seed `name`, `cmd`, `outs`:** seeded steps read `missing` before any work. The session-start report and the stale rule would then treat unbuilt plans as steps to resolve.
+- The econ and theory planning references are rewritten to match, with "retained output" as the threshold.
+
+### Every role loads and applies the gates
+
+- **Manifest row.** [using-superra](../../../../skills/using-superra/SKILL.md#domain) has a `reproducibility` Domain row: a task that "plans, produces, changes, records, or reviews a result computed by code — a new script, an edited one, or an existing script's output". The §Task Interface prose trigger and its "registration follows placement" restatement are removed.
+  - CLAUDE.md §Agent Load Surface needed no edit: its "Domain skill(s) per the manifest" row now covers the load.
+  - [CATEGORIES.md](../../../../skills/CATEGORIES.md) points to the manifest instead of its narrower trigger.
+- **Interactive self-review.** [interactive-mode.md](../../../../skills/using-superra/references/interactive-mode.md) step 2 now walks every loaded skill's gates, not just domain skills'.
+- **Implementer.**
+  - [implement-task](../../../../skills/implement-task/SKILL.md) Self-Check 4 points to `claiming-results.md`.
+  - Hygiene limits only *task-file* edits to assigned tasks.
+  - The `git add` template names tracked outputs and changed `repro-lock.json` / `repro-acceptance/`.
+- **Reviewer.** [review-task](../../../../skills/review-task/SKILL.md) names all three gates by their references and the evidence: read-only `status <targets> --upstream` and the committed records.
+- **One escalation status.** [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#the-stale-rule) says a subagent returns `DONE_WITH_CONCERNS` with the question in `## Results`. This status keeps the finished work committed, where `BLOCKED` would drop it.
+
+### Conflicted records resolve through the engine
+
+- **Engine.** [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py) reads a lock holding conflict markers, in merge or diff3 style. It keeps every entry that is on one side or identical on both, drops entries both sides changed so their steps read `missing`, and warns once.
+  - Any non-dry-run `build` rewrites the lock without markers.
+  - [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py) reproduces the adjacent-new-steps conflict through a real `git merge`, and the changed-on-both-sides case through `git merge-file`. Both failed before the change; `engine-freshness-check` runs them.
+- **Guidance.** [semantic-merge](../../../../skills/semantic-merge/SKILL.md) gains a "Reproduction records" role:
+  - Resolve the `missing` steps by the stale rule, then commit the lock that a `build` rewrites.
+  - A conflicted `repro-acceptance/<step>.json` is removed and its step resolved the same way.
+  - [parallel-dispatch.md](../../../../skills/agent-orchestration/references/parallel-dispatch.md) no longer promises clean merges and points there.
+
+### Terms and small fixes
+
+- **Terms.**
+  - "Completion targets" and "final deliverable tasks" are gone from every call site.
+  - `protect.md` and [result-protection](../../../../skills/result-protection/SKILL.md) say "key result".
+  - CLAUDE.md and CATEGORIES.md say external (and saved) inputs, not "boundary inputs".
+- **Result protection.** `result-protection` counts drift tests "registered as check steps", not a lock, as protection.
+- **Completion check.** In `completion.md`, "Verify Pipeline and Reproducibility" is now "Verify the Work", and `econ-data-analysis` cites the new name. The "ad-hoc REPL" line and a restated failure rule are removed.
+- **Step lifecycle pointers.** [changing-the-tree.md](../../../../skills/superplan/references/changing-the-tree.md), [consolidation.md](../../../../skills/superplan/references/consolidation.md) §Prune, and the [mature-consolidate](../../../../skills/superintegrate/references/mature-consolidate.md) prompt point to §Step lifecycle instead of restating it.
+- **Word count.** The edited instruction files total 18,852 → 18,910 words (+58). The new manifest row, the no-steps condition, and the semantic-merge role outweigh the cut restatements.
+
+### The harness contract is current
+
+- **Anchors.** Removing the §Task Interface paragraph restores the `load_contract.json` anchors that were off by two, LC008 included. LC003 and LC004 are re-anchored.
+- **LC008** cites the protection routing row in `reproducibility/SKILL.md` instead of model text.
+- **LC024** is added for the `reproducibility` Domain row:
+  - a `DOMAIN_ROWS` entry and its expected-artifact fixture;
+  - `ALL_STAGE_SKILLS` minus the domain skills, so a `reproducibility` load at `Stage: implementation` is not an over-load, with a green test for that case.
+- **Live runs, 2026-09-29, Sonnet via the SDK harness:**
+  - The protection row loaded both `result-protection` and `reproducibility`. The LC008 note and the README now record this.
+  - The reproducibility-worded domain fixture loaded `reproducibility` before its first edit.
+- **Tests.** Harness tests: 130 passed. Task-tree suite: 1,331 passed. The 2 failures are the step-reader browser cases in `test_dag_workspace_browser.py`, which fail identically without this change.
+
+### Three live sessions walked the wiring scenarios
+
+The scratch project, `Firm Size and Leverage`, is rebuildable from this description:
+
+- **Data:** `Data/raw.csv` holds 8 firms in 3 industries; firm `g` has negative size and is dropped.
+- **01-data** (`approved`) owns `build-panel`, which builds the panel from `Code/build_panel.py`, `Code/helpers.py` (`winsorize`), and `Data/raw.csv`.
+- **02-estimation** (`approved`) owns two steps:
+  - `estimate`, which sleeps 150 s and writes `beta_size`;
+  - `check-estimates`, a `kind: check` step asserting `beta_size` = −0.000734.
+- **Starting state:** everything built and committed.
+
+Sessions 1 and 2 dispatched a Sonnet implementer with `Load superRA:using-superra and superRA:implement-task`. Session 3 ran a Sonnet main agent through the Agent SDK, which had to write each researcher question into its report and continue on its own recommendation.
+
+| Scenario | Setup | Outcome |
+|---|---|---|
+| 1. New table script | `03-table` asks for per-industry slopes from a new script | Loaded `econ-data-analysis` and `reproducibility` from the manifest. Read `designing-the-graph.md`, `claiming-results.md`, `rerun-or-accept.md`. Registered and built `reg-by-industry`; `## Results` names `build-panel` as a saved input and the step as executed. |
+| 2. Shared-helper fan-out | `04-helper-fix`: `winsorize` rounds to 4 decimals | Rebuilt the cheap `build-panel`. Left `estimate` (150 s) and `check-estimates` stale. Returned `DONE_WITH_CONCERNS` with the rebuild-or-accept question and a recommendation in `## Results`. |
+| 3. Completion and Protect | A commit tightens the leverage clip in `estimate.py` and adds a header comment to `build_panel.py` | Ran `status .`, `explain`, then `build --dry-run`. Accepted `build-panel` under the comment-only exception with the reason recorded. Raised the costly `estimate` rerun as a researcher question before building. The `integrate(protect)` body records `External inputs: Data/raw.csv` and no target list. |
+
+- **Session 2** reached the right status without opening `rerun-or-accept.md`: it read `claiming-results.md` only. It went from the dry-run cost to `implement-task` §Escalation.
+- **Sessions 1 and 2** stopped at a pending permission prompt on `git commit` in the scratch directory. Their `## Results` and staged files show the intended commit, which names `repro-lock.json`.
+
+### Left open
+
+- **Pre-existing failing check:** `unified-dependency-workflow-check` fails its `task frontier` assertion both before and after this change. Its fixture expects file edges to gate readiness, which [03](../03-readiness-model/task.md) removed.
+- **Pre-existing failing check:** `dashboard-dag-design-interaction-check` fails the two browser cases noted above.
+- **For [09](../09-upgrade-and-records/task.md):** wiring.md's M6 (release notes on `tier:`) and its stale task-tree content were not part of this task.
+
+Owning task for the fold-back: [unified-dependency-workflow](../../07-workflow-integration/unified-dependency-workflow/task.md).
+

@@ -14,7 +14,7 @@ One task file carries the whole range of plan/execute interleaving:
 You fill no seat and run no role protocol here — this loop is your protocol for the task file.
 
 1. **Co-edit** the target and objective into the task file through the `using-superra` §Task Interface.
-2. **Self-review always.** Changed artifacts and recorded results against the objective; the diff and outputs for correctness, completeness, unintended scope; fresh verification per completion claim. Apply every `[BLOCKING]` item from active domain skills.
+2. **Self-review always.** Changed artifacts and recorded results against the objective; the diff and outputs for correctness, completeness, unintended scope; fresh verification per completion claim. Walk every loaded skill's gates matching what you did; every `[BLOCKING]` item passes.
 3. **Review and update the task.** Before each pause, update `## Results` per `superRA:communicate` and move `status` as the work lands (`in-progress` → `implemented`). Remove stale content so the task always reflects the latest stage.
 4. **Commit instantly** per edit, per `using-superra` §Commits.
 5. **Ask before review, with a tool — required.** `AskUserQuestion` (plain text only if the harness lacks it): review now / defer / skip, carrying the recommendation `main-agent.md` §Deciding on Review calls for. Never dispatch a reviewer on your own read.

@@ -148,7 +148,7 @@ Anything unexpected: STOP and investigate.
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
 - **`integration` stage** — `references/integration.md` (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations).
-- **End-of-workflow completion verification** — orchestrator-owned, not dispatched. In superRA, `superimplement/references/completion.md` §Verify Pipeline and Reproducibility.
+- **End-of-workflow completion verification** — orchestrator-owned, not dispatched. In superRA, `superimplement/references/completion.md` §Verify the Work.
 
 ## Pitfalls
 

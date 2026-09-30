@@ -10,6 +10,7 @@ loading every matching domain, not just the first):
 - ``theory-modeling``    — wording about deriving/solving/proving
 - ``academic-writing``   — wording about drafting/polishing reader-facing prose
 - ``slide-design``       — wording about creating/revising slides/Beamer
+- ``reproducibility``    — wording about producing or recording a result computed by code
 
 One parametrized table (:data:`DOMAIN_ROWS`) is the single source of truth, so
 adding a future domain is a one-row change. The trigger wording is kept close to
@@ -97,6 +98,13 @@ DOMAIN_ROWS: tuple[DomainRow, ...] = (
         skill="slide-design",
         trigger_wording=(
             "create and revise the Beamer presentation slides for this result"
+        ),
+    ),
+    DomainRow(
+        skill="reproducibility",
+        trigger_wording=(
+            "run the existing script and record the table it computes as this "
+            "task's result"
         ),
     ),
 )

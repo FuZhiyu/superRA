@@ -87,7 +87,6 @@ def test_table_matches_manifest_stage_rows():
     assert "documentation" not in by_stage
     assert ALL_STAGE_SKILLS == {
         "result-protection",
-        "reproducibility",
         "semantic-merge",
         "refactor-and-integrate",
         "task-tree",
@@ -352,6 +351,19 @@ def test_red_negative_stage_loaded_a_stage_skill():
     report = StageLoadReport()
     evaluate_stage_load(report, row, evidence)
     assert not report.ok
+
+
+def test_green_negative_stage_loaded_a_domain_row_skill():
+    # reproducibility is also a Domain row, so an implementation-stage task that
+    # records a result computed by code loads it correctly: not an over-load.
+    row = stage_row("implementation")
+    evidence = evidence_from_hook_records(
+        skill_tool_events=[("superRA:reproducibility", 0)],
+        edit_event_indices=[2],
+    )
+    report = StageLoadReport()
+    evaluate_stage_load(report, row, evidence)
+    assert report.ok
 
 
 def test_red_negative_stage_loaded_a_maturation_skill():
