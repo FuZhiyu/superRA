@@ -1,6 +1,6 @@
 ---
 title: "Author the Onboarding Skill Spine and Setup References"
-status: not-started
+status: implemented
 depends_on:
   - 02-retroactive-graph
 ---
@@ -20,3 +20,13 @@ Create `skills/onboarding/SKILL.md` carrying the six-stage choreography from the
 - **Stage 3 validates without `repro status` or `build`,** which write a `.superra-repro/` cache and a `.gitignore` line at the project root ([02-retroactive-graph](../02-retroactive-graph/task.md) §Validated without git).
 - **`references/project-setup.md`** (stage 4): offer git when absent, explaining what it gives the researcher; a `.gitignore` excluding data, generated outputs, and caches, settled with the researcher for ambiguous large files; a data-handling note in the project's `CLAUDE.md` / `AGENTS.md` (created if absent) saying where data lives and that it is never committed; a baseline commit of the untouched project, then the `superRA/` commit. A project already in git: check `.gitignore` coverage and commit `superRA/` on a topic branch.
 - **`references/legacy-plan-migration.md`:** the `PLAN.md` migration offer and `superra task migrate from-plan`, moved from [main-agent.md](../../../skills/using-superra/references/main-agent.md) §Session Start Actions.
+
+## Results
+
+[skills/onboarding/](../../../skills/onboarding/SKILL.md) carries the six stages, each ending at a stop point, with the writes-only-in-`superRA/` rule for stages 1–3 and a plain-words explanation where each concept first appears. Stages 5–6 route to [isolated-run.md](../../../skills/onboarding/references/isolated-run.md) from [04-isolated-run](../04-isolated-run/task.md).
+
+- **Stage 2 reuses retroactive capture.** [task-tree-design.md §Retroactive Task-Tree Creation](../../../skills/superplan/references/task-tree-design.md#retroactive-task-tree-creation) gained three things: the sources to read (code, outputs, paper or draft, documents), whole-project decomposition by §Splitting Tasks with the umbrella rule linked from `build-and-review.md`, and objectives written as for planned work. The status rule is unchanged; the skill adds one line that unverified existing work stays `implemented`.
+- **Stage 3** declares per [adoption.md](../../../skills/reproducibility/references/adoption.md) and validates with `task check` and the dashboard, since `repro status` and `build` write at the project root.
+- **[project-setup.md](../../../skills/onboarding/references/project-setup.md)** (stage 4) offers git and, for a project without it: a researcher-settled `.gitignore` that also covers `.superra-repro/` and the dashboard's run files, a data-handling note in `CLAUDE.md` / `AGENTS.md`, a dashboard stop before `git init` (which moves the dashboard's run files out of `superRA/`), a baseline commit checked for data and files over 50 MB, then a separate `superRA/` commit. A project already in git gets a coverage check and a topic-branch commit.
+- **[legacy-plan-migration.md](../../../skills/onboarding/references/legacy-plan-migration.md)** carries the upgrade message, docs link, and migrate command formerly in the session-start actions. The command was run in a scratch legacy project with the wrapper present, which needed the [06-empty-root-bootstrap](../06-empty-root-bootstrap/task.md) migration fix.
+- **Checks:** Markdown checks clean; `task check --category links` passes. Skill evals were not run; the researcher runs the end-to-end trial.
