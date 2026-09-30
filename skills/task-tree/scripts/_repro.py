@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from _task_io import VALID_STATUSES, Task, parse_body_sections, walk_plan
-from _task_dependencies import Dependencies, archived_paths, compose, cycle_path
+from _task_dependencies import Dependencies, archived_paths, compose, cycle_path, within
 from _task_validate import Finding
 
 
@@ -37,7 +37,10 @@ STEP_KINDS = ("build", "check")
 
 SECTION_KEYS = ("steps",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
-CONFIG_KEYS = ("vars", "runners", "env_deps", "env_probe")
+RETIRED_KEYS = ("tier",)
+RETIRED_KEY_WARNING = "{key!r} is retired and ignored; remove the key and name task targets instead"
+CONFIG_KEYS = ("vars", "runners", "env_deps")
+RETIRED_CONFIG_KEYS = ("env_probe", "code_roots")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -506,14 +509,12 @@ class ReproConfig:
     variables: dict[str, str] = field(default_factory=dict)
     runners: dict[str, str] = field(default_factory=dict)
     env_deps: list[str] = field(default_factory=list)
-    env_probe: str | None = None
 
     def to_dict(self) -> dict:
         return {
             "vars": dict(self.variables),
             "runners": dict(self.runners),
             "env_deps": list(self.env_deps),
-            "env_probe": self.env_probe,
         }
 
 
@@ -547,6 +548,10 @@ class Graph:
     findings: list[Finding] = field(default_factory=list)
     dependencies: Dependencies | None = None
     archived_steps: list[Step] = field(default_factory=list)
+    # Task path -> outs of its steps that failed to register; None when its
+    # whole section failed, so what it produces is unknown.
+    unregistered: dict[str, list[PathRef] | None] = field(default_factory=dict)
+    step_cycles: dict[str, set[str]] = field(default_factory=dict)  # finding message -> its steps
 
     def step(self, name: str) -> Step | None:
         for step in self.steps:
@@ -559,7 +564,8 @@ class Graph:
 
 
 def graph_to_dict(graph: Graph) -> dict:
-    """Serialize a graph to the JSON shape the CLI and dashboard consume."""
+    """Serialize a graph to the JSON shape the dashboard consumes."""
+    dependencies = graph.dependencies.to_dict() if graph.dependencies else None
     return {
         "config": graph.config.to_dict(),
         "tasks": [
@@ -573,9 +579,13 @@ def graph_to_dict(graph: Graph) -> dict:
         "step_edges": [
             {"from": src, "to": dst, "via": via} for src, dst, via in graph.step_edges
         ],
-        "task_edges": (graph.dependencies.edges if graph.dependencies else
-                       [{"from": src, "to": dst} for src, dst in graph.task_edges]),
-        "dependencies": graph.dependencies.to_dict() if graph.dependencies else None,
+        # Task nodes and `depends_on` edges only: grouped edges, boundary views,
+        # and dependency findings repeat `step_edges` and `findings`.
+        "dependencies": dependencies and {
+            "tasks": dependencies["tasks"],
+            "archived_tasks": dependencies["archived_tasks"],
+            "logical": graph.dependencies.logical,
+        },
         "archived_steps": [s.to_dict() for s in graph.archived_steps],
         "external_inputs": [e.to_dict() for e in graph.external_inputs],
         "findings": [f.to_dict() for f in graph.findings],
@@ -881,7 +891,7 @@ def load_project_config(plan_root: Path) -> tuple[dict, list[str]]:
         f"{CONFIG_FILENAME}: unknown '{CONFIG_KEY}' key {key!r}; "
         f"expected one of {list(CONFIG_KEYS)}"
         for key in section
-        if key not in CONFIG_KEYS
+        if key not in CONFIG_KEYS + RETIRED_CONFIG_KEYS
     ]
     return section, errors
 
@@ -922,7 +932,10 @@ def _build_step(
 ) -> Step:
     if not isinstance(raw, dict):
         raise _StepError("each entry of 'steps' must be a mapping")
-    unknown_keys = [k for k in raw if k not in STEP_KEYS]
+    for key in RETIRED_KEYS:
+        if key in raw:
+            warn(f"step {raw.get('name')!r}: " + RETIRED_KEY_WARNING.format(key=key))
+    unknown_keys = [k for k in raw if k not in STEP_KEYS + RETIRED_KEYS]
     if unknown_keys:
         raise _StepError(
             f"unknown step key {unknown_keys[0]!r}; expected one of {list(STEP_KEYS)}"
@@ -1125,6 +1138,9 @@ def build_graph(
     raw_config, config_errors = load_project_config(plan_root)
     for message in config_errors:
         _finding("", "error", message)
+    for key in RETIRED_CONFIG_KEYS:
+        if key in raw_config:
+            _finding("", "warning", f"{CONFIG_FILENAME}: '{CONFIG_KEY}' key {key!r} is retired and ignored; delete it")
     if resolve_vars:
         variables, var_errors = resolve_variables(
             raw_config.get("vars"), project_root, env=env, shell_runner=shell_runner
@@ -1137,15 +1153,10 @@ def build_graph(
     if not isinstance(runners, dict):
         _finding("", "error", f"{CONFIG_FILENAME}: 'runners' must be a mapping")
         runners = {}
-    env_probe = raw_config.get("env_probe")
-    if env_probe is not None and not isinstance(env_probe, str):
-        _finding("", "error", f"{CONFIG_FILENAME}: 'env_probe' must be one shell command string")
-        env_probe = None
     graph.config = ReproConfig(
         variables=variables,
         runners={str(k): str(v) for k, v in runners.items()},
         env_deps=[_norm(p) for p in _string_list(raw_config.get("env_deps"))],
-        env_probe=env_probe or None,
     )
     if resolve_vars:
         for raw in graph.config.env_deps:
@@ -1175,6 +1186,7 @@ def build_graph(
             document = parse_yaml_subset(extract_repro_block(section))
         except YamlSubsetError as exc:
             _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
+            graph.unregistered[task.path] = None
             continue
         if document is None:
             document = {}
@@ -1182,9 +1194,16 @@ def build_graph(
             _finding(
                 task.path, "error", f"## {REPRO_SECTION}: the block must be a mapping"
             )
+            graph.unregistered[task.path] = None
             continue
         for key in document:
-            if key not in SECTION_KEYS:
+            if key in RETIRED_KEYS:
+                _finding(
+                    task.path,
+                    "warning",
+                    f"## {REPRO_SECTION}: " + RETIRED_KEY_WARNING.format(key=key),
+                )
+            elif key not in SECTION_KEYS:
                 _finding(
                     task.path,
                     "error",
@@ -1196,6 +1215,7 @@ def build_graph(
         raw_steps = document.get("steps") or []
         if not isinstance(raw_steps, list):
             _finding(task.path, "error", f"## {REPRO_SECTION}: 'steps' must be a list")
+            graph.unregistered[task.path] = None
             continue
         for raw_step in raw_steps:
             try:
@@ -1209,16 +1229,19 @@ def build_graph(
                 )
             except _StepError as exc:
                 _finding(task.path, "error", f"## {REPRO_SECTION}: {exc}")
+                _unregister(graph, task.path, _raw_outs(raw_step, graph.config.variables))
                 continue
             if task.path not in archived:
                 owner = step_names.get(step.name)
                 if owner is not None:
                     _finding(task.path, "error", f"step name {step.name!r} is already used by task "
                              f"{owner or '(root)'}; active step names are unique across the tree")
+                    _unregister(graph, task.path, [o.path for o in step.outs])
                     continue
                 step_names[step.name] = task.path
             graph.steps.append(step)
 
+    graph.unregistered = {p: outs for p, outs in graph.unregistered.items() if p not in archived}
     graph.archived_steps = [s for s in graph.steps if s.task_path in archived]
     graph.steps = [s for s in graph.steps if s.task_path not in archived]
     # Diagnostic identities keep archived name collisions out of active lookup.
@@ -1236,18 +1259,116 @@ def build_graph(
             _finding(finding.task_path, "warning", finding.message)
     graph.section_tasks = [p for p in graph.section_tasks if p not in archived]
     _link(graph, project_root)
-    cycle = cycle_path([(a, b) for a, b, _ in graph.step_edges])
-    if cycle:
+    for component in _cyclic_components(graph.step_edges):
+        inner = [(a, b) for a, b, _ in graph.step_edges if a in component and b in component]
+        cycle = cycle_path(inner)
         witness = [f"{a} -> {b} via {via}" for a, b, via in graph.step_edges
                    if (a, b) in set(zip(cycle, cycle[1:]))]
-        _finding("", "error", "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness))
-    graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels,
-                                 complete=resolve_vars and not any(f.severity == "error" for f in findings))
+        message = "step cycle: " + " -> ".join(cycle) + "; " + "; ".join(witness)
+        _finding("", "error", message)
+        graph.step_cycles[message] = component
+    graph.dependencies = compose(tree, declared.steps, declared.step_edges, step_labels=labels)
     graph.findings.extend(Finding(**f) for f in graph.dependencies.findings)
-    graph.dependencies.findings = [f.to_dict() for f in graph.findings]
     graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
     graph.dependencies.order_tree()
     return graph
+
+
+def _cyclic_components(edges) -> list[set[str]]:
+    """Strongly connected components that hold a cycle, in a stable order."""
+    adjacency: dict[str, list[str]] = {}
+    for a, b, _ in edges:
+        adjacency.setdefault(a, []).append(b)
+        adjacency.setdefault(b, [])
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    components: list[set[str]] = []
+
+    def visit(node: str) -> None:
+        index[node] = low[node] = len(index)
+        stack.append(node)
+        on_stack.add(node)
+        for target in sorted(adjacency[node]):
+            if target not in index:
+                visit(target)
+                low[node] = min(low[node], low[target])
+            elif target in on_stack:
+                low[node] = min(low[node], index[target])
+        if low[node] == index[node]:
+            component = set()
+            while True:
+                member = stack.pop()
+                on_stack.discard(member)
+                component.add(member)
+                if member == node:
+                    break
+            if len(component) > 1 or node in adjacency[node]:
+                components.append(component)
+
+    for node in sorted(adjacency):
+        if node not in index:
+            visit(node)
+    return sorted(components, key=min)
+
+
+def _unregister(graph: Graph, task_path: str, outs: list[PathRef]) -> None:
+    if graph.unregistered.get(task_path, []) is not None:
+        graph.unregistered.setdefault(task_path, []).extend(outs)
+
+
+def _raw_outs(raw: Any, variables: dict[str, str]) -> list[PathRef]:
+    """Outs a step that failed to build still names, read leniently."""
+    entries = raw.get("outs") if isinstance(raw, dict) else None
+    refs = []
+    for entry in entries if isinstance(entries, list) else [entries] if entries else []:
+        path = entry.get("path") if isinstance(entry, dict) else entry
+        if isinstance(path, str) and path.strip():
+            refs.append(_path_ref(path, variables)[0])
+    return refs
+
+
+def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]]:
+    """Errors that touch these steps, and notes on inputs the graph cannot vouch for.
+
+    An error touches a step when it sits on the step's owning task (the root
+    task included), is a step cycle through it, is project-wide configuration
+    (not one variable: a step using a broken variable fails on its own task),
+    or leaves unregistered a step producing a file it reads. *tasks* adds
+    target task subtrees, so a target whose steps failed still refuses.
+    `depends_on` errors never touch builds.
+    """
+    names = set(names)
+    steps = [graph.step(n) for n in names if graph.step(n) is not None]
+    owners = {s.task_path for s in steps} | set(tasks)
+    errors = []
+    for f in graph.findings:
+        if f.severity != "error" or f.category != CATEGORY:
+            continue
+        if f.message in graph.step_cycles:
+            touches = bool(names & graph.step_cycles[f.message])
+        elif not f.task_path and f.message.startswith(f"{CONFIG_FILENAME}"):
+            touches = not f.message.startswith(f"{CONFIG_FILENAME}: variable ")
+        else:
+            touches = f.task_path in owners or any(within(f.task_path, t) for t in tasks)
+        if touches:
+            errors.append(f)
+    notes = []
+    for task_path, outs in sorted(graph.unregistered.items()):
+        if outs is None:
+            if any(names & set(e.consumers) for e in graph.external_inputs):
+                notes.append(f"task {task_path or '(root)'}: ## {REPRO_SECTION} did not parse, so none of "
+                             "its files is registered; an external input of this selection may be one of them")
+            continue
+        for step in steps:
+            for dep in step.deps:
+                if any(dep.logical == o.logical or dep.resolved == o.resolved
+                       or dep.resolved.startswith(o.resolved + "/") for o in outs):
+                    errors.append(Finding(task_path=step.task_path, category=CATEGORY, severity="error",
+                        message=f"step {step.name!r} reads {dep.logical}, which task {task_path or '(root)'} "
+                                "declares in a step that failed to register"))
+    return errors, notes
 
 
 def _iter_tasks(task: Task) -> list[Task]:

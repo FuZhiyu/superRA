@@ -21,22 +21,23 @@ Write `skills/reproducibility/SKILL.md` and its references: the discipline agent
 - BondElasticity lessons worth teaching (recorded in that repo's `.plan/`): lock paper-facing outputs, CSV companions for figures, never PNG hashes, one interpreter pin, boundary inputs.
 
 ## Results
-Graph review uses the dashboard DAG navigator; embedding a Mermaid export in task results is optional.
 
-
-The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its references define graph-authoring and verification discipline. Real-pipeline findings are recorded in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md); scoped verification and tier updates are recorded in [11-scoped-verification](../11-scoped-verification/task.md).
+The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its references define graph-design and verification discipline. The files the Objective names were later restructured: [12-agent-protocol](../12-agent-protocol/task.md) split `graph-authoring.md` and `rerun-model.md` into the references below, and [07-instruction-rewrite](../14-review-revisions/07-instruction-rewrite/task.md) moved the gates into the references that apply them. Real-pipeline findings are in [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md); scoped verification and the move from tiers to task targets are in [11-scoped-verification](../11-scoped-verification/task.md). Graph review uses the dashboard DAG navigator; embedding a Mermaid export in task results is optional.
 
 ### What each file owns
 
-- [SKILL.md](../../../skills/reproducibility/SKILL.md) — what gets a step, the tier opt-in and its timing, `build` / `status` as the evidence a result reproduces, and the reproduction gates.
-- [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) — declaring steps from a script's real I/O (file granularity, `${VAR}` roots, one interpreter pin, figure data companions, `check` deps, the boundary), and presenting a graph for the researcher's required-tier/boundary decisions.
-- [rerun-model.md](../../../skills/reproducibility/references/rerun-model.md) — the five things that rerun a step, identical regeneration as the cascade stopper, the size-and-mtime cache under Dropbox, and a five-row table for reading `explain`.
-- [protect-and-completion.md](../../../skills/reproducibility/references/protect-and-completion.md) — the three Protect decisions folded into the researcher proposal, and the completion-gate commands with failure triage.
+- [SKILL.md](../../../skills/reproducibility/SKILL.md) — the model (step, `fresh`, targets, producer chain, saved and external inputs, readiness versus freshness) and a routing table to the references.
+- [designing-the-graph.md](../../../skills/reproducibility/references/designing-the-graph.md) — what earns a step, the step unit, the dependency ladder, declaring from the script's real I/O, step lifecycle, and presenting a graph for review.
+- [claiming-results.md](../../../skills/reproducibility/references/claiming-results.md) — the gate before recording a result from retained code.
+- [rerun-or-accept.md](../../../skills/reproducibility/references/rerun-or-accept.md) — the stale rule: run, accept with a reason, or report.
+- [diagnosing.md](../../../skills/reproducibility/references/diagnosing.md) — the rerun rules in action, reading `explain`, and environment changes.
+- [protect-and-completion.md](../../../skills/reproducibility/references/protect-and-completion.md) — the completion gate and the external-inputs decision at Protect.
+- [adoption.md](../../../skills/reproducibility/references/adoption.md) — first use in a project.
 
 ### Boundaries held
 
 - **Mechanics stay in `task-tree`.** The skill points at [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Reproduction Section for schema, config keys, and findings; it contains no YAML block, so the inline-list quoting rule from [01-section-contract](../01-section-contract/task.md) has no surface to drift from.
-- **Command names come from [02-runner](../02-runner/task.md) §Objective** — `build`, `status`, `explain`, `dag --mermaid`, `tier`, the `--tier canon` flag, and the `fresh` / `stale` / `missing` / `failed` / `external` states. `task check --category reproduction` comes from [03-task-interface](../03-task-interface/task.md). Nothing was invented.
+- **Command names come from the runner** ([02-runner](../02-runner/task.md)) — `build`, `status`, `explain`, `impact`, `accept`, `revoke`, `dag --mermaid`, and the `fresh` / `stale` / `missing` / `failed` / `external` states. `task check --category reproduction` comes from [03-task-interface](../03-task-interface/task.md). Nothing was invented.
 - **Inventory registration is [07-workflow-integration](../07-workflow-integration/task.md)'s objective**, so `CATEGORIES.md`, `README.md`, the `CLAUDE.md` ownership table, and the `using-superra` manifest are untouched here.
 
 ### Packaging is in scope, inventory prose is not
@@ -51,13 +52,13 @@ The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its re
 
 ### Lessons carried in from TreasuryGIV
 
-**Outs are the artifacts a consumer reads; a write stamp is never one.** A directory out whose producer restamps a file in place restaled 36 downstream steps on an otherwise unchanged rerun. `graph-authoring.md` §Declare from the script now carries the rule on the `outs` bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
+**Outs are the artifacts a consumer reads; a write stamp is never one.** A directory out whose producer restamps a file in place restaled 36 downstream steps on an otherwise unchanged rerun. [designing-the-graph.md §Declare from the script](../../../skills/reproducibility/references/designing-the-graph.md#declare-from-the-script-not-from-memory) carries the rule on the volatile-bytes bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
-**A drift pin declares the published root, not a rehearsal mirror.** A project with an opt-in publish path has two roots, and a pin declared against the wrong one can be silently set from one worktree's sandbox. `graph-authoring.md` §Declare from the script now carries the rule on the `check`-step bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
+**A drift pin declares the published root, not a rehearsal mirror.** A project with an opt-in publish path has two roots, and a pin declared against the wrong one can be silently set from one worktree's sandbox. The same section carries the rule on the drift-test bullet. Full incident: [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) §What the pilot taught the model.
 
 ### Dependency boundaries
 
-[Graph authoring](../../../skills/reproducibility/references/graph-authoring.md#isolate-meaningful-recomputation) covers stage boundaries, helper-module separation, and artifact dependencies between stages.
+[designing-the-graph.md §The step unit follows the script](../../../skills/reproducibility/references/designing-the-graph.md#the-step-unit-follows-the-script) covers stage boundaries, helper-module separation, and artifact dependencies between stages.
 
 A temporary three-step pipeline (estimation, plotting, table formatting) exercised the live runner with separate presentation helpers. Five scenarios passed: warm builds and unrelated code edits ran no steps; a plotting-helper edit ran only plotting; changed estimates ran all three steps; a comment-only estimation edit ran estimation alone. Every scenario ended fresh, and both consumer outputs contained the changed estimate.
 

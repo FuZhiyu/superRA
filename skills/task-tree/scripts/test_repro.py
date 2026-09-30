@@ -691,8 +691,12 @@ class TestEdges:
         assert payload["step_edges"] == [
             {"from": "build", "to": "estimate", "via": "output/panel.parquet"}
         ]
-        assert [(e["from"], e["to"]) for e in payload["task_edges"]] == [("01-build", "02-estimate")]
-        assert {e["kind"] for e in payload["task_edges"][0]["evidence"]} == {"logical", "inferred"}
+        # Each fact once: depends_on edges beside the step edges, findings only at the top.
+        assert "task_edges" not in payload
+        assert set(payload["dependencies"]) == {"tasks", "archived_tasks", "logical"}
+        assert [(e["from"], e["to"], e["kind"]) for e in payload["dependencies"]["logical"]] == [
+            ("01-build", "02-estimate", "logical")
+        ]
         assert payload["steps"][0]["outs"][0]["sidecar"] is None
 
     def test_sidecar_survives_into_the_serialized_out(self, tmp_path):
@@ -787,6 +791,18 @@ class TestFindings:
         )
         assert _has(_graph(plan), "error", "unknown 'reproduction' key 'variables'")
 
+    def test_retired_config_keys_warn_and_keep_the_steps(self, tmp_path):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text(
+            "reproduction:\n  env_probe: python3 --version\n  code_roots:\n    - Code\n", encoding="utf-8"
+        )
+        _write_repro_task(plan / "01-a", "A", "steps:\n  - name: load\n    cmd: true\n")
+        graph = _graph(plan)
+        assert _has(graph, "warning", "'reproduction' key 'env_probe' is retired and ignored")
+        assert _has(graph, "warning", "'reproduction' key 'code_roots' is retired and ignored")
+        assert _messages(graph, "error") == []
+        assert [s.name for s in graph.steps] == ["load"]
+
     def test_unknown_variable(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(
@@ -802,6 +818,17 @@ class TestFindings:
         plan = _plan(tmp_path)
         _write_repro_task(plan / "01-a", "A", "level: high\nsteps: []\n")
         assert _has(_graph(plan), "error", "unknown key 'level'")
+
+    def test_retired_tier_keys_warn_and_keep_the_steps(self, tmp_path):
+        plan = _plan(tmp_path)
+        _write_repro_task(
+            plan / "01-a", "A", "tier: canon\nsteps:\n  - name: load\n    tier: canon\n    cmd: true\n"
+        )
+        graph = _graph(plan)
+        assert _has(graph, "warning", "## Reproduction: 'tier' is retired and ignored")
+        assert _has(graph, "warning", "step 'load': 'tier' is retired and ignored")
+        assert _messages(graph, "error") == []
+        assert [s.name for s in graph.steps] == ["load"]
 
     def test_unknown_step_key(self, tmp_path):
         plan = _plan(tmp_path)
@@ -898,7 +925,7 @@ class TestFindings:
         assert _has(graph, "warning", "which no step produces and which is not on disk")
         assert graph.external_inputs[0].exists is False
 
-    def test_derived_edge_contradicting_sibling_depends_on(self, tmp_path):
+    def test_depends_on_against_file_flow_is_a_warning_naming_the_file(self, tmp_path):
         plan = _plan(tmp_path)
         _write_repro_task(
             plan / "01-build",
@@ -918,11 +945,11 @@ class TestFindings:
             "    deps: [output/panel.parquet]\n"
             "    outs: [output/table.tex]\n",
         )
-        assert _has(
-            _graph(plan),
-            "error",
-            "dependency cycle",
-        )
+        graph = _graph(plan)
+        assert _messages(graph, "error") == []
+        assert _has(graph, "warning",
+                    "depends_on '02-estimate' runs against the file flow: 02-estimate reads "
+                    "this task's output output/panel.parquet")
 
     def test_consistent_depends_on_raises_nothing(self, tmp_path):
         assert _messages(_graph(_two_task_pipeline(tmp_path)), "warning") == []

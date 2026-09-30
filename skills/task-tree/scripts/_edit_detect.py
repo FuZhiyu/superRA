@@ -26,13 +26,27 @@ from _checkout_scope import is_foreign
 TASK_ROOT_DIRNAME = "superRA"
 STATE_DIRNAME = ".superra-repro"
 BASELINE_SUBDIR = "hook-baseline"
-BASELINE_VERSION = 1
+BASELINE_VERSION = 2
 
 # Script files watched under a task root: a retained task companion is code.
 SCRIPT_SUFFIXES = frozenset({".jl", ".py", ".r", ".do", ".sh", ".ipynb", ".sql", ".m"})
 _TREE_SUFFIXES = SCRIPT_SUFFIXES | {".md"}
 _STRUCTURE_NAMES = frozenset({"task.md", "config.yaml"})
 _SKIP_DIRS = frozenset({"__pycache__", "node_modules"})
+# Scratch and temporary folders: a script written there is not a candidate producer.
+_SCRATCH_DIRS = frozenset({"scratch", "tmp", "temp", "trash", "old", "archive"})
+# A directory holding more files than this is not a code directory; stay silent.
+MAX_DIR_FILES = 2000
+
+# Interpreter names a runner template can lead with, mapped to script suffixes.
+_RUNNER_SUFFIXES = {
+    "julia": (".jl",),
+    "python": (".py",), "python3": (".py",),
+    "rscript": (".r",), "r": (".r",),
+    "stata": (".do",), "stata-mp": (".do",), "stata-se": (".do",),
+    "bash": (".sh",), "sh": (".sh",), "zsh": (".sh",),
+    "matlab": (".m",),
+}
 
 # Above this size a file is compared by stat alone: a large data dep is not
 # read on every seed.
@@ -50,6 +64,20 @@ _MAX_PATH_HINTS = 16
 
 def is_script(path: Path) -> bool:
     return path.suffix.lower() in SCRIPT_SUFFIXES
+
+
+def runner_suffixes(runners: dict[str, str]) -> list[str]:
+    """Script suffixes of the configured runners (`julia` -> `.jl`), sorted.
+
+    Each runner's name and the tokens of its template before `{script}` are
+    looked up, so `uv run python {script}` and a runner named `julia` both count.
+    """
+    found: set[str] = set()
+    for name, template in runners.items():
+        tokens = [name, *re.split(r"[\s=]+", template.split("{script}")[0])]
+        for token in tokens:
+            found.update(_RUNNER_SUFFIXES.get(os.path.basename(token).lower(), ()))
+    return sorted(found)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +156,24 @@ def _tree_files(plan_root: Path) -> list[str] | None:
     return found
 
 
+def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> list[str]:
+    """Files under `root` (those with `suffixes`, or all), skipping hidden and
+    scratch folders; empty when the directory holds more than MAX_DIR_FILES."""
+    found: list[str] = []
+    for parent, dirnames, filenames in os.walk(root):
+        dirnames[:] = (
+            [d for d in dirnames
+             if not d.startswith(".") and d not in _SKIP_DIRS and d.lower() not in _SCRATCH_DIRS]
+            if recursive else []
+        )
+        for name in filenames:
+            if suffixes is None or os.path.splitext(name)[1].lower() in suffixes:
+                found.append(os.path.join(parent, name))
+        if len(found) > MAX_DIR_FILES:
+            return []
+    return found
+
+
 def _content_hash(path: str, size: int) -> str | None:
     if size > HASH_MAX_BYTES:
         return None
@@ -148,6 +194,7 @@ def _load(state_path: Path) -> dict | None:
         or loaded.get("version") != BASELINE_VERSION
         or not isinstance(loaded.get("files"), dict)
         or not isinstance(loaded.get("extra"), list)
+        or not isinstance(loaded.get("dirs"), list)
     ):
         return None
     return loaded
@@ -160,6 +207,8 @@ def _save(state_path: Path, payload: dict) -> None:
     ignore = state_dir / ".gitignore"
     if not ignore.exists():
         ignore.write_text("*\n", encoding="utf-8")
+        from _repro_state import dropbox_ignore  # the runner re-flags the folder whenever it opens it
+        dropbox_ignore(state_dir)
     tmp = state_path.with_name(f"{state_path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
     os.replace(tmp, state_path)
@@ -179,6 +228,8 @@ def detect(
     plan_root: Path,
     session_key: str,
     extra_files: Callable[[], list[str]],
+    watch_dirs: Callable[[], list[list]] | None = None,
+    created: set[str] | None = None,
 ) -> list[Path]:
     """Files under watch whose content changed since this session's baseline.
 
@@ -188,6 +239,12 @@ def detect(
     `config.yaml` changed, since only those can alter the list. A file newly
     added to that list is seeded, not reported; a new file under the task root
     is reported.
+
+    `watch_dirs` supplies `[directory, suffixes | None]` entries scanned on every
+    call: a directory dependency (`None`: every file, a new file counts as a
+    change) or a code directory (script `suffixes`: only a *new* script counts).
+    Entries are cached with `extra_files`. `created` collects the reported paths
+    that did not exist in the previous baseline.
     """
     plan_root = plan_root.resolve()
     tree = _tree_files(plan_root)
@@ -203,7 +260,7 @@ def detect(
     changed: list[str] = []
     hashed_bytes = 0
 
-    def visit(path: str, *, new_counts: bool) -> None:
+    def visit(path: str, *, new_counts: bool, new_only: bool = False) -> None:
         try:
             info = os.stat(path)
         except OSError:
@@ -226,8 +283,12 @@ def detect(
         files[path] = [info.st_size, info.st_mtime_ns, digest]
         if seeding or (previous is None and not new_counts):
             return
+        if new_only and previous is not None:
+            return
         if previous is None or digest is None or previous[2] != digest:
             changed.append(path)
+            if previous is None and created is not None:
+                created.add(path)
 
     for path in tree:
         visit(path, new_counts=True)
@@ -243,8 +304,25 @@ def detect(
         if path not in files:
             visit(path, new_counts=False)
 
+    project_root = str(plan_root.parent)
+    old_dirs = {entry[0] for entry in old["dirs"]} if not seeding else set()
+    dirs = (
+        sorted(watch_dirs() if watch_dirs else [], key=lambda entry: (entry[1] is not None, entry[0]))
+        if structure_moved
+        else list(old["dirs"])
+    )
+    for root, suffixes in dirs:  # declared directories first: they report edits, code dirs only new scripts
+        # A directory newly declared this call is seeded, not reported.
+        counts = root in old_dirs
+        for path in _scan_dir(root, suffixes, recursive=suffixes is None or root != project_root):
+            if path not in files:
+                visit(path, new_counts=counts, new_only=suffixes is not None)
+
     if seeding:
         _prune(baseline_dir)
-    if seeding or files != old_files or extra != old["extra"]:
-        _save(state_path, {"version": BASELINE_VERSION, "files": files, "extra": extra})
+    if seeding or files != old_files or extra != old["extra"] or dirs != old["dirs"]:
+        _save(
+            state_path,
+            {"version": BASELINE_VERSION, "files": files, "extra": extra, "dirs": dirs},
+        )
     return [Path(path) for path in changed]

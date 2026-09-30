@@ -190,7 +190,7 @@ def test_wheel_pinch_safari_gestures_and_keyboard_recovery(browser, workspace):
 def test_overview_legacy_links_and_offline_preview(browser, workspace):
     page = browser.new_page(viewport={'width': 1030, 'height': 768})
     enter(page, workspace['url'], {'roots': ['analysis-0'], 'mode': 'nearby', 'anchor': 'step-0-0', 'selected': 'step-0-0', 'tier': 'required'})
-    assert page.evaluate('_reproNav.roots') == []
+    assert page.evaluate('Object.keys(_reproNav).sort()') == ['expanded', 'selected']
     assert page.locator('.rp-task[data-task="analysis-1"]').count() == 1
     assert page.locator('[data-rp-menu=trace], [data-rp-menu=options], #repro-tier').count() == 0
     page.locator('[data-rp-action=overview]').click()
@@ -296,12 +296,11 @@ def test_resized_desktop_preview_fits_phone_with_all_toolbar_controls(browser, w
     page.keyboard.press('Shift+ArrowLeft')
     page.set_viewport_size({'width': 390, 'height': 844})
     page.wait_for_function("_reproReaderPlacement==='bottom' && !_reproReaderClosed")
+    # The reader rebuilds its toolbar buttons on each layout pass, so poll the boxes in the page instead of holding handles.
     for selector in ('#task-preview', '[data-rp-action=close-reader]', '[data-rp-action=overview]'):
-        for box in page.locator(selector).all():
-            box.wait_for(state='visible')
-            bounds = box.bounding_box()
-            assert bounds['x'] >= 0
-            assert bounds['x'] + bounds['width'] <= 390
+        page.wait_for_function(
+            "(s)=>{const els=[...document.querySelectorAll(s)];return els.length>0&&els.every(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.x>=0&&r.x+r.width<=390;});}",
+            arg=selector)
     reader = page.locator('#task-preview').bounding_box()
     assert reader['y'] >= 0
     assert reader['y'] + reader['height'] <= 844
@@ -317,8 +316,8 @@ def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace
       const ids=['heterogeneity','treasury','elasticity','paper','downstream'];
       const titles=['Heterogeneity estimates','Treasury bounds','Elasticity estimates','Reproduce paper','Publish results'];
       const pairs=[[0,1],[0,2],[0,3],[1,3],[2,3],[3,0],[3,4]];
-      const graph={steps:ids.map((id,i)=>({name:id,task:id,kind:'command'})),step_edges:pairs.map(([a,b])=>({from:ids[a],to:ids[b],via:'out.csv'})),dependencies:{tasks:ids.map((id,i)=>({path:id,title:titles[i],status:'in-progress'})),boundaries:{}}};
-      _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
+      const graph={steps:ids.map((id,i)=>({name:id,task:id,kind:'command'})),step_edges:pairs.map(([a,b])=>({from:ids[a],to:ids[b],via:'out.csv'})),dependencies:{tasks:ids.map((id,i)=>({path:id,title:titles[i],status:'in-progress'})),logical:[]}};
+      _reproData.graph=graph;_reproNav={expanded:[],selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
     }""")
     assert page.locator('#rp-arrow-cycle').get_attribute('markerUnits') == 'userSpaceOnUse'
@@ -326,7 +325,7 @@ def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace
     cycle = page.locator('.rp-wire.is-cycle').first
     assert page.locator('.rp-wire.is-cycle').count() == 6
     assert 'Heterogeneity estimates → Treasury bounds' in cycle.get_attribute('aria-label')
-    assert 'Task-group cycle' in cycle.get_attribute('aria-label')
+    assert 'Step cycle' in cycle.get_attribute('aria-label')
     cycle.focus()
     assert page.locator('.is-edge-endpoint').count() == 2
     assert page.locator('.is-edge-active').count() == 1
@@ -351,7 +350,27 @@ def test_connection_hover_keyboard_endpoints_and_cycle_labels(browser, workspace
     assert page.evaluate('document.activeElement.id') == focused
     assert page.locator('.is-edge-endpoint').count() == 2
     assert page.locator('.rp-task.is-cycle').count() == 4
-    assert page.locator('.rp-cycle-label[aria-label="Task-group cycle"]').count() == 4
+    assert page.locator('.rp-cycle-label[aria-label="Step cycle"]').count() == 4
+    page.close()
+
+
+def test_a_large_graph_opens_readable_on_the_selected_task(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 900})
+    enter(page, workspace['url'])
+    page.evaluate("""() => {
+      const ids=Array.from({length:40},(_,i)=>'task-'+String(i).padStart(2,'0'));
+      const graph={steps:ids.map(id=>({name:id+'-step',task:id,kind:'command'})),
+        step_edges:ids.slice(1).map((id,i)=>({from:ids[i]+'-step',to:id+'-step',via:'out.csv'})),
+        dependencies:{tasks:ids.map(id=>({path:id,title:id,status:'in-progress'})),logical:[]},findings:[]};
+      _reproData.graph=graph;_reproNav={expanded:[],selected:''};_reproSelected='';activePath='task-20';
+      _reproLayoutCache=null;_reproViewNext='open';drawReproView(document.getElementById('view-reproduction'),_reproData);
+    }""")
+    assert page.evaluate('_reproViewport.zoom') == 0.8
+    card = page.locator('.rp-task[data-task="task-20"]').bounding_box()
+    canvas = page.locator('.repro-canvas').bounding_box()
+    assert canvas['x'] <= card['x'] and card['x'] + card['width'] <= canvas['x'] + canvas['width']
+    page.locator('[data-rp-action=fit]').click()
+    assert page.evaluate('_reproViewport.zoom') < 0.8
     page.close()
 
 
@@ -362,7 +381,7 @@ def test_disconnected_bands_are_labeled_and_isolated_cards_stay_away_from_routes
     enter(page, workspace['url'])
     if page.locator('#task-preview').is_visible(): page.click('#navigation-toggle')
     page.evaluate("""graph => {
-      _reproData.graph=graph;_reproNav={roots:[],expanded:[],mode:'scope',anchor:'',selected:''};
+      _reproData.graph=graph;_reproNav={expanded:[],selected:''};
       _reproLayoutCache=null;drawReproView(document.getElementById('view-reproduction'),_reproData);
     }""", routing_fixture('components'))
     page.locator('[data-rp-action=fit]').click()
@@ -759,13 +778,13 @@ def test_step_reader_evidence_disclosure_and_file_metadata(browser, workspace, w
       const s=_reproData.graph.steps.find(s=>s.name==='step-0-0');s.kind='check';
       s.dependency_origins={'data/source.csv':[{kind:'declared'}]};
       const entry=_reproData.status.steps.find(s=>s.name==='step-0-0');
-      Object.assign(entry,{status:'fresh',reason:'up to date',log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit',evidence:{'review.md':'digest'}},boundary_inputs:[{logical:'${OUT}/saved-input.csv',resolved:'out/saved-input.csv',provenance:'existing',producer:'upstream-step'}]});
+      Object.assign(entry,{status:'fresh',reason:'up to date',log_tail:'Actual execution log',acceptance:{reason:'Reviewed documentation-only edit'},boundary_inputs:[{logical:'${OUT}/saved-input.csv',resolved:'out/saved-input.csv',provenance:'existing',producer:'upstream-step'}]});
       renderReproDetail('step-0-0');
     }""")
     assert 'fresh' in page.locator('.repro-status-line').inner_text()
     assert 'Check step' in page.locator('.repro-detail-context').inner_text()
     evidence = page.locator('[data-detail-section=evidence]').inner_text()
-    assert 'Reviewed documentation-only edit' in evidence and 'review.md' in evidence
+    assert 'Reviewed documentation-only edit' in evidence
     assert 'Actual execution log' in evidence and 'Last run' in evidence
     saved_input = page.locator('[data-detail-section=evidence] .repro-file-name a')
     assert saved_input.get_attribute('href').endswith('/out/saved-input.csv')

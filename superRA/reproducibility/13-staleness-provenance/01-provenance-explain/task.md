@@ -36,7 +36,7 @@ Build the provenance resolver and make `superra repro explain <target>` report, 
 steps:
   - name: provenance-explain-check
     kind: check
-    cmd: "uv run --with pytest --with 'pytask>=0.6,<0.7' --with pytask-parallel --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_provenance.py -q -p no:cacheprovider"
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_provenance.py -q -p no:cacheprovider"
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
@@ -44,7 +44,6 @@ steps:
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_repro_builds.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_provenance.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py

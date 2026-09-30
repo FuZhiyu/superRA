@@ -12,6 +12,6 @@ Pass the absolute worktree path in the dispatch `Worktree:` field, plus this `Ad
 
 **Seeding data in:** `worktree-data-sync` in `--mode seed`.
 
-**Harvest-out:** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Ex-ante task boundaries make parallel branches mechanically disjoint, so they typically merge cleanly. Resolve trivial adjacent conflicts inline; escalate material ones to the researcher.
+**Harvest-out:** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Ex-ante task boundaries keep code and task files disjoint; the shared reproduction records can still conflict — resolve them per `superRA:semantic-merge` §2's reproduction-records role. Resolve other trivial adjacent conflicts inline; escalate material ones to the researcher.
 
 Transient state — branch names, HEAD SHAs, worktree paths — never enters the task tree; git (`git worktree list`, `git branch`) is the source of truth.

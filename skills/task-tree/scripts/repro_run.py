@@ -1,243 +1,209 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pytask>=0.6,<0.7", "pytask-parallel", "pyyaml"]
+# dependencies = ["pyyaml"]
 # ///
 """The `superra repro` command surface: build, status, explain, dag.
 
-`cli.py` routes `repro` here. Only ``build`` imports pytask; when the current
-interpreter cannot (``cli.py`` declares pyyaml alone), ``main`` re-execs this
-script through ``uv run --script``, which provisions the block above. Every
-other subcommand answers from ``_repro_state`` and stays stdlib-only.
+`cli.py` routes `repro` here. Every subcommand is stdlib-only (with lazy
+pyyaml) and runs on Python 3.10, except that reading a legacy ``pytask.lock``
+needs ``tomllib``: then ``main`` re-execs this script through
+``uv run --script``, whose block above asks for Python 3.11+.
 
-Engine bridge: one in-memory pytask task per step, never a ``task_*.py`` in the
-project. Nodes are runner-owned so their lock ids are the logical
-(``${VAR}``-form) paths while hashing follows the resolved ones.
+``build`` runs the selected steps itself, in dependency order, one subprocess
+per step (threads under ``-j``). It decides run or skip per step with the
+``compute_status`` rule ``status`` reports, and writes each successful step's
+entry into ``repro-lock.json`` as the step completes.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import importlib.util
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _repro import Graph, Out, Step, build_graph  # noqa: E402
+from _repro import Graph, Out, Step, build_graph, step_errors  # noqa: E402
+from _repro_acceptance import capture_receipt, check_sources, current_state, mutation_lock, supersede  # noqa: E402
+from _repro_builds import platform_name  # noqa: E402
+from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_state import (  # noqa: E402
+    LOCK_FILENAME,
     TOML_AVAILABLE,
     HashCache,
+    LockEntry,
     ReproStateError,
     RunnerPaths,
-    Node,
     absolute,
     compute_status,
     dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
     format_status,
+    output_nodes,
+    prune_lock,
+    read_lock,
     read_run_record,
     render_dag,
     runner_paths,
     select_steps,
-    output_nodes,
     spec_hash,
-    spec_node_id,
     stamp_ref,
     step_nodes,
+    write_lock_entry,
     write_run_record,
 )
 from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
 NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every registered step"
-
-
-# ---------------------------------------------------------------------------
-# pytask node and task types
-# ---------------------------------------------------------------------------
-
-@dataclass
-class FileNode:
-    """A file or directory node whose lock id is its logical path.
-
-    Deliberately not a ``PPathNode``: pytask derives a path node's lock id from
-    its resolved path, which would embed the author or branch a ``${VAR}``
-    expanded to. Keeping the id in ``name`` keeps the committed lock portable.
-
-    ``must_exist`` is the out itself when a sidecar is hashed in its place, so
-    a deleted out is missing rather than fresh.
-    """
-
-    name: str
-    resolved: Path
-    cache: HashCache
-    must_exist: Path | None = None
-    saved_input: bool = False
-    attributes: dict = field(default_factory=dict)
-
-    @property
-    def signature(self) -> str:
-        return hashlib.sha256(self.name.encode("utf-8")).hexdigest()
-
-    def state(self) -> str | None:
-        if self.saved_input:
-            node = (self.name, str(self.resolved), str(self.must_exist) if self.must_exist else None)
-            return dependency_state(self.cache, Path('.'), node)
-        if self.must_exist is not None and not self.must_exist.exists():
-            return None
-        return self.cache.path_state(self.resolved)
-
-    def load(self, is_product: bool = False) -> Path:  # noqa: ARG002
-        return self.resolved
-
-    def save(self, value: Any) -> None:  # pragma: no cover - never a return target
-        raise NotImplementedError("reproduction outs are written by the step command")
-
-
-@dataclass
-class SpecNode:
-    """The resolved step definition — cmd, params, deps, outs — as one hash.
-
-    Every generated task shares one function, so pytask's task state cannot
-    tell two steps apart. This node supplies that granularity: editing one
-    step's definition invalidates that step and nothing else.
-    """
-
-    name: str
-    value: str
-    attributes: dict = field(default_factory=dict)
-
-    @property
-    def signature(self) -> str:
-        return hashlib.sha256(self.name.encode("utf-8")).hexdigest()
-
-    def state(self) -> str | None:
-        return self.value
-
-    def load(self, is_product: bool = False) -> str:  # noqa: ARG002
-        return self.value
-
-    def save(self, value: Any) -> None:  # pragma: no cover - never a return target
-        raise NotImplementedError
-
-
-@dataclass(kw_only=True)
-class StepTask:
-    """One reproduction step as a pytask task.
-
-    The stable state keeps runner upgrades from invalidating project work.
-    Forced targets advertise a transient change, cleared after execution so
-    the successful lock retains the stable state. Each task owns its flag.
-    """
-
-    name: str
-    function: Callable[..., Any]
-    depends_on: dict = field(default_factory=dict)
-    produces: dict = field(default_factory=dict)
-    markers: list = field(default_factory=list)
-    report_sections: list = field(default_factory=list)
-    attributes: dict = field(default_factory=dict)
-    force_pending: bool = False
-
-    def __post_init__(self) -> None:
-        command = self.function
-
-        # pytask-parallel calls function directly, bypassing execute.
-        def execute(**kwargs: Any) -> Any:
-            result = command(**kwargs)
-            self.force_pending = False
-            return result
-
-        self.function = execute
-
-    @property
-    def signature(self) -> str:
-        return hashlib.sha256(f"step:{self.name}".encode()).hexdigest()
-
-    def state(self) -> str | None:
-        return "forced" if self.force_pending else "1"
-
-    def execute(self, **kwargs: Any) -> Any:
-        return self.function(**kwargs)
+TIER_RETIRED_ERROR = "reproduction tiers are retired; name task or task#step targets instead ('.' selects every registered step)"
 
 
 class StepFailed(RuntimeError):
     """A step command exited non-zero."""
 
 
+class NotStarted(Exception):
+    """The build was interrupted before this step's attempt began."""
+
+
 # ---------------------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------------------
 
-def _run_step(
-    step: Step, paths: RunnerPaths, cache: HashCache, *, forced: bool = False,
-    graph: Graph | None = None, attributes: dict | None = None
-) -> Callable[..., None]:
-    """Build the callable pytask executes for *step*."""
+@dataclass
+class Build:
+    """One `repro build` invocation: its selection, the runs in flight, and outcomes."""
 
-    def _execute(deps, spec):  # noqa: ARG001 - pytask injects both by name
+    graph: Graph
+    paths: RunnerPaths
+    names: list[str]
+    cache: HashCache
+    forced: set[str]
+    dry_run: bool
+    completed: dict[str, LockEntry] = field(default_factory=dict)
+    outcomes: dict[str, tuple[str, str]] = field(default_factory=dict)  # name -> (outcome, detail)
+    stopping: threading.Event = field(default_factory=threading.Event)
+    running: dict[str, subprocess.Popen] = field(default_factory=dict)
+    running_lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def target(self, step: Step) -> str:
+        return f"{step.task_path or '.'}#{step.name}"
+
+    def parents(self) -> dict[str, list[str]]:
+        """Each selected step's producers inside the selection (directory outs included)."""
+        selected = set(self.names)
+        parents: dict[str, list[str]] = {name: [] for name in self.names}
+        for src, dst, _ in self.graph.step_edges:
+            if src in selected and dst in selected and src not in parents[dst]:
+                parents[dst].append(src)
+        return parents
+
+
+def _decide(build: Build, step: Step):
+    """This step's status under the rule `status` applies, over the whole build selection."""
+    return compute_status(
+        build.graph, build.paths, targets=[build.target(step)], cache=build.cache,
+        completed_locks=build.completed, scope=build.names,
+    ).entry(step.name)
+
+
+def _missing_inputs(build: Build, step: Step, entry) -> str | None:
+    """Why the step cannot start: an `external` input, or a dependency not on disk."""
+    if entry.status == "external":
+        return entry.reason
+    deps, _ = step_nodes(step, output_nodes(build.graph))
+    deps += directory_dep_nodes(build.graph, step)
+    absent = [node[0] for node in deps if dependency_state(build.cache, build.paths.project_root, node) is None]
+    if absent:
+        more = f" (and {len(absent) - 1} more)" if len(absent) > 1 else ""
+        return f"input {absent[0]} is missing{more}"
+    return None
+
+
+def _run_step(build: Build, step: Step, entry) -> str:
+    """Execute one step; returns the outcome (`executed` / `unchanged` / `would execute`)."""
+    graph, paths = build.graph, build.paths
+    check_sources(graph)
+    forced = step.name in build.forced
+    if not forced and entry.status == "fresh":
+        if entry.boundary_verified and not build.dry_run:
+            record_verified_inputs(paths, step.name, read_lock(paths.lock_file).get(step.name),
+                                   entry.boundary_verified)
+        return "unchanged"
+    if build.dry_run:
+        if entry.status == "external":
+            raise ReproStateError(f"step {step.name!r} cannot start: {entry.reason}")
+        return "would execute"
+    if build.stopping.is_set():  # before supersede and the run record touch anything
+        raise NotStarted
+    blocked = _missing_inputs(build, step, entry)
+    if blocked:
+        raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
+    # A rerun an acceptance or an unverified saved input required stays owed
+    # if it fails, like a forced one: restored bytes must not read as fresh.
+    must_retry = forced or bool(entry.acceptance_invalid) or any(c.kind == "boundary" for c in entry.changes)
+    committed = False
+    try:
         log_path = paths.log_file(step.name)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         for out in step.outs:
-            absolute(paths.project_root, out.path.resolved).parent.mkdir(
-                parents=True, exist_ok=True
-            )
+            absolute(paths.project_root, out.path.resolved).parent.mkdir(parents=True, exist_ok=True)
             if out.sidecar is not None:
-                absolute(paths.project_root, out.sidecar.resolved).parent.mkdir(
-                    parents=True, exist_ok=True
-                )
+                absolute(paths.project_root, out.sidecar.resolved).parent.mkdir(parents=True, exist_ok=True)
         sidecar_before = {
             out.path.logical: _mtime(absolute(paths.project_root, out.sidecar.resolved))
             for out in step.outs
             if out.sidecar is not None
         }
+        before = current_state(graph, step, paths, recorded=False)
+        before["boundary_inputs"] = boundary_inputs(graph, build.names, paths, consumers={step.name})
 
-        from _repro_acceptance import current_state
-        if graph is not None and attributes is not None:
-            attributes["superra_before"] = current_state(graph, step, paths, recorded=False)
-            from _repro_scope import boundary_inputs
-            attributes["superra_before"]['boundary_inputs'] = boundary_inputs(
-                graph, graph._execution_names, paths, consumers={step.name})
-        must_retry = forced or bool((attributes or {}).get("superra_retry_required"))
         started = time.time()
         write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started})
         with log_path.open("w", encoding="utf-8") as log:
             log.write(f"$ {step.cmd}\n")
             log.flush()
-            completed = subprocess.run(  # noqa: S602 - a declared shell step
-                step.cmd,
-                shell=True,
-                cwd=str(paths.project_root),
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                check=False,
-            )
-        duration = time.time() - started
+            with build.running_lock:
+                if build.stopping.is_set():
+                    raise StepFailed(f"step {step.name!r} was interrupted before it started")
+                supersede(paths, step.name)  # acceptance survives until the step is committed to run
+                committed = True
+                process = subprocess.Popen(  # noqa: S602 - a declared shell step
+                    step.cmd, shell=True, cwd=str(paths.project_root),
+                    stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                )
+                build.running[step.name] = process
+            try:
+                returncode = process.wait()
+            finally:
+                with build.running_lock:
+                    build.running.pop(step.name, None)
         record = {
-            "outcome": "pending" if completed.returncode == 0 else "failed",
+            "outcome": "pending" if returncode == 0 else "failed",
             "forced": must_retry,
-            "exit_code": completed.returncode,
-            "duration": duration,
+            "exit_code": returncode,
+            "duration": time.time() - started,
             "ended_at": time.time(),
             "log": paths.log_ref(step.name),
         }
         write_run_record(paths, step.name, record)
-        if completed.returncode != 0:
-            raise StepFailed(
-                f"step {step.name!r} exited {completed.returncode}; see "
-                f"{paths.log_ref(step.name)}"
-            )
+        if build.stopping.is_set():
+            raise StepFailed(f"step {step.name!r} was interrupted; see {paths.log_ref(step.name)}")
+        if returncode != 0:
+            raise StepFailed(f"step {step.name!r} exited {returncode}; see {paths.log_ref(step.name)}")
 
         for out in step.outs:
             if out.sidecar is None:
@@ -245,13 +211,29 @@ def _run_step(
             sidecar = absolute(paths.project_root, out.sidecar.resolved)
             if _mtime(sidecar) != sidecar_before[out.path.logical]:
                 continue  # the step maintains its own sidecar
-            _write_sidecar(paths.project_root, out, sidecar, cache)
+            _write_sidecar(paths.project_root, out, sidecar, build.cache)
         if step.kind == "check":
             stamp = paths.project_root / stamp_ref(step.name)
             stamp.parent.mkdir(parents=True, exist_ok=True)
             stamp.write_text(f"{spec_hash(step)}\n", encoding="utf-8")
 
-    return _execute
+        check_sources(graph)
+        receipt = capture_receipt(graph, step, paths, before)
+    except BaseException as exc:
+        if committed or not build.stopping.is_set():
+            supersede(paths, step.name)  # a failed step owes a rerun; an interrupt before its start does not
+        record = read_run_record(paths, step.name)
+        record.update(outcome="failed", forced=must_retry or record.get("forced", False), error=str(exc))
+        write_run_record(paths, step.name, record)
+        raise
+    entry = LockEntry(depends_on=receipt["state"]["deps"], produces=receipt["state"]["products"],
+                      built_on={"platform": platform_name()})
+    write_lock_entry(paths, step.name, entry)
+    build.completed[step.name] = entry
+    record = read_run_record(paths, step.name)
+    record["outcome"] = "success"
+    write_run_record(paths, step.name, record)
+    return "executed"
 
 
 def _write_sidecar(project_root: Path, out: Out, sidecar: Path, cache: HashCache) -> None:
@@ -269,67 +251,106 @@ def _mtime(path: Path) -> int | None:
         return None
 
 
-def make_tasks(
-    graph: Graph, names: list[str], paths: RunnerPaths, cache: HashCache,
-    *, force_names: set[str] | None = None,
-) -> list[StepTask]:
-    """One in-memory pytask task per selected step."""
-    outputs = output_nodes(graph)
-    selected_products = {out.path.logical for step in graph.steps if step.name in names for out in step.outs}
-    tasks = []
-    for name in names:
-        step = graph.step(name)
-        if step is None:  # pragma: no cover - names come from the graph
-            continue
-        record = read_run_record(paths, name)
-        forced = name in (force_names or ()) or (
-            record.get("outcome") in ("running", "pending")
-            or (record.get("outcome") == "failed" and record.get("forced", False))
-        )
-        deps, products = step_nodes(step, outputs)
-        deps += directory_dep_nodes(graph, step)
-        produces: dict[str, Any] = {}
-        if products:
-            key = "stamp" if step.kind == "check" else "outs"
-            produces[key] = [_node(node, paths, cache) for node in products]
-        attributes = {"superra": (graph, paths, step), "superra_cache": cache}
-        tasks.append(
-            StepTask(
-                name=step.name,
-                function=_run_step(step, paths, cache, forced=forced, graph=graph, attributes=attributes),
-                attributes=attributes,
-                force_pending=forced,
-                depends_on={
-                    "deps": [_node(node, paths, cache, saved_input=node[0] not in selected_products) for node in deps],
-                    "spec": SpecNode(name=spec_node_id(step.name), value=spec_hash(step)),
-                },
-                produces=produces,
-            )
-        )
-    return tasks
+def _stop(build: Build) -> None:
+    """Ctrl-C: start nothing new and stop every running step's process group."""
+    build.stopping.set()
+    with build.running_lock:
+        processes = list(build.running.values())
+    for process in processes:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except OSError:
+            pass
 
 
-def _node(node: Node, paths: RunnerPaths, cache: HashCache, *, saved_input=False) -> FileNode:
-    logical, hashed, must_exist = node
-    return FileNode(
-        name=logical,
-        resolved=absolute(paths.project_root, hashed),
-        cache=cache,
-        saved_input=saved_input,
-        must_exist=(
-            absolute(paths.project_root, must_exist) if must_exist else None
-        ),
-    )
+def _schedule(build: Build, n_workers: int) -> None:
+    """Run the selection in dependency order; a failure skips its descendants only."""
+    parents = build.parents()
+    order = {name: index for index, name in enumerate(build.names)}
+    pending = list(build.names)
+    futures: dict = {}
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        try:
+            while pending or futures:
+                for name in list(pending):
+                    states = [build.outcomes.get(parent, ("",))[0] for parent in parents[name]]
+                    if any(state in ("failed", "skipped") for state in states):
+                        culprit = next(p for p in parents[name] if build.outcomes[p][0] in ("failed", "skipped"))
+                        build.outcomes[name] = ("skipped", f"ancestor {culprit} did not complete")
+                        pending.remove(name)
+                    elif build.dry_run and "would execute" in states:
+                        build.outcomes[name] = ("would execute", "")
+                        pending.remove(name)
+                    elif all(parent in build.outcomes for parent in parents[name]) and not build.stopping.is_set():
+                        step = build.graph.step(name)
+                        futures[pool.submit(_attempt, build, step)] = name
+                        pending.remove(name)
+                if build.stopping.is_set():
+                    for name in pending:
+                        build.outcomes[name] = ("skipped", "build interrupted")
+                    pending.clear()
+                if not futures:
+                    for name in pending:  # only a dependency cycle leaves nothing runnable
+                        build.outcomes[name] = ("skipped", "dependency cycle")
+                    pending.clear()
+                    continue
+                done, _ = wait(futures, return_when=FIRST_COMPLETED)
+                for future in sorted(done, key=lambda f: order[futures[f]]):
+                    name = futures.pop(future)
+                    build.outcomes[name] = future.result()
+                    _report(build, name)
+        except KeyboardInterrupt:
+            _stop(build)
+            for future in list(futures):
+                name = futures.pop(future)
+                if future.cancel():  # still queued behind the workers
+                    build.outcomes[name] = ("skipped", "build interrupted")
+                    continue
+                try:
+                    build.outcomes[name] = future.result()
+                except KeyboardInterrupt:
+                    build.outcomes[name] = ("failed", "interrupted")
+            for name in pending:
+                build.outcomes[name] = ("skipped", "build interrupted")
+            raise
 
 
 @contextmanager
-def _in_directory(target: Path):
-    previous = Path.cwd()
-    os.chdir(target)
+def _interrupt_on_termination():
+    """SIGTERM and SIGHUP stop the build as Ctrl-C does, so no step outlives it."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum, frame):
+        raise KeyboardInterrupt
+
+    previous = {sig: signal.signal(sig, interrupt) for sig in (signal.SIGTERM, signal.SIGHUP)}
     try:
         yield
     finally:
-        os.chdir(previous)
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
+def _attempt(build: Build, step: Step) -> tuple[str, str]:
+    try:
+        entry = _decide(build, step)
+        return _run_step(build, step, entry), ""
+    except NotStarted:
+        return "skipped", "build interrupted"
+    except (StepFailed, ReproStateError, OSError) as exc:
+        return "failed", f"{type(exc).__name__}: {exc}"
+
+
+_MARKS = {"executed": "✓", "unchanged": "·", "would execute": "~", "failed": "✗", "skipped": "-"}
+
+
+def _report(build: Build, name: str) -> None:
+    outcome, detail = build.outcomes[name]
+    if build.dry_run:
+        return
+    print(f"{_MARKS[outcome]} {name}  {outcome}" + (f"\n  {detail}" if detail else ""), flush=True)
 
 
 def run_build(
@@ -341,18 +362,8 @@ def run_build(
     force_names: list[str] | None = None,
     dry_run: bool = False,
 ) -> int:
-    """Hand the selected steps to pytask and return its exit code."""
-    import pytask  # noqa: PLC0415 - the one import that needs the PEP 723 block
-
-    # A failed step's actionable line is `StepFailed: … see <log>`; the frames
-    # above it are this file's. pytask's own frame-suppression list takes the
-    # directory, and `show_traceback=False` would drop the message too.
-    scripts_dir = Path(__file__).resolve().parent
-    if scripts_dir not in pytask.Traceback.suppress:
-        pytask.Traceback.suppress += (scripts_dir,)
-
-    from _repro_acceptance import check_sources
-    from _repro_scope import BuildGuard, boundary_inputs
+    """Run every stale selected step; 0 when none failed, else 1."""
+    from _repro_scope import BuildGuard
     graph._execution_names = frozenset(names)
     if graph.dependencies:
         signature = getattr(graph, '_acceptance_sources', (None, None))[1]
@@ -368,49 +379,41 @@ def run_build(
         raise ReproStateError('missing saved inputs: ' + ', '.join(f"{b['logical']} (producer {b['producer']})" for b in missing)
                               + '; select the producer or use --upstream')
     forced = set(force_names or ())
-    tasks = make_tasks(graph, names, paths, cache, force_names=forced)
-    order = {name: index for index, name in enumerate(names)}
-    options: dict[str, Any] = {}
-    if n_workers > 1:
-        # Threads, not processes: steps are subprocesses, so the GIL is free
-        # while they run, nothing has to survive pickling, and the workers can
-        # share one hash cache.
-        options["n_workers"] = n_workers
-        options["parallel_backend"] = "threads"
-    from _repro_acceptance import mutation_lock
-    with mutation_lock(paths), _in_directory(paths.project_root):
-        # pytask 0.6's API does not run the hook_module CLI callback.
-        from _pytask.pluginmanager import get_plugin_manager, storage
-        from _pytask.build import normalize_programmatic_config
-        from _pytask.cli import DEFAULTS_FROM_CLI
-        import _repro_hooks
-        manager = get_plugin_manager()
-        manager.register(_repro_hooks)
-        storage.store(manager)
-        config = normalize_programmatic_config(
-            dict(tasks=tasks, paths=[], force=False, dry_run=dry_run,
-                 explain=dry_run, **options),
-            command="build", defaults_from_cli=DEFAULTS_FROM_CLI,
-        )
-        session = pytask.build(**config)
+    forced.update(
+        name for name in names
+        if (record := read_run_record(paths, name)).get("outcome") in ("running", "pending")
+        or (record.get("outcome") == "failed" and record.get("forced", False))
+    )
+    build = Build(graph=graph, paths=paths, names=list(names), cache=cache, forced=forced, dry_run=dry_run)
+    interrupted = False
+    with mutation_lock(paths), _interrupt_on_termination():
+        try:
+            _schedule(build, n_workers)
+        except KeyboardInterrupt:
+            interrupted = True
+        if not dry_run and not interrupted:
+            prune_lock(paths, {s.name for s in graph.steps} | {s.name for s in graph.archived_steps})
     cache.flush()
     if dry_run:
-        from _pytask.outcomes import WouldBeExecuted
-        pending = sorted(
-            (r.task.name for r in session.execution_reports
-             if r.task.name in order
-             and r.exc_info and isinstance(r.exc_info[1], WouldBeExecuted)),
-            key=order.__getitem__,
-        )
-        print(format_cost(pending, paths))
-    root = session.config.get("root")
-    if root is not None and Path(root).resolve() != paths.project_root.resolve():
-        print(
-            f"Warning: pytask rooted at {root}, not {paths.project_root}; "
-            f"pytask.lock was written there.",
-            file=sys.stderr,
-        )
-    return int(session.exit_code)
+        pending = [name for name in names if build.outcomes.get(name, ("",))[0] == "would execute"]
+        blocked = [name for name in names if build.outcomes.get(name, ("",))[0] in ("failed", "skipped")]
+        for name in blocked:
+            print(f"{_MARKS['failed']} {name}  cannot run\n  {build.outcomes[name][1]}")
+        if pending or not blocked:
+            print(format_cost(pending, paths))
+        return 1 if blocked else 0
+    counts = {}
+    for outcome, _ in build.outcomes.values():
+        counts[outcome] = counts.get(outcome, 0) + 1
+    print(f"{len(names)} step(s): " + ", ".join(
+        f"{counts[k]} {k}" for k in ("executed", "unchanged", "failed", "skipped") if counts.get(k)))
+    if interrupted:
+        print("Interrupted: running steps were stopped and recorded as failed.", file=sys.stderr)
+    legacy = [p.name for p in (paths.legacy_lock_file, paths.legacy_builds_file) if p.is_file()]
+    if paths.lock_file.is_file() and legacy:
+        print(f"{LOCK_FILENAME} now holds the build records; {', '.join(legacy)} no longer read. "
+              f"Remove with `git rm {' '.join(legacy)}`.")
+    return 1 if interrupted or counts.get("failed") or counts.get("skipped") else 0
 
 
 # ---------------------------------------------------------------------------
@@ -450,21 +453,20 @@ def format_cost(names: list[str], paths: RunnerPaths) -> str:
 def format_accept(result: dict) -> str:
     """Exactly which steps the acceptance covered, and what changed under each."""
     rows = result["steps"]
-    applied = result.get("applied", False)
+    written = sum(row["record"] is not None for row in rows)
     lines = [
-        f"Accepted {len(rows)} step(s) as the reviewed baseline."
-        if applied else
-        f"Would accept {len(rows)} step(s); no record was written."
+        f"Accepted {written} step(s) as the reviewed baseline."
+        if result.get("applied") else
+        f"Would accept {written} step(s); no record was written."
     ]
-    reason = rows[0]["record"]["reason"] if rows else ""
-    if reason:
-        lines.append(f"  reason: {reason}")
+    if result["reason"]:
+        lines.append(f"  reason: {result['reason']}")
     width = max((len(row["step"]) for row in rows), default=0)
     for row in rows:
         changes = ", ".join(f"{c['kind']} {c['node']}" for c in row["changes"])
+        if row["record"] is None:
+            changes = "already fresh; its evidence stays as it is"
         lines.append(f"  {row['step']:<{width}}  {changes or 'unchanged since the recorded baseline'}")
-    if not applied:
-        lines.append(f"  Apply this exact preview with --apply {result['token']}.")
     return "\n".join(lines)
 
 
@@ -474,7 +476,7 @@ def format_accept(result: dict) -> str:
 
 MODEL = """\
 Steps belong to tasks: a task's `## Reproduction` section registers its steps.
-pytask 0.6 executes them, generated in memory — a project holds no task_*.py.
+`build` runs them in dependency order, one subprocess per step.
 A step is fresh when the content hashes of its deps, definition, and outs match
 its last successful build or its reviewed acceptance.
 Targets scope every command: a task path selects its own and descendant steps,
@@ -539,11 +541,12 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro explain 02-merge --json --diff",
     ])
     explain.add_argument("target", help="A task path, task#step, unique step name, or declared file path")
-    explain.add_argument("--diff", action="store_true", help="Show full dependency diffs instead of the first lines")
+    explain.add_argument("--diff", action="store_true", help="Show dependency diffs: in full for a step or file, and at all for a task (task views omit them by default)")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
-    impact = _sub(sub, "impact", "Inspect conservative dependency fan-out from a file", [
+    impact = _sub(sub, "impact", "Predict which steps a change to a file would make stale, with recorded durations", [
         "superra repro impact Code/helpers.jl",
+        "superra repro impact superRA/config.yaml       # steps using a runner, a variable, or env_deps",
         "superra repro impact Code/helpers.jl --scope 02-merge --json",
     ])
     impact.add_argument("paths", nargs="+")
@@ -553,15 +556,11 @@ def build_parser() -> argparse.ArgumentParser:
     accept = _sub(sub, "accept", "Record the current results as the reviewed baseline", [
         "superra repro accept 02-merge --reason 'Ran interactively and reviewed the panel'",
         "superra repro accept 02-merge --dry-run    # preview; writes nothing",
-        "superra repro accept 02-merge --reason '...' --apply <preview-token>",
     ])
     accept.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     accept.add_argument("--reason", default="", help="Why the current results are valid (required to accept)")
     accept.add_argument("--review", action="append", default=[], metavar="NODE=RATIONALE", help="Optional per-node review note")
-    accept.add_argument("--evidence", action="append", default=[], metavar="FILE", help="Optional existing evidence file")
-    mode = accept.add_mutually_exclusive_group()
-    mode.add_argument("--apply", metavar="PREVIEW_TOKEN", help="Apply the exact preview a --dry-run printed")
-    mode.add_argument("--dry-run", action="store_true", help="Preview and print a token; write nothing")
+    accept.add_argument("--dry-run", action="store_true", help="Preview; write nothing")
     accept.add_argument("--json", action="store_true", dest="as_json")
 
     revoke = _sub(sub, "revoke", "Revoke selected step acceptances", [
@@ -578,37 +577,24 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _unsupported_here(command: str) -> bool:
-    """Whether the running interpreter is short of what this subcommand needs."""
-    if command == "build":
-        return importlib.util.find_spec("pytask") is None
-    return command in ("status", "explain", "accept", "revoke") and not TOML_AVAILABLE
-
-
-def _missing_piece(command: str) -> str:
-    return "pytask" if command == "build" else "Python 3.11+ (tomllib)"
+LOCK_READERS = ("build", "status", "explain", "accept", "revoke", "impact")
 
 
 def _reexec(argv: list[str], command: str) -> int:
-    """Re-run this script under uv, whose PEP 723 block supplies what is missing."""
-    missing = _missing_piece(command)
+    """Re-run this script under uv, whose PEP 723 block asks for Python 3.11+ (tomllib)."""
+    missing = "Python 3.11+ (tomllib) to read the legacy pytask.lock"
     if os.environ.get(REEXEC_ENV):
         print(
             f"Error: {missing} is still unavailable after the runner re-execed; "
-            f"install it, or make `uv` available on PATH.",
+            f"make `uv` available on PATH.",
             file=sys.stderr,
         )
         return 1
     uv = shutil.which("uv")
     if uv is None:
-        hint = (
-            "`pip install 'pytask>=0.6,<0.7' pytask-parallel`"
-            if command == "build"
-            else "run superRA on Python 3.11 or newer"
-        )
         print(
             f"Error: `superra repro {command}` needs {missing}. Install `uv`, which "
-            f"lets the runner provision it, or {hint}.",
+            f"lets the runner provision it, or run superRA on Python 3.11 or newer.",
             file=sys.stderr,
         )
         return 1
@@ -617,6 +603,12 @@ def _reexec(argv: list[str], command: str) -> int:
         [uv, "run", "--script", str(Path(__file__).resolve()), *argv], env=env, check=False
     )
     return completed.returncode
+
+
+def _behind_selection(graph, paths: RunnerPaths, targets: list[str], report) -> list:
+    """Producers outside the selection, behind it, that are not fresh."""
+    full = compute_status(graph, paths, targets=targets, upstream=True)
+    return [e for e in full.entries if e.step.name not in report.selected and e.status != "fresh"]
 
 
 def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
@@ -638,17 +630,38 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
             result = dict(step, **result)
         print(json.dumps(result, indent=2))
     else:
-        print(format_explain(result, report))
+        print(format_explain(result, report, full_diff=args.diff))
+    if result["errors"]:
+        sys.exit(1)
+
+
+def _refuse(errors) -> None:
+    """Exit on reproduction errors that touch the build selection."""
+    if errors:
+        print(f"Error: {len(errors)} reproduction error(s) touch the selected steps; "
+              "run `superra task check`.", file=sys.stderr)
+        for finding in errors:
+            print(f"  {finding.to_text()}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _command_word(argv: list[str]) -> str | None:
+    args = iter(argv)
+    for arg in args:
+        if arg in ("--plan-root", "--root"):
+            next(args, None)
+        elif not arg.startswith("-"):
+            return arg
+    return None
 
 
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if _command_word(argv) == "tier" or any(a == "--tier" or a.startswith("--tier=") for a in argv):
+        build_parser().error(TIER_RETIRED_ERROR)
     args = build_parser().parse_args(argv)
     if args.command in ('build', 'status') and not args.targets:
         build_parser().error(NO_TARGET_ERROR)
-
-    if _unsupported_here(args.command):
-        sys.exit(_reexec(argv, args.command))
 
     plan_root = resolve_plan_root_arg(args.plan_root)
     if plan_root is None:
@@ -659,6 +672,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
     project_root = plan_root.resolve().parent
     paths = runner_paths(project_root)
+    if args.command in LOCK_READERS and not TOML_AVAILABLE and paths.reads_legacy_lock:
+        sys.exit(_reexec(argv, args.command))
 
     from _repro_acceptance import bind_sources, source_signature
     signature = source_signature(plan_root) if args.command in ("build", "accept") else None
@@ -674,10 +689,10 @@ def main(argv: list[str] | None = None) -> None:
         ensure_state_dir(paths)
 
     if args.command in ("impact", "accept", "revoke"):
-        from _repro_acceptance import accept, impact, revoke
+        from _repro_acceptance import accept, format_impact, impact, revoke
         try:
             if args.command == "impact":
-                result = impact(graph, paths, args.paths, args.scope)
+                result = impact(graph, paths, args.paths, args.scope, config_file=plan_root / "config.yaml")
             elif args.command == "revoke":
                 result = revoke(graph, paths, args.targets)
             else:
@@ -687,10 +702,11 @@ def main(argv: list[str] | None = None) -> None:
                     if not sep or not rationale.strip():
                         raise ReproStateError("--review expects NODE=RATIONALE")
                     reviews[node] = rationale
-                result = accept(graph, paths, args.targets, args.reason, reviews,
-                                args.evidence, args.apply, dry_run=args.dry_run)
+                result = accept(graph, paths, args.targets, args.reason, reviews, dry_run=args.dry_run)
             if args.command == "accept" and not args.as_json:
                 print(format_accept(result))
+            elif args.command == "impact" and not args.as_json:
+                print(format_impact(result))
             else:
                 print(json.dumps(result, indent=2))
             return
@@ -699,20 +715,18 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
 
     if args.command == "build":
-        errors = [f for f in graph.findings if f.severity == "error"]
-        if errors:
-            print(
-                f"Error: {len(errors)} reproduction error(s); run `superra task check`.",
-                file=sys.stderr,
-            )
-            for finding in errors:
-                print(f"  {finding.to_text()}", file=sys.stderr)
-            sys.exit(1)
+        tasks = {"" if t in (".", "./") else t.partition("#")[0].removeprefix("./").rstrip("/")
+                 for t in args.targets}
         try:
             names, unknown = select_steps(graph, args.targets, include_ancestors=args.upstream)
         except ReproStateError as exc:
+            _refuse(step_errors(graph, [], tasks)[0])
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
+        errors, notes = step_errors(graph, names, tasks)
+        _refuse(errors)
+        for note in notes:
+            print(f"Warning: {note}", file=sys.stderr)
         if unknown:
             print(
                 f"Error: no step or task matches {', '.join(unknown)}", file=sys.stderr
@@ -741,15 +755,22 @@ def main(argv: list[str] | None = None) -> None:
             _explain(args, graph, paths, plan_root.name)
             return
         report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream)
+        behind = [] if args.upstream or not report.ok else _behind_selection(graph, paths, args.targets, report)
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
     if args.as_json:
-        print(json.dumps(report.to_dict(), indent=2))
+        result = report.to_dict()
+        result["behind"] = [{"name": e.step.name, "task": e.step.task_path, "status": e.status} for e in behind]
+        print(json.dumps(result, indent=2))
     else:
         print(format_status(report))
-    sys.exit(0 if report.ok else 1)
+        if behind:
+            names = ", ".join(f"{e.step.name} ({e.status})" for e in behind)
+            print(f"{len(behind)} producer(s) behind the selection not fresh: {names}; "
+                  "include them with --upstream")
+    sys.exit(1 if not report.ok else 3 if behind else 0)
 
 
 if __name__ == "__main__":

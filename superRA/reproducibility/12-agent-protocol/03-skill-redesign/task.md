@@ -42,7 +42,7 @@ Rewrite [skills/reproducibility/](../../../../skills/reproducibility/SKILL.md) s
 
 - Load `skill-creator` and `superRA:communicate` before editing. Style exemplars: `skills/implement-task/SKILL.md`, `skills/review-task/SKILL.md`.
 - Current content mostly survives; the work is re-homing and the new judgment content. Suggested mapping: SKILL.md §What Gets a Step and §Step Lifecycle → `designing-the-graph.md`; §Environment Changes → `diagnosing.md`; rerun-model §Reviewed acceptance → `rerun-or-accept.md`; the rest of rerun-model → `diagnosing.md`; graph-authoring → `designing-the-graph.md`.
-- `adoption.md` replaces [pilot-acceptance.md](../../../../skills/reproducibility/references/pilot-acceptance.md): keep the bounded start, the discovery-latency measurement, and the routing-agreement check; the matrix rows that retest the runner's own suite fail the Necessity test.
+- `adoption.md` replaces `pilot-acceptance.md`: keep the bounded start, the discovery-latency measurement, and the routing-agreement check; the matrix rows that retest the runner's own suite fail the Necessity test.
 - Pilot lessons missing from the skill today: per-step process start-up cost, and enumerating outs from disk picks up leftovers ([08-pilot-treasurygiv](../../08-pilot-treasurygiv/task.md)).
 - Inbound links to check: `superimplement/references/completion.md`, `superintegrate/references/{protect,integrate,finish,mature-consolidate}.md`, `superplan/references/{build-and-review,changing-the-tree}.md`, `task-tree/references/{commands,task-file-contract}.md`, `using-superra/SKILL.md`, and the two domain `planning.md` files.
 - A subagent cannot ask the researcher: the stale rule's "ask" is a return to the orchestrator, per `superimplement` §pausing.

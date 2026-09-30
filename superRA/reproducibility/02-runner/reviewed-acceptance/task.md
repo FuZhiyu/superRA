@@ -27,14 +27,13 @@ Provide impact inspection and exact-state acceptance for retained results, inclu
 steps:
   - name: reviewed-baseline-regression-check
     kind: check
-    cmd: "uv run --with pytest --with 'pytask>=0.6,<0.7' --with pytask-parallel --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
+    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
     deps:
       - skills/task-tree/scripts/_apply_patch.py
       - skills/task-tree/scripts/_artifacts.py
       - skills/task-tree/scripts/_comments.py
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
       - skills/task-tree/scripts/_step_links.py
@@ -71,7 +70,7 @@ steps:
 - **Truthful history:** acceptance writes only its ledger. It leaves successful locks, execution records, receipts, and check stamps intact; initial acceptance creates none of those. Never-run checks, missing files, invalid graphs, and failed/interrupted executions remain blocked.
 - **Execution:** ordinary serial/threaded builds skip accepted producers and run outstanding downstream work/checks. Forced attempts remove acceptance and execute. Full output and saved-input fingerprints detect subsequent changes; scoped freshness leaves outside producers unverified.
 - **Binding a batch:** a decision binds the producers accepted with it. Re-accepting one of them leaves the downstream record valid — its reviewed dependency hashes already pin that producer's output bytes — while revoking one that holds no successful lock invalidates it.
-- **Agent workflow:** [Build and Status](../../../../skills/reproducibility/SKILL.md#build-and-status) routes already-produced interactive results through registration and [reviewed acceptance](../../../../skills/reproducibility/references/rerun-model.md#reviewed-acceptance). [Commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [record schema](../../../../skills/task-tree/references/task-file-contract.md#acceptance-and-successful-baseline-records), and public descriptions match.
+- **Agent workflow:** [The reproducibility skill](../../../../skills/reproducibility/SKILL.md) routes already-produced interactive results through registration and [reviewed acceptance](../../../../skills/reproducibility/references/rerun-or-accept.md#accept). [Commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [record schema](../../../../skills/task-tree/references/task-file-contract.md#records), and public descriptions match.
 - **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **168 tests** through the [registered regression check](#step-reviewed-baseline-regression-check), whose status is fresh. The full task-tree suite passed **1,199 tests, 10 skipped**. Changed Markdown checks and the tree's dependency/reproduction/link diagnostics passed. A thorough correctness review ran on the code and its findings are fixed in this round.
 
 ## Review Notes

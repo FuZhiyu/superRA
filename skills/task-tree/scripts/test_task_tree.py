@@ -39,6 +39,12 @@ import cli
 from conftest import _write_task_md, _write_tiny_png
 
 
+def _frontier(root):
+    from _task_dependencies import compose
+    deps = compose(root, [], [])
+    return [deps.tasks[row["path"]] for row in deps.frontier()]
+
+
 def _workflow_lines(content: str) -> list[str]:
     return [line.rstrip() for line in content.splitlines()]
 
@@ -393,7 +399,7 @@ class TestComputeStatus:
 class TestComputeFrontier:
     def test_linear_chain(self, plan_root):
         root = _task_io.walk_plan(plan_root)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-second" in paths
         assert "01-first" not in paths  # already approved
@@ -401,7 +407,7 @@ class TestComputeFrontier:
 
     def test_nested_frontier(self, plan_with_branches):
         root = _task_io.walk_plan(plan_with_branches)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-data-prep/02-merge" in paths
         assert "02-estimation" not in paths  # blocked by 01-data-prep not approved
@@ -410,7 +416,7 @@ class TestComputeFrontier:
         root = _task_io.walk_plan(plan_root)
         for child in root.children:
             child.status = "approved"
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         assert len(frontier) == 0
 
     def test_no_deps_all_frontier(self, tmp_path):
@@ -423,7 +429,7 @@ class TestComputeFrontier:
             _write_task_md(d / "task.md", name, "not-started",
                            objective="Do it.")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         assert len(frontier) == 3
 
     def test_synthetic_root_not_on_frontier(self, tmp_path):
@@ -433,7 +439,7 @@ class TestComputeFrontier:
         root_dir.mkdir()
         root = _task_io.walk_plan(root_dir)  # no task.md, no children
         assert root.title == "(no root task.md)"
-        assert _task_io.compute_frontier(root) == []
+        assert _frontier(root) == []
 
     def test_revise_and_implemented_on_frontier(self, plan_root):
         """'revise' (ready to fix) and 'implemented' (approval decision open) are
@@ -445,7 +451,7 @@ class TestComputeFrontier:
         # 02-second depends on 01-first (approved), so deps are met.
         for state in ("revise", "implemented"):
             root.children[1].status = state
-            frontier = _task_io.compute_frontier(root)
+            frontier = _frontier(root)
             paths = [t.path for t in frontier]
             assert "02-second" in paths, (
                 f"'{state}' tasks are actionable and should be on the frontier"
@@ -475,7 +481,7 @@ class TestComputeFrontier:
             _write_task_md(d / "task.md", name, status,
                            depends_on=deps, objective="Do it.")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-B" in paths
         assert "03-C" in paths
@@ -515,7 +521,7 @@ class TestComputeFrontier:
                        objective="Do it.")
 
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         # Deep leaf under L1-a is reachable (no blocking deps at any level)
         assert "01-L1a/01-L2/01-leaf" in paths
@@ -538,7 +544,7 @@ class TestComputeFrontier:
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Empty", "not-started")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         # Root with no children is itself a leaf and is on the frontier
         assert len(frontier) == 1
         assert frontier[0].is_root
@@ -1931,109 +1937,10 @@ class TestValidateFrontmatter:
         assert warnings
 
 
-class TestValidateDependencies:
-    def test_valid_dep_no_warnings(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second", "03-third"])
-        assert warnings == []
-
-    def test_missing_sibling_ref(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        # Pass siblings that don't include 01-first
-        warnings = _task_validate.validate_dependencies(task, ["02-second", "03-third"])
-        assert warnings
-
-    def test_nonexistent_dep(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        task.depends_on = ["nonexistent"]
-        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second"])
-        assert warnings
-
-    def test_no_deps_no_warnings(self, plan_root):
-        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
-        assert task.depends_on == []
-        warnings = _task_validate.validate_dependencies(task, ["01-first"])
-        assert warnings == []
-
-
-class TestDetectCycles:
-    def _make_tasks(self, tmp_path, specs):
-        """Create tasks from (slug, deps) specs. Returns list of Task objects."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir(exist_ok=True)
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        for slug, deps in specs:
-            d = root_dir / slug
-            d.mkdir(exist_ok=True)
-            _write_task_md(d / "task.md", slug, "not-started", depends_on=deps)
-        tasks = []
-        for slug, _deps in specs:
-            tasks.append(_task_io.parse_task(root_dir / slug / "task.md"))
-        return tasks
-
-    def test_no_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", []),
-            ("02-b", ["01-a"]),
-            ("03-c", ["02-b"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings == []
-
-    def test_simple_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", ["02-b"]),
-            ("02-b", ["01-a"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings
-
-    def test_three_node_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", ["03-c"]),
-            ("02-b", ["01-a"]),
-            ("03-c", ["02-b"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings
-
-    def test_independent_tasks_no_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", []),
-            ("02-b", []),
-            ("03-c", []),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings == []
-
-
 class TestValidatePlan:
     def test_valid_plan_no_warnings(self, plan_root):
         warnings = _task_validate.validate_plan(plan_root)
         assert warnings == []
-
-    def test_missing_dep_produces_warning(self, plan_root):
-        # Add a task with a depends_on pointing to a nonexistent sibling
-        bad_dir = plan_root / "04-bad"
-        bad_dir.mkdir()
-        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
-                       depends_on=["99-nonexistent"])
-        warnings = _task_validate.validate_plan(plan_root)
-        assert warnings
-
-    def test_cycle_produces_warning(self, tmp_path):
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        d1 = root_dir / "01-a"
-        d1.mkdir()
-        _write_task_md(d1 / "task.md", "A", "not-started", depends_on=["02-b"])
-        d2 = root_dir / "02-b"
-        d2.mkdir()
-        _write_task_md(d2 / "task.md", "B", "not-started", depends_on=["01-a"])
-        warnings = _task_validate.validate_plan(root_dir)
-        assert warnings
-
 
 # --- Topological sort tests ---
 
@@ -2359,7 +2266,8 @@ class TestTaskReadReproduction:
         def _boom(*args, **kwargs):
             raise ReproStateError("reading pytask.lock needs Python 3.11+ (tomllib)")
 
-        monkeypatch.setattr(task_read, "compute_status", _boom)
+        import _repro_state
+        monkeypatch.setattr(_repro_state, "compute_status", _boom)
         repro = task_read._reproduction_view(root, target, None)
         assert repro["steps"][0]["status"] == "unknown"
         assert "runner unavailable" in repro["steps"][0]["reason"]
@@ -3297,11 +3205,11 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stdout == ""
 
-    def test_reproduction_reminder_never_resolves_vars(self, tmp_path, monkeypatch):
-        """A configured `shell:`/`env:` var never runs for any edit (no subprocess).
+    def test_reproduction_reminder_never_runs_shell_vars(self, tmp_path, monkeypatch):
+        """A configured `shell:` var never runs for any edit (no subprocess).
 
         Calls `_reproduction_reminder` in-process (not via subprocess) so a
-        monkeypatched `_repro.resolve_variables` sentinel can prove it is
+        monkeypatched `_repro._default_shell_runner` sentinel can prove it is
         never invoked, for both an irrelevant edit and a real producer edit.
         """
         plan_root = tmp_path / "superRA"
@@ -3332,7 +3240,7 @@ class TestTaskHook:
         import _repro
         calls: list = []
         monkeypatch.setattr(
-            _repro, "resolve_variables", lambda *a, **k: calls.append((a, k))
+            _repro, "_default_shell_runner", lambda *a, **k: calls.append((a, k)) or ""
         )
 
         feedback = task_hook._reproduction_reminder({"session_id": "s1"}, [irrelevant])
@@ -3388,7 +3296,7 @@ class TestTaskHook:
         `.jl` producer with a transitively-included helper. Records the timing
         in `## Results` — it should track the "no config" baseline (tens of
         ms, dominated by the tree walk), not add a per-shell-var subprocess
-        cost, since `resolve_vars=False` skips `shell:`/`env:` entirely.
+        cost, since the hook never runs a `shell:` resolver.
         """
         import time as time_module
 
@@ -3436,7 +3344,7 @@ class TestTaskHook:
             assert "build-panel" in feedback[0]
 
         avg_ms = 1000 * sum(elapsed) / len(elapsed)
-        # No subprocess ever runs for this path (resolve_vars=False), so this
+        # No subprocess ever runs for this path (the hook never runs shell:), so this
         # should be tree-walk-bound (tens of ms), never dominated by a shell
         # round-trip (which alone measured ~12ms in the review that raised
         # this finding, and would multiply per shell: var if it ran at all).
@@ -4044,7 +3952,7 @@ class TestArchivedInFrontier:
         d2.mkdir()
         _write_task_md(d2 / "task.md", "Archived", "archived")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-active" in paths
         assert "02-archived" not in paths
@@ -4062,7 +3970,7 @@ class TestArchivedInFrontier:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" in paths, (
             "archived dependency should be treated as satisfied"
@@ -4153,7 +4061,7 @@ class TestPostponedSemantics:
         d2.mkdir()
         _write_task_md(d2 / "task.md", "Postponed", "postponed")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-active" in paths
         assert "02-postponed" not in paths
@@ -4171,7 +4079,7 @@ class TestPostponedSemantics:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" not in paths, (
             "postponed dependency should block the dependent"
@@ -4194,7 +4102,7 @@ class TestPostponedSemantics:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" in paths, (
             "archived dependency should be treated as satisfied (unlike postponed)"

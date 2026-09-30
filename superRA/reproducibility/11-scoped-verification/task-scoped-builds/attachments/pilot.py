@@ -48,7 +48,7 @@ def main():
 
         def evidence():
             return {p.relative_to(root).as_posix(): p.read_bytes()
-                    for p in [root / 'pytask.lock', *sorted((root / '.superra-repro/runs').glob('*.json'))]
+                    for p in [root / 'repro-lock.json', *sorted((root / '.superra-repro/runs').glob('*.json'))]
                     if p.exists()}
 
         run('build', target)

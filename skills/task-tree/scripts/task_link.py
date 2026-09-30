@@ -8,7 +8,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_snapshot import preflight
+from _repro import build_graph
+from _task_dependencies import within
+from _task_snapshot import preflight, print_edit_notes
 from _task_io import (
     ATTACHMENTS_DIRNAME,
     TASK_ROOT_DIRNAME,
@@ -29,6 +31,11 @@ def _is_sibling_slug(slug: str) -> bool:
         and "/" not in slug
         and "\\" not in slug
     )
+
+
+def _files_from(graph, consumer: str, producer: str) -> str:
+    return ", ".join(sorted({e["via"] for e in graph.dependencies.inputs(consumer)
+                             if within(e["from"], producer)}))
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -70,8 +77,12 @@ def link_task(
     task = parse_task(task_md)
 
     if remove:
+        parent = task_path.rsplit("/", 1)[0] + "/" if "/" in task_path else ""
         if depends_on not in task.depends_on:
-            print(f"Warning: {depends_on} is not in depends_on for {task_path}", file=sys.stderr)
+            files = _files_from(build_graph(plan_root, resolve_vars=False), task_path, parent + depends_on)
+            detail = (f"; {task_path} reads {files} from {depends_on}, a file edge that orders builds "
+                      "but never gates starting work") if files else ""
+            print(f"Warning: {depends_on} is not in depends_on for {task_path}{detail}", file=sys.stderr)
             return
         task.depends_on.remove(depends_on)
         try:
@@ -80,10 +91,11 @@ def link_task(
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
         write_task(task)
-        if any(e["to"] == task_path and e["from"].rsplit("/", 1)[-1] == depends_on
-               for e in graph.dependencies.edges):
-            print("Inferred dependency remains.")
         print(f"Removed dependency {depends_on} from {task_path}")
+        files = _files_from(graph, task_path, parent + depends_on)
+        if files:
+            print(f"File edge remains: {task_path} reads {files} from {depends_on}.")
+        print_edit_notes(graph)
     else:
         parent_dir = task_dir.parent
         sibling_dirs = {
@@ -102,12 +114,13 @@ def link_task(
 
         task.depends_on.append(depends_on)
         try:
-            preflight(plan_root, lambda root, tasks: setattr(tasks[task_path], "depends_on", task.depends_on))
+            graph = preflight(plan_root, lambda root, tasks: setattr(tasks[task_path], "depends_on", task.depends_on))
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
         write_task(task)
         print(f"Added dependency {depends_on} to {task_path}")
+        print_edit_notes(graph)
 
 
 def main(argv: list[str] | None = None) -> None:

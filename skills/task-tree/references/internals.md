@@ -49,16 +49,15 @@ Key properties:
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
 | `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Task Anatomy`. |
-| `compute_frontier(root, dependencies, step_states)` | Task objects selected by the shared dependency snapshot; command callers use `frontier_rows` to retain parent own-work details. The single-argument legacy helper handles logical-only trees. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 
 ### Effective dependency snapshot
 
-`_repro.build_graph()` parses once, resolves configuration once, infers file edges, and calls pure `_task_dependencies.compose()`. `Graph.dependencies` owns effective edges, evidence, active task paths, per-parent boundary graphs, validation, ordering, and readiness. `Graph.steps` contains active steps; `Graph.archived_steps` retains excluded declarations. `Step.dependency_origins` records each dependency's `script`, `declared`, `include` (with entry path), or `environment` origins.
+`_repro.build_graph()` parses once, resolves configuration once, infers file edges, and calls pure `_task_dependencies.compose()`. `Graph.dependencies` owns effective edges, evidence, active task paths, per-parent boundary graphs, `depends_on` validation, ordering, readiness (`logical` edges), and task inputs (`files` edges, archived producers included). Its `findings` hold dependency findings only; `Graph.findings` adds reproduction findings. `Graph.steps` contains active steps; `Graph.archived_steps` retains excluded declarations. `Step.dependency_origins` records each dependency's `script`, `declared`, `include` (with entry path), or `environment` origins.
 
 The serialized `dependencies` object carries `valid`, `complete`, `tasks`, `edges`, `boundaries`, `archived_tasks`, and `findings`. Boundary node IDs are `task:<path>` and `step:<name>`. Each edge retains an `evidence` list: inferred records carry actual owner paths, producer/consumer step names, and `via`; logical records carry the authored declaration. Graph semantics are defined in [the task-file contract](task-file-contract.md#effective-dependencies).
 
-`_task_snapshot.py` adapts filesystem/state operations: mutation preflight edits an in-memory tree, then requires a valid graph before writes; frontier state reads only the parent-owned steps and their producer closure. Parsing never imports reproduction or runs configured shell commands. Structural tree JSON marks `dependencies_complete: false` and leaves `effective_depends_on: null` until a resolved snapshot is available. Unreadable tasks remain parse-error nodes so a partial tree cannot advertise readiness. Hook relevance/reconciliation uses unresolved graph inspection; explicit dependency commands perform authoritative resolved validation.
+`_task_snapshot.py` adapts filesystem/state operations. Mutation preflight builds the current and the edited in-memory tree without resolving variables, refuses new `depends_on` errors, and prints new dependency warnings and tasks leaving the frontier. `step_states` runs one status pass per command over the steps it reports; `task_inputs` joins those states to file edges for `task read` and `frontier_rows`. Parsing never imports reproduction or runs configured shell commands. Structural tree JSON computes `effective_depends_on` from `depends_on` alone. Unreadable tasks remain parse-error nodes so a partial tree cannot advertise readiness. Hook relevance/reconciliation uses unresolved graph inspection.
 
 ### Validation suite: `_task_validate.py`
 
@@ -70,8 +69,6 @@ Validation rules live in their own module: one owner and one message source per 
 | `validate_frontmatter(task)` | Validate status enums, title non-empty, list types. Returns list of warning strings. |
 | `validate_revision_notes(task)` | Warn when a task past `implemented` still carries a `## Revision Notes` section. A note is legitimate on `not-started`, `in-progress`, and `revise` — a fresh note on `revise` is the prescribed planner-to-implementer handoff. |
 | `validate_review_notes(task)` | Warn when an `approved` task retains a `[BLOCKING]` item in `## Review Notes`. |
-| `validate_dependencies(task, siblings)` | Check that all `depends_on` entries reference existing sibling directory names. |
-| `detect_cycles(tasks)` | DFS-based cycle detection among sibling tasks. Returns cycle description strings. |
 | `validate_plan(plan_root)` | Walk the entire plan tree, run all validations at each level. Returns aggregated prefixed warnings. |
 
 ### Enum constants
@@ -93,6 +90,8 @@ The frontmatter parser handles:
 - Tilde (`~`) as null
 
 No YAML library — the parser is minimal and purpose-built.
+
+The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset)) reads every accepted text to the values `pyyaml` would, except for two resolvers it drops: a timestamp-shaped scalar (`1994-01-01`) becomes a date under `pyyaml` and a sexagesimal (`12:30`) an integer, where the subset keeps both as strings.
 
 ## Hook Architecture
 
@@ -251,11 +250,11 @@ The wrapper's `dashboard` subcommand routes straight to `plan_dashboard.py` via 
 
 **Opening files locally.** Loopback-bound, non-doc-mode server: the card-head `Open` button, body file links, attachment links, and the reading pane's `Open` button hand the file to the OS default application for its type; the header `VS Code` button opens the active task's file in the window already holding that worktree (`SUPERRA_EDITOR` overrides the `code` executable for a fork such as `cursor`). Modifier or middle click keeps the `vscode://` link. Any other bind — off-loopback `--host`, doc-mode, standalone export — leaves every control on `vscode://`. Known gap: an SSH port-forward is indistinguishable from a local request, so an open runs on the server's machine.
 
-**Task DAG navigator.** Tree and Graph share search, task/status filters, task/step selection, the reader, comments, and attachments. Tree prioritizes reading with a hideable sidebar; Graph prioritizes the map with hideable details. Board is removed. The DAG projects the dependency snapshot through independently folded task containers. Its hash state stores layout, task/status filters, expansion, and selection; legacy filters normalize to the full project map; worktree-local state retains viewport and reader preferences. It is rendered client-side from two read-only routes: `/api/repro/graph` (the `_repro.graph_to_dict` shape) and `/api/repro/status` (the `compute_status(...).to_dict()` shape, plus a per-step `log_tail` the dashboard adds so the node detail panel needs no third route). The client fetches both once; the standalone export embeds the same project-wide graph and state snapshot. Reading either route never creates `.superra-repro/` or its `.gitignore` entry — only `superra repro` does — and never needs pytask; without `tomllib` the status payload carries `unavailable` and every step reads `unknown`. A build is cached per worktree for two seconds under the tree's task-file and `config.yaml` mtimes, so the request pair the view opens with resolves `reproduction.vars` once; the window stays short because the environment those vars read is in no signature.
+**Task DAG navigator.** Tree and Graph share search, task/status filters, task/step selection, the reader, comments, and attachments. Tree prioritizes reading with a hideable sidebar; Graph prioritizes the map with hideable details. Board is removed. The DAG projects the dependency snapshot through independently folded task containers. Its hash state stores layout, task/status filters, expansion, and selection; legacy filters normalize to the full project map; worktree-local state retains viewport and reader preferences. It is rendered client-side from two read-only routes: `/api/repro/graph` (the `_repro.graph_to_dict` shape) and `/api/repro/status` (the `compute_status(...).to_dict()` shape without `findings`, plus a per-step `log_tail` the dashboard adds so the node detail panel needs no third route). Each fact travels once: the graph's `dependencies` carries only `tasks`, `archived_tasks`, and the `depends_on` edges as `logical`, and the client derives task-level grouping from `step_edges`; findings travel only in the graph payload. The client fetches both once; the standalone export embeds the same project-wide graph and state snapshot. Reading either route never creates `.superra-repro/` or its `.gitignore` entry — only `superra repro` does; without `tomllib` to read a legacy `pytask.lock` the status payload carries `unavailable` and every step reads `unknown`. A build is cached per worktree for two seconds under the tree's task-file and `config.yaml` mtimes, so the request pair the view opens with resolves `reproduction.vars` once; the window stays short because the environment those vars read is in no signature.
 
-Filter offers task statuses and a collapsible task checklist with **Select all**, **Deselect all**, partial-selection indicators, and **Clear filters**. Search finds tasks, steps, output files, and task text without changing filters. Selecting a task or step preserves navigation contents; switching layouts retains selection, filters, and the open document. **Project overview** clears filters, collapses groups, and fits the map. **Uses** and **Used by** retain connections to hidden tasks and group connecting files by step. Each visible endpoint pair has one arrow with all evidence. Step citations and shared URLs follow [Step references](task-file-contract.md#step-references).
+Filter offers task statuses and a collapsible task checklist with **Select all**, **Deselect all**, partial-selection indicators, and **Clear filters**. Search finds tasks, steps, output files, and task text without changing filters. Selecting a task or step preserves navigation contents; switching layouts retains selection, filters, and the open document. The map opens at 80% on the selected step or task, or fitted when the whole map fits at 80% or more; **Fit** and **Project overview** fit it on request, and overview also clears filters and collapses groups. `depends_on`-only arrows are dashed, and only step cycles and `depends_on` cycles are marked as cycles. A task whose declaration has an error is outlined with a link to its finding. **Uses** and **Used by** retain connections to hidden tasks and group connecting files by step. Each visible endpoint pair has one arrow with all evidence. Step citations and shared URLs follow [Step references](task-file-contract.md#step-references).
 
-The view refreshes on `repro-updated`, which the watcher emits for exactly two changes. A build rewrites `pytask.lock` at the project root, outside the watched plan root: the watcher loops over `awatch` sessions with that file in its set, and while the file does not yet exist the session also yields on its timeout, so the tick that notices a first build announces it and re-enters watching the lock. A `## Reproduction` edit moves the graph: each changed task is tested for the section before and after its reparse, so adding and removing one both count and an edit elsewhere costs the view nothing.
+The view refreshes on `repro-updated`, which the watcher emits for exactly two changes. A build rewrites `repro-lock.json` at the project root, outside the watched plan root: the watcher loops over `awatch` sessions with that file in its set, and while the file does not yet exist the session also yields on its timeout, so the tick that notices a first build announces it and re-enters watching the lock. A build replaces the lock by rename, so a change to it re-enters too, following the new file. A `## Reproduction` edit moves the graph: each changed task is tested for the section before and after its reparse, so adding and removing one both count and an edit elsewhere costs the view nothing.
 
 The server provides SSE hot-reload, auto-updating when the viewed worktree's task files change. Port is derived deterministically from the git common directory (range 8100–8999; the plan-root path is the no-git fallback), so all of a repo's worktrees share one server. That server resolves any worktree per request: the active worktree rides the browser URL as a canonical, URL-encoded `?wt=` selector (absent means the launch worktree), and the selector does in-page navigation, not a server-wide switch, so two tabs can view different worktrees on one port. `--port N` overrides. The static `generate` subcommand is deprecated — use live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 
@@ -295,13 +294,75 @@ Repo-access-gated by GitHub Actions artifact permissions, but not a hosted webpa
 
 **Attachment data path.** `_task_io.py` owns the structural rule: every task scan and task-path mutation treats `attachments/` as opaque and rejects symlinked task directories, `task.md` files, and task-path components before parsing or writing. Migrations consume its structural task-file iterator, not recursive globs. `_artifacts.py` owns task-scoped attachment discovery, containment, MIME/preview classification, watcher ownership, and standalone packing. Direct files beside `task.md` are neither listed nor readable through this API. Live clients list with `/api/artifacts?task=<path>` and read with `/api/artifact?task=<path>&path=attachments/<relative-path>`; `download=true` forces attachment disposition. Default ceilings are 512 returned files, 256 KiB of manifest metadata, and 4,096 visited directory entries per task, 2 MiB per live preview, 2 MiB per standalone file, and 20 MiB total raw standalone bytes. Manifests name truncation and export-omission reasons; exports include a commit-pinned repository URL when the caller supplies one.
 
+## Reproduction records
+
+Agent-facing summary: [task-file contract §Records](task-file-contract.md#records).
+
+### The lock
+
+The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived.
+
+Each step's entry is one line, keys sorted inside, steps in name order with a blank line between entries. Git merges whole lines, so an entry both branches changed always conflicts instead of line-merging into a mix no build produced; the blank lines let changes to neighbouring entries merge cleanly. A lock holding conflict markers reads as every entry on one side or identical on both, dropping the entries the sides disagree on so their steps read `missing`; any real build rewrites it without markers. A version `1` lock, one key per line, still reads, and any real build rewrites it in this layout. Lock history reads both.
+
+| Field | Binding |
+| --- | --- |
+| `version` | `2` |
+| `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
+| `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
+| `steps.<name>.built_on` | `platform` (OS and CPU architecture) |
+
+Freshness reads `spec`, `deps`, and `outs` only; `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
+
+Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry. Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes.
+
+### Acceptance records
+
+One file per step, `repro-acceptance/<step>.json`, so branches that accept different steps merge without conflict. Two branches that accept one step both rewrite its `id` line, so their records conflict, or line-merge into one whose `id` no longer seals it; either way the record is set aside with a warning.
+
+| Field | Binding |
+| --- | --- |
+| `id` | SHA-256 of the canonical JSON record excluding `id` |
+| `basis` | `reviewed`; the only accepted value |
+| `lock` | SHA-256 of the preceding successful lock entry's `deps` and `products`; `null` when the runner has never built the step |
+| `state` | Reviewed `deps` (the `<step>::spec` node included) and `products` hashes; `outputs` only when actual output fingerprints differ from `products`, as with a sidecar |
+| `boundary_inputs` | Saved inputs at acceptance: logical path, producer, and actual digest |
+| `reason`, `reviews` | Required overall rationale and optional per-node notes |
+
+A record holds no resolved path, user or host name, or time; git records who committed it and when. Two checkouts accepting the same state write identical bytes. A record whose `id` does not match is set aside like one that does not parse.
+
+A reviewed record establishes or replaces the current baseline, including never-built producers and changed outputs. It binds the preceding successful lock if any, the reviewed input/product/output state, and the bytes of every input from another step's outputs, including a producer accepted in the same call. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. Invalid graphs, missing inputs/products, and unsuccessful executions cannot be covered.
+
+The legacy `repro-acceptance.json` ledger (`version: 1`, a `steps` mapping, records with `baseline`, `evidence`, `upstream`, `recorded_at`, and `actor`) is read with its `baseline.lock` bound as above.
+
+### Successful receipts and saved-input baselines
+
+Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and saved-input bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Raw source snapshots remain local and never enter a committed record or status payload; absent historical source text and execution logs remain unavailable.
+
+An absent upstream sidecar does not block an existing artifact: the dependency retains an explicit `saved-input:<digest>` baseline until the consumer executes again, and newly available metadata alone does not invalidate unchanged bytes. Producer products still require their declared sidecars. Reviewed acceptance checks actual output and saved-input digests; unchanged sidecar text cannot establish equality.
+
+### Build guards
+
+Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance rechecks declarations and hashes immediately before writing.
+
+### Explain sources and history
+
+`explain` diffs a git-tracked dependency from its blob history, an untracked one from a local snapshot, and otherwise names no known source. Each side of a row lists the states that hold its hash: a lock revision (introducing commit, author, and date), a git revision of a tracked file or `uncommitted`, the local receipt or snapshot, the acceptance, and a Dropbox conflicted copy beside the file; text prints the first.
+
+Lock and tracked-file histories cover the same refs — local and remote-tracking branches and HEAD — without fetching: the newest 200 lock revisions and the newest 50 revisions of each tracked file, each on HEAD's history and again off it. One `git log` pass per call reads them, cached until HEAD or a branch tip moves; one call reads at most 64 MiB of historical versions, none over 16 MiB. Only changed nodes are resolved; nothing outside the checkout is hashed.
+
+A row whose bytes came from a build (an output, or a produced input) reads the builder's `built_on` in the lock at the revision the row names, or in the working lock, and adds `env: same as lock builder` or `env: differs — <field>` (platform, or an `env_deps` path); with no `built_on`, nothing.
+
+### Julia include closure
+
+A `.jl` dep expands through `include` arguments of these forms: a string literal; `joinpath(@__DIR__, "…")` or `joinpath` of string literals; DrWatson's `projectdir("…")`, `srcdir("…")`, and `scriptsdir("…")`, also as the head of a `joinpath`; and `joinpath(<variable>, "…")` — a variable root resolves against the project root, then against the including file, keeping whichever is on disk and warning when both exist. Any other argument is reported and left to be declared by hand.
+
 ## Reviewed reuse execution
 
-[_repro_acceptance.py](../scripts/_repro_acceptance.py) owns atomic acceptance records, verified successful receipts, exact-state preview tokens, and dependency impact. Current reviewed baselines can precede the first runner execution and bind saved-input bytes outside scope. Status applies acceptance before propagating selected upstream uncertainty; legacy records retain full-chain validation. Public step JSON exposes nullable `acceptance` details without adding a status enum.
+[_repro_acceptance.py](../scripts/_repro_acceptance.py) owns per-step atomic acceptance records and their legacy-ledger conversion, verified successful receipts, and dependency impact. Current reviewed baselines can precede the first runner execution and bind saved-input bytes outside scope. Status applies acceptance before propagating selected upstream uncertainty; legacy records retain full-chain validation. Public step JSON exposes nullable `acceptance` details without adding a status enum.
 
-[_repro_hooks.py](../scripts/_repro_hooks.py) is loaded only by the pinned pytask 0.6 bridge. Its setup hook checks failure/dry-run cascade markers, force scope, declarations, and current acceptance state before raising `SkippedUnchanged`. That outcome preserves successful lock entries and allows eligible descendants to run. Ordinary skip markers and no-op task bodies have different engine semantics and are not used for reuse. Serial and thread workers share setup and teardown hooks.
+[repro_run.py](../scripts/repro_run.py) runs the build itself. Steps are scheduled in dependency order over the selection's step edges, on a thread pool under `-j`; a failed step skips its descendants. Each step is checked with `compute_status` over the whole build selection, counting steps completed earlier in the run: `fresh` (including a valid acceptance) skips and keeps its lock entry; anything else, or a forced step, runs after its inputs are confirmed on disk and its acceptance is superseded. A dry run decides the same way and writes nothing.
 
-The teardown wrapper captures a successful receipt only after engine product verification; dependency edits during execution fail the step. Run records distinguish interrupted/pending work from success. A project-local process lock coordinates builds, apply, and revoke on POSIX systems; records use atomic replacement. Preview tokens and immediate hash/declaration rechecks detect edits from writers outside that lock. Status, impact, and explain remain engine-free.
+A successful step's receipt is captured only after its declared outs are verified; dependency edits during execution fail the step. The step's lock entry is then written atomically under `RECORD_LOCK`, the in-process lock that also serializes acceptance-ledger rewrites from worker threads. Run records distinguish interrupted/pending work from success. A project-local process lock coordinates builds, accept, and revoke on POSIX systems; records use atomic replacement. Immediate hash and declaration rechecks detect edits from writers outside that lock. Status, impact, and explain remain engine-free.
 
 ## Script Inventory
 
@@ -315,10 +376,9 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `_task_dependencies.py` | Pure hierarchical dependency composition, provenance, cycles, task ordering and readiness |
 | `_repro_acceptance.py` | Exact-state acceptance, successful receipts, impact, and mutation coordination |
 | `_repro_scope.py` | Saved-input provenance, byte-level boundary evidence, and selected execution-contract guards |
-| `_repro_hooks.py` | Optional pytask setup/teardown integration for reuse and verified receipts |
 | `_task_snapshot.py` | Mutation preflight and parent-step freshness adapters |
 | `_repro.py` | Reproduction graph model — bounded YAML subset parser, `## Reproduction` section and `config.yaml` loading, variable resolution, Julia include closures, edge inference, validation findings |
-| `_repro_state.py` | Runner state — content-hash cache, `pytask.lock` reading, step-status classification, build-target selection, step-DAG rendering |
+| `_repro_state.py` | Runner state — content-hash cache, `repro-lock.json` reading and writing (legacy `pytask.lock` converted), step-status classification, build-target selection, step-DAG rendering |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
 | `_worktree_discovery.py` | Worktree discovery — enumerate git worktrees, identify those with a task root |
 
@@ -336,7 +396,7 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |
-| `repro_run.py` | `superra repro` — pytask build bridge and stdlib status/explain/impact/accept/revoke/dag commands |
+| `repro_run.py` | `superra repro` — the build loop and the status/explain/impact/accept/revoke/dag commands |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
 | `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |
@@ -357,5 +417,6 @@ The teardown wrapper captures a successful receipt only after engine product ver
 | `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
-| `test_repro_runner.py` | Runner — hash cache, status classification, target selection, and, when pytask is installed, build, rerun, and lock behavior |
+| `test_repro_runner.py` | Runner — hash cache, status classification, target selection, build, rerun, and lock behavior |
+| `test_repro_engine.py` | Build loop and `repro-lock.json` — scheduling, interruption, lock format and merges, legacy locks, freshness fixes |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

@@ -1,9 +1,7 @@
 # Adopting Reproduction in a Project
 
-**Start bounded.** One producer and one meaningful `kind: check` in one task, with a named saved-input boundary. Keep upstream reconstruction outside that first registration unless the researcher asks for it.
+**Start with one task.** Register one producer and one meaningful `kind: check` step, reading named saved or external inputs. Leave the upstream producers unregistered in that first pass unless the researcher asks for them.
 
-**Discover paths without starting the analysis environment.** Resolution runs on every command, so a resolver that boots the language runtime or reloads a project makes `status` cost what a build costs. Measure unchanged `status` and `build` wall time after the first registration, separating resolver, graph, hashing, and execution time when diagnosing latency. Subsecond warm status is a useful target for a small tree, not a gate.
-
-**Check that declared paths agree with the producer's routing.** A script that picks its own input location — a sandbox copy when present, the shared root otherwise — can read a file the declaration never names. Verify agreement against the producer's actual reads and writes after a branch change and after an input's availability changes.
+**Keep path discovery out of the analysis environment.** Every `superra` command evaluates the `shell:` variables in `superRA/config.yaml`. A variable that boots the language runtime or loads the project makes every `status` as slow as a build. After the first registration, time `status` and `build` with nothing changed; a warm `status` under a second is the target for a small tree, not a gate.
 
 Then follow [designing-the-graph.md](designing-the-graph.md) for the rest of the tree.

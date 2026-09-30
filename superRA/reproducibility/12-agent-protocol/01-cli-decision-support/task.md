@@ -34,16 +34,16 @@ Make `superra repro` cheap to use correctly: an agent facing a stale step sees w
 
 ### Legacy deleted
 
-`--tier`, `repro tier`, `--force-all`, the `tier:` section key, bare step-name targets, and acceptance records without `basis` are gone with their tests. Two behaviors changed for callers:
+`--force-all`, bare step-name targets, and acceptance records without `basis` are gone with their tests. `--tier`, `repro tier`, and the `tier:` key were deleted here too; [09-upgrade-and-records](../../14-review-revisions/09-upgrade-and-records/task.md) restored an error naming task targets for the flags and a warning for the key. Two behaviors changed for callers:
 
 - A bare step name is now rejected with its qualified form (`'build-a' is a step name, not a target; select it as '01-a#build-a'`) instead of resolving when unambiguous.
 - `basis: reviewed` and a list `boundary_inputs` are required ledger fields, so `read_ledger` rejects a pre-`basis` record rather than applying the old successful-output-equality rule. That made the whole legacy branch in `apply_to_status` dead, and it is removed.
 
-### TreasuryGIV `reproduction-graph` needs 21 deleted lines
+### TreasuryGIV `reproduction-graph` carries 21 retired lines
 
-All 21 `## Reproduction` sections on that branch carry a `tier:` key. Each now raises `[ERROR] ## Reproduction: unknown key 'tier'; expected one of ['steps']`, which fails `task check` and makes `repro build` exit 1 before selecting anything.
+All 21 `## Reproduction` sections on that branch carry a `tier:` key. Each now draws a `[WARNING]` that the key is retired and ignored; between this task and [09-upgrade-and-records](../../14-review-revisions/09-upgrade-and-records/task.md) it was an `[ERROR]` that made `repro build` exit 1.
 
-The fix is deleting the `tier:` line from each section — `git grep -l '^tier:' -- 'superRA/**/task.md' | xargs sed -i '' '/^tier: /d'`. Nothing else breaks: `tier` never entered the step spec hash ([spec_hashes](../../../../skills/task-tree/scripts/_repro_state.py#L320) covers `cmd`/`kind`/`params`/`deps`/`outs`/`sidecars`), so the committed `pytask.lock` and every step's freshness survive the edit. The branch commits no `repro-acceptance.json`, so no acceptance record needs migrating.
+The cleanup is deleting the `tier:` line from each section — `git grep -l '^tier:' -- 'superRA/**/task.md' | xargs sed -i '' '/^tier: /d'`. Nothing else breaks: `tier` never entered the step spec hash ([spec_hashes](../../../../skills/task-tree/scripts/_repro_state.py#L320) covers `cmd`/`kind`/`params`/`deps`/`outs`/`sidecars`), so the committed `pytask.lock` and every step's freshness survive the edit. The branch commits no `repro-acceptance.json`, so no acceptance record needs migrating.
 
 ### Validation
 

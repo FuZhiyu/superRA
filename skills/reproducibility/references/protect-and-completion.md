@@ -1,28 +1,23 @@
-# Protect and Completion
-
-## Reproduction choices at Protect
-
-Fold three reproduction decisions into the protection proposal the researcher answers (`skills/superintegrate/references/protect.md` step 3):
-
-- **Completion targets.** Name the tasks owning kept-result producers and the selected protection checks, including check-only tasks.
-- **A `kind: check` step for each drift test the researcher selects.** A file-consumer edge alone does not select a protection check.
-- **The boundary.** Name the inputs the project receives rather than rebuilds, and get the researcher's agreement that they are not reproducible here.
-
-Record all three in the `integrate(protect)` commit body.
+# Completion and Protect
 
 ## The completion gate
 
-Run at the IMPLEMENT phase exit, once every task is approved:
+Once every task is approved, run the gate over every active step:
 
-```bash
-superra repro build <deliverable-task>... '<check-task>#<check-step>'... --upstream
-superra repro status <deliverable-task>... '<check-task>#<check-step>'... --upstream
-```
+1. `superra repro status .`
+2. Resolve each step that is not `fresh` by [the stale rule](rerun-or-accept.md), building by name only the steps the rule says to run.
+3. `superra repro status .` again.
 
-Target the final deliverable tasks and the selected protection checks — the Protect completion targets once recorded; `--upstream` adds their producer chains. The gate passes when the build completes and every reported step is `fresh`; an empty selection is no evidence for a result. Valid reviewed acceptance satisfies this routine gate; requested fresh execution follows [the acceptance protocol](rerun-or-accept.md#accept). Claims outside these targets require their own [scoped verification](../SKILL.md#the-loop).
+The gate passes when every step is `fresh`, by execution or reviewed acceptance, except the steps the stale rule left stale and reported to the researcher. When the researcher asks for fresh execution, build the named targets with `--force`.
+
+**No registered steps:** `status .` reports that it selects no steps. An empty selection is no evidence for a result, so the gate passes only when no `## Results` rests on retained code, as in a prose, slide, or pen-and-paper tree. Otherwise register the producers ([designing-the-graph.md](designing-the-graph.md#what-earns-a-step)) and run the gate.
 
 A failure blocks the completion menu:
 
-- **A step failed** — inspect the log from `superra repro explain '<task>#<step>'` to distinguish producer, environment, and declaration failures.
-- **The build succeeded and status is still dirty** — [diagnosing.md](diagnosing.md).
-- **A kept result has no producer** — register it or identify its agreed external-input boundary.
+- **A step failed:** read the log its status reason names to tell producer, environment, and declaration failures apart.
+- **The build succeeded and status is still not `fresh`:** [diagnosing.md](diagnosing.md).
+- **A result has no producer:** register one, or agree with the researcher that its input is external.
+
+## Reproduction choices at Protect
+
+Fold one reproduction decision into the protection proposal the researcher answers: which inputs are external.

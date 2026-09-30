@@ -183,6 +183,7 @@ def test_skill_load_manifest_tables_match_contract():
         "theory-modeling",
         "academic-writing",
         "slide-design",
+        "reproducibility",
     }
 
 

@@ -1,6 +1,6 @@
 """`repro explain` provenance: the two-clone staleness case from the 2026-09-23 report.
 
-Clone A is the coauthor who builds and commits `pytask.lock`; clone B shares
+Clone A is the coauthor who builds and commits `repro-lock.json`; clone B shares
 `output/` through a simulated Dropbox that lags. Each stale step in B has a
 different true cause, and `explain` must name it with a runnable next command.
 """
@@ -15,7 +15,7 @@ import pytest
 
 import repro_run
 from _repro_builds import platform_name
-from test_repro_runner import CHAIN, CONFIG, Project, needs_pytask, project  # noqa: F401
+from test_repro_runner import CHAIN, CONFIG, Project, project  # noqa: F401
 
 
 def _task(title, steps):
@@ -95,7 +95,7 @@ def clones(tmp_path):
     git(a.root, "add", "-A")
     git(a.root, "commit", "-qm", "code")
     assert a.run("build", ".") == 0
-    git(a.root, "add", "pytask.lock")
+    git(a.root, "add", "repro-lock.json")
     git(a.root, "commit", "-qm", "first build")
     first = head(a.root)
 
@@ -118,16 +118,15 @@ def explain(project, capsys, *argv):
     return out
 
 
-@needs_pytask
 def test_explain_names_each_cause_across_two_clones(clones, capsys):
     a, b, first = clones
 
-    # A check passed only in the other clone: non-fresh, with the lock revision named; a status reason.
-    reason = f"passed at these inputs in lock {first}; not run here"
-    assert b.status(".").entry("check-paper").status == "missing"
+    # A check passed only in the other clone: fresh on the lock's word, naming the revision and that it did not run here.
+    reason = f"passed at these inputs in lock {first} on {platform_name()}; not run here"
+    assert b.status(".").entry("check-paper").status == "fresh"
     assert b.status(".").entry("check-paper").reason == reason
     out = explain(b, capsys, "02-paper#check-paper")
-    assert f"check-paper  [missing]  {reason}" in out
+    assert f"check-paper  [fresh]  {reason}" in out
     assert "input-changed" not in out and "other-build" not in out
 
     # Coauthor: rebuild est, edit a docstring, build panel on a merged side branch, rebuild robust.
@@ -162,7 +161,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     assert f"next: git show --stat {first}" in out
     body = out.split("searched:")[0]
     assert "synced" not in body and "branch" not in body
-    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance.json; pytask.lock at 5 revision(s) on local and remote-tracking branches and HEAD" in out
+    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance/; the lock at 4 revision(s) on local and remote-tracking branches and HEAD" in out
 
     # The consumer's dependency is an input; its output and the check's input follow the same roles.
     out = explain(b, capsys, "02-paper")
@@ -174,7 +173,8 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     # A docstring edit to a tracked dependency.
     out = explain(b, capsys, "figure")  # a unique bare step name
     code_commit = git(b.root, "log", "--format=%h", "--reverse").split()[0]
-    assert f"recorded git {code_commit}; current git {docstring}; 1 file changed, 1 insertion(+), 1 deletion(-)" in out
+    assert (f"recorded git {code_commit} (earlier commit, 6 behind HEAD); current git {docstring} (HEAD's version); "
+            "1 file changed, 1 insertion(+), 1 deletion(-)") in out
     assert "-Shared colors for every figure." in out and "+Shared colours for every figure." in out
     assert f"next: git diff {code_commit} {docstring} -- Code/style.py" in out
     assert "git history of Code/style.py (2 revision(s))" in out
@@ -230,7 +230,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     # An uncommitted edit to a tracked dependency.
     b.write("Code/style.py", STYLE + "# local\n")
     out = explain(b, capsys, "03-figure#figure")
-    assert f"recorded git {code_commit}; current uncommitted" in out
+    assert f"recorded git {code_commit} (earlier commit, 6 behind HEAD); current uncommitted" in out
     assert f"next: git diff {code_commit} -- Code/style.py" in out
 
     # Review finding: producer rebuilt and synced, consumer not rebuilt, in both clones.
@@ -250,7 +250,6 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
         assert "uncommitted" not in dep and "snapshot" not in dep
 
 
-@needs_pytask
 def test_tracked_output_edits_are_output_causes(clones, capsys):
     a, b, first = clones
     a.write("superRA/07-table/task.md", _task("07-table", _step("table", "sh Code/table.sh", ["Code/table.sh"], ["tables/t.txt"])))
@@ -264,12 +263,11 @@ def test_tracked_output_edits_are_output_causes(clones, capsys):
     assert "dependency" not in out.split("unknown-output", 1)[1]
     git(a.root, "commit", "-qam", "commit the edit")
     out = explain(a, capsys, "07-table#table")
-    assert "other-build" in out and f"current git {head(a.root)}" in out
+    assert "other-build" in out and f"current git {head(a.root)} (HEAD's version)" in out
     assert f"next: git show --stat {head(a.root)}" in out  # the revision the row prints
     assert "input-changed" not in out
 
 
-@needs_pytask
 def test_a_lock_off_heads_history_names_its_branches(clones, capsys):
     a, b, _ = clones
     git(a.root, "checkout", "-qb", "wip")
@@ -290,22 +288,20 @@ def test_a_lock_off_heads_history_names_its_branches(clones, capsys):
     assert "on local and remote-tracking branches and HEAD" in out
 
 
-@needs_pytask
 def test_status_reuses_the_lock_commit_without_git(clones, monkeypatch):
     import _repro_provenance
 
     _, b, first = clones
     b.paths.state_dir.mkdir()  # caches persist only into an existing state directory
-    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first}; not run here")
+    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first} on {platform_name()}; not run here")
 
     def no_git(*args, **kwargs):
         raise AssertionError("status spawned git")
 
     monkeypatch.setattr(_repro_provenance.Git, "raw", no_git)
-    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first}; not run here")
+    assert b.status(".").entry("check-paper").reason.endswith(f"lock {first} on {platform_name()}; not run here")
 
 
-@needs_pytask
 def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     _, b, _ = clones
     assert b.status("est").entry("est") is not None
@@ -319,7 +315,6 @@ def test_unique_bare_names_select_their_step_for_every_command(clones, capsys):
     assert b.status("est").entry("est").step.task_path == "01-est"
 
 
-@needs_pytask
 def test_lock_index_is_cached_per_revision(clones, capsys):
     _, b, first = clones
     explain(b, capsys, "01-est")
@@ -327,17 +322,15 @@ def test_lock_index_is_cached_per_revision(clones, capsys):
     assert (b.paths.state_dir / "lock-index" / f"{full}.json").is_file()
 
 
-@needs_pytask
 def test_check_stamp_lost_outside_git_names_the_working_lock(project):
     assert project.run("build", *CHAIN) == 0
     shutil.rmtree(project.paths.stamps_dir)
     check = project.status(*CHAIN).entry("check-b")
-    assert (check.status, check.reason) == ("missing", f"passed at these inputs in the working lock on {platform_name()}; not run here")
+    assert (check.status, check.reason) == ("fresh", f"passed at these inputs in the working lock on {platform_name()}; not run here")
     project.write("output/b.txt", "changed\n")
     assert project.status(*CHAIN).entry("check-b").reason == "output .superra-repro/stamps/check-b.stamp is missing"
 
 
-@needs_pytask
 def test_upstream_is_a_status_and_a_definition_change_an_input_without_git(project, capsys):
     assert project.run("build", *CHAIN) == 0
     project.write("superRA/01-a/task.md", project.read("superRA/01-a/task.md").replace("sh Code/a.sh", "sh Code/a.sh && true"))
@@ -348,3 +341,123 @@ def test_upstream_is_a_status_and_a_definition_change_an_input_without_git(proje
     assert "input-changed" in out and "spec" in out
     assert "next: git diff -- superRA/01-a/task.md superRA/config.yaml" in out
     assert "no git history (not a git checkout)" in out
+
+
+# ---------------------------------------------------------------------------
+# 14-review-revisions/05: the facts the skill branches on, at bounded cost
+# ---------------------------------------------------------------------------
+
+def _tracked_table(a):
+    a.write("superRA/07-table/task.md", _task("07-table", _step("table", "sh Code/table.sh", ["Code/table.sh"], ["tables/t.txt"])))
+    a.write("Code/table.sh", "mkdir -p tables\necho t1 > tables/t.txt\n")
+    assert a.run("build", "07-table") == 0
+    git(a.root, "add", "-A")
+    git(a.root, "commit", "-qm", "tracked table")
+
+
+def test_a_tracked_output_from_another_branch_states_its_relation_to_head(clones, capsys):
+    a, b, _ = clones
+    _tracked_table(a)
+    git(a.root, "checkout", "-qb", "wip")
+    a.write("Code/table.sh", "mkdir -p tables\necho t2 > tables/t.txt\n")
+    assert a.run("build", "07-table") == 0
+    git(a.root, "commit", "-qam", "table on wip")
+    wip = head(a.root)
+    git(a.root, "checkout", "-q", "main")
+    git(a.root, "checkout", "wip", "--", "tables/t.txt")  # the wip bytes, on main
+    git(a.root, "reset", "-q")
+    out = explain(a, capsys, "07-table#table")
+    assert "other-build" in out
+    assert f"current git {wip} (not in HEAD's history; on wip)" in out
+
+    # The same bytes reached only through a remote-tracking branch.
+    git(b.root, "pull", "-q", "--no-rebase", "origin", "main")
+    git(b.root, "fetch", "-q")
+    git(b.root, "checkout", "origin/wip", "--", "tables/t.txt")
+    git(b.root, "reset", "-q")
+    out = explain(b, capsys, "07-table#table")
+    assert f"current git {wip} (not in HEAD's history; on origin/wip)" in out
+
+    # A tracked input edited since the recorded build: the current side is HEAD's version.
+    a.write("Code/table.sh", "mkdir -p tables\necho t3 > tables/t.txt\n")
+    git(a.root, "commit", "-qam", "edit table.sh")
+    out = explain(a, capsys, "07-table#table")
+    assert f"current git {head(a.root)} (HEAD's version)" in out
+
+
+def test_explain_reports_the_graph_errors_build_refuses(project, capsys):
+    project.write("superRA/04-loop/task.md", _task("04-loop", _step("p", "sh Code/p.sh", ["${OUT}/q.txt"], ["${OUT}/p.txt"])
+                                                + _step("q", "sh Code/q.sh", ["${OUT}/p.txt"], ["${OUT}/q.txt"])))
+    capsys.readouterr()
+    assert project.run("explain", "04-loop") == 1
+    out = capsys.readouterr().out
+    assert "step cycle: " in out
+    assert "graph error(s); run `superra task check`." in out
+    assert project.run("explain", "04-loop", "--json") == 1
+    data = json.loads(capsys.readouterr().out)
+    assert any("step cycle" in f["message"] for f in data["errors"])
+
+
+def test_one_row_per_changed_file_read_by_several_steps(clones, capsys):
+    a, _, _ = clones
+    for task in ("04-panel", "05-robust", "06-noise"):
+        path = f"superRA/{task}/task.md"
+        a.write(path, a.read(path).replace("    deps:\n", '    deps:\n      - "Code/style.py"\n'))
+    assert a.run("build", ".") == 0
+    git(a.root, "commit", "-qam", "style read by four steps")
+    a.write("Code/style.py", STYLE + "# edit\n")
+    git(a.root, "commit", "-qam", "style edit")
+    out = explain(a, capsys, ".")
+    rows = [line for line in out.splitlines() if "Code/style.py" in line and "→" in line]
+    assert len(rows) == 1, out
+    assert "steps: figure, noise, panel, robust" in out
+    assert out.count("next: git diff") == 1
+    assert "-Shared colors" not in out  # a task view leaves diffs to --diff
+    footer = out.splitlines()[-1]
+    assert footer.startswith("searched: ") and len(footer) < 300
+
+
+def test_explain_walks_git_history_once_per_call_and_caches_it(clones, capsys, monkeypatch):
+    import _repro_provenance
+
+    a, _, _ = clones
+    a.paths.state_dir.mkdir(exist_ok=True)
+    for name in ("panel", "robust", "noise"):
+        a.write(f"Code/{name}.sh", emit(name, "v3"))
+    git(a.root, "commit", "-qam", "three tracked edits")
+    calls = []
+    raw = _repro_provenance.Git.raw
+
+    def counting(self, *args, **kwargs):
+        calls.append(args[0])
+        return raw(self, *args, **kwargs)
+
+    monkeypatch.setattr(_repro_provenance.Git, "raw", counting)
+    out = explain(a, capsys, ".")
+    assert out.count("dependency Code/") == 3
+    assert calls.count("log") == 2  # HEAD's history, then the branches outside it: one pass for three files
+    calls.clear()
+    assert explain(a, capsys, ".") == out
+    assert calls.count("log") == 0  # same HEAD and refs: the history comes from the cache
+
+
+def test_one_blob_budget_covers_every_file_in_a_call(clones, capsys, monkeypatch):
+    import _repro_provenance
+
+    a, _, _ = clones
+    for name in ("panel", "robust", "noise"):
+        a.write(f"Code/{name}.sh", emit(name, "v3"))
+    git(a.root, "commit", "-qam", "three tracked edits")
+    budget = len(emit("panel", "v1")) + 1  # room for one historical version, not three
+    monkeypatch.setattr(_repro_provenance, "BLOB_TOTAL_BYTES", budget)
+    read = []
+    blobs = _repro_provenance.Git.blobs
+
+    def counting(self, specs):
+        result = blobs(self, specs)
+        read.extend(len(raw) for spec, raw in result.items() if ":" not in spec)  # historical versions, not locks
+        return result
+
+    monkeypatch.setattr(_repro_provenance.Git, "blobs", counting)
+    explain(a, capsys, ".")
+    assert 0 < sum(read) <= budget

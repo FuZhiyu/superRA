@@ -96,19 +96,19 @@ Commit figures to `attachments/` beside the task's `task.md` and embed relative 
 
 ## Effective Dependencies
 
-**Author only logical prerequisites in `depends_on`.** The effective graph combines them with consumed-output edges inferred from reproduction steps, retaining both reasons when they coincide. Tasks without steps remain graph nodes. Removing a logical declaration leaves any inferred dependency intact.
+**Author only logical prerequisites in `depends_on`.** The effective graph combines them with the consumed-output edges inferred from reproduction steps. Removing a logical declaration leaves any inferred edge intact.
 
-**Validate at every task boundary.** Nodes are direct child task groups and the containing task's individual steps. Edges inside one collapsed child stay internal; crossing edges order its sibling groups. Reject cycles in the step graph or any boundary graph, including cycles created only by grouping or combining logical and inferred edges. A parent's setup step → child task → parent's report step remains valid; adding a child preserves existing step identities and hashes.
+**Validate at every task boundary.** Nodes are direct child task groups and the containing task's own steps; edges inside one collapsed child stay internal. `depends_on` cycles and step cycles are errors. A loop that appears only when file edges are grouped by task is not an error; a `depends_on` running against the file flow is a warning naming the file. A parent's setup step → child task → parent's report step is valid; adding a child preserves existing step identities and hashes.
 
-**Use effective prerequisites for development readiness.** Active prerequisite groups at `implemented`, `approved`, or `revise` satisfy the gate; `not-started`, `in-progress`, or `postponed` block. A group's prerequisites apply to its descendants. Internal parent/child prerequisites use actual producer-step freshness, avoiding a wait on the containing parent's child-status rollup. The frontier includes actionable parent-owned steps as `kind: own-work`, with their owner path and step names; this is derived context, not another persisted task status.
+**Only `depends_on` gates readiness.** Active prerequisites at `implemented`, `approved`, or `revise` satisfy the gate; `not-started`, `in-progress`, or `postponed` block. A group's prerequisites apply to its descendants. File edges never gate: `task frontier` and `task read` report each input that is not fresh — file, producer, state, and `superra repro build <task> --upstream`. A missing input fails only the build that reads it. Stale steps are listed by `repro status`, not the frontier.
 
-**Exclude archived tasks and their subtrees from the active graph.** Keep declarations for direct/transitive downstream warnings. Their consumed artifacts become boundary inputs: available files remain usable, missing files still block execution. Archival itself does not create a blocking dependency or cycle.
+**Exclude archived tasks and their subtrees from the active graph.** Their declarations stay for downstream warnings. Their consumed artifacts become saved inputs: available files remain usable, and a missing one blocks the consumer's build, which names its archived producer. Archival creates no blocking dependency or cycle.
 
-**Reject incomplete or cyclic graphs before dispatch or build selection.** Task/step target selection cannot bypass global validation. Structural `task tree` remains available without resolving shell configuration; `task read`, frontier, DAG, dependency checks, and mutation preflight resolve one shared snapshot. Invalid declarations stay readable with their findings.
+**Reproduction errors block only the builds they touch, never planning.** `repro build` and `accept` refuse, and `status` exits non-zero, on an error in a selected step's owning task, a step cycle through a selected step, project-wide configuration, or a failed declaration of a step producing a file a selected step reads. A broken variable touches only the steps that use it. A section that fails to parse registers nothing; a build warns that an external input it reads may be that section's output. Frontier, read, and tree edits proceed with inputs unknown. A `depends_on` error or unparseable task makes `task frontier` fail and never blocks a build; mutation preflight refuses only an edit that adds one. Invalid declarations stay readable with their findings.
 
 ## Reproduction Section
 
-The build unit is a **step**. File-derived edges also contribute task prerequisites under [Effective Dependencies](#effective-dependencies); `depends_on` retains its sibling-slug syntax. Logical prerequisites govern task development and do not add file inputs or pull unrelated scripts into a reproduction build.
+The build unit is a **step**; its file edges order builds. `depends_on` adds no file inputs and pulls no unrelated scripts into a build.
 
 **The section body is exactly one fenced `yaml` block.** Prose outside the fence is a contract violation — a note about a step goes in `## Details` or in a YAML comment inside the block.
 
@@ -133,7 +133,7 @@ Cite a step with `[build-panel](../data/task.md#step-build-panel)`, relative to 
 
 Keep the step name stable when reordering or editing its command. Task moves rewrite relative links; a step rename also requires updating its citations. Citations do not create execution dependencies.
 
-The dashboard reveals and selects the step, and rendered step rows expose matching anchors. A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selector intact. Generic Markdown viewers can open the task file; exact step jumping requires a renderer that emits the anchor.
+A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selector intact.
 
 ### Top-level keys
 
@@ -151,7 +151,7 @@ The dashboard reveals and selects the step, and rendered step rows expose matchi
 | `deps` | Files or directories the step reads. With `cmd`, list the script here. |
 | `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge. |
 | `kind` | `build` (default) or `check`. A `check` step declares no `outs` and reruns when its deps change. |
-| `params` | Flat mapping hashed into the step's state, so changing a value reruns the step. |
+| `params` | Flat mapping hashed into the step's definition. |
 
 Per-out sidecar tracking is a nested block item:
 
@@ -162,7 +162,7 @@ outs:
     sidecar: "${OUT}/very_large.arrow.sha256"
 ```
 
-Within the selected producer chain, the runner hashes the sidecar instead of the out; a hand-edit of the out goes unnoticed until the sidecar is rewritten. Saved-input boundaries additionally track actual bytes. An absent upstream sidecar does not block an existing artifact: the dependency retains an explicit `saved-input:<digest>` baseline until the consumer executes again; newly available metadata alone does not invalidate unchanged bytes. Producer products still require their declared sidecars. Reviewed acceptance checks actual output and saved-input digests; arbitrary unchanged sidecar text cannot establish equality.
+Within the selected producer chain, the runner hashes the sidecar instead of the out, so a hand-edit of the out goes unnoticed until the sidecar is rewritten. A saved input and an accepted output are hashed by their actual bytes.
 
 ### Project config
 
@@ -178,29 +178,35 @@ reproduction:
       env: PROJECT_SCRATCH
   runners:
     julia: julia --project=. {script}
-  env_probe: "python -c 'import numpy; numpy.show_config()'"
 ```
 
 | Key | Value |
 |---|---|
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
-| `env_deps` | Optional paths added to every step's deps; changing one invalidates every step. Existing explicit configurations retain this behavior. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
-| `env_probe` | Optional shell command run once per build from the project root; its stdout is committed in `repro-builds.json`, so it must print no paths or user-identifying text. It reports what the project's own environment resolves to (a BLAS backend, a package version) and never invalidates a step. |
+| `env_deps` | Optional paths added to every step's deps. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
 
-`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path. Root changes invalidate through changed content or resolved command text; relocation to equal bytes alone preserves freshness.
+`${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path.
+
+### What invalidates a step
+
+- **Changed content, never a timestamp.** A step reruns when the SHA-256 of a dep, an out, or its definition — `cmd` or the expanded runner, `params`, the resolved command text — differs from its lock entry. `touch` and an mtime-only change, such as a Dropbox re-sync, rehash without invalidating; restoring a file's original bytes restores freshness.
+- **A changed root** invalidates through changed content or resolved command text; relocation to identical bytes preserves freshness.
+- **An external input** is hashed like any dep: a redelivered extract restales its consumers.
+- **An `env_deps` file** that changes invalidates every step.
+- **A Julia `.jl` dep** expands to every file it reaches through a statically resolvable `include`, so a helper edit invalidates its consumers without being listed. An `include` that does not resolve is reported for hand declaration.
+- **Identical output stops the cascade.** A rerun that regenerates its outs byte for byte leaves its descendants fresh.
+- **A failed forced rerun** stays `failed` until a successful retry, which the next build attempts even with unchanged inputs.
 
 ### The YAML subset
 
-Both the section block and `config.yaml` are read by a stdlib parser over a bounded subset. `pyyaml`, when installed, reads every accepted text to the same values, except for two resolvers the subset drops: a timestamp-shaped scalar (`1994-01-01`) becomes a date under `pyyaml` and a sexagesimal (`12:30`) becomes an integer, where the subset keeps both as strings.
+Both the section block and `config.yaml` are read by a stdlib parser over a bounded subset.
 
 - **Accepted:** block mappings, block lists, inline lists of scalars, plain and quoted scalars, `#` comments.
 - **Rejected:** anchors, aliases, tags, multi-line (literal or folded) scalars, inline mappings, duplicate keys, tab indentation.
 - **Rejected here, accepted by `pyyaml`:** an unpaired `'` or `"` inside a plain scalar (`cmd: echo don't` — quote the whole scalar); an escaped `\"` inside a double-quoted scalar; any escape outside `\n`, `\t`, `\r`, `\\`, `\/`, `\0`, including `\uXXXX`.
 
 Inline lists are flow context, where YAML reserves `{`, `}`, `[`, `]`, and `,`: quote a `${VAR}` path there (`deps: ["${OUT}/panel.parquet"]`) or use a block list. Both parsers reject the unquoted form.
-
-Julia deps carry their own closure: a `.jl` dep expands to every file it reaches through `include`, so helper edits invalidate the step without being listed. Resolved forms are a string literal; `joinpath(@__DIR__, "…")` or `joinpath` of string literals; DrWatson's `projectdir("…")`, `srcdir("…")`, and `scriptsdir("…")`, also as the head of a `joinpath`; and `joinpath(<variable>, "…")` — a variable root resolves against the project root, then against the including file, keeping whichever is on disk and warning when both exist. An include whose argument is not a static path is reported and left to be declared by hand.
 
 ### Validation
 
@@ -211,48 +217,26 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
 - **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out.
 - **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
-- **Dependencies:** step cycles, cyclic task-group ordering, unresolved logical prerequisites, or incomplete task parsing.
+- **Dependencies:** step cycles, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
 
-**Unregistered results artifact** — an advisory `[WARNING]`, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Not every retained artifact belongs in the graph, so it never blocks. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
+**Unregistered results artifact** — an advisory `[WARNING]` that never blocks, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 
 An out that has never been built is runner state, reported as `missing` by `repro status`, not a check finding — a fresh clone of a correctly declared tree checks clean.
 
-### Acceptance and successful baseline records
+### Records
 
-The project-root `repro-acceptance.json` is committed separately from `pytask.lock`. Its version-1 object has `version: 1` and a `steps` mapping by stable step name. Each record contains:
+`superra repro` writes these; never hand-edit them. Formats: [internals.md §Reproduction records](internals.md#reproduction-records).
 
-| Field | Binding |
-| --- | --- |
-| `id` | SHA-256 of the canonical JSON record excluding `id` |
-| `basis` | `reviewed`; the only accepted value |
-| `baseline` | Preceding successful lock and available execution evidence; `lock: null` when the runner has never built the step |
-| `boundary_inputs` | Actual saved-input fingerprints by logical path at acceptance, including inputs between steps accepted together; a resolved root never enters the committed record |
-| `state` | Reviewed dependency/specification hashes, engine product hashes, and actual output fingerprints |
-| `upstream` | Producers accepted in the same decision, with their acceptance ids at that time |
-| `reason`, `reviews` | Required overall rationale and optional per-node notes |
-| `evidence` | Optional existing evidence-file references mapped to content hashes at review time |
-| `recorded_at`, `actor` | Recording time and available local account name |
+| Path | Git | Holds |
+|---|---|---|
+| `repro-lock.json` | committed | Each step's last successful build: definition, dep, and out hashes by variable-form path, and the platform it ran on. |
+| `repro-acceptance/<step>.json` | committed | The step's reviewed acceptance: reviewed hashes, saved-input digests, reason, optional per-node notes. |
+| `.superra-repro/` | gitignored and Dropbox-ignored, one per checkout | Hash cache, logs, successful-build receipts, check stamps, `explain`'s history index. |
 
-A reviewed record establishes or replaces the current baseline, including never-built producers and changed outputs. It binds the preceding successful lock if any, reviewed input/product/output state, and the producers accepted with it. Each bound producer must keep an acceptance or a successful lock; re-accepting one leaves this record valid, because its reviewed dependency hashes already pin that producer's output bytes. Outside producers remain saved-input boundaries. Changes after acceptance invalidate that state. Invalid graphs, missing inputs/products, and unsuccessful executions cannot be covered. Acceptance does not change workflow task statuses, successful lock entries, check stamps, or actual-run metadata. The status vocabulary remains `fresh`, `stale`, `missing`, `failed`, and `external`.
+**A reviewed acceptance makes its step `fresh`** until anything it recorded changes: an input, a saved input's bytes included, the definition, or an output. It can precede the step's first build. It changes no task status, lock entry, or check stamp; a check is accepted only over its previous successful run with an unchanged stamp.
 
-The project-root `repro-builds.json` is committed with `pytask.lock` and holds what git cannot know about each step's last successful build. The runner overwrites a step's entry when its receipt is written; a failed run leaves it unchanged, and older entries live in git history.
-
-| Field | Binding |
-| --- | --- |
-| `lock_id` | First 16 hex characters of the SHA-256 of the step's lock entry (`depends_on` and `produces`); a record whose `lock_id` differs from its lock entry describes another build |
-| `built_at` | Build time |
-| `platform` | OS and CPU architecture |
-| `env` | `deps`: the configured `env_deps` hashes; `probe`: a 16-hex digest of the `env_probe` stdout, or `probe_error` |
-
-Probe text is stored once, under the top-level `_probes` key (digest → stdout); texts no step references are dropped.
-
-No host or user name enters the record.
-
-Successful receipts live in gitignored `.superra-repro/baselines/<step>.json`. After engine product verification, the runner records full output digests, the dependency/product state, the resolved step definition, and UTF-8 dependency snapshots of at most 128 KiB each and 1 MiB per step. `execution_scope` names the frozen selected steps; `boundary_inputs` records consumed artifacts from out-of-scope producers, their logical/resolved paths, actual digests, producer identities, and successful-output provenance when available. Dependencies and boundary bytes must remain unchanged through execution. A receipt supports a baseline only when its recorded state matches the successful lock. Accepted records embed the preceding execution identity if any, reviewed state, output digests, and saved-input fingerprints, preserving reuse checks after local cache loss. Raw source snapshots remain local and never enter the committed ledger or status payload; absent historical source text and execution logs remain unavailable.
-
-Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance retains its separate preview/apply consistency guard.
-
-Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes. A current reviewed baseline hashes the actual outputs even without a successful receipt; it does not claim those bytes were executed. `explain` diffs a git-tracked dependency from its blob history, an untracked one from a local snapshot, and otherwise names no known source. Check acceptance requires its previous successful baseline and unchanged stamp; missing stamps require execution.
+- **A bad record disables only itself.** An acceptance record that does not parse or validate — a merge conflict, a hand edit — is set aside with a warning; its step reads as not accepted until `accept` or `revoke` replaces it.
+- **A legacy `repro-acceptance.json` ledger still validates.** The first `accept` converts it into per-step files and removes it; commit both changes.

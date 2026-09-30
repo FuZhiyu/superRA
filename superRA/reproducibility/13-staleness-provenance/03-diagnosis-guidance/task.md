@@ -33,7 +33,6 @@ steps:
       - skills/task-tree/scripts/_repro.py
       - skills/task-tree/scripts/_repro_acceptance.py
       - skills/task-tree/scripts/_repro_builds.py
-      - skills/task-tree/scripts/_repro_hooks.py
       - skills/task-tree/scripts/_repro_provenance.py
       - skills/task-tree/scripts/_repro_scope.py
       - skills/task-tree/scripts/_repro_state.py
@@ -77,7 +76,7 @@ steps:
   - a check `passed at these inputs in lock <rev>; not run here` → run it here.
   - `external` on a generated file → unchanged from the old table.
 - **The intro** names `explain <target>` as the replacement for manual `git log -S` / `shasum` / `stat` and points at commands.md for format instead of restating it.
-- **[rerun-or-accept.md §Preview](../../../../skills/reproducibility/references/rerun-or-accept.md#preview-the-cost-and-the-cause)** points to that table before the stale rule.
+- **[rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md)** points to that table before the stale rule.
 - **Deviations:** dropped rows the resolver or pointers now carry — the produced-input and `upstream` cases (the `explain` pointer already names the producer) and "a file you did not know the step read" (explanation, no action).
 
 ### Evaluation scenario

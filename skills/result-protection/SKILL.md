@@ -5,7 +5,7 @@ description: Protect key research results with permanent documentation, drift te
 
 # Result Protection
 
-Protect key results from unintended changes. Permanent results documentation suffices when the researcher chooses it; drift tests, a registered `## Reproduction` step with its committed lock (`superRA:reproducibility`), and other checks add automated protection where useful.
+Protect key results from unintended changes. Permanent results documentation suffices when the researcher chooses it; drift tests, registered as check steps (`superRA:reproducibility`), and other checks add automated protection where useful.
 
 ## References
 
@@ -20,5 +20,5 @@ Load any domain-specific drift-test reference per the active domain skill's stag
 ## Scope Gate
 
 - `[BLOCKING]` Protect researcher-confirmed key results, not every intermediate number.
-- `[BLOCKING]` Record a protection mechanism and durable home for every researcher-confirmed kept result.
+- `[BLOCKING]` Record a protection mechanism and durable home for every researcher-confirmed key result.
 - `[BLOCKING]` A protection update that changes expected results requires the same escalation as a meaningful result change.

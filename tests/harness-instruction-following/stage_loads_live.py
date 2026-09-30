@@ -53,6 +53,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from domain_loads_live import ALL_DOMAIN_SKILLS
 from sdk_load_evidence import SkillLoadEvidence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -133,13 +134,14 @@ STAGE_ROWS: tuple[StageRow, ...] = (
 # All stage skill names, for the negative-case "no stage skill loaded" check.
 # Flattens every positive skill-channel row's expected_skills, including the
 # multi-skill maturation row, so a maturation skill loaded on the negative stage
-# is caught as an over-load.
+# is caught as an over-load. A skill the Domain table also loads (reproducibility)
+# is a correct conditional load at any stage, so it is not an over-load.
 ALL_STAGE_SKILLS: frozenset[str] = frozenset(
     skill
     for row in STAGE_ROWS
     if row.channel == CHANNEL_SKILL
     for skill in row.expected_skills
-)
+) - ALL_DOMAIN_SKILLS
 
 
 def stage_row(stage: str) -> StageRow:

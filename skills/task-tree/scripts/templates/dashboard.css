@@ -1440,63 +1440,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   color: var(--text);
   line-height: 1.25;
 }
-/* Direct-sibling-dependency footer on a card in the layered flow. */
-.child-card-deps {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  line-height: 1.4;
-  color: var(--text-mute);
-  margin-top: 2px;
-}
-.child-card-deps .dep-arrow { color: var(--accent); margin-right: 3px; }
-.child-card-deps .dep-label { color: var(--text-mid); }
-.child-card-deps .dep-slug { color: var(--text-mid); }
-
-/* ── Layered dependency flow: topological tiers stacked in execution order ──
-   Cards reuse .child-card; tiers stack top->bottom, each a wrapping row. A
-   subtle downward spine + chevron between tiers signals flow direction without
-   drawing node-to-node connectors. */
-.child-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 4px;
-}
-.flow-tier {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-/* Inter-tier cue: a centered vertical spine capped by a downward chevron,
-   sitting in the gap between consecutive tiers. */
-.flow-sep {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 26px;
-  margin: 2px 0;
-  pointer-events: none;
-}
-.flow-sep::before {
-  content: "";
-  flex: 1;
-  width: 0;
-  border-left: 2px dashed var(--border);
-}
-.flow-sep::after {
-  content: "";
-  width: 7px;
-  height: 7px;
-  margin-top: -4px;
-  border-right: 2px solid var(--accent);
-  border-bottom: 2px solid var(--accent);
-  transform: rotate(45deg);
-  opacity: 0.75;
-}
-/* The card knows its tier (for a faint left accent on dependent tiers). */
-.child-card.has-deps { border-left: 3px solid var(--accent-soft); }
-.child-card.has-deps:hover { border-left-color: var(--accent); }
-
 /* ── Reproduction view: task overview, bounded graph, and step inspector ── */
 #view-reproduction:not(.hidden) {
   /* Wider than the reading views: a layered graph is wide by construction, and
@@ -1549,7 +1492,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   font: inherit;
 }
 .repro-picker { flex: 0 1 100%; min-width: 0; }
-.repro-picker > summary, .repro-step-list > summary, .repro-boundaries summary {
+.repro-picker > summary, .repro-step-list > summary {
   cursor: pointer;
   padding: 8px 0;
   font-size: var(--fs-meta);
@@ -1595,7 +1538,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   gap: 6px;
 }
 .repro-search-items { max-height: 320px; overflow: auto; margin: 10px 0; }
-.repro-search-items .hc-btn, .repro-step-list .hc-btn, .repro-boundaries .hc-btn {
+.repro-search-items .hc-btn, .repro-step-list .hc-btn {
   height: auto;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1607,8 +1550,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #repro-detail .repro-detail { margin-top: 0; }
 .repro-detail-name, .repro-detail dd { min-width: 0; overflow-wrap: anywhere; }
 .repro-viewport-controls { margin-top: 10px; }
-.repro-boundaries { margin: 12px 0; font-size: var(--fs-meta); overflow-wrap: anywhere; }
-.repro-boundaries details > div { padding: 4px 0; }
 .repro-plot.is-zoomed-out .repro-node-state { visibility: hidden; }
 #view-reproduction :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
@@ -2436,6 +2377,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-findings { margin:0;border:0;padding:8px;line-height:1.55; }
 .repro-findings .hc-btn { height:auto;white-space:normal;overflow-wrap:anywhere; }
 .repro-legend { margin:0;gap:6px; }
+.repro-legend + .repro-legend { margin-top:6px; }
 .rp-legend-menu .rp-menu-body { width:290px; }
 .repro-view p[role=status] { margin:0 0 8px;padding:6px 9px;border-left:2px solid var(--accent);font-size:var(--fs-meta);color:var(--text-mid); }
 .repro-view p[role=status]:empty { display:none; }
@@ -2452,8 +2394,6 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #repro-selection { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .repro-footer .rp-menu > summary { padding:5px 0;background:none;border:0;font:inherit; }
 .rp-footer-menu .rp-menu-body { top:auto;bottom:calc(100% + 7px);width:400px; }
-.repro-boundaries { margin:0; }
-.repro-boundaries .hc-btn { white-space:normal;height:auto;min-height:28px; }
 #repro-edge-detail:empty { display:none; }
 #repro-edge-detail { position:absolute;z-index:6;right:12px;top:12px;max-width:min(450px,calc(100% - 48px));max-height:65%;overflow:auto;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;box-shadow:var(--shadow-md);font-size:var(--fs-meta);overflow-wrap:anywhere; }
 .rp-branch-title { margin:8px 0 2px;font-size:var(--fs-emph);color:var(--text); }
@@ -2537,6 +2477,12 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-edges #rp-arrow-cycle path { fill:var(--accent); }
 .rp-task.is-cycle,.repro-node.is-cycle { border-color:var(--border); }
 .rp-cycle-label { color:var(--accent);font-weight:600; }
+.repro-edges .rp-wire.is-logical { stroke-dasharray:6 4; }
+.repro-legend-wire line { stroke:var(--text-mute);stroke-width:1.5; }
+.repro-legend-wire.is-logical line { stroke-dasharray:6 4; }
+.rp-task.is-error { border:2px solid var(--rp-failed-t); }
+.rp-error-link { pointer-events:auto;padding:0;border:0;background:none;color:var(--rp-failed-t);font:inherit;font-weight:600;cursor:pointer; }
+.rp-error-link:hover { text-decoration:underline; }
 .rp-task.is-edge-endpoint,.repro-node.is-edge-endpoint { outline:3px solid var(--accent);outline-offset:3px; }
 .rp-task.is-cycle.is-edge-endpoint,.repro-node.is-cycle.is-edge-endpoint { outline-color:var(--accent); }
 .has-edge-focus .rp-wire:not(.is-edge-active) { opacity:.22; }

@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pytask>=0.6,<0.7", "pytask-parallel", "pyyaml"]
+# dependencies = ["pyyaml"]
 # ///
 """Exercise dependency-guided work and reviewed reuse through the public CLI."""
 from __future__ import annotations
@@ -72,12 +72,13 @@ def verify(base: Path) -> None:
     write(root, "Code/b.sh", "set -eu\n. Code/shared.sh\n"
           "echo $(($(cat output/a.txt) + $(value))) > output/b.txt\necho consumer >> events.txt\n")
     write(root, "Code/check.sh", 'set -eu\ntest "$(cat output/b.txt)" = 14\necho check >> events.txt\n')
-    assert [row["path"] for row in json.loads(run(root, "task", "frontier", "--json"))] == ["source"]
+    # File edges are reported, not gating: only `depends_on` holds a task off the frontier.
+    assert {row["path"] for row in json.loads(run(root, "task", "frontier", "--json"))} == {"source", "consumer"}
     context = json.loads(run(root, "task", "read", "consumer", "--json"))
-    assert [row["path"] for row in context["dependencies"]] == ["source"]
+    assert context["dependencies"] == []
     run(root, "task", "check", "--category", "dependency", "--json")
     run(root, "repro", "build", ".")
-    lock = (root / "pytask.lock").read_bytes()
+    lock = (root / "repro-lock.json").read_bytes()
     events = (root / "events.txt").read_text()
 
     write(root, "Code/shared.sh", (root / "Code/shared.sh").read_text()
@@ -86,15 +87,13 @@ def verify(base: Path) -> None:
     assert {row["step"] for row in impact["direct"]} == {"source", "consumer"}
     baseline = json.loads(run(root, "repro", "explain", "source#source", "--json"))
     assert "Documentation only" in json.dumps(baseline)
-    write(root, "review.md", "Inspected the verified baseline diff and Code/a.sh: only a trailing "
-          "comment in shared.sh changed. The sourced value function and its call site remain "
-          "identical. Existing source output remains valid. Consumer calculation is reviewed separately.\n")
-    args = ["repro", "accept", "source#source", "--reason", "Helper documentation only",
-            "--review", "Code/shared.sh=Only a trailing comment changed; value and its call site are identical",
-            "--evidence", "review.md", "--json"]
-    proposal = json.loads(run(root, *args, "--dry-run"))  # accept without it applies at once
-    run(root, *args, "--apply", proposal["token"])
-    assert (root / "pytask.lock").read_bytes() == lock
+    run(root, "repro", "accept", "source#source", "--reason", "Helper documentation only",
+                  "--review", "Code/shared.sh=Only a trailing comment changed; value and its call site are identical",
+                  "--dry-run", "--json")
+    assert (root / "repro-lock.json").read_bytes() == lock  # dry run writes nothing
+    run(root, "repro", "accept", "source#source", "--reason", "Helper documentation only",
+        "--review", "Code/shared.sh=Only a trailing comment changed; value and its call site are identical")
+    assert (root / "repro-lock.json").read_bytes() == lock
     assert (root / "events.txt").read_text() == events
     run(root, "repro", "status", "source#source", "--json")
 

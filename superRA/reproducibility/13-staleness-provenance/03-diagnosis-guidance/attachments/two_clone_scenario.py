@@ -3,7 +3,7 @@
 
 Usage: python3 two_clone_scenario.py <empty-dir> [--check]
 
-Clone `coauthor/` builds and commits `pytask.lock`; clone `you/` shares
+Clone `coauthor/` builds and commits `repro-lock.json`; clone `you/` shares
 `output/` through a Dropbox that has synced only part of the coauthor's work.
 Prints the path of the clone the evaluated agent works in. Each clone carries
 `superRA/superra`, a shim that runs this checkout's task-tree CLI. `--check`
@@ -171,7 +171,7 @@ def check(b):
     assert got == EXPECTED, got
     statuses = {e["name"]: (e["status"], e["reason"]) for e in data["steps"]}
     assert statuses["robust"][0] == "fresh", statuses  # synced
-    assert statuses["check-robust"][0] == "missing" and "not run here" in statuses["check-robust"][1], statuses
+    assert statuses["check-robust"][0] == "fresh" and "not run here" in statuses["check-robust"][1], statuses  # passed in the lock
 
     # The sync-lag rows carry the relation fact diagnosing.md keys on.
     text = subprocess.run([str(b / "superRA/superra"), "repro", "explain", "."], cwd=b, env=ENV, check=True,
