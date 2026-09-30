@@ -12,5 +12,5 @@ Stage 4. **Offer git with what it gives the researcher:** a saved snapshot of ev
 
 ## A project already in git
 
-- **Check what `.gitignore` misses:** tracked data files and files over 50 MB. Report them; untrack nothing without the researcher.
+- **Check what `.gitignore` misses:** tracked data files, files over 50 MB, and `.superra-repro/`. Report the tracked files, untracking nothing without the researcher; add the `.superra-repro/` line in the `superRA/` commit.
 - **Commit `superRA/` on a topic branch,** per `superRA:using-superra` §Commits.

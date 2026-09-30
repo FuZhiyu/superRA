@@ -113,7 +113,13 @@ def _plan_root(root: str | None) -> Path:
     """
     if root is not None:
         return Path(root)
-    detected = resolve_plan_root_arg(None) or _wrapper_only_root()
+    detected = resolve_plan_root_arg(None)
+    wrapper_root = _wrapper_only_root()
+    # A nearer wrapper-initialized root wins over a farther autodetected tree.
+    if wrapper_root is not None and (
+        detected is None or len(wrapper_root.parts) > len(detected.resolve().parts)
+    ):
+        detected = wrapper_root
     if detected is None:
         print("Error: could not auto-detect task root. Use --root.", file=sys.stderr)
         sys.exit(1)

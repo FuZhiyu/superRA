@@ -5,7 +5,7 @@
 Before your first substantive response:
 
 - Load `superRA:communicate` before your response.
-- **No `superRA/` in a project that already holds code, data, results, or a legacy `PLAN.md`:** offer `superRA:onboarding` before any action below; they wait until onboarding creates the tree.
+- **No `superRA/` in a project that already holds code, data, results, or a legacy `PLAN.md`:** offer `superRA:onboarding` before any action below; they wait until onboarding creates the tree, or run at once if the researcher declines.
 - Check whether the CLI wrapper `./superRA/superra` exists; bootstrap it per `superRA:task-tree` §CLI Setup if not.
 - Run `./superRA/superra task tree` for the full status summary.
 - Run `./superRA/superra repro status .` and report the steps that are not `fresh`; "selects no steps" means the tree registers none, so there is nothing to report.

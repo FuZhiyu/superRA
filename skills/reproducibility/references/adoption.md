@@ -8,7 +8,7 @@
 ## Declaring an existing project
 
 - **Declare the scripts as they are,** per [designing-the-graph.md](designing-the-graph.md#declare-from-the-script-not-from-memory); edit no code. A script the graph cannot describe cleanly — hard-coded machine paths, several scripts writing one directory, reads routed at runtime: note it in the task's `## Details` for the first build.
-- **Validate with `superra task check`,** then present the graph per [designing-the-graph.md §Presenting a graph for review](designing-the-graph.md#presenting-a-graph-for-review).
+- **Present the graph** per [designing-the-graph.md §Presenting a graph for review](designing-the-graph.md#presenting-a-graph-for-review).
 
 ## The first build
 
