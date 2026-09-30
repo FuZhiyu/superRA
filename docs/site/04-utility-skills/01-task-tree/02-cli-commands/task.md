@@ -14,11 +14,11 @@ Inspect state and pull up one task:
 
 ```bash
 ./superRA/superra task tree                      # the whole tree with status badges
-./superRA/superra task frontier                  # ready tasks and parent-owned work
+./superRA/superra task frontier                  # ready tasks, each with its inputs that are not fresh
 ./superRA/superra task read 01-data/02-merge     # one task with its full inherited context
 ```
 
-`task read` is what dispatch uses: it prints the file plus the ancestor chain, effective prerequisites with their evidence, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
+`task read` is what dispatch uses: it prints the file plus the ancestor chain, its `depends_on` prerequisites, the inputs that are not fresh, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
 
 Scope or restructure work:
 
@@ -31,7 +31,7 @@ Scope or restructure work:
 ./superRA/superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 ```
 
-Use `task move` for relocation and renaming: it repairs links and preflights the effective graph. A cross-parent move warns about logical edges it must drop; inferred edges are recomputed.
+Use `task move` for relocation and renaming: it repairs links and refuses a move that would break `depends_on`. A cross-parent move warns about `depends_on` edges it must drop; file inputs follow their producers.
 
 Comments steer a task without editing its body; a pinned note surfaces inline on the next `task read` and on the dashboard:
 
@@ -56,6 +56,6 @@ For reproduction work, ask the agent to explain the effects of a change before r
 ./superRA/superra repro accept 02-merge --dry-run  # preview only
 ```
 
-Acceptance records a reviewed baseline with a reason and optional evidence, including results produced before registration. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview, apply, and revoke.
+Acceptance records a reviewed baseline with a required reason, including results produced before registration, in one committed file per step under `repro-acceptance/`. The [reproducibility skill](skills/reproducibility/SKILL.md) explains when reuse is justified; [command details](skills/task-tree/references/commands.md#reviewed-acceptance) cover preview and revoke.
 
 The DAG view (`task dag <subtree>`, Mermaid output) and the [dashboard](#/04-utility-skills/01-task-tree/04-dashboard) round out the surface. Every flag, bulk status operation, result-append command, and migration tool is in [skills/task-tree/references/commands.md](skills/task-tree/references/commands.md).

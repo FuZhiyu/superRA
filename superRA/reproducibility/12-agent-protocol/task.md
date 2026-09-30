@@ -35,13 +35,15 @@ Make agents use the reproduction graph well without coaching: register retained 
 
 Observed by the researcher in real-project use: results recorded with no registered step; producers run directly instead of through `repro`; superficial staleness answered by rerunning everything; graphs that are hard to keep current.
 
+This diagnosis describes the skill as of 2026-09-20. [03-skill-redesign](03-skill-redesign/task.md) replaced `rerun-model.md`, `graph-authoring.md`, and `pilot-acceptance.md`, and [08-workflow-wiring](../14-review-revisions/08-workflow-wiring/task.md) wired the role skills and `interactive-mode.md` to the gates.
+
 - **The skill opens with rules, not a model.** [SKILL.md](../../../skills/reproducibility/SKILL.md) never says what a step, freshness, target scope, or the execute-versus-accept pair is before it starts issuing requirements.
-- **The acceptance protocol is buried.** It is the last section of [rerun-model.md](../../../skills/reproducibility/references/rerun-model.md), a diagnostic reference, and says nothing about cost or the step's role.
+- **The acceptance protocol is buried.** It is the last section of `rerun-model.md`, a diagnostic reference, and says nothing about cost or the step's role.
 - **Accepting costs more than building.** `accept` needs a preview, a copied token, and a repeated call; `build` is one call.
-- **Nothing states the dependency trade-off.** [graph-authoring.md](../../../skills/reproducibility/references/graph-authoring.md) lists four isolation rules but not the asymmetry behind them, the default step unit, or the process start-up cost the TreasuryGIV pilot measured (9 minutes in-process, 42 minutes as 44 processes).
+- **Nothing states the dependency trade-off.** `graph-authoring.md` lists four isolation rules but not the asymmetry behind them, the default step unit, or the process start-up cost the TreasuryGIV pilot measured (9 minutes in-process, 42 minutes as 44 processes).
 - **Scope semantics are stated twice**, in SKILL.md §Build and Status and in commands.md §Reproduction, which also carries retired flags, legacy records, and a dashboard paragraph.
 - **Role skills are silent.** `implement-task`, `review-task`, and `interactive-mode.md` never mention reproduction; the only triggers are one line in `using-superra` §Task Interface and a once-per-session hook reminder.
-- **[pilot-acceptance.md](../../../skills/reproducibility/references/pilot-acceptance.md) collides with `repro accept` by name**, and most of its matrix retests the runner's own suite.
+- **`pilot-acceptance.md` collides with `repro accept` by name**, and most of its matrix retests the runner's own suite.
 
 `status` and `explain` already print each step's last run duration from the gitignored run records, so a cost estimate needs no new data; it is unknown on a machine that never ran the step.
 

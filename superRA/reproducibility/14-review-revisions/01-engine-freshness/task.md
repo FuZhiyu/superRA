@@ -10,7 +10,7 @@ depends_on: []
 
 ### One engine, one freshness rule
 
-- **`build` decides run or skip through the rule `status` uses.** Each step is checked with `_repro_state.compute_status` over the whole build selection, counting steps completed earlier in the same run, so a producer inside the selection is never treated as a saved input and a rerun that regenerates identical bytes still stops the cascade. [_repro_hooks.py](../../../../skills/task-tree/scripts/_repro_hooks.py) and the pytask adapter types in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) (`FileNode`, `SpecNode`, `StepTask`, the `_pytask` imports) are deleted; their logic runs inline in the loop.
+- **`build` decides run or skip through the rule `status` uses.** Each step is checked with `_repro_state.compute_status` over the whole build selection, counting steps completed earlier in the same run, so a producer inside the selection is never treated as a saved input and a rerun that regenerates identical bytes still stops the cascade. `_repro_hooks.py` and the pytask adapter types in [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py) (`FileNode`, `SpecNode`, `StepTask`, the `_pytask` imports) are deleted; their logic runs inline in the loop.
 - **The CLI is unchanged:** the same subcommands, flags, and `--json` shapes. `build` exits 0 on success and 1 when a step fails or the build cannot start. Only `build`'s progress lines and summary, and the lock file names, change.
 - **Execution semantics carry over:**
   - Steps run in dependency order; a failed step skips its descendants while unrelated branches continue.
