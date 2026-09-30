@@ -25,7 +25,7 @@ At `Stage: planning-review`, follow the manifest-loaded planning-review referenc
 
 **Verify from evidence; re-execute only when something is off.** Spot-check a subset when a value looks wrong; full rerun only with researcher approval. Evidence can't support a claim → "evidence missing" finding; the implementer closes it.
 
-**Check a result from retained code against the `superRA:reproducibility` gates:** registration (`references/designing-the-graph.md`), the claim (`references/claiming-results.md`), each step not `fresh` (`references/rerun-or-accept.md`). Evidence: read-only `superra repro status <targets> --upstream` and the committed `repro-lock.json` and `repro-acceptance/` records.
+**Check a result from retained code against the `superRA:reproducibility` gates:** registration (`references/designing-the-graph.md`), the claim (§Recording a Result), each step not `fresh` (`references/rerun-or-accept.md`). Evidence: read-only `superra repro status <targets> --upstream` and the committed `repro-lock.json` and `repro-acceptance/` records.
 
 Bundle dispatch (`Tasks:`): run this protocol per task — separate `## Review Notes`, independent `status:`. Unclear task structure: flag in your return, don't invent one.
 

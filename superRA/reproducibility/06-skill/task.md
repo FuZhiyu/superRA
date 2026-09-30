@@ -26,9 +26,8 @@ The [reproducibility skill](../../../skills/reproducibility/SKILL.md) and its re
 
 ### What each file owns
 
-- [SKILL.md](../../../skills/reproducibility/SKILL.md) — the model (step, `fresh`, targets, producer chain, saved and external inputs, readiness versus freshness) and a routing table to the references.
+- [SKILL.md](../../../skills/reproducibility/SKILL.md) — the model (step, `fresh`, targets, producer chain, saved and external inputs), the core commands, the gate for recording a result, and a routing table to the references.
 - [designing-the-graph.md](../../../skills/reproducibility/references/designing-the-graph.md) — what earns a step, the step unit, the dependency ladder, declaring from the script's real I/O, step lifecycle, and presenting a graph for review.
-- [claiming-results.md](../../../skills/reproducibility/references/claiming-results.md) — the gate before recording a result from retained code.
 - [rerun-or-accept.md](../../../skills/reproducibility/references/rerun-or-accept.md) — the stale rule: run, accept with a reason, or report.
 - [diagnosing.md](../../../skills/reproducibility/references/diagnosing.md) — the rerun rules in action, reading `explain`, and environment changes.
 - [protect-and-completion.md](../../../skills/reproducibility/references/protect-and-completion.md) — the completion gate and the external-inputs decision at Protect.

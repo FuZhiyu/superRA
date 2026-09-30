@@ -84,13 +84,13 @@ The reproduction instructions now state each rule once, in its owning file, and 
 
 ### Each gate lives in the reference loaded when it applies
 
-`SKILL.md` keeps the purpose, §The Model, and the routing table. §Gates and §The Loop are gone. The claim gate has its own reference, [claiming-results.md](../../../../skills/reproducibility/references/claiming-results.md), routed from "Recording a result from retained code in `## Results`"; `protect-and-completion.md` keeps the completion check and Protect.
+`SKILL.md` keeps the purpose, §The Model, and the routing table. §Gates and §The Loop are gone. The claim gate has its own reference, `claiming-results.md`, routed from "Recording a result from retained code in `## Results`"; `protect-and-completion.md` keeps the completion check and Protect.
 
 | Gate, enum, or ordering constraint | New home |
 |---|---|
 | `[BLOCKING]` retained code and its results are registered; updating declarations in the commit that changes them stays ungated guidance | [designing-the-graph.md §What earns a step](../../../../skills/reproducibility/references/designing-the-graph.md#what-earns-a-step) |
 | `[ADVISORY]` name files, not their directory | same file, §Declare from the script |
-| `[BLOCKING]` a claimed result reads `fresh` in `status <targets>`, `--upstream` when the claim covers the producer chain; then state coverage in `## Results` and commit the records | [claiming-results.md](../../../../skills/reproducibility/references/claiming-results.md) |
+| `[BLOCKING]` a claimed result reads `fresh` in `status <targets>`, `--upstream` when the claim covers the producer chain; then state coverage in `## Results` and commit the records | `claiming-results.md` |
 | `[BLOCKING]` a step not `fresh` is resolved by the stale rule | top of [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) |
 | Stale-rule classes and its three rows; the cannot-move-a-result exception; "cheap" ≈ a minute | rerun-or-accept.md §The stale rule, unchanged in content. The rule covers steps a change left not fresh; a step the agent just registered, or a failure it fixed, is built |
 | Step states `fresh`/`stale`/`missing`/`failed`/`external` | stale rule (what to do per state); commands.md state table (meaning) |
@@ -142,7 +142,7 @@ Session 2's other notes concern files outside this task: `implement-task` limits
 
 These call sites still point at removed text or name completion targets:
 
-- [implement-task:50](../../../../skills/implement-task/SKILL.md#L50) and [review-task:28](../../../../skills/review-task/SKILL.md#L28) point to `reproducibility` §Gates; the claim gate is now [claiming-results.md](../../../../skills/reproducibility/references/claiming-results.md).
+- [implement-task:50](../../../../skills/implement-task/SKILL.md#L50) and [review-task:28](../../../../skills/review-task/SKILL.md#L28) point to `reproducibility` §Gates; the claim gate is now `claiming-results.md`.
 - [load_contract.json:220](../../../../tests/harness-instruction-following/load_contract.json#L220) cites `SKILL.md#L12-L18`.
 - `completion.md:18`, `integrate.md:9`, and `finish.md:39` run `build <targets> --upstream` before status.
 - `protect.md:15` still frames the Protect choices around targets.
