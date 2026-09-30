@@ -1,6 +1,6 @@
 ---
 title: "Design-Review Revisions: Resolve the 2026-09-28 Findings Before 0.5 Ships"
-status: implemented
+status: approved
 depends_on: []
 ---
 
