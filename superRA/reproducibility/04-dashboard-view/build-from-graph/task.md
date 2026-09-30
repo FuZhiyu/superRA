@@ -35,7 +35,7 @@ From any task or step card in the Reproduction view, the researcher can build it
 ### Validation
 
 - Dashboard tests cover the build route's refusals (cross-site, rebinding `Host`, wrong content type, unknown target, flag-like target), the build lifecycle (start, `running` state, lock refusal, stop, completion summary), and the read-only invariant of the estimate and explain routes.
-- A browser pass on the parent's [16-step fixture](../attachments/repro_fixture.py) exercises: build a step, build with upstream, rebuild all, stop mid-build, a lock refusal from a concurrent CLI build, the hover card (hover, keyboard focus, pinned), and the timings. Record it with screenshots in both themes and at 430px in `attachments/`.
+- A browser pass on the parent's 16-step fixture (retired at Protect; recover it with `git show 27b7e181^:superRA/reproducibility/04-dashboard-view/attachments/repro_fixture.py`) exercises: build a step, build with upstream, rebuild all, stop mid-build, a lock refusal from a concurrent CLI build, the hover card (hover, keyboard focus, pinned), and the timings. Record it with screenshots in both themes and at 430px in `attachments/`.
 
 ## Details
 
@@ -45,6 +45,10 @@ From any task or step card in the Reproduction view, the researcher can build it
   - Inspector: [renderReproDetail](../../../../skills/task-tree/scripts/templates/dashboard.js#L1998) already shows reason, last run, duration, and log tail.
   - Server: the `/api/open` gate and [`_local_open_enabled`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1581); [the status payload](../../../../skills/task-tree/scripts/plan_dashboard.py#L1471); the lock watcher in [`_watch_worktree`](../../../../skills/task-tree/scripts/plan_dashboard.py#L565), which already refreshes the view per completed step.
   - Runner: [`run_build`](../../../../skills/task-tree/scripts/repro_run.py#L356), [`format_cost`](../../../../skills/task-tree/scripts/repro_run.py#L423), [`explain`](../../../../skills/task-tree/scripts/_repro_provenance.py#L865).
+- **Cost budget.** Measured on a real 112-step project (ElasticityBound-Local, 2,350 commits), warm cache: `status .` takes 1.5s; `explain` takes 1.3s for `.` and 2.1s for one step, mostly the status computation it contains. A stale node adds one `git log` pass, cached per refs, plus reads of the changed historical blobs, each capped at 16 MiB.
+  - Timings need no request: durations are already in the status payload.
+  - Compute the estimate in the browser from the graph and status payloads: the non-fresh steps in scope and their last durations. Label it approximate, since downstream steps can rerun once an upstream output changes.
+  - The hover card shows the status `reason` at once and fills in the explain rows when they arrive: fetch after a short hover delay, one request per hovered target, cached until the next status refresh. Fetch diffs only when the card is pinned.
 - **Known difficulties.**
   - **A step node is a `<button>`,** so its chip cannot nest inside it. Restructure the node as a wrapper holding a select button and the Build chip as siblings, keeping node ids, selection, and keyboard order.
   - **An executing step reads `failed` today:** `compute_status` treats a `running` run record as an interrupted run ([_repro_state.py:881](../../../../skills/task-tree/scripts/_repro_state.py#L881)). While the worktree's build is live, the dashboard must report `running` for those steps, and the interrupted-run rule must still apply after a crash.
