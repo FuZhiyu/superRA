@@ -536,7 +536,7 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro explain 02-merge --json --diff",
     ])
     explain.add_argument("target", help="A task path, task#step, unique step name, or declared file path")
-    explain.add_argument("--diff", action="store_true", help="Show full dependency diffs instead of the first lines")
+    explain.add_argument("--diff", action="store_true", help="Show dependency diffs: in full for a step or file, and at all for a task (task views omit them by default)")
     explain.add_argument("--json", action="store_true", dest="as_json")
 
     impact = _sub(sub, "impact", "Predict which steps a change to a file would make stale, with recorded durations", [
