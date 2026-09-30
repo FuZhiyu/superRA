@@ -1,63 +1,44 @@
 ---
-title: "Define the `## Reproduction` Section Contract and Graph Model"
+title: "The `## Reproduction` Section Contract, Graph Library, and Effective Dependencies"
 status: approved
 depends_on: []
 ---
 
 ## Objective
 
-Specify the `## Reproduction` section and ship the shared library that turns a task tree into a validated reproduction graph. Every later task (runner, task interface, dashboard, hook, skill) consumes this library and this contract; neither runs pytask.
+Own the `## Reproduction` section contract and the stdlib library that turns a task tree into a validated reproduction graph, plus the effective dependency snapshot that task readiness, validation, and every task view read. The runner, task interface, dashboard, hook, and skill consume this library; none parses a section itself.
 
-- **Contract** lands in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) as a new body section: the section body is exactly one fenced `yaml` block; prose outside the fence is a contract violation. Top-level key: `steps` (list); a retired `tier` key warns and is ignored. Project-wide config is the `reproduction:` key of `superRA/config.yaml`, a new project-config file whose top-level keys are namespaced by concern so other configuration can move there later; the contract documents both.
-- **Bounded YAML subset**, pinned in the contract and parsed by a stdlib parser in the core: block mappings and block lists, inline lists of scalars, plain and quoted scalars, comments; no anchors, tags, multi-line scalars, or inline mappings. Per-out sidecar tracking is therefore a nested block item (`- path: …` / `sidecar: …`). `pyyaml`, when present, parses the same text identically.
-- **Step keys:** `name` (slug, unique across the tree), `cmd` (shell string run from the project root) or `runner` + `script` (expands a runner template from config), `deps` (files or directories read, the script included), `outs` (files or directories written; a directory means every file inside), optional `kind: check` (no `outs`; reruns when deps change), optional `params` (flat mapping hashed into the step state).
-- **Config keys:** `vars` (each a literal, `env: NAME`, or `shell: "…"`, evaluated once per invocation), `runners` (name → command template with `{script}`), `env_deps` (paths added to every step's deps in the subtree). `${VAR}` interpolation applies to `cmd`, `deps`, `outs`, and `script`; every node keeps its logical (variable-form) path as its id alongside the resolved path.
-- **Graph model** (`skills/task-tree/scripts/_repro.py`): parse every task's section; resolve config and variables; expand each `.jl` dep to its transitive `include("…")` closure (string-literal paths relative to the including file, `@__DIR__` resolved to that directory; unresolvable includes are warnings); infer step edges by matching `outs` to `deps`; classify deps no step produces as external inputs; retain exact producer/consumer ownership as evidence and compose effective task edges through the hierarchy contract in [unified dependencies](unified-dependencies/task.md). Expose the graph as plain dataclasses plus a JSON serialization the CLI and dashboard reuse.
-- **Validation** returns findings in the `task check` `Finding` shape: `[ERROR]` duplicate step names, two steps declaring the same out, a `check` step with outs, prose outside the fence, YAML outside the subset in a section or in `config.yaml`, an unknown variable; `[WARNING]` a dep that neither exists on disk nor is produced, unresolved dynamic input references. Dependency validity follows the effective-graph update rather than the previous warning-only reconciliation. Never-built outs are runner state (`missing` in `repro status`), not a check finding, so a fresh clone checks clean.
-- **Validation criteria:** unit tests under `skills/task-tree/scripts/` cover the subset parser (accepted forms, and rejection of every excluded form), variable sources and scoping, include-closure extraction on a fixture with nested includes, edge inference including directory outs, external-input classification, every finding above, and byte-identical results from the stdlib parser and `pyyaml` on the fixture sections.
-
-- **0.5 dependency model:** implement the [unified dependency update](unified-dependencies/task.md), which owns effective graph composition and its task-tooling consumers; preserve the existing reproduction section and step identity contracts.
-
-## Details
-
-- The fence-aware section splitter is [`parse_body_sections`](../../../skills/task-tree/scripts/_task_io.py#L326); `Task` objects already carry the parsed body, and [task_check.py](../../../skills/task-tree/scripts/task_check.py) shows the `Finding` shape and the `--category` convention (add `reproduction`).
-- The stdlib subset parser serves every read path; `pyyaml` is optional and, when importable, only cross-checks the subset parser in tests.
-- Include-closure extractor: TreasuryGIV's `Code/run_estimates.jl` resolves to 16 transitive helpers with a ~30-line regex extractor; `include(joinpath(@__DIR__, "x.jl"))` is common there, so resolve `@__DIR__` as the including file's directory.
-- Sidecar semantics: the runner hashes the sidecar instead of the out; the contract must say the trade-off (a hand-edited out goes unnoticed).
-- `${OUT}` in TreasuryGIV must equal the routing in `Code/output_paths.jl`: `output/` when `TREASURYGIV_WRITE_CANONICAL` is set, else `output/sandbox/<email-local-part>/<branch>/`; a `shell:` var covers it without duplicating the slug rules.
-- The frontmatter parser in `_task_io.py` (`_parse_yaml_value`, `_parse_yaml_list_continuation`) is the existing stdlib subset precedent; the comment sidecar chose JSON for the same reason ([_comments.py:179](../../../skills/task-tree/scripts/_comments.py#L179)). The section stays YAML because humans write and comment on it; the subset keeps the parser bounded.
+- **Contract** in [task-file-contract.md §Reproduction Section](../../../skills/task-tree/references/task-file-contract.md#reproduction-section): the section body is one fenced `yaml` block in a bounded subset a stdlib parser reads, and `pyyaml`, when present, parses identically. Step keys are `name`, `cmd` or `runner` + `script`, `deps`, `outs`, optional `kind: check` and `params`; project config (`vars`, `runners`, `env_deps`) lives under `reproduction:` in `superRA/config.yaml`. Every node keeps its logical `${VAR}` path as its id beside the resolved path.
+- **Graph model** ([_repro.py](../../../skills/task-tree/scripts/_repro.py)): parse every section, resolve config and variables, expand each `.jl` dep to its `include` closure, infer step edges by matching `outs` to `deps` (directory outs by prefix), classify unproduced deps as external inputs, and report findings in the `task check` shape. One malformed task costs only its own steps.
+- **Effective dependencies** ([_task_dependencies.py](../../../skills/task-tree/scripts/_task_dependencies.py)): readiness follows `depends_on` only, own or inherited; file edges between steps are reported as inputs and never gate. Parents may own steps beside child tasks; archived subtrees leave the active graph with warnings to their active consumers. Cycle errors cover step cycles and `depends_on` cycles only. A reproduction error blocks only the builds it touches, never planning commands. The [0.5 design](../attachments/v05-design.md#one-task-dag-combines-both-sources-of-dependency) records the decisions.
 
 ## Results
 
-The reproduction graph library and its contract are in place; [02-runner](../02-runner/task.md) through [06-skill](../06-skill/task.md) can build on them without re-reading a task file.
+The library, the contract, and the dependency snapshot are in place, and every consumer reads one snapshot per command.
 
-### What later tasks call
+### What consumers call
 
-[`_repro.py`](../../../skills/task-tree/scripts/_repro.py) is stdlib-only and never executes a build.
+- [`build_graph`](../../../skills/task-tree/scripts/_repro.py) returns a `Graph` of plain dataclasses plus `findings`, and never raises. `graph_to_dict` is the JSON the runner, `task read`, and the dashboard share; its `dependencies` block carries tasks, archived tasks, and the `depends_on` edges as `logical`.
+- `check_reproduction(plan_root, root)` feeds the `task check` `reproduction` category; `parse_yaml_subset` and `extract_repro_block` read one section without building the tree.
+- `step_errors` decides which reproduction errors touch a selection: an error on a selected step's own task or a target's subtree, a step cycle through a selected step, or project-wide configuration.
+- [Preflight](../../../skills/task-tree/scripts/_task_snapshot.py) builds the current and edited trees without resolving variables and refuses only a new `depends_on` error. `task create`, `move`, `dep add`, and archive transitions print each task they take off the frontier and each new dependency warning.
+- Mechanics are documented in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md#effective-dependencies), [commands.md §Manage dependencies](../../../skills/task-tree/references/commands.md#manage-dependencies), and [internals.md §Effective dependency snapshot](../../../skills/task-tree/references/internals.md#effective-dependency-snapshot).
 
-- `build_graph(plan_root, *, project_root, root, env, shell_runner)` returns a `Graph` of `Step` / `Out` / `PathRef` / `ExternalInput` dataclasses plus `findings`. It never raises: one malformed task costs its own steps and nothing else.
-- `graph_to_dict(graph)` is the JSON shape the runner, `task read`, and the dashboard share.
-- `check_reproduction(plan_root, root)` returns the same findings for the `task check` `reproduction` category ([03-task-interface](../03-task-interface/task.md) wires it); pass the already-walked `root` to avoid a second tree walk.
-- `parse_yaml_subset` and `extract_repro_block` are separately callable, so the hook can read one section without building the tree.
+### Contract decisions
 
-`Finding` moved from [task_check.py](../../../skills/task-tree/scripts/task_check.py) to [_task_validate.py](../../../skills/task-tree/scripts/_task_validate.py) so both validators emit one shape and `task check` can import `_repro` without a cycle. `task_check` re-exports it; no call site changed.
+- **A `${VAR}` path inside an inline list must be quoted.** PyYAML rejects `deps: [${OUT}/x]` because `{` is a flow indicator, so the subset parser rejects it too, naming the quoted fix.
+- **Structural step errors are `[ERROR]` findings**, not crashes: a missing or non-slug `name`, an unknown key or `kind`, no command, an undefined runner, and malformed `deps`, `outs`, or `params`. The contract's §Validation lists them.
+- **`env_deps` entries are interpolated**, so `${SCRATCH}/env.lock` is a real path; an unknown variable there is one error against `config.yaml`.
+- **Retired keys warn and are ignored.** A leftover `tier:` in a section or step, or `env_probe` / `code_roots` under `reproduction:`, is a `[WARNING]`. None entered a step's hash, so upgrading a pre-release project reruns nothing.
+- **A `depends_on` that runs against the file flow is a warning**, not an error; a loop that appears only when file edges are grouped by task is neither.
 
-### Three contract decisions the plan did not settle
+### The include closure resolves the idioms projects use
 
-- **A `${VAR}` path inside an inline list must be quoted.** PyYAML rejects `deps: [${OUT}/panel.parquet]` outright — `{` is a reserved flow indicator — so accepting it would have made the two parsers disagree on the very form agents write most. The subset parser rejects it with a message naming the quoted fix; block lists are unaffected.
-- **Structural step errors are `[ERROR]` findings too.** Beyond the findings the objective lists, a missing or non-slug `name`, an unknown `kind`, a step declaring neither `cmd` nor `runner` + `script`, an unknown step or section key, an undefined runner, a runner template without `{script}`, a non-list `deps` or `outs`, a malformed `outs` entry, and a non-flat `params` all report rather than crash the walk. The contract's §Validation lists all of them, since that is where an agent looks a rejection message up.
-- **`env_deps` are interpolated.** The objective scopes `${VAR}` to `cmd`, `deps`, `outs`, and `script`, and `env_deps` entries become deps of every step, so treating them as literal would have made `env_deps: ["${SCRATCH}/env.lock"]` a dep on a path that cannot exist. An unknown variable there is one `[ERROR]` against `config.yaml` rather than one per step.
+The [TreasuryGIV pilot](../08-pilot-treasurygiv/task.md) found the first resolver blind to DrWatson-style includes: 56 of its 57 findings were unresolved includes, each dropping a helper from its step's deps so helper edits stopped invalidating the step. The resolver now handles string literals, `joinpath(@__DIR__, …)`, `projectdir` / `srcdir` / `scriptsdir`, and `joinpath(<variable>, …)` with a balanced-paren scan; `Base.include(mod, path)` stays a warning because it is genuinely dynamic. Details: [internals.md §Julia include closure](../../../skills/task-tree/references/internals.md#julia-include-closure).
 
-### The include closure resolves four forms, not one
+### Known limits
 
-The [08-pilot-treasurygiv](../08-pilot-treasurygiv/task.md) pilot found the first version blind on the idiom TreasuryGIV actually uses. Resolving only a string literal and `joinpath(@__DIR__, …)` left 56 of the pilot's 57 findings as unresolved-include warnings, because DrWatson projects write `include(projectdir("Code", "helpers.jl"))` and tests write `include(joinpath(REPO_ROOT, "Code", "x.jl"))`. An unresolved include is not a cosmetic warning: it drops the helper from the step's deps, so a helper edit stops invalidating the step that reads it — the property the closure exists to provide.
+- Python imports are not tracked; only the Julia `include` closure extends a step's deps.
+- A build blocked by an archived producer's missing file says `external input … is missing` without naming the producer; `task read` and the frontier name it.
 
-`_include_target` now returns candidate `(anchor, path)` pairs and resolves, in addition to the two original forms, `projectdir("…")` / `srcdir("…")` / `scriptsdir("…")` — as direct include arguments and as the head of a `joinpath` — against the project root, and `joinpath(<variable>, "…")` against the project root first and the including file second, keeping whichever candidate is on disk and warning when both exist. Extraction also moved off the nested-parens regex onto a balanced-paren scan, so `include(joinpath(projectdir(), "Code", "io.jl"))` — two levels deep — is seen at all. Registering all 44 TreasuryGIV producers now leaves two warnings: `Base.include(mod, path)`, which is genuinely dynamic, and one derived task edge that contradicts a `depends_on` order.
-
-### Validation
-
-97 tests in [test_repro.py](../../../skills/task-tree/scripts/test_repro.py); suite at 1040 passed with pytask installed.
-
-Coverage follows the objective's list, plus: the subset parser agrees with `pyyaml` byte-for-byte on three fixture sections (`json.dumps(..., sort_keys=True)` equality), scalar typing included — the parser reimplements PyYAML's YAML 1.1 resolvers for null, bool, int, and float. The two resolvers it drops, sexagesimals and timestamps, and the three forms it rejects that `pyyaml` accepts (an unpaired quote in a plain scalar, an escaped `\"`, an escape outside the supported set) are listed in the contract's §The YAML subset.
-
-Contract prose is [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Reproduction Section, with the section listed in §Task Anatomy and both new modules in [internals.md](../../../skills/task-tree/references/internals.md) §Script Inventory.
+Tests: [test_repro.py](../../../skills/task-tree/scripts/test_repro.py) (parser, variables, closure, findings, and `pyyaml` agreement) and [test_task_dependencies.py](../../../skills/task-tree/scripts/test_task_dependencies.py) (readiness, cycles, archived producers, preflight, and parent-owned steps).
