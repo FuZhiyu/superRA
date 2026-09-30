@@ -498,36 +498,87 @@ def revoke(graph, paths, targets):
     return {'revoked': removed}
 
 
-def impact(graph, paths, files, scope=()):
+def _config_origins(graph, step) -> list[dict]:
+    """What in `config.yaml` the step's definition draws on: its runner, variables, and `env_deps`."""
+    from _repro import VAR_REF_RE
+    origins = [{'kind': 'config', 'via': f'runner {step.runner}'}] if step.runner else []
+    texts = [step.cmd_logical] + [d.logical for d in step.deps] + [
+        ref.logical for out in step.outs for ref in (out.path, out.sidecar) if ref is not None]
+    names = sorted({name for text in texts for name in VAR_REF_RE.findall(text)})
+    origins += [{'kind': 'config', 'via': f'variable {name}'} for name in names]
+    if graph.config.env_deps:
+        origins.append({'kind': 'config', 'via': 'env_deps'})
+    return origins
+
+
+def impact(graph, paths, files, scope=(), config_file=None):
+    """Steps a change to *files* would make stale: direct readers, their descendants, and recorded durations."""
+    from _repro import CONFIG_FILENAME
+    from _repro_signals import downstream_steps, step_durations
     selected, unknown = select_steps(graph, scope, include_ancestors=False)
     if unknown:
         raise ReproStateError('unknown scope: ' + ', '.join(unknown))
-    resolved = {str(absolute(paths.project_root, p).resolve()) for p in files}
+    resolved = {p: str(absolute(paths.project_root, p).resolve()) for p in files}
+    config_file = str(Path(config_file or paths.project_root / 'superRA' / CONFIG_FILENAME).resolve())
+    configs = [p for p, path in resolved.items() if path == config_file]
     direct = []
     for step in graph.steps:
         reasons = []
         for dep in step.deps:
             path = str(absolute(paths.project_root, dep.resolved).resolve())
-            if dep.logical in files or any(path == p or path.startswith(p + '/') or p.startswith(path + '/') for p in resolved):
+            if dep.logical in files or any(path == p or path.startswith(p + '/') or p.startswith(path + '/')
+                                           for p in resolved.values()):
                 reasons.append({'path': dep.logical, 'origins': step.dependency_origins.get(dep.logical, [])})
+        origins = _config_origins(graph, step) if configs else []
+        if origins:
+            reasons.append({'path': configs[0], 'origins': origins})
         if reasons:
-            direct.append({'step': step.name, 'task': step.task_path, 'reasons': reasons, 'in_scope': not scope or step.name in selected})
-    affected = {r['step'] for r in direct}
-    edges = []
-    changed = True
-    while changed:
-        changed = False
-        for src, dst, via in graph.step_edges:
-            if src in affected:
-                if (src, dst, via) not in edges:
-                    edges.append((src, dst, via))
-                if dst not in affected:
-                    affected.add(dst)
-                    changed = True
+            direct.append({'step': step.name, 'task': step.task_path, 'reasons': reasons,
+                           'in_scope': not scope or step.name in selected})
+    names = downstream_steps(graph, [r['step'] for r in direct])
+    durations = step_durations(paths.project_root, names)
+    affected = set(names)
     return {'paths': list(files), 'direct': direct,
-            'affected': [{'step': name, 'in_scope': not scope or name in selected} for name in sorted(affected)],
-            'edges': edges, 'findings': [f.to_dict() for f in graph.findings],
+            'affected': [{'step': name, 'task': graph.step(name).task_path, 'in_scope': not scope or name in selected,
+                          'duration': durations[name]} for name in names],
+            'edges': [edge for edge in graph.step_edges if edge[0] in affected],
+            'findings': [f.to_dict() for f in graph.findings],
             'prediction': 'conservative invalidation; unchanged output bytes can stop a cascade'}
+
+
+def format_impact(result) -> str:
+    """One line per affected step: why it is affected and what its last run cost."""
+    affected = result['affected']
+    known = [row['duration'] for row in affected if row['duration']]
+    unknown = len(affected) - len(known)
+    lines = [f"{', '.join(result['paths'])}: {len(affected)} step(s) affected"
+             + (f", {sum(known):.1f}s recorded" if known else '')
+             + (f" ({unknown} with no recorded duration)" if unknown else '')]
+    direct = {row['step']: row for row in result['direct']}
+    via = {}
+    for src, dst, path in result['edges']:
+        via.setdefault(dst, f'{path} from {src}')
+    width = max((len(row['step']) for row in affected), default=0)
+    for row in affected:
+        if row['step'] in direct:
+            why = '; '.join(f"{reason['path']} ({', '.join(_origin_text(o) for o in reason['origins']) or 'declared'})"
+                            for reason in direct[row['step']]['reasons'])
+        else:
+            why = f"reads {via.get(row['step'], 'an affected output')}"
+        cost = f"{row['duration']:.1f}s" if row['duration'] else 'no recorded duration'
+        scope = '' if row['in_scope'] else '  [outside scope]'
+        lines.append(f"  {row['step']:<{width}}  {cost:>8}  {why}{scope}")
+    errors = sum(f['severity'] == 'error' for f in result['findings'])
+    if errors:
+        lines.append(f"{errors} graph error(s); run `superra task check`.")
+    lines.append(f"Prediction: {result['prediction']}.")
+    return '\n'.join(lines)
+
+
+def _origin_text(origin) -> str:
+    if origin['kind'] == 'config':
+        return origin['via']
+    return origin['kind'] + (f" via {origin['via']}" if origin.get('via') else '')
 
 
 def source_signature(root, cache=None):
