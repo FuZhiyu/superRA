@@ -11,7 +11,7 @@ Make the task hook's PostToolUse behaviors fire for a file edit made through any
 - **One detector, no command parsing.** After every `Bash`, `Edit`, `Write`, and `apply_patch` call, the hook compares the watched files against a per-session rolling baseline and hands the changed paths to the existing consumers. A file counts as changed only when its content hash differs. Paths the tool call itself supplies are always included, so the call that seeds the baseline loses nothing.
 - **Watched set.** Every `.md` and common script file under a task root, plus the literal-path scripts, deps, and Julia include closures of registered reproduction steps. Markdown outside a task root is watched only through the tool-supplied path.
 - **An unregistered script under a task root draws the reproduction reminder** with no owning step named, in trees that carry reproduction config: a retained task companion is always registered.
-- **`code_roots` is retired.** The hook is its only consumer. Delete the config key, its parser support, the hook branch, the contract row, and their tests; v0.5 is unreleased, so no compatibility surface stays. Other missing-registration signals belong to [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md).
+- **`code_roots` is retired.** The hook is its only consumer. Delete the config key, its parser support, the hook branch, the contract row, and their tests; v0.5 is unreleased, so no compatibility surface stays. Other missing-registration signals belong to [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md).
 - **A step's out draws no reproduction reminder**, even when another step reads it as a dep: a rerun rewrites it.
 - **Messages state what changed, not who changed it.** A change can come from the researcher, another agent, or a sync, and surfaces at the next tool call.
 - **Approval check after the write is advisory.** A changed `task.md` that carries `status: approved` with blocking review notes draws non-blocking feedback naming the task. The PreToolUse approval and communicate gates stay as they are.
@@ -69,7 +69,7 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 - **The hook never reports its own writes.** Reconcile rewrites ancestor statuses, so detection runs before any reconcile, and once one ran the hook detects again and discards the result.
 - **Reminder floods collapse.** More than five reproduction reminders in one call (a checkout, a merge) become one line pointing at `superra repro status .`.
 - **Every reminder names a runnable target.** `superra repro status` needs at least one; a reminder with owning steps names them as `task#step` selectors, and one with none falls back to `.`, the whole active tree.
-- **"Carries reproduction config"** means any step, any `## Reproduction` section, or any `reproduction:` config value ([`has_reproduction`](../../../skills/task-tree/scripts/_repro_signals.py#L194)), which also closes the `code_roots` advisory in [02-agent-signals](../../reproducibility/12-agent-protocol/02-agent-signals/task.md).
+- **"Carries reproduction config"** means any step, any `## Reproduction` section, or any `reproduction:` config value ([`has_reproduction`](../../../skills/task-tree/scripts/_repro_signals.py#L194)), which also closes the `code_roots` advisory in [05-reminder-hook](../../reproducibility/05-reminder-hook/task.md).
 - **The post-write approval check needed no new code:** reconcile already reports `approved` with `[BLOCKING]` notes, and now runs for Bash-made edits.
 
 ### Known limits
@@ -95,7 +95,7 @@ The task hook now handles a file edit the same way whichever tool made it. A per
 
 ### Second pass — thorough, on scope-fidelity and correctness against the design this landed beside
 
-Read against the [12-agent-protocol group decisions](../../reproducibility/12-agent-protocol/task.md#decisions-researcher-2026-09-20) and its three children, the redesigned [reproducibility skill](../../../skills/reproducibility/SKILL.md), [_repro_signals.py](../../../skills/task-tree/scripts/_repro_signals.py), and the `guard-foreign-checkout` gate from [agent-cwd-isolation](../agent-cwd-isolation/task.md). All findings are closed.
+Read against the agent-protocol decisions now in [06-skill](../../reproducibility/06-skill/task.md#objective), the redesigned [reproducibility skill](../../../skills/reproducibility/SKILL.md), [_repro_signals.py](../../../skills/task-tree/scripts/_repro_signals.py), and the `guard-foreign-checkout` gate from [agent-cwd-isolation](../agent-cwd-isolation/task.md). All findings are closed.
 
 Both routes by which the hook reached another checkout — a command naming a path into it, and a payload `cwd` that a `cd` moved into it — were replayed on two scratch checkouts, each escape reproduced first on the commit that carried it. At `a7f5585a` the foreign checkout ends with only the file it was itself edited in dirty, its root `task.md` unrolled and no `.superra-repro/`, while the session's own tree still reconciles in the same call. [test_edit_detect.py](../../../skills/task-tree/scripts/test_edit_detect.py) passes identically with and without an ambient `CLAUDE_PROJECT_DIR`, so its stripping of one hides nothing.
 
