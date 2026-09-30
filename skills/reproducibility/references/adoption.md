@@ -1,7 +1,7 @@
 # Adopting Reproduction in a Project
 
-**Start bounded.** One producer and one meaningful `kind: check` in one task, reading named saved or external inputs. Keep upstream reconstruction outside that first registration unless the researcher asks for it.
+**Start with one task.** Register one producer and one meaningful `kind: check` step, reading named saved or external inputs. Leave the upstream producers unregistered in that first pass unless the researcher asks for them.
 
-**Discover paths without starting the analysis environment.** Every command evaluates the `shell:` variables in `superRA/config.yaml`, so one that boots the language runtime or loads the project makes `status` cost what a build costs. After the first registration, time unchanged `status` and `build`; subsecond warm `status` is a target for a small tree, not a gate.
+**Keep path discovery out of the analysis environment.** Every `superra` command evaluates the `shell:` variables in `superRA/config.yaml`. A variable that boots the language runtime or loads the project makes every `status` as slow as a build. After the first registration, time `status` and `build` with nothing changed; a warm `status` under a second is the target for a small tree, not a gate.
 
 Then follow [designing-the-graph.md](designing-the-graph.md) for the rest of the tree.
