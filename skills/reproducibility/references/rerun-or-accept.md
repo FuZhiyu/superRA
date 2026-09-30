@@ -6,7 +6,7 @@ Before applying the rule: `superra repro build <targets> --dry-run` for the cost
 
 ## The stale rule
 
-It covers every step `status` reports as `stale`, `missing` (never built, or an out is gone), or `failed` (read the log its reason names and fix the failure first). A step reported `external` waits on a missing external input: retrieve it, or register its producer.
+It covers steps a change left `stale`, `missing` (an out is gone), or `failed`. Your own work is built, never left stale: a step you just registered, or a `failed` step once you fix what the log its reason names shows. A step reported `external` waits on a missing external input: retrieve it, or register its producer.
 
 Classify the step from the graph:
 
@@ -37,6 +37,6 @@ Accepting the same fan-out again and again is a design signal — fix it at the 
 
 ## What acceptance never covers
 
-- **It executes nothing.** A check that has never run must run.
+- **A check that has never run must run.**
 - **It covers the selection only.** Accepting a consumer says nothing about the producers of its saved inputs; when the claim covers them, accept or build them too.
 - **It does not replace unresolved work.** Unreviewed results, result-affecting changes not yet executed, and changed check assertions require running the affected producer or check.

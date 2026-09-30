@@ -2,7 +2,7 @@
 
 ## What earns a step
 
-`[BLOCKING]` Retained code, and every result recorded from it, is registered in its owning task, in the commit that changes the result, its inputs, or its ownership.
+`[BLOCKING]` Retained code, and every result recorded from it, is registered in its owning task. Update the declarations in the commit that changes the result, its inputs, or its ownership.
 
 - **A script whose output a result cites** — a build step whose `outs` are the files it writes. A finding recorded only in prose still registers the script that printed it.
 - **A drift test or validation script** — a `kind: check` step over the artifacts it reads.
@@ -37,7 +37,7 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
 - **Bind declared paths to execution.** Pass the paths to the producer, or assert they match its runtime routing — a script that prefers a sandbox copy when present can read a file its declaration never names. Recheck after a branch change or when an input's availability changes.
 - **Pin the interpreter once**, in the `runners` template.
 - **Check a figure's numerical data.** Point the check at a deterministic artifact holding the plotted values, reusing an existing artifact or a project-native format; write a companion only when that evidence is missing.
-- **Point a drift test of a published result at the published copy,** not at the sandbox copy a rehearsal build writes; otherwise it re-validates the run it exists to check.
+- **Point a drift test of a published result at the published copy,** not at a sandbox copy of the same outputs.
 - **Stop at external inputs:** declare each as a dep with no producing step.
 - **Upstream code is a dep only when the step reads or executes it;** provenance alone is not a dependency.
 - **Use a sidecar only for one measurably slow intermediate,** never for an exhibit.
