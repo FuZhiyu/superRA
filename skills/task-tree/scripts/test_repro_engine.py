@@ -93,6 +93,61 @@ def test_branches_that_build_different_steps_merge_cleanly(project, left, right)
     assert project.status(".").ok
 
 
+def _new_step_task(project, name):
+    project.write(f"superRA/04-{name}/task.md", TASK_X.replace("build-x", name).replace("x.sh", f"{name}.sh")
+                  .replace("x.txt", f"{name}.txt"))
+    project.write(f"Code/{name}.sh", f"mkdir -p output\necho {name} > output/{name}.txt\n")
+
+
+def test_a_lock_conflicted_by_adjacent_new_steps_reads_both_and_the_next_build_rewrites_it(project, capsys):
+    _merge_repo(project)
+    for branch, name in (("left", "build-p"), ("right", "build-q")):  # sort next to each other
+        git(project.root, "checkout", "-qb", branch, "main")
+        _new_step_task(project, name)
+        assert project.run("build", f"04-{name}") == 0
+        git(project.root, "add", "-A")
+        git(project.root, "commit", "-qm", branch)
+    git(project.root, "checkout", "-q", "left")
+    merge = subprocess.run(["git", "merge", "--no-edit", "right"], cwd=project.root, capture_output=True, text=True)
+    assert merge.returncode != 0 and "<<<<<<<" in project.read("repro-lock.json")
+    capsys.readouterr()
+
+    assert set(project.states().values()) == {"fresh"}
+    err = capsys.readouterr().err
+    assert "conflict markers" in err and "dropped" not in err
+    times = project.run_times()
+    assert project.run("build", ".") == 0
+    assert project.run_times() == times  # nothing reran
+    text = project.read("repro-lock.json")
+    assert "<<<<<<<" not in text
+    assert {"build-p", "build-q"} <= set(json.loads(text)["steps"])
+
+
+@pytest.mark.parametrize("style", [[], ["--diff3"]])
+def test_a_lock_entry_both_sides_changed_is_dropped_so_its_step_reads_missing(project, capsys, style):
+    assert project.run("build", ".") == 0
+    base = project.read("repro-lock.json")
+    sides = []
+    for text in ("left", "right"):
+        project.write("Code/a.sh", f"# {text}\nmkdir -p output\necho hello > output/a.txt\n")
+        assert project.run("build", "01-a") == 0
+        sides.append(project.read("repro-lock.json"))
+    files = [project.write(f"lock-{label}.json", body) for label, body in zip(("ours", "base", "theirs"),
+                                                                             (sides[0], base, sides[1]))]
+    merged = subprocess.run(["git", "merge-file", "-p", *style, *map(str, files)],
+                            capture_output=True, text=True).stdout
+    assert "<<<<<<<" in merged
+    project.write("repro-lock.json", merged)
+    capsys.readouterr()
+
+    assert set(read_lock(project.paths.lock_file)) == {"build-b", "check-b", "build-x"}
+    assert "dropped 1 entry both sides changed: build-a" in capsys.readouterr().err
+    assert project.states()["build-a"] == "missing"
+    assert project.run("build", "01-a") == 0
+    assert "<<<<<<<" not in project.read("repro-lock.json")
+    assert project.states()["build-a"] == "fresh"
+
+
 # ---------------------------------------------------------------------------
 # Scheduling
 # ---------------------------------------------------------------------------

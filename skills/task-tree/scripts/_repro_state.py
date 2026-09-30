@@ -506,6 +506,68 @@ def convert_legacy(lock_text: str | None, builds_text: str | None = None) -> dic
     return document
 
 
+def has_conflict_markers(text: str) -> bool:
+    return any(line.startswith("<<<<<<<") for line in text.splitlines())
+
+
+def _conflict_sides(text: str) -> tuple[str, str]:
+    """The two sides of a file holding merge-conflict markers (either conflict style)."""
+    sides: tuple[list[str], list[str]] = ([], [])
+    region = None  # None outside a conflict; "ours", "base", or "theirs" inside one
+    for line in text.splitlines(keepends=True):
+        if line.startswith("<<<<<<<") and region is None:
+            region = "ours"
+        elif line.startswith("|||||||") and region == "ours":
+            region = "base"
+        elif line.startswith("=======") and region in ("ours", "base"):
+            region = "theirs"
+        elif line.startswith(">>>>>>>") and region == "theirs":
+            region = None
+        else:
+            if region in (None, "ours"):
+                sides[0].append(line)
+            if region in (None, "theirs"):
+                sides[1].append(line)
+    if region is not None:
+        raise ValueError("unterminated merge-conflict region")
+    return "".join(sides[0]), "".join(sides[1])
+
+
+def _parse_lock_side(text: str) -> dict:
+    """One side of a conflicted lock; repairs the commas a hunk boundary can leave."""
+    try:
+        return parse_lock(text)
+    except ValueError:
+        text = re.sub(r",(\s*[}\]])", r"\1", text)
+        return parse_lock(re.sub(r'(?<=[}\]"0-9el])(\s*\n\s*)(?=")', r",\1", text))
+
+
+_WARNED_CONFLICTS: set[tuple[str, str]] = set()
+
+
+def resolve_conflicted_lock(text: str, source: Path | None = None) -> dict:
+    """A lock holding merge-conflict markers: every entry on one side or identical on both.
+
+    An entry both sides changed is dropped, so its step reads ``missing``.
+    """
+    ours, theirs = (_parse_lock_side(side)["steps"] for side in _conflict_sides(text))
+    steps, dropped = {}, []
+    for name in sorted(ours.keys() | theirs.keys()):
+        if name in ours and name in theirs and ours[name] != theirs[name]:
+            dropped.append(name)
+        else:
+            steps[name] = ours.get(name, theirs.get(name))
+    key = (str(source), text)
+    if key not in _WARNED_CONFLICTS:
+        _WARNED_CONFLICTS.add(key)
+        note = (f"; dropped {len(dropped)} {'entry' if len(dropped) == 1 else 'entries'} both sides changed: "
+                f"{', '.join(dropped)} (their steps read missing)") if dropped else ""
+        print(f"Warning: {source.name if source else LOCK_FILENAME} holds merge-conflict markers; read "
+              f"{len(steps)} entries on one side or identical on both{note}. The next `superra repro build` "
+              "rewrites it without markers; commit it.", file=sys.stderr)
+    return {"version": LOCK_VERSION, "steps": steps}
+
+
 _LEGACY_DOCUMENTS: dict[tuple, dict] = {}
 
 
@@ -514,7 +576,8 @@ def read_lock_document(path: Path) -> dict:
     legacy = path.parent / LEGACY_LOCK_FILENAME
     try:
         if path.is_file():
-            return parse_lock(path.read_text(encoding="utf-8"))
+            text = path.read_text(encoding="utf-8")
+            return resolve_conflicted_lock(text, path) if has_conflict_markers(text) else parse_lock(text)
         if legacy.is_file():
             builds = path.parent / LEGACY_BUILDS_FILENAME
             key = (legacy.read_text(encoding="utf-8"),
@@ -553,13 +616,14 @@ def write_lock_entry(paths: RunnerPaths, name: str, entry: LockEntry) -> None:
 
 
 def prune_lock(paths: RunnerPaths, keep: set[str]) -> None:
-    """Drop entries of steps no longer in the tree; convert a legacy lock on the way."""
+    """Drop entries of steps no longer in the tree; convert a legacy or conflicted lock on the way."""
     with RECORD_LOCK:
         if not paths.lock_file.is_file() and not paths.legacy_lock_file.is_file():
             return
         document = read_lock_document(paths.lock_file)
         pruned = {name: raw for name, raw in document["steps"].items() if name in keep}
-        if paths.lock_file.is_file() and pruned == document["steps"]:
+        if (paths.lock_file.is_file() and pruned == document["steps"]
+                and not has_conflict_markers(paths.lock_file.read_text(encoding="utf-8"))):
             return
         document["steps"] = pruned
         _write_lock_document(paths, document)
