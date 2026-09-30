@@ -1,6 +1,6 @@
 ---
 title: "Route New and Legacy Projects to Onboarding"
-status: implemented
+status: approved
 depends_on:
   - 03-onboarding-skill
   - 04-isolated-run
@@ -24,3 +24,9 @@ A project without a task tree now reaches onboarding from both entry points, and
 - **Inventories:** a Workflow row in [CATEGORIES.md](../../../skills/CATEGORIES.md); an onboarding paragraph in [README.md](../../../README.md) §How it works and the upgrade paragraph's migration sentence; an Ownership Boundaries row and a main-agent load-surface row in [CLAUDE.md](../../../CLAUDE.md); the `.agents/skills/onboarding` symlink the Codex packaging check requires.
 - **Left as is:** the `task-tree` description and its §Migration row still name `PLAN.md` migration, because the migrate command's mechanics stay there; onboarding only owns the offer. README has no skill table, so nothing was added there.
 - **Checks:** `test_contract.py` 15 passed; `check-harness-compatibility.sh` passes after adding the symlink; Markdown and link checks clean.
+
+## Review Notes
+
+Tier: quick. Focuses: the CLAUDE.md §Teach the Protocol instruction gate on added skill lines, cross-reference consistency with the owners.
+
+1. **[ADVISORY] No path for a researcher who declines onboarding.** [main-agent.md:8](../../../skills/using-superra/references/main-agent.md#L8) holds every session-start action "until onboarding creates the tree", and [superplan SKILL.md](../../../skills/superplan/SKILL.md) §Entry Assessment re-offers onboarding whenever existing work has no tree. A researcher who declines but wants to plan new work gets no wrapper and a repeated offer. One clause — declined: continue with the actions below — closes it.

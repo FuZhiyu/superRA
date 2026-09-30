@@ -1,6 +1,6 @@
 ---
 title: "Author the Onboarding Skill Spine and Setup References"
-status: implemented
+status: revise
 depends_on:
   - 02-retroactive-graph
 ---
@@ -30,3 +30,13 @@ Create `skills/onboarding/SKILL.md` carrying the six-stage choreography from the
 - **[project-setup.md](../../../skills/onboarding/references/project-setup.md)** (stage 4) offers git and, for a project without it: a researcher-settled `.gitignore` that also covers `.superra-repro/` and the dashboard's run files, a data-handling note in `CLAUDE.md` / `AGENTS.md`, a dashboard stop before `git init` (which moves the dashboard's run files out of `superRA/`), a baseline commit checked for data and files over 50 MB, then a separate `superRA/` commit. A project already in git gets a coverage check and a topic-branch commit.
 - **[legacy-plan-migration.md](../../../skills/onboarding/references/legacy-plan-migration.md)** carries the upgrade message, docs link, and migrate command formerly in the session-start actions. The command was run in a scratch legacy project with the wrapper present, which needed the [06-empty-root-bootstrap](../06-empty-root-bootstrap/task.md) migration fix.
 - **Checks:** Markdown checks clean; `task check --category links` passes. Skill evals were not run; the researcher runs the end-to-end trial.
+
+## Review Notes
+
+Tier: quick. Focuses: the CLAUDE.md §Teach the Protocol instruction gate on added skill lines, cross-reference consistency with the owners.
+
+1. **[BLOCKING] Objective line paraphrases its owner (gate test 1, DRY).** [task-tree-design.md:119](../../../skills/superplan/references/task-tree-design.md#L119) points to §Writing Objectives and Details, then restates its goal bullet ("what the task must produce or verify, naming the artifacts that define its scope", [task-tree-design.md:10](../../../skills/superplan/references/task-tree-design.md#L10)) as ": what the unit achieves and the outputs it produces." Fix: cut the paraphrase — "Write each objective as for planned work, per §Writing Objectives and Details."
+2. **[BLOCKING] Same-file restatement of the status rule (gate test 2).** [SKILL.md:47](../../../skills/onboarding/SKILL.md#L47) "No: tasks stay `implemented`." is already fixed by stage 2's "Existing work superRA has not verified stays `implemented`." ([SKILL.md:25](../../../skills/onboarding/SKILL.md#L25)). Fix: drop the clause; "Yes: …isolated-run.md" alone keeps the branch.
+3. **[ADVISORY] Third copy of the `task check` validation.** [SKILL.md:12](../../../skills/onboarding/SKILL.md#L12) "validate with `superra task check` and the dashboard" repeats [designing-the-graph.md:50](../../../skills/reproducibility/references/designing-the-graph.md#L50) (and adoption.md:11, see 02-retroactive-graph). The clause's real job is overriding [designing-the-graph.md:62](../../../skills/reproducibility/references/designing-the-graph.md#L62), which says to "rerun `superra repro status <task>`" after a graph comment; "so they wait for stage 5, including after a graph comment" would carry that without the restatement.
+4. **[ADVISORY] Umbrella task reads as mandatory.** [task-tree-design.md:118](../../../skills/superplan/references/task-tree-design.md#L118) "with an umbrella task per build-and-review.md §Create" can be read as always creating one; the owner makes it conditional ("Otherwise skip it", [build-and-review.md:43](../../../skills/superplan/references/build-and-review.md#L43)). "…and decide the umbrella task per …" keeps the condition with the owner.
+5. **[ADVISORY] Already-in-git path leaves `.superra-repro/` out of `.gitignore`.** [project-setup.md:15](../../../skills/onboarding/references/project-setup.md#L15) checks only data and large files. The first `repro build` in the worktree then appends `.superra-repro/` to the tracked `.gitignore` ([_repro_state.py:149-156](../../../skills/task-tree/scripts/_repro_state.py#L149-L156)); that edit is outside isolated-run's commit step and blocks `git worktree remove` without `--force`. Add `.superra-repro/` to the coverage check, as the no-git path already does.

@@ -1,6 +1,6 @@
 ---
 title: "Adopt the Reproduction Graph Across an Existing Project"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -27,3 +27,9 @@ Rewrite [adoption.md](../../../skills/reproducibility/references/adoption.md) so
 In a scratch project with no repository and one declared step, `task check`, `repro dag`, `repro status`, `build`, and the dashboard's graph and status endpoints all worked, and the build wrote `repro-lock.json`.
 
 **`superra repro status` and `build` write outside `superRA/`:** a hash cache `.superra-repro/` and a `.gitignore` line for it at the project root. `task check`, `repro dag`, and the dashboard write nothing. Onboarding's declare-only stage therefore validates with `task check` and the dashboard, and leaves `status` to the run; this is recorded for [03-onboarding-skill](../03-onboarding-skill/task.md).
+
+## Review Notes
+
+Tier: quick. Focuses: the CLAUDE.md §Teach the Protocol instruction gate on added skill lines, cross-reference consistency with the owners.
+
+1. **[BLOCKING] Restated validation step (gate test 1, DRY).** [adoption.md:11](../../../skills/reproducibility/references/adoption.md#L11) opens with "Validate with `superra task check`", which the section one line above points into already carries: [designing-the-graph.md:50](../../../skills/reproducibility/references/designing-the-graph.md#L50) ends §Declare from the script with "Validate before building: `superra task check`." Fix: keep only the pointer — "Then present the graph per designing-the-graph.md §Presenting a graph for review."
