@@ -45,6 +45,8 @@ flowchart TB
     class FINISHED terminal
 ```
 
+An existing project — even one without git — enters through the `onboarding` skill: the agent writes a task tree and reproduction graph for the work already done, touching nothing outside `superRA/` until you approve, then offers git and an isolated rerun that checks each result against its original.
+
 Research is rarely this linear: an unanticipated issue mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving unrelated finished work untouched. Run `./superRA/superra dashboard` from a project terminal to watch and steer any of it through the Tree and Graph views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks a full cycle end to end, covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
 
 ## Installation
@@ -75,7 +77,7 @@ For the unreleased 0.5.0 upgrade, every coauthor on a shared project upgrades su
 
 Readiness follows `depends_on` only; file dependencies between steps order builds and are reported as inputs, never gating. `repro build <task>` builds that task and its nested tasks using saved upstream inputs. Add `--upstream` to include producers and `--force` to rerun every step in that scope. Use `task#step` for one step, or `.` for every registered step. `build --dry-run` reports what would run and what each step last cost, and `repro impact` shows what a change affects. Reviewed acceptance (`repro accept --reason`) keeps a reviewed result fresh without rerunning it and never claims the step ran; the [reproducibility skill](skills/reproducibility/SKILL.md) decides when to rerun and when to accept. See the [command reference](skills/task-tree/references/commands.md#reproduction).
 
-0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered migration (`superra task migrate from-plan`).
+0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered onboarding, which migrates them (`superra task migrate from-plan`).
 
 ## Contributing
 
