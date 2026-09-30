@@ -1,6 +1,6 @@
 ---
 title: "Adopt the Reproduction Graph Across an Existing Project"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -18,7 +18,7 @@ Rewrite [adoption.md](../../../skills/reproducibility/references/adoption.md) so
 
 [adoption.md](../../../skills/reproducibility/references/adoption.md) now covers declaring a whole existing project, with the one-task trial kept as the other scope the researcher can pick.
 
-- **Declaring:** scripts are declared as they are, with no code edits; a script the graph cannot describe cleanly is noted in the task's `## Details` for the first build. Validation is `superra task check`, then the existing graph-review step. External-input agreement stays with [designing-the-graph.md §Presenting a graph for review](../../../skills/reproducibility/references/designing-the-graph.md#presenting-a-graph-for-review), linked rather than restated.
+- **Declaring:** scripts are declared as they are, with no code edits; a script the graph cannot describe cleanly is noted in the task's `## Details` for the first build. The graph is then presented through the existing review step, which also carries the `task check` validation and the external-input agreement: [designing-the-graph.md](../../../skills/reproducibility/references/designing-the-graph.md), linked rather than restated.
 - **First build:** upstream-first, in slices the researcher picks, with recorded durations pricing later slices. The cheap-discovery rule is unchanged except that timing happens after the first build.
 - **Load table:** the `adoption.md` row in [SKILL.md](../../../skills/reproducibility/SKILL.md) names both scopes.
 
@@ -33,3 +33,4 @@ In a scratch project with no repository and one declared step, `task check`, `re
 Tier: quick. Focuses: the CLAUDE.md §Teach the Protocol instruction gate on added skill lines, cross-reference consistency with the owners.
 
 1. **[BLOCKING] Restated validation step (gate test 1, DRY).** [adoption.md:11](../../../skills/reproducibility/references/adoption.md#L11) opens with "Validate with `superra task check`", which the section one line above points into already carries: [designing-the-graph.md:50](../../../skills/reproducibility/references/designing-the-graph.md#L50) ends §Declare from the script with "Validate before building: `superra task check`." Fix: keep only the pointer — "Then present the graph per designing-the-graph.md §Presenting a graph for review."
+   → implemented: [adoption.md:11](../../../skills/reproducibility/references/adoption.md#L11) keeps only the pointer to §Presenting a graph for review.

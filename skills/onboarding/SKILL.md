@@ -9,7 +9,7 @@ Bring existing work into superRA in six stages.
 
 - **End every stage at its stop point:** present what changed, then wait for the researcher.
 - **Enter at the stage the project needs;** skip a stage whose work is already done.
-- **Stages 1–3 write only inside `superRA/`:** no code edits, no git commands, no other files. `superra repro status` and `repro build` write a cache and a `.gitignore` line at the project root, so they wait for stage 5; validate with `superra task check` and the dashboard.
+- **Stages 1–3 write only inside `superRA/`:** no code edits, no git commands, no other files. `superra repro status` and `repro build` write a cache and a `.gitignore` line at the project root, so both wait for stage 5, including the `repro status` after a graph comment.
 - **Explain each concept in plain words where it first appears,** for a researcher who has never used superRA or git.
 
 ## 1. Orient
@@ -44,7 +44,7 @@ Offer git per [references/project-setup.md](references/project-setup.md), whethe
 
 ## 5–6. Isolated reproduction run and merge back
 
-Ask whether to rerun the project to verify it. Yes: [references/isolated-run.md](references/isolated-run.md). No: tasks stay `implemented`.
+Ask whether to rerun the project to verify it. Yes: [references/isolated-run.md](references/isolated-run.md).
 
 ## Close
 

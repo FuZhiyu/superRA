@@ -248,6 +248,22 @@ def test_task_create_first_task_in_wrapper_only_root(
     assert (root / "01-data" / "task.md").exists()
 
 
+def test_task_create_prefers_nearer_wrapper_only_root(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = task_root.parent / "work" / "trial"
+    inner = project / "superRA"
+    inner.mkdir(parents=True)
+    (inner / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.chdir(project)
+
+    cli.main(["task", "create", "01-data", "--title", "Data"])
+
+    assert (inner / "01-data" / "task.md").exists()
+    assert not (task_root / "01-data").exists()
+
+
 def test_task_create_without_wrapper_or_tasks_still_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -23,7 +23,7 @@ Task-tree design judgment — objective/guidance writing, placement, splitting, 
 
 Assess three dimensions before exploration or task design — creating a tree and updating one both pass through this.
 
-- **Placement.** `superRA/` exists: place by `references/task-tree-design.md` §Placing Work in the Existing Tree. No tree, but existing work or a legacy `PLAN.md`: offer `superRA:onboarding`. Neither: the work becomes the first top-level task under `superRA/`.
+- **Placement.** `superRA/` exists: place by `references/task-tree-design.md` §Placing Work in the Existing Tree. No tree, but existing work or a legacy `PLAN.md`: offer `superRA:onboarding` unless the researcher declined it this session. Neither: the work becomes the first top-level task under `superRA/`.
 - **Depth tier.** Choose from §Depth Tiers.
 - **Routing path.** Forward planning (default), or **retroactive documentation** — code/results without task coverage need a `superRA/` record; same phases, per `task-tree-design.md` §Retroactive Task-Tree Creation. Structural cleanup of an existing tree is neither — that is the separate `references/consolidation.md` pass, entered on structural debt, not on new work needing placement.
 
