@@ -1,6 +1,6 @@
 ---
 title: "Onboarding: Adopt a Raw Research Project into superRA"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

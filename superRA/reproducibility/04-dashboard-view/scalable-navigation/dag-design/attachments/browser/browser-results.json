@@ -1,7 +1,7 @@
 {
   "machine": "macOS-27.0-arm64-arm-64bit",
-  "live": "http://127.0.0.1:60128",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-594__2nu/superRA",
+  "live": "http://127.0.0.1:61085",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-nfi4sjcu/superRA",
   "browser": "154.0.8037.58",
   "counts": {
     "steps": 500,
@@ -13,22 +13,22 @@
   "timingsMs": {
     "search": [
       0.5,
-      0.39999985694885254,
-      0.3000001907348633,
       0.5,
+      0.2999999523162842,
+      0.6000001430511475,
       0.2999999523162842
     ],
     "overview": [
+      3.5,
       3.200000047683716,
-      3.299999952316284,
-      3.0999999046325684,
-      3.4000000953674316,
-      3
+      3,
+      3.5999999046325684,
+      3.299999952316284
     ],
     "full": [
-      83.29999995231628,
-      88.70000004768372,
-      80.70000004768372
+      90.5,
+      90.40000009536743,
+      90
     ]
   },
   "sharedReaderAndHistory": true,
