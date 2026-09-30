@@ -1,6 +1,6 @@
 ---
 title: "Upgrade Path and Task-Tree Records Match Shipped Behavior"
-status: implemented
+status: approved
 depends_on:
   - 08-workflow-wiring
 ---
