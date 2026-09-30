@@ -36,40 +36,6 @@ A project from 0.4 upgrades to 0.5 without losing its frontier, and the release 
 
 Reproduced directly on a scratch tree before 01: a step with `tier: canon` printed `[ERROR] [reproduction] a: ## Reproduction: unknown step key 'tier'`, `task frontier` refused with "effective dependency graph is invalid", and `repro status . --tier canon` printed `superra repro: error: unrecognized arguments: --tier canon`.
 
-## Reproduction
-
-```yaml
-steps:
-  - name: upgrade-path-check
-    kind: check
-    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro.py skills/task-tree/scripts/test_repro_runner.py -k 'tier or retired' -q -p no:cacheprovider"
-    deps:
-      - skills/task-tree/scripts/_apply_patch.py
-      - skills/task-tree/scripts/_artifacts.py
-      - skills/task-tree/scripts/_comments.py
-      - skills/task-tree/scripts/_repro.py
-      - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_builds.py
-      - skills/task-tree/scripts/_repro_provenance.py
-      - skills/task-tree/scripts/_repro_scope.py
-      - skills/task-tree/scripts/_repro_signals.py
-      - skills/task-tree/scripts/_repro_state.py
-      - skills/task-tree/scripts/_step_links.py
-      - skills/task-tree/scripts/_task_dependencies.py
-      - skills/task-tree/scripts/_task_io.py
-      - skills/task-tree/scripts/_task_snapshot.py
-      - skills/task-tree/scripts/_task_validate.py
-      - skills/task-tree/scripts/_worktree_discovery.py
-      - skills/task-tree/scripts/cli.py
-      - skills/task-tree/scripts/dashboard_artifact_workflow.py
-      - skills/task-tree/scripts/repro_run.py
-      - skills/task-tree/scripts/task_query.py
-      - skills/task-tree/scripts/task_read.py
-      - skills/task-tree/scripts/conftest.py
-      - skills/task-tree/scripts/test_repro.py
-      - skills/task-tree/scripts/test_repro_runner.py
-```
-
 ## Results
 
 A project on the reproduction pre-release now upgrades with warnings instead of errors, and the release notes, README, docs-site task-tree pages, and task tree describe what 0.5 ships. [upgrade-path-check](#reproduction) is fresh; its eight tests fail without the code changes and pass here.

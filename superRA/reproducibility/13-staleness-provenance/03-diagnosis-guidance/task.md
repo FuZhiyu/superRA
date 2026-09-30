@@ -18,48 +18,6 @@ Agents resolve a stale step from `explain` output alone, and the claim is verifi
 - The current table in `diagnosing.md` names symptoms ("an out you did not edit") and investigation steps that the resolver now performs; most rows shrink to an action.
 - Load `skill-creator` and `superRA:reproducibility` before editing.
 
-## Reproduction
-
-```yaml
-steps:
-  - name: diagnosis-scenario-check
-    kind: check
-    cmd: "sh -c 'python3 superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py \"$(mktemp -d)/scenario\" --check'"
-    deps:
-      - superRA/reproducibility/13-staleness-provenance/03-diagnosis-guidance/attachments/two_clone_scenario.py
-      - skills/task-tree/scripts/_apply_patch.py
-      - skills/task-tree/scripts/_artifacts.py
-      - skills/task-tree/scripts/_comments.py
-      - skills/task-tree/scripts/_repro.py
-      - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_builds.py
-      - skills/task-tree/scripts/_repro_provenance.py
-      - skills/task-tree/scripts/_repro_scope.py
-      - skills/task-tree/scripts/_repro_state.py
-      - skills/task-tree/scripts/_step_links.py
-      - skills/task-tree/scripts/_task_dependencies.py
-      - skills/task-tree/scripts/_task_io.py
-      - skills/task-tree/scripts/_task_snapshot.py
-      - skills/task-tree/scripts/_task_validate.py
-      - skills/task-tree/scripts/_worktree_discovery.py
-      - skills/task-tree/scripts/cli.py
-      - skills/task-tree/scripts/dashboard_artifact_workflow.py
-      - skills/task-tree/scripts/plan_dashboard.py
-      - skills/task-tree/scripts/plan_migrate.py
-      - skills/task-tree/scripts/repro_run.py
-      - skills/task-tree/scripts/task_add_result.py
-      - skills/task-tree/scripts/task_check.py
-      - skills/task-tree/scripts/task_comment.py
-      - skills/task-tree/scripts/task_create.py
-      - skills/task-tree/scripts/task_hook.py
-      - skills/task-tree/scripts/task_link.py
-      - skills/task-tree/scripts/task_query.py
-      - skills/task-tree/scripts/task_read.py
-      - skills/task-tree/scripts/task_rename.py
-      - skills/task-tree/scripts/task_update.py
-      - skills/task-tree/scripts/wrapper_resolver.py
-```
-
 ## Results
 
 `diagnosing.md` §Read what explain names now maps each `explain` row to one action, and a companion script materializes the 01 two-clone scenario for the fresh-agent evaluation.

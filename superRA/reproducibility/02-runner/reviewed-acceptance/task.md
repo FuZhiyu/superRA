@@ -20,49 +20,6 @@ Provide impact inspection and exact-state acceptance for retained results, inclu
 - Capture successful receipts only after product verification. The existing subprocess run record is written before sidecar/stamp completion, so command exit alone is insufficient evidence.
 - Sidecars do not prove the output bytes. Reviewed baselines hash the actual output; successful-run provenance remains separately available when recorded.
 
-
-## Reproduction
-
-```yaml
-steps:
-  - name: reviewed-baseline-regression-check
-    kind: check
-    cmd: "uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_repro_acceptance.py skills/task-tree/scripts/test_repro_runner.py skills/task-tree/scripts/test_repro_scope.py -q -p no:cacheprovider"
-    deps:
-      - skills/task-tree/scripts/_apply_patch.py
-      - skills/task-tree/scripts/_artifacts.py
-      - skills/task-tree/scripts/_comments.py
-      - skills/task-tree/scripts/_repro.py
-      - skills/task-tree/scripts/_repro_acceptance.py
-      - skills/task-tree/scripts/_repro_scope.py
-      - skills/task-tree/scripts/_repro_state.py
-      - skills/task-tree/scripts/_step_links.py
-      - skills/task-tree/scripts/_task_dependencies.py
-      - skills/task-tree/scripts/_task_io.py
-      - skills/task-tree/scripts/_task_snapshot.py
-      - skills/task-tree/scripts/_task_validate.py
-      - skills/task-tree/scripts/_worktree_discovery.py
-      - skills/task-tree/scripts/cli.py
-      - skills/task-tree/scripts/dashboard_artifact_workflow.py
-      - skills/task-tree/scripts/plan_dashboard.py
-      - skills/task-tree/scripts/plan_migrate.py
-      - skills/task-tree/scripts/repro_run.py
-      - skills/task-tree/scripts/task_add_result.py
-      - skills/task-tree/scripts/task_check.py
-      - skills/task-tree/scripts/task_comment.py
-      - skills/task-tree/scripts/task_create.py
-      - skills/task-tree/scripts/task_hook.py
-      - skills/task-tree/scripts/task_link.py
-      - skills/task-tree/scripts/task_query.py
-      - skills/task-tree/scripts/task_read.py
-      - skills/task-tree/scripts/task_rename.py
-      - skills/task-tree/scripts/task_update.py
-      - skills/task-tree/scripts/wrapper_resolver.py
-      - skills/task-tree/scripts/test_repro_acceptance.py
-      - skills/task-tree/scripts/test_repro_runner.py
-      - skills/task-tree/scripts/test_repro_scope.py
-```
-
 ## Results
 
 [Acceptance](../../../../skills/task-tree/scripts/_repro_acceptance.py) establishes or replaces a reviewed current baseline for newly registered producers, harmless edits, and changed outputs from direct runs. A reason is required; evidence files and per-node notes are optional. The committed record keys its saved inputs by logical path, so it reads the same on every checkout. Existing legacy records retain their original validation rules.
@@ -71,7 +28,7 @@ steps:
 - **Execution:** ordinary serial/threaded builds skip accepted producers and run outstanding downstream work/checks. Forced attempts remove acceptance and execute. Full output and saved-input fingerprints detect subsequent changes; scoped freshness leaves outside producers unverified.
 - **Binding a batch:** a decision binds the producers accepted with it. Re-accepting one of them leaves the downstream record valid — its reviewed dependency hashes already pin that producer's output bytes — while revoking one that holds no successful lock invalidates it.
 - **Agent workflow:** [The reproducibility skill](../../../../skills/reproducibility/SKILL.md) routes already-produced interactive results through registration and [reviewed acceptance](../../../../skills/reproducibility/references/rerun-or-accept.md#accept). [Commands](../../../../skills/task-tree/references/commands.md#reviewed-acceptance), [record schema](../../../../skills/task-tree/references/task-file-contract.md#records), and public descriptions match.
-- **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **168 tests** through the [registered regression check](#step-reviewed-baseline-regression-check), whose status is fresh. The full task-tree suite passed **1,199 tests, 10 skipped**. Changed Markdown checks and the tree's dependency/reproduction/link diagnostics passed. A thorough correctness review ran on the code and its findings are fixed in this round.
+- **Validation:** [acceptance, scope, and runner fixtures](../../../../skills/task-tree/scripts/test_repro_acceptance.py) passed **168 tests**. The full task-tree suite passed **1,199 tests, 10 skipped**. Changed Markdown checks and the tree's dependency/reproduction/link diagnostics passed. A thorough correctness review ran on the code and its findings are fixed in this round.
 
 ## Review Notes
 

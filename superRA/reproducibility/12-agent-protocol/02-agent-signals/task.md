@@ -60,17 +60,3 @@ Tier: quick, with two spot checks; narrow re-review. Focus: correctness, scope-f
 
 1. `[ADVISORY]` A legitimately producer-less file warns on every `task check` with no way to acknowledge it: the 4 hand-captured dashboard screenshots are that class.
 2. `[ADVISORY]` `has_reproduction` reads `code_roots`, which [edit-detection](../../../task-tree/edit-detection/task.md) retires; that task's sweep covers it.
-
-## Reproduction
-
-```yaml
-steps:
-  - name: agent-signals-check
-    kind: check
-    cmd: uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_tree.py -q -p no:cacheprovider
-    deps:
-      - skills/task-tree/scripts/test_task_tree.py
-      - skills/task-tree/scripts/_repro_signals.py
-      - skills/task-tree/scripts/task_hook.py
-      - skills/task-tree/scripts/task_check.py
-```

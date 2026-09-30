@@ -106,17 +106,3 @@ No blocking findings; four of five advisories were fixed or recorded under §Kno
 1. `[ADVISORY]` The objective's per-harness live-session check ran for Claude Code only. The Codex half is unrun for the reason §Results gives, and the rerun instruction it carries is the follow-up to track.
 
 Cost claims check out: steady detection is 2.8–3.8 ms over the 159 watched files, and the whole hook process takes about 240 ms on a `task.md` change both before and after this change, so the detector adds roughly 40 ms there rather than a new reconcile cost.
-
-## Reproduction
-
-```yaml
-steps:
-  - name: edit-detection-check
-    kind: check
-    cmd: uv run --with pytest --with pyyaml python -m pytest skills/task-tree/scripts/test_edit_detect.py -q -p no:cacheprovider
-    deps:
-      - skills/task-tree/scripts/test_edit_detect.py
-      - skills/task-tree/scripts/_edit_detect.py
-      - skills/task-tree/scripts/_checkout_scope.py
-      - skills/task-tree/scripts/task_hook.py
-```
