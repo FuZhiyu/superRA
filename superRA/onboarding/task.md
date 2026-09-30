@@ -1,6 +1,6 @@
 ---
 title: "Onboarding: Adopt a Raw Research Project into superRA"
-status: not-started
+status: in-progress
 depends_on: []
 ---
 
@@ -15,7 +15,7 @@ The skill runs six stages, each ending at a stop point where the researcher revi
 1. **Orient.** Explain what superRA is, what the `superRA/` folder holds, what a task is, and the dashboard. State that nothing outside `superRA/` changes until the researcher agrees.
 2. **Retroactive task tree.** Actively create the tasks through the existing retroactive capture, scaled from one task to a whole tree: tasks that read like regular tasks, each with an objective stating what the work achieves and which outputs it produces, and `## Results` recording the current results. Existing work superRA has not verified is `implemented` under the existing status rule. Present the tree on the dashboard; the researcher can edit or delete anything in `superRA/`.
 3. **Reproduction graph.** Declare `## Reproduction` steps for every task, back to external inputs, and agree the external inputs with the researcher. Present the DAG.
-4. **Version control.** After the researcher approves the tree and graph — whether or not a run follows: create a git repository if none exists, with a `.gitignore` that keeps data and generated outputs out, a data-handling note, and a baseline commit of the untouched project before the `superRA/` commit.
+4. **Version control, offered.** After the researcher approves the tree and graph — whether or not a run follows: offer a git repository if none exists, with a `.gitignore` that keeps data and generated outputs out, a data-handling note, and a baseline commit of the untouched project before the `superRA/` commit. The isolated run needs git; a researcher who declines keeps the tree and graph uncommitted.
 5. **Isolated reproduction run** (researcher opts in). Explain git worktrees, create one, seed its data by copy-on-write, and build upstream-first in slices the researcher chooses. Code edits are limited to what the code needs to run, committed in the worktree. A task whose rebuild matches its original outputs becomes `approved`; one that fails or diverges goes to `revise`, with the problem in `## Review Notes`. `## Results` keeps presenting the current results.
 6. **Merge back.** Explain the branch and its diff (`superRA/` plus minimal fixes), and merge after the researcher agrees. Work that grew beyond minimal fixes goes through `superRA:superintegrate` instead.
 
