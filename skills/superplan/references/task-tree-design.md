@@ -114,8 +114,9 @@ Anti-patterns: a new task for a scope extension of an existing task; a narrow im
 
 Creating `superRA/` from existing work:
 
-1. Read the existing code and results.
-2. Place each logical unit by the §Placing Work in the Existing Tree descent, mirroring the logical structure of the work, not the file layout.
-3. `approved` for work complete and verified.
-4. `implemented` for work done with the approval decision still open.
-5. Populate `## Results` from existing findings.
+1. Read the existing code, generated outputs, and any paper, draft, or project documents.
+2. Place each logical unit by the §Placing Work in the Existing Tree descent, mirroring the logical structure of the work, not the file layout. A whole project with no tree: decompose it by §Splitting Tasks, and decide the umbrella task per [build-and-review.md §Create the `superRA/` Directory](build-and-review.md#create-the-superra-directory).
+3. Write each objective as for planned work, per §Writing Objectives and Details.
+4. `approved` for work complete and verified.
+5. `implemented` for work done with the approval decision still open.
+6. Populate `## Results` from existing findings.

@@ -78,6 +78,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | --- | --- |
 | Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate`; default IMPLEMENT choreography in `using-superra/references/interactive-mode.md` |
 | Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
+| Onboarding an existing project — stage choreography and stop points, new-user concept explanations, version-control setup, isolated reproduction run and merge back, legacy `PLAN.md` migration offer | `onboarding` |
 | Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
 | Skill-Load Manifest | `using-superra` |
 | Execution modes, the review trigger, and the interactive canvas loop | `using-superra/references/main-agent.md` (§Execution Modes, §Deciding on Review) and `references/interactive-mode.md` |
@@ -115,6 +116,7 @@ What each agent loads in a session. This section documents the architecture for 
 | Phase workflow skill (`superplan` / `superintegrate`) | phase entry | Mandatory |
 | `using-superra/references/interactive-mode.md` | executing a task in the default interactive mode | Typical |
 | `superimplement` | autonomous execution, on researcher request or an accepted recommendation | On demand |
+| `onboarding` | a project with existing work but no `superRA/`, or a legacy `PLAN.md` | On demand |
 | `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` and the interactive loop are ungated — each instructs the load at its own dispatch point) | Mandatory when dispatching |
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
 | `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |

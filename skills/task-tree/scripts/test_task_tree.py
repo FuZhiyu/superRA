@@ -1872,6 +1872,25 @@ class TestMigrationMapping:
         )
         assert fm["status"] == "revise"
 
+    def test_migrate_into_wrapper_only_root(self, tmp_path):
+        """A superRA/ holding only the wrapper counts as empty."""
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text("# Plan\n\n### Task 1: Load Data\n\nDo it.\n", encoding="utf-8")
+        output = tmp_path / "superRA"
+        output.mkdir()
+        (output / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+        plan_migrate.migrate(plan_md, None, output)
+        assert (output / "01-load-data" / "task.md").exists()
+        assert (output / "superra").exists()
+
+    def test_migrate_refuses_root_with_tasks(self, tmp_path):
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text("# Plan\n\n### Task 1: Load Data\n\nDo it.\n", encoding="utf-8")
+        output = tmp_path / "superRA"
+        (output / "01-existing").mkdir(parents=True)
+        with pytest.raises(ValueError, match="not empty"):
+            plan_migrate.migrate(plan_md, None, output)
+
     def test_review_status_wins_over_checkbox(self, tmp_path):
         """When review_status is set but integration_status is not, review wins."""
         plan_md = tmp_path / "PLAN.md"

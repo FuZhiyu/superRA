@@ -1,7 +1,7 @@
 {
   "machine": "macOS-27.0-arm64-arm-64bit",
-  "live": "http://127.0.0.1:60129",
-  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-830cfdqw/superRA",
+  "live": "http://127.0.0.1:64713",
+  "project": "/private/var/folders/9x/vnnsv2w17fs8qvf0drctkd040000gn/T/navigation-xih0bvnf/superRA",
   "browser": "154.0.8037.58",
   "counts": {
     "steps": 89,
@@ -27,10 +27,10 @@
   },
   "routing-components": {
     "nodes": 9,
-    "edges": 6,
+    "edges": 3,
     "cycleEdges": 0,
-    "components": 1,
-    "isolatedCards": 5
+    "components": 2,
+    "isolatedCards": 4
   },
   "responsivePanes": {
     "side": true,

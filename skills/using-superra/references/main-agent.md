@@ -5,11 +5,11 @@
 Before your first substantive response:
 
 - Load `superRA:communicate` before your response.
+- **No `superRA/` in a project that already holds code, data, results, or a legacy `PLAN.md`:** offer `superRA:onboarding` before any action below; they wait until onboarding creates the tree, or run at once if the researcher declines.
 - Check whether the CLI wrapper `./superRA/superra` exists; bootstrap it per `superRA:task-tree` §CLI Setup if not.
 - Run `./superRA/superra task tree` for the full status summary.
 - Run `./superRA/superra repro status .` and report the steps that are not `fresh`; "selects no steps" means the tree registers none, so there is nothing to report.
 - Bring up the live dashboard without opening a browser: `./superRA/superra dashboard --no-open` (idempotent — reuses a running background server or starts one detached). Retain its emitted scoped URL.
-- `PLAN.md` without a `superRA/` directory: the project predates the task tree that replaced the `PLAN.md` / `RESULTS.md` model. Tell the user about the upgrade, offer `superra task migrate from-plan`, and point to the superRA docs at http://fuzhiyu.me/superRA/.
 - **Branch check.** `git branch --show-current`; on `main`/`master`, recommend a topic branch before the first commit — the researcher declining is consent to proceed on the default branch.
 
 ## Workflow Map
