@@ -417,6 +417,7 @@ class TestServerRoutes:
         assert folder == {**folder, "kind": "directory", "entries": 4, "entries_capped": False}
         assert client.get("/api/file-peek", params={"path": "out/later.csv"}).json() == {"exists": False}
         assert client.get("/api/file-peek", params={"path": "../../etc/passwd"}).status_code == 403
+        assert client.get("/api/file-peek", params={"path": "out/fig.png\0x"}).status_code == 400
 
     def test_symlinked_folders_and_declared_external_paths_are_readable(self, plan_root, tmp_path_factory):
         """A symlink inside the project is the researcher's own inclusion, and a path
@@ -2871,8 +2872,10 @@ class TestFileLinkConsistency:
         # its `docs/...` lead), not the bare basename or a hardcoded segment.
         assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
-        # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
-        assert "vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref" in BASE_HTML
+        # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX
+        # (PROJECT_ROOT only for a project file shown in the reading pane).
+        assert "var fileRoot = RESOLVED_ROOT;" in BASE_HTML
+        assert "vscode://file/' + fileRoot + '/' + contentDirRel + relHref" in BASE_HTML
         assert "var repoPathPrefix = rootRel + contentDirRel;" in BASE_HTML
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
@@ -3530,7 +3533,20 @@ class TestLocalOpen:
                 },
             )
         assert r.status_code == 403
+        assert "only for a browser on this machine" in r.json()["detail"]
         assert calls == []
+
+    def test_host_and_peer_parsing(self):
+        """`Host` loses its port and IPv6 brackets, and a dual-stack bind's
+        IPv4-mapped peer compares as plain IPv4."""
+        from types import SimpleNamespace
+        for authority, host in (("127.0.0.1:8995", "127.0.0.1"), ("[::1]:8995", "::1"),
+                                ("[::1]", "::1"), ("localhost", "localhost"), ("", "")):
+            assert plan_dashboard._authority_host(authority) == host, authority
+        req = SimpleNamespace(scope={"server": ("::ffff:192.168.1.5", 8995)})
+        assert plan_dashboard._names_this_machine(req, "192.168.1.5")
+        assert plan_dashboard._names_this_machine(req, "::ffff:127.0.0.1")
+        assert not plan_dashboard._names_this_machine(req, "192.168.1.6")
 
     def test_refuses_a_directory(self, plan_root, monkeypatch):
         """Files only, matching /files/.  No surface sends a directory, and on macOS
@@ -3662,13 +3678,14 @@ class TestLocalOpen:
 
     def test_card_head_button_opens_in_default_application(self):
         """The card-head button targets the OS default application (no editor named
-        in its label, icon, or title), and a browser on another machine gets none."""
+        in its label, icon, or title); a standalone export keeps its VS Code link,
+        and a live page on another machine gets no button."""
         fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
         assert "var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;" in body
-        assert "var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'Open';" in body
-        assert "((openNative || REPO_FILE_BASE) ? '<a class=\"open-btn\"" in body
+        assert "openNative ? 'Open' : 'VS Code'" in body
+        assert "((openNative || REPO_FILE_BASE || window.STANDALONE) ? '<a class=\"open-btn\"" in body
         assert "openNative ? OPEN_ICON : EDITOR_ICON" in body
         assert "taskFileOpenPath(path)" in body
 

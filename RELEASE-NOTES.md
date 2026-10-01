@@ -72,6 +72,9 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 - **The graph opens readable at 80%** on the selected task or step; Fit and Project overview still fit on request.
 - **Arrows carrying only `depends_on` edges are dashed.** A task whose declaration has an error gets a red outline and a link to its finding.
 - The unused search, trace, and scope modes and the `/dag` route are removed; legacy URLs open the full map. Each finding and edge travels once, cutting the 200-step fixture's payload by 38%.
+- **Hovering a file link previews the file:** its size and date, plus the first lines of a text file, an image, or a PDF's first page. This covers a step's inputs and outputs and file links in task text. Images and PDFs over 2 MiB show only their size, and nothing extra loads until you hover.
+- **A browser on another machine opens files inside the dashboard.** A phone, or a computer reaching an exposed `--host` server, gets a reading-pane view of the file instead of a `vscode://` link it cannot follow. The browser on the dashboard's own machine still opens files in their default application. That now holds even under `--host 0.0.0.0`, because the check is per browser rather than per bind.
+- **Files behind a symlink in the project, and outside paths a `## Reproduction` step declares, can be viewed and opened.** A path containing `..` is refused.
 
 ### In preparation
 
