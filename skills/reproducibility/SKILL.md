@@ -57,3 +57,4 @@ Other flags: `superra repro <command> --help`.
 | [protect-and-completion.md](references/protect-and-completion.md) | The IMPLEMENT completion check, or `Stage: protection`. |
 | [diagnosing.md](references/diagnosing.md) | A state you did not expect. |
 | [adoption.md](references/adoption.md) | Adopting reproduction: a whole existing project, or a first one-task trial. |
+| [online-only-files.md](references/online-only-files.md) | A file a step reads or writes is online-only on this machine (Dropbox, Google Drive, Box, iCloud), or you are about to download one. |
