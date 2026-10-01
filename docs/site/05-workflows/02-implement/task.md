@@ -20,6 +20,8 @@ A review is a separate agent reading the committed evidence — the actual files
 
 Independence is what makes review worth its cost. An agent reviewing its own work shares its own blind spots, so the review is a scoped independent pass: the dispatch names a depth tier and one or more focuses, and the reviewer reports every finding it has evidence for — a `file:line`, an artifact, a quoted line — leaving severity calls to the orchestrator. That is what catches the silent bad merge, the wrong aggregation, the unreproducible output. Take one when a result is load-bearing, when the plan flagged the task as high-stakes, or when the agent comes back uncertain. Whatever individual tasks got, INTEGRATE reviews the accumulated work once before anything ships. The role behavior is owned by the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills.
 
+When the last task is approved, the agent checks that every retained result is fresh against the code that produced it: it rebuilds cheap stale steps and asks you before a costly rerun. The [reproducibility page](#/04-utility-skills/09-reproducibility) explains how freshness is decided.
+
 ### Execution modes and seat assignment
 
 The default is **interactive mode** (`direct` remains an alias): the main agent co-edits the task as a live canvas, executes it, always self-reviews, and pauses often for your feedback.
