@@ -14,8 +14,12 @@ Let the researcher read tasks, review an agent-built reproduction graph, and act
 - **One project map.** Task containers fold and expand independently into their steps and child tasks; Project overview collapses and fits the map; search reveals a task, step, or output file without changing filters. Selection never changes the map's contents.
 - **Dependencies read honestly.** One arrow per visible endpoint pair carries every connecting file and `depends_on` prerequisite; `depends_on`-only arrows are distinguishable; only step cycles and `depends_on` cycles are marked; a task whose declaration has an error is marked with a link to its finding.
 - **Step inspection.** The reader shows a step's state and reason, command, inputs, outputs, acceptance, run evidence, and log tail. Markdown step links (`task.md#step-<name>`) and `?step=<name>` URLs select the step.
-- **Graph actions.** Every task and step card builds, estimates its build, and explains its staleness, per [build-from-graph](build-from-graph/task.md).
-- **Data path.** Read-only `GET /api/repro/graph` and `GET /api/repro/status` routes, a live refresh after a build or a `## Reproduction` edit, and a standalone export that works offline.
+- **Graph actions.** Every task and step card opens a Build menu — `superra repro build <target>`, with `--upstream`, or with `--force` — each item showing its command and an estimate from last run durations. Cards show last durations and a live build; a non-fresh card opens a hover card with `superra repro explain`'s causes. `accept`, `revoke`, and `-j` stay CLI actions.
+- **Data path.** Read-only `GET /api/repro/graph` and `GET /api/repro/status` routes, a live refresh after a build or a `## Reproduction` edit, and a standalone export that works offline. The build, stop, and explain routes are live-server only.
+
+### Constraints
+
+- **The build route runs declared commands,** so it accepts only same-origin JSON from a `Host` naming this machine, and only a target the current graph resolves, passed as one argv element after `--`. An off-loopback `--host` bind keeps the controls; doc mode and the standalone export render none.
 
 ## Results
 
@@ -37,4 +41,15 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 - Native Safari and physical trackpad gestures remain unverified.
 - Each step in the graph payload repeats its declared inputs across `deps`, `declared_deps`, and `dependency_origins`.
 
-Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), and a browser smoke test in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py).
+### Graph actions
+
+- **The build outlives the server.** `POST /api/repro/build` spawns the runner in its own process group with the login shell's environment (`$SHELL -l -i -c 'env -0'`, 0.5s), so Julia, conda, and `PATH` match the researcher's terminal. Stop sends SIGTERM to that group only while the lock holder belongs to it, so a recycled pid is never signalled.
+- **Executing steps read "building", not `failed`.** The mutation lock records its holder's pid and the runner stamps its pid on in-flight run records. Only the holder's records read `building now`, in `status`, `explain`, `task read`, and the dashboard; a crashed build's step still reads interrupted.
+- **Polling never re-lays out the graph.** The page polls `GET /api/repro/build` every 1.5s during a build and repaints nodes, chips, and the status line in place; the lock watcher refreshes states as each step completes.
+- **The estimate and timings cost no request.** Both derive from the loaded payloads, since `build --dry-run` takes the mutation lock and fails during a build.
+- **Explain costs about what status does**, 1.3–2.1s on a 112-step project, so the hover card fetches once per target, caches until the next refresh, and fetches task diffs only when pinned.
+- **Project pages get an opaque origin.** `/files` serves any `text/html` or `*xml` type under `Content-Security-Policy: sandbox` without `allow-same-origin`, so a page in the project cannot pass the same-origin gate of the build, comment, or open routes.
+- **Reviewed** at the thorough tier for security and correctness: one blocking finding (any lock holder masked interrupted steps) and four advisories, all fixed before approval.
+- **Limits.** Probing the lock takes a shared lock for microseconds, so a CLI build starting in that window is refused and can be rerun. A build whose server restarted mid-run shows no "Last build" line. On a narrow screen the Build menu can extend below the short graph stage.
+
+Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), and browser tests of the map and the Build menu and hover cards in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py). The graph actions add `TestReproBuildRoutes` in test_dashboard.py and the lock-holder test in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py).
