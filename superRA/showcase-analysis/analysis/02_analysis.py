@@ -43,8 +43,8 @@ GRS_OUT = DATA / "grs_results.csv"
 # %% [markdown]
 # ## Load the panel and re-describe before analysis
 #
-# The panel was built and validated upstream (`01-data`): 754 months
-# (1963-07 -> 2026-04), columns `Mkt-RF, SMB, HML, RF` plus 25 excess-return
+# The panel was built and validated upstream (`01-data`): one row per month
+# from 1963-07 to the latest complete month, columns `Mkt-RF, SMB, HML, RF` plus 25 excess-return
 # series named `... (xs)`. We read the existing diagnostics rather than
 # re-running full validation, but confirm shape, range, completeness, and the
 # 25/3 split before estimating anything.
@@ -424,7 +424,7 @@ for fac, color in zip(["Mkt-RF", "SMB", "HML"], ["#222", "#1b7837", "#762a83"]):
 ax.set_yscale("log")
 ax.set_ylabel("Cumulative value of \\$1 (log scale)")
 ax.set_xlabel("Date")
-ax.set_title("Cumulative growth of \\$1 in each factor, 1963-07 -> 2026-04")
+ax.set_title(f"Cumulative growth of \\$1 in each factor, {panel.index.min():%Y-%m} -> {panel.index.max():%Y-%m}")
 ax.legend(loc="upper left")
 ax.grid(True, which="both", alpha=0.25)
 fig.savefig(ATTACH / "fig3_cumulative_factors.png", dpi=130, bbox_inches="tight")
