@@ -68,7 +68,7 @@ Every card in the Reproduction view can now build, cost, and explain itself. 1,0
 - **Same-origin JSON only.** [`_same_origin_json`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1590) now carries the content-type and `Sec-Fetch-Site` gate `/api/open` already used.
 - **The `Host` must name this machine** ([`_is_trusted_authority`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1744)): loopback, an IP literal, the machine's own names, or a name listed in `SUPERRA_DASHBOARD_HOSTS` (e.g. a Tailscale MagicDNS name). A rebinding page sends its own domain, so an off-loopback bind keeps its protection.
 - **Graph targets only.** [`_validate_build_target`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1763) rejects control characters, padding, and a leading `-`, then requires `select_steps` to resolve the target. The target reaches the runner as one argv element after `--`.
-- **Project pages get an opaque origin.** `/files` serves HTML, SVG, and XML with `Content-Security-Policy: sandbox allow-scripts …`, so a page in the project cannot pass the gate of the build, comment, or open routes. Its scripts still run; it loses same-origin storage.
+- **Project pages get an opaque origin.** `/files` serves every file whose guessed media type is `text/html` or ends in `xml` (HTML, XHTML, SVG, RSS, any XML) with `Content-Security-Policy: sandbox allow-scripts …`, so a page in the project cannot pass the gate of the build, comment, or open routes. Its scripts still run; it loses same-origin storage.
 - **Off where there is no server to trust.** Doc mode and the standalone export render no controls (`window.REPRO_ACTIONS`). The `--host` help now says the server runs the tree's builds.
 
 ### How the hard parts were handled
@@ -86,6 +86,7 @@ Every card in the Reproduction view can now build, cost, and explain itself. 1,0
 - [TestReproBuildRoutes](../../../../skills/task-tree/scripts/test_dashboard.py#L6623) (12 tests): the flag in live, off-loopback, doc-mode, and export pages; the refusals (wrong content type, cross-site, rebinding `Host`, eight malformed or unknown targets, doc mode); the `Host` predicate; argv shape; a real build to `fresh`; a slow build reading `running` and refusing a second build, then stopping to `failed`; a CLI-held lock refusing the page while a crashed build's step still reads interrupted; Stop refusing a recycled pid; `/files` sandboxing project pages; explain answering a task and a step while writing nothing; and the client estimate and command quoting under node.
 - [test_status_reads_only_the_lock_holders_steps_as_building](../../../../skills/task-tree/scripts/test_repro_runner.py#L604) pins the CLI side.
 - [test_build_menu_and_explain_card](../../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py#L98) drives the chip reveal, menu, Escape, and both hover cards in Chromium.
+- **Independent review**, thorough tier, focused on security and correctness: one blocking finding (any lock holder masked interrupted steps as building) and four advisories (pid reuse on Stop, unsandboxed project pages twice, three readers without the live-build test). All are fixed; the re-review approved, and its last advisory, sandboxing by media type rather than suffix, was fixed after it.
 - **Browser pass on the fixture**, recorded in `attachments/`: build a step, stop a forced rebuild, a concurrent CLI build, both hover cards, keyboard entry into the menu at 430px, light and dark. The only console error is an htmx SSE `[object Event]` on page reload, which an unmodified page also raises.
 
 ### Limits
@@ -93,14 +94,3 @@ Every card in the Reproduction view can now build, cost, and explain itself. 1,0
 - **Status probing takes a shared lock for microseconds.** A CLI build starting in that window is refused with the usual "another reproduction build" message and can simply be rerun.
 - **A build whose server restarted mid-run** shows no "Last build" line, because no process recorded its exit code. Its states still refresh from the lock.
 - **On a narrow screen** the Build menu can extend below the short graph stage.
-
-## Review Notes
-
-Tier: thorough. Focus: security, correctness. Re-review at `2bb133cd`: 1,061 passed, 9 skipped.
-
-1. **[ADVISORY] `/files` still serves two families of script-capable XML unsandboxed.** The sandbox keys on a suffix list ([plan_dashboard.py:1531](../../../../skills/task-tree/scripts/plan_dashboard.py#L1531)), but `FileResponse` derives the type from `mimetypes`. That leaves two gaps:
-   - `.xht` maps to `application/xhtml+xml`, which renders as XHTML with scripts.
-   - `.rss`, `.atom`, `.rdf`, `.kml`, and `.xsl` map to `*+xml` or `application/xml`. Browsers render these as XML documents, which run XHTML-namespaced scripts.
-
-   Such a file then runs on the dashboard origin and can start builds of declared steps. The companion route already serves these types as downloads ([_artifacts.py:166-170](../../../../skills/task-tree/scripts/_artifacts.py#L166-L170)). Fix: decide on the guessed media type instead of the suffix: `text/html`, any type ending in `xml`, and `image/svg+xml`.
-   → implemented: `/files` serves `.html`, `.htm`, `.xhtml`, `.svg`, `.xml` with `Content-Security-Policy: sandbox allow-scripts …` and no `allow-same-origin` ([plan_dashboard.py:1531](../../../../skills/task-tree/scripts/plan_dashboard.py#L1531)); images and PDFs are untouched. Pinned by [test_project_pages_are_served_sandboxed](../../../../skills/task-tree/scripts/test_dashboard.py#L6757).
