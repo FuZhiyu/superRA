@@ -23,6 +23,7 @@ import hashlib
 import importlib.resources as resources
 import ipaddress
 import json
+import mimetypes
 import os
 import re
 import shlex
@@ -1528,7 +1529,6 @@ async def repro_status(request: Request):
 
 # --- Route: GET /files/{path} ----------------------------------------------
 
-SANDBOXED_SUFFIXES = {".html", ".htm", ".xhtml", ".svg", ".xml"}
 FILES_SANDBOX = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
 
 
@@ -1548,8 +1548,9 @@ async def serve_file(path: str, request: Request):
 
     # A project page that runs scripts gets an opaque origin, so it cannot pass
     # the same-origin gate of the routes that start processes or write files.
-    headers = {"Content-Security-Policy": FILES_SANDBOX} if resolved.suffix.lower() in SANDBOXED_SUFFIXES else None
-    return FileResponse(str(resolved), headers=headers)
+    media_type = mimetypes.guess_type(resolved.name)[0] or ""
+    renders = media_type == "text/html" or media_type.endswith("xml")  # HTML, SVG, XHTML, any XML
+    return FileResponse(str(resolved), headers={"Content-Security-Policy": FILES_SANDBOX} if renders else None)
 
 
 # --- Route: POST /api/open -------------------------------------------------

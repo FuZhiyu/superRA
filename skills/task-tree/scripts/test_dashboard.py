@@ -6755,14 +6755,15 @@ class TestReproBuildRoutes:
             assert c.post("/api/repro/build/stop", json={}).status_code == 409
 
     def test_project_pages_are_served_sandboxed(self, plan):
-        (plan.parent / "page.html").write_text("<script>fetch('/api/repro/build')</script>", encoding="utf-8")
+        for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+            (plan.parent / name).write_text("<script>fetch('/api/repro/build')</script>", encoding="utf-8")
         (plan.parent / "fig.png").write_bytes(b"\x89PNG\r\n\x1a\n")
         with self._client(plan) as c:
-            page = c.get("/files/page.html")
-            image = c.get("/files/fig.png")
-        assert page.headers["content-security-policy"].startswith("sandbox allow-scripts")
-        assert "allow-same-origin" not in page.headers["content-security-policy"]
-        assert "content-security-policy" not in image.headers
+            for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+                policy = c.get(f"/files/{name}").headers.get("content-security-policy", "")
+                assert policy.startswith("sandbox allow-scripts"), name
+                assert "allow-same-origin" not in policy
+            assert "content-security-policy" not in c.get("/files/fig.png").headers
 
     # --- Explain ----------------------------------------------------------
 
