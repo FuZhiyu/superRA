@@ -29,12 +29,13 @@ The page answers three questions a researcher has after the first graph appears,
 
 The reproduction page is written at [docs/site/04-utility-skills/09-reproducibility/task.md](../../../../docs/site/04-utility-skills/09-reproducibility/task.md), and the utility-skills index entry in [docs/site/04-utility-skills/task.md](../../../../docs/site/04-utility-skills/task.md) now links to it with a blurb in the page's terms.
 
-- **The showcase cascade uses the planned graph and must be reconciled once [01-showcase-graph](../01-showcase-graph/task.md) lands.** The page assumes:
-  - three build steps (`download.py` → `01_build_panel.py` in 01-data, `02_analysis.py` in 02-analysis) and one check on `grs_results.csv`;
-  - the raw CSVs as the download step's outputs, not an external input;
-  - step name `build-panel` in the `## Reproduction` example, and task-path targets in the commands block.
-  - If 01 names steps differently, places the check elsewhere, or makes the raw CSVs external, update the diagram, the cascade table, and the YAML example.
-- **Every mechanics claim matches a real run.** I ran a throwaway four-step scratch project (download → build panel → analysis → check, same shape as the showcase) with this checkout's CLI. Verified behaviors:
+- **The showcase example matches the registered graph from [01-showcase-graph](../01-showcase-graph/task.md).** The diagram shows the committed raw CSVs as an external input feeding `build-panel` (01-data), `estimate-test-plot` and the `check-grs-headline` check (02-analysis). The cascade table names those three steps; the `download` row is gone, replaced by one sentence that no step writes the raw data. The `## Reproduction` example is the real `build-panel` declaration (`runner: uv` + `script:`, the two CSVs as deps), with one sentence on what `runner` and `script` mean.
+- **Every showcase cascade claim was rerun on the real graph** in a scratch clone of this branch:
+  - A comment edit to `01_build_panel.py` reads all three steps `stale`. `build showcase-analysis` then executes `build-panel`, and the other two report `unchanged` because the panel bytes are identical.
+  - `build showcase-analysis/02-analysis` after that edit runs nothing and uses the saved panel. `status` on that selection exits 3 and names `build-panel` as a producer behind it that is not fresh.
+  - `accept showcase-analysis/01-data` without `--reason` errors; with a reason, all three steps read `fresh`, `build-panel` as "reviewed baseline".
+  - Setting the sample start to 1970-01 makes `impact` list all three steps, and `build showcase-analysis` executes all three.
+- **The general mechanics claims match a real run.** I ran a throwaway four-step scratch project (download → build panel → analysis → check, same shape as the showcase) with this checkout's CLI. Verified behaviors:
   - `touch` keeps every step fresh; a comment edit makes the step and its two descendants stale; the rebuild writes identical bytes and the downstream steps report `unchanged`.
   - `build 02-analysis` after a real panel change runs nothing and uses the saved panel; `status` exits 3 naming the stale producer; `--upstream --dry-run` lists the three steps with last durations; `impact` lists the three affected steps.
   - A failing check reads `failed`; restoring the inputs clears it on the next build.
