@@ -19,18 +19,15 @@ Rewrite the agent-facing and reader-facing instructions for the behavior [01-loc
     - Plain `status` covers the chain.
     - A result checked with `--only`, or one resting on `unverified` steps, says so in `## Results` and names where tracing stopped.
     - A selected step must itself read `fresh`.
-- **Online-only data.** Write the download notes the CLI points to, in the reference that handles a step that is not `fresh`.
-  - Downloading is the researcher's call: report the files and their total size, and download only on their go-ahead.
-  - **File Provider files** (under `~/Library/CloudStorage/`): Finder's Download Now or Make Available Offline. Alternatively, a coordinated read with PyObjC. A plain full read may leave the file partial, so confirm afterwards that `ls -lO` no longer shows `dataless`.
-  - **Legacy Dropbox placeholders:** Dropbox's Make Available Offline only.
-  - Then rerun `status`.
+- **[online-only-files.md](../../../../skills/reproducibility/references/online-only-files.md)** (added in `4bc5396c`; the CLI points here). Update it for what 01 and 02 ship: an online-only file now reads unknown and its step `unverified`, the gate's message, and `--only` as the way past the gate.
 - **[rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md) and [protect-and-completion.md](../../../../skills/reproducibility/references/protect-and-completion.md).**
   - Acceptance stays step-local: to cover a producer, name it.
   - The `--dry-run` cost now includes stale producers.
   - Accept the steps the stale rule sets aside before building the rest, or build with `--only`; a default build would rerun them. protect-and-completion.md line 8 ("building by name only the steps the rule says to run") states the scoped assumption.
+  - The completion check reports every `unverified` step to the researcher, with the files that need downloading. It never treats them as verified just because `status` exits 0.
 - **[adoption.md](../../../../skills/reproducibility/references/adoption.md).** In an adopted project, a producer that has never been built reads `missing`, even when its outputs exist, so a default downstream build runs it. Accept or build such producers first, or use `--only`.
 - **[review-task SKILL.md](../../../../skills/review-task/SKILL.md) line 28.** The evidence command becomes plain `status`.
-- **Docs site.** The [reproducibility page](../../../../docs/site/04-utility-skills/09-reproducibility/task.md) and the [dashboard page](../../../../docs/site/04-utility-skills/01-task-tree/04-dashboard/task.md) (line 26) describe the default, `--only`, `unverified`, the Build menu's modes, and the dashboard's solid, dashed, and faded cards.
+- **Docs site.** The [reproducibility page](../../../../docs/site/04-utility-skills/09-reproducibility/task.md) describes the default, `--only`, and `unverified`. The dashboard page belongs to [03-state-display](../03-state-display/task.md).
 - **[RELEASE-NOTES.md](../../../../RELEASE-NOTES.md) 0.5.0.**
   - Describe the default, `--only`, `unverified`, the download gate, and the removal of `external`.
   - Note that `status X --upstream` now exits 3 instead of 1 when only a producer is stale.

@@ -21,20 +21,24 @@ Make `superra repro` act on what the machine running it can verify. `build` and 
 | Online-only and not cached: same size; or the read fails | **unknown** |
 
 - **Online-only means** `st_flags & SF_DATALESS` (File Provider: Dropbox, Google Drive, Box, OneDrive, iCloud), or a zero-byte file carrying the `com.dropbox.placeholder` xattr (legacy Dropbox). An mtime difference alone never counts as a change.
-- **The lock records each file's size** beside its hash.
+- **Size comparison applies only to `SF_DATALESS` files.** `lstat` reports a legacy placeholder's size as 0, so an uncached placeholder is always unknown.
+- **The lock records each file's size** beside its hash. A sidecar-tracked out records the size of the out itself; a directory dep records no size, so a directory holding an uncached online-only file is unknown.
+- **Every read of a tracked file goes through this check,** including `explain`'s diffs, `accept`'s preview, and sidecar reads.
 
-**Step states.** Each step takes the first state its own files support:
+**Step states.** Each step takes the first state its own evidence supports. The order follows `_classify` today, with `unverified` added just above `fresh`:
 
 | If | State |
 |---|---|
+| It has never been built | `missing` |
+| Its last run failed or was interrupted, and it still has work to do | `failed` |
+| An output is **absent** (a check that passed at these inputs on another machine stays `fresh`, as today) | `missing` |
 | Its definition or any of its files is **changed** | `stale` |
-| An output is **absent** | `missing` |
 | Any file is **unknown** | `unverified` |
-| Its last run failed | `failed` |
 | Otherwise, or a valid acceptance covers it | `fresh` |
 
 - **`external` is removed as a state.** "External input" stays as the name for a file no step produces.
-- **Reported state.** A `fresh` or `unverified` step whose producer is `stale`, `missing`, or `failed` is reported `stale`, with the reason naming that producer. The step's own state is kept alongside.
+- **Reported state.** A `fresh` or `unverified` step whose producer is `stale`, `missing`, or `failed` is reported `stale`. The step's own state is kept alongside, and the reason names the **origin**: the step furthest upstream on that path whose own state is `stale`, `missing`, or `failed`.
+- **"unverified" names only this state.** The saved-input provenance that `_repro_scope.py` labels "unverified" today is renamed.
 
 **Commands.**
 
@@ -42,18 +46,20 @@ Make `superra repro` act on what the machine running it can verify. `build` and 
 - **`--only`** restricts to the named selection; files from producers outside it are used as they sit on disk, as today. Use it when another session is editing a producer in this worktree. **`--upstream`** stays as a hidden no-op alias.
 - **`--force`** reruns the named selection only; added producers run only when their state calls for it.
 - **What runs.** In dependency order, a build runs `stale`, `missing`, `failed`, and forced steps. `unverified` steps never run, and their outputs are used as they are. A step stale only through upstream reruns only if its inputs changed after its producer ran (existing behavior).
-- **Download gate.** Before running anything, if a step that will run reads a file not on disk (online-only, or absent with no producer), the build runs nothing. It lists those files with their sizes, capped, and points to the download notes in the `reproducibility` skill. No command downloads, and no download flag exists.
+- **Download gate.** Before running anything, if a step that will run reads a file not on disk (online-only, or absent with no producer), the build runs nothing. It lists those files with their sizes (capped), names `--only` as the way to build the rest, and points to [online-only-files.md](../../../skills/reproducibility/references/online-only-files.md) for online-only files. The same check runs again when each step starts, because a step can turn stale after its producers run. No command downloads, and no download flag exists.
 - **Build preview.** Before executing, `build` prints the added producers that will run, with their last recorded durations (capped). It does not prompt. `--dry-run` keeps its per-step listing.
 - **`accept` and `revoke`** act on the named steps only. `accept` refuses to record a file it cannot hash here, naming it. After recording, it names the non-fresh producers behind the accepted step (capped) and says the step reads stale until they are built or accepted.
 - **Default `status` output.**
   - One line per selected step.
   - Producers that are `stale`, `missing`, or `failed` are listed (capped); fresh producers are counted.
-  - `unverified` steps outside the selection collapse to one line with their count, total online-only size, and where tracing stopped.
+  - `unverified` producers collapse to one line with their count, their total online-only size, and the **boundary**: the first `unverified` producer on each path back from the selection.
   - Exit 0 when every assessed step is `fresh` or `unverified`; 1 when a selected step's own state is `stale`, `missing`, or `failed`; 3 when the selection's own states are fine but a producer behind it is `stale`, `missing`, or `failed`.
 
 **Display.** [03-state-display](03-state-display/task.md) owns the dashboard design language for these states.
 
-**Unchanged.** Content hashing, early cutoff, acceptance validation, `explain`, and `impact`.
+**Frontier.** `task frontier` and `task read` flag only inputs whose producer is `stale`, `missing`, or `failed`. An `unverified` producer's input is not flagged, because a build never runs it.
+
+**Unchanged.** Content hashing, early cutoff, acceptance validation, and `impact`. `explain` changes only to say "online-only here" where it says "missing here" today.
 
 ### Constraints
 

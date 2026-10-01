@@ -11,7 +11,9 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 - **Runner.**
   - Default producer-chain scope for `build`, `status`, and `build --dry-run`; `--only`; the hidden `--upstream` alias; and target-only `--force`.
   - The run rule, under which `unverified` steps never run.
-  - The download gate, the build preview, and `accept`'s line naming non-fresh producers (text, `--dry-run`, JSON).
+  - The download gate, before scheduling and again at each step's start in `_missing_inputs`, with the message the parent specifies.
+  - The build preview, and `accept`'s line naming non-fresh producers (text, `--dry-run`, JSON).
+  - The `--only` refusal for a missing saved input names `--only`'s alternative, not `--upstream` ([repro_run.py:381](../../../../skills/task-tree/scripts/repro_run.py#L381)).
 - **Default `status`.** Output and exit codes as the parent specifies, with this report shape:
   - `selected` holds the targets' steps only; the assessed producers are kept apart.
   - The exit code comes from the selected steps' own states and the producers' reported states, not `report.ok`.
@@ -20,10 +22,10 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 - **Online-only reporting.** Wherever a command names files it cannot check here (the gate, the `unverified` summary line, `accept`'s refusal), list them with sizes under `OUTPUT_CAP`, add a count line pointing to `--json`, and point once to the download notes in the [reproducibility skill](../../../../skills/reproducibility/SKILL.md).
 - **Bounded saved-input lists.** Cap the saved-input list in `status` ([_repro_state.py:1160](../../../../skills/task-tree/scripts/_repro_state.py#L1160)) and the per-file `Saved input:` lines in `build` ([repro_run.py:378](../../../../skills/task-tree/scripts/repro_run.py#L378)) the same way.
 - **Views.**
-  - The frontier and `task read` hint drops `--upstream` ([_task_snapshot.py:95](../../../../skills/task-tree/scripts/_task_snapshot.py#L95)).
+  - The frontier and `task read` flag inputs per the parent's §Frontier (`CURRENT` at [_task_snapshot.py:11](../../../../skills/task-tree/scripts/_task_snapshot.py#L11)), and the hint drops `--upstream` ([_task_snapshot.py:95](../../../../skills/task-tree/scripts/_task_snapshot.py#L95)).
   - `task read` shows a step's own state under that name, not "for saved inputs" ([task_read.py:258](../../../../skills/task-tree/scripts/task_read.py#L258)).
   - The `MODEL` help text describes the new default ([repro_run.py:479](../../../../skills/task-tree/scripts/repro_run.py#L479)).
-- **Mechanics docs.** [commands.md §Reproduction](../../../../skills/task-tree/references/commands.md#reproduction).
+- **Mechanics docs.** [commands.md §Reproduction](../../../../skills/task-tree/references/commands.md#reproduction), apart from the state table (01), and the frontier hint in [task-file-contract.md:103](../../../../skills/task-tree/references/task-file-contract.md#L103).
 
 ### Validation
 
@@ -33,7 +35,8 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
   - `--force` reruns the targets only; stale producers still build, and fresh producers stay untouched.
   - With a stale producer, `accept` records the consumer and names the producer; the next default `status` exits 3.
   - Accepted consumer, then its producer rebuilt: identical bytes leave the consumer unchanged, and changed bytes rerun it.
-  - The gate: a step that must run but reads an online-only file, or an absent file no step produces, runs nothing anywhere in the build, and lists the file with its size.
+  - The gate: a step that must run but reads an online-only file, or an absent file no step produces, runs nothing anywhere in the build, and lists the file with its size. A step that turns stale only after its producer ran is stopped at its start, and never reads the file.
+  - The frontier does not flag an input whose producer is `unverified`.
   - `--upstream` behaves exactly like the default.
   - Default `status` and `build` output stays within the cap on a chain longer than `OUTPUT_CAP`.
   - Default `status --json` separates `steps` from `producers`, and its `ok` and exit code agree with the text output.
