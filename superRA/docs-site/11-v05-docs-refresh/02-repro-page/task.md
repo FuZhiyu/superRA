@@ -1,6 +1,6 @@
 ---
 title: "Reproducibility Docs Page: How superRA Knows a Result Is Current"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -45,3 +45,11 @@ The reproduction page is written at [docs/site/04-utility-skills/09-reproducibil
   - A `params` edit makes the step stale; a conflicted lock warns and drops the disputed entry to `missing`.
 - **Checks pass.** `superra task check --root docs/site` is clean, `check_markdown.py` reports the page clean, and `docs/build_site.sh` exits 0.
 - **The page title is `reproducibility`**, matching the sibling skill pages.
+
+## Review Notes
+
+Tier: quick. Focuses: accuracy of reproduction claims against the code, contract, and CLI; docs-site gates (agent-first, concise, no AI-flavored prose, authority not paraphrase).
+
+1. **[ADVISORY] The downstream cascade is scoped to the selection, and the page does not say so.** [task.md:28](../../../../docs/site/04-utility-skills/09-reproducibility/task.md#L28) says a step reading a stale step's output "is stale too", and the cascade table at [task.md:60](../../../../docs/site/04-utility-skills/09-reproducibility/task.md#L60) shows `estimate-test-plot` as `stale`. With [task.md:71](../../../../docs/site/04-utility-skills/09-reproducibility/task.md#L71) ("`build` runs only the selected steps that are not fresh"), a reader predicts that `build showcase-analysis/02-analysis` reruns it, and [task.md:65](../../../../docs/site/04-utility-skills/09-reproducibility/task.md#L65) then says it runs nothing. The code lifts a step to `stale` only for a parent inside the reported selection ([_repro_acceptance.py:345-385](../../../../skills/task-tree/scripts/_repro_acceptance.py#L345-L385), where `by_name` holds only the selected entries), so outside the selection the analysis step reads `fresh` against the panel on disk. Fix: qualify line 28 with "among the steps you select" or extend line 72 to say a step is judged against the files on disk when their producer is outside the selection.
+2. **[ADVISORY] "For every step that is not fresh" overstates the agent's rule.** [task.md:82](../../../../docs/site/04-utility-skills/09-reproducibility/task.md#L82) leaves out the task-local branch of [rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md#the-stale-rule): a step whose producer sits under its task's `attachments/` with no outside readers is left stale and reported to the researcher, not rebuilt. Fix: "For a step that other results depend on, the agent rebuilds…", or drop "every".
+
