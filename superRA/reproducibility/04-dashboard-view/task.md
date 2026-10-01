@@ -1,6 +1,6 @@
 ---
 title: "Dashboard Reproduction View for Reviewing the Graph"
-status: in-progress
+status: implemented
 depends_on:
   - 01-section-contract
   - 02-runner
