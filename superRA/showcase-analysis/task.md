@@ -36,7 +36,7 @@ This is a documentation artifact built from fully public data — no vendor or p
 ### Constraints
 
 - Public data only. The download script and the committed figures are safe to commit; raw CSVs and any intermediate `.parquet` are gitignored and rebuilt by the pipeline.
-- A single committed `run_all.sh` at the tree root reproduces every output in dependency order and fails fast (`set -e`): download → build panel → estimate/test/visualize. Update it whenever a script is added.
+- Every output rebuilds through the reproduction graph, `superra repro build showcase-analysis`: download → build panel → estimate/test/visualize, then the headline check. Register a step in the owning task whenever a script is added.
 - This tree is the showcase artifact and is exported with the **full task-tracker chrome** (status pills, rollup, DAG, kanban) — non-doc-mode — by the docs build, so each task's `## Results` should read well as a standalone, figure-bearing record.
 
 ## Details
@@ -45,10 +45,10 @@ This is a documentation artifact built from fully public data — no vendor or p
 
 ## Results
 
-The study ran end-to-end through the workflow and reproduces from source via [run_all.sh](run_all.sh) (`download → build panel → estimate/test/visualize`, ~3.5s).
+The study ran end-to-end through the workflow and reproduces from source through four registered steps: [download](01-data/task.md#step-download) → [build-panel](01-data/task.md#step-build-panel) → [estimate-test-plot](02-analysis/task.md#step-estimate-test-plot) → [check-grs-headline](02-analysis/task.md#step-check-grs-headline). `superra repro status showcase-analysis` shows all four `fresh` against [repro-lock.json](../../repro-lock.json); a cold `superra repro build showcase-analysis` takes about 30 s, most of it `uv` resolving script environments.
 
-**Headline:** adding SMB and HML to the market factor halves the average pricing error on the 25 size × book-to-market portfolios (mean $|\alpha|$ 0.195 → 0.089 %/month), yet both models are still rejected by the GRS joint test over 1963-07 → 2026-04 — CAPM $F(25,728)=4.10$ and FF3 $F(25,726)=3.55$ — the canonical textbook result. FF3 prices most of the cross-section but fails on the precisely-estimated small-growth corner (`SMALL LoBM` $\alpha=-0.47$, $t=-5.1$).
+**Headline:** adding SMB and HML to the market factor halves the average pricing error on the 25 size × book-to-market portfolios (mean $|\alpha|$ 0.197 → 0.087 %/month), yet both models are still rejected by the GRS joint test over 1963-07 → 2026-08 — CAPM $F(25,732)=4.20$ and FF3 $F(25,730)=3.64$ — the canonical textbook result. FF3 prices most of the cross-section but fails on the precisely-estimated small-growth corner (`SMALL LoBM` $\alpha=-0.46$, $t=-5.1$).
 
-- [01-data](01-data/task.md) — public Ken French data → 754-month panel (1963-07 → 2026-04), validated against published factor magnitudes.
+- [01-data](01-data/task.md) — public Ken French data → 758-month panel (1963-07 → 2026-08, the 202608 vintage), validated against published factor magnitudes.
 - [02-analysis](02-analysis/task.md) — CAPM/FF3 on all 25 portfolios, GRS test (implemented from the residual covariance, cross-checked two ways), and the four figures.
 - [03-writeup](03-writeup/task.md) — the reader-facing narrative with the math and the two key figures.
