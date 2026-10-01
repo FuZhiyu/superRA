@@ -8,13 +8,13 @@ depends_on: []
 
 Reduce the `skills/reproducibility` branch to its minimum net diff against the protected record, then verify it. This task is temporary: Integrate deletes it at close, and it holds no durable content.
 
-**Protect decision:** commit `27b7e181`, *integrate(protect): drop low-value tests, retire every check step, fix the record choices*. Its body lists the kept and dropped results, the durable homes, and the protection: documentation plus the pytest suite, with no registered reproduction steps.
+**Protect decision:** commit `27b7e181`, *integrate(protect): drop low-value tests, retire every check step, fix the record choices*. Its body lists the kept and dropped results, the durable homes, and the protection: documentation plus the pytest suite, with no registered reproduction steps except the showcase study's, which [docs-site/11-v05-docs-refresh](../docs-site/11-v05-docs-refresh/task.md) registers as a docs demonstration. Run this task after that one is approved.
 
 **Governing diff:** `git diff 447f0ef16f877f83dab2582426b7029dca039085..HEAD`, with `BASE_HEAD_SHA = 447f0ef16f877f83dab2582426b7029dca039085`. Recompute it at the start of the pass. Maturation ended at `de294145`.
 
 **Protected record.** A hunk survives only if it supports one of these artifacts, or a validation or presentation path that they document:
 
-- [RELEASE-NOTES.md](../../RELEASE-NOTES.md) `## [0.5.0]`, [README.md](../../README.md), [CLAUDE.md](../../CLAUDE.md), [skills/CATEGORIES.md](../../skills/CATEGORIES.md), and the docs-site task-tree and hooks pages under [docs/site](../../docs/site).
+- [RELEASE-NOTES.md](../../RELEASE-NOTES.md) `## [0.5.0]`, [README.md](../../README.md), [CLAUDE.md](../../CLAUDE.md), [skills/CATEGORIES.md](../../skills/CATEGORIES.md), the docs-site task-tree and hooks pages under [docs/site](../../docs/site), and every page and showcase file that [docs-site/11-v05-docs-refresh](../docs-site/11-v05-docs-refresh/task.md) adds or changes.
 - [skills/reproducibility/](../../skills/reproducibility/SKILL.md), [skills/onboarding/](../../skills/onboarding/SKILL.md), the [skills/task-tree references](../../skills/task-tree/references/internals.md), and the workflow call sites listed in [07-workflow-integration](../reproducibility/07-workflow-integration/task.md#each-call-site-points-to-its-owning-rule).
 - The `## Results` of [reproducibility](../reproducibility/task.md) and its children 01–07, [08-pilot-treasurygiv](../reproducibility/08-pilot-treasurygiv/task.md) (archived), [onboarding](../onboarding/task.md), [task-tree/edit-detection](../task-tree/edit-detection/task.md), and [task-tree/agent-cwd-isolation](../task-tree/agent-cwd-isolation/task.md). Retained attachment: [v05-design.md](../reproducibility/attachments/v05-design.md).
 
