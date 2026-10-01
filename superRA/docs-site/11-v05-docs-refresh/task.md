@@ -1,6 +1,6 @@
 ---
 title: "v0.5 Docs: Explain Reproduction and Refresh Stale Pages"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 

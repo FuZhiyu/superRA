@@ -1,6 +1,6 @@
 ---
 title: "Documentation Site: Dogfooded Task-Tree Docs + README Front Door"
-status: in-progress
+status: implemented
 depends_on: []
 ---
 
