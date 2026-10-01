@@ -21,7 +21,7 @@ Implement the parent's §Checking files and §Step states in the freshness engin
 - **Acceptance.** `accept` refuses to record a file it cannot hash here, naming it. An acceptance whose files are online-only and uncached reads `unverified`, not invalid.
 - **Mechanics docs.**
   - [commands.md](../../../../skills/task-tree/references/commands.md): the state table only.
-  - [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md): reproduction records, and the readiness lines that name `external`.
+  - [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md): reproduction records.
   - [internals.md](../../../../skills/task-tree/references/internals.md) §Reproduction records.
 
 ### Validation

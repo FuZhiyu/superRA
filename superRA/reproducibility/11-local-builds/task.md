@@ -29,8 +29,8 @@ Make `superra repro` act on what the machine running it can verify. `build` and 
 
 | If | State |
 |---|---|
-| It has never been built | `missing` |
 | Its last run failed or was interrupted, and it still has work to do | `failed` |
+| It has never been built | `missing` |
 | An output is **absent** (a check that passed at these inputs on another machine stays `fresh`, as today) | `missing` |
 | Its definition or any of its files is **changed** | `stale` |
 | Any file is **unknown** | `unverified` |
