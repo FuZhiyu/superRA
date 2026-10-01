@@ -23,11 +23,11 @@ Write for a researcher reader following `report-in-markdown`; link down to `02-a
 
 ## Results
 
-Adding the size and value factors to the market factor halves the average pricing error on the 25 size × book-to-market portfolios, but it does not rescue the model: both CAPM and the Fama-French three-factor model are rejected by the Gibbons-Ross-Shanken joint test over 1963-07 → 2026-04. The three-factor model explains most of the size-value cross-section the market factor alone cannot, then fails on a handful of precisely-estimated corners, chiefly small-growth. This is the canonical textbook outcome, recovered here on the modern sample. The per-portfolio estimates, the full set of grids, and the implementation cross-checks live in [02-analysis](../02-analysis/task.md); this account narrates the verdict and the two figures that carry it.
+Adding the size and value factors to the market factor halves the average pricing error on the 25 size × book-to-market portfolios, but it does not rescue the model: both CAPM and the Fama-French three-factor model are rejected by the Gibbons-Ross-Shanken joint test over 1963-07 → 2026-08. The three-factor model explains most of the size-value cross-section the market factor alone cannot, then fails on a handful of precisely-estimated corners, chiefly small-growth. This is the canonical textbook outcome, recovered here on the modern sample. The per-portfolio estimates, the full set of grids, and the implementation cross-checks live in [02-analysis](../02-analysis/task.md); this account narrates the verdict and the two figures that carry it.
 
 ### The question and the test
 
-The test assets are Ken French's 25 value-weighted portfolios formed on a 5×5 size × book-to-market sort, in excess of the risk-free rate, over 754 months (1963-07 → 2026-04). For each portfolio $i$ we estimate two linear factor models by OLS,
+The test assets are Ken French's 25 value-weighted portfolios formed on a 5×5 size × book-to-market sort, in excess of the risk-free rate, over 758 months (1963-07 → 2026-08). For each portfolio $i$ we estimate two linear factor models by OLS,
 
 $$
 R_{it}-R_{ft} = \alpha_i + \beta_i\,(\text{Mkt-RF})_t + \varepsilon_{it},
@@ -49,24 +49,24 @@ with $K$ factors, $T$ months, $\hat\alpha$ the $N\times1$ intercept vector, $\ha
 
 | Model | GRS $F(df_1,df_2)$ | $p$-value | Verdict | mean \|α\| (%/mo) | $\hat\alpha'\hat\Sigma^{-1}\hat\alpha$ (monthly) |
 |---|---:|---:|:--|---:|---:|
-| CAPM | $F(25,728)=4.10$ | $1.7\times10^{-10}$ | **reject** $H_0$ | 0.195 | 0.143 |
-| FF3  | $F(25,726)=3.55$ | $1.8\times10^{-8}$  | **reject** $H_0$ | 0.089 | 0.127 |
+| CAPM | $F(25,732)=4.20$ | $7.4\times10^{-11}$ | **reject** $H_0$ | 0.197 | 0.146 |
+| FF3  | $F(25,730)=3.64$ | $8.3\times10^{-9}$  | **reject** $H_0$ | 0.087 | 0.129 |
 
-Both models reject the null that all 25 intercepts are jointly zero, at any conventional level. The three factors halve the average pricing error — mean $|\alpha|$ falls from 0.195 to 0.089 %/month — yet the GRS statistic stays far in the rejection region. The quadratic form barely moves (0.143 → 0.127) even as mean $|\alpha|$ halves, because the residual pricing ability that defeats the three-factor model is concentrated in a few corners with large, sharply-estimated alphas rather than spread evenly across the grid. A test that weights each alpha by its precision through $\hat\Sigma^{-1}$ still rejects strongly.
+Both models reject the null that all 25 intercepts are jointly zero, at any conventional level. The three factors halve the average pricing error — mean $|\alpha|$ falls from 0.197 to 0.087 %/month — yet the GRS statistic stays far in the rejection region. The quadratic form barely moves (0.146 → 0.129) even as mean $|\alpha|$ halves, because the residual pricing ability that defeats the three-factor model is concentrated in a few corners with large, sharply-estimated alphas rather than spread evenly across the grid. A test that weights each alpha by its precision through $\hat\Sigma^{-1}$ still rejects strongly.
 
 ### Where the pricing errors live
 
 The collapse of the pricing errors from CAPM to the three-factor model is visible directly on the size × book-to-market grid.
 
-![CAPM and FF3 alpha grids on the 5×5 size × book-to-market sort, shared diverging color scale centered at zero. Cells are alphas in %/month. CAPM (left) shows a strong growth→value gradient and a large negative small-growth corner; FF3 (right) washes most cells toward zero but the small-growth corner remains blue.](attachments/fig1_alpha_grids.png)
+![CAPM and FF3 alpha grids on the 5×5 size × book-to-market sort, shared diverging color scale centered at zero. Cells are alphas in %/month. CAPM (left) shows a strong growth→value gradient and a large negative small-growth corner; FF3 (right) washes most cells toward zero but the small-growth corner remains blue.](../02-analysis/attachments/fig1_alpha_grids.png)
 
-CAPM mis-prices the value sort systematically: its alphas climb growth→value in every size row, because the market factor cannot explain the value premium, and the small-growth corner sits at a large negative $-0.53$ %/month. The three-factor panel washes most cells toward zero — the SMB and HML loadings absorb the size and value gradients — but the small-growth corner stays deep blue. That corner, `SMALL LoBM`, keeps an alpha of $-0.47$ %/month at $t=-5.1$: a large, precisely-estimated pricing error that no rotation of the three factors removes. A few other cells remain significant in the same way (big-growth $+0.17$ at $t=4.1$, `ME5 BM4` $-0.22$ at $t=-3.8$), and together they keep the model rejected. The grids with their full $t$-statistics and the SMB/HML loadings that drive the gradients are in [02-analysis](../02-analysis/task.md).
+CAPM mis-prices the value sort systematically: its alphas climb growth→value in every size row, because the market factor cannot explain the value premium, and the small-growth corner sits at a large negative $-0.52$ %/month. The three-factor panel washes most cells toward zero — the SMB and HML loadings absorb the size and value gradients — but the small-growth corner stays deep blue. That corner, `SMALL LoBM`, keeps an alpha of $-0.46$ %/month at $t=-5.1$: a large, precisely-estimated pricing error that no rotation of the three factors removes. A few other cells remain significant in the same way (big-growth $+0.16$ at $t=4.0$, `ME5 BM4` $-0.22$ at $t=-3.8$), and together they keep the model rejected. The grids with their full $t$-statistics and the SMB/HML loadings that drive the gradients are in [02-analysis](../02-analysis/task.md).
 
 ### Realized versus predicted returns
 
 The same story reads off the cross-section of mean returns.
 
-![Realized vs. predicted mean excess return (%/mo) for the 25 portfolios under CAPM (left) and FF3 (right), with a 45° perfect-pricing line. Points are tightly clustered on the diagonal under FF3 and scattered under CAPM; the small-growth portfolio is annotated and lies far below the line in both.](attachments/fig2_realized_vs_predicted.png)
+![Realized vs. predicted mean excess return (%/mo) for the 25 portfolios under CAPM (left) and FF3 (right), with a 45° perfect-pricing line. Points are tightly clustered on the diagonal under FF3 and scattered under CAPM; the small-growth portfolio is annotated and lies far below the line in both.](../02-analysis/attachments/fig2_realized_vs_predicted.png)
 
 Each point is one portfolio; the horizontal axis is the model's predicted mean excess return $\hat\beta_i'\bar f$ and the vertical axis the realized mean, so distance off the 45° line is the pricing error. Under CAPM the cloud is scattered and tilted off the diagonal. Under the three-factor model the points pull onto the line — the cross-section is largely priced — with the annotated small-growth portfolio the conspicuous exception, sitting far below the line in both panels. The picture matches the GRS numbers: the typical pricing error shrinks, but a few large outliers survive.
 
