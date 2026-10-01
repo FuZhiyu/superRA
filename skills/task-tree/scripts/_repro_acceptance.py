@@ -67,6 +67,22 @@ def mutation_lock(paths):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+def build_running(paths) -> bool:
+    """True while a build or record change holds the mutation lock; never creates state."""
+    import fcntl
+    try:
+        handle = (paths.state_dir / 'mutation.lock').open('r')
+    except OSError:
+        return False
+    with handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        return False
+
+
 def read_json(path, default):
     if not path.exists():
         return default

@@ -754,7 +754,9 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "explain":
             _explain(args, graph, paths, plan_root.name)
             return
-        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream)
+        from _repro_acceptance import build_running
+        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream,
+                                live_build=build_running(paths))
         behind = [] if args.upstream or not report.ok else _behind_selection(graph, paths, args.targets, report)
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)
