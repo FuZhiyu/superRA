@@ -14,9 +14,16 @@ A browser view of your whole task tree that refreshes itself as agents work, so 
 Open the superRA dashboard and point me at what is in review.
 ```
 
-The 0.5.0 workspace redesign is under development. **Tree** and **DAG** are alternative navigators sharing the selected task, reader, comments, and attachments; **Kanban** groups work by status. The DAG opens readable at 80% on the selected task and draws file edges between steps as solid arrows and `depends_on` prerequisites as dashed ones. Expand a task to reveal its own steps and immediate child groups; selecting or expanding keeps the surrounding scope.
+Two views share the selected task, the reader, comments, and attachments:
 
-Workflow status remains separate from reproduction counts. Step details show freshness, inputs, outputs, and the last actual execution; accepted results read as fresh with their recorded reason. Graph errors remain visible through filters: a task whose declaration has an error is outlined in red, and only step cycles and `depends_on` cycles are marked.
+- **Tree** navigates the task hierarchy, for reading task bodies and results.
+- **Graph** draws each task as a card holding its [reproduction steps](#/04-utility-skills/09-reproducibility), with file edges between steps as solid arrows and `depends_on` prerequisites as dashed ones. It opens at 80% on the selected task; expand a task to show its own steps and child tasks.
+
+### Step freshness in the Graph view
+
+Each step shows its state (`fresh`, `stale`, `missing`, `failed`, or `external`) and how long its last run took, and each task card totals its steps. Select a step to see its inputs, its outputs, and its last actual run; an accepted step reads `fresh` with the recorded reason. Freshness is separate from workflow status, so an `approved` task can still hold a stale step. A task whose `## Reproduction` declaration has an error is outlined in red, with a link to the finding.
+
+On the live dashboard, each task and step card has a **Build** button. Its menu offers this task or step, the same with its upstream producers, or a forced rerun of all of them, and shows the `superra repro build` command and an estimate from the last recorded runs. Hover a step that is not fresh to see why. An exported snapshot shows the same graph and states without these controls.
 
 ### A shareable snapshot
 

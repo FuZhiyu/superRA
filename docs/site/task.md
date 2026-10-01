@@ -53,7 +53,7 @@ What it is:
 - A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. [Here](#/07-showcase) is an example — and you are looking at the dashboard right now, since this documentation site is built on the very same system.
 - An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
 - **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design.
-- **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
+- **Utility skills** that teach agents practical mechanics — keeping every result traceable to the code that produced it, loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
 
 ## Why superRA?
 
@@ -136,6 +136,7 @@ superRA's design centers on a few ideas:
 - For which discipline fits your work, the [Domain Skills](#/03-domain-skills) page introduces each one — data analysis, theory modeling, academic writing, slide design.
 - For more on the three phases — what each does for you and what you decide along the way — the [Workflows](#/05-workflows) section covers plan, implement, and integrate one page at a time.
 - For the tools the workflow composes, the [Utility Skills](#/04-utility-skills) page covers the task tree, intent-aware merging, result protection, and the rest of the domain-neutral layer.
+- For how superRA knows which tables and figures are out of date after an edit, see [Reproducibility](#/04-utility-skills/09-reproducibility).
 - The [Showcase](#/07-showcase) embeds a real superRA task tree, exported by the same dashboard that renders this site.
 
 superRA is open source and built for researchers comfortable with git and an AI harness. Installation and contribution details live in the project [README](README.md).

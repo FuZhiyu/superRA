@@ -14,7 +14,7 @@ A bare agent keeps project state in the conversation — which steps are done, w
 
 The task tree makes the filesystem the single source of truth instead. Every task is a directory holding a `task.md` with its objective, status, dependencies, and (once done) its results. Nesting a directory nests the task. Sibling names in `depends_on` decide when a task is ready; files a task reads from another task's reproduction steps are reported as its inputs and never hold it back. There is no database — the tree you see is the directory tree, and git versions it alongside your code, so a fresh agent (or you, a week later) resumes from the files alone.
 
-From that structure the agent computes answers you can ask for in plain language: "show me the tree" (whole tree with rollup status), "what can I start now?" (the **frontier** — tasks whose `depends_on` prerequisites are done, each with its inputs that are not fresh), "what's blocking the merge?" (its prerequisites and inputs), "open the dashboard" (live browser view of tree, frontier, DAG, and kanban).
+From that structure the agent computes answers you can ask for in plain language: "show me the tree" (whole tree with rollup status), "what can I start now?" (the **frontier** — tasks whose `depends_on` prerequisites are done, each with its inputs that are not fresh), "what's blocking the merge?" (its prerequisites and inputs), "open the dashboard" (live browser view of the tree and its reproduction graph).
 
 ## What the agent runs, and what you can run yourself
 
