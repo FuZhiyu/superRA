@@ -25,7 +25,7 @@ A **step** is one command that reads files (its inputs) and writes files (its ou
 
 - **Content decides, timestamps never do.** A Dropbox re-sync or a `touch` leaves every step fresh, and restoring a file's original bytes restores freshness.
 - **Any byte change makes the step stale, even an edited comment.** The hash cannot tell that a comment does not move a result. Whether the step needs a rerun is a separate decision, covered under *What stays your call* below.
-- **Staleness flows downstream.** A step reading the output of a stale step is stale too, until its producer is rebuilt.
+- **Staleness flows downstream within the steps you select.** A selected step reading the output of a stale selected step is stale too, until its producer is rebuilt. A producer outside the selection is not consulted: its file is read as it sits on disk.
 - **Identical output stops the cascade.** When a rerun writes the same bytes as before, the steps that read those bytes stay fresh and are skipped.
 - **Your coauthor's clone sees the same freshness**, because the lock is in git. A check step that passed at the same inputs on another machine reads `fresh` there, with the reason "passed at these inputs … not run here". Outputs you keep out of git are absent from a fresh clone, so their steps read `missing` until built.
 - **A merge conflict in the lock does not break it.** Entries both sides agree on still read; the entries they disagree on drop to `missing`, and the next build rewrites the file without conflict markers.
@@ -79,7 +79,7 @@ Building only `showcase-analysis/02-analysis` after the 1970 edit reruns nothing
 
 Use it for an expensive result you already produced from the same committed code, for example in an interactive session, or for a change you have read and know cannot move the result.
 
-For every step that is not fresh, the agent rebuilds cheap steps, accepts on its own only when the diff proves the change cannot move a result (a comment, whitespace, a logging line), and asks you before a costly rerun, with a recommendation. The rule is in [rerun-or-accept.md](skills/reproducibility/references/rerun-or-accept.md).
+For a step that other results depend on, the agent rebuilds it when cheap, accepts on its own only when the diff proves the change cannot move a result (a comment, whitespace, a logging line), and asks you before a costly rerun, with a recommendation. A step whose script lives in its own task's `attachments/` and that no other task reads is left stale and reported to you. The rule is in [rerun-or-accept.md](skills/reproducibility/references/rerun-or-accept.md).
 
 ## The `## Reproduction` section
 
