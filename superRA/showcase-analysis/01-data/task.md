@@ -13,11 +13,11 @@ created: 2026-06-17
 
 Acquire the source data and assemble a single tidy monthly panel that the regression tasks consume.
 
-- **Download** the two Ken French zip files with a committed `data/download.py` (PEP 723, `uv run --script`): the research factors and the 25 size-B/M 5×5 portfolios. Extract the CSVs into a gitignored `data/raw/`.
+- **Download** the two Ken French zip files with a committed `data/download.py` (PEP 723, `uv run --script`): the research factors and the 25 size-B/M 5×5 portfolios. Extract the CSVs into `data/raw/`; the extracted CSVs are committed and frozen at the 202608 release.
 - **Parse** each multi-panel CSV: strip the multi-line text header, keep only the value-weighted **monthly** portfolio panel (cut the equal-weighted and annual panels that follow it), parse the `YYYYMM` index into a month-end date, recode `-99.99` and `-999` to missing, and keep returns in percent.
 - **Merge** the 25 portfolios with the factor series on the month index (declare the join type and verify it). Construct the 25 portfolio **excess returns** by subtracting `RF`.
 - **Restrict** to the baseline sample (1963-07 → latest complete month).
-- Write the result to `data/ff_panel.parquet` (gitignored): one row per month, columns for the four factors, `RF`, and the 25 excess-return series.
+- Write the result to `data/ff_panel.parquet` (committed): one row per month, columns for the four factors, `RF`, and the 25 excess-return series.
 
 Apply the Describe gate before and after each transformation: report the panel shape (months × series), the date range, missingness per series, and summary statistics (mean, std, tail percentiles) for the factors and a spot-check of portfolio columns. Log row/column counts at the parse, merge, and sample-restriction steps. Confirm there are no within-sample month gaps before any downstream time-series use.
 

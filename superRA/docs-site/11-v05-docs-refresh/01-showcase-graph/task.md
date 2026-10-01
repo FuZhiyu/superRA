@@ -1,6 +1,6 @@
 ---
 title: "Register the Showcase Study's Reproduction Graph"
-status: implemented
+status: approved
 depends_on: []
 ---
 
