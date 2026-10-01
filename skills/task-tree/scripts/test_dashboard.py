@@ -6728,17 +6728,41 @@ class TestReproBuildRoutes:
             assert c.post("/api/repro/build/stop", json={}).status_code == 409
 
     def test_a_build_outside_the_dashboard_refuses_the_page(self, plan):
-        import fcntl
+        """A CLI build holds the lock: the page cannot start or stop one, and a
+        step a crashed build left in flight still reads interrupted."""
+        from _repro_acceptance import mutation_lock
+        from _repro_state import ensure_state_dir, runner_paths, write_run_record
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        write_run_record(paths, "fetch-crsp", {"outcome": "running", "started_at": 1.0, "pid": 999999})
+        with mutation_lock(paths), self._client(plan) as c:
+            state = c.get("/api/repro/build").json()
+            assert state["running"] is True and state["steps"] == []
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["status"] == "failed" and entry["running"] is False
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 409
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_stop_refuses_a_job_whose_pid_is_not_the_build(self, plan):
+        """A job left without an exit code, whose pid now names another process,
+        is not stopped."""
         from _repro_state import ensure_state_dir, runner_paths
         paths = runner_paths(plan.parent)
         ensure_state_dir(paths)
-        with (paths.state_dir / "mutation.lock").open("a") as held:
-            fcntl.flock(held, fcntl.LOCK_EX)
-            with self._client(plan) as c:
-                assert c.get("/api/repro/build").json()["running"] is True
-                r = c.post("/api/repro/build", json={"target": "01-ingest"})
-                assert r.status_code == 409
-                assert c.post("/api/repro/build/stop", json={}).status_code == 409
+        plan_dashboard._write_job(paths, {"pid": os.getpid(), "target": "01-ingest", "started_at": 1.0})
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json()["job"]["alive"] is False
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_project_pages_are_served_sandboxed(self, plan):
+        (plan.parent / "page.html").write_text("<script>fetch('/api/repro/build')</script>", encoding="utf-8")
+        (plan.parent / "fig.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        with self._client(plan) as c:
+            page = c.get("/files/page.html")
+            image = c.get("/files/fig.png")
+        assert page.headers["content-security-policy"].startswith("sandbox allow-scripts")
+        assert "allow-same-origin" not in page.headers["content-security-policy"]
+        assert "content-security-policy" not in image.headers
 
     # --- Explain ----------------------------------------------------------
 

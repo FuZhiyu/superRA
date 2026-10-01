@@ -601,27 +601,32 @@ def test_a_sidecar_tracked_out_is_hashed_through_its_sidecar(project):
 
 
 
-def test_status_reads_a_step_a_live_build_is_executing_as_building(project, capsys):
-    """An in-flight run record is an interrupted run unless another process's
-    build holds the mutation lock; then the step is executing now."""
-    import fcntl
-    from _repro_acceptance import build_running
+def test_status_reads_only_the_lock_holders_steps_as_building(project, capsys):
+    """An in-flight run record is executing only when the process holding the
+    mutation lock wrote it; any other in-flight record is an interrupted run."""
+    import os
+    from _repro_acceptance import lock_holder, mutation_lock
     from _repro_state import write_run_record
 
-    project.run("build", *CHAIN)
-    write_run_record(project.paths, "build-b", {"outcome": "running", "started_at": 1.0})
-    assert not build_running(project.paths)
-    assert project.states(*CHAIN)["build-b"] == "failed"
-
-    with (project.paths.state_dir / "mutation.lock").open("a") as held:
-        fcntl.flock(held, fcntl.LOCK_EX)
-        assert build_running(project.paths)
+    def build_b():
         capsys.readouterr()
         project.run("status", *CHAIN, "--json")
-        step = next(s for s in json.loads(capsys.readouterr().out)["steps"] if s["name"] == "build-b")
-    assert step["running"] is True and step["started_at"] == 1.0
-    assert step["reason"] == "building now" and step["status"] == "fresh"
-    assert not build_running(project.paths)
+        return next(s for s in json.loads(capsys.readouterr().out)["steps"] if s["name"] == "build-b")
+
+    project.run("build", *CHAIN)
+    write_run_record(project.paths, "build-b", {"outcome": "running", "started_at": 1.0, "pid": 999999})
+    assert lock_holder(project.paths) is None
+    assert project.states(*CHAIN)["build-b"] == "failed"
+
+    with mutation_lock(project.paths):  # an unrelated build or acceptance
+        assert lock_holder(project.paths) == os.getpid()
+        stale = build_b()
+        write_run_record(project.paths, "build-b", {"outcome": "running", "started_at": 1.0, "pid": os.getpid()})
+        live = build_b()
+    assert stale["status"] == "failed" and stale["running"] is False
+    assert live["running"] is True and live["started_at"] == 1.0
+    assert live["reason"] == "building now" and live["status"] == "fresh"
+    assert lock_holder(project.paths) is None
 
 def test_status_json_matches_the_documented_shape(project, capsys):
     project.run("build", *CHAIN)
