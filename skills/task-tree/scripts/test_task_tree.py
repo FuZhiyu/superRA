@@ -4039,6 +4039,21 @@ class TestTaskCheck:
             for f in findings
         )
 
+    def test_postponed_consumer_of_postponed_dependency_is_silent(self, tmp_path):
+        """A postponed task depending on a postponed sibling is not reported as blocked."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "postponed")
+        d2 = root_dir / "02-consumer"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Consumer", "postponed",
+                       depends_on=["01-dep"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert not any("postponed" in f.message for f in findings)
+
     def test_detects_rollup_mismatch(self, tmp_path):
         """Flags when stored parent status disagrees with computed rollup."""
         root_dir = tmp_path / "superRA"

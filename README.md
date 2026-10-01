@@ -11,7 +11,7 @@ superRA turns an AI coding agent into a disciplined research assistant. It runs 
 1. A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
 2. An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
 3. **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
-4. **Utility skills** that teach agents practical mechanics — communicating dense results clearly, keeping every result rebuildable from a declared graph, loading papers from Zotero, syncing data across worktrees, and more.
+4. **Utility skills** that teach agents practical mechanics — communicating dense results clearly, keeping every result [rebuildable from a declared graph](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility), loading papers from Zotero, syncing data across worktrees, and more.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 
@@ -74,8 +74,6 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 ### Upgrading
 
 For the unreleased 0.5.0 upgrade, every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance: an older superRA reads neither the new `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then run `superra task check` and a build; the build prints the `git rm` that retires `pytask.lock` and `repro-builds.json`. Leftover `tier:`, `env_probe`, and `code_roots` keys only warn and can be deleted. The [release notes](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release) give the steps in order.
-
-Readiness follows `depends_on` only; file dependencies between steps order builds and are reported as inputs, never gating. `repro build <task>` builds that task and its nested tasks using saved upstream inputs. Add `--upstream` to include producers and `--force` to rerun every step in that scope. Use `task#step` for one step, or `.` for every registered step. `build --dry-run` reports what would run and what each step last cost, and `repro impact` shows what a change affects. Reviewed acceptance (`repro accept --reason`) keeps a reviewed result fresh without rerunning it and never claims the step ran; the [reproducibility skill](skills/reproducibility/SKILL.md) decides when to rerun and when to accept. See the [command reference](skills/task-tree/references/commands.md#reproduction).
 
 0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered onboarding, which migrates them (`superra task migrate from-plan`).
 

@@ -276,8 +276,8 @@ def _schedule(build: Build, n_workers: int) -> None:
             while pending or futures:
                 for name in list(pending):
                     states = [build.outcomes.get(parent, ("",))[0] for parent in parents[name]]
-                    if any(state in ("failed", "skipped") for state in states):
-                        culprit = next(p for p in parents[name] if build.outcomes[p][0] in ("failed", "skipped"))
+                    culprit = next((p for p, state in zip(parents[name], states) if state in ("failed", "skipped")), None)
+                    if culprit is not None:
                         build.outcomes[name] = ("skipped", f"ancestor {culprit} did not complete")
                         pending.remove(name)
                     elif build.dry_run and "would execute" in states:

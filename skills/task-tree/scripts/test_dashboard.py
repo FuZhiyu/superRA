@@ -349,6 +349,8 @@ class TestServerRoutes:
             ("highlight.min.js", "text/javascript"),
             ("languages/julia.min.js", "text/javascript"),
             ("purify.min.js", "text/javascript"),
+            ("pdf.min.mjs", "text/javascript"),
+            ("pdf.worker.min.mjs", "text/javascript"),
             ("fonts/KaTeX_Main-Regular.woff2", "font/woff2"),
         ):
             resp = client.get(f"/static/{name}")
@@ -390,6 +392,59 @@ class TestServerRoutes:
     def test_files_returns_404_for_missing(self, client):
         resp = client.get("/files/no_such_file.txt")
         assert resp.status_code == 404
+
+    def test_file_peek_answers_kind_size_and_bounded_head(self, client, plan_root):
+        """The hover preview reads a stat plus at most PEEK_HEAD_BYTES, marks an
+        image or PDF previewable only under the preview limit, and answers a
+        missing output as not built rather than an error."""
+        root = plan_root.parent
+        (root / "out").mkdir()
+        (root / "out" / "table.csv").write_text("a,b\n" + "1,2\n" * 5000)
+        _write_tiny_png(root / "out" / "fig.png")
+        (root / "out" / "big.pdf").write_bytes(b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024 + 1))
+        (root / "out" / "panel.parquet").write_bytes(b"PAR1\0\0")
+
+        csv = client.get("/api/file-peek", params={"path": "out/table.csv"}).json()
+        assert csv["kind"] == "text" and csv["truncated"]
+        assert csv["head"].startswith("a,b\n1,2") and len(csv["head"]) == plan_dashboard.PEEK_HEAD_BYTES
+        png = client.get("/api/file-peek", params={"path": "out/fig.png"}).json()
+        assert png["kind"] == "image" and png["previewable"] and "head" not in png
+        pdf = client.get("/api/file-peek", params={"path": "out/big.pdf"}).json()
+        assert pdf["kind"] == "pdf" and not pdf["previewable"]
+        parquet = client.get("/api/file-peek", params={"path": "out/panel.parquet"}).json()
+        assert parquet["kind"] == "binary" and not parquet["previewable"] and "head" not in parquet
+        folder = client.get("/api/file-peek", params={"path": "out"}).json()
+        assert folder == {**folder, "kind": "directory", "entries": 4, "entries_capped": False}
+        assert client.get("/api/file-peek", params={"path": "out/later.csv"}).json() == {"exists": False}
+        assert client.get("/api/file-peek", params={"path": "../../etc/passwd"}).status_code == 403
+
+    def test_symlinked_folders_and_declared_external_paths_are_readable(self, plan_root, tmp_path_factory):
+        """A symlink inside the project is the researcher's own inclusion, and a path
+        the reproduction graph declares is too; `..` and anything else outside stay
+        refused."""
+        outside = tmp_path_factory.mktemp("elsewhere")
+        (outside / "sub").mkdir(parents=True)
+        (outside / "raw.csv").write_text("id,x\n1,2\n")
+        (outside / "secret.txt").write_text("no")
+        external = tmp_path_factory.mktemp("external")
+        (external / "result.csv").write_text("a\n1\n")
+        (external / "other.csv").write_text("no")
+        (plan_root.parent / "data").symlink_to(outside, target_is_directory=True)
+        task = plan_root / "05-external"
+        task.mkdir()
+        (task / "task.md").write_text(
+            "---\ntitle: External output\nstatus: in-progress\n---\n\n## Objective\n\nWrite outside.\n\n"
+            f"## Reproduction\n\n```yaml\nsteps:\n  - name: ext\n    cmd: echo hi\n    outs: [{external / 'result.csv'}]\n```\n"
+        )
+        with _client_for(plan_root) as c:
+            def peek(path):
+                return c.get("/api/file-peek", params={"path": path})
+            assert c.get("/files/data/raw.csv").text == "id,x\n1,2\n"
+            assert peek("data/raw.csv").json()["head"] == "id,x\n1,2\n"
+            assert peek("data/sub/../secret.txt").status_code == 403
+            assert peek(str(external / "result.csv")).json()["head"] == "a\n1\n"
+            assert peek(str(external / "other.csv")).status_code == 403
+            assert peek(str(outside / "raw.csv")).status_code == 403
 
     def test_events_sse_generator_yields_heartbeat(self, client):
         """The SSE event_generator yields a heartbeat as its first message.
@@ -2753,11 +2808,12 @@ def forest_root(tmp_path):
     return root
 
 
-def _client_for(plan_root, base_url: str | None = None):
+def _client_for(plan_root, base_url: str | None = None, peer: str | None = None):
     """Build a TestClient pointed at *plan_root* (any basename), launch worktree.
 
-    *base_url* overrides the default ``http://testserver`` origin, which matters
-    only for routes that check the ``Host`` authority (``/api/open``).
+    *base_url* overrides the default ``http://testserver`` origin and *peer* the
+    client address; both matter only where the page asks whether the browser is
+    on this machine (``LOCAL_OPEN``, ``/api/open``).
     """
     from starlette.testclient import TestClient
 
@@ -2766,6 +2822,8 @@ def _client_for(plan_root, base_url: str | None = None):
     plan_dashboard._worktree_cache.clear()
     plan_dashboard.rebuild_tree()
     kwargs = {"base_url": base_url} if base_url else {}
+    if peer:
+        kwargs["client"] = (peer, 50000)
     return TestClient(plan_dashboard.app, raise_server_exceptions=True, **kwargs)
 
 
@@ -2990,34 +3048,24 @@ class TestWorktreeOpenButton:
                        BASE_HTML, re.S)
         assert fn and "worktree-open-btn" not in fn.group(0)
 
-    def test_href_uses_project_root_via_shared_uri_builder(self):
-        """Without the local-open route the button keeps its pre-route deep link:
-        PROJECT_ROOT (the whole worktree, not the superRA/ subdir) through the
-        shared vscodeFileUri."""
+    def test_hidden_without_an_editor_to_open(self):
+        """GitHub-file mode has no local folder, and a browser on another machine
+        no editor holding this worktree, so both hide the button."""
         fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
                        BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
-        assert "vscodeFileUri(PROJECT_ROOT)" in body
-        # Scoped to the pre-route branch, because the local-open branch above
-        # deliberately targets a task file under RESOLVED_ROOT.  Both the direct
-        # name and taskFileVscodeHref, which reaches it indirectly, stay out.
-        pre_route = re.search(r"\}\s*else\s*\{(.*?)\n  \}", body, re.S)
-        assert pre_route
-        assert "RESOLVED_ROOT" not in pre_route.group(1)
-        assert "taskFileVscodeHref" not in pre_route.group(1)
-        # GitHub-file mode has no local folder to open → hide the button.
-        assert "if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }" in body
+        assert "if (REPO_FILE_BASE || !window.LOCAL_OPEN) { btn.style.display = 'none'; return; }" in body
+        assert "vscodeFileUri(PROJECT_ROOT)" not in body
 
     def test_local_open_targets_active_task_file_in_this_worktree(self):
-        """With the local-open route the button opens the ACTIVE task's file with
-        target 'editor', so the route can pass the worktree folder alongside it and
-        the file lands in the window holding this worktree."""
+        """The button opens the ACTIVE task's file with target 'editor', so the
+        route can pass the worktree folder alongside it and the file lands in the
+        window holding this worktree."""
         fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
                        BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
-        assert "if (window.LOCAL_OPEN) {" in body
         assert "taskFileOpenPath(activePath)" in body
         assert "'data-open-target', 'editor'" in body
 
@@ -3214,9 +3262,12 @@ class TestTabTitleWiring:
         )
         assert fn
         body = fn.group(0)
-        assert "setTabTitle(entry.name);" in body
-        catch = re.search(r"\}\)\.catch\(function\(error\) \{.*?\n  \}\);", body, re.S)
-        assert catch and "setTabTitle('');" in catch.group(0)
+        assert "buildArtifactPageHead(taskPath, entry.name)" in body
+        assert "showArtifactLoadError(region, token, error)" in body
+        head = re.search(r"function buildArtifactPageHead\(taskPath, name\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert head and "setTabTitle(name);" in head.group(0)
+        error = re.search(r"function showArtifactLoadError\(region, token, error\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert error and "setTabTitle('');" in error.group(0)
 
     def test_deep_descent_patch_awaits_the_sidebar_update(self):
         """Same completion hook as the status badge — not a fixed-interval poll —
@@ -3270,24 +3321,33 @@ def _read_local_open_flag(html: str) -> str:
 class TestLocalOpen:
     # --- Render-time flag -------------------------------------------------
 
-    def test_flag_true_for_loopback_live_page(self, plan_root, monkeypatch):
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+    def test_flag_true_for_a_browser_on_this_machine(self, plan_root, monkeypatch):
+        """Loopback, or the address the connection arrived on (the researcher's own
+        desktop reaching an off-loopback bind through its own LAN/Tailscale IP)."""
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
-        with _client_for(plan_root) as c:
-            assert _read_local_open_flag(c.get("/").text) == "true"
+        for base, peer in (("http://127.0.0.1:8995", "127.0.0.1"), ("http://localhost:8995", "::1"),
+                           ("http://100.64.0.5:8995", "100.64.0.5")):
+            with _client_for(plan_root, base_url=base, peer=peer) as c:
+                assert _read_local_open_flag(c.get("/").text) == "true", base
 
-    def test_flag_false_off_loopback(self, plan_root, monkeypatch):
-        """An off-loopback --host may put the browser on another machine, so the
-        page keeps its vscode:// links and never calls the route."""
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+    def test_flag_false_for_another_machine(self, plan_root, monkeypatch):
+        """A phone or another computer has nothing here to open a file with, so its
+        page opens files in the reading pane and never calls the route."""
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
-        with _client_for(plan_root) as c:
+        with _client_for(plan_root, base_url="http://100.64.0.5:8995", peer="100.64.0.9") as c:
             assert _read_local_open_flag(c.get("/").text) == "false"
 
+    def test_flag_false_behind_a_reverse_proxy(self, plan_root, monkeypatch):
+        """A proxy on this machine connects from loopback but forwards the public
+        name, so the browser behind it is not taken for a local one."""
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1") as c:
+            page = c.get("/", headers={"host": "mac.tailnet.ts.net"}).text
+            assert _read_local_open_flag(page) == "false"
+
     def test_flag_false_in_doc_mode(self, plan_root, monkeypatch):
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
-        with _client_for(plan_root) as c:
+        with _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1") as c:
             assert _read_local_open_flag(c.get("/").text) == "false"
 
     def test_flag_false_in_standalone_export(self, plan_root):
@@ -3300,40 +3360,19 @@ class TestLocalOpen:
         for host in ("0.0.0.0", "192.168.1.10", "100.64.0.1", "::", "", "example.com"):
             assert not plan_dashboard._is_loopback_host(host), host
 
-    def test_serve_records_bound_host(self, monkeypatch):
-        """serve() is the single in-process serve path, so the host it is handed is
-        the one the route gates on."""
-        pytest.importorskip("uvicorn")
-        import uvicorn
-
-        seen = {}
-
-        class _FakeServer:
-            def __init__(self, config):
-                pass
-
-            def run(self):
-                seen["bound"] = plan_dashboard.BOUND_HOST
-
-        monkeypatch.setattr(uvicorn, "Server", _FakeServer)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
-        plan_dashboard.serve(12345, host="0.0.0.0")
-        assert seen["bound"] == "0.0.0.0"
-
     # --- Opening ----------------------------------------------------------
 
     def _spawns(self, monkeypatch):
         """Capture every process the route would launch, without launching one."""
         calls: list[list[str]] = []
         monkeypatch.setattr(plan_dashboard, "_spawn", calls.append)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
         return calls
 
     def _client(self, plan_root):
-        """A client whose default ``Host`` authority is loopback — what a browser on
+        """A loopback client with a loopback ``Host`` authority — what a browser on
         the researcher's own machine sends, and what the route requires."""
-        return _client_for(plan_root, base_url="http://127.0.0.1:8995")
+        return _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1")
 
     def test_native_open_hands_file_to_os(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
@@ -3404,10 +3443,9 @@ class TestLocalOpen:
 
     # --- Refusals ---------------------------------------------------------
 
-    def test_refuses_off_loopback(self, plan_root, monkeypatch):
+    def test_refuses_another_machine(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
-        with self._client(plan_root) as c:
+        with _client_for(plan_root, base_url="http://100.64.0.5:8995", peer="100.64.0.9") as c:
             r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
         assert r.status_code == 403
         assert calls == []
@@ -3477,8 +3515,8 @@ class TestLocalOpen:
         """DNS rebinding defeats both origin checks: a page on evil.example.com that
         rebinds the name to 127.0.0.1 is same-origin to the browser, so it needs no
         preflight and sends `Sec-Fetch-Site: same-origin` freely.  What it cannot
-        change is the authority it puts in `Host`, so the route requires a loopback
-        one.  The deterministic 8100–8999 port makes the precondition cheap to meet,
+        change is the authority it puts in `Host`, so the route requires one naming
+        this machine.  The deterministic 8100–8999 port makes the precondition cheap to meet,
         and the route starts processes."""
         calls = self._spawns(monkeypatch)
         with self._client(plan_root) as c:
@@ -3492,16 +3530,7 @@ class TestLocalOpen:
                 },
             )
         assert r.status_code == 403
-        assert r.json()["detail"] == "Untrusted Host header"
         assert calls == []
-
-    def test_loopback_authority_predicate(self):
-        """The Host check strips the port and IPv6 brackets, then applies the same
-        loopback test as the bind check."""
-        for authority in ("127.0.0.1", "127.0.0.1:8995", "localhost:8995", "[::1]:8995", "[::1]"):
-            assert plan_dashboard._is_loopback_authority(authority), authority
-        for authority in ("evil.example.com:8995", "192.168.1.10:8995", "", "0.0.0.0:8995"):
-            assert not plan_dashboard._is_loopback_authority(authority), authority
 
     def test_refuses_a_directory(self, plan_root, monkeypatch):
         """Files only, matching /files/.  No surface sends a directory, and on macOS
@@ -3633,12 +3662,13 @@ class TestLocalOpen:
 
     def test_card_head_button_opens_in_default_application(self):
         """The card-head button targets the OS default application (no editor named
-        in its label, icon, or title)."""
+        in its label, icon, or title), and a browser on another machine gets none."""
         fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
         assert "var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;" in body
-        assert "openNative ? 'Open' : 'VS Code'" in body
+        assert "var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'Open';" in body
+        assert "((openNative || REPO_FILE_BASE) ? '<a class=\"open-btn\"" in body
         assert "openNative ? OPEN_ICON : EDITOR_ICON" in body
         assert "taskFileOpenPath(path)" in body
 
@@ -6644,7 +6674,6 @@ class TestReproBuildRoutes:
     # --- Render-time flag -------------------------------------------------
 
     def test_flag_true_for_live_page_even_off_loopback(self, plan, monkeypatch):
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
         with self._client(plan) as c:
             assert _read_repro_actions_flag(c.get("/").text) == "true"
 

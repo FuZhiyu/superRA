@@ -12,7 +12,7 @@ The tasks are approved, so the work is correct, but correct work can still break
 
 ### Protect — choose the permanent record and how to guard it
 
-Before permanent documentation is written, superRA surveys the provisional findings and proposes concrete choices: which results to keep or drop, what the final documentation and result files should look like, where they should live, how the affected task tree should consolidate, and how each kept result should be protected. You choose among those options while the work is still easy to reshape. The approved choices are recorded in a decision commit so later agents and resumed sessions share the same specification.
+Before permanent documentation is written, superRA surveys the provisional findings and proposes concrete choices: which results to keep or drop, what the final documentation and result files should look like, where they should live, how the affected task tree should consolidate, and how each kept result should be protected. You choose among those options while the work is still easy to reshape. You also agree which inputs are external, meaning files no step produces, such as a vendor download; the [reproducibility page](#/04-utility-skills/09-reproducibility) covers what that changes. The approved choices are recorded in a decision commit so later agents and resumed sessions share the same specification.
 
 Permanent results documentation can be sufficient protection. For a headline coefficient or another result where automated drift detection is valuable, you can also request a drift test: a small check that fails when a later sync or refactor moves the saved value. Existing protection checks continue to run throughout integration.
 

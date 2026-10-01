@@ -68,7 +68,7 @@ def workspace(tmp_path_factory):
     while not server.started:
         assert time.monotonic() < deadline, 'Fixture server did not start'
         time.sleep(.05)
-    yield {'url': f'http://127.0.0.1:{port}'}
+    yield {'url': f'http://127.0.0.1:{port}', 'base': base}
     server.should_exit = True
     thread.join(5)
     dashboard.PLAN_ROOT = previous
@@ -126,3 +126,101 @@ def test_build_menu_and_explain_card(browser, workspace):
     assert step_chip.get_attribute('data-value') == 'analysis-1#step-1-0'
     page.close()
 
+
+
+def _tiny_pdf():
+    objs = [b'<< /Type /Catalog /Pages 2 0 R >>', b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+            b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R >>']
+    draw = b'0 0 1 rg 20 20 160 60 re f'
+    objs.append(b'<< /Length %d >>\nstream\n%s\nendstream' % (len(draw), draw))
+    out, offsets = bytearray(b'%PDF-1.4\n'), []
+    for i, body in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b'%d 0 obj\n%s\nendobj\n' % (i, body)
+    xref = len(out)
+    out += b'xref\n0 %d\n0000000000 65535 f \n' % (len(objs) + 1) + b''.join(b'%010d 00000 n \n' % o for o in offsets)
+    out += b'trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n' % (len(objs) + 1, xref)
+    return bytes(out)
+
+
+def test_file_hover_preview(browser, workspace):
+    figs = workspace['base'] / 'figs'
+    figs.mkdir(exist_ok=True)
+    (figs / 'table.csv').write_text('year,ret\n2001,0.10\n')
+    (figs / 'fig.pdf').write_bytes(_tiny_pdf())
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'])
+    page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    page.locator('#repro-node-step-0-0').dispatch_event('click')
+    output = page.locator('#repro-detail [data-peek="out/0-0.txt"]')
+    output.hover()
+    page.wait_for_selector('#file-peek :text("Not built yet")')
+    page.evaluate("""() => ['figs/table.csv', 'figs/fig.pdf'].forEach(path => {
+      const a = document.createElement('a'); a.href = '#'; a.textContent = path; a.dataset.peek = path; a.style.display = 'block';
+      document.querySelector('#repro-detail').prepend(a); })""")
+    page.locator('[data-peek="figs/table.csv"]').hover()
+    page.wait_for_selector('#file-peek .file-peek-text:has-text("2001,0.10")')
+    assert page.evaluate('_pdfjs') is None
+    page.locator('[data-peek="figs/fig.pdf"]').hover()
+    page.wait_for_selector('#file-peek img[src^="data:image/png"]')
+    page.mouse.move(2, 2)
+    page.wait_for_selector('#file-peek', state='detached')
+    page.close()
+
+
+def test_task_body_file_links_preview_on_hover(browser, workspace):
+    figs = workspace['base'] / 'figs'
+    figs.mkdir(exist_ok=True)
+    (figs / 'table.csv').write_text('year,ret\n2001,0.10\n')
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'])
+    page.evaluate("""() => { const div = document.createElement('div');
+      div.innerHTML = renderMarkdown('[table](../../figs/table.csv#L2)', null, 'analysis-0');
+      div.style.cssText = 'position:relative;z-index:999;background:#fff';
+      document.body.prepend(div); }""")
+    link = page.locator('a:has-text("table")').first
+    assert link.get_attribute('data-peek') == 'figs/table.csv'
+    link.hover()
+    page.wait_for_selector('#file-peek .file-peek-text:has-text("2001,0.10")')
+    page.close()
+
+
+def remote(page):
+    """Serve the page as a browser on another machine sees it."""
+    def rewrite(route):
+        if route.request.resource_type != 'document':
+            return route.continue_()
+        response = route.fetch()
+        route.fulfill(response=response, body=response.text().replace('window.LOCAL_OPEN = true', 'window.LOCAL_OPEN = false'))
+    page.route('**/*', rewrite)
+
+
+def test_remote_file_links_open_the_reading_pane(browser, workspace):
+    figs = workspace['base'] / 'figs'
+    figs.mkdir(exist_ok=True)
+    (figs / 'big.csv').write_text('year,ret\n' + '2001,0.10\n' * 300_000)
+    (figs / 'fig.pdf').write_bytes(_tiny_pdf())
+    context = browser.new_context(viewport={'width': 1180, 'height': 820}, has_touch=True)
+    page = context.new_page()
+    remote(page)
+    enter(page, workspace['url'])
+    assert page.evaluate('window.LOCAL_OPEN') is False
+    page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    page.locator('#repro-node-step-0-0').dispatch_event('click')
+    link = page.locator('#repro-detail [data-peek="out/0-0.txt"]')
+    assert link.get_attribute('href') == '#/analysis-0?file=out%2F0-0.txt'
+    link.tap()
+    page.wait_for_selector('#active-node :text("Not built yet.")')
+    assert page.locator('#file-peek').count() == 0
+    assert 'file=out%2F0-0.txt' in page.url and page.evaluate('_reproSelected') == ''
+    page.goto(workspace['url'] + '#/analysis-0?file=figs%2Fbig.csv')
+    page.wait_for_selector('#active-node :text("Showing the first")')
+    assert page.locator('#active-node pre').inner_text().startswith('year,ret')
+    page.goto(workspace['url'] + '#/analysis-0?file=figs%2Ffig.pdf')
+    page.wait_for_selector('#active-node iframe.artifact-pdf-preview')
+    assert page.locator('#active-node iframe').get_attribute('src').startswith('/files/figs/fig.pdf?v=')
+    page.locator('.attachment-owner-action').tap()
+    page.wait_for_function("location.hash.indexOf('file=') === -1")
+    context.close()

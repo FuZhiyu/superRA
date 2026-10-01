@@ -209,10 +209,9 @@ var STANDALONE_ARTIFACTS = {{ standalone_artifacts | tojson }};
    opt-in (default false), so a normal dashboard is byte-for-byte unchanged. #}
 window.DOC_MODE = {{ 'true' if doc_mode else 'false' }};
 {# Local file opening: this server can hand a file to the machine the researcher
-   is sitting at (POST /api/open). True only for a loopback-bound, non-doc-mode
-   live server; false for a standalone export, doc-mode, and an off-loopback
-   --host, where the viewer may not be at the server's machine and the page keeps
-   its vscode:// links instead. #}
+   is sitting at (POST /api/open). Decided per request: true only when this browser
+   runs on the server's machine (live, non-doc-mode); elsewhere a file link opens
+   the file in the reading pane instead. False for a standalone export. #}
 window.LOCAL_OPEN = {{ 'true' if local_open else 'false' }};
 {# Reproduction actions: the Build menu on graph cards (POST /api/repro/build) and
    the explain hover card. True for a live server outside doc-mode; false for a

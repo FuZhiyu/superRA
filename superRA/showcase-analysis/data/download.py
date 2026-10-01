@@ -7,8 +7,9 @@
 Public data from the Ken French Data Library:
   https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
 
-Both the zips and the extracted CSVs land under data/raw/, which is gitignored.
-Re-running overwrites in place, so the build is reproducible from scratch.
+The extracted CSVs in data/raw/ are committed as the study's frozen input; the
+zips are gitignored. Re-running overwrites the CSVs with the current release,
+which stales the build-panel step and every result downstream.
 """
 
 import urllib.request
