@@ -6595,6 +6595,193 @@ class TestReproRoutes:
         assert "task_edges" not in graph
 
 
+# ---------------------------------------------------------------------------
+# TestReproBuildRoutes — POST /api/repro/build runs `superra repro build` for a
+# graph card, GET reports it, POST /api/repro/build/stop ends it, and GET
+# /api/repro/explain answers the hover card.  The build route executes the
+# commands the tree declares, so its refusals are pinned as tightly as its
+# lifecycle.
+# ---------------------------------------------------------------------------
+
+
+def _read_repro_actions_flag(html: str) -> str:
+    m = re.search(r"window\.REPRO_ACTIONS = (\w+);", html)
+    assert m, "REPRO_ACTIONS not injected"
+    return m.group(1)
+
+
+def _wait_for(predicate, timeout=20.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        value = predicate()
+        if value:
+            return value
+        time.sleep(0.1)
+    raise AssertionError("condition not reached in time")
+
+
+class TestReproBuildRoutes:
+    @pytest.fixture
+    def plan(self, repro_plan, monkeypatch):
+        """The repro fixture with a fetch step that writes its out after *SLOW* seconds,
+        served on a loopback authority, building with this process's environment."""
+        code = repro_plan.parent / "code"
+        (code / "fetch.sh").write_text(
+            '#!/bin/sh\nsleep "${SLOW:-0}"\nmkdir -p build\necho crsp > build/crsp.csv\n', encoding="utf-8")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        monkeypatch.setattr(plan_dashboard, "_login_env", lambda root: dict(os.environ, PWD=str(root)))
+        monkeypatch.delenv("SLOW", raising=False)
+        plan_dashboard._repro_graph_cache.clear()
+        return repro_plan
+
+    def _client(self, plan_root, base_url="http://127.0.0.1:8995"):
+        return _client_for(plan_root, base_url=base_url)
+
+    def _finish(self, c):
+        return _wait_for(lambda: (lambda s: s if not s["running"] and s["job"] and "returncode" in s["job"] else None)(
+            c.get("/api/repro/build").json()))
+
+    # --- Render-time flag -------------------------------------------------
+
+    def test_flag_true_for_live_page_even_off_loopback(self, plan, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "true"
+
+    def test_flag_false_in_doc_mode_and_export(self, plan, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "false"
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        html = plan_dashboard.generate_dashboard(plan).read_text("utf-8")
+        assert _read_repro_actions_flag(html) == "false"
+
+    # --- Refusals ---------------------------------------------------------
+
+    def test_refuses_what_is_not_a_same_origin_request_for_a_graph_target(self, plan, monkeypatch):
+        spawned = []
+        monkeypatch.setattr(plan_dashboard, "_start_build_sync", lambda *a: spawned.append(a) or {})
+        with self._client(plan) as c:
+            ok = {"target": "01-ingest"}
+            assert c.post("/api/repro/build", content=json.dumps(ok),
+                          headers={"content-type": "text/plain"}).status_code == 415
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"sec-fetch-site": "cross-site"}).status_code == 403
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"host": "evil.example.com:8995"}).status_code == 403
+            for bad in ("--force", "-j", "nope", "", " 01-ingest", "01-ingest\n", 7, None):
+                assert c.post("/api/repro/build", json={"target": bad}).status_code == 400, bad
+            assert not spawned
+            assert c.post("/api/repro/build", json=ok).status_code == 200
+            monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+            assert c.post("/api/repro/build", json=ok).status_code == 403
+            assert c.post("/api/repro/build/stop", json={}).status_code == 403
+        assert [a[1:] for a in spawned] == [("01-ingest", False, False)]
+
+    def test_trusted_authority_names_this_machine_only(self, monkeypatch):
+        monkeypatch.setenv(plan_dashboard.BUILD_HOSTS_ENV_VAR, "studio.tail1234.ts.net")
+        own = socket.gethostname()
+        for host in ("127.0.0.1:8995", "localhost", "[::1]:80", "100.64.0.7:8995",
+                     own, own.split(".")[0] + ":8995", "studio.tail1234.ts.net"):
+            assert plan_dashboard._is_trusted_authority(host), host
+        for host in ("evil.example.com", "evil.example.com:8995", "", own + ".evil.example.com"):
+            assert not plan_dashboard._is_trusted_authority(host), host
+
+    def test_target_is_one_argv_element_after_the_separator(self):
+        assert plan_dashboard._build_args("02-panel", True, True) == ["--upstream", "--force", "--", "02-panel"]
+        assert plan_dashboard._build_args("01-ingest#fetch-crsp", False, False) == ["--", "01-ingest#fetch-crsp"]
+
+    # --- Lifecycle --------------------------------------------------------
+
+    def test_build_runs_reports_and_refreshes_state(self, plan):
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json() == {"enabled": True, "running": False, "job": None, "steps": []}
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp"})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build '01-ingest#fetch-crsp'"
+            state = self._finish(c)
+            status = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}
+        assert state["job"]["returncode"] == 0
+        assert state["job"]["summary"] == "1 step(s): 1 executed"
+        assert status["fetch-crsp"]["status"] == "fresh"
+        assert status["fetch-crsp"]["duration"] is not None
+
+    def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
+        monkeypatch.setenv("SLOW", "30")
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 200
+            state = _wait_for(lambda: (lambda s: s if s["steps"] else None)(c.get("/api/repro/build").json()))
+            assert state["running"] and state["job"]["alive"]
+            assert [s["name"] for s in state["steps"]] == ["fetch-crsp"]
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["running"] is True and entry["reason"] == "building now"
+            assert entry["status"] != "failed"
+            second = c.post("/api/repro/build", json={"target": "02-panel"})
+            assert second.status_code == 409
+            assert "another reproduction build" in second.json()["detail"]
+            assert c.post("/api/repro/build/stop", json={}).status_code == 200
+            state = self._finish(c)
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+        assert state["job"]["returncode"] != 0
+        assert entry["status"] == "failed"
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_a_build_outside_the_dashboard_refuses_the_page(self, plan):
+        import fcntl
+        from _repro_state import ensure_state_dir, runner_paths
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        with (paths.state_dir / "mutation.lock").open("a") as held:
+            fcntl.flock(held, fcntl.LOCK_EX)
+            with self._client(plan) as c:
+                assert c.get("/api/repro/build").json()["running"] is True
+                r = c.post("/api/repro/build", json={"target": "01-ingest"})
+                assert r.status_code == 409
+                assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    # --- Explain ----------------------------------------------------------
+
+    def test_explain_answers_for_a_task_or_step_and_writes_nothing(self, plan):
+        with self._client(plan) as c:
+            task = c.get("/api/repro/explain", params={"target": "02-panel"})
+            step = c.get("/api/repro/explain", params={"target": "01-ingest#fetch-crsp"})
+            path = c.get("/api/repro/explain", params={"target": "code/fetch.sh"})
+            unknown = c.get("/api/repro/explain", params={"target": "nope"})
+        assert task.status_code == 200 and task.json()["kind"] == "task"
+        assert [s["name"] for s in task.json()["steps"]] == ["merge-panel"]
+        assert step.status_code == 200 and step.json()["steps"][0]["status"] == "missing"
+        assert path.status_code == 400 and unknown.status_code == 400
+        assert not (plan.parent / ".superra-repro").exists()
+
+
+    # --- Client estimate (node-backed) ------------------------------------
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_menu_estimate_and_command_follow_the_selection(self):
+        defs = _extract_js_defs([
+            "REPRO_STATES", "REPRO_GLYPHS", "_reproBuild", "reproStatusIndex", "reproStateOf", "reproWithin",
+            "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope", "reproBuildEstimate",
+        ])
+        harness = (
+            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'}],"
+            "step_edges:[{from:'a',to:'b'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
+            "{name:'b',status:'fresh',duration:1},{name:'c',status:'missing',duration:null},{name:'x',status:'external'}]}};"
+            "console.log(JSON.stringify({"
+            "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
+            "this:reproBuildEstimate('t2#b',''), upstream:reproBuildEstimate('t2#b','upstream'), force:reproBuildEstimate('t2','force'),"
+            "cmd:reproBuildCommand('t2#b','upstream'), root:reproBuildCommand('.','force')}));"
+        )
+        proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, proc.stderr
+        out = json.loads(proc.stdout.strip().splitlines()[-1])
+        assert out["scope"] == ["b", "c", "x"] and out["up"] == ["a", "b"]
+        assert out["this"] == "Nothing stale"
+        assert out["upstream"] == "1 step would run · ~2.0s by last runs"
+        assert out["force"] == "2 steps would run · ~1.0s by last runs · 1 never ran · 1 waiting on an external input"
+        assert out["cmd"] == "superra repro build 't2#b' --upstream"
+        assert out["root"] == "superra repro build . --force"
+
 class TestReproExportSnapshot:
     def _fragments(self, html):
         match = re.search(r"var STANDALONE_FRAGMENTS = (\{.*?\});\n", html, re.S)
@@ -6672,6 +6859,8 @@ def _run_repro_render_node(harness_body):
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
         "onReproClick", "reproNavigate", "reproHash",
+        "_reproBuild", "reproActionsOn", "reproExplainable", "reproStepTarget", "reproTaskTarget",
+        "reproIsRunning", "reproNodeMeta", "reproChipHTML", "reproBuildStatusHTML",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness
@@ -6692,6 +6881,7 @@ def _run_repro_render_node(harness_body):
         "function reproOpen(){}\n"
         "function reproTransform(){}\n"
         "function reproBindHead(){}\n"
+        "function reproBindExplain(){}\n"
         "function renderReproDetail(){}\n"
     )
     body = _extract_js_defs(["drawReproView"])

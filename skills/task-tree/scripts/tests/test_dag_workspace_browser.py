@@ -93,3 +93,34 @@ def test_dag_renders_and_selection_works(browser, workspace):
     assert 'step-0-0' in page.locator('#repro-detail').inner_text()
     assert not page.locator('#repro-notice').inner_text()
     page.close()
+
+
+def test_build_menu_and_explain_card(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'])
+    page.locator('[data-rp-action=fold][data-value="analysis-1"]').click()
+    page.wait_for_selector('#repro-node-step-1-0')
+    chip = page.locator('.rp-task[data-task="analysis-1"] .rp-build-chip')
+    assert chip.evaluate('el => getComputedStyle(el).opacity') == '0'
+    page.locator('.rp-task[data-task="analysis-1"] .rp-task-head').hover()
+    page.wait_for_function('el => getComputedStyle(el).opacity === "1"', arg=chip.element_handle())
+    chip.click()
+    menu = page.locator('#rp-build-menu')
+    assert [menu.locator('[role=menuitem] .rp-build-label').nth(i).inner_text() for i in range(3)] == [
+        'Build this task', 'Build with upstream', 'Rebuild all']
+    assert 'superra repro build analysis-1 --upstream' in menu.inner_text()
+    assert '4 steps would run' in menu.locator('[data-mode=""]').inner_text()
+    page.keyboard.press('Escape')
+    assert page.locator('#rp-build-menu').count() == 0
+    page.locator('#repro-node-step-1-0').hover()
+    page.wait_for_selector('#rp-explain-card .rp-explain-body section, #rp-explain-card .rp-explain-body .repro-hint:not(:has-text("Loading"))')
+    assert 'step-1-0' in page.locator('#rp-explain-card').inner_text()
+    page.mouse.move(2, 2)
+    page.wait_for_selector('#rp-explain-card', state='detached')
+    page.locator('.rp-task[data-task="analysis-2"] .rp-task-summary').hover()
+    page.wait_for_selector('#rp-explain-card[data-target="analysis-2"]')
+    assert '4 of 4 steps not fresh' in page.locator('#rp-explain-card').inner_text()
+    step_chip = page.locator('#repro-node-step-1-0 + .rp-build-chip-step')
+    assert step_chip.get_attribute('data-value') == 'analysis-1#step-1-0'
+    page.close()
+
