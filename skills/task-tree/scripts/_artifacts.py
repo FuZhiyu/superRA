@@ -139,7 +139,7 @@ def _hidden_or_cache(name: str) -> bool:
     )
 
 
-def _classify(path: Path) -> tuple[str, str, bool]:
+def classify(path: Path) -> tuple[str, str, bool]:
     suffix = path.suffix.lower()
     mime = _MIME_OVERRIDES.get(suffix)
     if mime is None:
@@ -206,7 +206,7 @@ def _artifact_file(path: Path, relative: str, limits: ArtifactLimits) -> Artifac
         return None
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         return None
-    kind, mime, safe_inline = _classify(path)
+    kind, mime, safe_inline = classify(path)
     return ArtifactFile(
         path=relative,
         name=path.name,

@@ -301,6 +301,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
             if (window.LOCAL_OPEN) {
               a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
             }
+            if (!window.STANDALONE) a.setAttribute('data-peek', taskRelOpenPath(taskPath, artifactTarget));
           }
           return;
         }
@@ -326,6 +327,16 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         }
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
+        } else if (!window.LOCAL_OPEN) {
+          /* A browser on another machine has no editor or app to hand the file
+             to, so the link opens it in the reading pane instead. */
+          var fileRel = normalizeProjectPath(rootRel + contentDirRel + decodePathHref(href.replace(/#.*$/, '')));
+          a.setAttribute('href', projectFileHash(taskPath, fileRel));
+          a.setAttribute('data-file-page', fileRel);
+          a.setAttribute('data-file-task', taskPath);
+          a.setAttribute('data-peek', fileRel);
+          a.removeAttribute('target');
+          return;
         } else {
           var relHref = href;
           var loc = '';
@@ -344,6 +355,9 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
              which nothing decodes. */
           if (window.LOCAL_OPEN) {
             a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
+          }
+          if (!window.STANDALONE) {
+            a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref)));
           }
         }
         a.setAttribute('target', '_blank');
@@ -1067,7 +1081,7 @@ function reproHash() {
   var f=_workspaceFilters||{};
   /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
   var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null;
-  var query=(activeArtifactPath?['attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
+  var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
   return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
@@ -1992,16 +2006,197 @@ function selectReproStep(name) {
 
 }
 
-function reproFileList(files) {
+function reproFileList(files, task) {
   if (!files.length) return '<p class="repro-hint">No files declared.</p>';
   return '<ul class="repro-files">' + files.map(function(file) {
     var ref=file.path||file, logical=ref.logical||'', resolved=ref.resolved||logical;
     var slash=logical.lastIndexOf('/'), leaf=logical.slice(slash+1), dir=logical.slice(0,slash+1);
-    var href=REPO_FILE_BASE?repoFileHref(resolved):vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved);
-    var link='<a href="'+escapeAttr(href)+'" target="_blank"'+(window.LOCAL_OPEN&&!REPO_FILE_BASE?' data-open-path="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
+    var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
+      :window.LOCAL_OPEN?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank" data-open-path="'+escapeAttr(resolved)+'"'
+      :projectFileLinkAttrs(task||'',resolved);
+    var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
     return '<li><div class="repro-file-name">'+link+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
       +(file.note?'<div class="repro-file-note">'+escapeHtml(file.note)+'</div>':'')+'</li>';
   }).join('')+'</ul>';
+}
+/* ── The file hover preview ──
+   One card at a time: /api/file-peek answers kind, size, and a text head; an
+   image or PDF loads from /files/ only under the server's preview limit, and
+   pdf.js is imported on the first PDF hover, never at page load. */
+var FILE_PEEK_DELAY_MS = 250, FILE_PEEK_PDF_BUDGET_MS = 3000, FILE_PEEK_WIDTH = 320;
+var _filePeekTimer = null, _filePeekToken = 0, _filePeekTask = null, _filePeekThumbs = new Map(), _pdfjs = null;
+function filePeekSchedule(anchor) {
+  clearTimeout(_filePeekTimer);
+  var card = document.getElementById('file-peek');
+  if (anchor && card && card._anchor === anchor) return;
+  _filePeekTimer = setTimeout(function() { if (anchor && anchor.isConnected) filePeekShow(anchor); else filePeekClose(); }, anchor ? FILE_PEEK_DELAY_MS : 150);
+}
+function filePeekClose() {
+  clearTimeout(_filePeekTimer);
+  _filePeekToken++;
+  if (_filePeekTask) { _filePeekTask.cancel(); _filePeekTask = null; }
+  var card = document.getElementById('file-peek');
+  if (card) card.remove();
+}
+function filePeekPlace(card, anchor) {
+  var a = anchor.getBoundingClientRect(), w = window.innerWidth, h = window.innerHeight;
+  var left = Math.min(Math.max(8, a.left), Math.max(8, w - card.offsetWidth - 8)), top = a.bottom + 6;
+  if (top + card.offsetHeight > h - 8 && a.top - card.offsetHeight - 6 >= 8) top = a.top - card.offsetHeight - 6;
+  card.style.left = left + 'px';
+  card.style.top = Math.max(8, top) + 'px';
+}
+function filePeekShow(anchor) {
+  filePeekClose();
+  var token = _filePeekToken, path = anchor.dataset.peek;
+  var card = document.createElement('div');
+  card.id = 'file-peek';
+  card.className = 'rp-menu-body file-peek';
+  card.setAttribute('role', 'tooltip');
+  card._anchor = anchor;
+  card.innerHTML = '<p class="rp-float-head"></p><div class="file-peek-body"><p class="repro-hint">Loading…</p></div>';
+  card.firstChild.textContent = path;
+  document.body.appendChild(card);
+  filePeekPlace(card, anchor);
+  fetch(wtUrl('/api/file-peek?path=' + encodeURIComponent(path))).then(function(resp) {
+    if (!resp.ok) throw new Error(resp.status === 403 ? 'Outside the project — no preview.' : 'Preview unavailable (' + resp.status + ').');
+    return resp.json();
+  }).then(function(peek) {
+    if (token !== _filePeekToken) return;
+    filePeekRender(card, path, peek, token);
+    filePeekPlace(card, anchor);
+  }).catch(function(e) {
+    if (token !== _filePeekToken) return;
+    card.lastChild.firstChild.textContent = e.message;
+  });
+}
+function filePeekRender(card, path, peek, token) {
+  var body = card.lastChild, url = projectFileUrl(path, peek.mtime_ns);
+  body.innerHTML = '';
+  function note(text) { var p = document.createElement('p'); p.className = 'repro-hint'; p.textContent = text; body.appendChild(p); }
+  if (!peek.exists) { note('Not built yet.'); return; }
+  note(projectFileMeta(peek) + ' · modified ' + new Date(peek.mtime_ns / 1e6).toLocaleString());
+  if (peek.head != null) {
+    var pre = document.createElement('pre');
+    pre.className = 'repro-log file-peek-text';
+    pre.textContent = peek.head + (peek.truncated ? '\n…' : '');
+    body.appendChild(pre);
+  } else if ((peek.kind === 'image' || peek.kind === 'pdf') && !peek.previewable) {
+    note(artifactUnavailableReason(peek));
+  } else if (peek.kind === 'image') {
+    var img = document.createElement('img');
+    img.alt = path;
+    img.src = url;
+    img.onload = function() { if (card._anchor) filePeekPlace(card, card._anchor); };
+    body.appendChild(img);
+  } else if (peek.kind === 'pdf') {
+    filePeekPdf(card, body, url, token);
+  }
+}
+function filePeekPdf(card, body, url, token) {
+  var cached = _filePeekThumbs.get(url);
+  var img = document.createElement('img');
+  img.alt = 'First page';
+  body.appendChild(img);
+  if (cached) { img.src = cached; return; }
+  img.hidden = true;
+  var status = document.createElement('p');
+  status.className = 'repro-hint';
+  status.textContent = 'Rendering first page…';
+  body.appendChild(status);
+  if (!_pdfjs) _pdfjs = import('/static/pdf.min.mjs').then(function(lib) {
+    lib.GlobalWorkerOptions.workerSrc = '/static/pdf.worker.min.mjs';
+    return lib;
+  });
+  var doc = null, budget = null;
+  _pdfjs.then(function(lib) {
+    if (token !== _filePeekToken) throw null;
+    return lib.getDocument({ url: url, isEvalSupported: false }).promise;
+  }).then(function(d) {
+    doc = d;
+    if (token !== _filePeekToken) throw null;
+    return doc.getPage(1);
+  }).then(function(page) {
+    if (token !== _filePeekToken) throw null;
+    var scale = FILE_PEEK_WIDTH / page.getViewport({ scale: 1 }).width * (window.devicePixelRatio || 1);
+    var viewport = page.getViewport({ scale: scale }), canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    _filePeekTask = page.render({ canvas: canvas, canvasContext: canvas.getContext('2d'), viewport: viewport });
+    var task = _filePeekTask;
+    budget = setTimeout(function() { task.cancel(); }, FILE_PEEK_PDF_BUDGET_MS);
+    return task.promise.then(function() { return canvas.toDataURL(); });
+  }).then(function(data) {
+    if (_filePeekThumbs.size >= 24) _filePeekThumbs.delete(_filePeekThumbs.keys().next().value);
+    _filePeekThumbs.set(url, data);
+    if (token !== _filePeekToken) return;
+    img.src = data;
+    img.hidden = false;
+    status.remove();
+    if (card._anchor) filePeekPlace(card, card._anchor);
+  }).catch(function(e) {
+    if (token !== _filePeekToken || !e) return;
+    status.textContent = e.name === 'RenderingCancelledException' ? 'Too complex to preview quickly — open the file.' : 'PDF preview failed.';
+  }).finally(function() {
+    clearTimeout(budget);
+    _filePeekTask = null;
+    if (doc) doc.destroy();
+  });
+}
+document.addEventListener('pointerover', function(e) {
+  var anchor = e.pointerType !== 'touch' && e.target.closest && e.target.closest('[data-peek]');
+  if (anchor) filePeekSchedule(anchor);
+});
+document.addEventListener('pointerout', function(e) {
+  var anchor = e.pointerType !== 'touch' && e.target.closest && e.target.closest('[data-peek]');
+  if (anchor && !(e.relatedTarget && anchor.contains(e.relatedTarget))) filePeekSchedule(null);
+});
+/* A plain click on a project-file link opens the in-page file view; the hash
+   href stays for a new tab. */
+function openFilePageLink(e) {
+  var link = e.target.closest && e.target.closest('a[data-file-page]');
+  if (!link || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  filePeekClose();
+  setActive(link.dataset.fileTask || '', '/' + link.dataset.filePage);
+}
+document.addEventListener('click', openFilePageLink);
+document.addEventListener('focusin', function(e) {
+  if (e.target.matches('[data-peek]:focus-visible')) filePeekSchedule(e.target);
+});
+document.addEventListener('focusout', function(e) { if (e.target.matches('[data-peek]')) filePeekSchedule(null); });
+['scroll', 'keydown'].forEach(function(type) {
+  document.addEventListener(type, function(e) { if (type === 'scroll' || e.key === 'Escape') filePeekClose(); }, true);
+});
+
+/* A project file shown in the reading pane — the remote viewer's stand-in for
+   opening it on this machine.  Addressed as `#/<task>?file=<path>`, carried in
+   activeArtifactPath with a leading '/' (an attachment path never has one). */
+function projectFileHash(task, path) {
+  return '#/' + task + '?file=' + encodeURIComponent(path);
+}
+function projectFileLinkAttrs(task, path) {
+  return ' href="'+escapeAttr(projectFileHash(task,path))+'" data-file-page="'+escapeAttr(path)+'" data-file-task="'+escapeAttr(task)+'"';
+}
+/* Collapse `.` and `..` segments; a path that climbs above the project root
+   stays as written, and the server refuses it. */
+function normalizeProjectPath(path) {
+  var out = [];
+  var parts = path.split('/');
+  for (var i = 0; i < parts.length; i++) {
+    if (!parts[i] || parts[i] === '.') continue;
+    if (parts[i] !== '..') out.push(parts[i]);
+    else if (out.length) out.pop();
+    else return path;
+  }
+  return out.join('/');
+}
+function projectFileUrl(path, mtime) {
+  return wtUrl('/files/' + path.split('/').map(encodeURIComponent).join('/') + (mtime ? '?v=' + mtime : ''));
+}
+function projectFileMeta(peek) {
+  return peek.kind === 'directory'
+    ? 'Directory · ' + peek.entries + (peek.entries_capped ? '+' : '') + ' entries'
+    : peek.kind + ' · ' + formatArtifactBytes(peek.size);
 }
 function reproDisclosure(key, label, content, open) {
   return '<details class="repro-disclosure" data-detail-section="'+key+'"'+(open?' open':'')+'><summary>'+label+'</summary><div class="repro-disclosure-body">'+content+'</div></details>';
@@ -2028,7 +2223,7 @@ function renderReproDetail(name) {
   }).join('');
   var evidence='';
   if(entry&&entry.local_status&&entry.local_status!==state)evidence+='<p><strong>For saved inputs: '+escapeHtml(entry.local_status)+'</strong> — '+escapeHtml(entry.local_reason||'')+'</p>';
-  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}));
+  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}),step.task);
   if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>';
   if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
   else if(entry&&entry.duration!=null)evidence+='<p>Duration: '+reproDuration(entry.duration)+'</p>';
@@ -2043,8 +2238,8 @@ function renderReproDetail(name) {
     +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
     +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
     +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
-    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproFileList(outs.slice(0,3))+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3)),opened.has('outputs')):'')+'</section>'
-    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>',reproFileList(inputs),opened.has('inputs'))
+    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
+    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>',reproFileList(inputs,step.task),opened.has('inputs'))
     +reproDisclosure('connections','Connected steps <span>'+new Set((related.incoming[name]||[]).map(function(e){return e.from;}).concat((related.outgoing[name]||[]).map(function(e){return e.to;}))).size+'</span>',connections,opened.has('connections'))
     +(Object.keys(step.params||{}).length?reproDisclosure('params','Parameters','<dl class="repro-params">'+Object.keys(step.params).map(function(key){return reproDetailRow(escapeHtml(key),'<code>'+escapeHtml(JSON.stringify(step.params[key]))+'</code>');}).join('')+'</dl>',opened.has('params')):'')
     +(evidence?reproDisclosure('evidence','Run & evidence',evidence,opened.has('evidence')||(state==='failed'&&(!same||previousState!=='failed'))):'')+'</article>';
@@ -2520,7 +2715,7 @@ function parseArtifactHash() {
   var query = h.indexOf('?');
   if (query === -1) return '';
   var params = new URLSearchParams(h.slice(query + 1));
-  return params.get('attachment') || '';
+  return params.get('attachment') || (params.get('file') ? '/' + params.get('file') : '');
 }
 
 /* The one navigation entry point. Sets activePath, writes history (unless
@@ -2616,7 +2811,7 @@ function updateBreadcrumb(path, artifactPath) {
   }
   if (artifactPath) {
     addSep();
-    addCrumb(artifactPath.replace(/^attachments\//, ''), path, true);
+    addCrumb(artifactPath.replace(/^attachments\/|^\//, ''), path, true);
   }
 }
 
@@ -2782,11 +2977,11 @@ async function loadActiveNode(path) {
     setTabTitle(path ? title : SITE_TITLE);
     var status = navRowStatus(path);
     /* With the local-open route the button hands task.md to whatever application
-       this machine uses for markdown; without it, today's vscode:// deep link. */
+       this machine uses for markdown.  A browser on another machine has nothing
+       to open it with, and the card already shows it, so it gets no button. */
     var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;
-    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
-      : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
-    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : (openNative ? 'Open' : 'VS Code');
+    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub' : 'Open task.md in the default application';
+    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'Open';
     var fileButtonIcon = openNative ? OPEN_ICON : EDITOR_ICON;
 
     region.innerHTML =
@@ -2794,8 +2989,8 @@ async function loadActiveNode(path) {
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
-      + '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
-      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>'
+      + ((openNative || REPO_FILE_BASE) ? '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>' : '')
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -3206,6 +3401,16 @@ function loadAttachmentBranches(scope) {
 }
 
 function renderActiveArtifactBody(taskPath, entry, body, token) {
+  var languages = { python: 'python', julia: 'julia', r: 'r' };
+  if (!entry.previewable && entry.head != null) {
+    var partial = document.createElement('p');
+    partial.className = 'artifact-state';
+    partial.textContent = 'Showing the first ' + formatArtifactBytes(entry.head.length) + ' of '
+      + formatArtifactBytes(entry.size) + ' — download the file for the rest.';
+    body.appendChild(partial);
+    body.appendChild(renderArtifactCode(entry.head, languages[entry.kind] || ''));
+    return;
+  }
   if (!entry.previewable) {
     var unavailable = document.createElement('p');
     unavailable.className = 'artifact-state artifact-state-unavailable';
@@ -3216,7 +3421,7 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
   if (entry.kind === 'image') {
     var image = document.createElement('img');
     image.className = 'artifact-image-preview';
-    image.src = artifactResourceUrl(taskPath, entry.path);
+    image.src = entry.url || artifactResourceUrl(taskPath, entry.path);
     image.alt = entry.name;
     body.appendChild(image);
     return;
@@ -3226,12 +3431,16 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     frame.className = 'artifact-pdf-preview';
     frame.setAttribute('sandbox', '');
     frame.title = 'PDF preview: ' + entry.name;
-    frame.src = artifactResourceUrl(taskPath, entry.path);
+    frame.src = entry.url || artifactResourceUrl(taskPath, entry.path);
     body.appendChild(frame);
     return;
   }
   body.textContent = 'Loading preview…';
-  readArtifactText(taskPath, entry).then(function(text) {
+  var read = entry.url ? fetch(entry.url).then(function(resp) {
+    if (!resp.ok) throw new Error('Preview unavailable (' + resp.status + ').');
+    return resp.text();
+  }) : readArtifactText(taskPath, entry);
+  read.then(function(text) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
         || entry.path !== activeArtifactPath) return;
     body.innerHTML = '';
@@ -3239,13 +3448,12 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
       var markdown = document.createElement('div');
       markdown.className = 'rendered-md artifact-markdown-preview';
       markdown.innerHTML = renderMarkdown(
-        text, null, taskPath, { artifactPath: entry.path }
+        text, null, taskPath, entry.url ? {} : { artifactPath: entry.path }
       );
       body.appendChild(markdown);
     } else if (entry.kind === 'notebook') {
       body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
     } else {
-      var languages = { python: 'python', julia: 'julia', r: 'r' };
       body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
     }
   }).catch(function(error) {
@@ -3255,11 +3463,89 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
   });
 }
 
+/* The reading-pane header an attachment and a project file share. */
+function buildArtifactPageHead(taskPath, name) {
+  var head = document.createElement('header');
+  head.className = 'active-node-head attachment-active-head';
+  var heading = document.createElement('h2');
+  heading.className = 'active-node-title';
+  heading.tabIndex = -1;
+  heading.textContent = name;
+  /* An attachment is a page in its own right, so the tab names it too. */
+  setTabTitle(name);
+  head.appendChild(heading);
+  var owner = document.createElement('button');
+  owner.type = 'button';
+  owner.className = 'attachment-owner-action';
+  owner.textContent = 'Back to task';
+  owner.onclick = function() { setActive(taskPath); };
+  head.appendChild(owner);
+  return head;
+}
+
+function showArtifactLoadError(region, token, error) {
+  if (token !== _artifactPreviewToken) return;
+  region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+  region.firstChild.textContent = error.message;
+  /* The pane names no attachment now, so neither may the tab. */
+  setTabTitle('');
+}
+
+function finishArtifactPage(region) {
+  var heading = region.querySelector('.active-node-title');
+  if (_moveFocusOnLoad && heading) {
+    _moveFocusOnLoad = false;
+    heading.focus({ preventScroll: true });
+  }
+}
+
+function loadProjectFile(taskPath, filePath, region, token) {
+  fetch(wtUrl('/api/file-peek?path=' + encodeURIComponent(filePath))).then(function(resp) {
+    if (!resp.ok) throw new Error(resp.status === 403 ? 'This file is outside the project.' : 'File unavailable (' + resp.status + ').');
+    return resp.json();
+  }).then(function(peek) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || '/' + filePath !== activeArtifactPath) return;
+    var name = filePath.split('/').pop() || filePath, url = projectFileUrl(filePath, peek.mtime_ns);
+    region.innerHTML = '';
+    var head = buildArtifactPageHead(taskPath, name);
+    if (peek.size != null) {
+      var actions = document.createElement('div');
+      actions.className = 'artifact-actions';
+      var download = document.createElement('a');
+      download.className = 'artifact-action';
+      download.href = url;
+      download.download = name;
+      download.textContent = 'Download';
+      actions.appendChild(download);
+      head.appendChild(actions);
+    }
+    region.appendChild(head);
+    var meta = document.createElement('p');
+    meta.className = 'attachment-active-meta';
+    meta.textContent = filePath + (peek.exists ? ' · ' + projectFileMeta(peek) : '');
+    region.appendChild(meta);
+    var body = document.createElement('div');
+    body.className = 'artifact-preview-body attachment-active-body';
+    region.appendChild(body);
+    if (peek.exists && peek.size != null) {
+      renderActiveArtifactBody(taskPath, Object.assign({}, peek, { path: '/' + filePath, name: name, url: url }), body, token);
+    } else {
+      var state = document.createElement('p');
+      state.className = 'artifact-state';
+      state.textContent = !peek.exists ? 'Not built yet.' : 'Folders and special files have no preview.';
+      body.appendChild(state);
+    }
+    finishArtifactPage(region);
+  }).catch(function(error) { showArtifactLoadError(region, token, error); });
+}
+
 function loadActiveArtifact(taskPath, artifactPath) {
   var region = document.getElementById('active-node');
   if (!region) return;
   var token = ++_artifactPreviewToken;
-  region.innerHTML = '<p class="artifact-state">Loading attachment…</p>';
+  region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
+  if (artifactPath.charAt(0) === '/') { loadProjectFile(taskPath, artifactPath.slice(1), region, token); return; }
   fetchAttachmentManifest(taskPath).then(function(manifest) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
         || artifactPath !== activeArtifactPath) return;
@@ -3268,21 +3554,7 @@ function loadActiveArtifact(taskPath, artifactPath) {
     var entry = artifactManifestEntry(taskPath, artifactPath);
     if (!entry) throw new Error('This attachment is unavailable.');
     region.innerHTML = '';
-    var head = document.createElement('header');
-    head.className = 'active-node-head attachment-active-head';
-    var heading = document.createElement('h2');
-    heading.className = 'active-node-title';
-    heading.tabIndex = -1;
-    heading.textContent = entry.name;
-    /* An attachment is a page in its own right, so the tab names it too. */
-    setTabTitle(entry.name);
-    head.appendChild(heading);
-    var owner = document.createElement('button');
-    owner.type = 'button';
-    owner.className = 'attachment-owner-action';
-    owner.textContent = 'Back to task';
-    owner.onclick = function() { setActive(taskPath); };
-    head.appendChild(owner);
+    var head = buildArtifactPageHead(taskPath, entry.name);
     var actions = buildArtifactPreviewHead(taskPath, entry)
       .querySelector('.artifact-actions');
     if (actions) head.appendChild(actions);
@@ -3301,17 +3573,8 @@ function loadActiveArtifact(taskPath, artifactPath) {
         row.dataset.artifactOwner === taskPath
         && row.dataset.artifactPath === artifactPath);
     });
-    if (_moveFocusOnLoad) {
-      _moveFocusOnLoad = false;
-      heading.focus({ preventScroll: true });
-    }
-  }).catch(function(error) {
-    if (token !== _artifactPreviewToken) return;
-    region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
-    region.firstChild.textContent = error.message;
-    /* The pane names no attachment now, so neither may the tab. */
-    setTabTitle('');
-  });
+    finishArtifactPage(region);
+  }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }
 
 function refreshAttachmentManifest(taskPath, manifest) {
@@ -5000,17 +5263,14 @@ function populateWorktreeSelector(data) {
 function updateWorktreeOpenHref() {
   var btn = document.getElementById('worktree-open-btn');
   if (!btn) return;
-  if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
+  /* Only a browser on this machine has an editor to open; elsewhere a vscode://
+     link would name the server's paths on the viewer's disk. */
+  if (REPO_FILE_BASE || !window.LOCAL_OPEN) { btn.style.display = 'none'; return; }
   if (!btn.innerHTML) btn.innerHTML = EDITOR_ICON + '<span>VS Code</span>';
-  if (window.LOCAL_OPEN) {
-    btn.href = taskFileVscodeHref(activePath);
-    btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
-    btn.setAttribute('data-open-target', 'editor');
-    btn.title = "Open this task's file in this worktree's VS Code window";
-  } else {
-    btn.href = vscodeFileUri(PROJECT_ROOT);
-    btn.title = 'Open this worktree in VS Code';
-  }
+  btn.href = taskFileVscodeHref(activePath);
+  btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
+  btn.setAttribute('data-open-target', 'editor');
+  btn.title = "Open this task's file in this worktree's VS Code window";
   btn.style.display = '';
 }
 

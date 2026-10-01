@@ -37,7 +37,7 @@ import time
 import webbrowser
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import AsyncGenerator
 from urllib.parse import quote
 
@@ -102,13 +102,6 @@ PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 # chrome suppressed).  Strictly opt-in via `serve --doc-mode`; default off so the
 # served dashboard is unchanged.  Read by the index route at render time.
 DOC_MODE: bool = False
-
-# The host the server bound, recorded by ``serve()`` (the single in-process serve
-# path).  ``/api/open`` acts only on a loopback bind: off loopback the browser may
-# be on another machine, so an open would put a window on a host nobody is at.
-# Defaults to ``serve()``'s own default so an in-process ASGI host sees the same
-# policy a plain ``serve()`` would.
-BOUND_HOST: str = "127.0.0.1"
 
 # Executable used for a ``target: "editor"`` open, overridable for a VS Code fork
 # (``cursor``, ``code-insiders``, ``codium``).
@@ -1213,7 +1206,7 @@ async def index(request: Request):
         root_prefix=Path(resolved_root).name,
         wt_id=wt_id,
         doc_mode=DOC_MODE,
-        local_open=_local_open_enabled(),
+        local_open=_is_local_viewer(request),
         repro_actions=_repro_actions_enabled(),
         search_index=_build_search_index(state.root_task, all_tasks),
     )
@@ -1272,6 +1265,8 @@ _VENDOR_ASSET_TYPES = {
     "languages/julia.min.js": "text/javascript; charset=utf-8",
     "notebook.min.js": "text/javascript; charset=utf-8",
     "purify.min.js": "text/javascript; charset=utf-8",
+    "pdf.min.mjs": "text/javascript; charset=utf-8",
+    "pdf.worker.min.mjs": "text/javascript; charset=utf-8",
     **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
 }
 
@@ -1532,17 +1527,44 @@ async def repro_status(request: Request):
 FILES_SANDBOX = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
 
 
+def _project_path(state: WorktreeState, path: str) -> Path:
+    """The real file behind *path*, when the dashboard may serve or open it.
+
+    Readable: anything reached by walking down the project tree, following the
+    symlinks in it (a symlinked data folder is the researcher's own inclusion),
+    or a path the reproduction graph declares, and anything inside one.  ``..``
+    is refused outright: written out it can climb back through a symlinked
+    folder that the OS resolves somewhere else.
+    """
+    if ".." in PurePosixPath(path).parts:
+        raise HTTPException(status_code=403, detail="Access denied")
+    root = Path(state.project_root)
+    target = Path(os.path.normpath(root / path))
+    if not (target.is_relative_to(root) or any(
+        target == declared or target.is_relative_to(declared)
+        for declared in _declared_repro_paths(state)
+    )):
+        raise HTTPException(status_code=403, detail="Access denied")
+    return target.resolve()
+
+
+def _declared_repro_paths(state: WorktreeState) -> set[Path]:
+    """Absolute paths the reproduction graph names outside the project root."""
+    try:
+        graph = _repro_graph(state)
+    except Exception:
+        return set()
+    refs = [ref for step in graph.steps for ref in (
+        *step.deps, *(o.path for o in step.outs), *(o.sidecar for o in step.outs if o.sidecar),
+    )]
+    return {Path(os.path.normpath(ref.resolved)) for ref in refs if os.path.isabs(ref.resolved)}
+
+
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
     state = await resolve_worktree(request)
-    file_path = Path(state.project_root) / path
-    resolved = file_path.resolve()
-    project_resolved = Path(state.project_root).resolve()
-
-    # Security: prevent path traversal outside project root
-    if not resolved.is_relative_to(project_resolved):
-        raise HTTPException(status_code=403, detail="Access denied")
+    resolved = await asyncio.to_thread(_project_path, state, path)
     if not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -1551,6 +1573,52 @@ async def serve_file(path: str, request: Request):
     media_type = mimetypes.guess_type(resolved.name)[0] or ""
     renders = media_type == "text/html" or media_type.endswith("xml")  # HTML, SVG, XHTML, any XML
     return FileResponse(str(resolved), headers={"Content-Security-Policy": FILES_SANDBOX} if renders else None)
+
+
+# --- Route: GET /api/file-peek ---------------------------------------------
+#
+# The step-file hover card and in-page file view.  Answers from one stat plus a
+# bounded head read, so the cost is flat in file size; the entry carries the same
+# ``previewable`` / ``download_only`` policy as a task attachment, and the page
+# loads the file itself from /files/ only when it is previewable.
+
+PEEK_HEAD_BYTES = 4096
+PEEK_DIR_ENTRIES = 1000
+_PEEK_TEXT_KINDS = {"text", "markdown", "python", "julia", "r"}
+
+
+def _file_peek(resolved: Path, path: str) -> dict:
+    try:
+        info = resolved.stat()
+    except OSError:
+        return {"exists": False}
+    if resolved.is_dir():
+        with os.scandir(resolved) as entries:
+            count = sum(1 for _, _ in zip(range(PEEK_DIR_ENTRIES + 1), entries))
+        return {"exists": True, "kind": "directory", "entries": min(count, PEEK_DIR_ENTRIES),
+                "entries_capped": count > PEEK_DIR_ENTRIES, "mtime_ns": info.st_mtime_ns}
+    if not resolved.is_file():
+        return {"exists": True, "kind": "special", "mtime_ns": info.st_mtime_ns}
+    peek = {"exists": True, **artifacts.describe_resolved(resolved, path).as_dict(),
+            "max_preview_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes}
+    if peek["kind"] in _PEEK_TEXT_KINDS:
+        try:
+            with open(resolved, "rb") as fh:
+                head = fh.read(PEEK_HEAD_BYTES)
+        except OSError:
+            return peek
+        if b"\0" not in head:
+            peek["head"] = head.decode("utf-8", errors="replace")
+            peek["truncated"] = info.st_size > len(head)
+    return peek
+
+
+@app.get("/api/file-peek")
+async def file_peek(request: Request, path: str = ""):
+    """One project file as an attachment-shaped entry plus its opening bytes."""
+    state = await resolve_worktree(request)
+    resolved = await asyncio.to_thread(_project_path, state, path)
+    return await asyncio.to_thread(_file_peek, resolved, path)
 
 
 # --- Route: POST /api/open -------------------------------------------------
@@ -1570,19 +1638,6 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(h).is_loopback
     except ValueError:
         return False
-
-
-def _is_loopback_authority(authority: str) -> bool:
-    """True when a ``Host`` header names the local machine.
-
-    Strips the port and an IPv6 literal's brackets, then applies the same loopback
-    test as the bind check.  A loopback-bound route requiring a loopback authority
-    is what closes DNS rebinding: an attacker page on ``evil.example.com`` that
-    rebinds the name to 127.0.0.1 is same-origin to the browser (so the content-type
-    and ``Sec-Fetch-Site`` checks both pass), but it still sends its own name in
-    ``Host``.
-    """
-    return _is_loopback_host(_authority_host(authority))
 
 
 def _authority_host(authority: str) -> str:
@@ -1621,15 +1676,27 @@ async def _same_origin_json(request: Request, trusted_authority) -> dict:
     return body
 
 
-def _local_open_enabled() -> bool:
-    """True when this server may open files on its own host.
+def _is_local_viewer(request: Request) -> bool:
+    """True when the browser runs on this server's machine, so a file opened here
+    lands in front of the person who clicked.
 
-    Loopback-bound only (see ``BOUND_HOST``) and never in doc-mode, where the page
-    is a published documentation site rather than a working tracker.  Also the
-    render-time flag the page reads to decide between the open route and its
-    ``vscode://`` links.
+    Decided per request, not by the bind: an off-loopback ``--host`` serves a phone
+    and the researcher's own desktop at once.  The peer must be loopback or the
+    address the connection arrived on, which a remote peer cannot forge over TCP,
+    and ``Host`` must name one of those addresses, which a rebinding page (its own
+    domain) and a reverse proxy (the public name) both fail.  Never in doc-mode,
+    where the page is a published documentation site.  Also the render-time flag
+    the page reads to choose between the open route and its in-page file view.
     """
-    return _is_loopback_host(BOUND_HOST) and not DOC_MODE
+    if DOC_MODE or request.client is None:
+        return False
+    return (_names_this_machine(request, request.client.host)
+            and _names_this_machine(request, _authority_host(request.headers.get("host", ""))))
+
+
+def _names_this_machine(request: Request, host: str) -> bool:
+    """True when *host* is loopback or the address this connection arrived on."""
+    return _is_loopback_host(host) or host == (request.scope.get("server") or ("",))[0]
 
 
 def _editor_executable() -> str | None:
@@ -1679,16 +1746,18 @@ async def open_local_path(request: Request):
     percent-encoding (a markdown href arrives encoded) before sending it, since a
     JSON body passes through no decoding layer the way a URL path does.
 
-    CSRF: the route starts processes, so it accepts only same-origin JSON from a
-    loopback authority (``_same_origin_json``).  No check needs a token.  The gate
-    is scoped to this route rather than app-wide because a legitimate off-loopback
-    ``--host`` bind must keep serving the read and comment routes, and this route
-    is already off in that case.
+    CSRF: the route starts processes, so it accepts only same-origin JSON
+    (``_same_origin_json``) from a browser on this machine (``_is_local_viewer``).
+    No check needs a token.  The gate is scoped to this route rather than app-wide
+    because a legitimate off-loopback ``--host`` bind must keep serving the read
+    and comment routes to other machines.
     """
-    if not _local_open_enabled():
-        raise HTTPException(status_code=403, detail="Local open is disabled on this server")
+    if not _is_local_viewer(request):
+        raise HTTPException(status_code=403, detail="Opening files here is only for a browser on this machine")
 
-    body = await _same_origin_json(request, _is_loopback_authority)
+    body = await _same_origin_json(
+        request, lambda authority: _names_this_machine(request, _authority_host(authority))
+    )
 
     rel = body.get("path")
     target = body.get("target") or "native"
@@ -1699,9 +1768,7 @@ async def open_local_path(request: Request):
 
     state = await resolve_worktree(request)
     project_resolved = Path(state.project_root).resolve()
-    resolved = (project_resolved / rel).resolve()
-    if not resolved.is_relative_to(project_resolved):
-        raise HTTPException(status_code=403, detail="Access denied")
+    resolved = await asyncio.to_thread(_project_path, state, rel)
     # Files only, matching /files/.  A directory is not a surface the page sends,
     # and on macOS an .app bundle is a directory that `open` would execute.
     if not resolved.is_file():
@@ -3012,7 +3079,7 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     background-by-default serving this is a long-lived ambient surface, so it
     must not be reachable off-host unless the operator deliberately opts in via
     ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).  Records the
-    bound host in ``BOUND_HOST``, which gates ``/api/open``.
+    ``/api/open`` stays limited to a browser on this machine (``_is_local_viewer``).
 
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
     ``_server.should_exit = True``.  This is the single in-process serve path:
@@ -3023,17 +3090,13 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     """
     import uvicorn
 
-    global _server, BOUND_HOST
-    BOUND_HOST = host
+    global _server
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:
         _server.run()
     finally:
-        # BOUND_HOST describes the host currently bound; nothing is bound once
-        # run() returns, so put it back to the unserved default.
         _server = None
-        BOUND_HOST = "127.0.0.1"
 
 
 # ---------------------------------------------------------------------------
