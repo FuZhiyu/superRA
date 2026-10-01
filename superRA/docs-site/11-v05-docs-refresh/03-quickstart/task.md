@@ -1,6 +1,6 @@
 ---
 title: "Quickstart: Show the Graph and Start Existing Projects with Onboarding"
-status: implemented
+status: approved
 depends_on: [01-showcase-graph, 02-repro-page]
 ---
 

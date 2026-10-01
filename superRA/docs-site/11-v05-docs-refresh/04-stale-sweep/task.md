@@ -1,6 +1,6 @@
 ---
 title: "Refresh Pages That Predate 0.5"
-status: implemented
+status: approved
 depends_on: [02-repro-page]
 ---
 
