@@ -1,6 +1,6 @@
 ---
 title: "Reproducibility: Task-Declared Build Graph with Make-Like Reruns"
-status: revise
+status: implemented
 depends_on: []
 ---
 

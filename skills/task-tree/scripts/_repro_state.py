@@ -787,7 +787,7 @@ def compute_status(
     completed_locks: dict[str, LockEntry] | None = None,
     upstream: bool = False,
     scope: Iterable[str] | None = None,
-    live_build: bool = False,
+    live_build: int | None = None,
 ) -> StatusReport:
     """Classify a selection against saved inputs, optionally including producers.
 
@@ -795,8 +795,8 @@ def compute_status(
     a build checks one step at a time, but a producer anywhere in its build
     selection is never a saved input.
 
-    *live_build* says another process's build holds the mutation lock, so a
-    step whose run record is still in flight is executing, not interrupted.
+    *live_build* is the pid holding the mutation lock (`lock_holder`); a step
+    whose in-flight run record that process wrote is executing, not interrupted.
     """
     targets = list(targets)
     names, unknown = select_steps(graph, targets, include_ancestors=upstream)
@@ -860,7 +860,7 @@ def _classify(
     outputs: dict[str, Node],
     missing_external: set[str],
     memo: dict,
-    live_build: bool = False,
+    live_build: int | None = None,
 ) -> StepStatus:
     result = StepStatus(step=step)
     record = read_run_record(paths, step.name)
@@ -888,7 +888,7 @@ def _classify(
         elsewhere = _compare(result, step, entry, paths, cache, outputs, memo)
 
     if record.get("outcome") in ("running", "pending"):
-        if live_build:
+        if live_build and record.get("pid") == live_build:
             result.running = True
             result.started_at = record.get("started_at")
             result.reason = "building now"

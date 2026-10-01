@@ -58,12 +58,14 @@ def print_edit_notes(graph):
 
 def step_states(graph, plan_root, names):
     """Status entries for *names* and their producers, from one status pass."""
+    from _repro_acceptance import lock_holder
     from _repro_state import ReproStateError, compute_status, runner_paths
     if not names:
         return {}, None
     targets = [f'{graph.step(n).task_path or "."}#{n}' for n in sorted(names)]
+    paths = runner_paths(plan_root.resolve().parent)
     try:
-        report = compute_status(graph, runner_paths(plan_root.resolve().parent), targets=targets, upstream=True)
+        report = compute_status(graph, paths, targets=targets, upstream=True, live_build=lock_holder(paths))
     except ReproStateError as exc:
         return {}, str(exc)
     return {e.step.name: e for e in report.entries}, None

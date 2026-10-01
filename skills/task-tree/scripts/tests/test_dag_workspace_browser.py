@@ -101,7 +101,9 @@ def test_build_menu_and_explain_card(browser, workspace):
     page.locator('[data-rp-action=fold][data-value="analysis-1"]').click()
     page.wait_for_selector('#repro-node-step-1-0')
     chip = page.locator('.rp-task[data-task="analysis-1"] .rp-build-chip')
-    assert chip.evaluate('el => getComputedStyle(el).opacity') == '0'
+    page.mouse.move(2, 2)
+    page.evaluate('document.activeElement.blur()')  # the fold toggle keeps focus, which reveals the chip
+    page.wait_for_function('el => getComputedStyle(el).opacity === "0"', arg=chip.element_handle())
     page.locator('.rp-task[data-task="analysis-1"] .rp-task-head').hover()
     page.wait_for_function('el => getComputedStyle(el).opacity === "1"', arg=chip.element_handle())
     chip.click()

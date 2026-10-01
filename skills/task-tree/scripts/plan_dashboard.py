@@ -55,7 +55,7 @@ from _repro_state import (
     runner_paths,
     select_steps,
 )
-from _repro_acceptance import build_running
+from _repro_acceptance import lock_holder
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
@@ -1484,7 +1484,7 @@ def _repro_status_payload(state: WorktreeState) -> dict:
     graph = _repro_graph(state)
     paths = runner_paths(project_root)
     try:
-        report = compute_status(graph, paths, upstream=True, live_build=build_running(paths))
+        report = compute_status(graph, paths, upstream=True, live_build=lock_holder(paths))
         report.selected = {e.step.name for e in report.entries}
     except ReproStateError as exc:
         summary = {name: 0 for name in STATUSES}
@@ -1528,6 +1528,10 @@ async def repro_status(request: Request):
 
 # --- Route: GET /files/{path} ----------------------------------------------
 
+SANDBOXED_SUFFIXES = {".html", ".htm", ".xhtml", ".svg", ".xml"}
+FILES_SANDBOX = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
+
+
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
@@ -1542,7 +1546,10 @@ async def serve_file(path: str, request: Request):
     if not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(str(resolved))
+    # A project page that runs scripts gets an opaque origin, so it cannot pass
+    # the same-origin gate of the routes that start processes or write files.
+    headers = {"Content-Security-Policy": FILES_SANDBOX} if resolved.suffix.lower() in SANDBOXED_SUFFIXES else None
+    return FileResponse(str(resolved), headers=headers)
 
 
 # --- Route: POST /api/open -------------------------------------------------
@@ -1826,6 +1833,20 @@ def _pid_alive(pid) -> bool:
     return True
 
 
+def _job_alive(job: dict | None, holder: int | None) -> bool:
+    """True while the page's job is the build running here: its process group holds
+    the mutation lock, or it was spawned moments ago and has not taken it yet.
+    A recycled pid fails the group check."""
+    if job is None or "returncode" in job or not _pid_alive(job.get("pid")):
+        return False
+    if holder:
+        try:
+            return os.getpgid(holder) == job["pid"]
+        except OSError:
+            return False
+    return time.time() - job.get("started_at", 0) < BUILD_STARTUP_GRACE
+
+
 def _reap_build(proc: subprocess.Popen, paths, job: dict) -> None:
     returncode = proc.wait()
     current = _read_job(paths)
@@ -1840,10 +1861,8 @@ def _start_build_sync(state: WorktreeState, target: str, upstream: bool, force: 
     paths = runner_paths(project_root)
     args = _build_args(target, upstream, force)
     with _build_start_lock:
-        job = _read_job(paths)
-        starting = (job is not None and "returncode" not in job and _pid_alive(job.get("pid"))
-                    and time.time() - job.get("started_at", 0) < BUILD_STARTUP_GRACE)
-        if starting or build_running(paths):
+        holder = lock_holder(paths)
+        if holder is not None or _job_alive(_read_job(paths), holder):
             raise ReproStateError("another reproduction build or acceptance mutation is running")
         ensure_state_dir(paths)
         paths.logs_dir.mkdir(parents=True, exist_ok=True)
@@ -1883,12 +1902,11 @@ def _build_summary(log_text: str) -> str:
 def _build_state_sync(state: WorktreeState) -> dict:
     """Whether a build is running here, the page's last build, and the executing steps."""
     paths = runner_paths(Path(state.project_root))
-    locked = build_running(paths)
+    holder = lock_holder(paths)
     job = _read_job(paths)
-    running = locked
+    running = holder is not None
     if job is not None:
-        live = "returncode" not in job and _pid_alive(job.get("pid"))
-        job["alive"] = live and (locked or time.time() - job.get("started_at", 0) < BUILD_STARTUP_GRACE)
+        job["alive"] = _job_alive(job, holder)
         running = running or job["alive"]
         tail = _log_tail(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES)
         job["summary"] = "" if job["alive"] else _build_summary(tail)
@@ -1900,7 +1918,8 @@ def _build_state_sync(state: WorktreeState) -> dict:
                 record = json.loads(record_file.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
-            if isinstance(record, dict) and record.get("outcome") in ("running", "pending"):
+            if (isinstance(record, dict) and record.get("outcome") in ("running", "pending")
+                    and holder and record.get("pid") == holder):
                 steps.append({"name": record_file.stem, "started_at": record.get("started_at")})
     return {"enabled": _repro_actions_enabled(), "running": running, "job": job, "steps": steps}
 
@@ -1908,7 +1927,7 @@ def _build_state_sync(state: WorktreeState) -> dict:
 def _stop_build_sync(state: WorktreeState) -> dict:
     paths = runner_paths(Path(state.project_root))
     job = _read_job(paths)
-    if job is None or "returncode" in job or not _pid_alive(job.get("pid")):
+    if not _job_alive(job, lock_holder(paths)):
         raise HTTPException(status_code=409, detail="No build started from the dashboard is running")
     try:
         os.killpg(int(job["pid"]), signal.SIGTERM)  # its own group: start_new_session
@@ -1973,7 +1992,7 @@ def _repro_explain_sync(state: WorktreeState, target: str, diff: bool = False) -
     cache = HashCache(paths.cache_file)
     try:
         report = compute_status(graph, paths, targets=[target_ref(graph.step(n)) for n in names],
-                                cache=cache, upstream=True, live_build=build_running(paths))
+                                cache=cache, upstream=True, live_build=lock_holder(paths))
         result = explain(report, paths, cache, kind, value, full_diff=diff, plan_name=state.plan_root.name)
     except ReproStateError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
