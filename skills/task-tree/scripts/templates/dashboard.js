@@ -267,6 +267,16 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
      ROOT_PREFIX / RESOLVED_ROOT. */
   var repoRootRel = REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '';
   var repoLinkPrefix = repoRootRel + contentDirRel;
+  /* A project file in the reading pane resolves against its own folder under
+     the project root, and none of its links name a task. */
+  var projectDir = contentBase && contentBase.projectDir;
+  var fileRoot = RESOLVED_ROOT;
+  if (projectDir != null) {
+    contentDirRel = projectDir ? projectDir + '/' : '';
+    rootRel = repoRootRel = '';
+    repoPathPrefix = repoLinkPrefix = contentDirRel;
+    fileRoot = PROJECT_ROOT;
+  }
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -275,12 +285,12 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
     var stepMatch=href&&href.match(/#step-([A-Za-z0-9][A-Za-z0-9._-]*)$/);
-    if(stepMatch&&isRelativeResource(href)){
+    if(stepMatch&&isRelativeResource(href)&&projectDir==null){
       var owner=href.startsWith('#')&&!artifactPath?taskPath:resolveInternalTaskPath(href,taskPath,contentBaseDir);
       if(owner!==null){a.setAttribute('href','#/'+owner+'?step='+encodeURIComponent(stepMatch[1]));a.classList.add('task-link');a.removeAttribute('target');return;}
     }
     if (href && isRelativeResource(href) && !href.startsWith('#')) {
-      var internal = resolveInternalTaskPath(href, taskPath, contentBaseDir);
+      var internal = projectDir == null ? resolveInternalTaskPath(href, taskPath, contentBaseDir) : null;
       if (internal !== null) {
         a.setAttribute('href', '#/' + internal);
         a.removeAttribute('target');
@@ -327,10 +337,10 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         }
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
-        } else if (!window.LOCAL_OPEN) {
+        } else if (!window.LOCAL_OPEN && !window.STANDALONE) {
           /* A browser on another machine has no editor or app to hand the file
              to, so the link opens it in the reading pane instead. */
-          var fileRel = normalizeProjectPath(rootRel + contentDirRel + decodePathHref(href.replace(/#.*$/, '')));
+          var fileRel = normalizeProjectPath(rootRel + contentDirRel + decodePathHref(href.replace(/[?#].*$/, '')));
           a.setAttribute('href', projectFileHash(taskPath, fileRel));
           a.setAttribute('data-file-page', fileRel);
           a.setAttribute('data-file-task', taskPath);
@@ -345,7 +355,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
             loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
             relHref = relHref.slice(0, lm.index);
           }
-          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref + loc);
+          a.setAttribute('href', 'vscode://file/' + fileRoot + '/' + contentDirRel + relHref + loc);
           /* With the local-open route a plain click hands the file to the
              application this machine uses for its type; the vscode:// href above
              stays for modifier/middle clicks (and carries the line anchor, which
@@ -357,7 +367,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
             a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
           }
           if (!window.STANDALONE) {
-            a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref)));
+            a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
           }
         }
         a.setAttribute('target', '_blank');
@@ -2012,7 +2022,7 @@ function reproFileList(files, task) {
     var ref=file.path||file, logical=ref.logical||'', resolved=ref.resolved||logical;
     var slash=logical.lastIndexOf('/'), leaf=logical.slice(slash+1), dir=logical.slice(0,slash+1);
     var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
-      :window.LOCAL_OPEN?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank" data-open-path="'+escapeAttr(resolved)+'"'
+      :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
       :projectFileLinkAttrs(task||'',resolved);
     var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
     return '<li><div class="repro-file-name">'+link+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
@@ -2107,7 +2117,7 @@ function filePeekPdf(card, body, url, token) {
     lib.GlobalWorkerOptions.workerSrc = '/static/pdf.worker.min.mjs';
     return lib;
   });
-  var doc = null, budget = null;
+  var doc = null, budget = null, task = null;
   _pdfjs.then(function(lib) {
     if (token !== _filePeekToken) throw null;
     return lib.getDocument({ url: url, isEvalSupported: false }).promise;
@@ -2121,8 +2131,7 @@ function filePeekPdf(card, body, url, token) {
     var viewport = page.getViewport({ scale: scale }), canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    _filePeekTask = page.render({ canvas: canvas, canvasContext: canvas.getContext('2d'), viewport: viewport });
-    var task = _filePeekTask;
+    task = _filePeekTask = page.render({ canvas: canvas, canvasContext: canvas.getContext('2d'), viewport: viewport });
     budget = setTimeout(function() { task.cancel(); }, FILE_PEEK_PDF_BUDGET_MS);
     return task.promise.then(function() { return canvas.toDataURL(); });
   }).then(function(data) {
@@ -2138,7 +2147,7 @@ function filePeekPdf(card, body, url, token) {
     status.textContent = e.name === 'RenderingCancelledException' ? 'Too complex to preview quickly — open the file.' : 'PDF preview failed.';
   }).finally(function() {
     clearTimeout(budget);
-    _filePeekTask = null;
+    if (_filePeekTask === task) _filePeekTask = null;
     if (doc) doc.destroy();
   });
 }
@@ -2180,12 +2189,12 @@ function projectFileLinkAttrs(task, path) {
 /* Collapse `.` and `..` segments; a path that climbs above the project root
    stays as written, and the server refuses it. */
 function normalizeProjectPath(path) {
-  var out = [];
+  var out = path.charAt(0) === '/' ? [''] : [];
   var parts = path.split('/');
   for (var i = 0; i < parts.length; i++) {
     if (!parts[i] || parts[i] === '.') continue;
     if (parts[i] !== '..') out.push(parts[i]);
-    else if (out.length) out.pop();
+    else if (out.length && out[out.length - 1] !== '') out.pop();
     else return path;
   }
   return out.join('/');
@@ -2194,9 +2203,8 @@ function projectFileUrl(path, mtime) {
   return wtUrl('/files/' + path.split('/').map(encodeURIComponent).join('/') + (mtime ? '?v=' + mtime : ''));
 }
 function projectFileMeta(peek) {
-  return peek.kind === 'directory'
-    ? 'Directory · ' + peek.entries + (peek.entries_capped ? '+' : '') + ' entries'
-    : peek.kind + ' · ' + formatArtifactBytes(peek.size);
+  if (peek.kind === 'directory') return 'Directory · ' + peek.entries + (peek.entries_capped ? '+' : '') + ' entries';
+  return peek.size == null ? peek.kind : peek.kind + ' · ' + formatArtifactBytes(peek.size);
 }
 function reproDisclosure(key, label, content, open) {
   return '<details class="repro-disclosure" data-detail-section="'+key+'"'+(open?' open':'')+'><summary>'+label+'</summary><div class="repro-disclosure-body">'+content+'</div></details>';
@@ -2977,11 +2985,13 @@ async function loadActiveNode(path) {
     setTabTitle(path ? title : SITE_TITLE);
     var status = navRowStatus(path);
     /* With the local-open route the button hands task.md to whatever application
-       this machine uses for markdown.  A browser on another machine has nothing
-       to open it with, and the card already shows it, so it gets no button. */
+       this machine uses for markdown; a standalone export keeps the vscode://
+       deep link.  A live page on another machine has nothing to open it with,
+       and the card already shows it, so it gets no button. */
     var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;
-    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub' : 'Open task.md in the default application';
-    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'Open';
+    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
+      : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
+    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : (openNative ? 'Open' : 'VS Code');
     var fileButtonIcon = openNative ? OPEN_ICON : EDITOR_ICON;
 
     region.innerHTML =
@@ -2989,7 +2999,7 @@ async function loadActiveNode(path) {
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
-      + ((openNative || REPO_FILE_BASE) ? '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + ((openNative || REPO_FILE_BASE || window.STANDALONE) ? '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
       + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>' : '')
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
@@ -3405,7 +3415,7 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
   if (!entry.previewable && entry.head != null) {
     var partial = document.createElement('p');
     partial.className = 'artifact-state';
-    partial.textContent = 'Showing the first ' + formatArtifactBytes(entry.head.length) + ' of '
+    partial.textContent = 'Showing the first ' + formatArtifactBytes(new Blob([entry.head]).size) + ' of '
       + formatArtifactBytes(entry.size) + ' — download the file for the rest.';
     body.appendChild(partial);
     body.appendChild(renderArtifactCode(entry.head, languages[entry.kind] || ''));
@@ -3436,6 +3446,9 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     return;
   }
   body.textContent = 'Loading preview…';
+  var contentBase = entry.url
+    ? { projectDir: entry.path.slice(1).replace(/\/?[^/]*$/, '') }
+    : { artifactPath: entry.path };
   var read = entry.url ? fetch(entry.url).then(function(resp) {
     if (!resp.ok) throw new Error('Preview unavailable (' + resp.status + ').');
     return resp.text();
@@ -3447,12 +3460,10 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     if (entry.kind === 'markdown') {
       var markdown = document.createElement('div');
       markdown.className = 'rendered-md artifact-markdown-preview';
-      markdown.innerHTML = renderMarkdown(
-        text, null, taskPath, entry.url ? {} : { artifactPath: entry.path }
-      );
+      markdown.innerHTML = renderMarkdown(text, null, taskPath, contentBase);
       body.appendChild(markdown);
     } else if (entry.kind === 'notebook') {
-      body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
+      body.appendChild(renderNotebookPreview(text, taskPath, contentBase));
     } else {
       body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
     }
@@ -3521,6 +3532,9 @@ function loadProjectFile(taskPath, filePath, region, token) {
       head.appendChild(actions);
     }
     region.appendChild(head);
+    document.querySelectorAll('.attachment-file-row.nav-active').forEach(function(row) {
+      row.classList.remove('nav-active');
+    });
     var meta = document.createElement('p');
     meta.className = 'attachment-active-meta';
     meta.textContent = filePath + (peek.exists ? ' · ' + projectFileMeta(peek) : '');
@@ -3758,7 +3772,7 @@ function installNotebookAdapter() {
       notebookJoin(value),
       null,
       ctx.taskPath || '',
-      { artifactPath: ctx.artifactPath || '' }
+      ctx.contentBase || {}
     );
   };
   nb.highlighter = function(value, pre, code, language) {
@@ -3795,7 +3809,7 @@ function installNotebookAdapter() {
         attached.text,
         null,
         ctx.taskPath || '',
-        { artifactPath: ctx.artifactPath || '' }
+        ctx.contentBase || {}
       );
       cell.appendChild(markdown);
       attached.warnings.forEach(function(name) {
@@ -3826,7 +3840,7 @@ function installNotebookAdapter() {
   return true;
 }
 
-function renderNotebookPreview(rawText, taskPath, artifactPath) {
+function renderNotebookPreview(rawText, taskPath, contentBase) {
   var outer = document.createElement('div');
   outer.className = 'notebook-preview';
   if (!installNotebookAdapter()) {
@@ -3848,7 +3862,7 @@ function renderNotebookPreview(rawText, taskPath, artifactPath) {
   }
   _notebookRenderContext = {
     taskPath: taskPath,
-    artifactPath: artifactPath,
+    contentBase: contentBase,
     notebook: parsed,
   };
   try {

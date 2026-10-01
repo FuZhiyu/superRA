@@ -224,3 +224,33 @@ def test_remote_file_links_open_the_reading_pane(browser, workspace):
     page.locator('.attachment-owner-action').tap()
     page.wait_for_function("location.hash.indexOf('file=') === -1")
     context.close()
+
+
+def test_project_markdown_resolves_against_its_own_folder(browser, workspace):
+    notes = workspace['base'] / 'notes'
+    notes.mkdir(exist_ok=True)
+    (notes / 'README.md').write_text('# Notes\n\n![fig](fig.png)\n\n[table](table.csv#L2)\n')
+    (notes / 'table.csv').write_text('a\n1\n')
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    remote(page)
+    page.goto(workspace['url'] + '#/analysis-0?file=notes%2FREADME.md')
+    page.wait_for_selector('#active-node .rendered-md img')
+    assert page.locator('#active-node .rendered-md img').get_attribute('src').startswith('/files/notes/fig.png')
+    link = page.locator('#active-node .rendered-md a:has-text("table")')
+    assert link.get_attribute('data-file-page') == 'notes/table.csv'
+    page.close()
+
+
+def test_standalone_export_keeps_editor_links(browser, tmp_path):
+    root = tmp_path / 'superRA'
+    (root / 'a').mkdir(parents=True)
+    (root / 'task.md').write_text('---\ntitle: Export\nstatus: in-progress\n---\n\n## Objective\n\nx\n')
+    (root / 'a' / 'task.md').write_text('---\ntitle: A\nstatus: in-progress\n---\n\n## Objective\n\n[table](../../figs/t.csv)\n')
+    out = dashboard.generate_dashboard(root)
+    page = browser.new_page()
+    page.goto(out.as_uri() + '#/a')
+    link = page.locator('#active-node a:has-text("table")')
+    link.wait_for()
+    assert link.get_attribute('href').startswith('vscode://file/')
+    assert link.get_attribute('data-file-page') is None and link.get_attribute('data-peek') is None
+    page.close()

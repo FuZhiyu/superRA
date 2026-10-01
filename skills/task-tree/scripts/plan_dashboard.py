@@ -1536,6 +1536,8 @@ def _project_path(state: WorktreeState, path: str) -> Path:
     is refused outright: written out it can climb back through a symlinked
     folder that the OS resolves somewhere else.
     """
+    if "\0" in path:
+        raise HTTPException(status_code=400, detail="Invalid path")
     if ".." in PurePosixPath(path).parts:
         raise HTTPException(status_code=403, detail="Access denied")
     root = Path(state.project_root)
@@ -1599,7 +1601,11 @@ def _file_peek(resolved: Path, path: str) -> dict:
                 "entries_capped": count > PEEK_DIR_ENTRIES, "mtime_ns": info.st_mtime_ns}
     if not resolved.is_file():
         return {"exists": True, "kind": "special", "mtime_ns": info.st_mtime_ns}
-    peek = {"exists": True, **artifacts.describe_resolved(resolved, path).as_dict(),
+    try:
+        entry = artifacts.describe_resolved(resolved, path)
+    except FileNotFoundError:
+        return {"exists": False}
+    peek = {"exists": True, **entry.as_dict(),
             "max_preview_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes}
     if peek["kind"] in _PEEK_TEXT_KINDS:
         try:
@@ -1695,8 +1701,18 @@ def _is_local_viewer(request: Request) -> bool:
 
 
 def _names_this_machine(request: Request, host: str) -> bool:
-    """True when *host* is loopback or the address this connection arrived on."""
-    return _is_loopback_host(host) or host == (request.scope.get("server") or ("",))[0]
+    """True when *host* is loopback or the address this connection arrived on.
+    A dual-stack bind reports an IPv4 peer as ``::ffff:a.b.c.d``; both sides
+    compare unmapped."""
+    def unmapped(h: str) -> str:
+        try:
+            ip = ipaddress.ip_address(h)
+        except ValueError:
+            return h
+        return str(getattr(ip, "ipv4_mapped", None) or ip)
+
+    host = unmapped(host)
+    return _is_loopback_host(host) or host == unmapped((request.scope.get("server") or ("",))[0])
 
 
 def _editor_executable() -> str | None:
