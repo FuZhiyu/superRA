@@ -600,6 +600,29 @@ def test_a_sidecar_tracked_out_is_hashed_through_its_sidecar(project):
     assert project.states(*CHAIN)["build-a"] == "fresh"
 
 
+
+def test_status_reads_a_step_a_live_build_is_executing_as_building(project, capsys):
+    """An in-flight run record is an interrupted run unless another process's
+    build holds the mutation lock; then the step is executing now."""
+    import fcntl
+    from _repro_acceptance import build_running
+    from _repro_state import write_run_record
+
+    project.run("build", *CHAIN)
+    write_run_record(project.paths, "build-b", {"outcome": "running", "started_at": 1.0})
+    assert not build_running(project.paths)
+    assert project.states(*CHAIN)["build-b"] == "failed"
+
+    with (project.paths.state_dir / "mutation.lock").open("a") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        assert build_running(project.paths)
+        capsys.readouterr()
+        project.run("status", *CHAIN, "--json")
+        step = next(s for s in json.loads(capsys.readouterr().out)["steps"] if s["name"] == "build-b")
+    assert step["running"] is True and step["started_at"] == 1.0
+    assert step["reason"] == "building now" and step["status"] == "fresh"
+    assert not build_running(project.paths)
+
 def test_status_json_matches_the_documented_shape(project, capsys):
     project.run("build", *CHAIN)
     capsys.readouterr()
@@ -623,7 +646,9 @@ def test_status_json_matches_the_documented_shape(project, capsys):
         "name", "task", "kind", "cmd", "status", "reason", "changes",
         "duration", "last_run", "log", "deps", "outs", "acceptance",
         "local_status", "local_reason", "boundary_inputs", "external_consumers",
+        "running", "started_at",
     }
+    assert step["running"] is False
     assert step["task"] == "02-b"
     assert step["status"] == "fresh"
     assert step["duration"] > 0
