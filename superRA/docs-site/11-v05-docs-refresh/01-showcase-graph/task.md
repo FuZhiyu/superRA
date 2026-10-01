@@ -1,6 +1,6 @@
 ---
 title: "Register the Showcase Study's Reproduction Graph"
-status: implemented
+status: revise
 depends_on: []
 ---
 
@@ -8,12 +8,16 @@ depends_on: []
 
 Register [showcase-analysis](../../../showcase-analysis/task.md) in the reproduction graph so every retained output rebuilds through `superra repro build showcase-analysis`, and retire `run_all.sh`.
 
-- **One step per existing script,** each declared in the `## Reproduction` of the task that owns it: `data/download.py` (01-data), `analysis/01_build_panel.py` (01-data), `analysis/02_analysis.py` (02-analysis). Scripts keep their behavior; edit them only where the graph cannot describe them.
+- **One step per analysis script,** each declared in the `## Reproduction` of the task that owns it: `analysis/01_build_panel.py` (01-data), `analysis/02_analysis.py` (02-analysis). Scripts keep their behavior; edit them only where the graph cannot describe them.
 - **Add one `kind: check` step** that guards a headline result (e.g., the GRS statistics in `data/grs_results.csv`), so the export shows a check alongside builds.
-- **The Ken French download is the only network step.** Agree in `## Results` whether the raw CSVs it writes are its `outs` or an external input.
+- **The showcase data is frozen and committed.** The two raw Ken French CSVs (the 202608 release) are a committed external input; `download.py` stays as an unregistered refresh helper, and its zips are not kept. The panel and estimates parquet files are committed too, so a clean checkout — and the deployed docs export — reads every step `fresh` and the recorded numbers never move without a deliberate data refresh.
 - `superra repro status showcase-analysis` shows every step `fresh` after a real build; commit `repro-lock.json`.
 - `superRA/showcase-analysis` task `## Results` that cite `run_all.sh` now cite the graph.
 - The live export (`docs/build_site.sh` → `showcase-analysis-tree.html`) renders the graph and step freshness; confirm by opening it.
+
+## Revision Notes
+
+Substantive: the researcher chose to freeze and commit the showcase data instead of registering `download` as a step, so the docs export reads fresh and the numbers stop drifting with Ken French releases.
 
 ## Details
 
