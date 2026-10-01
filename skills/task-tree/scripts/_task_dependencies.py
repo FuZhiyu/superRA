@@ -220,7 +220,9 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
                 grouped.setdefault((edge["from"][5:], edge["to"][5:]), []).extend(edge["evidence"])
     result.edges = [{"from": a, "to": b, "evidence": reasons} for (a, b), reasons in sorted(grouped.items())]
     for edge in result.logical:
-        if result.tasks[edge["from"]].effective_status() == "postponed":
+        # A postponed consumer is not blocked by a postponed prerequisite.
+        if (result.tasks[edge["from"]].effective_status() == "postponed"
+                and result.tasks[edge["to"]].effective_status() != "postponed"):
             result.findings.append(dict(task_path=edge["to"], category="dependency", severity="warning",
                 message=f"depends on postponed task {edge['from']!r} (blocked until resumed)"))
     # Archival removes edges, but downstream authors still need the lost provenance.
