@@ -426,7 +426,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="127.0.0.1",
         help=(
             "Interface to bind (default: 127.0.0.1, loopback only). "
-            "The server is unauthenticated; pass --host 0.0.0.0 only to "
+            "The server is unauthenticated and runs the tree's builds; "
+            "pass --host 0.0.0.0 only to "
             "deliberately expose it on a trusted LAN."
         ),
     )
