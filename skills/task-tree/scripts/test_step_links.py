@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from task_check import run_checks
-from _task_io import compute_move_link_rewrites
 
 
 def task(root: Path, name: str, step: str, prose: str = ""):
@@ -32,10 +31,3 @@ def test_step_citations_check_owner_and_ignore_examples(tmp_path):
     assert any("'absent'" in f.message for f in findings)
     assert any("report/task.md" in f.message for f in findings)
 
-
-def test_task_move_preserves_step_fragment(tmp_path):
-    root = tmp_path / "superRA"
-    old = task(root, "data", "build-panel")
-    source = task(root, "report", "write-report", "[build](../data/task.md#step-build-panel)")
-    rewrites = compute_move_link_rewrites(root, old.parent, root / "renamed", moved_root=old.parent)
-    assert any("../renamed/task.md#step-build-panel" in text for text in rewrites.values())

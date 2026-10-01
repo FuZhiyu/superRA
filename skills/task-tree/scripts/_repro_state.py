@@ -688,6 +688,8 @@ class StepStatus:
     external_consumers: list[str] = field(default_factory=list)
     acceptance_invalid: str | None = None
     boundary_verified: list[dict] = field(default_factory=list)  # sidecar saved inputs whose bytes checked out
+    running: bool = False  # a live build is executing this step now
+    started_at: float | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -704,6 +706,8 @@ class StepStatus:
             "changes": [c.to_dict() for c in self.changes],
             "duration": self.duration,
             "last_run": self.last_run,
+            "running": self.running,
+            "started_at": self.started_at,
             "log": self.log,
             "acceptance": (
                 {key: self.acceptance[key] for key in
@@ -783,12 +787,16 @@ def compute_status(
     completed_locks: dict[str, LockEntry] | None = None,
     upstream: bool = False,
     scope: Iterable[str] | None = None,
+    live_build: int | None = None,
 ) -> StatusReport:
     """Classify a selection against saved inputs, optionally including producers.
 
     *scope* widens what counts as in scope for saved inputs beyond the selection:
     a build checks one step at a time, but a producer anywhere in its build
     selection is never a saved input.
+
+    *live_build* is the pid holding the mutation lock (`lock_holder`); a step
+    whose in-flight run record that process wrote is executing, not interrupted.
     """
     targets = list(targets)
     names, unknown = select_steps(graph, targets, include_ancestors=upstream)
@@ -811,7 +819,7 @@ def compute_status(
         if step.name not in needed:
             continue
         entry = _classify(
-            step, lock.get(step.name), paths, cache, outputs, missing_external, memo
+            step, lock.get(step.name), paths, cache, outputs, missing_external, memo, live_build
         )
         entry.external_consumers = external_consumers(graph, step)
         report.entries.append(entry)
@@ -852,6 +860,7 @@ def _classify(
     outputs: dict[str, Node],
     missing_external: set[str],
     memo: dict,
+    live_build: int | None = None,
 ) -> StepStatus:
     result = StepStatus(step=step)
     record = read_run_record(paths, step.name)
@@ -879,8 +888,13 @@ def _classify(
         elsewhere = _compare(result, step, entry, paths, cache, outputs, memo)
 
     if record.get("outcome") in ("running", "pending"):
-        result.status = "failed"
-        result.reason = "previous execution was interrupted; rerun required"
+        if live_build and record.get("pid") == live_build:
+            result.running = True
+            result.started_at = record.get("started_at")
+            result.reason = "building now"
+        else:
+            result.status = "failed"
+            result.reason = "previous execution was interrupted; rerun required"
 
     # Restoring inputs can clear an ordinary failure. A forced failure must be
     # retried even with unchanged bytes: it invalidates the cached success. A

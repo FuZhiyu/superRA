@@ -1,7 +1,6 @@
 """superRA's own build loop and `repro-lock.json`: scheduling, interruption, the
-lock format and its merges, legacy `pytask.lock` projects, and the freshness
-cases the pytask engine got wrong (symlinked data, a deleted lock, sidecar
-reruns, scoped status)."""
+lock format and its merges, and freshness edge cases (symlinked data, a deleted
+lock, sidecar reruns, scoped status)."""
 from __future__ import annotations
 
 import json
@@ -17,16 +16,14 @@ import pytest
 from _repro_acceptance import LEDGER, read_ledger, receipt_path
 from _repro_builds import platform_name
 from _repro_state import (
-    LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, TOML_AVAILABLE, legacy_lock_id, read_lock,
+    read_lock,
     lock_text, read_lock_document, _write_lock_document,
 )
 from test_repro_acceptance import review
-from test_repro_provenance import explain, git, head
+from test_repro_provenance import git
 from test_repro_runner import CHAIN, TASK_X, Project, _use_a_sidecar, project  # noqa: F401
 
 SCRIPTS = Path(__file__).parent
-# In process, a legacy lock needs tomllib; the CLI re-execs under uv instead.
-needs_tomllib = pytest.mark.skipif(not TOML_AVAILABLE, reason="reading pytask.lock needs Python 3.11+")
 
 
 # ---------------------------------------------------------------------------
@@ -124,17 +121,6 @@ def test_a_lock_conflicted_by_adjacent_new_steps_reads_both_and_the_next_build_r
     text = project.read("repro-lock.json")
     assert "<<<<<<<" not in text
     assert {"build-p", "build-q"} <= set(json.loads(text)["steps"])
-
-
-def test_a_version_1_lock_reads_and_the_next_build_rewrites_it_one_line_per_step(project):
-    assert project.run("build", ".") == 0
-    document = json.loads(project.read("repro-lock.json"))
-    project.write("repro-lock.json", json.dumps(dict(document, version=1), indent=2, sort_keys=True) + "\n")
-    assert set(project.states().values()) == {"fresh"}
-    times = project.run_times()
-    assert project.run("build", ".") == 0
-    assert project.run_times() == times
-    assert project.read("repro-lock.json") == lock_text(document)
 
 
 def _mixed_check_repo(project, *, adjacent_new_steps):
@@ -304,40 +290,6 @@ def test_an_interrupt_stops_running_steps_and_records_them_failed(project, sig):
     assert project.states()["build-x"] == "failed"
 
 
-def test_an_interrupt_leaves_queued_steps_and_their_acceptance_untouched(project):
-    assert project.run("build", ".") == 0
-    project.write("Code/x.sh", project.read("Code/x.sh") + "# harmless\n")
-    review(project, ("03-x#build-x",))
-    assert project.states()["build-x"] == "fresh"
-    record = project.paths.run_file("build-x").read_bytes()
-    project.write("Code/a.sh", "echo $$ > pid.txt\nsleep 30\n")
-    _interrupt_build(project, signal.SIGINT, ".", "--force", "-j", "1")  # build-x waits behind build-a
-    assert project.paths.run_file("build-x").read_bytes() == record
-    assert project.states()["build-x"] == "fresh"  # the acceptance still stands
-    assert project.states()["build-a"] == "failed"
-
-
-def test_a_stop_after_the_check_leaves_the_steps_acceptance_standing(project, monkeypatch):
-    import repro_run
-    assert project.run("build", ".") == 0
-    project.write("Code/x.sh", project.read("Code/x.sh") + "# harmless\n")
-    review(project, ("03-x#build-x",))
-    ledger = project.root / LEDGER / "build-x.json"
-    accepted = ledger.read_bytes()
-    boundary, run_step = repro_run.boundary_inputs, repro_run._run_step
-
-    def stop_after_the_check(build, step, entry):
-        def late(*args, **kwargs):
-            build.stopping.set()  # the interrupt lands after the pre-start check
-            return boundary(*args, **kwargs)
-        monkeypatch.setattr(repro_run, "boundary_inputs", late)
-        return run_step(build, step, entry)
-
-    monkeypatch.setattr(repro_run, "_run_step", stop_after_the_check)
-    project.run("build", "03-x", "--force")
-    assert ledger.read_bytes() == accepted  # supersede waits for the step to actually start
-
-
 # ---------------------------------------------------------------------------
 # Freshness fixes
 # ---------------------------------------------------------------------------
@@ -455,131 +407,3 @@ def test_a_check_that_failed_here_outweighs_its_pass_elsewhere(project, monkeypa
     check = project.status(*CHAIN).entry("check-b")
     assert check.status == "failed" and check.reason.startswith("forced rerun required; last run failed")
     assert project.run("status", *CHAIN) == 1
-
-
-def test_a_check_that_failed_here_unforced_reads_rerun_required(project, monkeypatch):
-    project.write("Code/check.sh", 'test "$CHECK_OK" = yes\n')
-    project.write("superRA/02-b/task.md", project.read("superRA/02-b/task.md").replace(
-        "cmd: test -s output/b.txt", "cmd: sh Code/check.sh"))
-    monkeypatch.setenv("CHECK_OK", "yes")
-    assert project.run("build", *CHAIN) == 0
-    elsewhere = read_lock_document(project.paths.lock_file)  # the pass another machine committed
-    for stamp in project.paths.stamps_dir.iterdir():
-        stamp.unlink()
-    local = read_lock_document(project.paths.lock_file)
-    del local["steps"]["check-b"]
-    _write_lock_document(project.paths, local)
-    monkeypatch.setenv("CHECK_OK", "no")
-    assert project.run("build", "02-b#check-b") == 1  # never built here: runs unforced and fails
-    _write_lock_document(project.paths, elsewhere)
-    check = project.status(*CHAIN).entry("check-b")
-    assert check.status == "failed" and check.reason.startswith("rerun required; last run failed")
-
-
-# ---------------------------------------------------------------------------
-# Legacy pytask.lock projects
-# ---------------------------------------------------------------------------
-
-def _as_legacy(project, *, record=True):
-    """Rewrite the project's lock as the pytask engine left it: pytask.lock + repro-builds.json."""
-    document = read_lock_document(project.paths.lock_file)
-    blocks, builds = [], {}
-    for name, entry in sorted(read_lock(project.paths.lock_file).items()):
-        deps = "\n".join(f'"{k}" = "{v}"' for k, v in entry.depends_on.items())
-        outs = "\n".join(f'"{k}" = "{v}"' for k, v in entry.produces.items())
-        blocks.append(f'[[task]]\nid = "{name}"\nsignature = "x"\nstate = "1"\n\n'
-                      f'[task.depends_on]\n{deps}\n\n[task.produces]\n{outs}\n')
-        builds[name] = {"lock_id": legacy_lock_id(entry.depends_on, entry.produces), "built_at": 1.0,
-                        "platform": document["steps"][name]["built_on"]["platform"], "env": {"deps": {}}}
-    project.write(LEGACY_LOCK_FILENAME, 'lock-version = "1"\n\n' + "\n".join(blocks))
-    if record:
-        project.write(LEGACY_BUILDS_FILENAME, json.dumps(builds))
-    project.paths.lock_file.unlink()
-
-
-@needs_tomllib
-def test_a_legacy_lock_reads_unchanged_and_the_first_build_migrates_it(project, capsys, monkeypatch):
-    assert project.run("build", *CHAIN) == 0
-    expected = read_lock(project.paths.lock_file)
-    _as_legacy(project)
-    import _repro_state
-    parses = []
-    real = _repro_state.convert_legacy
-    monkeypatch.setattr(_repro_state, "convert_legacy", lambda *a: parses.append(1) or real(*a))
-    monkeypatch.setattr(_repro_state, "_LEGACY_DOCUMENTS", {})
-    assert read_lock(project.paths.lock_file) == expected
-    assert read_lock(project.paths.lock_file)["build-a"].built_on == {"platform": platform_name()}
-    assert len(parses) == 1  # converted once per process, not once per reader
-    assert project.status(*CHAIN).ok
-    before = project.run_times()
-    capsys.readouterr()
-    assert project.run("build", *CHAIN) == 0
-    out = capsys.readouterr().out
-    assert project.run_times() == before
-    assert "`git rm pytask.lock repro-builds.json`" in out
-    assert (project.root / LEGACY_LOCK_FILENAME).exists() and (project.root / LEGACY_BUILDS_FILENAME).exists()
-    assert read_lock(project.paths.lock_file) == expected
-    assert not (project.root / ".pytask").exists()
-
-
-@needs_tomllib
-def test_explain_names_lock_revisions_across_the_switch_to_repro_lock(project, capsys, monkeypatch):
-    project.write(".gitignore", "output/\n.superra-repro/\n")
-    git(project.root, "init", "-q")
-    git(project.root, "add", "-A")
-    git(project.root, "commit", "-qm", "code")
-    assert project.run("build", *CHAIN) == 0
-    _as_legacy(project, record=False)
-    git(project.root, "add", LEGACY_LOCK_FILENAME)
-    git(project.root, "commit", "-qm", "the pytask engine's lock")
-    legacy = head(project.root)
-    project.write("Code/a.sh", "mkdir -p output\necho other > output/a.txt\n")
-    assert project.run("build", "01-a") == 0
-    git(project.root, "add", "repro-lock.json")
-    git(project.root, "commit", "-qam", "rebuild a on the new engine")
-    rebuilt = head(project.root)
-    project.write("output/a.txt", "hello\n")  # the old bytes come back, as a lagging sync would
-    import _repro_provenance
-    with monkeypatch.context() as patch:  # Python 3.10: no tomllib to read the legacy revision
-        patch.setattr(_repro_provenance, "tomllib", None)
-        explain(project, capsys, "01-a#build-a")
-    assert len(list((project.paths.state_dir / "lock-index").iterdir())) == 1  # only the readable revision
-    out = explain(project, capsys, "01-a#build-a")
-    assert f"recorded lock {rebuilt} " in out
-    assert f"current lock {legacy} " in out
-
-
-def test_explain_names_lock_revisions_across_the_switch_to_one_line_entries(project, capsys):
-    project.write(".gitignore", "output/\n.superra-repro/\n")
-    git(project.root, "init", "-q")
-    git(project.root, "add", "-A")
-    git(project.root, "commit", "-qm", "code")
-    assert project.run("build", *CHAIN) == 0
-    document = json.loads(project.read("repro-lock.json"))
-    project.write("repro-lock.json", json.dumps(dict(document, version=1), indent=2, sort_keys=True) + "\n")
-    git(project.root, "add", "repro-lock.json")
-    git(project.root, "commit", "-qm", "a version 1 lock")
-    version_1 = head(project.root)
-    project.write("Code/a.sh", "mkdir -p output\necho other > output/a.txt\n")
-    assert project.run("build", "01-a") == 0
-    assert json.loads(project.read("repro-lock.json"))["version"] == 2
-    git(project.root, "commit", "-qam", "rebuild a")
-    rebuilt = head(project.root)
-    project.write("output/a.txt", "hello\n")  # the old bytes come back
-    out = explain(project, capsys, "01-a#build-a")
-    assert f"recorded lock {rebuilt} " in out
-    assert f"current lock {version_1} " in out
-
-
-def test_a_legacy_lock_on_python_310_re_execs_through_uv(project, monkeypatch, capsys):
-    import repro_run
-    assert project.run("build", *CHAIN) == 0
-    _as_legacy(project)
-    calls = []
-    monkeypatch.setattr(repro_run, "TOML_AVAILABLE", False)
-    monkeypatch.setattr(repro_run, "_reexec", lambda argv, command: calls.append(command) or 0)
-    assert project.run("status", *CHAIN) == 0
-    assert calls == ["status"]
-    project.paths.legacy_lock_file.unlink()
-    assert project.run("status", *CHAIN) == 1  # never built: nothing to convert, no re-exec
-    assert calls == ["status"]

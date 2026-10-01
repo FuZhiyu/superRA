@@ -172,7 +172,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
         before["boundary_inputs"] = boundary_inputs(graph, build.names, paths, consumers={step.name})
 
         started = time.time()
-        write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started})
+        write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started,
+                                            "pid": os.getpid()})
         with log_path.open("w", encoding="utf-8") as log:
             log.write(f"$ {step.cmd}\n")
             log.flush()
@@ -194,6 +195,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
         record = {
             "outcome": "pending" if returncode == 0 else "failed",
             "forced": must_retry,
+            "pid": os.getpid(),
             "exit_code": returncode,
             "duration": time.time() - started,
             "ended_at": time.time(),
@@ -607,7 +609,8 @@ def _reexec(argv: list[str], command: str) -> int:
 
 def _behind_selection(graph, paths: RunnerPaths, targets: list[str], report) -> list:
     """Producers outside the selection, behind it, that are not fresh."""
-    full = compute_status(graph, paths, targets=targets, upstream=True)
+    from _repro_acceptance import lock_holder
+    full = compute_status(graph, paths, targets=targets, upstream=True, live_build=lock_holder(paths))
     return [e for e in full.entries if e.step.name not in report.selected and e.status != "fresh"]
 
 
@@ -620,8 +623,10 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
         targets = [target_ref(graph.step(name)) for name in value[1]]
     else:
         targets = [target_ref(s) for s in ([value["producer"]] if value["producer"] else []) + value["consumers"]]
+    from _repro_acceptance import lock_holder
     cache = HashCache(paths.cache_file)
-    report = compute_status(graph, paths, targets=targets, cache=cache, upstream=True)
+    report = compute_status(graph, paths, targets=targets, cache=cache, upstream=True,
+                            live_build=lock_holder(paths))
     result = explain(report, paths, cache, kind, value, full_diff=args.diff, plan_name=plan_name)
     cache.flush()
     if args.as_json:
@@ -754,7 +759,9 @@ def main(argv: list[str] | None = None) -> None:
         if args.command == "explain":
             _explain(args, graph, paths, plan_root.name)
             return
-        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream)
+        from _repro_acceptance import lock_holder
+        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream,
+                                live_build=lock_holder(paths))
         behind = [] if args.upstream or not report.ok else _behind_selection(graph, paths, args.targets, report)
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)

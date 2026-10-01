@@ -214,6 +214,10 @@ window.DOC_MODE = {{ 'true' if doc_mode else 'false' }};
    --host, where the viewer may not be at the server's machine and the page keeps
    its vscode:// links instead. #}
 window.LOCAL_OPEN = {{ 'true' if local_open else 'false' }};
+{# Reproduction actions: the Build menu on graph cards (POST /api/repro/build) and
+   the explain hover card. True for a live server outside doc-mode; false for a
+   standalone export, which has no server to run them. #}
+window.REPRO_ACTIONS = {{ 'true' if repro_actions else 'false' }};
 {# Absolute path of the resolved task root (the dir the CLI/dashboard resolved
    via --root / auto-detect), and its basename. Every task-path -> file href is
    built from these instead of a hardcoded `superRA/` under PROJECT_ROOT, so

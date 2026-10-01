@@ -230,9 +230,8 @@ class TestServerRoutes:
         assert 'id="crumbs"' in text
         assert 'id="active-node"' in text
         assert 'id="children-dag"' in text
-        # Workspace/Kanban toggle; the standalone DAG button is removed.
+        # Workspace toggle; the standalone DAG button is removed.
         assert 'id="btn-workspace"' in text
-        assert 'id="btn-kanban"' not in text
         assert 'id="btn-dag"' not in text
 
     def test_export_returns_attachment(self, client):
@@ -1962,12 +1961,6 @@ class TestTouchPolish:
         :active affordance (so taps still give feedback)."""
         assert "-webkit-tap-highlight-color: transparent;" in BASE_HTML
         assert ".task-row:active" in BASE_HTML
-
-    def test_shared_filter_controls_present(self):
-        assert 'id="workspace-filter"' in BASE_HTML
-        assert 'id="filter-trigger"' in BASE_HTML
-        assert 'id="search-box"' not in BASE_HTML
-        assert 'id="filter-status"' not in BASE_HTML
 
     def test_content_safe_area_insets(self):
         """The detail panel and the bottom sheet pad past the home indicator /
@@ -3728,11 +3721,10 @@ class TestDashboard:
     def test_generate_embeds_fragments_inline(self, plan_root):
         """Every fragment the standalone client fetches is pre-rendered inline."""
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
-        # Nav tree, per-node bodies, per-node children graphs, and the kanban board.
+        # Nav tree, per-node bodies, and per-node children graphs.
         assert "/nav" in html
         assert "/node/01-first" in html
         assert "/api/children-graph?root=02-second" in html
-        assert 'id="view-kanban"' not in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
 
@@ -3854,8 +3846,6 @@ class TestDashboard:
         with TestClient(plan_dashboard.app) as c:
             assert fragments["/nav"] == c.get("/nav").text
             assert fragments["/node/01-first"] == c.get("/node/01-first").text
-            assert "/kanban" not in fragments
-            assert c.get("/kanban").status_code == 404
             assert (
                 fragments["/api/children-graph?root=02-second"]
                 == c.get("/api/children-graph", params={"root": "02-second"}).json()
@@ -6534,7 +6524,6 @@ class TestReproRoutes:
             "fetch-crsp", "check-ingest", "merge-panel",
         ]
         assert [t["path"] for t in body["tasks"]] == ["01-ingest", "02-panel"]
-        assert all("tier" not in t for t in body["tasks"])
         # Step edges are inferred from files, including across owner tasks.
         assert {(e["from"], e["to"]) for e in body["step_edges"]} == {
             ("fetch-crsp", "check-ingest"), ("fetch-crsp", "merge-panel"),
@@ -6546,8 +6535,11 @@ class TestReproRoutes:
 
     def test_status_route_serves_the_runner_contract(self, repro_plan):
         with _repro_client(repro_plan) as c:
+            c.get("/api/repro/graph")
             body = c.get("/api/repro/status").json()
-        assert "tier" not in body
+        # A dashboard GET writes no runner state into the project.
+        assert not (repro_plan.parent / ".superra-repro").exists()
+        assert not (repro_plan.parent / ".gitignore").exists()
         assert body["summary"] == {
             "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "external": 0,
             "total": 3,
@@ -6561,34 +6553,6 @@ class TestReproRoutes:
         assert entry["log_tail"] == ""
         for key in ("task", "kind", "cmd", "deps", "outs", "duration"):
             assert key in entry
-        assert "tier" not in entry
-
-    def test_status_route_serves_every_step_and_ignores_a_legacy_tier_query(
-        self, repro_plan
-    ):
-        with _repro_client(repro_plan) as c:
-            body = c.get("/api/repro/status").json()
-            legacy = c.get("/api/repro/status", params={"tier": "canon"})
-        assert [s["name"] for s in body["steps"]] == [
-            "fetch-crsp", "check-ingest", "merge-panel",
-        ]
-        assert legacy.status_code == 200
-        assert legacy.json() == body
-
-    def test_status_route_carries_a_bounded_log_tail(self, repro_plan):
-        """The node detail panel reads the step's log through this payload, so a
-        chatty build step must not pull its whole log into the response."""
-        logs = repro_plan.parent / ".superra-repro" / "logs"
-        logs.mkdir(parents=True)
-        (logs / "fetch-crsp.log").write_text(
-            "\n".join(f"line {i}" for i in range(5000)), encoding="utf-8"
-        )
-        with _repro_client(repro_plan) as c:
-            body = c.get("/api/repro/status").json()
-        tail = {s["name"]: s["log_tail"] for s in body["steps"]}
-        assert tail["fetch-crsp"].splitlines()[-1] == "line 4999"
-        assert len(tail["fetch-crsp"].splitlines()) == 20
-        assert tail["check-ingest"] == ""
 
     def test_status_route_degrades_when_the_lock_cannot_be_read(
         self, repro_plan, monkeypatch
@@ -6606,16 +6570,6 @@ class TestReproRoutes:
         assert body["steps"] == [] and body["ok"] is False
         assert body["summary"]["total"] == 0
         assert "Python 3.11" in body["unavailable"]
-
-    def test_reading_the_routes_creates_no_runner_state(self, repro_plan):
-        """A dashboard GET must not write into the project: only `superra repro`
-        owns `.superra-repro/` and the `.gitignore` entry that comes with it."""
-        project_root = repro_plan.parent
-        with _repro_client(repro_plan) as c:
-            c.get("/api/repro/graph")
-            c.get("/api/repro/status")
-        assert not (project_root / ".superra-repro").exists()
-        assert not (project_root / ".gitignore").exists()
 
     def test_tree_with_no_reproduction_sections_serves_empty_payloads(self, plan_root):
         with _repro_client(plan_root) as c:
@@ -6641,19 +6595,217 @@ class TestReproRoutes:
         assert "task_edges" not in graph
 
 
-class TestLogTailBoundedRead:
-    def test_reads_only_the_tail_and_drops_the_partial_first_line(self, tmp_path):
-        log = tmp_path / "step.log"
-        log.write_text("aaaa\nbbbb\ncccc\n", encoding="utf-8")
-        assert plan_dashboard._log_tail(log, lines=10) == "aaaa\nbbbb\ncccc"
-        # 7 bytes back lands mid-'bbbb', so that fragment is dropped.
-        assert plan_dashboard._log_tail(log, lines=10, max_bytes=7) == "cccc"
+# ---------------------------------------------------------------------------
+# TestReproBuildRoutes — POST /api/repro/build runs `superra repro build` for a
+# graph card, GET reports it, POST /api/repro/build/stop ends it, and GET
+# /api/repro/explain answers the hover card.  The build route executes the
+# commands the tree declares, so its refusals are pinned as tightly as its
+# lifecycle.
+# ---------------------------------------------------------------------------
 
-    def test_a_bound_larger_than_the_file_keeps_every_line(self, tmp_path):
-        log = tmp_path / "step.log"
-        log.write_text("aaaa\nbbbb\n", encoding="utf-8")
-        assert plan_dashboard._log_tail(log, lines=10, max_bytes=4096) == "aaaa\nbbbb"
 
+def _read_repro_actions_flag(html: str) -> str:
+    m = re.search(r"window\.REPRO_ACTIONS = (\w+);", html)
+    assert m, "REPRO_ACTIONS not injected"
+    return m.group(1)
+
+
+def _wait_for(predicate, timeout=20.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        value = predicate()
+        if value:
+            return value
+        time.sleep(0.1)
+    raise AssertionError("condition not reached in time")
+
+
+class TestReproBuildRoutes:
+    @pytest.fixture
+    def plan(self, repro_plan, monkeypatch):
+        """The repro fixture with a fetch step that writes its out after *SLOW* seconds,
+        served on a loopback authority, building with this process's environment."""
+        code = repro_plan.parent / "code"
+        (code / "fetch.sh").write_text(
+            '#!/bin/sh\nsleep "${SLOW:-0}"\nmkdir -p build\necho crsp > build/crsp.csv\n', encoding="utf-8")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        monkeypatch.setattr(plan_dashboard, "_login_env", lambda root: dict(os.environ, PWD=str(root)))
+        monkeypatch.delenv("SLOW", raising=False)
+        plan_dashboard._repro_graph_cache.clear()
+        return repro_plan
+
+    def _client(self, plan_root, base_url="http://127.0.0.1:8995"):
+        return _client_for(plan_root, base_url=base_url)
+
+    def _finish(self, c):
+        return _wait_for(lambda: (lambda s: s if not s["running"] and s["job"] and "returncode" in s["job"] else None)(
+            c.get("/api/repro/build").json()))
+
+    # --- Render-time flag -------------------------------------------------
+
+    def test_flag_true_for_live_page_even_off_loopback(self, plan, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "true"
+
+    def test_flag_false_in_doc_mode_and_export(self, plan, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "false"
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        html = plan_dashboard.generate_dashboard(plan).read_text("utf-8")
+        assert _read_repro_actions_flag(html) == "false"
+
+    # --- Refusals ---------------------------------------------------------
+
+    def test_refuses_what_is_not_a_same_origin_request_for_a_graph_target(self, plan, monkeypatch):
+        spawned = []
+        monkeypatch.setattr(plan_dashboard, "_start_build_sync", lambda *a: spawned.append(a) or {})
+        with self._client(plan) as c:
+            ok = {"target": "01-ingest"}
+            assert c.post("/api/repro/build", content=json.dumps(ok),
+                          headers={"content-type": "text/plain"}).status_code == 415
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"sec-fetch-site": "cross-site"}).status_code == 403
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"host": "evil.example.com:8995"}).status_code == 403
+            for bad in ("--force", "-j", "nope", "", " 01-ingest", "01-ingest\n", 7, None):
+                assert c.post("/api/repro/build", json={"target": bad}).status_code == 400, bad
+            assert not spawned
+            assert c.post("/api/repro/build", json=ok).status_code == 200
+            monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+            assert c.post("/api/repro/build", json=ok).status_code == 403
+            assert c.post("/api/repro/build/stop", json={}).status_code == 403
+        assert [a[1:] for a in spawned] == [("01-ingest", False, False)]
+
+    def test_trusted_authority_names_this_machine_only(self, monkeypatch):
+        monkeypatch.setenv(plan_dashboard.BUILD_HOSTS_ENV_VAR, "studio.tail1234.ts.net")
+        own = socket.gethostname()
+        for host in ("127.0.0.1:8995", "localhost", "[::1]:80", "100.64.0.7:8995",
+                     own, own.split(".")[0] + ":8995", "studio.tail1234.ts.net"):
+            assert plan_dashboard._is_trusted_authority(host), host
+        for host in ("evil.example.com", "evil.example.com:8995", "", own + ".evil.example.com"):
+            assert not plan_dashboard._is_trusted_authority(host), host
+
+    def test_target_is_one_argv_element_after_the_separator(self):
+        assert plan_dashboard._build_args("02-panel", True, True) == ["--upstream", "--force", "--", "02-panel"]
+        assert plan_dashboard._build_args("01-ingest#fetch-crsp", False, False) == ["--", "01-ingest#fetch-crsp"]
+
+    # --- Lifecycle --------------------------------------------------------
+
+    def test_build_runs_reports_and_refreshes_state(self, plan):
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json() == {"enabled": True, "running": False, "job": None, "steps": []}
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp"})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build '01-ingest#fetch-crsp'"
+            state = self._finish(c)
+            status = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}
+        assert state["job"]["returncode"] == 0
+        assert state["job"]["summary"] == "1 step(s): 1 executed"
+        assert status["fetch-crsp"]["status"] == "fresh"
+        assert status["fetch-crsp"]["duration"] is not None
+
+    def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
+        monkeypatch.setenv("SLOW", "30")
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 200
+            state = _wait_for(lambda: (lambda s: s if s["steps"] else None)(c.get("/api/repro/build").json()))
+            assert state["running"] and state["job"]["alive"]
+            assert [s["name"] for s in state["steps"]] == ["fetch-crsp"]
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["running"] is True and entry["reason"] == "building now"
+            assert entry["status"] != "failed"
+            second = c.post("/api/repro/build", json={"target": "02-panel"})
+            assert second.status_code == 409
+            assert "another reproduction build" in second.json()["detail"]
+            assert c.post("/api/repro/build/stop", json={}).status_code == 200
+            state = self._finish(c)
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+        assert state["job"]["returncode"] != 0
+        assert entry["status"] == "failed"
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_a_build_outside_the_dashboard_refuses_the_page(self, plan):
+        """A CLI build holds the lock: the page cannot start or stop one, and a
+        step a crashed build left in flight still reads interrupted."""
+        from _repro_acceptance import mutation_lock
+        from _repro_state import ensure_state_dir, runner_paths, write_run_record
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        write_run_record(paths, "fetch-crsp", {"outcome": "running", "started_at": 1.0, "pid": 999999})
+        with mutation_lock(paths), self._client(plan) as c:
+            state = c.get("/api/repro/build").json()
+            assert state["running"] is True and state["steps"] == []
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["status"] == "failed" and entry["running"] is False
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 409
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_stop_refuses_a_job_whose_pid_is_not_the_build(self, plan):
+        """A job left without an exit code, whose pid now names another process,
+        is not stopped."""
+        from _repro_state import ensure_state_dir, runner_paths
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        plan_dashboard._write_job(paths, {"pid": os.getpid(), "target": "01-ingest", "started_at": 1.0})
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json()["job"]["alive"] is False
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_project_pages_are_served_sandboxed(self, plan):
+        for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+            (plan.parent / name).write_text("<script>fetch('/api/repro/build')</script>", encoding="utf-8")
+        (plan.parent / "fig.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        with self._client(plan) as c:
+            for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+                policy = c.get(f"/files/{name}").headers.get("content-security-policy", "")
+                assert policy.startswith("sandbox allow-scripts"), name
+                assert "allow-same-origin" not in policy
+            assert "content-security-policy" not in c.get("/files/fig.png").headers
+
+    # --- Explain ----------------------------------------------------------
+
+    def test_explain_answers_for_a_task_or_step_and_writes_nothing(self, plan):
+        with self._client(plan) as c:
+            task = c.get("/api/repro/explain", params={"target": "02-panel"})
+            step = c.get("/api/repro/explain", params={"target": "01-ingest#fetch-crsp"})
+            path = c.get("/api/repro/explain", params={"target": "code/fetch.sh"})
+            unknown = c.get("/api/repro/explain", params={"target": "nope"})
+        assert task.status_code == 200 and task.json()["kind"] == "task"
+        assert [s["name"] for s in task.json()["steps"]] == ["merge-panel"]
+        assert step.status_code == 200 and step.json()["steps"][0]["status"] == "missing"
+        assert path.status_code == 400 and unknown.status_code == 400
+        assert not (plan.parent / ".superra-repro").exists()
+
+
+    # --- Client estimate (node-backed) ------------------------------------
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_menu_estimate_and_command_follow_the_selection(self):
+        defs = _extract_js_defs([
+            "REPRO_STATES", "REPRO_GLYPHS", "_reproBuild", "reproStatusIndex", "reproStateOf", "reproWithin",
+            "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope", "reproBuildEstimate",
+        ])
+        harness = (
+            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'}],"
+            "step_edges:[{from:'a',to:'b'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
+            "{name:'b',status:'fresh',duration:1},{name:'c',status:'missing',duration:null},{name:'x',status:'external'}]}};"
+            "console.log(JSON.stringify({"
+            "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
+            "this:reproBuildEstimate('t2#b',''), upstream:reproBuildEstimate('t2#b','upstream'), force:reproBuildEstimate('t2','force'),"
+            "cmd:reproBuildCommand('t2#b','upstream'), root:reproBuildCommand('.','force')}));"
+        )
+        proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, proc.stderr
+        out = json.loads(proc.stdout.strip().splitlines()[-1])
+        assert out["scope"] == ["b", "c", "x"] and out["up"] == ["a", "b"]
+        assert out["this"] == "Nothing stale"
+        assert out["upstream"] == "1 step would run · ~2.0s by last runs"
+        assert out["force"] == "2 steps would run · ~1.0s by last runs · 1 never ran · 1 waiting on an external input"
+        assert out["cmd"] == "superra repro build 't2#b' --upstream"
+        assert out["root"] == "superra repro build . --force"
 
 class TestReproExportSnapshot:
     def _fragments(self, html):
@@ -6674,73 +6826,6 @@ class TestReproExportSnapshot:
             "fetch-crsp", "check-ingest", "merge-panel",
         ]
         assert status["summary"]["missing"] == 3
-
-    def test_export_of_a_tree_with_no_steps_embeds_an_empty_snapshot(self, plan_root):
-        fragments = self._fragments(
-            plan_dashboard.render_standalone_html(plan_root)
-        )
-        assert fragments["/api/repro/graph"]["steps"] == []
-        assert fragments["/api/repro/status"]["steps"] == []
-
-
-def _extract_css_tokens(css_text):
-    """{theme: {token: hex}} for the `--rp-*` custom properties of both themes."""
-    light_src, dark_src = css_text.split('[data-theme="dark"]', 1)
-    pattern = re.compile(r"(--rp-[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})")
-    return {
-        "light": dict(pattern.findall(light_src)),
-        "dark": dict(pattern.findall(dark_src)),
-    }
-
-
-def _wcag_contrast(fg, bg):
-    """WCAG 2.x contrast ratio between two `#rrggbb` colours."""
-    def _luminance(value):
-        channels = []
-        for i in (1, 3, 5):
-            c = int(value[i:i + 2], 16) / 255
-            channels.append(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4)
-        r, g, b = channels
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-    a, b = _luminance(fg), _luminance(bg)
-    lo, hi = sorted((a, b))
-    return (hi + 0.05) / (lo + 0.05)
-
-
-class TestReproViewWiring:
-    def test_page_carries_the_view_toggle_container_and_sse_sink(self):
-        assert 'id="btn-reproduction"' in BASE_HTML
-        assert "showView('reproduction')" in BASE_HTML
-        assert 'id="view-reproduction"' in BASE_HTML
-        assert 'sse-swap="repro-updated"' in BASE_HTML
-
-    def test_doc_mode_hides_the_toggle(self):
-        """A documentation tree declares no build steps."""
-        assert "html[data-doc-mode] #btn-reproduction { display: none !important; }" in BASE_HTML
-
-    def test_state_tokens_are_defined_in_both_themes(self):
-        light, dark = BASE_HTML.split('[data-theme="dark"]', 1)
-        for state in ("fresh", "stale", "missing", "failed", "external"):
-            for suffix in ("", "-t"):
-                token = f"--rp-{state}{suffix}:"
-                assert token in light, f"{token} missing from the light theme"
-                assert token in dark, f"{token} missing from the dark theme"
-        assert "--rp-ink-2:" in light and "--rp-ink-2:" in dark
-
-    def test_text_on_a_state_wash_clears_aa(self):
-        """The node's state word, the legend count and the check tag sit on the
-        wash, where the chrome's --text-mid / --text-mute are not AA; the
-        accessibility argument for the palette's CVD warn band rests on that
-        word being readable."""
-        css = _extract_css_tokens(BASE_HTML)
-        for theme in ("light", "dark"):
-            ink = css[theme]["--rp-ink-2"]
-            for state in ("fresh", "stale", "missing", "failed", "external"):
-                wash = css[theme][f"--rp-{state}"]
-                ratio = _wcag_contrast(ink, wash)
-                assert ratio >= 4.5, f"{theme} {state}: --rp-ink-2 on the wash is {ratio:.2f}"
-
 
 class TestReproLockWatch:
     """A build rewrites `repro-lock.json` at the project root, outside the watched
@@ -6784,245 +6869,9 @@ class TestReproLockWatch:
             self._reset()
             loop.close()
 
-    def test_config_change_broadcasts_repro_updated(self, tmp_path):
-        """`superRA/config.yaml` is neither a task file nor the lock, but its
-        `reproduction:` block shapes every step, so an edit refreshes the view."""
-        import watchfiles
-
-        loop = asyncio.new_event_loop()
-        self._reset()
-        root = tmp_path / "superRA"
-        root.mkdir()
-        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
-        (root / "config.yaml").write_text("reproduction:\n  runners:\n    sh: sh {script}\n")
-        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
-            "wt-a", root
-        )
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients["wt-a"] = {queue}
-
-        async def _test():
-            state = plan_dashboard._worktree_cache["wt-a"]
-            await plan_dashboard._rebuild_and_broadcast(
-                state, {(watchfiles.Change.modified, str(root / "config.yaml"))}
-            )
-            assert not queue.empty()
-            assert "event: repro-updated" in queue.get_nowait()
-            assert queue.empty()
-            # A config.yaml elsewhere in the tree is an ordinary file.
-            nested = root / "child"
-            nested.mkdir()
-            await plan_dashboard._rebuild_and_broadcast(
-                state, {(watchfiles.Change.added, str(nested / "config.yaml"))}
-            )
-            assert queue.empty()
-
-        try:
-            loop.run_until_complete(_test())
-        finally:
-            self._reset()
-            loop.close()
-
-    def _stub_awatch(self, monkeypatch, batches_per_session):
-        """Replace `awatch` with sessions yielding the given change batches.
-
-        Records the watch set and the `yield_on_timeout` flag of each session,
-        and tracks that every session is closed — leaving one suspended is what
-        orphans the native fsevents thread.
-        """
-        sessions = []
-
-        def _fake_awatch(*paths, **kwargs):
-            index = len(sessions)
-            record = {
-                "paths": paths,
-                "yield_on_timeout": kwargs.get("yield_on_timeout"),
-                "closed": False,
-            }
-            sessions.append(record)
-
-            async def _gen():
-                for batch in (
-                    batches_per_session[index]
-                    if index < len(batches_per_session)
-                    else []
-                ):
-                    yield batch() if callable(batch) else batch
-
-            class _Session:
-                """Forwards to the generator, recording that it was closed."""
-
-                def __init__(self, agen):
-                    self._agen = agen
-
-                def __aiter__(self):
-                    return self._agen.__aiter__()
-
-                async def aclose(self):
-                    record["closed"] = True
-                    await self._agen.aclose()
-
-            return _Session(_gen())
-
-        import watchfiles
-        monkeypatch.setattr(watchfiles, "awatch", _fake_awatch)
-        return sessions
-
-    def _seed(self, tmp_path):
-        root = tmp_path / "superRA"
-        root.mkdir()
-        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
-        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
-            "wt-a", root
-        )
-        return root
-
-    def test_watcher_adds_the_lock_only_when_it_exists(self, tmp_path, monkeypatch):
-        """`awatch` raises on a path that is not there, so a project that has
-        never built must not put its absent lock in the watch set."""
-        self._reset()
-        root = self._seed(tmp_path)
-        sessions = self._stub_awatch(monkeypatch, [[], []])
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(
-                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
-            )
-            assert sessions[0]["paths"] == (root,)
-            # No lock to watch: the session ticks so its arrival is noticed.
-            assert sessions[0]["yield_on_timeout"] is True
-            (tmp_path / "repro-lock.json").write_text("", encoding="utf-8")
-            loop.run_until_complete(
-                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
-            )
-            assert sessions[1]["paths"] == (root, tmp_path / "repro-lock.json")
-            # Watching the lock is event-driven; no tick needed.
-            assert sessions[1]["yield_on_timeout"] is False
-            assert all(s["closed"] for s in sessions)
-        finally:
-            self._reset()
-            loop.close()
-
-    def test_a_projects_first_build_re_arms_the_watch_and_pushes(self, tmp_path, monkeypatch):
-        """The lock does not exist until the first build, and a watch set is
-        fixed for the life of an `awatch`: the tick that notices the new file
-        has to announce that build itself, then re-enter watching it."""
-        self._reset()
-        root = self._seed(tmp_path)
-        lock = tmp_path / "repro-lock.json"
-
-        def _first_build():
-            lock.write_text("", encoding="utf-8")
-            return set()          # a timeout tick carries no changes
-
-        sessions = self._stub_awatch(monkeypatch, [[_first_build], []])
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients["wt-a"] = {queue}
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(
-                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
-            )
-            assert len(sessions) == 2
-            assert sessions[0]["paths"] == (root,)
-            assert sessions[1]["paths"] == (root, lock)
-            assert all(s["closed"] for s in sessions)
-            assert not queue.empty()
-            assert "event: repro-updated" in queue.get_nowait()
-        finally:
-            self._reset()
-            loop.close()
-
-    def test_a_rebuild_re_arms_the_watch_on_the_replaced_lock(self, tmp_path, monkeypatch):
-        """A build replaces the lock by rename; the watch re-enters so it follows
-        the new file instead of the inode it started on."""
-        import watchfiles
-
-        self._reset()
-        root = self._seed(tmp_path)
-        lock = tmp_path / "repro-lock.json"
-        lock.write_text("{}", encoding="utf-8")
-        sessions = self._stub_awatch(
-            monkeypatch, [[{(watchfiles.Change.added, str(lock))}], []]
-        )
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients["wt-a"] = {queue}
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(
-                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
-            )
-            assert [s["paths"] for s in sessions] == [(root, lock), (root, lock)]
-            assert all(s["closed"] for s in sessions)
-            assert "event: repro-updated" in queue.get_nowait()
-        finally:
-            self._reset()
-            loop.close()
-
-    def test_a_lock_write_while_the_watch_re_arms_is_not_lost(self, tmp_path, monkeypatch):
-        """A `-j` build writes the lock once per step. A write that lands while
-        the watch closes and reopens is in neither session, so the reopened
-        watch compares the lock with what the last refresh read."""
-        import watchfiles
-
-        self._reset()
-        root = self._seed(tmp_path)
-        lock = tmp_path / "repro-lock.json"
-        lock.write_text("{}", encoding="utf-8")
-        rebuild = plan_dashboard._rebuild_and_broadcast
-        writes = iter(['{"steps": 1}'])
-
-        async def _rebuild_then_a_late_write(state, changes):
-            await rebuild(state, changes)
-            for text in writes:  # the build's next step finishes during the refresh
-                lock.write_text(text, encoding="utf-8")
-
-        monkeypatch.setattr(plan_dashboard, "_rebuild_and_broadcast", _rebuild_then_a_late_write)
-        sessions = self._stub_awatch(
-            monkeypatch, [[{(watchfiles.Change.added, str(lock))}], [set()]]
-        )
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients["wt-a"] = {queue}
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(
-                plan_dashboard._watch_worktree("wt-a", asyncio.Event())
-            )
-            assert sessions[1]["yield_on_timeout"] is True  # its first tick runs the comparison
-            events = []
-            while not queue.empty():
-                events.append(queue.get_nowait())
-            assert sum("event: repro-updated" in e for e in events) == 2
-        finally:
-            self._reset()
-            loop.close()
-
-    def test_the_reopened_watch_ticks_only_once(self, tmp_path, monkeypatch):
-        """A quiet first tick after a re-arm has done its comparison; the next
-        watch is event-driven again."""
-        import watchfiles
-
-        self._reset()
-        self._seed(tmp_path)
-        lock = tmp_path / "repro-lock.json"
-        lock.write_text("{}", encoding="utf-8")
-        sessions = self._stub_awatch(monkeypatch, [[{(watchfiles.Change.added, str(lock))}], [set()], []])
-        loop = asyncio.new_event_loop()
-        try:
-            loop.run_until_complete(plan_dashboard._watch_worktree("wt-a", asyncio.Event()))
-            assert [s["yield_on_timeout"] for s in sessions[1:]] == [True, False]
-        finally:
-            self._reset()
-            loop.close()
-
 
 # ---------------------------------------------------------------------------
-# Reproduction findings + empty-state copy (node-backed)
-#
-# No steps has two causes that read alike and mean opposite things: nothing was
-# declared, or what was declared failed to load. These pin that the findings
-# reach the reader either way, and that the strip's own sentence stays true of
-# the severities it is summarising.
+# Reproduction findings rendering (node-backed)
 # ---------------------------------------------------------------------------
 
 
@@ -7035,6 +6884,8 @@ def _run_repro_render_node(harness_body):
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
         "onReproClick", "reproNavigate", "reproHash",
+        "_reproBuild", "reproActionsOn", "reproExplainable", "reproStepTarget", "reproTaskTarget",
+        "reproIsRunning", "reproNodeMeta", "reproChipHTML", "reproBuildStatusHTML",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness
@@ -7055,6 +6906,7 @@ def _run_repro_render_node(harness_body):
         "function reproOpen(){}\n"
         "function reproTransform(){}\n"
         "function reproBindHead(){}\n"
+        "function reproBindExplain(){}\n"
         "function renderReproDetail(){}\n"
     )
     body = _extract_js_defs(["drawReproView"])
@@ -7068,43 +6920,6 @@ def _run_repro_render_node(harness_body):
 
 @pytest.mark.skipif(_NODE is None, reason="node not available")
 class TestReproFindingsRendering:
-    def test_explore_renders_cross_task_file_dependencies(self, repro_plan):
-        with _repro_client(repro_plan) as client:
-            graph = client.get("/api/repro/graph").json()
-        edge = next(e for e in graph["step_edges"] if e["to"] == "merge-panel")
-        owner = next(s["task"] for s in graph["steps"] if s["name"] == "merge-panel")
-        out = _run_repro_render_node(
-            "var box={innerHTML:'',querySelector:function(){return null;}};"
-            "_reproData={graph:" + json.dumps(graph) + ",status:{steps:[],findings:[]}};"
-            "drawReproView(box,_reproData);"
-            "reproNavigate({expanded:[" + json.dumps(owner) + "]},true);"
-            "console.log(JSON.stringify({html:box.innerHTML}));"
-        )
-        assert 'class="repro-canvas"' in out["html"]
-        assert 'data-step="merge-panel"' in out["html"]
-        producer_owner = next(s["task"] for s in graph["steps"] if s["name"] == edge["from"])
-        assert f'data-node-id="task:{producer_owner}"' in out["html"]
-        assert f'data-from="task:{producer_owner}" data-to="merge-panel"' in out["html"]
-        assert "Project overview" in out["html"]
-
-    def test_a_graph_that_failed_to_load_shows_its_errors_not_an_empty_state(self):
-        """A section that was declared and did not load must not read as a tree
-        where nobody declared one — the error is the whole explanation."""
-        out = _run_repro_render_node(
-            "var box={innerHTML:'',querySelector:function(){return null;}};"
-            "var data={graph:{steps:[],findings:[{severity:'error',task_path:'01-a',"
-            "  message:\"## Reproduction: step 'onlystep' names runner 'sh', which\"}]},"
-            "  status:{steps:[],findings:[{severity:'error',task_path:'01-a',"
-            "  message:\"## Reproduction: step 'onlystep' names runner 'sh', which\"}]}};"
-            "drawReproView(box, data);"
-            "console.log(JSON.stringify({"
-            "  strip: box.innerHTML.indexOf('repro-findings')>=0,"
-            "  message: box.innerHTML.indexOf('names runner')>=0,"
-            "  claimsNothingDeclared: box.innerHTML.indexOf('No task declares')>=0}));"
-        )
-        assert out["strip"] and out["message"]
-        assert not out["claimsNothingDeclared"]
-
     def test_a_broken_task_card_is_marked_and_links_its_finding(self):
         """A task whose section failed to parse draws no steps; its card must not
         read like a task with none declared, and a depends_on-only edge must not
@@ -7125,280 +6940,3 @@ class TestReproFindingsRendering:
         assert 'data-rp-action="finding" data-value="broken"' in html
         assert 'data-finding-task="broken"' in html
         assert 'class="rp-wire is-logical"' in html
-
-    def test_an_empty_tree_shows_no_active_tasks(self):
-        out = _run_repro_render_node(
-            "var box={innerHTML:'',querySelector:function(){return null;}};"
-            "drawReproView(box, {graph:{steps:[],findings:[]},status:{steps:[],findings:[]}});"
-            "console.log(JSON.stringify({"
-            "  claimsNothingDeclared: box.innerHTML.indexOf('No active tasks')>=0,"
-            "  strip: box.innerHTML.indexOf('repro-findings')>=0}));"
-        )
-        assert out["claimsNothingDeclared"] and not out["strip"]
-
-    def test_the_strip_does_not_claim_a_warning_hid_a_step(self):
-        """`_repro`'s warnings name steps that are drawn — a missing external
-        input, a `depends_on` ordering conflict — so the strip must not say
-        their steps are absent."""
-        out = _run_repro_render_node(
-            "var html=reproFindingsHTML([{severity:'warning',task_path:'01-a',"
-            "  message:'depends on X, which no step produces'}]);"
-            "console.log(JSON.stringify({html: html}));"
-        )
-        assert "1 warning" in out["html"]
-        assert "are drawn" in out["html"]
-        assert "did not load" not in out["html"]
-
-    def test_the_strip_counts_each_severity_separately(self):
-        out = _run_repro_render_node(
-            "var html=reproFindingsHTML(["
-            "  {severity:'error',message:'a'},{severity:'error',message:'b'},"
-            "  {severity:'warning',message:'c'}]);"
-            "console.log(JSON.stringify({html: html}));"
-        )
-        assert "2 errors" in out["html"] and "1 warning" in out["html"]
-
-    def test_a_sidecar_tracked_out_names_the_file_the_runner_hashes(self):
-        out = _run_repro_render_node(
-            "console.log(JSON.stringify({"
-            "  plain: reproOutLabel({path:{logical:'${OUT}/panel.csv'},sidecar:null}),"
-            "  tracked: reproOutLabel({path:{logical:'${OUT}/big.bin'},"
-            "    sidecar:{logical:'${OUT}/big.sha'}})}));"
-        )
-        assert out["plain"] == "${OUT}/panel.csv"
-        assert out["tracked"] == "${OUT}/big.bin (hashed via ${OUT}/big.sha)"
-
-
-# ---------------------------------------------------------------------------
-# Reproduction graph reuse
-#
-# Each build resolves `reproduction.vars`, which a project may point at a shell
-# probe (`git rev-parse`, a conda prefix). The view opens with two requests, so
-# the pair has to cost one resolution, and a task edit has to cost a new one.
-# ---------------------------------------------------------------------------
-
-PROBE_CONFIG = """\
-reproduction:
-  vars:
-    OUT:
-      shell: "sh code/probe.sh"
-"""
-
-
-@pytest.fixture
-def probe_plan(tmp_path):
-    root = tmp_path / "superRA"
-    root.mkdir()
-    (root / "config.yaml").write_text(PROBE_CONFIG, encoding="utf-8")
-    _write_task_md(root / "task.md", "Probe Project", "in-progress", objective="Root.")
-    (root / "01-ingest").mkdir()
-    (root / "01-ingest" / "task.md").write_text(REPRO_INGEST, encoding="utf-8")
-    code = tmp_path / "code"
-    code.mkdir()
-    (code / "probe.sh").write_text(
-        'echo run >> "$(dirname "$0")/../probe.count"\necho build\n', encoding="utf-8"
-    )
-    for name in ("fetch.sh", "check.sh"):
-        (code / name).write_text("#!/bin/sh\n", encoding="utf-8")
-    return root
-
-
-def _probe_runs(plan_root):
-    counter = plan_root.parent / "probe.count"
-    return len(counter.read_text().split()) if counter.is_file() else 0
-
-
-class TestReproGraphReuse:
-    def test_opening_the_view_resolves_vars_once(self, probe_plan):
-        plan_dashboard._repro_graph_cache.clear()
-        with _repro_client(probe_plan) as c:
-            assert c.get("/api/repro/graph").status_code == 200
-            assert c.get("/api/repro/status").status_code == 200
-        assert _probe_runs(probe_plan) == 1
-
-    def test_a_task_edit_resolves_them_again(self, probe_plan):
-        plan_dashboard._repro_graph_cache.clear()
-        with _repro_client(probe_plan) as c:
-            c.get("/api/repro/graph")
-            task = probe_plan / "01-ingest" / "task.md"
-            task.write_text(task.read_text() + "\n<!-- edited -->\n", encoding="utf-8")
-            plan_dashboard.rebuild_worktree_state(plan_dashboard._launch_wt_id)
-            c.get("/api/repro/graph")
-        assert _probe_runs(probe_plan) == 2
-
-    def test_the_cache_expires(self, probe_plan, monkeypatch):
-        """The graph also depends on the environment the vars read, which no
-        file signature sees, so a reused build is short-lived."""
-        plan_dashboard._repro_graph_cache.clear()
-        monkeypatch.setattr(plan_dashboard, "REPRO_GRAPH_TTL", 0.0)
-        with _repro_client(probe_plan) as c:
-            c.get("/api/repro/graph")
-            c.get("/api/repro/graph")
-        assert _probe_runs(probe_plan) == 2
-
-
-class TestReproGraphChangeBroadcast:
-    """A `## Reproduction` edit moves the graph and the view must refetch; an
-    edit to a task that declares none must not make it refetch."""
-
-    def _reset(self):
-        plan_dashboard._worktree_cache.clear()
-        plan_dashboard._worktree_clients.clear()
-        plan_dashboard._worktree_watchers.clear()
-        plan_dashboard._worktree_locks.clear()
-
-    def _run(self, plan_root, edited_rel, new_text):
-        import watchfiles
-
-        loop = asyncio.new_event_loop()
-        self._reset()
-        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
-            "wt-a", plan_root
-        )
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients["wt-a"] = {queue}
-        plan_dashboard._jinja_env = None
-        edited = plan_root / edited_rel
-        edited.write_text(new_text, encoding="utf-8")
-
-        async def _test():
-            state = plan_dashboard._worktree_cache["wt-a"]
-            await plan_dashboard._rebuild_and_broadcast(
-                state, {(watchfiles.Change.modified, str(edited))}
-            )
-            events = []
-            while not queue.empty():
-                events.append(queue.get_nowait())
-            return events
-
-        try:
-            return loop.run_until_complete(_test())
-        finally:
-            self._reset()
-            plan_dashboard._jinja_env = None
-            loop.close()
-
-    def test_an_edit_to_a_declaring_task_asks_the_view_to_refetch(self, repro_plan):
-        events = self._run(
-            repro_plan, "01-ingest/task.md",
-            REPRO_INGEST.replace("sh code/fetch.sh", "sh code/fetch.sh --full"),
-        )
-        assert any("event: repro-updated" in e for e in events)
-
-    def test_removing_the_section_also_asks_it_to_refetch(self, repro_plan):
-        events = self._run(
-            repro_plan, "01-ingest/task.md",
-            '---\ntitle: "Ingest"\nstatus: in-progress\ndepends_on: []\n---\n\n'
-            "## Objective\n\nNo longer declares steps.\n",
-        )
-        assert any("event: repro-updated" in e for e in events)
-
-    def test_an_edit_elsewhere_leaves_the_view_alone(self, repro_plan):
-        events = self._run(
-            repro_plan, "task.md",
-            '---\ntitle: "Repro Project"\nstatus: in-progress\ndepends_on: []\n---\n\n'
-            "## Objective\n\nRoot, reworded.\n",
-        )
-        assert events, "the sidebar row should still have been swapped"
-        assert not any("event: repro-updated" in e for e in events)
-
-
-@pytest.mark.skipif(_NODE is None, reason="node not available")
-class TestReproNavigationRepair:
-    def run_client(self, body):
-        defs = _extract_js_defs([
-            "onReproClick", "reproNavigate", "reproWithin",
-            "reproProject", "reproHash", "reproReadHash", "normalizeWorkspaceFilters",
-            "revealReproStep", "selectReproStep", "reproNodeId", "initRouter", "reproRevealOwner", "parentPath", "reproFocus", "reproZoomAt",
-        ])
-        shim = r"""
-const assert = require('node:assert/strict');
-var activeArtifactPath='',activePath='analysis', ACTIVE_WT='fixture', restoring=false;
-var _workspaceFilters={statuses:[],tasks:null};
-function applyWorkspaceFilters(){}
-function syncTreeSteps(){}
-var location={hash:'#/analysis'}, history={
-  pushState:function(s,t,url){location.hash=url;},
-  replaceState:function(s,t,url){location.hash=url;}
-};
-var _reproNav={selected:'',expanded:[]};
-var _reproSelected='';
-var _reproInspectorClosed=false, _reproViewNext='', _reproLayoutCache=null, currentView='workspace';
-var _reproViewport={x:0,y:0,zoom:1};
-var _reproData={graph:{steps:[
-  {name:'input',task:'other'},
-  {name:'result',task:'analysis'}
-],step_edges:[{from:'input',to:'result'}]},status:{steps:[]}};
-var drawn=null, opened='', selected='', transformed=0;
-var box={querySelectorAll:function(){return [];},querySelector:function(){return null;},classList:{remove:function(){}},focus:function(){}};
-var document={getElementById:function(){return box;},
-  querySelector:function(){return {clientWidth:800,clientHeight:500,focus:function(){}};}};
-function drawReproView(){drawn=reproProject(_reproData.graph);}
-function showView(view){opened=view;currentView=view;}
-function renderReproDetail(name){selected=name;}
-function loadReproData(){return Promise.resolve(_reproData);}
-function reproTransform(){transformed++;}
-function reproReaderControls(){}
-function reproSelectTask(path){_reproSelected='';_reproNav.selected='';setActive(path);}
-function reproCenter(){}
-function parseHash(){return 'analysis';}
-function parseArtifactHash(){return '';}
-function setActive(path){activePath=path;}
-function click(action,value){onReproClick({preventDefault:function(){},target:{closest:function(selector){
-  return selector==='[data-rp-action]' ? {dataset:{rpAction:action,value:value||''},closest:function(){return null;}} : null;
-}}});}
-"""
-        proc = subprocess.run(
-            [_NODE, "-e", shim + defs + "\n(async function(){" + body +
-             "\n})().catch(e=>{console.error(e);process.exit(1)});"],
-            capture_output=True, text=True, timeout=20,
-        )
-        assert proc.returncode == 0, proc.stderr
-
-    def test_reveal_select_and_overview_keep_all_steps(self):
-        self.run_client("""
-reproFocus('analysis');await Promise.resolve();await Promise.resolve();
-assert.equal(opened,'reproduction');
-assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
-click('select','result');
-assert.equal(selected,'result');
-click('overview');
-assert.equal(_reproNav.selected,'result');
-assert.deepEqual(_reproNav.expanded,[]);
-assert.equal(_reproViewNext,'fit');
-assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
-""")
-
-    def test_task_link_reveals_step_without_filtering_peers(self):
-        self.run_client("""
-currentView='reproduction';
-await revealReproStep('input');
-assert.equal(_reproNav.selected,'input');
-assert.deepEqual(_reproNav.expanded,['other','']);
-assert.deepEqual(drawn.steps.map(s=>s.name),['input','result']);
-""")
-
-    def test_reload_normalizes_legacy_filtered_hash(self):
-        self.run_client("""
-var wanted={roots:['analysis'],tier:'required',view:'graph',mode:'upstream',anchor:'result',selected:'result',expanded:[]};
-location.hash='#/analysis?repro='+encodeURIComponent(JSON.stringify(wanted));
-initRouter();
-assert.deepEqual(Object.keys(_reproNav).sort(),['expanded','selected']);
-assert.equal(_reproNav.selected,'result');
-assert.equal(opened,'reproduction');
-assert.ok(location.hash.includes('?repro='));
-""")
-
-    def test_zoom_and_inspector_close_preserve_selection(self):
-        self.run_client("""
-click('select','result');
-click('zoom-in');
-assert.equal(_reproViewport.zoom,1.25);
-assert.equal(_reproViewport.x,-100);
-assert.equal(transformed,1);
-click('close-detail');
-assert.equal(_reproInspectorClosed,true);
-assert.equal(_reproSelected,'result');
-click('select','result');
-assert.equal(_reproInspectorClosed,false);
-""")

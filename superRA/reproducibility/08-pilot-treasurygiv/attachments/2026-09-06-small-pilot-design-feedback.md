@@ -33,7 +33,7 @@ rebuilt; and a deliberately altered share failed the numerical check. All tempor
 were restored, the boundary input hash was unchanged, and final status reported both steps fresh.
 
 **1. Put each declaration at the smallest useful scope.** The
-[graph-authoring reference](../../../../skills/reproducibility/references/graph-authoring.md)
+`graph-authoring.md` reference (now [designing-the-graph.md](../../../../skills/reproducibility/references/designing-the-graph.md))
 currently says to root every movable path in a config variable. Preserve portable aliases for
 actual shared roots, but explicitly permit stable repo-relative boundary inputs in the task,
 including untracked inputs. Keep artifact filenames, run selection, dependency edges, and
@@ -78,8 +78,8 @@ full-pipeline pilot and this small adoption test serve different purposes and sh
 to invoke independently.
 
 The immediate changes belong in
-[graph-authoring](../../../../skills/reproducibility/references/graph-authoring.md),
-[rerun-model](../../../../skills/reproducibility/references/rerun-model.md), and the
+`graph-authoring.md` (now [designing-the-graph.md](../../../../skills/reproducibility/references/designing-the-graph.md)),
+`rerun-model.md` (now [diagnosing.md](../../../../skills/reproducibility/references/diagnosing.md)), and the
 [skill's reference routing](../../../../skills/reproducibility/SKILL.md).
 The current schema already supports explicit dependencies, shared runners, and simple root
 variables. Consider task-local variables, resolver timing diagnostics, or resolving several roots

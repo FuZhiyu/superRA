@@ -23,8 +23,10 @@ import hashlib
 import importlib.resources as resources
 import ipaddress
 import json
+import mimetypes
 import os
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -52,7 +54,9 @@ from _repro_state import (
     ReproStateError,
     compute_status,
     runner_paths,
+    select_steps,
 )
+from _repro_acceptance import lock_holder
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
@@ -1210,6 +1214,7 @@ async def index(request: Request):
         wt_id=wt_id,
         doc_mode=DOC_MODE,
         local_open=_local_open_enabled(),
+        repro_actions=_repro_actions_enabled(),
         search_index=_build_search_index(state.root_task, all_tasks),
     )
     return HTMLResponse(content=html)
@@ -1480,7 +1485,7 @@ def _repro_status_payload(state: WorktreeState) -> dict:
     graph = _repro_graph(state)
     paths = runner_paths(project_root)
     try:
-        report = compute_status(graph, paths, upstream=True)
+        report = compute_status(graph, paths, upstream=True, live_build=lock_holder(paths))
         report.selected = {e.step.name for e in report.entries}
     except ReproStateError as exc:
         summary = {name: 0 for name in STATUSES}
@@ -1524,6 +1529,9 @@ async def repro_status(request: Request):
 
 # --- Route: GET /files/{path} ----------------------------------------------
 
+FILES_SANDBOX = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
+
+
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
@@ -1538,7 +1546,11 @@ async def serve_file(path: str, request: Request):
     if not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(str(resolved))
+    # A project page that runs scripts gets an opaque origin, so it cannot pass
+    # the same-origin gate of the routes that start processes or write files.
+    media_type = mimetypes.guess_type(resolved.name)[0] or ""
+    renders = media_type == "text/html" or media_type.endswith("xml")  # HTML, SVG, XHTML, any XML
+    return FileResponse(str(resolved), headers={"Content-Security-Policy": FILES_SANDBOX} if renders else None)
 
 
 # --- Route: POST /api/open -------------------------------------------------
@@ -1570,12 +1582,43 @@ def _is_loopback_authority(authority: str) -> bool:
     and ``Sec-Fetch-Site`` checks both pass), but it still sends its own name in
     ``Host``.
     """
+    return _is_loopback_host(_authority_host(authority))
+
+
+def _authority_host(authority: str) -> str:
+    """The host of a ``Host`` header, without its port or an IPv6 literal's brackets."""
     host = (authority or "").strip()
     if host.startswith("["):
         host = host.partition("]")[0].lstrip("[")
     elif host.count(":") == 1:
         host = host.rpartition(":")[0]
-    return _is_loopback_host(host)
+    return host
+
+
+async def _same_origin_json(request: Request, trusted_authority) -> dict:
+    """The JSON object body of a same-origin request, or the refusal.
+
+    Requiring ``application/json`` forces a preflight on any cross-origin
+    ``fetch``, which fails because no CORS middleware is installed; the
+    ``Sec-Fetch-Site`` check closes the simple-form-POST path that skips the
+    preflight; *trusted_authority* on the ``Host`` header closes DNS rebinding,
+    which defeats both by making the attacker page genuinely same-origin.
+    """
+    if not trusted_authority(request.headers.get("host", "")):
+        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if content_type != "application/json":
+        raise HTTPException(status_code=415, detail="Expected application/json")
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request refused")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object")
+    return body
 
 
 def _local_open_enabled() -> bool:
@@ -1637,34 +1680,15 @@ async def open_local_path(request: Request):
     JSON body passes through no decoding layer the way a URL path does.
 
     CSRF: the route starts processes, so it accepts only same-origin JSON from a
-    loopback authority.  Requiring ``application/json`` forces a preflight on any
-    cross-origin ``fetch`` — no CORS middleware is installed, so that preflight
-    fails — the ``Sec-Fetch-Site`` check closes the simple-form-POST path that
-    would otherwise skip the preflight, and the ``Host`` check closes DNS
-    rebinding, which defeats both of those by making the attacker page genuinely
-    same-origin.  No check needs a token.  The gate is scoped to this route rather
-    than app-wide because a legitimate off-loopback ``--host`` bind must keep
-    serving the read and comment routes, and this route is already off in that
-    case.
+    loopback authority (``_same_origin_json``).  No check needs a token.  The gate
+    is scoped to this route rather than app-wide because a legitimate off-loopback
+    ``--host`` bind must keep serving the read and comment routes, and this route
+    is already off in that case.
     """
     if not _local_open_enabled():
         raise HTTPException(status_code=403, detail="Local open is disabled on this server")
 
-    if not _is_loopback_authority(request.headers.get("host", "")):
-        raise HTTPException(status_code=403, detail="Untrusted Host header")
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type != "application/json":
-        raise HTTPException(status_code=415, detail="Expected application/json")
-    fetch_site = request.headers.get("sec-fetch-site")
-    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403, detail="Cross-site request refused")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Malformed JSON body")
-    if not isinstance(body, dict):
-        raise HTTPException(status_code=400, detail="Expected a JSON object")
+    body = await _same_origin_json(request, _is_loopback_authority)
 
     rel = body.get("path")
     target = body.get("target") or "native"
@@ -1691,6 +1715,299 @@ async def open_local_path(request: Request):
     else:
         await asyncio.to_thread(_open_native_sync, resolved)
     return {"status": "opened", "target": target}
+
+
+# --- Routes: /api/repro/build and /api/repro/explain -----------------------
+#
+# The page runs `superra repro build` for one card.  The server spawns the
+# runner as its own process group in the page's worktree, so the build outlives
+# this server, and records the job beside the runner's state.  The mutation lock
+# the runner holds is the truth for "a build is running"; the job file only says
+# which build the page started and how it ended.
+
+BUILD_JOB_FILENAME = "dashboard-build.json"
+BUILD_LOG_FILENAME = "dashboard-build.log"
+BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
+# A just-spawned runner has not taken the lock yet; trust its live pid this long.
+BUILD_STARTUP_GRACE = 30.0
+BUILD_LOG_TAIL_LINES = 40
+_build_start_lock = threading.Lock()
+
+
+def _repro_actions_enabled() -> bool:
+    """True when the page may build: a live server outside doc mode.  Unlike local
+    open, an off-loopback ``--host`` bind keeps it: the operator chose that bind."""
+    return not DOC_MODE
+
+
+def _machine_names() -> set[str]:
+    """This machine's own names, plus any the operator lists in ``SUPERRA_DASHBOARD_HOSTS``."""
+    names = {socket.gethostname(), socket.getfqdn()}
+    names |= {n.split(".")[0] for n in list(names)}
+    names |= {n + ".local" for n in list(names) if "." not in n}
+    names |= set(os.environ.get(BUILD_HOSTS_ENV_VAR, "").split(","))
+    return {n.strip().lower().rstrip(".") for n in names if n.strip()}
+
+
+def _is_trusted_authority(authority: str) -> bool:
+    """True when a ``Host`` header names this machine: loopback, an IP literal, or
+    one of its own names.  A rebinding page sends its own domain, which is none of
+    these, and an IP literal involves no DNS to rebind."""
+    host = _authority_host(authority).lower().rstrip(".")
+    if not host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return host == "localhost" or host in _machine_names()
+
+
+def _build_args(target: str, upstream: bool, force: bool) -> list[str]:
+    """`build` arguments; `--` keeps a target from ever parsing as a flag."""
+    return (["--upstream"] if upstream else []) + (["--force"] if force else []) + ["--", target]
+
+
+def _validate_build_target(graph, target) -> str:
+    """*target* when it selects steps of the current graph, else a 400."""
+    if (not isinstance(target, str) or not target or target != target.strip()
+            or target.startswith("-") or any(ord(c) < 32 for c in target)):
+        raise HTTPException(status_code=400, detail="Invalid build target")
+    try:
+        names, unknown = select_steps(graph, [target])
+    except ReproStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if unknown or not names:
+        raise HTTPException(status_code=400, detail=f"No step or task matches {target}")
+    return target
+
+
+def _login_env(project_root: Path) -> dict[str, str]:
+    """The researcher's login-shell environment, so a build sees the toolchain
+    their terminal does (Julia, conda, ``PATH``) rather than this server's,
+    which is often an agent hook's.  Falls back to this process's environment."""
+    shell = os.environ.get("SHELL") or "/bin/sh"
+    marker = b"\0__SUPERRA_ENV__\0"
+    env = dict(os.environ)
+    try:
+        out = subprocess.run(  # noqa: S603 - argv form; the command text is constant
+            [shell, "-l", "-i", "-c", "printf '\\0__SUPERRA_ENV__\\0'; env -0"],
+            stdin=subprocess.DEVNULL, capture_output=True, timeout=30, check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        out = b""
+    _, found, tail = out.partition(marker)
+    if found:
+        env = {}
+        for item in tail.split(b"\0"):
+            key, eq, value = item.partition(b"=")
+            if eq and key:
+                env[key.decode(errors="replace")] = value.decode(errors="replace")
+    env["PWD"] = str(project_root)
+    env.pop("OLDPWD", None)
+    env["PYTHONUNBUFFERED"] = "1"  # the log keeps the runner's line order as it runs
+    return env
+
+
+def _job_file(paths) -> Path:
+    return paths.state_dir / BUILD_JOB_FILENAME
+
+
+def _read_job(paths) -> dict | None:
+    try:
+        job = json.loads(_job_file(paths).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return job if isinstance(job, dict) else None
+
+
+def _write_job(paths, job: dict) -> None:
+    from _repro_acceptance import atomic_json
+    atomic_json(_job_file(paths), job)
+
+
+def _pid_alive(pid) -> bool:
+    try:
+        os.kill(int(pid), 0)
+    except (OSError, ValueError, TypeError):
+        return False
+    return True
+
+
+def _job_alive(job: dict | None, holder: int | None) -> bool:
+    """True while the page's job is the build running here: its process group holds
+    the mutation lock, or it was spawned moments ago and has not taken it yet.
+    A recycled pid fails the group check."""
+    if job is None or "returncode" in job or not _pid_alive(job.get("pid")):
+        return False
+    if holder:
+        try:
+            return os.getpgid(holder) == job["pid"]
+        except OSError:
+            return False
+    return time.time() - job.get("started_at", 0) < BUILD_STARTUP_GRACE
+
+
+def _reap_build(proc: subprocess.Popen, paths, job: dict) -> None:
+    returncode = proc.wait()
+    current = _read_job(paths)
+    if current is not None and current.get("pid") == job["pid"]:
+        _write_job(paths, dict(current, returncode=returncode, ended_at=time.time()))
+
+
+def _start_build_sync(state: WorktreeState, target: str, upstream: bool, force: bool) -> dict:
+    """Spawn one `superra repro build` for the page's worktree; refuse a second."""
+    from _repro_state import ensure_state_dir
+    project_root = Path(state.project_root)
+    paths = runner_paths(project_root)
+    args = _build_args(target, upstream, force)
+    with _build_start_lock:
+        holder = lock_holder(paths)
+        if holder is not None or _job_alive(_read_job(paths), holder):
+            raise ReproStateError("another reproduction build or acceptance mutation is running")
+        ensure_state_dir(paths)
+        paths.logs_dir.mkdir(parents=True, exist_ok=True)
+        argv = [sys.executable, str(Path(__file__).with_name("repro_run.py")),
+                "--root", str(state.plan_root), "build", *args]
+        with (paths.logs_dir / BUILD_LOG_FILENAME).open("wb") as log:
+            proc = subprocess.Popen(  # noqa: S603 - argv form, shell=False
+                argv, cwd=project_root, env=_login_env(project_root),
+                stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        job = {
+            "pid": proc.pid,
+            "target": target,
+            "upstream": upstream,
+            "force": force,
+            "command": "superra repro build " + " ".join(
+                a if a.startswith("--") else shlex.quote(a) for a in args if a != "--"),
+            "started_at": time.time(),
+            "log": f"{paths.state_dir.name}/logs/{BUILD_LOG_FILENAME}",
+        }
+        _write_job(paths, job)
+    threading.Thread(target=_reap_build, args=(proc, paths, job), daemon=True).start()
+    return job
+
+
+def _build_summary(log_text: str) -> str:
+    """The line of a build log that says how it ended."""
+    lines = [line.strip() for line in log_text.splitlines() if line.strip()]
+    for line in reversed(lines):
+        if (line.startswith(("Error:", "Interrupted", "Nothing to execute", "No steps registered"))
+                or re.match(r"\d+ step\(s\): ", line)):
+            return line
+    return lines[-1] if lines else ""
+
+
+def _build_state_sync(state: WorktreeState) -> dict:
+    """Whether a build is running here, the page's last build, and the executing steps."""
+    paths = runner_paths(Path(state.project_root))
+    holder = lock_holder(paths)
+    job = _read_job(paths)
+    running = holder is not None
+    if job is not None:
+        job["alive"] = _job_alive(job, holder)
+        running = running or job["alive"]
+        tail = _log_tail(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES)
+        job["summary"] = "" if job["alive"] else _build_summary(tail)
+        job["log_tail"] = tail
+    steps = []
+    if running and paths.runs_dir.is_dir():
+        for record_file in sorted(paths.runs_dir.glob("*.json")):
+            try:
+                record = json.loads(record_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if (isinstance(record, dict) and record.get("outcome") in ("running", "pending")
+                    and holder and record.get("pid") == holder):
+                steps.append({"name": record_file.stem, "started_at": record.get("started_at")})
+    return {"enabled": _repro_actions_enabled(), "running": running, "job": job, "steps": steps}
+
+
+def _stop_build_sync(state: WorktreeState) -> dict:
+    paths = runner_paths(Path(state.project_root))
+    job = _read_job(paths)
+    if not _job_alive(job, lock_holder(paths)):
+        raise HTTPException(status_code=409, detail="No build started from the dashboard is running")
+    try:
+        os.killpg(int(job["pid"]), signal.SIGTERM)  # its own group: start_new_session
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=f"Could not stop the build: {exc}")
+    return {"status": "stopping", "pid": job["pid"]}
+
+
+@app.get("/api/repro/build")
+async def repro_build_state(request: Request):
+    """The worktree's running build, if any, and the page's last build."""
+    state = await resolve_worktree(request)
+    return await asyncio.to_thread(_build_state_sync, state)
+
+
+@app.post("/api/repro/build")
+async def repro_build(request: Request):
+    """Start `superra repro build <target> [--upstream] [--force]` in the page's worktree.
+
+    The route executes the commands the tree declares, so it takes only a
+    same-origin JSON request from a ``Host`` naming this machine, and only a
+    target present in the current graph, passed as one argv element after ``--``.
+    """
+    if not _repro_actions_enabled():
+        raise HTTPException(status_code=403, detail="Builds are disabled on this server")
+    body = await _same_origin_json(request, _is_trusted_authority)
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    graph = await asyncio.to_thread(_repro_graph, state)
+    target = _validate_build_target(graph, body.get("target"))
+    try:
+        return await asyncio.to_thread(
+            _start_build_sync, state, target, body.get("upstream") is True, body.get("force") is True)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@app.post("/api/repro/build/stop")
+async def repro_build_stop(request: Request):
+    """Stop the build this page started; the runner records its stopped steps as failed."""
+    if not _repro_actions_enabled():
+        raise HTTPException(status_code=403, detail="Builds are disabled on this server")
+    await _same_origin_json(request, _is_trusted_authority)
+    state = await resolve_worktree(request)
+    return await asyncio.to_thread(_stop_build_sync, state)
+
+
+def _repro_explain_sync(state: WorktreeState, target: str, diff: bool = False) -> dict:
+    from _repro_provenance import explain, resolve_target, target_ref
+    from _repro_state import HashCache
+    project_root = Path(state.project_root)
+    graph = _repro_graph(state)
+    paths = runner_paths(project_root)
+    try:
+        kind, value = resolve_target(graph, target, project_root)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if kind == "path":
+        raise HTTPException(status_code=400, detail="Explain takes a task or step")
+    names = [value] if kind == "step" else value[1]
+    cache = HashCache(paths.cache_file)
+    try:
+        report = compute_status(graph, paths, targets=[target_ref(graph.step(n)) for n in names],
+                                cache=cache, upstream=True, live_build=lock_holder(paths))
+        result = explain(report, paths, cache, kind, value, full_diff=diff, plan_name=state.plan_root.name)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    cache.flush()
+    return result
+
+
+@app.get("/api/repro/explain")
+async def repro_explain(request: Request, target: str, diff: bool = False):
+    """`superra repro explain <target> --json [--diff]` for a task or step: why it is not fresh."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_explain_sync, state, target, diff)
 
 
 # --- Comment routes --------------------------------------------------------
@@ -2690,7 +3007,8 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
 
     Binds *host*, defaulting to loopback (``127.0.0.1``).  The server is
     unauthenticated and exposes the project's files (``/files/{path}``), the
-    full task tree (``/export``), and disk-writing comment routes; with
+    full task tree (``/export``), disk-writing comment routes, and the build
+    route that runs the tree's declared commands; with
     background-by-default serving this is a long-lived ambient surface, so it
     must not be reachable off-host unless the operator deliberately opts in via
     ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).  Records the
@@ -3252,7 +3570,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="127.0.0.1",
         help=(
             "Interface to bind (default: 127.0.0.1, loopback only). "
-            "The server is unauthenticated and serves project files; pass "
+            "The server is unauthenticated, serves project files, and runs the "
+            "tree's builds; pass "
             "--host 0.0.0.0 only to deliberately expose it on a trusted LAN."
         ),
     )

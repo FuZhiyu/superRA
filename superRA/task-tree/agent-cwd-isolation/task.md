@@ -47,9 +47,9 @@ The decision is `ask`, not `deny`: a researcher who deliberately pointed a sessi
 
 `deny_reason()` is the whole decision, and the trace harness registers it as a third in-process `PreToolUse` hook ([`confinement_hook`](../../../tests/harness-instruction-following/sdk_load_harness.py#L167)) that hard-denies on it, since a traced session has no approver.
 
-### The reproduction runs in CI, with no credentials
+### The gate's tests run with no credentials
 
-[tests/hooks/test-guard-foreign-checkout.sh](../../../tests/hooks/test-guard-foreign-checkout.sh) builds two disposable git checkouts under `mktemp` and replays the escape end to end: a session pointed at one checkout writes `## Results` into the other's `task.md` and commits that checkout's uncommitted `in-flight.txt`. Part 1 asserts the pre-existing surfaces all accept it — `guard-task-approval` allows the foreign write and `task_hook.py` reconciles the foreign tree with no complaint — which is why the escape was visible only in `git log`. Parts 2 and 3 assert the gate stops both mutations — through the `cd` chain, subshell, brace group, `bash -c`, `git -C`, and `--git-dir`/`--work-tree` forms — and stays out of the way of a session's own tree, a sibling worktree including its subshell form, non-task files, foreign non-task-tree git, and read-only git. 24 checks, all passing. [test_trace_confinement.py](../../../tests/harness-instruction-following/test_trace_confinement.py) covers the harness callback with no SDK import and no model call.
+[tests/hooks/test-guard-foreign-checkout.sh](../../../tests/hooks/test-guard-foreign-checkout.sh) builds two disposable git checkouts under `mktemp`. Part 1 asserts the gate stops both mutations — a foreign `task.md` write and a commit of the foreign checkout's uncommitted `in-flight.txt` — through the `cd` chain, subshell, brace group, `bash -c`, `git -C`, and `--git-dir`/`--work-tree` forms. Part 2 asserts it stays out of the way of a session's own tree, a sibling worktree, non-task files, foreign non-task-tree git, and read-only git. 18 checks, all passing. [test_trace_confinement.py](../../../tests/harness-instruction-following/test_trace_confinement.py) covers the harness callback with no SDK import and no model call.
 
 ### Boundaries
 

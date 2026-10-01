@@ -21,6 +21,9 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 - **Reproduction sections register producers and checks.** A task's `## Reproduction` section declares steps with their `deps` and `outs`; `superra repro build` reruns the steps whose inputs changed and records each successful build in the committed `repro-lock.json`.
 - **The dashboard shows how results are produced:** reproduction steps, freshness, file dependencies, and task ownership. Workflow skills register and verify retained results through the `reproducibility` skill.
+- **The `onboarding` skill brings an existing project into superRA,** even one without git. The agent writes a task tree and a reproduction graph for the work already done, touching nothing outside `superRA/` until the researcher approves. It then offers git, with a `.gitignore` that keeps data out, and an optional rerun in an isolated worktree that checks each result against its original before merging back.
+  - Session start and `superplan` offer onboarding to any project with code, data, or results but no `superRA/`. A legacy `PLAN.md` project enters the same skill, which runs the migration.
+  - `superra task create` creates the first task in a `superRA/` that holds only the wrapper.
 
 ### Changed
 
@@ -29,7 +32,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 - **superRA runs builds itself; pytask is no longer a dependency.** `repro build` runs steps as subprocesses in dependency order, `-j N` at a time. A failed step skips its descendants; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed.
   - `status` and `build` decide freshness by one rule: SHA-256 content hashes with no size cap, and a rerun that regenerates identical bytes leaves its consumers fresh.
   - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
-  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on this repository's 14 steps, against about 0.8 s under pytask.
+  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on a 14-step project, against about 0.8 s under pytask.
 - **The lock holds one line per step.** `repro-lock.json` (version 2) writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and can no longer mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
 - **Task-scoped builds by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. Builds use saved inputs outside the selection. `--upstream` adds the producer chain and `--force` reruns the selection. `--force-all` is retired.
   - A scoped `status` exits 3 and names the producers behind the selection that are not fresh (`behind` in `--json`).
@@ -58,7 +61,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 #### Agent workflow
 
-- **The `reproducibility` skill routes by situation.** `SKILL.md` defines the model — producer chain, saved input, external input, and readiness versus freshness — and routes each situation to one reference: designing the graph, claiming a result, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption. The claim gate has its own reference, `claiming-results.md`.
+- **The `reproducibility` skill carries the everyday path and routes the rest.** `SKILL.md` defines the model (producer chain, saved input, external input), lists the core commands, and holds the gate for recording a result. Each other situation loads one reference: designing the graph, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption.
 - **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
 - **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps the stale rule left stale and reported to the researcher. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
 - **Protect asks which inputs are external;** it no longer selects completion targets. Planners name each artifact and its planned script in the producing task's `## Details`; the implementer registers the step.

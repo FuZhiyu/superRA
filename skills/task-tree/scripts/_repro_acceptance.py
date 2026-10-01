@@ -56,15 +56,38 @@ def mutation_lock(paths):
     import fcntl
     paths.state_dir.mkdir(parents=True, exist_ok=True)
     dropbox_ignore(paths.state_dir)
-    with (paths.state_dir / 'mutation.lock').open('a') as handle:
+    with (paths.state_dir / 'mutation.lock').open('a+') as handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ReproStateError('another reproduction build or acceptance mutation is running') from None
         try:
+            handle.truncate(0)
+            handle.write(str(os.getpid()))
+            handle.flush()
             yield
         finally:
+            handle.truncate(0)
+            handle.flush()
             fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def lock_holder(paths) -> int | None:
+    """The pid holding the mutation lock — 0 when held but unrecorded — or None when
+    free. Never creates state."""
+    import fcntl
+    try:
+        handle = (paths.state_dir / 'mutation.lock').open('r')
+    except OSError:
+        return None
+    with handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            text = handle.read().strip()
+            return int(text) if text.isdigit() else 0
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        return None
 
 
 def read_json(path, default):
