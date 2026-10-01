@@ -54,7 +54,7 @@ Estimated CAPM and FF3 for all 25 size × book-to-market portfolios on the basel
 
 **Outputs:**
 - [grs_results.csv](../data/grs_results.csv) — the two-model GRS table (committed; tiny, useful for the writeup).
-- `data/regression_estimates.parquet` — full per-portfolio estimate table, 50 portfolio-model rows (gitignored as intermediate, per [../.gitignore](../.gitignore); rebuilt by the step).
+- `data/regression_estimates.parquet` — full per-portfolio estimate table, 50 portfolio-model rows (committed, so a clean checkout reads the step `fresh`).
 - Figures in [attachments/](attachments/).
 
 ### Headline result

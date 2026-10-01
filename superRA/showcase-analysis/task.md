@@ -24,7 +24,7 @@ This is a documentation artifact built from fully public data — no vendor or p
 
 ### Context
 
-- **Data inventory (researcher-approved 2026-06-17).** All series are public, from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html), downloaded by a committed script; raw files are gitignored and regenerated on demand.
+- **Data inventory (researcher-approved 2026-06-17).** All series are public, from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html), downloaded by a committed script. The extracted CSVs of the 202608 release are committed and frozen; rerunning the script is a deliberate data refresh.
 
   | Series | File | Columns | Span | Notes |
   |---|---|---|---|---|
@@ -35,8 +35,8 @@ This is a documentation artifact built from fully public data — no vendor or p
 
 ### Constraints
 
-- Public data only. The download script and the committed figures are safe to commit; raw CSVs and any intermediate `.parquet` are gitignored and rebuilt by the pipeline.
-- Every output rebuilds through the reproduction graph, `superra repro build showcase-analysis`: download → build panel → estimate/test/visualize, then the headline check. Register a step in the owning task whenever a script is added.
+- Public data only. The download script, the raw CSVs, the intermediate `.parquet` files, and the figures are all safe to commit, and all are committed so a clean checkout reads every step `fresh`.
+- Every output rebuilds from the committed raw CSVs through the reproduction graph, `superra repro build showcase-analysis`: build panel → estimate/test/visualize, then the headline check. Register a step in the owning task whenever a script is added.
 - This tree is the showcase artifact and is exported with the **full task-tracker chrome** (status pills, rollup, DAG, kanban) — non-doc-mode — by the docs build, so each task's `## Results` should read well as a standalone, figure-bearing record.
 
 ## Details
@@ -45,7 +45,7 @@ This is a documentation artifact built from fully public data — no vendor or p
 
 ## Results
 
-The study ran end-to-end through the workflow and reproduces from source through four registered steps: [download](01-data/task.md#step-download) → [build-panel](01-data/task.md#step-build-panel) → [estimate-test-plot](02-analysis/task.md#step-estimate-test-plot) → [check-grs-headline](02-analysis/task.md#step-check-grs-headline). `superra repro status showcase-analysis` shows all four `fresh` against [repro-lock.json](../../repro-lock.json); a cold `superra repro build showcase-analysis` takes about 30 s, most of it `uv` resolving script environments.
+The study ran end-to-end through the workflow and reproduces from the committed 202608 Ken French CSVs through three registered steps: [build-panel](01-data/task.md#step-build-panel) → [estimate-test-plot](02-analysis/task.md#step-estimate-test-plot) → [check-grs-headline](02-analysis/task.md#step-check-grs-headline). `superra repro status showcase-analysis` shows all three `fresh` against [repro-lock.json](../../repro-lock.json), including on a clean checkout.
 
 **Headline:** adding SMB and HML to the market factor halves the average pricing error on the 25 size × book-to-market portfolios (mean $|\alpha|$ 0.197 → 0.087 %/month), yet both models are still rejected by the GRS joint test over 1963-07 → 2026-08 — CAPM $F(25,732)=4.20$ and FF3 $F(25,730)=3.64$ — the canonical textbook result. FF3 prices most of the cross-section but fails on the precisely-estimated small-growth corner (`SMALL LoBM` $\alpha=-0.46$, $t=-5.1$).
 
