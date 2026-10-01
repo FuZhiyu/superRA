@@ -523,6 +523,53 @@ def test_a_failing_step_stops_its_descendants_and_exits_non_zero(project):
     assert project.states(*CHAIN)["check-b"] == "stale"
 
 
+TASK_JOIN = """\
+---
+title: "Join"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Join a slow and a failing branch.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: a-slow
+    cmd: sleep 1 && mkdir -p output && echo s > output/slow.txt
+    outs:
+      - "${OUT}/slow.txt"
+  - name: b-fail
+    cmd: exit 3
+    outs:
+      - "${OUT}/bad.txt"
+  - name: join
+    cmd: cat output/slow.txt output/bad.txt > output/join.txt
+    deps:
+      - "${OUT}/slow.txt"
+      - "${OUT}/bad.txt"
+    outs:
+      - "${OUT}/join.txt"
+```
+"""
+
+
+def test_a_failed_parent_skips_its_child_while_a_sibling_parent_runs(tmp_path, capsys):
+    proj = Project(tmp_path / "join")
+    proj.write("superRA/config.yaml", CONFIG)
+    proj.write("superRA/01-join/task.md", TASK_JOIN)
+
+    # The failure lands while a-slow, the parent listed first, is still running.
+    assert proj.run("build", ".", "-j", "2") == 1
+    out = capsys.readouterr().out
+    assert "1 executed, 1 failed, 1 skipped" in out
+    states = proj.states()
+    assert states["a-slow"] == "fresh" and states["b-fail"] == "failed"
+
+
 @pytest.mark.parametrize("flag,expected", [
     (("--force",), {"check-b"}),
     (("--upstream", "--force"), {"build-a", "build-b", "check-b"}),
