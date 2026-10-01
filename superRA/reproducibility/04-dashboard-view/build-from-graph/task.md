@@ -1,6 +1,6 @@
 ---
 title: "Build and Diagnose Steps from the Graph"
-status: implemented
+status: revise
 ---
 
 ## Objective
@@ -91,3 +91,21 @@ Every card in the Reproduction view can now build, cost, and explain itself. 1,0
 - **Status probing takes a shared lock for microseconds.** A CLI build starting in that window is refused with the usual "another reproduction build" message and can simply be rerun.
 - **A build whose server restarted mid-run** shows no "Last build" line, because no process recorded its exit code. Its states still refresh from the lock.
 - **On a narrow screen** the Build menu can extend below the short graph stage.
+
+## Review Notes
+
+Tier: thorough. Focus: security, correctness. Suite at `59993056`: 1,059 passed, 9 skipped.
+
+1. **[BLOCKING] Any holder of the mutation lock turns every interrupted step into "building now", and `status` then reports it `fresh`.**
+   - **Problem.** `live_build` is one flag for the whole worktree. [_repro_state.py:890-894](../../../../skills/task-tree/scripts/_repro_state.py#L890-L894) treats every run record whose outcome is `running` or `pending` as executing, so a step left interrupted by an earlier crashed or killed build loses its `failed` verdict whenever another build, `accept`, or `revoke` holds the lock. It keeps its lock-compared state instead.
+     - Reproduced on the `repro_plan` fixture: build `fetch-crsp` to fresh, write its run record as `{"outcome": "running", "started_at": 1.0}`, then hold `mutation.lock` as an unrelated build would. `/api/repro/status` moves from `failed · previous execution was interrupted; rerun required` to `fresh · building now · running: true`. `GET /api/repro/build` lists the step under `steps`, so the card pulses "building" with an elapsed time measured from that old start.
+     - The CLI shares the fault through [repro_run.py:757-759](../../../../skills/task-tree/scripts/repro_run.py#L757-L759): an agent that checks `superra repro status` during a concurrent build sees a step that still needs a rerun as `fresh`.
+     - [commands.md](../../../../skills/task-tree/references/commands.md) says only "a step it is executing" reads `building now`. The code does not match that claim.
+     - The build's own decisions stay intact. `_decide` ([repro_run.py:117](../../../../skills/task-tree/scripts/repro_run.py#L117)) and the forced set in `run_build` ([repro_run.py:382](../../../../skills/task-tree/scripts/repro_run.py#L382)) do not pass `live_build`.
+   - **Fix.** Tie each in-flight record to the build that owns it. For example, have the runner write its pid, or a build id kept beside the lock, into the `running` record at [repro_run.py:175](../../../../skills/task-tree/scripts/repro_run.py#L175), and treat a record as live only when that owner still holds the lock. Apply the same test in `_build_state_sync`'s `steps` list. Add a test that holds the lock with a stale `running` record present and asserts `failed`.
+
+2. **[ADVISORY] Stop can signal an unrelated process group after pid reuse.** [`_stop_build_sync`](../../../../skills/task-tree/scripts/plan_dashboard.py#L1908-L1916) calls `killpg` on the job file's pid whenever that pid is alive and the job has no `returncode`. A job whose runner exited while the server was down never gets a `returncode`, so a recycled pid passes the check. The UI shows Stop only when `job.alive`, which also requires the lock ([plan_dashboard.py:1891](../../../../skills/task-tree/scripts/plan_dashboard.py#L1891)), but a CLI build holding the lock satisfies that requirement too. Fix: in the route, require the same `alive` test, and check that the pid is still the runner, for example `os.getpgid(pid) == pid` together with a start time recorded in the job.
+
+3. **[ADVISORY] A same-origin page is not necessarily a page the dashboard wrote.** `/files/{path}` serves any project file with its inferred type ([plan_dashboard.py:1545](../../../../skills/task-tree/scripts/plan_dashboard.py#L1545)). An HTML file in the project, such as a rendered report or a downloaded page, therefore runs on the dashboard origin and passes `_same_origin_json`. It can then start `--force` rebuilds of any declared step. It cannot run commands of its own choosing. The comment routes and `/api/open` already carry this exposure; the build route raises the stakes. Fix: serve `/files` responses with `Content-Security-Policy: sandbox`, which gives HTML an opaque origin.
+
+4. **[ADVISORY] Three status readers still report an executing step as interrupted.** CLI `explain` ([repro_run.py:624](../../../../skills/task-tree/scripts/repro_run.py#L624)), `status`'s `behind` list ([repro_run.py:610](../../../../skills/task-tree/scripts/repro_run.py#L610)), and `task read`'s step states ([_task_snapshot.py:66](../../../../skills/task-tree/scripts/_task_snapshot.py#L66)) do not pass `live_build`. During a build they print `failed · previous execution was interrupted` while the dashboard and `status` print `building now`. Fix: pass the same flag once finding 1 makes it per-record.
