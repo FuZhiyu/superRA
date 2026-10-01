@@ -1,6 +1,6 @@
 ---
 title: "superRA"
-status: implemented
+status: approved
 depends_on: []
 ---
 
