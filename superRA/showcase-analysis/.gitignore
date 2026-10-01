@@ -1,9 +1,3 @@
-# Raw Ken French downloads (zips + extracted CSVs) — public, regenerated on demand
-data/raw/
-
-# Intermediate panel — rebuilt by analysis/01_build_panel.py
-data/ff_panel.parquet
-
-# Intermediate per-portfolio estimate table — rebuilt by analysis/02_analysis.py.
-# The small GRS results table (data/grs_results.csv) IS committed for the writeup.
-data/regression_estimates.parquet
+# Zips fetched by data/download.py (a manual refresh helper). The extracted CSVs
+# in data/raw/ are the committed, frozen input; the zips are not kept.
+data/raw/*.zip

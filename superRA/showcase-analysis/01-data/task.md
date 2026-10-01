@@ -25,20 +25,18 @@ Apply the Describe gate before and after each transformation: report the panel s
 
 ## Results
 
-Built the baseline monthly panel end-to-end from public Ken French data. Two registered steps produce it, [download](#step-download) → [build-panel](#step-build-panel); `superra repro build showcase-analysis/01-data` reruns whichever is not `fresh`, and both are `fresh` in [repro-lock.json](../../../repro-lock.json).
+Built the baseline monthly panel end-to-end from public Ken French data. The registered step [build-panel](#step-build-panel) produces it from the committed raw CSVs and is `fresh` in [repro-lock.json](../../../repro-lock.json).
 
 **Scripts (committed):**
-- [../data/download.py](../data/download.py) — downloads `F-F_Research_Data_Factors_CSV.zip` and `25_Portfolios_5x5_CSV.zip` from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) and extracts the CSVs into `data/raw/`.
 - [../analysis/01_build_panel.py](../analysis/01_build_panel.py) — parses, merges, constructs excess returns, restricts the sample, and writes the panel. Jupytext percent format.
+- [../data/download.py](../data/download.py) — refresh helper, not a registered step. Downloads `F-F_Research_Data_Factors_CSV.zip` and `25_Portfolios_5x5_CSV.zip` from the [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) and extracts the CSVs into `data/raw/`; the zips are gitignored via [../.gitignore](../.gitignore).
 
-**Gitignored (rebuilt by the graph):** `data/raw/` (zips + CSVs) and `data/ff_panel.parquet`, via [../.gitignore](../.gitignore).
+### The input is the frozen 202608 release
 
-### The downloaded CSVs are the download step's outputs
+The two raw CSVs, [F-F_Research_Data_Factors.csv](../data/raw/F-F_Research_Data_Factors.csv) and [25_Portfolios_5x5.csv](../data/raw/25_Portfolios_5x5.csv), are committed and declared as external inputs of `build-panel`. The panel is committed too, so a clean checkout reads the step `fresh` without rebuilding.
 
-The raw CSVs and zips are declared as `outs` of [download](#step-download), not as external inputs, so a checkout without them rebuilds them through the graph.
-
-- **The graph cannot pin the vintage.** The Ken French library serves only the current file, so whenever `download` reruns (its script changed, or `data/raw/` is absent) it fetches the latest vintage. A new vintage changes every downstream number, and the changed [grs_results.csv](../data/grs_results.csv) and figures show up in `git diff`.
-- **Ken French revises history, not only the latest months.** Cutting the 202608 vintage at 2026-04 does not reproduce the 202604-vintage results (CAPM GRS 4.099 against 4.104), so a fixed sample end would not freeze the numbers either.
+- **The data is frozen because the source does not keep old releases.** The Ken French library serves only the current file, and it revises past months: cutting the 202608 release at 2026-04 does not reproduce the 202604-release results (CAPM GRS 4.099 against 4.104).
+- **Refreshing is deliberate.** Running `download.py` replaces the CSVs, which makes `build-panel` and everything downstream stale. Rebuild, then update the recorded numbers.
 
 ### Output panel
 
@@ -90,18 +88,11 @@ No divergences from published magnitudes or expected structure; nothing to flag.
 
 ```yaml
 steps:
-  - name: download
-    runner: uv
-    script: superRA/showcase-analysis/data/download.py
-    outs:
-      - superRA/showcase-analysis/data/raw/F-F_Research_Data_Factors_CSV.zip
-      - superRA/showcase-analysis/data/raw/F-F_Research_Data_Factors.csv
-      - superRA/showcase-analysis/data/raw/25_Portfolios_5x5_CSV.zip
-      - superRA/showcase-analysis/data/raw/25_Portfolios_5x5.csv
   - name: build-panel
     runner: uv
     script: superRA/showcase-analysis/analysis/01_build_panel.py
     deps:
+      # Frozen external input: the committed 202608 Ken French release.
       - superRA/showcase-analysis/data/raw/F-F_Research_Data_Factors.csv
       - superRA/showcase-analysis/data/raw/25_Portfolios_5x5.csv
     outs:
