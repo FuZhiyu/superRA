@@ -31,7 +31,7 @@ From any task or step card in the Reproduction view, the researcher can build it
 - **The client sends a target, never command text.** The server accepts only a task path or step present in the current graph, and passes it as an argv element after `--`, never through a shell string.
 - **An off-loopback `--host` bind keeps the Build controls**, under the same checks: the researcher opts into that bind. Standalone export and doc mode render no Build or explain controls.
 - **Timing, estimate, and explain stay read-only:** on a never-built tree they create no `.superra-repro/` and write nothing to the project, like the existing repro routes.
-- **The state glyph-and-word accessibility and both themes hold** for every new control, per [the parent task's palette results](../task.md#the-state-palette-is-a-status-scale-not-a-series-palette).
+- **The state glyph-and-word accessibility and both themes hold** for every new control, per [the parent task's design decisions](../task.md#design-decisions).
 
 ### Validation
 

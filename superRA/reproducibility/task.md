@@ -6,19 +6,19 @@ depends_on: []
 
 ## Objective
 
-Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](attachments/v05-design.md): one hierarchical dependency model, selective content-based rebuilds, reviewed acceptance as fresh, and task/step dashboard views. Real-project use supplies the compatibility evidence; no pilot task remains.
+Own superRA's reproduction graph under the [dependency and reuse design](attachments/v05-design.md): one hierarchical dependency model, selective content-based rebuilds, reviewed acceptance as fresh, and task/step dashboard views. Real-project use supplies the compatibility evidence.
 
 ### Context
 
-- **Engine: superRA runs the build itself** ([01-engine-freshness](14-review-revisions/01-engine-freshness/task.md)). `superra repro build` walks the selected steps in dependency order, runs each as a subprocess, and runs ready steps on threads under `-j`. `status` and `build` decide freshness by one rule: sha256 content hashes with no size cap, and early cutoff when a rerun regenerates identical bytes.
-- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block.** Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers its steps. Task targets and their producer dependencies define execution and completion scope; [task targets and lifecycle](11-scoped-verification/task-targets-and-lifecycle/task.md) removed the tier system. Project-wide config (variables, runner templates, env deps) lives under a `reproduction:` key in `superRA/config.yaml`. The YAML in both places is a bounded subset the stdlib parser reads. Schema: [01-section-contract](01-section-contract/task.md); compatibility and scoped verification: [11-scoped-verification](11-scoped-verification/task.md).
-- **Dependency contract:** the [0.5 design](attachments/v05-design.md#one-task-dag-combines-both-sources-of-dependency) governs inferred and logical edges, hierarchy, validation, and task readiness. Steps remain the execution units; inferred task prerequisites are never duplicated in frontmatter.
+- **Engine: superRA runs the build itself** ([02-runner](02-runner/task.md)). `superra repro build` walks the selected steps in dependency order, runs each as a subprocess, and runs ready steps on threads under `-j`. `status` and `build` decide freshness by one rule: sha256 content hashes with no size cap, and early cutoff when a rerun regenerates identical bytes.
+- **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block** ([01-section-contract](01-section-contract/task.md)). Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers its steps; task and `task#step` targets select what runs. Project-wide config (variables, runner templates, env deps) lives under a `reproduction:` key in `superRA/config.yaml`. The YAML in both places is a bounded subset the stdlib parser reads.
+- **Dependency contract:** the [0.5 design](attachments/v05-design.md#one-task-dag-combines-both-sources-of-dependency) governs inferred and logical edges, hierarchy, validation, and task readiness. Readiness follows `depends_on` only; file edges between steps order builds and are reported as inputs. Inferred prerequisites are never duplicated in frontmatter.
 - **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
-- **The committed lock `repro-lock.json` keys nodes by logical path.** Each step's entry, one line per step, also records the platform of its last build; `pytask.lock` and `repro-builds.json` from earlier builds are still read until the first build. Lock ids are the variable-form paths (`${OUT}/…`) so they do not embed an author or branch; hashing happens on the paths resolved for the invocation. Root changes invalidate through changed content or resolved commands; equal-content relocation alone preserves freshness.
-- **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The new `reproducibility` utility skill owns the discipline: when to register or retire steps, the hashing model agents must understand, boundary inputs, check steps, graph review, and the Protect / completion duties.
-- **Enforcement:** instructions, a `task check` category, scoped verification before claiming a result, the IMPLEMENT completion gate over every active step, and a PostToolUse reminder hook.
-- **Detection:** agents declare deps/outs in v1; the loader adds Julia `include` closures and configured env deps. A file-open tracer is a postponed follow-up.
-- **Pilots are closed.** The archived [TreasuryGIV pilot](08-pilot-treasurygiv/task.md) keeps the adoption lessons; the BondElasticity migration and the 0.5 compatibility pilot were dropped in favor of real-project use.
+- **Committed records are portable.** `repro-lock.json` keys nodes by logical `${VAR}` path, one line per step, so it embeds no author or branch; acceptance records are one file per step under `repro-acceptance/`. Root changes invalidate through changed content or resolved commands; equal-content relocation alone preserves freshness.
+- **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The `reproducibility` utility skill owns the discipline: when to register or retire steps, the rerun model agents must understand, external inputs, check steps, graph review, the stale rule, and the Protect and completion duties.
+- **Enforcement:** instructions, a `task check` category, the claim gate before recording a result, the completion gate over every step, and a PostToolUse reminder hook.
+- **Detection:** agents declare deps and outs; the loader adds Julia `include` closures and configured env deps. A file-open tracer is a postponed follow-up ([10-trace](10-trace/task.md)).
+- **Pilots are closed.** The archived [TreasuryGIV pilot](08-pilot-treasurygiv/task.md) keeps the adoption lessons; real-project use supplies ongoing evidence.
 
 ### Constraints
 
@@ -28,48 +28,35 @@ Deliver the 0.5 reproduction upgrade under the [dependency and reuse design](att
 
 ## Details
 
-### Exploration synthesis (2026-09-02)
+### Why content hashing (2026-09-02 survey)
 
-- **Both pilot repos keep outputs in Dropbox, where mtimes are unreliable.** TreasuryGIV recorded Smart Sync reverting in-flight writes to stale cloud copies; BondElasticity observed mtime churn making Snakemake rules look dirty. Content hashing is required, which rules out mtime-based tools and Snakemake's default 1 MB checksum cap.
-- **Survey of engines** (tested on this machine with 5 MB intermediates): pytask 0.6 and DVC hash without a cap and stop cascades when a rerun regenerates identical bytes; Snakemake 9 falls back to mtime above 1 MB and has no early cutoff; doit misses command edits; DVC changed owners in late 2025 with no release since. Julia startup with a sysimage is ~4-5 s per process, so one process per step is acceptable. sha256 runs at ~2 GB/s here.
-- **BondElasticity lessons** (`.plan/` records in that repo): lock what the paper shows, not intermediates; never hash PNGs, track a deterministic CSV companion; declared-but-unproduced outputs surface only in from-scratch builds; keep the interpreter pin in one place; a non-reproducible artifact belongs at the graph boundary; gate destructive wipes with a dry-run diff.
-- **TreasuryGIV structure:** 44 orchestrator steps in `Code/run_all_results.jl`, ~9 min end to end with the sysimage, 68% estimation. Output paths depend on `TREASURYGIV_WRITE_CANONICAL` plus author and branch slugs; reads prefer the sandbox mirror when it exists. Steps 13 and 25 read sandbox-only paths; steps 17-19 and 11-12 share output directories; step 38 reads two artifacts whose producers are commented out. Existing tests are four standalone Julia scripts with CSV baselines.
-- **superRA touch points** for the pipeline requirement today: `superplan/references/build-and-review.md` (pipeline file, self-review item 3), `econ-data-analysis/references/planning.md` §Pipeline File (a duplicate), `theory-modeling/references/planning.md` item 5, `superimplement/references/completion.md` §3, `superintegrate/references/{protect,integrate,finish}.md`, `result-protection/SKILL.md`, `implement-task/SKILL.md`, `using-superra/SKILL.md` Stage table (pinned by `tests/harness-instruction-following/test_contract.py`), `CATEGORIES.md`, `README.md`.
+- **Both pilot repos keep outputs in Dropbox, where mtimes are unreliable.** TreasuryGIV recorded Smart Sync reverting in-flight writes to stale cloud copies; BondElasticity observed mtime churn making Snakemake rules look dirty.
+- **Engine survey** (5 MB intermediates): pytask 0.6 and DVC hash without a cap and stop cascades when a rerun regenerates identical bytes; Snakemake 9 falls back to mtime above 1 MB and has no early cutoff; doit misses command edits. Julia startup with a sysimage is ~4-5 s per process, so one process per step is acceptable. sha256 runs at ~2 GB/s. superRA later replaced pytask with its own loop ([02-runner](02-runner/task.md#superra-owns-the-engine)).
 
 ## Critical Files
 
-- [skills/task-tree/scripts/_task_io.py](../../skills/task-tree/scripts/_task_io.py) — task parsing and the fence-aware section splitter every reproduction reader builds on
-- [skills/task-tree/scripts/cli.py](../../skills/task-tree/scripts/cli.py) — subcommand wiring; `superra repro` and the `task read` / `task check` extensions land here
-- [skills/task-tree/scripts/plan_dashboard.py](../../skills/task-tree/scripts/plan_dashboard.py) and [templates/dashboard.js](../../skills/task-tree/scripts/templates/dashboard.js) — API routes and the client the Reproduction view extends
-- [skills/task-tree/references/task-file-contract.md](../../skills/task-tree/references/task-file-contract.md) — the section vocabulary the new section joins
+- [skills/task-tree/scripts/_repro.py](../../skills/task-tree/scripts/_repro.py) — section parser, graph model, and validation every reproduction reader builds on
+- [skills/task-tree/scripts/repro_run.py](../../skills/task-tree/scripts/repro_run.py) and [_repro_state.py](../../skills/task-tree/scripts/_repro_state.py) — the `superra repro` entry, build loop, freshness, and lock
+- [skills/task-tree/scripts/plan_dashboard.py](../../skills/task-tree/scripts/plan_dashboard.py) and [templates/dashboard.js](../../skills/task-tree/scripts/templates/dashboard.js) — graph routes and the Tree/Graph workspace
+- [skills/task-tree/references/task-file-contract.md](../../skills/task-tree/references/task-file-contract.md), [commands.md](../../skills/task-tree/references/commands.md), and [internals.md](../../skills/task-tree/references/internals.md) — the mechanics documentation
+- [skills/reproducibility/SKILL.md](../../skills/reproducibility/SKILL.md) — the discipline agents follow
 - [CLAUDE.md](../../CLAUDE.md) — ownership table and the instruction gate every skill edit passes
 
 ## Results
 
-### 0.5 planning and release preparation
+superRA projects carry one reproduction graph inside the task tree: `superra repro build <targets>` reruns only what changed, reviewed acceptance reuses results without rerunning them, the dashboard shows the graph for review, and the workflow keeps it current. [RELEASE-NOTES.md](../../RELEASE-NOTES.md) describes 0.5.0 for users; each line below points at the task that holds the detail.
 
-The [design](attachments/v05-design.md) records the researcher decisions and the implementation contract. Work stays with its existing owners: [effective graph](01-section-contract/unified-dependencies/task.md), [impact and acceptance](02-runner/reviewed-acceptance/task.md), [dashboard navigation](04-dashboard-view/scalable-navigation/task.md), and [workflow guidance](07-workflow-integration/unified-dependency-workflow/task.md).
+- **Contract, library, and readiness.** A `## Reproduction` section registers a task's steps; one dependency snapshot serves every task view, and readiness follows `depends_on` only. [01-section-contract](01-section-contract/task.md)
+- **Runner.** `superra repro build | status | explain | impact | accept | revoke | dag` on superRA's own engine, with portable lock and acceptance records and provenance-based diagnosis. [02-runner](02-runner/task.md)
+- **CLI surfaces.** `task read` and `task frontier` show prerequisites apart from inputs that are not fresh; `task check` validates the graph and flags unregistered result files. [03-task-interface](03-task-interface/task.md)
+- **Dashboard.** A Tree/Graph workspace over one project map that opens readable and marks only real cycles. [04-dashboard-view](04-dashboard-view/task.md)
+- **Reminder hook.** Any producer edit, by any tool, draws one reminder naming the steps it stales. [05-reminder-hook](05-reminder-hook/task.md)
+- **Discipline.** The `reproducibility` skill: the model, graph design, the claim gate, the stale rule, diagnosis, adoption, and Protect and completion duties. [06-skill](06-skill/task.md)
+- **Workflow wiring.** Every phase's call site points to the reference that owns its rule; the manifest loads the skill for any task producing or reviewing a result from code. [07-workflow-integration](07-workflow-integration/task.md)
+- **Pilot.** TreasuryGIV registered 49 steps in 21 tasks; the pilot fixed the include resolver and added authoring rules. [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md)
 
-The Claude, marketplace, and Codex plugin manifests are at 0.5.0; [release notes](../../RELEASE-NOTES.md#050---unreleased) mark it unreleased, describe what it ships after [14-review-revisions](14-review-revisions/task.md), and give the upgrade order for projects on the pre-release. The interrupted UI experiment was removed from runtime source.
+### Open
 
-Planning verification passed: task-tree structural checks, Markdown render checks, local-link checks for the new design/tasks, plugin packaging checks, and synchronized-version checks. Independent design review returned APPROVE after stale inherited contracts and the logical-only dashboard empty-state requirement were corrected. The subsequent archived-task refinement excludes archived work and warns active downstreams; it received structural and Markdown self-checks without another independent pass.
-
-### Implementation
-
-superRA projects carry one reproduction graph inside the task tree: `superra repro build <targets>` reruns only what changed, the dashboard shows the graph for review, and the workflow keeps it current. Each line points at the task that holds the detail; [14-review-revisions](14-review-revisions/task.md) records the 2026-09-28 revisions until they fold back into these owners.
-
-- **Contract and library.** A `## Reproduction` section whose body is one YAML block registers a task's steps; the library parses the bounded subset, builds the graph, and expands Julia `include` closures. Readiness follows `depends_on` only; file edges between steps are reported as inputs. [01-section-contract](01-section-contract/task.md), [03-readiness-model](14-review-revisions/03-readiness-model/task.md)
-- **Runner.** `superra repro build | status | explain | impact | accept | revoke | dag` on superRA's own engine, which replaced pytask 0.6: content hashes with a size-and-mtime cache, logical `${VAR}` lock ids, check steps, sidecars, and the one-line-per-step `repro-lock.json`. [02-runner](02-runner/task.md), [01-engine-freshness](14-review-revisions/01-engine-freshness/task.md)
-- **CLI surfaces.** `task read` shows a task's steps and its inputs that are not fresh, and `task check` validates the graph. [03-task-interface](03-task-interface/task.md)
-- **Dashboard.** Per-step state, a task/step DAG that opens readable, and task-section comments. [04-dashboard-view](04-dashboard-view/task.md), [06-dashboard](14-review-revisions/06-dashboard/task.md)
-- **Reminder hook.** A producer edit without a step update draws one PostToolUse reminder per session. [05-reminder-hook](05-reminder-hook/task.md), [04-edit-hook](14-review-revisions/04-edit-hook/task.md)
-- **Discipline.** The `reproducibility` skill: the model, graph design, the claim gate, the stale rule, diagnosis, and Protect and completion duties. [06-skill](06-skill/task.md), [07-instruction-rewrite](14-review-revisions/07-instruction-rewrite/task.md)
-- **Workflow wiring.** The graph replaces the pipeline-file requirement at PLAN, IMPLEMENT, and INTEGRATE; the manifest loads the skill for any task producing or reviewing a result from code. [07-workflow-integration](07-workflow-integration/task.md), [08-workflow-wiring](14-review-revisions/08-workflow-wiring/task.md)
-- **Pilot.** TreasuryGIV registered 49 steps in 21 tasks with its required build narrowed to the internal master deck; the pilot fixed the include resolver and added two authoring rules. [08-pilot-treasurygiv](08-pilot-treasurygiv/task.md)
-- **Scoped verification and adoption.** Task targets replaced reproduction tiers; selected checks, bounded pilots, and separate targeted and full-chain forced reruns, with producer identity shared across path aliases and hashing limited to selected work. [11-scoped-verification](11-scoped-verification/task.md)
-
-### Open for the next round
-
-- **Design-review revisions** ([14-review-revisions](14-review-revisions/task.md)) resolve the 2026-09-28 review findings before 0.5 ships.
 - `repro trace` ([10-trace](10-trace/task.md)) stays postponed.
-- The superRA plugin installed for other projects predates this tree; until it is refreshed, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
+- The plugin installed for other projects predates 0.5; until it is updated, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
+- This repository registers no steps: Protect retired its check steps with the researcher's agreement, so the pytest suite and the documentation carry its protection.

@@ -74,7 +74,7 @@ canon` and the completion gate behind it go green while those pins never run. Ru
 with `--tier all` before integration; the tiers stay as registered, since per-task tiering is the v1
 rule and this pilot's lean default build was the ask.
 
-Resolved since: [task targets](../11-scoped-verification/task-targets-and-lifecycle/task.md) replaced tiers, and the completion gate names its protection checks explicitly.
+Resolved since: [task targets](../02-runner/task.md#selection-and-upgrade) replaced tiers, and [the completion gate](../../../skills/reproducibility/references/protect-and-completion.md#the-completion-gate) covers every step.
 
 ### Verification
 
