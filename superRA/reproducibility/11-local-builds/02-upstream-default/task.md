@@ -1,6 +1,6 @@
 ---
 title: "Commands Include the Producer Chain, Gate Downloads, and Report Online-Only Data"
-status: implemented
+status: revise
 depends_on: [01-local-graph]
 ---
 
@@ -156,3 +156,18 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
   - `build 03-box` and `build 03-box --dry-run` printed the gate shown above and ran nothing.
   - Afterwards the Box file still had `SF_DATALESS` set, with the same size (5,123,878 bytes) and mtime.
 
+
+## Review Notes
+
+Tier: thorough. Focus: correctness, contract fidelity to the parent's §Decisions, test quality. Behavior checked on a disposable five-step fixture and a 20-step chain; full suite 1097 passed, 10 skipped.
+
+1. [BLOCKING] **`build --dry-run` that hits the gate prints no per-step plan.** [repro_run.py:482](../../../../skills/task-tree/scripts/repro_run.py#L482) raises from `_gate` before `_schedule`, so the output is only `Execution scope:` plus the gate error. The planner's ruling: the dry run must print its per-step plan with recorded costs, then the gate's file list with sizes, then exit 1. The stale rule relies on that cost preview. Reproduced: with `Data/ext.csv` absent and `Code/use.sh` edited, `build 03-after --dry-run` printed no `Would execute` block.
+   - Fix: in dry-run, collect the gate rows without raising, run the schedule and print `format_cost`, then print the gate message and exit 1.
+   - Update [commands.md:113](../../../../skills/task-tree/references/commands.md#L113), the `build --dry-run` bullet under §Deviations and decisions, and [test_task_dependencies.py:169](../../../../skills/task-tree/scripts/test_task_dependencies.py#L169). Add a test in [test_repro_upstream.py](../../../../skills/task-tree/scripts/test_repro_upstream.py) asserting the order: plan with costs, file list, exit 1.
+2. [ADVISORY] **The local `OUTPUT_CAP` has no pointer to its replacement.** The planner accepted the local copy on condition of a comment naming the `_task_validate.OUTPUT_CAP` import to switch to once the `task check --all` edit lands. The comment at [_repro_state.py:58](../../../../skills/task-tree/scripts/_repro_state.py#L58) does not name it.
+3. [ADVISORY] **`build` still prints one line per fresh requested step.** [repro_run.py:391](../../../../skills/task-tree/scripts/repro_run.py#L391) hides `unchanged` and `unverified` lines only for added producers. `build .` on a fully fresh 20-step chain printed 20 `· unchanged` lines, so output grows with tree size for work that never ran.
+   - Acceptable: `✓ executed` and `✗ failed` lines are progress for subprocesses that actually ran, and failures carry their log pointer.
+   - Fix: count `unchanged` and `unverified` steps in the closing line for requested steps too.
+4. [ADVISORY] **Joined lists drop items without naming a command.** `capped_join` ([_repro_state.py:1437](../../../../skills/task-tree/scripts/_repro_state.py#L1437)) ends with "and N more" but no command that lists them. It is used for `Execution scope:`, the `unverified` boundary, `Why not fresh:`, the `--only` producer line, and the missing-saved-input refusal. CLAUDE.md §Bounded Agent-Facing Output requires the count line to give the exact command.
+5. [ADVISORY] **The `unverified` line reads "0 B plus 1 of unknown size" when no size is known.** [_repro_state.py:1533](../../../../skills/task-tree/scripts/_repro_state.py#L1533). A legacy Dropbox placeholder (zero bytes, `com.dropbox.placeholder` xattr) produced `○ 1 producer(s) unverified, 0 B plus 1 of unknown size online-only here`. When nothing is sized, print only the unknown count.
+6. [ADVISORY] **Under `--only`, the gate still says to select steps with `--only`.** The `then` line in `_gate` ([repro_run.py:404](../../../../skills/task-tree/scripts/repro_run.py#L404)) is fixed text. When `build.only` is set, tell the user to narrow the targets instead.
