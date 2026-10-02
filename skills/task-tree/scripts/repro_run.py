@@ -39,7 +39,9 @@ from _repro_acceptance import capture_receipt, check_sources, current_state, mut
 from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_state import (  # noqa: E402
+    BLOCKING,
     LOCK_FILENAME,
+    OUTPUT_CAP,
     TOML_AVAILABLE,
     HashCache,
     Unread,
@@ -47,6 +49,8 @@ from _repro_state import (  # noqa: E402
     ReproStateError,
     RunnerPaths,
     absolute,
+    capped,
+    capped_join,
     compute_status,
     dependency_state,
     directory_dep_nodes,
@@ -58,12 +62,14 @@ from _repro_state import (  # noqa: E402
     read_lock,
     read_run_record,
     render_dag,
+    repro_command,
     runner_paths,
     select_steps,
     spec_hash,
     stamp_ref,
     step_nodes,
     unread,
+    unread_file_lines,
     unread_phrase,
     write_lock_entry,
     write_run_record,
@@ -97,6 +103,9 @@ class Build:
     cache: HashCache
     forced: set[str]
     dry_run: bool
+    requested: set[str] = field(default_factory=set)  # the steps the targets select themselves
+    targets: list[str] = field(default_factory=list)  # as typed, for the commands a message names
+    only: bool = False
     completed: dict[str, LockEntry] = field(default_factory=dict)
     outcomes: dict[str, tuple[str, str]] = field(default_factory=dict)  # name -> (outcome, detail)
     stopping: threading.Event = field(default_factory=threading.Event)
@@ -105,6 +114,9 @@ class Build:
 
     def target(self, step: Step) -> str:
         return f"{step.task_path or '.'}#{step.name}"
+
+    def command(self, verb: str, *flags: str) -> str:
+        return repro_command(verb, self.targets, *(["--only"] if self.only else []), *flags)
 
     def parents(self) -> dict[str, list[str]]:
         """Each selected step's producers inside the selection (directory outs included)."""
@@ -124,22 +136,33 @@ def _decide(build: Build, step: Step):
     ).entry(step.name)
 
 
-def _missing_inputs(build: Build, step: Step, entry) -> str | None:
-    """Why the step cannot start: a dependency not on disk, online-only even if cached, or unreadable."""
+def _unreadable_inputs(build: Build, step: Step) -> list[tuple[str, str, int | None]]:
+    """(node, why, size) per input the step cannot read here without a download.
+
+    Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
+    """
     root = build.paths.project_root
     deps, _ = step_nodes(step, output_nodes(build.graph))
     deps += directory_dep_nodes(build.graph, step)
     externals = {e.path.logical for e in build.graph.external_inputs}
-    states = [(node[0], Unread("online-only")
-               if build.cache.probe(absolute(root, node[2] or node[1]), walk=True)[0]
-               else dependency_state(build.cache, root, node)) for node in deps]
-    blocked = [(n, v) for n, v in states if v is None] or [(n, v) for n, v in states if unread(v)]
-    if not blocked:
+    rows = []
+    for node in deps:
+        online, size = build.cache.probe(absolute(root, node[2] or node[1]), walk=True)
+        value = Unread("online-only") if online else dependency_state(build.cache, root, node)
+        if value is None:
+            rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
+        elif unread(value):
+            rows.append((node[0], unread_phrase(value), size))
+    return rows
+
+
+def _missing_inputs(build: Build, step: Step, entry) -> str | None:
+    """Why the step cannot start: the download gate, rechecked when the step starts."""
+    rows = _unreadable_inputs(build, step)
+    if not rows:
         return None
-    node, value = blocked[0]
-    why = "missing" if value is None and node not in externals else unread_phrase(value)
-    more = f" (and {len(blocked) - 1} more)" if len(blocked) > 1 else ""
-    return f"input {node} is {why}{more}"
+    lines = unread_file_lines(rows, build.command("status", "--json"))
+    return "\n".join([f"{len(rows)} input(s) not on this machine:", *lines])
 
 
 def _run_step(build: Build, step: Step, entry) -> str:
@@ -365,9 +388,49 @@ _MARKS = {"executed": "✓", "unchanged": "·", "unverified": "○", "would exec
 
 def _report(build: Build, name: str) -> None:
     outcome, detail = build.outcomes[name]
-    if build.dry_run:
+    if build.dry_run or (name not in build.requested and outcome in ("unchanged", "unverified")):
+        return  # an added producer that did not run is only counted
+    print(f"{_MARKS[outcome]} {name}  {outcome}"
+          + "".join(f"\n  {line}" for line in detail.splitlines()), flush=True)
+
+
+def _will_run(build: Build) -> list[str]:
+    """Steps their own state or a force sets to run; one stale only through upstream decides at its start."""
+    report = compute_status(build.graph, build.paths, targets=[build.target(build.graph.step(n)) for n in build.names],
+                            cache=build.cache, completed_locks=build.completed, scope=build.names)
+    return [n for n in build.names if n in build.forced or report.entry(n).local_status in BLOCKING]
+
+
+def _gate(build: Build, will_run: list[str]) -> None:
+    """Run nothing when a step that will run reads a file not on disk that no step in this build writes first."""
+    outputs = output_nodes(build.graph)
+    written = {node[0] for name in will_run for node in step_nodes(build.graph.step(name), outputs)[1]}
+    rows: dict[str, tuple] = {}
+    for name in will_run:
+        for node, why, size in _unreadable_inputs(build, build.graph.step(name)):
+            if why != "missing" and node not in written:
+                rows.setdefault(node, (node, why, size, []))[3].append(name)
+    if rows:
+        ran = "the build would run nothing" if build.dry_run else "nothing was run"
+        raise ReproStateError("\n".join([
+            f"{len(rows)} file(s) the build reads are not on this machine, so {ran}:",
+            *unread_file_lines(list(rows.values()), build.command("status", "--json"),
+                               then=["To build the steps that do not read them, select those steps with --only."]),
+        ]))
+
+
+def _preview(build: Build, will_run: list[str]) -> None:
+    """The producers the targets added that will run, with their last durations."""
+    added = [name for name in will_run if name not in build.requested]
+    if not added:
         return
-    print(f"{_MARKS[outcome]} {name}  {outcome}" + (f"\n  {detail}" if detail else ""), flush=True)
+    width = max(len(name) for name in added[:OUTPUT_CAP])
+    rows = []
+    for name in added:
+        duration = read_run_record(build.paths, name).get("duration")
+        rows.append(f"{name:<{width}}  {f'{duration:.1f}s' if duration is not None else 'no recorded duration'}")
+    print(f"Also building {len(added)} producer(s) the targets read:")
+    print("\n".join(capped(rows, "producer(s)", build.command("build", "--dry-run"))))
 
 
 def run_build(
@@ -378,8 +441,15 @@ def run_build(
     n_workers: int = 1,
     force_names: list[str] | None = None,
     dry_run: bool = False,
+    requested: list[str] | None = None,
+    targets: list[str] | None = None,
+    only: bool = False,
 ) -> int:
-    """Run every stale selected step; 0 when none failed, else 1."""
+    """Run every stale selected step; 0 when none failed, else 1.
+
+    *requested* is the steps the targets select themselves (default: *names*);
+    the rest are added producers, run only when their state calls for it.
+    """
     from _repro_scope import BuildGuard
     graph._execution_names = frozenset(names)
     if graph.dependencies:
@@ -387,23 +457,31 @@ def run_build(
         graph._build_guard = BuildGuard(graph, graph.dependencies.tasks[""].dir_path, names, signature)
     check_sources(graph)
     cache = HashCache(paths.cache_file)
+    build = Build(graph=graph, paths=paths, names=list(names), cache=cache, forced=set(force_names or ()),
+                  dry_run=dry_run, requested=set(names if requested is None else requested),
+                  targets=list(targets or ()), only=only)
     boundary = boundary_inputs(graph, names, paths, cache)
-    print('Execution scope: ' + ', '.join(names))
-    for item in boundary:
-        print(f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)")
+    print(f"Execution scope: {len(names)} step(s): {capped_join(list(names))}")
+    saved = [f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)"
+             for item in boundary]
+    if saved:
+        print("\n".join(capped(saved, "saved input(s)", build.command("status", "--json"), indent="")))
     missing = [item for item in boundary if item['digest'] is None and not item.get('here')]
     if missing:
-        raise ReproStateError('missing saved inputs: ' + ', '.join(f"{b['logical']} (producer {b['producer']})" for b in missing)
-                              + '; select the producer or use --upstream')
-    forced = set(force_names or ())
-    forced.update(
+        raise ReproStateError('missing saved inputs: '
+                              + capped_join([f"{b['logical']} (producer {b['producer']})" for b in missing])
+                              + '; build without --only to include their producers')
+    build.forced.update(
         name for name in names
         if (record := read_run_record(paths, name)).get("outcome") in ("running", "pending")
         or (record.get("outcome") == "failed" and record.get("forced", False))
     )
-    build = Build(graph=graph, paths=paths, names=list(names), cache=cache, forced=forced, dry_run=dry_run)
     interrupted = False
     with mutation_lock(paths), _interrupt_on_termination():
+        will_run = _will_run(build)
+        _gate(build, will_run)
+        if not dry_run:
+            _preview(build, will_run)
         try:
             _schedule(build, n_workers)
         except KeyboardInterrupt:
@@ -415,7 +493,8 @@ def run_build(
         pending = [name for name in names if build.outcomes.get(name, ("",))[0] == "would execute"]
         blocked = [name for name in names if build.outcomes.get(name, ("",))[0] in ("failed", "skipped")]
         for name in blocked:
-            print(f"{_MARKS['failed']} {name}  cannot run\n  {build.outcomes[name][1]}")
+            print(f"{_MARKS['failed']} {name}  cannot run"
+                  + "".join(f"\n  {line}" for line in build.outcomes[name][1].splitlines()))
         if pending or not blocked:
             print(format_cost(pending, paths))
         return 1 if blocked else 0
@@ -484,6 +563,13 @@ def format_accept(result: dict) -> str:
         if row["record"] is None:
             changes = "already fresh; its evidence stays as it is"
         lines.append(f"  {row['step']:<{width}}  {changes or 'unchanged since the recorded baseline'}")
+    behind = result.get("behind") or []
+    if behind:
+        reads = "read" if result.get("applied") else "would read"
+        lines.append(f"{len(behind)} producer(s) behind the accepted step(s) are not fresh; the accepted "
+                     f"step(s) {reads} stale until they are built or accepted:")
+        lines.extend(capped([f"{row['name']} ({row['status']})" for row in behind], "producer(s)",
+                            repro_command("status", result.get("targets", []), "--json")))
     return "\n".join(lines)
 
 
@@ -495,12 +581,16 @@ MODEL = """\
 Steps belong to tasks: a task's `## Reproduction` section registers its steps.
 `build` runs them in dependency order, one subprocess per step.
 A step is fresh when the content hashes of its deps, definition, and outs match
-its last successful build or its reviewed acceptance.
+its last successful build or its reviewed acceptance. A step whose files this
+machine cannot check without a download is unverified; `build` never runs it.
 Targets scope every command: a task path selects its own and descendant steps,
-`task#step` or a unique step name selects one step, `.` selects the whole active tree. Files read from
-producers outside the scope are saved inputs, used as they sit on disk.
+`task#step` or a unique step name selects one step, `.` selects the whole active tree.
+`build` and `status` also take in the targets' producer chain, and `build` runs
+only the steps whose state calls for it. With `--only`, files read from producers
+outside the targets are saved inputs, used as they sit on disk.
 A stale step is resolved two ways: execute it with `build`, or record the
-current results as reviewed with `accept --reason ...`.
+current results as reviewed with `accept --reason ...`. `accept` and `revoke`
+act on the named steps only.
 """
 
 
@@ -512,6 +602,13 @@ def _sub(sub, name: str, purpose: str, examples: list[str]):
         epilog="Examples:\n" + "".join(f"  {line}\n" for line in examples),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+
+
+def _scope_flags(parser) -> None:
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--only", action="store_true",
+                       help="Restrict to the targets; files from producers outside them are used as they sit on disk")
+    scope.add_argument("--upstream", action="store_true", help=argparse.SUPPRESS)  # the default; kept as an alias
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -529,25 +626,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    build = _sub(sub, "build", "Execute every stale step in the target scope", [
+    build = _sub(sub, "build", "Execute every stale step in the targets and their producer chain", [
         "superra repro build 02-merge -j 4",
-        "superra repro build 02-merge --upstream    # also its stale producers",
+        "superra repro build 02-merge --only        # its own steps; producers' files as they sit on disk",
         "superra repro build 02-merge --dry-run     # what would run, and what it last cost",
         "superra repro build '02-merge#check-panel' --force",
     ])
     build.add_argument("targets", nargs="*", help="Task paths (including descendants), task#step selectors, or unique step names")
-    build.add_argument("--upstream", action="store_true", help="Include transitive file-producer ancestors")
+    _scope_flags(build)
     build.add_argument("-j", "--jobs", type=int, default=1, dest="jobs")
-    build.add_argument("--force", action="store_true", help="Rerun every step in the selected scope, including ancestors only with --upstream")
+    build.add_argument("--force", action="store_true", help="Rerun the targets' own steps; producers run only when their state calls for it")
     build.add_argument("--dry-run", action="store_true", help="Report what would run and its last recorded cost")
 
-    status = _sub(sub, "status", "Report each selected step's freshness and outside readers", [
+    status = _sub(sub, "status", "Report each selected step's freshness, its producers', and outside readers", [
         "superra repro status .",
         "superra repro status 02-merge '02-merge#check-panel'",
-        "superra repro status . --upstream --json",
+        "superra repro status 02-merge --only --json",
     ])
-    status.add_argument("targets", nargs="*", help="Task paths, task#step selectors, or unique step names; saved inputs outside scope")
-    status.add_argument("--upstream", action="store_true", help="Also assess transitive producer ancestors")
+    status.add_argument("targets", nargs="*", help="Task paths, task#step selectors, or unique step names")
+    _scope_flags(status)
     status.add_argument("--json", action="store_true", dest="as_json")
 
     explain = _sub(sub, "explain", "Explain where each changed hash came from, with a next command per cause", [
@@ -622,11 +719,11 @@ def _reexec(argv: list[str], command: str) -> int:
     return completed.returncode
 
 
-def _behind_selection(graph, paths: RunnerPaths, targets: list[str], report) -> list:
-    """Producers outside the selection, behind it, that are not fresh."""
+def _behind_selection(graph, paths: RunnerPaths, targets: list[str]) -> list:
+    """Producers behind the targets that are stale, missing, or failed."""
     from _repro_acceptance import lock_holder
     full = compute_status(graph, paths, targets=targets, upstream=True, live_build=lock_holder(paths))
-    return [e for e in full.entries if e.step.name not in report.selected and e.status != "fresh"]
+    return [e for e in full.producers if e.status in BLOCKING]
 
 
 def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
@@ -723,6 +820,9 @@ def main(argv: list[str] | None = None) -> None:
                         raise ReproStateError("--review expects NODE=RATIONALE")
                     reviews[node] = rationale
                 result = accept(graph, paths, args.targets, args.reason, reviews, dry_run=args.dry_run)
+                result["targets"] = args.targets
+                result["behind"] = [{"name": e.step.name, "task": e.step.task_path, "status": e.status}
+                                    for e in _behind_selection(graph, paths, args.targets)]
             if args.command == "accept" and not args.as_json:
                 print(format_accept(result))
             elif args.command == "impact" and not args.as_json:
@@ -738,7 +838,8 @@ def main(argv: list[str] | None = None) -> None:
         tasks = {"" if t in (".", "./") else t.partition("#")[0].removeprefix("./").rstrip("/")
                  for t in args.targets}
         try:
-            names, unknown = select_steps(graph, args.targets, include_ancestors=args.upstream)
+            names, unknown = select_steps(graph, args.targets, include_ancestors=not args.only)
+            requested = select_steps(graph, args.targets)[0]
         except ReproStateError as exc:
             _refuse(step_errors(graph, [], tasks)[0])
             print(f"Error: {exc}", file=sys.stderr)
@@ -755,15 +856,17 @@ def main(argv: list[str] | None = None) -> None:
         if not names:
             print("No steps registered.")
             return
-        force_names = names if args.force else []
         try:
             result = run_build(
                 graph,
                 paths,
                 names,
                 n_workers=max(1, args.jobs),
-                force_names=force_names,
+                force_names=requested if args.force else [],
                 dry_run=args.dry_run,
+                requested=requested,
+                targets=args.targets,
+                only=args.only,
             )
         except ReproStateError as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -775,24 +878,24 @@ def main(argv: list[str] | None = None) -> None:
             _explain(args, graph, paths, plan_root.name)
             return
         from _repro_acceptance import lock_holder
-        report = compute_status(graph, paths, targets=args.targets, upstream=args.upstream,
+        report = compute_status(graph, paths, targets=args.targets, upstream=not args.only,
                                 live_build=lock_holder(paths))
-        behind = [] if args.upstream or not report.ok else _behind_selection(graph, paths, args.targets, report)
+        behind = _behind_selection(graph, paths, args.targets) if args.only and report.exit_code == 0 else []
     except ReproStateError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
     if args.as_json:
         result = report.to_dict()
-        result["behind"] = [{"name": e.step.name, "task": e.step.task_path, "status": e.status} for e in behind]
+        if args.only:
+            result["behind"] = [{"name": e.step.name, "task": e.step.task_path, "status": e.status} for e in behind]
         print(json.dumps(result, indent=2))
     else:
         print(format_status(report))
         if behind:
-            names = ", ".join(f"{e.step.name} ({e.status})" for e in behind)
-            print(f"{len(behind)} producer(s) behind the selection not fresh: {names}; "
-                  "include them with --upstream")
-    sys.exit(1 if not report.ok else 3 if behind else 0)
+            print(f"{len(behind)} producer(s) behind the selection not fresh; drop --only to assess them: "
+                  + capped_join([f"{e.step.name} ({e.status})" for e in behind]))
+    sys.exit(report.exit_code or (3 if behind else 0))
 
 
 if __name__ == "__main__":

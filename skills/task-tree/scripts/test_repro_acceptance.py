@@ -181,7 +181,7 @@ def test_acceptance_of_saved_inputs_does_not_certify_or_build_upstream(project):
     assert all('resolved' not in item for item in saved)
     assert project.status('02-b').entry('build-b').status == 'fresh'
     assert compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).entry('build-b').status != 'fresh'
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert set(project.run_times()) == {'check-b'}
     assert project.read('output/b.txt') == 'reviewed downstream result\n'
 

@@ -15,7 +15,7 @@ from _repro_state import (
     BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
     directory_dep_nodes, dropbox_ignore, is_online_only,
     node_state, output_nodes, read_lock, read_run_record, select_steps, spec_hash,
-    spec_node_id, step_nodes, unread, unread_phrase, _topological,
+    spec_node_id, step_nodes, unread, unread_file_lines, unread_phrase, _topological, repro_command,
 )
 
 LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
@@ -492,10 +492,13 @@ def preview(graph, paths, targets, reason, reviews):
         state = current_state(graph, step, paths)
         if any(v is None for group in state.values() for v in group.values()):
             raise ReproStateError(f'{name}: required input or output is missing')
-        unhashed = unread_nodes(state)
+        unhashed = {node: (node, unread_phrase(value), value.size) for group in state.values()
+                     for node, value in group.items() if unread(value)}
         if unhashed:
-            raise ReproStateError(f'{name}: cannot record {unhashed[0][0]}, which is {unhashed[0][1]}'
-                                  + (f' (and {len(unhashed) - 1} more)' if len(unhashed) > 1 else ''))
+            ref = f"{step.task_path or '.'}#{name}"
+            raise ReproStateError('\n'.join([f'{name}: cannot record {len(unhashed)} file(s) this machine cannot hash:',
+                                             *unread_file_lines(list(unhashed.values()),
+                                                                repro_command('status', [ref], '--json'))]))
         if step.kind == 'check' and state['products'] != before['lock']['products']:
             raise ReproStateError(f'{name}: check stamp differs from successful baseline; run the check')
         previous_record = ledger['steps'].get(name)

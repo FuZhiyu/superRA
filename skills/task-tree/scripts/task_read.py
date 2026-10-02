@@ -255,7 +255,7 @@ def _render_reproduction_human(repro: dict) -> list[str]:
                 f"  - {row['name']}: {row['status']} — {row['reason']} [outs: {outs}]"
             )
             if row.get('local_status') and row['local_status'] != row['status']:
-                lines.append(f"    for saved inputs: {row['local_status']} — {row['local_reason']}")
+                lines.append(f"    own state: {row['local_status']} — {row['local_reason']}")
             for boundary in row.get('boundary_inputs') or []:
                 lines.append(f"    saved input: {boundary['logical']} ({boundary['provenance']}; producer {boundary['producer']})")
     else:
