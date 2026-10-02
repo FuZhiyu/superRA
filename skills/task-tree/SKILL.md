@@ -30,7 +30,7 @@ Run the committed `./superRA/superra` wrapper created above — contributors ins
 
 ```bash
 ./superRA/superra task tree            # tree with status badges
-./superRA/superra task frontier        # ready tasks, each with its inputs that are not fresh
+./superRA/superra task frontier        # ready tasks, each with its inputs whose producer is stale, missing, or failed
 ./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
 ./superRA/superra task tree --json     # JSON output
 ./superRA/superra dashboard --no-open  # idempotent; starts or reuses a server and prints this worktree's scoped URL

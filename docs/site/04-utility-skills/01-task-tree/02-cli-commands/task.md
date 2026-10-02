@@ -14,11 +14,11 @@ Inspect state and pull up one task:
 
 ```bash
 ./superRA/superra task tree                      # the whole tree with status badges
-./superRA/superra task frontier                  # ready tasks, each with its inputs that are not fresh
+./superRA/superra task frontier                  # ready tasks, each with its inputs whose producer is stale, missing, or failed
 ./superRA/superra task read 01-data/02-merge     # one task with its full inherited context
 ```
 
-`task read` is what dispatch uses: it prints the file plus the ancestor chain, its `depends_on` prerequisites, the inputs that are not fresh, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
+`task read` is what dispatch uses: it prints the file plus the ancestor chain, its `depends_on` prerequisites, the inputs whose producer is `stale`, `missing`, or `failed`, and unresolved comments, so the agent arrives oriented. Run it to see exactly what an agent sees on arrival.
 
 Scope or restructure work:
 

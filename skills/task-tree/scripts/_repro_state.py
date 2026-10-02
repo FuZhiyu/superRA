@@ -28,9 +28,11 @@ from typing import Iterable
 
 if __package__:
     from ._repro import Graph, Step
+    from ._task_validate import OUTPUT_CAP
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
     from _repro import Graph, Step
+    from _task_validate import OUTPUT_CAP
 
 try:  # Python 3.11+
     import tomllib
@@ -55,10 +57,6 @@ RECORD_LOCK = threading.RLock()
 STATUSES = ("fresh", "stale", "missing", "failed", "unverified")
 BLOCKING = ("stale", "missing", "failed")
 
-# Default text output lists at most this many items per list; the rest collapse
-# to a count and the command that lists them all. Replace with an import of
-# `_task_validate.OUTPUT_CAP` once that constant is committed.
-OUTPUT_CAP = 10
 DOWNLOAD_NOTES = ("Before downloading, read references/online-only-files.md "
                   "in the superRA:reproducibility skill.")
 
@@ -209,6 +207,14 @@ def is_online_only(path: Path, info: os.stat_result) -> bool:
     if file_flags(info) & SF_DATALESS:
         return True
     return stat.S_ISREG(info.st_mode) and info.st_size == 0 and has_placeholder_xattr(path)
+
+
+def path_online_only(path: Path | str) -> bool:
+    """`is_online_only` from a fresh `stat`; False when *path* cannot be stat'ed."""
+    try:
+        return is_online_only(Path(path), os.stat(path))
+    except OSError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -1636,6 +1642,7 @@ __all__ = [
     "format_size",
     "format_status",
     "is_online_only",
+    "path_online_only",
     "node_sizes",
     "node_state",
     "outcome",

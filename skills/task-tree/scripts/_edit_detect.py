@@ -160,14 +160,15 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
     """Files under `root` (those with `suffixes`, or all), skipping hidden and
     scratch folders and never listing an online-only directory; empty when the
     directory holds more than MAX_DIR_FILES."""
+    from _repro_state import path_online_only
     found: list[str] = []
-    if _dataless(root):
+    if path_online_only(root):
         return found
     for parent, dirnames, filenames in os.walk(root):
         dirnames[:] = (
             [d for d in dirnames
              if not d.startswith(".") and d not in _SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
-             and not _dataless(os.path.join(parent, d))]
+             and not path_online_only(os.path.join(parent, d))]
             if recursive else []
         )
         for name in filenames:
@@ -176,14 +177,6 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
         if len(found) > MAX_DIR_FILES:
             return []
     return found
-
-
-def _dataless(path: str) -> bool:
-    from _repro_state import SF_DATALESS, file_flags
-    try:
-        return bool(file_flags(os.stat(path)) & SF_DATALESS)
-    except OSError:
-        return False
 
 
 def _content_hash(path: str, size: int) -> str | None:

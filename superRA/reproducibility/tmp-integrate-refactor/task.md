@@ -1,6 +1,6 @@
 ---
 title: "TEMPORARY — Integrate Refactoring Pass: Local Builds"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -54,3 +54,34 @@ Run the Integrate refactoring pass for the 11-local-builds work, against the rec
 - `git diff --check` is clean, and each commit body carries the Final Diff Self-Check trail.
 
 ## Results
+
+All seven actions are done with no unmatched hunk, and the full suite still passes 1123 tests.
+
+### Triage: every hunk traces to the protected record
+
+`git diff adf5ed6f..HEAD`, recomputed at `b71f03b5`, adds three commits to the `a96c2756` triage: `246cb772` and `b71f03b5` touch only Review Notes, the parent status, and this task; `59884a58` adds `OUTPUT_CAP` to `_task_validate.py` (action 7). Each other file maps to an entry under action 1; none was removed.
+
+### The online-only peek test failed because it hovered before the page settled
+
+The cause is test-only. Both load-time events below are intended dashboard behavior, and a moving pointer recovers from either.
+
+- **The worktree selector's reveal moves the link from under the pointer.** The first `/api/worktrees` answer (about 200 ms after load) shows the selector and shifts the panel. The resulting `pointerout` cancels the peek before its 250 ms delay ends. In every instrumented failure, that `pointerout` followed `populateWorktreeSelector` by about 25 ms.
+- **The anchor replacement named as the lead is harmless.** The watcher's catch-up `full-reload` (about 500 ms after load) re-renders the panel. Chrome then fires `pointerover` on the replacement anchor, and the peek shows again; forcing `onFullReload()` mid-hover confirmed this.
+- **A third hazard appeared once the selector wait was in place.** `hover()` scrolls the link into view, and the scroll event fires on the next frame, after the pointer has arrived. The dashboard closes the peek on any scroll.
+
+The fix is at [test_repro_states_browser.py:199-206](../../../skills/task-tree/scripts/tests/test_repro_states_browser.py#L199-L206). It awaits `fetchWorktrees()` and `document.fonts.ready`, the same settle as `enter()` in [test_dag_workspace_browser.py:77](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py#L77), scrolls the link into view, and waits one animation frame before hovering. The online-only assertion is unchanged.
+
+- **Before the fix:** 1 of 6 runs failed on OlinStudio.
+- **After the fix:** 20 of 20 sequential runs passed, as did 15 of 15 module runs with three running in parallel.
+
+### Smaller actions
+
+- **Rewording.** The four files that action 3 lists now say "inputs whose producer is `stale`, `missing`, or `failed`". To satisfy the verification grep, the same wording also replaced the same claim in [RELEASE-NOTES.md:47](../../../RELEASE-NOTES.md#L47) and [v05-design.md:15](../attachments/v05-design.md#L15). Only this task's own text still matches the grep.
+- **Review notes.** The [02-runner](../02-runner/task.md) and [04-dashboard-view](../04-dashboard-view/task.md) items are fixed as their notes proposed, the [07-workflow-integration](../07-workflow-integration/task.md) item is resolved by the rewording, and all three `## Review Notes` sections are deleted.
+- **Online-only probe.** [`path_online_only`](../../../skills/task-tree/scripts/_repro_state.py#L212) now replaces `_edit_detect._dataless` and `Resolver._online_only`. It also detects a legacy placeholder, which only a regular file can be. `_scan_dir` passes directories only, so `_scan_dir`'s behavior is unchanged. In `include_closure`, the import now runs before the loop. It stays inside the function because `_repro_state` imports `_repro`.
+- **`OUTPUT_CAP`.** `_repro_state.py` imports the constant from `_task_validate`, and the known limit is gone from 02-runner.
+- **Doc audit.** Neither the root README.md nor CLAUDE.md makes a claim this diff contradicts. CLAUDE.md's pointer to `_task_validate.OUTPUT_CAP` is now accurate.
+
+### Verification
+
+The full suite passes 1123 tests. `repro status .` exits 0 with three `fresh` steps, and `repro-lock.json` is unchanged. `task check` reports 0 errors and the one pre-existing warning, and `git diff --check` is clean.

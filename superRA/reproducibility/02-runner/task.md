@@ -64,9 +64,9 @@ A TreasuryGIV session (transcript `02d0fe7f`, 2026-10-01) passed seven `task#ste
 - **One resolver, flipped at the CLI.** `select_steps(..., include_ancestors=not args.only)` serves `build`, `status`, and `build --dry-run`. `--upstream` is a hidden alias for the default; combined with `--only` it is a usage error.
 - **`--force` reruns the targets only;** an added producer runs only when its state calls for it. This keeps the fix for the [TreasuryGIV pilot's](../08-pilot-treasurygiv/task.md) unintended 40-minute upstream rebuild.
 - **`build` previews** the added producers that will run, with their last durations, and prints a line only for steps that execute or fail.
-- **`status` keeps the selection apart from its producers.** JSON lists `steps` and `producers` separately. It exits 0 when every assessed step is `fresh` or `unverified`, 1 when a selected step's own state is `stale`, `missing`, or `failed`, and 3 when only a producer's is. `status X --upstream` therefore exits 3 where it exited 1.
+- **`status` keeps the selection apart from its producers.** JSON lists `steps` and `producers` separately. It exits 0 when every assessed step is `fresh` or `unverified`, 1 when a selected step's own state is `stale`, `missing`, or `failed`, and 3 when only a producer's is. `status X --upstream` therefore exits 3 where it exited 1. `status --only` also exits 3 when its selection is clean but a producer behind it is `stale`, `missing`, or `failed`.
 - **`accept` stays step-local.** After recording, it names the non-fresh producers behind the accepted steps and says those steps read stale until the producers are built or accepted.
-- **Every elided list names its command.** Default text lists at most `OUTPUT_CAP` (10) items per list, then a count and the `--json` command.
+- **Every elided list names its command.** Default text lists at most `OUTPUT_CAP` (10) items per list, then a count and the command that lists them.
 - **Concurrent work does not abort a build.** Guards cover the selected declarations, resolved paths, artifact ownership, and input bytes; unrelated task creation, status changes, prose, and unused config edits pass ([internals.md §Build guards](../../../skills/task-tree/references/internals.md#build-guards)).
 - **A pre-release project upgrades without rebuilding:** `pytask.lock`, `repro-builds.json`, and `repro-acceptance.json` are read until the first build or accept rewrites them. [RELEASE-NOTES.md](../../../RELEASE-NOTES.md) gives the order coauthors follow.
 
@@ -86,13 +86,5 @@ Reading an online-only file downloads it, and the hash cache used to read any fi
 
 - Batch acceptance is atomic per step, not per call: an I/O failure partway can leave the earlier steps' records written.
 - **Size and mtime across download and eviction are unverified.** The hash cache key (path, size, `mtime_ns`) assumes both survive; every online-only check so far was read-only.
-- **`OUTPUT_CAP` is a local copy** in `_repro_state.py`. Import it from `_task_validate` once that constant is committed.
 
 Tests: [test_repro_engine.py](../../../skills/task-tree/scripts/test_repro_engine.py), [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py), [test_repro_scope.py](../../../skills/task-tree/scripts/test_repro_scope.py), [test_repro_acceptance.py](../../../skills/task-tree/scripts/test_repro_acceptance.py), [test_repro_provenance.py](../../../skills/task-tree/scripts/test_repro_provenance.py), [test_repro_builds.py](../../../skills/task-tree/scripts/test_repro_builds.py), [test_repro_online.py](../../../skills/task-tree/scripts/test_repro_online.py) (file checks that never download), and [test_repro_upstream.py](../../../skills/task-tree/scripts/test_repro_upstream.py) (the producer-chain default, `--only`, `--force`, and the gate).
-
-## Review Notes
-
-Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
-
-1. [ADVISORY] [§Selection:69](#L69) says every elided list ends with "the `--json` command". The build preview's count line names `build --dry-run` ([repro_run.py:438](../../../skills/task-tree/scripts/repro_run.py#L438)). Fix: "then a count and the command that lists them".
-2. [ADVISORY] The fold dropped the fact that `status --only` still exits 3 when a producer behind the selection is not fresh ([repro_run.py:893](../../../skills/task-tree/scripts/repro_run.py#L893), [:910](../../../skills/task-tree/scripts/repro_run.py#L910)); [§Selection:67](#L67) gives the default's exit codes only. Fix: add the `--only` case to that bullet.

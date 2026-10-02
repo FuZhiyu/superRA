@@ -40,11 +40,11 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 
 [internals.md §Dashboard](../../../skills/task-tree/references/internals.md#dashboard-plan_dashboardpy) (**Card channels**, **Graph actions**) documents the mapping.
 
-- **One mapping, `reproChannels`,** renders every Graph card, Tree step row, task-page step table, step panel, and explain card. When the two states agree, a card keeps the tint it always had. Only the step where staleness starts has a stale tint; its descendants show a stale border around an empty fill, labelled `stale · upstream`.
+- **One mapping, `reproChannels`,** renders every Graph card, Tree step row, task-page step table, step panel, and explain card. When the two states agree, a card shows that state's tint. Only the step where staleness starts has a stale tint; its descendants show a stale border around an empty fill, labelled `stale · upstream`.
 - **Online-only is hatching and a cloud.** An own-`unverified` step gets diagonal `--rp-hatch` stripes and the label `unverified · online-only`, or a `☁ online-only` tag when a stale producer sets its label. `--rp-unverified` replaced `--rp-external` with the same validated purple.
   - Contrast: dark-theme stripes take 10% of the unverified ink, keeping `--rp-ink-2` near 4.8:1. A 16% draft dropped it to about 4.0:1 in light and 4.3:1 in dark.
   - The cloud (U+2601 U+FE0E) uses Hiragino Sans or Lucida Grande, because Menlo and IBM Plex Mono draw it squat.
-- **Reserved meanings are unchanged.** Dashed borders mean a check step and dashed wires `depends_on`; fading means a zero-count legend row or an unfocused wire. Check cards had lost their `is-check` class in an earlier rewrite; it is back.
+- **Reserved meanings are unchanged.** Dashed borders mean a check step and dashed wires `depends_on`; fading means a zero-count legend row or an unfocused wire. Check cards carry the `is-check` class and are dashed.
 - **Rollups.** Task cards, and a line under each Tree row, count steps per reported state by glyph (`◐3 ○1 ✕1`), leaving each row's slug width unchanged. A task whose steps are all own-`unverified` is hatched.
 - **The step panel** adds `Own evidence: fresh.` or `Own evidence: unverified — <reason>.`, says when the step would rerun, and links the origin step. Inputs and outputs lead with `N files online-only here (size)` and a pointer to [online-only-files.md](../../../skills/reproducibility/references/online-only-files.md).
 - **`/api/file-peek` answers an online-only file or folder from its `stat`,** and the hover card and in-page file view show a note with no Download link and no `/files/` request.
@@ -70,9 +70,3 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 - **Limits.** Probing the lock takes a shared lock for microseconds, so a CLI build starting in that window is refused and can be rerun. A build whose server restarted mid-run shows no "Last build" line. On a narrow screen the Build menu can extend below the short graph stage.
 
 Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), browser tests of the map and the Build menu and hover cards in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py), and the card channels, panel, file view, and gated menu on an every-state fixture in [test_repro_states_browser.py](../../../skills/task-tree/scripts/tests/test_repro_states_browser.py), a separate module because each module's server binds the global `PLAN_ROOT`. The graph actions add `TestReproBuildRoutes` in test_dashboard.py and the lock-holder test in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py).
-
-## Review Notes
-
-Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
-
-1. [ADVISORY] Two editing-history cues in §Cards show reported and own state: "a card keeps the tint it always had" ([:43](#L43)) and "Check cards had lost their `is-check` class in an earlier rewrite; it is back" ([:47](#L47)). Fix: state the current behavior — matching states show the state's tint; check cards carry `is-check` and are dashed.

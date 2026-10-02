@@ -33,7 +33,7 @@ The graph replaced the pipeline-file requirement at every phase; no workflow fil
 | Maturation | [mature-consolidate.md](../../../skills/superintegrate/references/mature-consolidate.md), [consolidation.md](../../../skills/superplan/references/consolidation.md) §Prune, [changing-the-tree.md](../../../skills/superplan/references/changing-the-tree.md) | [§Step lifecycle](../../../skills/reproducibility/references/designing-the-graph.md#step-lifecycle) |
 | Merge | [semantic-merge](../../../skills/semantic-merge/SKILL.md) "Reproduction records" role; [parallel-dispatch.md](../../../skills/agent-orchestration/references/parallel-dispatch.md) points there | the stale rule |
 
-- **The main agent** ([main-agent.md](../../../skills/using-superra/references/main-agent.md)) runs `repro status .` at session start and reports the steps that are not `fresh`; a frontier input that is not fresh goes through the stale rule before work builds on it, and a costly rerun the stale rule sends to the researcher is a pre-set gate in autonomous mode.
+- **The main agent** ([main-agent.md](../../../skills/using-superra/references/main-agent.md)) runs `repro status .` at session start and reports the steps that are not `fresh`; a frontier input whose producer is `stale`, `missing`, or `failed` goes through the stale rule before work builds on it, and a costly rerun the stale rule sends to the researcher is a pre-set gate in autonomous mode.
 - **One escalation status.** A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`, which keeps its finished work committed; `implement-task` §Escalation and `superimplement` point to the stale rule.
 - **Seeded steps were rejected.** Planners name artifacts instead of seeding `## Reproduction` steps, because seeded steps read `missing` before any work and the session-start report would treat unbuilt plans as steps to resolve.
 
@@ -50,9 +50,3 @@ The graph replaced the pipeline-file requirement at every phase; no workflow fil
   - A new table script was registered and built, and `## Results` named its saved input and that the step executed.
   - A shared-helper edit: the implementer rebuilt the cheap panel step, left the costly estimation stale, and returned `DONE_WITH_CONCERNS` with a recommendation.
   - Completion and Protect: the main agent ran `status`, `explain`, and a dry run, accepted a comment-only change under the exception, asked before the costly rerun, and recorded `External inputs:` in the Protect commit body.
-
-## Review Notes
-
-Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
-
-1. [ADVISORY] [§Each call site points to its owning rule:36](#L36) says "a frontier input that is not fresh goes through the stale rule", mirroring [main-agent.md:29](../../../skills/using-superra/references/main-agent.md#L29). The frontier now flags only inputs whose producer is `stale`, `missing`, or `failed` ([_task_snapshot.py:11](../../../skills/task-tree/scripts/_task_snapshot.py#L11)); an input from an `unverified` producer is not flagged. Fix: reword both lines together, as [03-task-interface](../03-task-interface/task.md) does.

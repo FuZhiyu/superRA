@@ -21,8 +21,8 @@ from pathlib import Path
 
 from _repro_state import (
     LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, STATE_DIRNAME, ReproStateError,
-    absolute, convert_legacy, dependency_state, directory_dep_nodes, is_online_only, node_state, output_nodes,
-    parse_lock, spec_hash, stamp_ref, step_nodes, tomllib, unread, unread_phrase, _stamp,
+    absolute, convert_legacy, dependency_state, directory_dep_nodes, node_state, output_nodes,
+    parse_lock, path_online_only, spec_hash, stamp_ref, step_nodes, tomllib, unread, unread_phrase, _stamp,
 )
 
 LOCK_REV_CAP = 200
@@ -580,7 +580,7 @@ class Resolver:
         rec_git = _first(row['recorded_sources'], 'git')
         path = row['path']
         cur_git = _first(row['current_sources'], 'git')
-        if path and self._online_only(path) and not (rec_git and cur_git):
+        if path and path_online_only(absolute(self.paths.project_root, path)) and not (rec_git and cur_git):
             return  # only a diff between two revisions leaves the working tree unread
         if rec_git and path:
             revs = [rec_git['rev']] + ([cur_git['rev']] if cur_git else [])
@@ -603,13 +603,6 @@ class Resolver:
             row['recorded_sources'].insert(0, {'source': 'snapshot'})
             self._set_diff(row, [line.rstrip('\n') for line in difflib.unified_diff(
                 snapshot.splitlines(True), now.splitlines(True), n=3)])
-
-    def _online_only(self, resolved) -> bool:
-        path = absolute(self.paths.project_root, resolved)
-        try:
-            return is_online_only(path, path.stat())
-        except OSError:
-            return False
 
     def _set_diff(self, row, lines):
         hunk = next((i for i, line in enumerate(lines) if line.startswith('@@')), 0)

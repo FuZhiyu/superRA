@@ -112,7 +112,7 @@ def format_input(row):
 
 
 def frontier_rows(graph, plan_root):
-    """Ready tasks, each with the inputs that are not fresh."""
+    """Ready tasks, each with the inputs whose producer is stale, missing, or failed."""
     require_valid(graph)
     rows = graph.dependencies.frontier()
     states, unavailable = step_states(graph, plan_root, input_producers(graph, [r["path"] for r in rows]))

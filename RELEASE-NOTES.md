@@ -44,7 +44,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 #### Readiness and dependencies
 
-- **Only `depends_on` decides readiness.** A task is ready once its `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`. File edges between steps order builds and appear in `task read` and `task frontier` as inputs that are not fresh; they never gate.
+- **Only `depends_on` decides readiness.** A task is ready once its `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`. File edges between steps order builds and appear in `task read` and `task frontier` as inputs whose producer is `stale`, `missing`, or `failed`; they never gate.
   - A `depends_on` that runs against the file flow is a warning. Only step cycles and `depends_on` cycles are errors; a loop that appears only when file edges are grouped by task is not.
   - `task create`, `move`, `dep add`, and archive transitions print each task they take off the frontier.
 - **Reproduction errors block only the builds they touch.** Planning commands and the frontier keep working, with the errors noted on stderr. `build`, `accept`, and `status` refuse on an error in a selected step's own task, a step cycle through a selected step, or project-wide configuration. `build --dry-run` reports a step whose input is missing as `cannot run`.
