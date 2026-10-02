@@ -2,11 +2,11 @@
 
 `[BLOCKING]` Resolve every step that is not `fresh` by [the stale rule](#the-stale-rule): run it, accept it with a recorded reason, or report it. Never leave one silently stale.
 
-Before applying the rule, get the cost from `superra repro build <targets> --dry-run` and the cause from `superra repro explain <target>` ([reading explain](diagnosing.md#read-what-explain-names)).
+Before applying the rule, get the cost, stale producers included, from `superra repro build <targets> --dry-run` and the cause from `superra repro explain <target>` ([reading explain](diagnosing.md#read-what-explain-names)).
 
 ## The stale rule
 
-The rule covers every step `status` reports as `stale`, `missing`, or `failed`. Build or accept your own work — a step you just registered or a failure you fixed — rather than leaving it stale. A step reported `external` waits on a missing external input: retrieve the input, or register its producer.
+The rule covers every step `status` reports as `stale`, `missing`, or `failed`. Build or accept your own work — a step you just registered or a failure you fixed — rather than leaving it stale. An `unverified` step is outside the rule: report it with the files `status` lists as not checkable here; for an absent external input, retrieve it or register its producer.
 
 Classify the step from the graph:
 
@@ -23,6 +23,8 @@ Classify the step from the graph:
 
 **Exception: a change that cannot move a result.** When the diff proves it — a comment, whitespace, a logging line, a docstring, a helper the consumer never calls — accept on your own with the reason recorded, and report that you did. The proof is the diff, not the file list or the commit message.
 
+**Record the rule's acceptances before you build.** While a producer stays stale by the rule, build with `--only`, or the default build reruns it.
+
 ## Accept
 
 Accept an expensive result already produced from the same committed code, such as by an interactive run, instead of rerunning it.
@@ -38,5 +40,5 @@ Accepting the same fan-out again and again is a design signal: fix it at the [sc
 ## What acceptance never covers
 
 - **A check that has never run.** Run it.
-- **Steps outside the selection.** Accepting a consumer says nothing about the producers of its saved inputs; when the claim covers them, accept or build them too.
+- **Producers you did not name.** To cover one, name it or build it.
 - **Unresolved work.** Unreviewed results, result-affecting changes not yet executed, and changed check assertions require running the affected producer or check.
