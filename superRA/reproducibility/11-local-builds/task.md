@@ -1,6 +1,6 @@
 ---
 title: "Build What This Machine Can Check: Producer Chain by Default, Online-Only Data Reported"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
@@ -105,3 +105,19 @@ Make `superra repro` act on what the machine running it can verify. `build` and 
 ### At Mature
 
 These task files state the scoped default or the `external` state as current contract; rewrite their lines when folding: [02-runner](../02-runner/task.md), [03-task-interface](../03-task-interface/task.md), [04-dashboard-view](../04-dashboard-view/task.md), [06-skill](../06-skill/task.md), and [07-workflow-integration](../07-workflow-integration/task.md).
+
+## Results
+
+`superra repro` now acts on what the machine running it can check: no command downloads a file, `build` and `status` include a selection's producer chain by default, and the dashboard shows each state, where staleness starts, and what is online-only.
+
+- **States and file checks.** Online-only files and legacy Dropbox placeholders are detected and never opened. `unverified` replaces `external`, and the lock records file sizes in an optional `sizes` key. [01-local-graph](01-local-graph/task.md)
+- **Commands.** The producer chain is included by default, with `--only`, `--force` on the named targets, the download gate, capped output, and status exit codes 0/1/3. [02-upstream-default](02-upstream-default/task.md)
+- **Dashboard.** A card's border shows its reported state and its fill shows its own state (tinted, empty, or hatched). The file preview never reads online-only content. [03-state-display](03-state-display/task.md)
+- **Skill and docs.** These cover the producer-chain default, `--only`, `unverified`, and asking before downloading, with the download notes in [online-only-files.md](../../../skills/reproducibility/references/online-only-files.md). [04-discipline](04-discipline/task.md)
+
+### Open
+
+- **Size and mtime across download and eviction are unverified.** The hash cache assumes both survive. Every check so far was read-only, so no file has yet been downloaded and evicted to test it.
+- **Long task names truncate in the dashboard sidebar.** At the default width, the title and status badge fill the row. This predates this task.
+- **Sidebar rows sometimes load out of order** (01, 03, 02) after switching from Graph to Tree. This also predates this task.
+- **`OUTPUT_CAP` is a local copy** in `_repro_state.py`. Import it from `_task_validate` once that constant is committed.
