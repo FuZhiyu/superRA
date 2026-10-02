@@ -34,8 +34,10 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
   - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
   - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on a 14-step project, against about 0.8 s under pytask.
 - **The lock holds one line per step.** `repro-lock.json` (version 2) writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and can no longer mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
-- **Task-scoped builds by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. Builds use saved inputs outside the selection. `--upstream` adds the producer chain and `--force` reruns the selection. `--force-all` is retired.
-  - A scoped `status` exits 3 and names the producers behind the selection that are not fresh (`behind` in `--json`).
+- **Builds include the producer chain by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. They also take in the steps that produce the targets' inputs, back to the external inputs, so naming the final result brings it current; a build skips fresh steps and prints the added producers it will run, with their last durations. `--only` restricts a command to the targets and uses files from producers outside them as they sit on disk. `--force` reruns the targets only. `--force-all` is retired, and `--upstream` is a hidden alias for the default.
+  - `status` exits 3 when the selected steps are fine but a producer behind them is `stale`, `missing`, or `failed`, and names it. `status X --upstream` therefore exits 3 in that case, where it exited 1 before. Under `--only`, `--json` lists those producers as `behind`.
+- **No command downloads a file.** An online-only file (Dropbox, Google Drive, Box, OneDrive, or iCloud through File Provider, or a legacy Dropbox placeholder) is never opened to check it. Its step reads `unverified` unless this machine has already hashed the file; the lock records each file's size, so a File Provider file whose size changed still reads as changed. `build` never runs an `unverified` step and uses its outputs as they are, and `status` exits 0 over it while listing its files with their sizes.
+  - **Download gate.** A build that would run a step reading a file not on this machine, online-only or absent with no producer, runs nothing. It lists the files with their sizes and names `--only` as the way to build the rest.
 - **Task targets replace reproduction tiers.** The `task tree --tier` filter and badge are removed.
 - **A check that passed at these inputs elsewhere reads `fresh`**, with the reason `passed at these inputs in lock <rev> on <platform>; not run here`. A local failure still wins.
 - **Scoped build guards.** Unrelated task additions and unused configuration edits no longer abort running steps. Changes to the selected execution contract or input bytes still reject inconsistent success evidence.
@@ -54,7 +56,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 - **Acceptance records are one portable file per step,** `repro-acceptance/<step>.json`. Branches that accept different steps merge cleanly, and two clones with different data roots or user names write byte-identical records. A record that does not parse disables only its own step, with a warning.
   - `--apply`, `--evidence`, and the `upstream` record field are removed; records no longer carry `actor`, `recorded_at`, or evidence paths.
   - `accept` skips steps already fresh and never rewrites an unchanged record.
-  - Revoking a producer's acceptance leaves a downstream record valid; full-chain status reports the consumer stale while the producer is not fresh.
+  - Revoking a producer's acceptance leaves a downstream record valid; `status` reports the consumer stale while the producer is not fresh.
 - **`.superra-repro/` stays on its machine.** superRA sets Dropbox's ignore flag on the folder, so another machine's in-progress run cannot mark a step failed here. Deleting the folder stales no step.
 - **`explain` states the facts the stale rule acts on.** Every lock or git source states its relation to HEAD (HEAD's version, N commits behind, or on another branch). Graph errors on the explained steps are listed and make `explain` exit 1. A file several steps read prints once. A task view prints diff excerpts only with `--diff`. A history cache in `.superra-repro/history.json` makes a repeat call run no `git log`.
 - **`impact` covers `superRA/config.yaml` and prints text by default,** one line per affected step with its last recorded duration and why it is affected; `--json` keeps the structured output.
@@ -63,7 +65,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 - **The `reproducibility` skill carries the everyday path and routes the rest.** `SKILL.md` defines the model (producer chain, saved input, external input), lists the core commands, and holds the gate for recording a result. Each other situation loads one reference: designing the graph, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption.
 - **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
-- **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps the stale rule left stale and reported to the researcher. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
+- **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps reported to the researcher: those the stale rule left stale, and every `unverified` step. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
 - **Protect asks which inputs are external;** it no longer selects completion targets. Planners name each artifact and its planned script in the producing task's `## Details`; the implementer registers the step.
 - **The edit hook catches every producer edit:** edits through any tool, paths built from `${VAR}` variables, files inside declared directory dependencies, and the first tool call of a session. A new script beside registered ones draws a softer reminder, and a `task.md` edit reports warnings for the edited tasks only.
 
@@ -83,6 +85,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 ### Removed
 
+- The `external` step state. A step whose input no step produces and is absent now reads `unverified`; "external input" still names a file no step produces.
 - pytask and `pytask-parallel` as dependencies, the `_repro_hooks.py` plugin, and the `env_probe` and `code_roots` configuration keys, which now warn and are ignored. A lock's legacy probe fields are ignored on read.
 
 ### Release Prep

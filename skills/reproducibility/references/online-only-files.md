@@ -2,6 +2,13 @@
 
 Load when a file a step reads or writes is online-only on this machine (Dropbox, Google Drive, Box, OneDrive, iCloud), or before downloading one. macOS only.
 
+## superra Never Downloads
+
+An online-only file not yet hashed here reads `changed` when its size differs from the lock's, and `unknown` otherwise. A build refuses to start while a step it would run reads an online-only file, even one hashed here:
+
+- **Build the steps that read none:** select those steps with `--only`.
+- **Build a step that reads one:** download first, after §Ask First.
+
 ## Recognize One
 
 - **File Provider** (folders under `~/Library/CloudStorage/`, including Dropbox on File Provider): `ls -lO <file>` shows `dataless`; in Python, `os.lstat(p).st_flags & 0x40000000`. Size and mtime are real; reading the content downloads it.
@@ -12,7 +19,7 @@ Load when a file a step reads or writes is online-only on this machine (Dropbox,
 
 **Downloading is the researcher's call.** Report the files and their total size, then wait for the go-ahead.
 
-- **Sizes:** `stat -f %z <file>`; `du` counts an online-only file as 0.
+- **Sizes:** `superra repro status <targets>` lists them for `unverified` steps; otherwise `stat -f %z <file>`. `du` counts an online-only file as 0.
 - **Free space:** `df -h <dir>`. Under disk pressure, macOS may make other files online-only again.
 
 ## Download
