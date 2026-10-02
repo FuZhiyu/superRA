@@ -85,3 +85,5 @@ The fix is at [test_repro_states_browser.py:199-206](../../../skills/task-tree/s
 ### Verification
 
 The full suite passes 1123 tests. `repro status .` exits 0 with three `fresh` steps, and `repro-lock.json` is unchanged. `task check` reports 0 errors and the one pre-existing warning, and `git diff --check` is clean.
+
+- **Two other tests are flaky under load, at the base as well.** Run one suite at a time, the committed head passed four of five full-suite runs; the one failure was not captured by name. With three suites running at once, `test_an_interrupt_stops_running_steps_and_records_them_failed[SIGHUP]` failed in every suite, and `TestBackgroundLaunch::test_colliding_repos_each_get_own_server` failed in one. The interrupt failure also occurs three times out of three at `b71f03b5`. Its helper sleeps 0.2 s before signalling ([test_repro_engine.py:277](../../../skills/task-tree/scripts/test_repro_engine.py#L277)). This task did not change either test.
