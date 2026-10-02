@@ -724,6 +724,7 @@ def include_closure(
     found: list[str] = []
     warnings_out: list[str] = []
     seen: set[Path] = set()
+    from _repro_state import is_online_only  # deferred: _repro_state imports this module
     pending = [entry]
     while pending:
         current = pending.pop()
@@ -734,7 +735,6 @@ def include_closure(
         if resolved in seen:
             continue
         seen.add(resolved)
-        from _repro_state import is_online_only
         try:
             if is_online_only(current, current.stat()):
                 warnings_out.append(
