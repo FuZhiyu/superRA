@@ -419,6 +419,36 @@ class TestServerRoutes:
         assert client.get("/api/file-peek", params={"path": "../../etc/passwd"}).status_code == 403
         assert client.get("/api/file-peek", params={"path": "out/fig.png\0x"}).status_code == 400
 
+    def test_file_peek_answers_an_online_only_file_from_its_stat(self, client, plan_root, monkeypatch):
+        """An `SF_DATALESS` file or folder, or a legacy Dropbox placeholder, is
+        never opened or listed: the route returns `online_only` and the size the
+        stat knows."""
+        import builtins
+        import _repro_state
+        root = plan_root.parent
+        (root / "cloud").mkdir()
+        (root / "cloud" / "vendor.csv").write_text("v\n" * 1000)
+        (root / "cloud" / "folder").mkdir()
+        (root / "cloud" / "placeholder.csv").write_bytes(b"")
+        dataless = {(i.st_dev, i.st_ino) for i in (os.stat(root / "cloud" / name) for name in ("vendor.csv", "folder"))}
+        placeholder = os.path.realpath(root / "cloud" / "placeholder.csv")
+        monkeypatch.setattr(_repro_state, "file_flags",
+                            lambda info: _repro_state.SF_DATALESS if (info.st_dev, info.st_ino) in dataless else 0)
+        monkeypatch.setattr(_repro_state, "has_placeholder_xattr", lambda path: os.path.realpath(path) == placeholder)
+        real_open, real_scandir = builtins.open, os.scandir
+
+        def refuse(path):
+            if os.path.realpath(path).startswith(os.path.realpath(root / "cloud")):
+                raise AssertionError(f"read online-only {path}")
+        monkeypatch.setattr(builtins, "open", lambda f, *a, **k: (refuse(f), real_open(f, *a, **k))[1])
+        monkeypatch.setattr(os, "scandir", lambda p=".": (refuse(p), real_scandir(p))[1])
+
+        peek = lambda path: client.get("/api/file-peek", params={"path": path}).json()  # noqa: E731
+        assert peek("cloud/vendor.csv") == {"exists": True, "online_only": True, "kind": "file", "size": 2000,
+                                            "mtime_ns": os.stat(root / "cloud" / "vendor.csv").st_mtime_ns}
+        assert peek("cloud/folder")["online_only"] and peek("cloud/folder")["size"] is None
+        assert peek("cloud/placeholder.csv")["online_only"] and peek("cloud/placeholder.csv")["size"] is None
+
     def test_symlinked_folders_and_declared_external_paths_are_readable(self, plan_root, tmp_path_factory):
         """A symlink inside the project is the researcher's own inclusion, and a path
         the reproduction graph declares is too; `..` and anything else outside stay
@@ -6768,11 +6798,19 @@ class TestReproBuildRoutes:
         assert job["detail"][0].split() [:2] == ["code/fetch.sh", "-"]
         assert "no step produces it" in job["detail"][0]
 
-    def test_build_summary_keeps_an_errors_lines(self):
+    def test_build_summary_keeps_an_errors_lines_and_each_failed_steps_block(self):
         log = "Execution scope: 1 step(s): a\nError: 2 file(s) are gone:\n  x.csv  1 B\n  y.csv  2 B\nTry --only.\n"
         assert plan_dashboard._build_summary(log) == (
             "Error: 2 file(s) are gone:", ["  x.csv  1 B", "  y.csv  2 B", "Try --only."])
         assert plan_dashboard._build_summary("✓ a  executed\n1 step(s): 1 executed\n") == ("1 step(s): 1 executed", [])
+        stopped = ("✓ clean  executed\n✗ join  failed\n  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:\n"
+                   "    Data/vendor.csv  2.4 MB  online-only here\n✓ report  executed\n3 step(s): 2 executed, 1 failed\n")
+        assert plan_dashboard._build_summary(stopped) == ("3 step(s): 2 executed, 1 failed", [
+            "✗ join  failed", "  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:",
+            "    Data/vendor.csv  2.4 MB  online-only here"])
+        many = "".join(f"✗ s{i}  failed\n  boom\n" for i in range(10)) + "10 step(s): 10 failed\n"
+        detail = plan_dashboard._build_summary(many)[1]
+        assert len(detail) == plan_dashboard.BUILD_DETAIL_LINES + 1 and detail[-1] == "… 8 more line(s) in the log"
 
     def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
         monkeypatch.setenv("SLOW", "30")
@@ -6855,18 +6893,23 @@ class TestReproBuildRoutes:
         defs = _extract_js_defs([
             "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD", "_reproBuild", "reproStatusIndex", "reproStateOf",
             "reproChannels", "reproWithin", "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope",
-            "reproBuildEstimate",
+            "reproBuildEstimate", "reproGatedFiles", "formatArtifactBytes",
         ])
-        # a (stale) -> b (fresh, stale through a) -> y (unverified, stale through a); c missing; x unverified.
+        # a (stale) -> b (fresh, stale through a) and y (unverified, stale through a); c missing; x unverified.
+        # x and y read the online-only D/cloud.csv; nothing writes it.
+        cloud = "files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048}]"
         harness = (
             "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'},{name:'y',task:'t2'}],"
             "step_edges:[{from:'a',to:'b'},{from:'a',to:'y'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
             "{name:'b',status:'stale',local_status:'fresh',origin:'a',duration:1},{name:'c',status:'missing',duration:null},"
-            "{name:'x',status:'unverified',duration:3},{name:'y',status:'stale',local_status:'unverified',origin:'a',duration:4}]}};"
+            "{name:'x',status:'unverified',duration:3," + cloud + "},"
+            "{name:'y',status:'stale',local_status:'unverified',origin:'a',duration:4," + cloud + "}]}};"
             "console.log(JSON.stringify({"
             "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
             "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
-            "force:reproBuildEstimate('t2','force'), cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
+            "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'),"
+            "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
+            "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
             "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
@@ -6875,8 +6918,12 @@ class TestReproBuildRoutes:
         assert out["scope"] == ["b", "c", "x", "y"] and out["up"] == ["a", "b"]
         assert out["only"] == "Nothing stale"
         assert out["chain"] == "1 step would run · ~2.0s by last runs · 1 more if their inputs change"
-        assert out["task"] == "2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change · 2 online-only, not run"
-        assert out["force"] == "5 steps would run · ~10.0s by last runs · 1 never ran"
+        assert out["task"] == ("2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change"
+                               " · 1 need online-only files if their inputs change · 1 online-only, not run")
+        # The runner's gate: forced x and y read D/cloud.csv, so the build runs nothing.
+        assert out["force"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
+        assert out["writtenFirst"] == []
         assert out["cmd"] == "superra repro build 't2#b' --only"
         assert out["plain"] == "superra repro build t2"
         assert out["root"] == "superra repro build . --force"

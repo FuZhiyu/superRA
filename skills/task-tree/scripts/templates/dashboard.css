@@ -1792,7 +1792,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .repro-own-line .hc-btn { height: auto; padding: 0 6px; font-family: var(--font-mono); }
 .repro-online-summary { margin: 0 0 8px; font-size: var(--fs-meta); color: var(--text-mid); }
 .repro-online-summary .repro-glyph { color: var(--rp-unverified-t); }
-.repro-files .repro-cloud-tag { margin-left: 8px; }
+.repro-files .repro-cloud-tag, .repro-node-name .repro-cloud-tag { margin-left: 8px; }
 
 /* Steps and task prose occupy the same reader, with the task breadcrumb retained. */
 .step-reading #active-node, .step-reading #children-dag { display:none; }
@@ -2622,7 +2622,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .nav-step-state { grid-column:2;font-size:var(--fs-micro);color:var(--rp-ink-2); }
 .nav-repro-rollup > span, .rp-task-summary > span { background:none; }
 .rp-task-summary .repro-glyph { font-size:inherit; }
-.nav-repro-rollup { flex:none;padding:1px 5px;border-radius:4px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }
+.nav-repro-rollup { margin:-3px 0 2px 30px;width:max-content;padding:1px 5px;border-radius:4px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }
 .workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-spacer,.workspace:not(.dag-mode).tree-sidebar-hidden > .nav-tree,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-resizer,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-rail { display:none; }
 #navigation-toggle { white-space:nowrap; }
 @media(max-width:620px) { .header-controls #btn-find { display:inline-flex;max-width:150px;overflow:hidden;white-space:nowrap; } .workspace-filter-summary { padding:6px 12px;gap:6px; } .workspace-filter { padding:16px; } .workspace-filter label { min-height:40px; } }

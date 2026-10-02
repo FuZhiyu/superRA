@@ -24,11 +24,11 @@ import repro_run
 # descendants, an `unverified` task, an `unverified` step behind a stale
 # producer, a never-built step, a failed step, and a check step.
 TASKS = {
-    '01-clean': ('Clean the survey panel', [
+    '01-survey-panel': ('Clean the survey panel', [
         {'name': 'clean', 'cmd': 'cp Data/survey.csv out/clean.csv', 'deps': ['Data/survey.csv'], 'outs': ['out/clean.csv']},
         {'name': 'codebook-check', 'kind': 'check', 'cmd': 'test -s Data/codebook.csv', 'deps': ['Data/codebook.csv']},
     ]),
-    '02-estimate': ('Estimate the panel model', [
+    '02-panel-model': ('Estimate the panel model', [
         {'name': 'merge', 'cmd': 'cp out/clean.csv out/merged.csv', 'deps': ['out/clean.csv'], 'outs': ['out/merged.csv']},
         {'name': 'report', 'cmd': 'wc -l out/merged.csv > out/report.txt', 'deps': ['out/merged.csv'], 'outs': ['out/report.txt']},
         {'name': 'vendor-join', 'cmd': 'cat out/clean.csv Data/vendor.csv > out/joined.csv',
@@ -36,7 +36,7 @@ TASKS = {
         {'name': 'figures', 'cmd': 'cp Data/codebook.csv out/figures.txt', 'deps': ['Data/codebook.csv'], 'outs': ['out/figures.txt']},
         {'name': 'robustness', 'cmd': 'exit 1', 'deps': ['Data/codebook.csv'], 'outs': ['out/robust.txt']},
     ]),
-    '03-vendor': ('Summarize the vendor archive', [
+    '03-vendor-archive': ('Summarize the vendor archive', [
         {'name': 'vendor-rows', 'cmd': 'wc -l Data/vendor.csv > out/vendor-rows.txt', 'deps': ['Data/vendor.csv'], 'outs': ['out/vendor-rows.txt']},
         {'name': 'vendor-bytes', 'cmd': 'wc -c Data/vendor.csv > out/vendor-bytes.txt', 'deps': ['Data/vendor.csv'], 'outs': ['out/vendor-bytes.txt']},
     ]),
@@ -159,8 +159,8 @@ def test_graph_cards_carry_the_reported_state_on_the_border_and_their_own_on_the
     assert {'rp-unverified', 'rp-hatched'} <= classes(page, '#repro-node-vendor-rows')
     assert 'unverified · online-only' in page.locator('#repro-node-vendor-rows').inner_text()
     assert {'rp-fresh', 'is-check'} <= classes(page, '#repro-node-codebook-check')
-    assert 'rp-hatched' in classes(page, '.rp-task[data-task="03-vendor"]')
-    assert 'rp-hatched' not in classes(page, '.rp-task[data-task="02-estimate"]')
+    assert 'rp-hatched' in classes(page, '.rp-task[data-task="03-vendor-archive"]')
+    assert 'rp-hatched' not in classes(page, '.rp-task[data-task="02-panel-model"]')
     legend = page.locator('[data-rp-menu=legend] .rp-menu-body').text_content()
     assert 'unverified' in legend and 'external' not in legend
     for line in ("tinted the step's own state", 'empty inherited from upstream', 'hatched online-only here'):
@@ -169,37 +169,59 @@ def test_graph_cards_carry_the_reported_state_on_the_border_and_their_own_on_the
 
 
 def test_tree_rows_count_states_and_steps_wear_both_channels(browser, states):
-    page = open_view(browser, states, '02-estimate', layout='tree')
+    page = open_view(browser, states, '02-panel-model', layout='tree')
     page.wait_for_selector('#nav-tree .nav-step[data-tree-step="merge"]')
-    rollup = page.locator('#nav-tree .task-node[data-path="02-estimate"] > .task-row .nav-repro-rollup')
+    rollup = page.locator('#nav-tree .task-node[data-path="02-panel-model"] > .nav-repro-rollup')
     assert rollup.inner_text().split() == ['◐3', '○1', '✕1']
-    assert 'rp-hatched' in classes(page, '#nav-tree .task-node[data-path="03-vendor"] > .task-row .nav-repro-rollup')
+    assert 'rp-hatched' in classes(page, '#nav-tree .task-node[data-path="03-vendor-archive"] > .nav-repro-rollup')
+    # The rollup sits on its own line, so the row's slug keeps the width it has without one.
+    widths = page.evaluate('''() => Array.from(document.querySelectorAll('#nav-tree .task-node > .nav-repro-rollup')).map(badge => {
+      const slug = badge.parentElement.querySelector(':scope > .task-row > .task-slug'), before = slug.getBoundingClientRect().width;
+      badge.hidden = true; const after = slug.getBoundingClientRect().width; badge.hidden = false; return [before, after]; })''')
+    assert len(widths) == 3 and all(before == after for before, after in widths)
     assert {'rp-stale', 'rp-inherited'} <= classes(page, '.nav-step[data-tree-step="merge"]')
     assert {'rp-stale', 'rp-hatched'} <= classes(page, '.nav-step[data-tree-step="vendor-join"]')
+    assert page.locator('.nav-step[data-tree-step="codebook-check"] .nav-step-state').inner_text() == 'fresh · check'
     page.close()
 
 
 def test_panel_names_the_own_evidence_the_origin_and_each_online_only_file(browser, states):
-    page = open_view(browser, states, '02-estimate', layout='tree', selected='vendor-join')
+    page = open_view(browser, states, '02-panel-model', layout='tree', selected='vendor-join')
     page.wait_for_selector('#repro-detail .repro-own-line')
     own = page.locator('#repro-detail .repro-own-line')
-    assert own.inner_text().startswith('Own evidence: unverified — dependency Data/vendor.csv is online-only here.')
+    assert own.inner_text().startswith('Own evidence: unverified — dependency Data/vendor.csv is online-only here. '
+                                       "A build runs it only if a producer's rerun changes its inputs, and then needs its online-only files here.")
     assert own.locator('[data-rp-action=related]').inner_text() == 'clean'
     summary = page.locator('#repro-detail .repro-online-summary').inner_text()
     assert '1 file online-only here (2.3 MiB).' in summary
     online = page.locator('#repro-detail li.is-online-only')
     assert online.count() == 1 and '2.3 MiB' in online.inner_text()
-    assert online.locator('a').get_attribute('data-peek') is None  # hovering never reads it
+    online.locator('a').hover()
+    page.wait_for_selector('#file-peek :text("Online-only here (2.3 MiB)")')
+    page.mouse.move(2, 2)
     page.locator('#nav-tree .nav-step[data-tree-step="merge"]').click()
     page.wait_for_selector('#repro-detail[data-step="merge"] .repro-own-line')
-    assert page.locator('#repro-detail .repro-own-line').inner_text().startswith('Own evidence: fresh.')
+    assert page.locator('#repro-detail .repro-own-line').inner_text().startswith(
+        "Own evidence: fresh. A build reruns it only if a producer's rerun changes its inputs.")
     assert page.locator('#repro-detail .repro-online-summary').count() == 0
+    page.close()
+
+
+def test_file_view_of_an_online_only_file_shows_its_size_and_never_loads_it(browser, states):
+    page = browser.new_page(viewport={'width': 1440, 'height': 900})
+    loaded = []
+    page.on('request', lambda request: loaded.append(request.url) if '/files/Data/vendor.csv' in request.url else None)
+    page.goto(f'{states}/#/02-panel-model?file=Data%2Fvendor.csv')
+    page.wait_for_selector('#active-node :text("Online-only here (2.3 MiB)")')
+    assert page.locator('#active-node .artifact-action').count() == 0  # no Download link
+    page.wait_for_timeout(300)
+    assert loaded == []
     page.close()
 
 
 def test_build_menu_sends_only_and_shows_a_gated_builds_files(browser, states):
     page = open_view(browser, states)
-    page.wait_for_selector('.rp-task[data-task="02-estimate"] .rp-build-chip')
+    page.wait_for_selector('.rp-task[data-task="02-panel-model"] .rp-build-chip')
     sent = []
 
     def build(route):
@@ -209,13 +231,15 @@ def test_build_menu_sends_only_and_shows_a_gated_builds_files(browser, states):
         route.fulfill(status=409, content_type='application/json', body=json.dumps({'detail': 'refused in test'}))
     page.route('**/api/repro/build?*', build)
     page.route('**/api/repro/build', build)
-    page.evaluate("""reproOpenBuildMenu(document.querySelector('.rp-task[data-task="02-estimate"] .rp-build-chip'))""")
+    page.evaluate("""reproOpenBuildMenu(document.querySelector('.rp-task[data-task="02-panel-model"] .rp-build-chip'))""")
     menu = page.locator('#rp-build-menu')
-    assert menu.locator('[data-mode=only] code').inner_text() == 'superra repro build 02-estimate --only'
-    assert menu.locator('[data-mode=""] code').inner_text() == 'superra repro build 02-estimate'
+    assert menu.locator('[data-mode=only] code').inner_text() == 'superra repro build 02-panel-model --only'
+    assert menu.locator('[data-mode=""] code').inner_text() == 'superra repro build 02-panel-model'
+    assert menu.locator('[data-mode=force] .rp-build-est').inner_text() == (
+        'Would run nothing: 1 file not on this machine (2.3 MiB): Data/vendor.csv')
     menu.locator('[data-mode=only]').click()
     page.wait_for_function('() => _reproBuild.error')
-    assert sent == [{'target': '02-estimate', 'only': True, 'force': False}]
+    assert sent == [{'target': '02-panel-model', 'only': True, 'force': False}]
     detail = page.evaluate("""() => { _reproBuild.error = ''; _reproBuild.wt = ACTIVE_WT;
       _reproBuild.job = {ended_at: Date.now() / 1000, returncode: 1, summary: 'Error: 1 file(s) the build reads are not on this machine, so nothing was run:',
         detail: ['  Data/vendor.csv  2.3 MB  online-only here  (read by vendor-join)'], log_tail: ''};

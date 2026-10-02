@@ -47,12 +47,15 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
+import _repro_state
 from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
 from _repro_state import (
     LOCK_FILENAME,
+    SF_DATALESS,
     STATUSES,
     ReproStateError,
     compute_status,
+    is_online_only,
     runner_paths,
     select_steps,
 )
@@ -1582,7 +1585,9 @@ async def serve_file(path: str, request: Request):
 # The step-file hover card and in-page file view.  Answers from one stat plus a
 # bounded head read, so the cost is flat in file size; the entry carries the same
 # ``previewable`` / ``download_only`` policy as a task attachment, and the page
-# loads the file itself from /files/ only when it is previewable.
+# loads the file itself from /files/ only when it is previewable.  An online-only
+# file or folder (Dropbox, Box, iCloud...) answers from the stat alone: reading
+# or listing it would download it.
 
 PEEK_HEAD_BYTES = 4096
 PEEK_DIR_ENTRIES = 1000
@@ -1594,6 +1599,11 @@ def _file_peek(resolved: Path, path: str) -> dict:
         info = resolved.stat()
     except OSError:
         return {"exists": False}
+    if is_online_only(resolved, info):
+        return {"exists": True, "online_only": True, "kind": "directory" if resolved.is_dir() else "file",
+                # A legacy Dropbox placeholder reports size 0, so only SF_DATALESS knows its size.
+                "size": info.st_size if _repro_state.file_flags(info) & SF_DATALESS and not resolved.is_dir() else None,
+                "mtime_ns": info.st_mtime_ns}
     if resolved.is_dir():
         with os.scandir(resolved) as entries:
             count = sum(1 for _, _ in zip(range(PEEK_DIR_ENTRIES + 1), entries))
@@ -1814,6 +1824,7 @@ BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
 # A just-spawned runner has not taken the lock yet; trust its live pid this long.
 BUILD_STARTUP_GRACE = 30.0
 BUILD_LOG_TAIL_LINES = 40
+BUILD_DETAIL_LINES = 12
 _build_start_lock = threading.Lock()
 
 
@@ -1974,9 +1985,11 @@ def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool
 
 
 def _build_summary(log_text: str) -> tuple[str, list[str]]:
-    """The line of a build log that says how it ended, and an error's lines after it.
+    """The line of a build log that says how it ended, and the lines that explain it.
 
-    The lines carry a refusal's detail, such as the download gate's file list.
+    After an `Error:` summary, the lines that follow it (the download gate's file
+    list); after a step count, each failed step's block (a step stopped at its
+    start names the files it needs), at most BUILD_DETAIL_LINES.
     """
     lines = [line.rstrip() for line in log_text.splitlines() if line.strip()]
     for at in range(len(lines) - 1, -1, -1):
@@ -1985,7 +1998,14 @@ def _build_summary(log_text: str) -> tuple[str, list[str]]:
             return line, lines[at + 1:]
         if (line.startswith(("Interrupted", "Nothing to execute", "No steps registered"))
                 or re.match(r"\d+ step\(s\): ", line)):
-            return line, []
+            failed, inside = [], False
+            for row in lines[:at]:
+                inside = row.startswith("✗ ") or (inside and row[:1].isspace())
+                if inside:
+                    failed.append(row)
+            if len(failed) > BUILD_DETAIL_LINES:
+                failed = failed[:BUILD_DETAIL_LINES] + [f"… {len(failed) - BUILD_DETAIL_LINES} more line(s) in the log"]
+            return line, failed
     return (lines[-1].strip() if lines else ""), []
 
 
