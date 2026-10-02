@@ -351,20 +351,24 @@ class HashCache:
             return self.tree_hash(path)
         return self._hashed(path, info)
 
-    def probe(self, path: Path) -> tuple[bool, int | None]:
+    def probe(self, path: Path, *, walk: bool = False) -> tuple[bool, int | None]:
         """(online-only, size) from metadata alone; never reads content.
 
-        A directory is online-only when it or anything under it is, as its last
-        walk found; it has no size. A legacy placeholder's size is unknown.
+        A directory has no size. It is online-only when its own flag says so or
+        its last hash walk found online-only content; *walk* stats everything
+        under a directory that has not been walked. A legacy placeholder's size
+        is unknown.
         """
         try:
             info = path.stat()
         except OSError:
             return False, None
         if stat.S_ISDIR(info.st_mode):
-            if str(path) not in self._online:
+            if file_flags(info) & SF_DATALESS:
+                return True, None
+            if walk and str(path) not in self._online:
                 self._online[str(path)] = _holds_online_only(path)
-            return self._online[str(path)], None
+            return self._online.get(str(path), False), None
         if not stat.S_ISREG(info.st_mode):
             return False, None
         if file_flags(info) & SF_DATALESS:
@@ -1250,6 +1254,8 @@ def _file_rows(
         for node in nodes:
             path = absolute(paths.project_root, node[2] or node[1])
             online, size = cache.probe(path)
+            if node[2] is not None:  # a sidecar-tracked out: never walk the out itself
+                online = online or cache.probe(absolute(paths.project_root, node[1]))[0]
             result = outcomes.get(node[0])
             if result is None:
                 if online:

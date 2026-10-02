@@ -158,12 +158,16 @@ def _tree_files(plan_root: Path) -> list[str] | None:
 
 def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> list[str]:
     """Files under `root` (those with `suffixes`, or all), skipping hidden and
-    scratch folders; empty when the directory holds more than MAX_DIR_FILES."""
+    scratch folders and never listing an online-only directory; empty when the
+    directory holds more than MAX_DIR_FILES."""
     found: list[str] = []
+    if _dataless(root):
+        return found
     for parent, dirnames, filenames in os.walk(root):
         dirnames[:] = (
             [d for d in dirnames
-             if not d.startswith(".") and d not in _SKIP_DIRS and d.lower() not in _SCRATCH_DIRS]
+             if not d.startswith(".") and d not in _SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
+             and not _dataless(os.path.join(parent, d))]
             if recursive else []
         )
         for name in filenames:
@@ -172,6 +176,14 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
         if len(found) > MAX_DIR_FILES:
             return []
     return found
+
+
+def _dataless(path: str) -> bool:
+    from _repro_state import SF_DATALESS, file_flags
+    try:
+        return bool(file_flags(os.stat(path)) & SF_DATALESS)
+    except OSError:
+        return False
 
 
 def _content_hash(path: str, size: int) -> str | None:
@@ -272,9 +284,10 @@ def detect(
             files[path] = previous
             return
         nonlocal hashed_bytes
+        from _repro_state import is_online_only
         try:
-            if hashed_bytes + info.st_size > HASH_BUDGET_BYTES:
-                digest = None
+            if hashed_bytes + info.st_size > HASH_BUDGET_BYTES or is_online_only(Path(path), info):
+                digest = None  # compared by stat alone; an online-only file is never opened
             else:
                 digest = _content_hash(path, info.st_size)
                 hashed_bytes += info.st_size

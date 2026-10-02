@@ -223,7 +223,6 @@ def test_failed_never_built_and_passed_elsewhere_outrank_an_online_only_input(pr
     assert project.status(*CHAIN).entry("build-b").status == "failed"
 
     project.write("superRA/01-a/task.md", TASK_A.replace("build-a", "build-a2"))
-    entry = project.status(*CHAIN).entry("build-a2")
     offline.evict("Code/a.sh")
     _clear_cache(project)
     entry = project.status(*CHAIN).entry("build-a2")
@@ -264,6 +263,49 @@ def test_build_never_runs_an_unverified_step(project, offline, capsys):
     assert project.run("build", *CHAIN) == 0
     assert project.run_times() == before
     assert "3 step(s): 2 unchanged, 1 unverified" in capsys.readouterr().out
+
+
+def test_a_stale_step_never_starts_on_an_online_only_input_even_a_cached_one(project, offline, capsys):
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/b.sh", "cat output/a.txt > output/b.txt\n")
+    offline.evict("output/a.txt")  # still in the hash cache: hashable, yet reading it downloads it
+    assert project.status(*CHAIN).entry("build-b").local_status == "stale"
+    before = project.run_times()
+    capsys.readouterr()
+    assert project.run("build", "02-b#build-b") == 1
+    assert "cannot start: input ${OUT}/a.txt is online-only here" in capsys.readouterr().out
+    assert project.run_times()["build-b"] == before["build-b"]
+    from _repro_state import read_run_record
+    assert read_run_record(project.paths, "build-b").get("outcome") == "success"  # no failed run recorded
+
+
+def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, capsys):
+    assert project.run("build", *CHAIN) == 0
+    before = project.run_times()
+    offline.evict("Code/a.sh")
+    _clear_cache(project)
+    assert project.status("01-a").entry("build-a").status == "unverified"
+    capsys.readouterr()
+    assert project.run("build", "01-a#build-a", "--force") == 1
+    assert "cannot start: input Code/a.sh is online-only here" in capsys.readouterr().out
+    assert project.run_times() == before
+
+
+def test_edit_detection_never_opens_an_online_only_file_or_lists_an_online_only_directory(tmp_path, monkeypatch):
+    import _edit_detect
+    import task_hook
+    proj = Project(tmp_path / "dir")
+    proj.write("superRA/01-agg/task.md", DIR_TASK)
+    proj.write("Data/panel/y2020/p.csv", "1\n")
+    proj.write("Data/panel/y2021/p.csv", "2\n")
+    offline = Offline(monkeypatch, proj.root)
+    offline.evict("Data/panel/y2021")
+    offline.evict("Data/panel/y2020/p.csv")
+    watch = task_hook._repro_watch(proj.plan_root)
+    assert _edit_detect.detect(proj.plan_root, "s1", lambda: watch[0], lambda: watch[1]) == []
+    assert os.path.realpath(proj.root / "Data/panel/y2021") not in offline.listed
+    baseline = json.loads(next((proj.root / ".superra-repro/hook-baseline").glob("s1.json")).read_text())
+    assert baseline["files"][str(proj.root / "Data/panel/y2020/p.csv")][2] is None  # kept, never hashed
 
 
 def test_a_stale_step_never_starts_on_an_input_it_cannot_hash(project, offline, capsys):
