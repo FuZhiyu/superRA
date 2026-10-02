@@ -24,6 +24,12 @@ from _task_io import (
 )
 
 
+# Default agent-facing output lists at most this many findings per group; the
+# rest collapse to a count and the command that lists them, so output size
+# stays fixed however messy the tree.
+OUTPUT_CAP = 10
+
+
 @dataclass
 class Finding:
     """A single diagnostic finding.
