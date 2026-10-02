@@ -49,9 +49,11 @@ LEGACY_BUILDS_FILENAME = "repro-builds.json"
 # acceptance ledger) across `-j` worker threads.
 RECORD_LOCK = threading.RLock()
 
-# Step states. A step takes the first one its own evidence supports, in this
-# order; the cascade then lifts a `fresh` step whose upstream is not fresh.
-STATUSES = ("fresh", "stale", "missing", "failed", "external")
+# Step states, for counting and display. A step takes the first state its own
+# evidence supports: failed, missing, stale, unverified, fresh. The cascade then
+# lifts a `fresh` or `unverified` step whose producer is stale, missing, or failed.
+STATUSES = ("fresh", "stale", "missing", "failed", "unverified")
+BLOCKING = ("stale", "missing", "failed")
 
 
 class ReproStateError(RuntimeError):
@@ -168,17 +170,71 @@ def stamp_ref(step_name: str) -> str:
 # Content hashing
 # ---------------------------------------------------------------------------
 
+SF_DATALESS = getattr(stat, "SF_DATALESS", 0x40000000)  # File Provider: content not on disk
+PLACEHOLDER_XATTR = b"com.dropbox.placeholder"  # legacy Dropbox online-only file
+_LIBC = None
+
+
+def file_flags(info: os.stat_result) -> int:
+    return getattr(info, "st_flags", 0)
+
+
+def has_placeholder_xattr(path: Path) -> bool:
+    """Whether *path* carries the legacy Dropbox placeholder xattr; reads no content."""
+    global _LIBC
+    if sys.platform != "darwin":
+        return False
+    try:
+        import ctypes
+        if _LIBC is None:
+            libc = ctypes.CDLL(None, use_errno=True)
+            libc.getxattr.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p,
+                                      ctypes.c_size_t, ctypes.c_uint32, ctypes.c_int]
+            libc.getxattr.restype = ctypes.c_ssize_t
+            _LIBC = libc
+        return _LIBC.getxattr(os.fsencode(path), PLACEHOLDER_XATTR, None, 0, 0, 0) >= 0
+    except (OSError, AttributeError):
+        return False
+
+
+def is_online_only(path: Path, info: os.stat_result) -> bool:
+    """Content not on disk: `SF_DATALESS`, or a zero-byte legacy Dropbox placeholder."""
+    if file_flags(info) & SF_DATALESS:
+        return True
+    return stat.S_ISREG(info.st_mode) and info.st_size == 0 and has_placeholder_xattr(path)
+
+
+@dataclass(frozen=True)
+class Unread:
+    """An existing file or directory this machine cannot hash without downloading it.
+
+    *why* is ``online-only`` or ``unreadable`` (a read failed). *size* is the
+    file's size, known only for an `SF_DATALESS` file; a legacy placeholder's
+    zero size and a directory carry none.
+    """
+
+    why: str
+    size: int | None = None
+
+
+def unread(value) -> bool:
+    return isinstance(value, Unread)
+
+
 class HashCache:
     """Content hashes keyed on (size, mtime_ns), persisted as JSON.
 
     A hit costs one ``stat``; a miss reads the file. Inode is deliberately not
-    part of the key: Dropbox does not preserve it across machines.
+    part of the key: Dropbox does not preserve it across machines. An
+    online-only file is never opened: a hit still returns its hash, a miss
+    returns `Unread`.
     """
 
     def __init__(self, path: Path | None = None):
         self.path = path
         self.full_reads = 0
         self._entries: dict[str, list] = {}
+        self._online: dict[str, bool] = {}  # directory -> holds online-only content, from its last walk
         self._dirty = False
         self._flush_lock = threading.Lock()
         if path is not None and path.is_file():
@@ -191,45 +247,60 @@ class HashCache:
                     k: v for k, v in loaded.items() if isinstance(v, list) and len(v) == 3
                 }
 
-    def file_hash(self, path: Path) -> str | None:
-        """sha256 of a file's content, or None when it is not a readable file."""
+    def file_hash(self, path: Path) -> str | Unread | None:
+        """sha256 of a file's content; `Unread` when it cannot be read here; None when absent."""
         try:
             info = path.stat()
-        except OSError:
+        except (FileNotFoundError, NotADirectoryError):
             return None
+        except OSError:
+            return Unread("unreadable")
         return self._hashed(path, info)
 
-    def _hashed(self, path: Path, info: os.stat_result) -> str | None:
+    def _hashed(self, path: Path, info: os.stat_result) -> str | Unread | None:
         if not stat.S_ISREG(info.st_mode):
             return None
+        if info.st_size == 0 and has_placeholder_xattr(path):
+            return Unread("online-only")  # never an empty file's hash
         key = str(path)
         cached = self._entries.get(key)
         if cached and cached[0] == info.st_size and cached[1] == info.st_mtime_ns:
             return cached[2]
+        if file_flags(info) & SF_DATALESS:
+            return Unread("online-only", info.st_size)
         digest = hashlib.sha256()
         try:
             with path.open("rb") as handle:
                 for block in iter(lambda: handle.read(1 << 20), b""):
                     digest.update(block)
         except OSError:
-            return None
+            return Unread("unreadable")
         self.full_reads += 1
         value = digest.hexdigest()
         self._entries[key] = [info.st_size, info.st_mtime_ns, value]
         self._dirty = True
         return value
 
-    def tree_hash(self, path: Path) -> str | None:
+    def tree_hash(self, path: Path) -> str | Unread:
         """One hash over every file under a directory, by relative path.
 
         Symlinked files and subdirectories are followed, each real directory
-        once. A broken link or an unreadable file makes the whole directory
-        unreadable (None) rather than silently leaving it out.
+        once. A directory's flags are checked before it is listed, since
+        listing an online-only directory downloads its entries. A broken link,
+        an unreadable file, or uncached online-only content makes the whole
+        directory `Unread` rather than silently leaving it out.
         """
         digest = hashlib.sha256()
         entries: list[tuple[str, str]] = []
         visited: set[tuple[int, int]] = set()
         unreadable: list[OSError] = []
+        online = False
+        try:
+            if file_flags(os.stat(path)) & SF_DATALESS:
+                self._online[str(path)] = True
+                return Unread("online-only")
+        except OSError:
+            return Unread("unreadable")
         for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
             info = os.stat(parent)
             if (info.st_dev, info.st_ino) in visited:
@@ -237,36 +308,70 @@ class HashCache:
                 continue
             visited.add((info.st_dev, info.st_ino))
             dirnames.sort()
+            for dirname in dirnames:
+                try:
+                    if file_flags(os.stat(os.path.join(parent, dirname))) & SF_DATALESS:
+                        self._online[str(path)] = True
+                        return Unread("online-only")
+                except OSError:
+                    return Unread("unreadable")  # a broken link
             for filename in sorted(filenames):
                 child = Path(parent) / filename
                 try:
                     child_info = child.stat()
                 except OSError:
-                    return None  # a broken link
+                    return Unread("unreadable")  # a broken link
                 if not stat.S_ISREG(child_info.st_mode):
                     continue
+                online = online or is_online_only(child, child_info)
                 child_hash = self._hashed(child, child_info)
-                if child_hash is None:
-                    return None  # unreadable
+                if unread(child_hash):
+                    self._online[str(path)] = online or child_hash.why == "online-only"
+                    return Unread(child_hash.why)
                 entries.append((os.path.relpath(child, path).replace(os.sep, "/"), child_hash))
+        self._online[str(path)] = online
         if unreadable:
-            return None
+            return Unread("unreadable")
         for name, value in sorted(entries):
             digest.update(f"{name}\0{value}\n".encode())
         return f"dir:{digest.hexdigest()}"
 
-    def path_state(self, path: Path) -> str | None:
-        """State of a file or directory: its content hash, or None if absent.
+    def path_state(self, path: Path) -> str | Unread | None:
+        """State of a file or directory: its content hash, `Unread`, or None if absent.
 
         One ``stat`` decides both the branch and, for a file, the cache key.
         """
         try:
             info = path.stat()
-        except OSError:
+        except (FileNotFoundError, NotADirectoryError):
             return None
+        except OSError:
+            return Unread("unreadable")
         if stat.S_ISDIR(info.st_mode):
             return self.tree_hash(path)
         return self._hashed(path, info)
+
+    def probe(self, path: Path) -> tuple[bool, int | None]:
+        """(online-only, size) from metadata alone; never reads content.
+
+        A directory is online-only when it or anything under it is, as its last
+        walk found; it has no size. A legacy placeholder's size is unknown.
+        """
+        try:
+            info = path.stat()
+        except OSError:
+            return False, None
+        if stat.S_ISDIR(info.st_mode):
+            if str(path) not in self._online:
+                self._online[str(path)] = _holds_online_only(path)
+            return self._online[str(path)], None
+        if not stat.S_ISREG(info.st_mode):
+            return False, None
+        if file_flags(info) & SF_DATALESS:
+            return True, info.st_size
+        if info.st_size == 0 and has_placeholder_xattr(path):
+            return True, None
+        return False, info.st_size
 
     def flush(self) -> None:
         """Persist, but never create the state directory — `ensure_state_dir` owns
@@ -279,6 +384,39 @@ class HashCache:
             except OSError:
                 return
             self._dirty = False
+
+
+def _holds_online_only(path: Path) -> bool:
+    """Whether a directory or anything under it is online-only, from `stat` alone.
+
+    Each directory's flag is checked before it is listed.
+    """
+    try:
+        if file_flags(os.stat(path)) & SF_DATALESS:
+            return True
+    except OSError:
+        return False
+    visited: set[tuple[int, int]] = set()
+    for parent, dirnames, filenames in os.walk(path, followlinks=True):
+        info = os.stat(parent)
+        if (info.st_dev, info.st_ino) in visited:
+            dirnames[:] = []
+            continue
+        visited.add((info.st_dev, info.st_ino))
+        for name in filenames:
+            child = Path(parent) / name
+            try:
+                if is_online_only(child, child.stat()):
+                    return True
+            except OSError:
+                continue
+        for name in dirnames:
+            try:
+                if file_flags(os.stat(os.path.join(parent, name))) & SF_DATALESS:
+                    return True
+            except OSError:
+                continue
+    return False
 
 
 Node = tuple[str, str, str | None]  # lock id, path to hash, path that must exist
@@ -349,26 +487,54 @@ def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
 
 def node_state(
     cache: HashCache, project_root: Path, node: Node
-) -> str | None:
-    """State of a node: absent when its required path is gone, else its hash."""
+) -> str | Unread | None:
+    """State of a node: absent when its required path is gone, else its hash or `Unread`.
+
+    A sidecar-tracked out's `Unread` sidecar carries the out's own size.
+    """
     _, hashed, must_exist = node
     if must_exist is not None and not absolute(project_root, must_exist).exists():
         return None
-    return path_state(cache, project_root, hashed)
+    value = path_state(cache, project_root, hashed)
+    if unread(value) and value.size is not None and must_exist is not None:
+        value = Unread(value.why, read_size(cache, project_root, node))
+    return value
 
 
-def dependency_state(cache: HashCache, project_root: Path, node: Node, recorded: str | None = None) -> str | None:
+def read_size(cache: HashCache, project_root: Path, node: Node) -> int | None:
+    """Size of the file a node's readers read: the out itself, never its sidecar."""
+    return cache.probe(absolute(project_root, node[2] or node[1]))[1]
+
+
+def dependency_state(cache: HashCache, project_root: Path, node: Node, recorded: str | None = None) -> str | Unread | None:
     """A saved artifact remains usable when its producer's sidecar is absent."""
     value = None if recorded and recorded.startswith('saved-input:') else node_state(cache, project_root, node)
     if value is None and node[2] is not None:
         digest = cache.path_state(absolute(project_root, node[2]))
+        if unread(digest):
+            return digest
         if digest is not None:
             return f"saved-input:{digest}"
     return value
 
 
-def path_state(cache: HashCache, project_root: Path, resolved: str) -> str | None:
+def path_state(cache: HashCache, project_root: Path, resolved: str) -> str | Unread | None:
     return cache.path_state(absolute(project_root, resolved))
+
+
+def outcome(current, recorded: str | None, recorded_size: int | None = None, *, produced: bool = True) -> str:
+    """One file's check: ``matches``, ``changed``, ``absent``, or ``unknown``; never a download.
+
+    An absent file no step produces is unknown. An online-only file whose size
+    differs from the recorded one is changed; any other `Unread` is unknown.
+    """
+    if current is None:
+        return "absent" if produced else "unknown"
+    if unread(current):
+        if current.size is not None and recorded_size is not None and current.size != recorded_size:
+            return "changed"
+        return "unknown"
+    return "matches" if current == recorded else "changed"
 
 
 def absolute(project_root: Path, resolved: str) -> Path:
@@ -425,32 +591,49 @@ class LockEntry:
     """One step's record in the lock, keyed by logical node id.
 
     ``depends_on`` carries the step spec as its ``<step>::spec`` node. What the
-    step was built on never decides freshness, so it takes no part in equality.
+    step was built on never decides freshness, so it takes no part in equality;
+    nor do ``sizes``, which only let an online-only file read changed unread.
     """
 
     depends_on: dict[str, str] = field(default_factory=dict)
     produces: dict[str, str] = field(default_factory=dict)
     built_on: dict = field(default_factory=dict, compare=False)
+    sizes: dict[str, int] = field(default_factory=dict, compare=False)
 
 
 def lock_entry(name: str, raw: dict) -> LockEntry:
-    """A ``repro-lock.json`` step entry as the in-memory lock entry."""
+    """A ``repro-lock.json`` step entry as the in-memory lock entry; ``sizes`` is optional."""
     depends_on = dict(raw.get("deps") or {})
     if raw.get("spec") is not None:
         depends_on[spec_node_id(name)] = raw["spec"]
+    sizes = raw.get("sizes")
     return LockEntry(depends_on=depends_on, produces=dict(raw.get("outs") or {}),
-                     built_on=dict(raw.get("built_on") or {}))
+                     built_on=dict(raw.get("built_on") or {}),
+                     sizes=dict(sizes) if isinstance(sizes, dict) else {})
 
 
 def lock_record(name: str, entry: LockEntry) -> dict:
     """The ``repro-lock.json`` step entry for an in-memory lock entry."""
     spec_id = spec_node_id(name)
-    return {
+    record = {
         "spec": entry.depends_on.get(spec_id),
         "deps": {k: v for k, v in entry.depends_on.items() if k != spec_id},
         "outs": dict(entry.produces),
         "built_on": dict(entry.built_on),
     }
+    if entry.sizes:
+        record["sizes"] = dict(entry.sizes)
+    return record
+
+
+def node_sizes(cache: HashCache, project_root: Path, nodes: Iterable[Node]) -> dict[str, int]:
+    """Each file node's size, of the out itself for a sidecar; a directory records none."""
+    sizes = {}
+    for node in nodes:
+        size = read_size(cache, project_root, node)
+        if size is not None:
+            sizes[node[0]] = size
+    return sizes
 
 
 def empty_lock() -> dict:
@@ -690,6 +873,8 @@ class StepStatus:
     boundary_verified: list[dict] = field(default_factory=list)  # sidecar saved inputs whose bytes checked out
     running: bool = False  # a live build is executing this step now
     started_at: float | None = None
+    files: list[dict] = field(default_factory=list)  # per dep and out: node, role, outcome, online_only, size
+    origin: str | None = None  # a lifted step: the furthest-upstream producer whose own state is blocking
 
     def to_dict(self) -> dict:
         return {
@@ -701,6 +886,8 @@ class StepStatus:
             "reason": self.reason,
             "local_status": self.local_status or self.status,
             "local_reason": self.local_reason or self.reason,
+            "origin": self.origin,
+            "files": self.files,
             "boundary_inputs": self.boundary_inputs,
             "external_consumers": self.external_consumers,
             "changes": [c.to_dict() for c in self.changes],
@@ -808,7 +995,7 @@ def compute_status(
     lock = read_lock(paths.lock_file)
     lock.update(completed_locks or {})
     outputs = output_nodes(graph)
-    missing_external = {e.path.logical for e in graph.external_inputs if not e.exists}
+    externals = {e.path.logical for e in graph.external_inputs}
     memo: dict = {}
     report = StatusReport(
         project_root=paths.project_root, graph=graph,
@@ -819,7 +1006,7 @@ def compute_status(
         if step.name not in needed:
             continue
         entry = _classify(
-            step, lock.get(step.name), paths, cache, outputs, missing_external, memo, live_build
+            step, lock.get(step.name), paths, cache, outputs, externals, memo, live_build
         )
         entry.external_consumers = external_consumers(graph, step)
         report.entries.append(entry)
@@ -858,10 +1045,11 @@ def _classify(
     paths: RunnerPaths,
     cache: HashCache,
     outputs: dict[str, Node],
-    missing_external: set[str],
+    externals: set[str],
     memo: dict,
     live_build: int | None = None,
 ) -> StepStatus:
+    """The step's own state: failed, missing, stale, unverified, fresh — the first its evidence supports."""
     result = StepStatus(step=step)
     record = read_run_record(paths, step.name)
     result.duration = record.get("duration")
@@ -869,23 +1057,13 @@ def _classify(
     if record.get("log"):
         result.log = record["log"]
 
-    blocked = [d.logical for d in step.deps if d.logical in missing_external]
-    if blocked:
-        result.status = "external"
-        result.reason = _plural(
-            f"external input {blocked[0]} is missing", len(blocked) - 1
-        )
-        result.changes = [
-            Change(node=p, kind="dependency", change="missing") for p in blocked
-        ]
-        return result
-
+    outcomes: dict[str, str] = {}
     elsewhere = False
     if entry is None:
         result.status = "missing"
         result.reason = "never built"
     else:
-        elsewhere = _compare(result, step, entry, paths, cache, outputs, memo)
+        elsewhere = _compare(result, step, entry, paths, cache, outputs, externals, memo, outcomes)
 
     if record.get("outcome") in ("running", "pending"):
         if live_build and record.get("pid") == live_build:
@@ -909,6 +1087,7 @@ def _classify(
         # the trigger a rerun answers to, and the log is where the last one died.
         log_ref = result.log or paths.log_ref(step.name)
         result.reason = f"{result.reason}; last run failed, see {log_ref}"
+    result.files = _file_rows(step, paths, cache, outputs, externals, outcomes)
     return result
 
 
@@ -919,7 +1098,9 @@ def _compare(
     paths: RunnerPaths,
     cache: HashCache,
     outputs: dict[str, Node],
+    externals: set[str],
     memo: dict,
+    outcomes: dict[str, str],
 ) -> bool:
     """Set *result* from the lock entry against what is on disk now.
 
@@ -931,12 +1112,18 @@ def _compare(
         for node in products
         if node_state(cache, paths.project_root, node) is None
     ]
+    unknown: list[tuple[str, str, str]] = []
     if absent:
-        if step.kind == "check" and not _changed_nodes(step, entry, paths, cache, deps, []):
+        if step.kind == "check" and not _changed_nodes(
+                step, entry, paths, cache, deps, [], externals, unknown, outcomes):
             # The stamp is machine-local; the committed lock says it passed at these inputs.
-            from _repro_provenance import check_elsewhere_reason
-            result.reason = check_elsewhere_reason(paths, memo, step.name, entry)
+            if unknown:
+                _unverified(result, unknown)
+            else:
+                from _repro_provenance import check_elsewhere_reason
+                result.reason = check_elsewhere_reason(paths, memo, step.name, entry)
             return True
+        outcomes.update(dict.fromkeys(absent, "absent"))
         result.status = "missing"
         result.reason = _plural(f"output {absent[0]} is missing", len(absent) - 1)
         result.changes = [
@@ -944,8 +1131,10 @@ def _compare(
         ]
         return False
 
-    changes = _changed_nodes(step, entry, paths, cache, deps, products)
+    changes = _changed_nodes(step, entry, paths, cache, deps, products, externals, unknown, outcomes)
     if not changes:
+        if unknown:
+            _unverified(result, unknown)
         return False
     result.status = "stale"
     result.changes = changes
@@ -962,6 +1151,19 @@ def _compare(
     return False
 
 
+def _unverified(result: StepStatus, unknown: list[tuple[str, str, str]]) -> None:
+    kind, node, why = unknown[0]
+    result.status = "unverified"
+    result.reason = _plural(f"{kind} {node} is {why}", len(unknown) - 1)
+
+
+def unread_phrase(current) -> str:
+    """Why a file is unknown: online-only, unreadable, or absent with no producer."""
+    if current is None:
+        return "not on disk, and no step produces it"
+    return "online-only here" if current.why == "online-only" else "unreadable here"
+
+
 def _changed_nodes(
     step: Step,
     entry: LockEntry,
@@ -969,9 +1171,18 @@ def _changed_nodes(
     cache: HashCache,
     deps: list[Node],
     products: list[Node],
+    externals: set[str] = frozenset(),
+    unknown: list | None = None,
+    outcomes: dict | None = None,
 ) -> list[Change]:
-    """Recorded node states that no longer match disk, in reporting order."""
+    """Recorded node states that no longer match disk, in reporting order.
+
+    Each compared file's outcome lands in *outcomes*; each unknown one, as
+    (kind, node, why), in *unknown*. An absent out is the caller's to judge.
+    """
     changes: list[Change] = []
+    unknown = [] if unknown is None else unknown
+    outcomes = {} if outcomes is None else outcomes
     spec_id = spec_node_id(step.name)
     recorded_spec = entry.depends_on.get(spec_id)
     declared, resolved = spec_hashes(step)
@@ -998,19 +1209,56 @@ def _changed_nodes(
                 changes.append(Change(node=node[0], kind="dependency", change="added"))
             continue  # a newly declared dep already moved the spec hash
         current = dependency_state(cache, paths.project_root, node, recorded)
-        if current is None:
+        result = outcomes[node[0]] = outcome(
+            current, recorded, entry.sizes.get(node[0]), produced=node[0] not in externals)
+        if result == "absent":
             changes.append(Change(node=node[0], kind="dependency", change="missing"))
-        elif current != recorded:
+        elif result == "changed":
             changes.append(Change(node=node[0], kind="dependency", change="changed"))
+        elif result == "unknown":
+            unknown.append(("dependency", node[0], unread_phrase(current)))
 
     for node in products:
         recorded = entry.produces.get(node[0])
         if recorded is None:
             continue
         current = node_state(cache, paths.project_root, node)
-        if current is not None and current != recorded:
+        result = outcomes[node[0]] = outcome(current, recorded, entry.sizes.get(node[0]))
+        if result == "changed":
             changes.append(Change(node=node[0], kind="output", change="changed"))
+        elif result == "unknown":
+            unknown.append(("output", node[0], unread_phrase(current)))
     return changes
+
+
+def _file_rows(
+    step: Step,
+    paths: RunnerPaths,
+    cache: HashCache,
+    outputs: dict[str, Node],
+    externals: set[str],
+    outcomes: dict[str, str],
+) -> list[dict]:
+    """Per dep and out: its outcome, whether it is online-only here, and its size.
+
+    A file the classification did not compare (a never-built step's) gets its
+    outcome from metadata alone: absent, unknown, or null when it is on disk.
+    """
+    deps, products = step_nodes(step, outputs)
+    rows = []
+    for role, nodes in (("dependency", deps), ("output", products)):
+        for node in nodes:
+            path = absolute(paths.project_root, node[2] or node[1])
+            online, size = cache.probe(path)
+            result = outcomes.get(node[0])
+            if result is None:
+                if online:
+                    result = "unknown"
+                elif not os.path.lexists(path):
+                    result = "unknown" if node[0] in externals else "absent"
+            rows.append({"node": node[0], "role": role, "outcome": result,
+                         "online_only": online, "size": size})
+    return rows
 
 
 def _topological(by_name: dict, upstream: dict[str, list[str]]) -> list[str]:
@@ -1127,7 +1375,7 @@ _MARKS = {
     "stale": "~",
     "missing": "?",
     "failed": "✗",
-    "external": "!",
+    "unverified": "○",
 }
 
 
@@ -1219,6 +1467,7 @@ def render_dag(graph: Graph, *, mermaid: bool = False) -> str:
 
 
 __all__ = [
+    "BLOCKING",
     "Change",
     "HashCache",
     "LOCK_FILENAME",
@@ -1231,12 +1480,16 @@ __all__ = [
     "StatusReport",
     "StepStatus",
     "TOML_AVAILABLE",
+    "Unread",
     "compute_status",
     "directory_dep_nodes",
     "ensure_state_dir",
     "external_consumers",
     "format_status",
+    "is_online_only",
+    "node_sizes",
     "node_state",
+    "outcome",
     "path_state",
     "lock_entry",
     "prune_lock",
@@ -1252,5 +1505,7 @@ __all__ = [
     "spec_node_id",
     "step_nodes",
     "stamp_ref",
+    "unread",
+    "unread_phrase",
     "write_run_record",
 ]

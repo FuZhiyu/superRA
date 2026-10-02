@@ -15,7 +15,7 @@ def test_task_and_qualified_step_targets(project):
     assert set(select_steps(project.graph(), ['.'])[0]) == {'build-a', 'build-b', 'check-b', 'build-x'}
 
 
-def test_scoped_build_uses_existing_unverified_inputs(project):
+def test_scoped_build_uses_existing_unrecorded_inputs(project):
     project.write('output/a.txt', 'saved without a build record\n')
     assert project.run('build', '02-b') == 0
     assert set(project.run_times()) == {'build-b', 'check-b'}
@@ -54,7 +54,7 @@ def test_saved_input_evidence_and_unchanged_repeat(project):
     project.write('output/a.txt', 'unverified\n')
     assert project.run('build', '02-b') == 0
     receipt = json.loads(receipt_path(project.paths, 'build-b').read_text())
-    assert receipt['boundary_inputs'][0]['provenance'] == 'unverified'
+    assert receipt['boundary_inputs'][0]['provenance'] == 'no successful build recorded'
     assert receipt['boundary_inputs'][0]['digest']
     before = project.run_times()
     project.write('Code/a.sh', 'exit 1\n')
@@ -74,7 +74,7 @@ def test_task_reader_preserves_global_freshness_and_local_evidence(project):
     row = next(item for item in view['steps'] if item['name'] == 'build-b')
     assert row['status'] == 'stale'
     assert row['local_status'] == 'fresh'
-    assert row['boundary_inputs'][0]['provenance'] == 'unverified'
+    assert row['boundary_inputs'][0]['provenance'] == 'no successful build recorded'
     assert 'for saved inputs: fresh' in '\n'.join(_render_reproduction_human(view))
 
 

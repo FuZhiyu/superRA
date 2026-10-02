@@ -21,8 +21,8 @@ from pathlib import Path
 
 from _repro_state import (
     LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, STATE_DIRNAME, ReproStateError,
-    absolute, convert_legacy, dependency_state, directory_dep_nodes, node_state, output_nodes,
-    parse_lock, spec_hash, stamp_ref, step_nodes, tomllib, _stamp,
+    absolute, convert_legacy, dependency_state, directory_dep_nodes, is_online_only, node_state, output_nodes,
+    parse_lock, spec_hash, stamp_ref, step_nodes, tomllib, unread, unread_phrase, _stamp,
 )
 
 LOCK_REV_CAP = 200
@@ -467,7 +467,7 @@ class Resolver:
 
     def sources(self, step, node, value, *, resolved=None, recorded_side=False) -> list[dict]:
         """Every known state that holds *value* for *node*."""
-        if value is None:
+        if value is None or unread(value):
             return []
         found = []
         is_file = resolved and not value.startswith(('dir:', 'saved-input:')) and '::' not in node
@@ -513,7 +513,8 @@ class Resolver:
             resolved = self._resolved_paths(step)
             return [(step, d['node'].removesuffix('::product'), d['kind'], d['before'], d['after'],
                      resolved.get(d['node'].removesuffix('::product')), True)
-                    for d in state_differences(record['state'], state) if d['after'] is not None]
+                    for d in state_differences(record['state'], state)
+                    if d['after'] is not None and not unread(d['after'])]
         return self._lock_changes(entry)
 
     def _resolved_paths(self, step) -> dict[str, str]:
@@ -553,7 +554,7 @@ class Resolver:
                 recorded = lock.produces.get(node) if lock else None
                 current = node_state(self.cache, root, spec) if spec else None
                 resolved = spec and spec[1]
-            if current is not None:
+            if current is not None and not unread(current):
                 rows.append((step, node, kind, recorded, current, resolved, False))
         return rows
 
@@ -578,8 +579,10 @@ class Resolver:
     def _input_diff(self, row, step):
         rec_git = _first(row['recorded_sources'], 'git')
         path = row['path']
+        cur_git = _first(row['current_sources'], 'git')
+        if path and self._online_only(path) and not (rec_git and cur_git):
+            return  # only a diff between two revisions leaves the working tree unread
         if rec_git and path:
-            cur_git = _first(row['current_sources'], 'git')
             revs = [rec_git['rev']] + ([cur_git['rev']] if cur_git else [])
             spec = './' + path
             key = (*revs, spec)
@@ -600,6 +603,13 @@ class Resolver:
             row['recorded_sources'].insert(0, {'source': 'snapshot'})
             self._set_diff(row, [line.rstrip('\n') for line in difflib.unified_diff(
                 snapshot.splitlines(True), now.splitlines(True), n=3)])
+
+    def _online_only(self, resolved) -> bool:
+        path = absolute(self.paths.project_root, resolved)
+        try:
+            return is_online_only(path, path.stat())
+        except OSError:
+            return False
 
     def _set_diff(self, row, lines):
         hunk = next((i for i, line in enumerate(lines) if line.startswith('@@')), 0)
@@ -889,6 +899,9 @@ def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='su
 def _explain_path(resolver, target) -> dict:
     node, resolved = target['node'], target['resolved']
     current = resolver.cache.path_state(absolute(resolver.paths.project_root, resolved))
+    here = None
+    if unread(current):
+        here, current = unread_phrase(current), None
     owner, readers = target['producer'], target['consumers']
     resolver.prepare([resolved])
     rows, seen = [], set()
@@ -902,7 +915,7 @@ def _explain_path(resolver, target) -> dict:
             rows.append(resolver.row(step, node, 'output' if step is owner else 'dependency',
                                      recorded, current, resolved))
     return {
-        'target': target['path'], 'kind': 'path', 'node': node, 'current': current,
+        'target': target['path'], 'kind': 'path', 'node': node, 'current': current, 'here': here,
         'current_sources': resolver.sources(owner or readers[0], node, current, resolved=resolved),
         'producer': target_ref(owner) if owner else None,
         'consumers': [target_ref(s) for s in readers],
@@ -913,7 +926,7 @@ def _explain_path(resolver, target) -> dict:
 def format_explain(result, report, *, full_diff=False) -> str:
     lines = []
     if result['kind'] == 'path':
-        now = ('missing here' if result['current'] is None else
+        now = (result['here'] if result.get('here') else 'missing here' if result['current'] is None else
                f"now {short(result['current'])}  {label(result['current_sources'])}")
         lines += [f"{result['target']}  {now}",
                   f"  produced by {result['producer'] or '(no step; external input)'}",

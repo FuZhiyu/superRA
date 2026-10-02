@@ -236,7 +236,7 @@ def test_a_missing_input_fails_the_step_before_its_command_runs(project, capsys)
     capsys.readouterr()
     assert project.run("build", "01-a") == 1
     out = capsys.readouterr().out
-    assert "cannot start: external input output/produced-by-nobody.txt is missing" in out
+    assert "cannot start: input output/produced-by-nobody.txt is not on disk, and no step produces it" in out
     assert not project.paths.run_file("build-a").exists()
 
 
@@ -337,7 +337,7 @@ def test_a_symlinked_subdirectory_inside_a_directory_dependency_is_hashed(tmp_pa
     assert proj.states()["agg"] == "fresh"
     (proj.root / "Data/panel/broken").symlink_to(proj.root / "nowhere")
     entry = proj.status().entry("agg")
-    assert entry.status == "stale" and entry.reason == "dependency Data/panel missing"
+    assert entry.status == "unverified" and entry.reason == "dependency Data/panel is unreadable here"
 
 
 def test_a_targeted_build_keeps_a_sidecar_saved_inputs_consumer_fresh(project):

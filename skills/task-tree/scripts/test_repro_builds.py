@@ -14,7 +14,7 @@ def test_record_is_written_on_success_only(project):
     text = project.read("repro-lock.json")
     lock = json.loads(text)
     for name in ("build-a", "build-b", "check-b"):
-        assert set(lock["steps"][name]) == {"spec", "deps", "outs", "built_on"}
+        assert set(lock["steps"][name]) == {"spec", "deps", "outs", "built_on", "sizes"}
         assert lock["steps"][name]["built_on"] == {"platform": platform_name()}
     assert getpass.getuser() not in text and socket.gethostname() not in text
 

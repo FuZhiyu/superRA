@@ -5,8 +5,8 @@ import threading
 
 from _repro import build_graph
 from _repro_state import (
-    Change, HashCache, ReproStateError, absolute, directory_dep_nodes,
-    output_nodes, read_lock, read_run_record, spec_hash, step_nodes,
+    Change, HashCache, ReproStateError, absolute, directory_dep_nodes, is_online_only,
+    output_nodes, read_lock, read_run_record, spec_hash, step_nodes, unread, unread_phrase,
 )
 
 
@@ -16,7 +16,10 @@ def _owners(graph, path):
 
 
 def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
-    """Describe actual consumed files whose registered producers are out of scope."""
+    """Describe actual consumed files whose registered producers are out of scope.
+
+    A file this machine cannot hash has digest None and says why under `here`.
+    """
     from _repro_acceptance import baseline
     cache = cache if cache is not None else HashCache(paths.cache_file)
     lock = read_lock(paths.lock_file) if lock is None else lock
@@ -44,9 +47,15 @@ def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
                 evidence = baselines[producer.name]
                 recorded = evidence.get('outputs', {}).get(out.path.logical)
                 actual = cache.path_state(absolute(paths.project_root, out.path.resolved)) if recorded else None
-                provenance = ('missing' if digest is None else 'unverified' if recorded is None else
+                here = unread_phrase(digest) if unread(digest) else None
+                provenance = (here if here else 'missing' if digest is None else
+                              'no successful build recorded' if recorded is None else
+                              'cannot be checked here' if unread(actual) else
                               'matches successful output' if actual == recorded else 'differs from successful output')
+                if here:
+                    digest = None
                 rows[key] = dict(logical=dep.logical, resolved=dep.resolved, producer=producer.name,
+                                 **({'here': here} if here else {}),
                                  task=producer.task_path, digest=digest, provenance=provenance,
                                  sidecar=out.sidecar is not None,
                                  consumers=[], producer_outcome=read_run_record(paths, producer.name).get('outcome'))
@@ -70,8 +79,11 @@ def _bytes_verified(graph, paths, item):
     _, out = max(owners, key=lambda pair: len(pair[1].path.resolved))
     if out.path.resolved != item['resolved']:
         return False
+    sidecar = absolute(paths.project_root, out.sidecar.resolved)
     try:
-        named = absolute(paths.project_root, out.sidecar.resolved).read_text(encoding='utf-8').split()
+        if is_online_only(sidecar, sidecar.stat()):
+            return False
+        named = sidecar.read_text(encoding='utf-8').split()
     except (OSError, UnicodeError):
         return False
     return bool(named) and named[0] == item['digest']
@@ -92,15 +104,18 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
         recorded = [{'provenance': 'recorded by the acceptance', **item} for item in accepted['boundary_inputs']]
     entry.boundary_inputs = recorded
     verified_paths = {item['logical'] for item in recorded}
+    unknown = []
     if lock is not None:
         for item in boundary:
             if not item['sidecar'] or item['logical'] in verified_paths:
                 continue
-            if _bytes_verified(graph, paths, item):
+            if item.get('here'):
+                unknown.append((item['logical'], item['here']))
+            elif _bytes_verified(graph, paths, item):
                 entry.boundary_verified.append(item)
             else:
-                entry.changes.append(Change(item['logical'], 'boundary', 'unverified'))
-                if entry.status == 'fresh':
+                entry.changes.append(Change(item['logical'], 'boundary', 'unbaselined'))
+                if entry.status in ('fresh', 'unverified'):
                     entry.status = 'stale'
                     entry.reason = f"saved input {item['logical']} needs a full-byte baseline"
     current_paths = {dep.logical: dep.resolved for dep in entry.step.deps}
@@ -111,10 +126,17 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
         current = cache.path_state(absolute(paths.project_root, resolved))
         if current == item['digest']:
             continue
+        if unread(current):
+            unknown.append((item['logical'], unread_phrase(current)))
+            continue
         entry.changes.append(Change(item['logical'], 'boundary', 'missing' if current is None else 'changed'))
-        if entry.status == 'fresh':
+        if entry.status in ('fresh', 'unverified'):
             entry.status = 'stale'
             entry.reason = f"saved input {item['logical']} {'missing' if current is None else 'changed'}"
+    if unknown and entry.status == 'fresh':
+        entry.status = 'unverified'
+        entry.reason = f"saved input {unknown[0][0]} is {unknown[0][1]}" + (
+            f" (and {len(unknown) - 1} more)" if len(unknown) > 1 else '')
 
 
 def record_verified_inputs(paths, name, lock, items):

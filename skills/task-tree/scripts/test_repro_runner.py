@@ -260,14 +260,22 @@ def test_unbuilt_steps_report_never_built(project):
     assert report.ok is False
 
 
-def test_missing_external_input_marks_the_step_external(project):
+def test_an_absent_input_no_step_produces_makes_its_consumer_unverified(project):
     project.write("Code/a.sh", "cp Data/raw.csv output/a.txt\n")
     project.write(
         "superRA/01-a/task.md", TASK_A.replace("      - Code/a.sh", "      - Data/raw.csv")
     )
-    entry = project.status(*CHAIN).entry("build-a")
-    assert entry.status == "external"
-    assert "Data/raw.csv" in entry.reason
+    assert project.status(*CHAIN).entry("build-a").status == "missing"  # never built outranks it
+    project.write("Data/raw.csv", "1\n")
+    assert project.run("build", *CHAIN) == 0
+    (project.root / "Data/raw.csv").unlink()
+    report = project.status(*CHAIN)
+    entry = report.entry("build-a")
+    assert entry.status == "unverified"
+    assert entry.reason == "dependency Data/raw.csv is not on disk, and no step produces it"
+    assert entry.files[0] == {"node": "Data/raw.csv", "role": "dependency", "outcome": "unknown",
+                              "online_only": False, "size": None}
+    assert report.entry("build-b").status == "fresh"  # an unverified producer lifts nothing
 
 
 def test_scoped_status_verifies_one_task_without_unrelated_steps(project, capsys):
@@ -698,9 +706,19 @@ def test_status_json_matches_the_documented_shape(project, capsys):
         "name", "task", "kind", "cmd", "status", "reason", "changes",
         "duration", "last_run", "log", "deps", "outs", "acceptance",
         "local_status", "local_reason", "boundary_inputs", "external_consumers",
-        "running", "started_at",
+        "running", "started_at", "origin", "files",
     }
     assert step["running"] is False
+    assert step["origin"] is None
+    size = lambda path: (project.root / path).stat().st_size
+    assert step["files"] == [
+        {"node": "Code/b.sh", "role": "dependency", "outcome": "matches", "online_only": False,
+         "size": size("Code/b.sh")},
+        {"node": "${OUT}/a.txt", "role": "dependency", "outcome": "matches", "online_only": False,
+         "size": size("output/a.txt")},
+        {"node": "${OUT}/b.txt", "role": "output", "outcome": "matches", "online_only": False,
+         "size": size("output/b.txt")},
+    ]
     assert step["task"] == "02-b"
     assert step["status"] == "fresh"
     assert step["duration"] > 0

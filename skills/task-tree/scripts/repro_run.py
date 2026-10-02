@@ -51,6 +51,7 @@ from _repro_state import (  # noqa: E402
     directory_dep_nodes,
     ensure_state_dir,
     format_status,
+    node_sizes,
     output_nodes,
     prune_lock,
     read_lock,
@@ -61,6 +62,8 @@ from _repro_state import (  # noqa: E402
     spec_hash,
     stamp_ref,
     step_nodes,
+    unread,
+    unread_phrase,
     write_lock_entry,
     write_run_record,
 )
@@ -121,16 +124,18 @@ def _decide(build: Build, step: Step):
 
 
 def _missing_inputs(build: Build, step: Step, entry) -> str | None:
-    """Why the step cannot start: an `external` input, or a dependency not on disk."""
-    if entry.status == "external":
-        return entry.reason
+    """Why the step cannot start: a dependency not on disk, or one it cannot hash here."""
     deps, _ = step_nodes(step, output_nodes(build.graph))
     deps += directory_dep_nodes(build.graph, step)
-    absent = [node[0] for node in deps if dependency_state(build.cache, build.paths.project_root, node) is None]
-    if absent:
-        more = f" (and {len(absent) - 1} more)" if len(absent) > 1 else ""
-        return f"input {absent[0]} is missing{more}"
-    return None
+    externals = {e.path.logical for e in build.graph.external_inputs}
+    states = [(node[0], dependency_state(build.cache, build.paths.project_root, node)) for node in deps]
+    blocked = [(n, v) for n, v in states if v is None] or [(n, v) for n, v in states if unread(v)]
+    if not blocked:
+        return None
+    node, value = blocked[0]
+    why = "missing" if value is None and node not in externals else unread_phrase(value)
+    more = f" (and {len(blocked) - 1} more)" if len(blocked) > 1 else ""
+    return f"input {node} is {why}{more}"
 
 
 def _run_step(build: Build, step: Step, entry) -> str:
@@ -143,9 +148,12 @@ def _run_step(build: Build, step: Step, entry) -> str:
             record_verified_inputs(paths, step.name, read_lock(paths.lock_file).get(step.name),
                                    entry.boundary_verified)
         return "unchanged"
+    if not forced and entry.status == "unverified":
+        return "unverified"  # never run on files this machine cannot check; its outputs are used as they are
     if build.dry_run:
-        if entry.status == "external":
-            raise ReproStateError(f"step {step.name!r} cannot start: {entry.reason}")
+        blocked = _missing_inputs(build, step, entry)
+        if blocked:
+            raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
         return "would execute"
     if build.stopping.is_set():  # before supersede and the run record touch anything
         raise NotStarted
@@ -228,8 +236,11 @@ def _run_step(build: Build, step: Step, entry) -> str:
         record.update(outcome="failed", forced=must_retry or record.get("forced", False), error=str(exc))
         write_run_record(paths, step.name, record)
         raise
+    deps, products = step_nodes(step, output_nodes(graph))
     entry = LockEntry(depends_on=receipt["state"]["deps"], produces=receipt["state"]["products"],
-                      built_on={"platform": platform_name()})
+                      built_on={"platform": platform_name()},
+                      sizes=node_sizes(build.cache, paths.project_root,
+                                       deps + directory_dep_nodes(graph, step) + products))
     write_lock_entry(paths, step.name, entry)
     build.completed[step.name] = entry
     record = read_run_record(paths, step.name)
@@ -241,7 +252,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
 def _write_sidecar(project_root: Path, out: Out, sidecar: Path, cache: HashCache) -> None:
     """Record the out's content hash so later runs never read the large file."""
     digest = cache.path_state(absolute(project_root, out.path.resolved))
-    if digest is None:
+    if digest is None or unread(digest):
         return
     sidecar.write_text(f"{digest}  {out.path.logical}\n", encoding="utf-8")
 
@@ -345,7 +356,7 @@ def _attempt(build: Build, step: Step) -> tuple[str, str]:
         return "failed", f"{type(exc).__name__}: {exc}"
 
 
-_MARKS = {"executed": "✓", "unchanged": "·", "would execute": "~", "failed": "✗", "skipped": "-"}
+_MARKS = {"executed": "✓", "unchanged": "·", "unverified": "○", "would execute": "~", "failed": "✗", "skipped": "-"}
 
 
 def _report(build: Build, name: str) -> None:
@@ -376,7 +387,7 @@ def run_build(
     print('Execution scope: ' + ', '.join(names))
     for item in boundary:
         print(f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)")
-    missing = [item for item in boundary if item['digest'] is None]
+    missing = [item for item in boundary if item['digest'] is None and not item.get('here')]
     if missing:
         raise ReproStateError('missing saved inputs: ' + ', '.join(f"{b['logical']} (producer {b['producer']})" for b in missing)
                               + '; select the producer or use --upstream')
@@ -408,7 +419,7 @@ def run_build(
     for outcome, _ in build.outcomes.values():
         counts[outcome] = counts.get(outcome, 0) + 1
     print(f"{len(names)} step(s): " + ", ".join(
-        f"{counts[k]} {k}" for k in ("executed", "unchanged", "failed", "skipped") if counts.get(k)))
+        f"{counts[k]} {k}" for k in ("executed", "unchanged", "unverified", "failed", "skipped") if counts.get(k)))
     if interrupted:
         print("Interrupted: running steps were stopped and recorded as failed.", file=sys.stderr)
     legacy = [p.name for p in (paths.legacy_lock_file, paths.legacy_builds_file) if p.is_file()]
