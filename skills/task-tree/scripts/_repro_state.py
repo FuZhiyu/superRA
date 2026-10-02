@@ -56,7 +56,8 @@ STATUSES = ("fresh", "stale", "missing", "failed", "unverified")
 BLOCKING = ("stale", "missing", "failed")
 
 # Default text output lists at most this many items per list; the rest collapse
-# to a count and the command that lists them all.
+# to a count and the command that lists them all. Replace with an import of
+# `_task_validate.OUTPUT_CAP` once that constant is committed.
 OUTPUT_CAP = 10
 DOWNLOAD_NOTES = ("Before downloading, read references/online-only-files.md "
                   "in the superRA:reproducibility skill.")
@@ -1434,10 +1435,10 @@ def capped(lines: list[str], what: str, command: str, indent: str = "  ") -> lis
     return shown
 
 
-def capped_join(items: list[str]) -> str:
-    """At most `OUTPUT_CAP` items on one line, then how many more."""
+def capped_join(items: list[str], command: str) -> str:
+    """At most `OUTPUT_CAP` items on one line, then how many more and the command that lists them."""
     extra = len(items) - OUTPUT_CAP
-    return ", ".join(items[:OUTPUT_CAP]) + (f" and {extra} more" if extra > 0 else "")
+    return ", ".join(items[:OUTPUT_CAP]) + (f" and {extra} more (`{command}` lists them)" if extra > 0 else "")
 
 
 def unread_file_lines(rows: list[tuple], command: str, then: Iterable[str] = ()) -> list[str]:
@@ -1528,11 +1529,15 @@ def format_status(report: StatusReport) -> str:
         unverified = [e for e in producers if e.status == "unverified"]
         if unverified:
             sizes = {row["node"]: row["size"] for e in unverified for row in e.files if row["online_only"]}
-            known = sum(size for size in sizes.values() if size is not None)
-            unsized = sum(size is None for size in sizes.values())
-            size = format_size(known) + (f" plus {unsized} of unknown size" if unsized else "")
-            lines.append(f"{_MARKS['unverified']} {len(unverified)} producer(s) unverified, "
-                         f"{size} online-only here; tracing stops at {capped_join(unverified_boundary(report))}")
+            known = [size for size in sizes.values() if size is not None]
+            unsized = len(sizes) - len(known)
+            if not known:
+                size = f"{unsized} online-only file(s) of unknown size here"
+            else:
+                size = f"{format_size(sum(known))} online-only here" + (
+                    f" plus {unsized} file(s) of unknown size" if unsized else "")
+            lines.append(f"{_MARKS['unverified']} {len(unverified)} producer(s) unverified, {size}; "
+                         f"tracing stops at {capped_join(unverified_boundary(report), command)}")
 
     files: dict[str, tuple] = {}
     for entry in report.entries:
@@ -1562,7 +1567,7 @@ def format_status(report: StatusReport) -> str:
     stale = {e.step.name for e in entries if e.status != "fresh"}
     pointed = [t for t in (report.targets or ["."]) if stale & set(select_steps(report.graph, [t])[0])]
     if pointed:
-        lines.append("Why not fresh: " + capped_join([f"superra repro explain {shlex.quote(t)}" for t in pointed]))
+        lines.append("Why not fresh: " + capped_join([f"superra repro explain {shlex.quote(t)}" for t in pointed], command))
     return "\n".join(lines)
 
 

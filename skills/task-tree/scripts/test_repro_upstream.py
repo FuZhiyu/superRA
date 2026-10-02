@@ -150,6 +150,41 @@ def test_the_gate_runs_nothing_when_a_step_that_must_run_reads_a_file_not_on_dis
     assert _changed(before, fan.run_times()) == {"p-stale"}
 
 
+def test_a_gated_dry_run_prints_its_plan_with_costs_then_the_files_and_exits_1(fan, capsys):
+    fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
+    fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
+    (fan.root / "Data/ext.csv").unlink()
+    before = fan.run_times()
+    capsys.readouterr()
+    assert fan.run("build", "02-use", "--dry-run") == 1
+    assert fan.run_times() == before
+    out = capsys.readouterr().out
+    assert re.search(r"Would execute 2 step\(s\):\n  p-stale  \d+\.\ds\n  use      \d+\.\ds\n"
+                     r"Last recorded cost: .*\n.*\n"
+                     r"1 file\(s\) the build reads are not on this machine, so the build would run nothing:\n"
+                     r"\s+Data/ext.csv\s+-\s+not on disk, and no step produces it  \(read by use\)\n"
+                     r"To build the steps that do not read them, select those steps with --only.$", out.strip())
+    assert "cannot run" not in out
+
+
+def test_under_only_the_gate_names_downloading_or_narrowing_the_targets(fan, capsys):
+    fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
+    fan.offline.evict("Data/ext.csv")
+    capsys.readouterr()
+    assert fan.run("build", "02-use", "--only") == 1
+    err = capsys.readouterr().err
+    assert "Download them first, or narrow the targets to steps that do not read them." in err
+    assert "--only" not in err
+
+
+def test_steps_that_did_not_run_are_only_counted(fan, capsys):
+    capsys.readouterr()
+    assert fan.run("build", "02-use") == 0
+    out = capsys.readouterr().out
+    assert "unchanged" not in out.replace("4 step(s): 4 unchanged", "")
+    assert out.strip().endswith("4 step(s): 4 unchanged")
+
+
 def test_a_step_stale_only_after_its_producer_ran_is_stopped_at_its_start(fan, capsys):
     fan.offline.evict("Data/ext.csv")  # cached: `use` still reads fresh, so the gate lets the build start
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
@@ -234,6 +269,16 @@ def test_status_reports_unverified_producers_on_one_line_with_size_and_boundary(
     assert [p["name"] for p in payload["producers"]] == ["build-a", "build-b"]
 
 
+def test_unverified_producers_without_a_known_size_say_so(project, monkeypatch, capsys):
+    assert project.run("build", *CHAIN) == 0
+    Offline(monkeypatch, project.root).placeholder("Code/a.sh")
+    _clear_cache(project)
+    capsys.readouterr()
+    assert project.run("status", "02-b#check-b") == 0
+    assert ("○ 1 producer(s) unverified, 1 online-only file(s) of unknown size here; tracing stops at build-a"
+            in capsys.readouterr().out)
+
+
 # ---------------------------------------------------------------------------
 # Output stays bounded on a chain longer than the cap
 # ---------------------------------------------------------------------------
@@ -262,7 +307,7 @@ def test_default_status_and_build_output_stays_within_the_cap(tmp_path, capsys):
     assert chain.run("build", "02-end") == 0
     out = capsys.readouterr().out
     scope = next(line for line in out.splitlines() if line.startswith("Execution scope:"))
-    assert scope.endswith(f"and {length - OUTPUT_CAP} more")
+    assert scope.endswith(f"and {length - OUTPUT_CAP} more (`superra repro status 02-end --json` lists them)")
     preview = out.split("Also building")[1].split("✓")[0].strip().splitlines()
     assert preview[0] == f"{length - 1} producer(s) the targets read:"
     assert len(preview) == OUTPUT_CAP + 2

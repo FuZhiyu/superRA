@@ -106,6 +106,7 @@ class Build:
     requested: set[str] = field(default_factory=set)  # the steps the targets select themselves
     targets: list[str] = field(default_factory=list)  # as typed, for the commands a message names
     only: bool = False
+    gated: set[str] = field(default_factory=set)  # steps the download gate stopped
     completed: dict[str, LockEntry] = field(default_factory=dict)
     outcomes: dict[str, tuple[str, str]] = field(default_factory=dict)  # name -> (outcome, detail)
     stopping: threading.Event = field(default_factory=threading.Event)
@@ -178,7 +179,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
     if not forced and entry.status == "unverified":
         return "unverified"  # never run on files this machine cannot check; its outputs are used as they are
     if build.dry_run:
-        blocked = _missing_inputs(build, step, entry)
+        blocked = None if step.name in build.gated else _missing_inputs(build, step, entry)
         if blocked:
             raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
         return "would execute"
@@ -388,8 +389,8 @@ _MARKS = {"executed": "✓", "unchanged": "·", "unverified": "○", "would exec
 
 def _report(build: Build, name: str) -> None:
     outcome, detail = build.outcomes[name]
-    if build.dry_run or (name not in build.requested and outcome in ("unchanged", "unverified")):
-        return  # an added producer that did not run is only counted
+    if build.dry_run or outcome in ("unchanged", "unverified"):
+        return  # a step that did not run is only counted
     print(f"{_MARKS[outcome]} {name}  {outcome}"
           + "".join(f"\n  {line}" for line in detail.splitlines()), flush=True)
 
@@ -401,8 +402,11 @@ def _will_run(build: Build) -> list[str]:
     return [n for n in build.names if n in build.forced or report.entry(n).local_status in BLOCKING]
 
 
-def _gate(build: Build, will_run: list[str]) -> None:
-    """Run nothing when a step that will run reads a file not on disk that no step in this build writes first."""
+def _gate(build: Build, will_run: list[str]) -> str | None:
+    """Why the build runs nothing: a step that will run reads a file not on disk that no step in it writes first.
+
+    Records the gated steps in `build.gated`, whose own start-time check a dry run then skips.
+    """
     outputs = output_nodes(build.graph)
     written = {node[0] for name in will_run for node in step_nodes(build.graph.step(name), outputs)[1]}
     rows: dict[str, tuple] = {}
@@ -410,13 +414,14 @@ def _gate(build: Build, will_run: list[str]) -> None:
         for node, why, size in _unreadable_inputs(build, build.graph.step(name)):
             if why != "missing" and node not in written:
                 rows.setdefault(node, (node, why, size, []))[3].append(name)
-    if rows:
-        ran = "the build would run nothing" if build.dry_run else "nothing was run"
-        raise ReproStateError("\n".join([
-            f"{len(rows)} file(s) the build reads are not on this machine, so {ran}:",
-            *unread_file_lines(list(rows.values()), build.command("status", "--json"),
-                               then=["To build the steps that do not read them, select those steps with --only."]),
-        ]))
+    if not rows:
+        return None
+    build.gated = {name for row in rows.values() for name in row[3]}
+    ran = "the build would run nothing" if build.dry_run else "nothing was run"
+    exit_line = ("Download them first, or narrow the targets to steps that do not read them." if build.only
+                 else "To build the steps that do not read them, select those steps with --only.")
+    return "\n".join([f"{len(rows)} file(s) the build reads are not on this machine, so {ran}:",
+                      *unread_file_lines(list(rows.values()), build.command("status", "--json"), then=[exit_line])])
 
 
 def _preview(build: Build, will_run: list[str]) -> None:
@@ -461,7 +466,7 @@ def run_build(
                   dry_run=dry_run, requested=set(names if requested is None else requested),
                   targets=list(targets or ()), only=only)
     boundary = boundary_inputs(graph, names, paths, cache)
-    print(f"Execution scope: {len(names)} step(s): {capped_join(list(names))}")
+    print(f"Execution scope: {len(names)} step(s): {capped_join(list(names), build.command('status', '--json'))}")
     saved = [f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)"
              for item in boundary]
     if saved:
@@ -469,7 +474,8 @@ def run_build(
     missing = [item for item in boundary if item['digest'] is None and not item.get('here')]
     if missing:
         raise ReproStateError('missing saved inputs: '
-                              + capped_join([f"{b['logical']} (producer {b['producer']})" for b in missing])
+                              + capped_join([f"{b['logical']} (producer {b['producer']})" for b in missing],
+                                            build.command("status", "--json"))
                               + '; build without --only to include their producers')
     build.forced.update(
         name for name in names
@@ -479,7 +485,9 @@ def run_build(
     interrupted = False
     with mutation_lock(paths), _interrupt_on_termination():
         will_run = _will_run(build)
-        _gate(build, will_run)
+        gate = _gate(build, will_run)
+        if gate and not dry_run:
+            raise ReproStateError(gate)
         if not dry_run:
             _preview(build, will_run)
         try:
@@ -497,7 +505,9 @@ def run_build(
                   + "".join(f"\n  {line}" for line in build.outcomes[name][1].splitlines()))
         if pending or not blocked:
             print(format_cost(pending, paths))
-        return 1 if blocked else 0
+        if gate:
+            print(gate)
+        return 1 if blocked or gate else 0
     counts = {}
     for outcome, _ in build.outcomes.values():
         counts[outcome] = counts.get(outcome, 0) + 1
@@ -894,7 +904,8 @@ def main(argv: list[str] | None = None) -> None:
         print(format_status(report))
         if behind:
             print(f"{len(behind)} producer(s) behind the selection not fresh; drop --only to assess them: "
-                  + capped_join([f"{e.step.name} ({e.status})" for e in behind]))
+                  + capped_join([f"{e.step.name} ({e.status})" for e in behind],
+                                repro_command("status", args.targets, "--json")))
     sys.exit(report.exit_code or (3 if behind else 0))
 
 
