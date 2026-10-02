@@ -1,6 +1,6 @@
 ---
 title: "TEMPORARY — Integrate Refactoring Pass: Local Builds"
-status: implemented
+status: approved
 depends_on: []
 ---
 
@@ -87,3 +87,13 @@ The fix is at [test_repro_states_browser.py:199-206](../../../skills/task-tree/s
 The full suite passes 1123 tests. `repro status .` exits 0 with three `fresh` steps, and `repro-lock.json` is unchanged. `task check` reports 0 errors and the one pre-existing warning, and `git diff --check` is clean.
 
 - **Two other tests are flaky under load, at the base as well.** Run one suite at a time, the committed head passed four of five full-suite runs; the one failure was not captured by name. With three suites running at once, `test_an_interrupt_stops_running_steps_and_records_them_failed[SIGHUP]` failed in every suite, and `TestBackgroundLaunch::test_colliding_repos_each_get_own_server` failed in one. The interrupt failure also occurs three times out of three at `b71f03b5`. Its helper sleeps 0.2 s before signalling ([test_repro_engine.py:277](../../../skills/task-tree/scripts/test_repro_engine.py#L277)). This task did not change either test.
+
+## Review Notes
+
+Tier: thorough. Focus: correctness (Integrate refactoring pass).
+
+1. [ADVISORY] The flake bullet in §Verification names the wrong test case and the wrong cause. The failing id `[2]` is `SIGINT`, not `SIGHUP`: the cases are parametrized `[SIGINT, SIGTERM, SIGHUP]` at [test_repro_engine.py:289](../../../skills/task-tree/scripts/test_repro_engine.py#L289). The failure has nothing to do with load. A non-interactive shell starts a `&` job with `SIGINT` ignored, and the test's build subprocess inherits that. `repro_run` installs handlers only for `SIGTERM` and `SIGHUP` ([repro_run.py:369](../../../skills/task-tree/scripts/repro_run.py#L369)), and Python does not install its `KeyboardInterrupt` handler when `SIGINT` starts out ignored. The step then sleeps through the signal and `communicate(timeout=15)` times out ([test_repro_engine.py:280](../../../skills/task-tree/scripts/test_repro_engine.py#L280)).
+   - At both HEAD and `b71f03b5`, one backgrounded `( pytest -k interrupt ) & wait` with no other load fails `[2]` deterministically.
+   - Run in the foreground beside 40 busy processes, the case passes five times out of five at both commits.
+   - Fix: correct the bullet. A test-side guard, restoring `SIG_DFL` for `SIGINT` in the `Popen` or skipping when `SIGINT` is ignored, is a pre-existing issue outside this task.
+2. [ADVISORY] The new wording "inputs whose producer is `stale`, `missing`, or `failed`" leaves out the `unknown` state, which the frontier also flags. It flags every input outside `CURRENT = {fresh, saved, unverified}` ([_task_snapshot.py:11](../../../skills/task-tree/scripts/_task_snapshot.py#L11)), and that includes `unknown` when a producer's state is unavailable ([_task_snapshot.py:93-94](../../../skills/task-tree/scripts/_task_snapshot.py#L93-L94)). The `task read` heading still says `=== Inputs Not Fresh ===` ([task_read.py:354](../../../skills/task-tree/scripts/task_read.py#L354)). The rewording matches the authoritative [task-file-contract.md:103](../../../skills/task-tree/references/task-file-contract.md#L103), so a precision fix starts there.
