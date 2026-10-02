@@ -50,3 +50,9 @@ The graph replaced the pipeline-file requirement at every phase; no workflow fil
   - A new table script was registered and built, and `## Results` named its saved input and that the step executed.
   - A shared-helper edit: the implementer rebuilt the cheap panel step, left the costly estimation stale, and returned `DONE_WITH_CONCERNS` with a recommendation.
   - Completion and Protect: the main agent ran `status`, `explain`, and a dry run, accepted a comment-only change under the exception, asked before the costly rerun, and recorded `External inputs:` in the Protect commit body.
+
+## Review Notes
+
+Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
+
+1. [ADVISORY] [§Each call site points to its owning rule:36](#L36) says "a frontier input that is not fresh goes through the stale rule", mirroring [main-agent.md:29](../../../skills/using-superra/references/main-agent.md#L29). The frontier now flags only inputs whose producer is `stale`, `missing`, or `failed` ([_task_snapshot.py:11](../../../skills/task-tree/scripts/_task_snapshot.py#L11)); an input from an `unverified` producer is not flagged. Fix: reword both lines together, as [03-task-interface](../03-task-interface/task.md) does.

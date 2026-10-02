@@ -89,3 +89,10 @@ Reading an online-only file downloads it, and the hash cache used to read any fi
 - **`OUTPUT_CAP` is a local copy** in `_repro_state.py`. Import it from `_task_validate` once that constant is committed.
 
 Tests: [test_repro_engine.py](../../../skills/task-tree/scripts/test_repro_engine.py), [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py), [test_repro_scope.py](../../../skills/task-tree/scripts/test_repro_scope.py), [test_repro_acceptance.py](../../../skills/task-tree/scripts/test_repro_acceptance.py), [test_repro_provenance.py](../../../skills/task-tree/scripts/test_repro_provenance.py), [test_repro_builds.py](../../../skills/task-tree/scripts/test_repro_builds.py), [test_repro_online.py](../../../skills/task-tree/scripts/test_repro_online.py) (file checks that never download), and [test_repro_upstream.py](../../../skills/task-tree/scripts/test_repro_upstream.py) (the producer-chain default, `--only`, `--force`, and the gate).
+
+## Review Notes
+
+Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
+
+1. [ADVISORY] [§Selection:69](#L69) says every elided list ends with "the `--json` command". The build preview's count line names `build --dry-run` ([repro_run.py:438](../../../skills/task-tree/scripts/repro_run.py#L438)). Fix: "then a count and the command that lists them".
+2. [ADVISORY] The fold dropped the fact that `status --only` still exits 3 when a producer behind the selection is not fresh ([repro_run.py:893](../../../skills/task-tree/scripts/repro_run.py#L893), [:910](../../../skills/task-tree/scripts/repro_run.py#L910)); [§Selection:67](#L67) gives the default's exit codes only. Fix: add the `--only` case to that bullet.

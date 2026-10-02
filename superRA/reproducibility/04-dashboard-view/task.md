@@ -70,3 +70,9 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 - **Limits.** Probing the lock takes a shared lock for microseconds, so a CLI build starting in that window is refused and can be rerun. A build whose server restarted mid-run shows no "Last build" line. On a narrow screen the Build menu can extend below the short graph stage.
 
 Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), browser tests of the map and the Build menu and hover cards in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py), and the card channels, panel, file view, and gated menu on an every-state fixture in [test_repro_states_browser.py](../../../skills/task-tree/scripts/tests/test_repro_states_browser.py), a separate module because each module's server binds the global `PLAN_ROOT`. The graph actions add `TestReproBuildRoutes` in test_dashboard.py and the lock-holder test in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py).
+
+## Review Notes
+
+Tier: thorough. Focuses: correctness, results-writing (maturation of 11-local-builds into this task).
+
+1. [ADVISORY] Two editing-history cues in §Cards show reported and own state: "a card keeps the tint it always had" ([:43](#L43)) and "Check cards had lost their `is-check` class in an earlier rewrite; it is back" ([:47](#L47)). Fix: state the current behavior — matching states show the state's tint; check cards carry `is-check` and are dashed.
