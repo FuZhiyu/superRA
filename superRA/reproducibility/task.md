@@ -1,6 +1,6 @@
 ---
 title: "Reproducibility: Task-Declared Build Graph with Make-Like Reruns"
-status: in-progress
+status: approved
 depends_on: []
 ---
 
@@ -13,7 +13,7 @@ Own superRA's reproduction graph under the [dependency and reuse design](attachm
 - **Engine: superRA runs the build itself** ([02-runner](02-runner/task.md)). `superra repro build` walks the selected steps in dependency order, runs each as a subprocess, and runs ready steps on threads under `-j`. `status` and `build` decide freshness by one rule: sha256 content hashes with no size cap, and early cutoff when a rerun regenerates identical bytes.
 - **Declaration home: a `## Reproduction` section per task whose entire body is one fenced YAML block** ([01-section-contract](01-section-contract/task.md)). Frontmatter stays `title` / `status` / `depends_on`. Presence of the section registers its steps; task and `task#step` targets select what runs. Project-wide config (variables, runner templates, env deps) lives under a `reproduction:` key in `superRA/config.yaml`. The YAML in both places is a bounded subset the stdlib parser reads.
 - **Dependency contract:** the [0.5 design](attachments/v05-design.md#one-task-dag-combines-both-sources-of-dependency) governs inferred and logical edges, hierarchy, validation, and task readiness. Readiness follows `depends_on` only; file edges between steps order builds and are reported as inputs. Inferred prerequisites are never duplicated in frontmatter.
-- **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
+- **Staleness is content-based.** A persistent cache keyed on size and mtime (no inode: Dropbox does not preserve it) makes a downstream-only run cost a `stat` per file. No check downloads a file: an online-only file this machine has not hashed makes its step `unverified`, which `build` never runs. Sidecar tracking is a per-output opt-in for very large intermediates. Machine-specific files (sysimages) are never dependencies.
 - **Committed records are portable.** `repro-lock.json` keys nodes by logical `${VAR}` path, one line per step, so it embeds no author or branch; acceptance records are one file per step under `repro-acceptance/`. Root changes invalidate through changed content or resolved commands; equal-content relocation alone preserves freshness.
 - **Ownership split.** `task-tree` owns the mechanics: section schema, parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, hook. The `reproducibility` utility skill owns the discipline: when to register or retire steps, the rerun model agents must understand, external inputs, check steps, graph review, the stale rule, and the Protect and completion duties.
 - **Enforcement:** instructions, a `task check` category, the claim gate before recording a result, the completion gate over every step, and a PostToolUse reminder hook.
@@ -47,9 +47,9 @@ Own superRA's reproduction graph under the [dependency and reuse design](attachm
 superRA projects carry one reproduction graph inside the task tree: `superra repro build <targets>` reruns only what changed, reviewed acceptance reuses results without rerunning them, the dashboard shows the graph for review, and the workflow keeps it current. [RELEASE-NOTES.md](../../RELEASE-NOTES.md) describes 0.5.0 for users; each line below points at the task that holds the detail.
 
 - **Contract, library, and readiness.** A `## Reproduction` section registers a task's steps; one dependency snapshot serves every task view, and readiness follows `depends_on` only. [01-section-contract](01-section-contract/task.md)
-- **Runner.** `superra repro build | status | explain | impact | accept | revoke | dag` on superRA's own engine, with portable lock and acceptance records and provenance-based diagnosis. [02-runner](02-runner/task.md)
-- **CLI surfaces.** `task read` and `task frontier` show prerequisites apart from inputs that are not fresh; `task check` validates the graph and flags unregistered result files. [03-task-interface](03-task-interface/task.md)
-- **Dashboard.** A Tree/Graph workspace over one project map that opens readable and marks only real cycles. [04-dashboard-view](04-dashboard-view/task.md)
+- **Runner.** `superra repro build | status | explain | impact | accept | revoke | dag` on superRA's own engine: builds take in the producer chain, no command downloads a file, and lock and acceptance records are portable. [02-runner](02-runner/task.md)
+- **CLI surfaces.** `task read` and `task frontier` show prerequisites apart from inputs whose producer needs a build; `task check` validates the graph and flags unregistered result files. [03-task-interface](03-task-interface/task.md)
+- **Dashboard.** A Tree/Graph workspace over one project map that opens readable, marks only real cycles, and shows each step's reported and own state. [04-dashboard-view](04-dashboard-view/task.md)
 - **Reminder hook.** Any producer edit, by any tool, draws one reminder naming the steps it stales. [05-reminder-hook](05-reminder-hook/task.md)
 - **Discipline.** The `reproducibility` skill: the model, graph design, the claim gate, the stale rule, diagnosis, adoption, and Protect and completion duties. [06-skill](06-skill/task.md)
 - **Workflow wiring.** Every phase's call site points to the reference that owns its rule; the manifest loads the skill for any task producing or reviewing a result from code. [07-workflow-integration](07-workflow-integration/task.md)
@@ -59,4 +59,4 @@ superRA projects carry one reproduction graph inside the task tree: `superra rep
 
 - `repro trace` ([10-trace](10-trace/task.md)) stays postponed.
 - The plugin installed for other projects predates 0.5; until it is updated, `superra repro` and the skill reach them only through `SUPERRA_REPO_ROOT`.
-- This repository registers no steps: Protect retired its check steps with the researcher's agreement, so the pytest suite and the documentation carry its protection.
+- This repository registers steps only for the [showcase analysis](../showcase-analysis/task.md). Protect retired the reproducibility tree's check steps with the researcher's agreement, so the pytest suite and the documentation carry its protection.
