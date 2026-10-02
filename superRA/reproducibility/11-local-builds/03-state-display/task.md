@@ -1,6 +1,6 @@
 ---
 title: "Dashboard Shows Each State, Where Staleness Starts, and What Is Online-Only"
-status: implemented
+status: revise
 depends_on: [02-upstream-default]
 ---
 
@@ -138,3 +138,44 @@ Every step card in the Graph, the Tree, the task-page step table, the step panel
     - the own-evidence line, the origin link, the online-only summary, the file size, and the missing `data-peek`;
     - the menu's `only` POST body and the gate detail rendering.
 - **Screenshots.** [screenshots.py](attachments/screenshots.py) builds the same fixture and wrote every image above on OlinStudio with Chrome.
+
+## Review Notes
+
+Tier: thorough. Focuses: visual design against the channel rule and reserved meanings (all ten screenshots, light and dark); the state mapping from `status`, `local_status`, `origin`, and `files`; the Build menu's `only` request end to end; test quality. Verified by rerunning the every-state fixture through `superra repro build` and `--dry-run` with `SF_DATALESS` simulated.
+
+1. **[BLOCKING] `GET /api/file-peek` reads online-only files, and the step panel still reaches it on click.**
+   - [plan_dashboard.py:1592-1620](../../../../skills/task-tree/scripts/plan_dashboard.py#L1592-L1620) opens any text file for a 4 KiB head with no online-only check.
+   - Removing `data-peek` ([dashboard.js:2070](../../../../skills/task-tree/scripts/templates/dashboard.js#L2070)) stops only the hover. The link still opens the in-page file view, which calls the route and then previews from `/files/` ([dashboard.js:3566](../../../../skills/task-tree/scripts/templates/dashboard.js#L3566), [:3599](../../../../skills/task-tree/scripts/templates/dashboard.js#L3599)). This breaks the parent's rule that nothing downloads implicitly.
+   - Fix: in `_file_peek`, test `is_online_only(resolved, info)` right after the `stat`. For an online-only file, return `exists`, `online_only: true`, `size`, and `mtime_ns`, and skip the head read. `loadProjectFile` then shows "online-only here" with the size, plus the pointer to `online-only-files.md`, and renders no preview. Add a route test with `SF_DATALESS` simulated. Then update the internals.md file-preview paragraph, and drop the "Out of scope" item from `## Results`.
+
+2. **[BLOCKING] The Tree rollup badge squeezes task slugs down to one character.**
+   - [tree-light.png](attachments/tree-light.png) shows `0…`, `01-c…`, and `03-ven…`. The badge ([dashboard.js:581](../../../../skills/task-tree/scripts/templates/dashboard.js#L581), `flex:none` at [dashboard.css:2625](../../../../skills/task-tree/scripts/templates/dashboard.css#L2625)) goes on every task that has steps, so this is not rare. Real slugs such as `02-upstream-default` are longer than the fixture's.
+   - Fix: keep the slug legible at the default sidebar width. Options: move the rollup to its own line under the row, let the badge shrink before the slug does, or collapse it to the most severe state's glyph and count. Re-shoot the Tree to show the result.
+
+3. **[BLOCKING] The Force estimate ignores the download gate.**
+   - [build-menu.png](attachments/build-menu.png) shows "Force rebuild this task … 6 steps would run · ~28ms". On the same fixture, `superra repro build --dry-run --force 02-estimate` prints "1 file(s) the build reads are not on this machine, so the build would run nothing: Data/vendor.csv 2.4 MB online-only here (read by vendor-join)".
+   - [dashboard.js:2365](../../../../skills/task-tree/scripts/templates/dashboard.js#L2365) pushes a forced `unverified` target into the run set without checking what it reads. [test_dashboard.py:6879](../../../../skills/task-tree/scripts/test_dashboard.py#L6879) asserts the wrong text: it counts the forced `unverified` steps `x` and `y` as running. This contradicts the Results claim that "the estimate follows the runner's rule".
+   - Fix: mirror `_gate` ([repro_run.py:405](../../../../skills/task-tree/scripts/repro_run.py#L405)) in `reproBuildEstimate`. If a step in the run set has a `dependency` row in `files` that is online-only, or absent with no producer, and no other step in the run set writes it, the item reads that the download gate stops the build, with the count and size of those files, instead of a step count. Update the test.
+
+4. **[BLOCKING] `screenshots.py` is retained and its PNGs are cited in `## Results`, but it is not registered as a step.**
+   - This fails the `[BLOCKING]` registration gate in [designing-the-graph.md](../../../../skills/reproducibility/references/designing-the-graph.md#what-earns-a-step). `superra task check` reports 10 warnings for this task.
+   - None of the three reasons in Deviations holds:
+     - "Leave files regenerated per machine unregistered" covers machine-local files such as sysimages. These PNGs are committed evidence. Their varying bytes only cost early cutoff, and no step reads them.
+     - A `dashboard.js` edit that makes the screenshots stale is the true signal. The stale rule then decides between accepting and rerunning.
+     - Other tasks registering none is precedent, not a reason.
+   - Fix: add `## Reproduction` with one `screenshots` step.
+     - `cmd`: the `uv run` line at the top of `screenshots.py`.
+     - `deps`: `screenshots.py`, `tests/test_repro_states_browser.py`, `plan_dashboard.py`, and the `templates/` files the page loads (`dashboard.js`, `dashboard.css`, `base.html`).
+     - `outs`: the ten PNGs.
+   - Then build the step, or accept the current outputs. Commit `repro-lock.json`, and state the evidence in `## Results` per reproducibility §Recording a Result.
+
+5. **[ADVISORY] An `unverified` step behind a stale producer is attempted, then fails at the step-start gate, but the panel and the estimate say it will not run.**
+   - The panel line ([dashboard.js:2279](../../../../skills/task-tree/scripts/templates/dashboard.js#L2279)) says "A build reruns it only if its inputs change". The menu counts it as "online-only, not run".
+   - On the fixture, `superra repro build 02-estimate` reran `clean` and then failed `vendor-join`: "cannot start: 1 input(s) not on this machine". "Last build" reads only "6 step(s): 4 executed, 2 failed", with no file list, because `_build_summary` keeps detail only after an `Error:` line.
+   - Fix: for own `unverified`, say that a build stops at this step if its inputs change, and count it that way in the estimate.
+
+6. **[ADVISORY] The cloud tag touches the step name.** It renders as `vendor-join☁ online-only` ([graph-light.png](attachments/graph-light.png)). Give `.repro-node-name .repro-cloud-tag` a left margin.
+
+7. **[ADVISORY] Tree check rows say only `fresh`.** The check kind shows only through a faint dashed border ([tree-light.png](attachments/tree-light.png), `codebook-check`), while Graph cards add `· check`. Add the same suffix to `.nav-step-state`.
+
+8. **[ADVISORY] The Results claim about the fresh page does not match two screenshots.** `## Results` says "The screenshots use a fresh page for the Tree", which implies the row-order bug is avoided. [tree-dark.png](attachments/tree-dark.png) and [panel-dark.png](attachments/panel-dark.png) still show the rows in order 01, 03, 02. Re-shoot those two, or drop the claim.
