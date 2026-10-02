@@ -4,7 +4,7 @@ Load when a file a step reads or writes is online-only on this machine (Dropbox,
 
 ## superra Never Downloads
 
-An online-only file not yet hashed here reads `unknown`, or `changed` when its size differs from the lock's, and its step reads `unverified`. A build refuses to start while a step it would run reads an online-only file, even one hashed here:
+An online-only file not yet hashed here reads `changed` when its size differs from the lock's, and `unknown` otherwise. A build refuses to start while a step it would run reads an online-only file, even one hashed here:
 
 - **Build the steps that read none:** select those steps with `--only`.
 - **Build a step that reads one:** download first, after §Ask First.

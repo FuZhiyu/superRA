@@ -6,7 +6,7 @@ Before applying the rule, get the cost, stale producers included, from `superra 
 
 ## The stale rule
 
-The rule covers every step `status` reports as `stale`, `missing`, or `failed`. Build or accept your own work — a step you just registered or a failure you fixed — rather than leaving it stale. An `unverified` step is outside the rule: report it with the files `status` lists as not checkable here.
+The rule covers every step `status` reports as `stale`, `missing`, or `failed`. Build or accept your own work — a step you just registered or a failure you fixed — rather than leaving it stale. An `unverified` step is outside the rule: report it with the files `status` lists as not checkable here; for an absent external input, retrieve it or register its producer.
 
 Classify the step from the graph:
 
@@ -23,7 +23,7 @@ Classify the step from the graph:
 
 **Exception: a change that cannot move a result.** When the diff proves it — a comment, whitespace, a logging line, a docstring, a helper the consumer never calls — accept on your own with the reason recorded, and report that you did. The proof is the diff, not the file list or the commit message.
 
-**Accept before you build.** Record the rule's acceptances first. While a producer stays stale by the rule, build with `--only`, or the default build reruns it.
+**Record the rule's acceptances before you build.** While a producer stays stale by the rule, build with `--only`, or the default build reruns it.
 
 ## Accept
 
@@ -40,5 +40,5 @@ Accepting the same fan-out again and again is a design signal: fix it at the [sc
 ## What acceptance never covers
 
 - **A check that has never run.** Run it.
-- **Producers you did not name.** Acceptance is step-local: to cover a producer, name it, or build it.
+- **Producers you did not name.** To cover one, name it or build it.
 - **Unresolved work.** Unreviewed results, result-affecting changes not yet executed, and changed check assertions require running the affected producer or check.
