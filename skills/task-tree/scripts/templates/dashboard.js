@@ -575,14 +575,15 @@ function syncTreeSteps() {
   if(!_reproData)return;
   var byTask={},statuses=reproStatusIndex(_reproData);(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
   document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
-    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children'),row=node.querySelector(':scope > .task-row'),badge=row&&row.querySelector(':scope > .nav-repro-rollup');
+    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children'),row=node.querySelector(':scope > .task-row'),badge=node.querySelector(':scope > .nav-repro-rollup');
     if(!steps.length){var old=children&&children.querySelector(':scope > .nav-step-list');if(old)old.remove();if(badge)badge.remove();return;}
     var rollup=reproRollup(steps,statuses);
-    if(row&&!badge){badge=document.createElement('span');row.insertBefore(badge,row.querySelector(':scope > .badge'));}
+    /* Its own line under the row, so the slug and title keep the row's width. */
+    if(row&&!badge){badge=document.createElement('div');row.after(badge);}
     if(badge){badge.className='nav-repro-rollup'+(rollup.hatched?' rp-hatched':'');badge.innerHTML=rollup.compact;badge.title=steps.length+' steps: '+rollup.text;}
     if(!children){children=document.createElement('div');children.className='task-children';children.style.display='none';node.appendChild(children);node.dataset.needsLoad='false';var caret=node.querySelector(':scope > .task-row > .task-toggle');if(caret){caret.classList.remove('leaf');caret.textContent='▸';}}
     var list=children.querySelector(':scope > .nav-step-list');if(!list){list=document.createElement('div');list.className='nav-step-list';children.prepend(list);}
-    list.innerHTML=steps.map(function(s){var ch=reproChannels(statuses[s.name]);return '<button type="button" class="nav-step '+ch.cls+(s.kind==='check'?' is-check':'')+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'" title="'+escapeAttr(ch.label+(ch.cloud?' · online-only here':''))+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'><span class="repro-glyph" aria-hidden="true">'+ch.glyph+'</span><span class="nav-step-name">'+escapeHtml(s.name)+'</span><span class="nav-step-state">'+escapeHtml(ch.label)+(ch.cloud?' '+REPRO_CLOUD_HTML:'')+'</span></button>';}).join('');
+    list.innerHTML=steps.map(function(s){var ch=reproChannels(statuses[s.name]);return '<button type="button" class="nav-step '+ch.cls+(s.kind==='check'?' is-check':'')+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'" title="'+escapeAttr(ch.label+(ch.cloud?' · online-only here':''))+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'><span class="repro-glyph" aria-hidden="true">'+ch.glyph+'</span><span class="nav-step-name">'+escapeHtml(s.name)+'</span><span class="nav-step-state">'+escapeHtml(ch.label+(s.kind==='check'?' · check':''))+(ch.cloud?' '+REPRO_CLOUD_HTML:'')+'</span></button>';}).join('');
   });
 }
 function updateNavigationToggle() {
@@ -2067,7 +2068,7 @@ function reproFileList(files, task) {
     var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
       :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
       :projectFileLinkAttrs(task||'',resolved);
-    var link='<a'+attrs+(!window.STANDALONE&&!file.online?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
+    var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
     var cloud=file.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(file.online.size!=null?' · '+formatArtifactBytes(file.online.size):'')+'</span>':'';
     return '<li'+(file.online?' class="is-online-only"':'')+'><div class="repro-file-name">'+link+cloud+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
       +(file.note?'<div class="repro-file-note">'+escapeHtml(file.note)+'</div>':'')+'</li>';
@@ -2123,11 +2124,18 @@ function filePeekShow(anchor) {
     card.lastChild.firstChild.textContent = e.message;
   });
 }
+/* /api/file-peek answers an online-only file from its stat alone; the page shows
+   this instead of a preview, so nothing reads it. */
+function onlineOnlyNote(peek) {
+  return REPRO_CLOUD + ' Online-only here' + (peek.size != null ? ' (' + formatArtifactBytes(peek.size) + ')' : '')
+    + ': no preview, since reading it would download it. Before downloading, read references/online-only-files.md in the superRA:reproducibility skill.';
+}
 function filePeekRender(card, path, peek, token) {
   var body = card.lastChild, url = projectFileUrl(path, peek.mtime_ns);
   body.innerHTML = '';
   function note(text) { var p = document.createElement('p'); p.className = 'repro-hint'; p.textContent = text; body.appendChild(p); }
   if (!peek.exists) { note('Not built yet.'); return; }
+  if (peek.online_only) { note(onlineOnlyNote(peek)); return; }
   note(projectFileMeta(peek) + ' · modified ' + new Date(peek.mtime_ns / 1e6).toLocaleString());
   if (peek.head != null) {
     var pre = document.createElement('pre');
@@ -2276,7 +2284,7 @@ function renderReproDetail(name) {
   }).join('');
   var evidence='',ch=reproChannels(entry),own='';
   if(ch.own!==state)own='<p class="repro-own-line"><strong>Own evidence: '+escapeHtml(ch.own)+'</strong>'+(ch.own==='unverified'?' — '+escapeHtml(entry.local_reason||''):'')
-    +'. A build reruns it only if its inputs change once the steps upstream rerun.'+(entry.origin?' Staleness starts at '+reproButton(entry.origin,'related',entry.origin)+'.':'')+'</p>';
+    +(ch.own==='unverified'?'. A build runs it only if a producer\'s rerun changes its inputs, and then needs its online-only files here.':'. A build reruns it only if a producer\'s rerun changes its inputs.')+(entry.origin?' Staleness starts at '+reproButton(entry.origin,'related',entry.origin)+'.':'')+'</p>';
   if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}),step.task);
   if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>';
   if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
@@ -2355,23 +2363,47 @@ function reproBuildScope(graph, target, producers) {
 /* What the build would run, costed from each step's last recorded run: the
    steps whose own state is stale, missing, or failed, plus the forced targets.
    A step stale only through upstream reruns if its inputs change; an
-   `unverified` step never runs. */
+   `unverified` one then needs its online-only files, and otherwise never runs.
+   Mirrors the runner's download gate: when a step that will run reads a file
+   not on this machine that no running step writes first, nothing runs. */
 function reproBuildEstimate(target, mode) {
   var statuses = reproStatusIndex(_reproData), targets = new Set(reproBuildScope(_reproData.graph, target, false));
   var scope = new Set(reproBuildScope(_reproData.graph, target, mode !== 'only'));
-  var run = [], maybe = 0, online = 0, total = 0, unknown = 0;
+  var run = [], maybe = 0, needs = 0, online = 0, total = 0, unknown = 0;
   scope.forEach(function(name) {
-    var entry = statuses[name], ch = reproChannels(entry);
+    var entry = statuses[name], ch = reproChannels(entry), upstream = entry && entry.origin && scope.has(entry.origin);
     if ((mode === 'force' && targets.has(name)) || ['stale', 'missing', 'failed'].indexOf(ch.own) >= 0) run.push(entry);
-    else if (ch.own === 'unverified') online++;
-    else if (entry && entry.origin && scope.has(entry.origin)) maybe++;
+    else if (ch.own === 'unverified') { if (upstream) needs++; else online++; }
+    else if (upstream) maybe++;
   });
-  var tail = (maybe ? ' · ' + maybe + ' more if their inputs change' : '') + (online ? ' · ' + online + ' online-only, not run' : '');
+  var gate = reproGatedFiles(run);
+  if (gate.length) {
+    var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0;
+    sized.forEach(function(f) { bytes += f.size; });
+    return 'Would run nothing: ' + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
+      + (sized.length ? ' (' + formatArtifactBytes(bytes) + ')' : '') + ': '
+      + gate.slice(0, 3).map(function(f) { return f.node; }).join(', ') + (gate.length > 3 ? ', +' + (gate.length - 3) + ' more' : '');
+  }
+  var tail = (maybe ? ' · ' + maybe + ' more if their inputs change' : '')
+    + (needs ? ' · ' + needs + ' need online-only files if their inputs change' : '')
+    + (online ? ' · ' + online + ' online-only, not run' : '');
   if (!run.length) return 'Nothing stale' + tail;
   run.forEach(function(entry) { if (entry && entry.duration != null) total += entry.duration; else unknown++; });
   return run.length + ' step' + (run.length === 1 ? '' : 's') + ' would run'
     + (run.length > unknown ? ' · ~' + reproDuration(total) + ' by last runs' : '')
     + (unknown ? ' · ' + unknown + ' never ran' : '') + tail;
+}
+/* The inputs the runner's gate stops on: online-only, or absent with no
+   producer (`unknown`), and written first by no step in *run*. */
+function reproGatedFiles(run) {
+  var written = new Set(), gated = {};
+  run.forEach(function(entry) { (entry && entry.files || []).forEach(function(f) { if (f.role === 'output') written.add(f.node); }); });
+  run.forEach(function(entry) {
+    (entry && entry.files || []).forEach(function(f) {
+      if (f.role === 'dependency' && (f.online_only || f.outcome === 'unknown') && !written.has(f.node)) gated[f.node] = f;
+    });
+  });
+  return Object.keys(gated).sort().map(function(node) { return gated[node]; });
 }
 
 /* Place a floating panel in the graph stage below its anchor, or above when it
@@ -3573,7 +3605,7 @@ function loadProjectFile(taskPath, filePath, region, token) {
     var name = filePath.split('/').pop() || filePath, url = projectFileUrl(filePath, peek.mtime_ns);
     region.innerHTML = '';
     var head = buildArtifactPageHead(taskPath, name);
-    if (peek.size != null) {
+    if (peek.size != null && !peek.online_only) {
       var actions = document.createElement('div');
       actions.className = 'artifact-actions';
       var download = document.createElement('a');
@@ -3590,12 +3622,17 @@ function loadProjectFile(taskPath, filePath, region, token) {
     });
     var meta = document.createElement('p');
     meta.className = 'attachment-active-meta';
-    meta.textContent = filePath + (peek.exists ? ' · ' + projectFileMeta(peek) : '');
+    meta.textContent = filePath + (peek.exists && !peek.online_only ? ' · ' + projectFileMeta(peek) : '');
     region.appendChild(meta);
     var body = document.createElement('div');
     body.className = 'artifact-preview-body attachment-active-body';
     region.appendChild(body);
-    if (peek.exists && peek.size != null) {
+    if (peek.online_only) {
+      var cloud = document.createElement('p');
+      cloud.className = 'artifact-state';
+      cloud.textContent = onlineOnlyNote(peek);
+      body.appendChild(cloud);
+    } else if (peek.exists && peek.size != null) {
       renderActiveArtifactBody(taskPath, Object.assign({}, peek, { path: '/' + filePath, name: name, url: url }), body, token);
     } else {
       var state = document.createElement('p');
