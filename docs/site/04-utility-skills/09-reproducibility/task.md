@@ -25,7 +25,7 @@ A **step** is one command that reads files (its inputs) and writes files (its ou
 
 - **Content decides, timestamps never do.** A Dropbox re-sync or a `touch` leaves every step fresh, and restoring a file's original bytes restores freshness.
 - **Any byte change makes the step stale, even an edited comment.** The hash cannot tell that a comment does not move a result. Whether the step needs a rerun is a separate decision, covered under *What stays your call* below.
-- **Staleness flows downstream within the steps you select.** A selected step reading the output of a stale selected step is stale too, until its producer is rebuilt. A producer outside the selection is not consulted: its file is read as it sits on disk.
+- **Staleness flows downstream.** A step reading the output of a stale step is stale too, until its producer is rebuilt. `status` and `build` follow each result you name back through the steps that produce its inputs.
 - **Identical output stops the cascade.** When a rerun writes the same bytes as before, the steps that read those bytes stay fresh and are skipped.
 - **Your coauthor's clone sees the same freshness**, because the lock is in git. A check step that passed at the same inputs on another machine reads `fresh` there, with the reason "passed at these inputs … not run here". Outputs you keep out of git are absent from a fresh clone, so their steps read `missing` until built.
 - **A merge conflict in the lock does not break it.** Entries both sides agree on still read; the entries they disagree on drop to `missing`, and the next build rewrites the file without conflict markers.
@@ -40,7 +40,7 @@ Each step is in one of five states:
 | `stale` | An input, an output, the definition, or an upstream step changed. |
 | `missing` | Never built, or an output is gone. |
 | `failed` | The last run exited non-zero; the status line names the log. Restoring the inputs it last succeeded on can clear it. |
-| `external` | An input that no step produces is not on disk, so the step cannot run. |
+| `unverified` | This machine cannot check one of its files without downloading or obtaining it: an online-only file not yet checked here, an unreadable file, or an input no step produces that is not on disk. A build never runs it. |
 
 ## A stale cascade on the showcase study
 
@@ -62,14 +62,15 @@ Suppose you edit `01_build_panel.py` to start the sample in 1970 instead of July
 
 No step writes the raw CSVs, so no build changes the data; replacing them with a newer release would make all three steps stale. Had the edit only fixed a comment, the same three steps would read `stale`. Accepting the panel step, with the comment-only diff as the reason, returns all three to `fresh`, since the panel file itself did not change. Rebuilding the panel instead also ends there, because the new file is byte-identical: the analysis and the check are skipped.
 
-Building only `showcase-analysis/02-analysis` after the 1970 edit reruns nothing: the analysis reads the panel file that is on disk, which still covers 1963 onward. `status` on that selection reports the panel step as a producer behind it that is not fresh, and `--upstream` brings it into the build.
+Naming only `showcase-analysis/02-analysis` as the target after the 1970 edit still reruns all three steps, because the build follows the analysis back to the panel step that produces its input. With `--only`, the build stays inside `02-analysis` and reruns nothing: the analysis reads the panel file on disk, which still covers 1963 onward, and `status` names the panel step as a producer behind the selection that is not fresh.
 
 ## What runs, and when
 
 **Nothing reruns on its own.** `status` reports states and never runs anything; `build` runs steps, and only when you or the agent asks.
 
-- **`build <target>` runs only the selected steps that are not fresh**, in dependency order. A target is a task path (the task and its subtasks), one step as `task#step`, or `.` for the whole tree.
-- **Files written by steps outside the selection are used as they sit on disk.** `--upstream` adds the steps that produce them, back to the external inputs.
+- **`build <target>` runs the steps that are not fresh among the target and the steps producing its inputs**, back to the external inputs, in dependency order. A target is a task path (the task and its subtasks), one step as `task#step`, or `.` for the whole tree. Naming the final result is enough to bring it current.
+- **`--only` keeps a build to the target.** Files written by steps outside it are used as they sit on disk. The agent uses it when another session is editing an upstream script.
+- **Nothing is downloaded.** A file that is online-only on this machine (Dropbox, Google Drive, Box, OneDrive, iCloud) is never opened to check it. A build that would read one runs nothing and lists it with its size, and the agent asks you before downloading.
 - **The cost comes first if you ask for it.** `build --dry-run` lists what would run with each step's last run time; `impact <file>` lists which steps a change to that file would make stale.
 - **A failure stays local.** A failed step skips the steps below it while unrelated steps continue. A missing input fails only the build that reads it; tasks that read it still appear on the frontier, with the input flagged.
 
@@ -107,7 +108,7 @@ The agent runs these. You can run them yourself through `./superRA/superra` to i
 ./superRA/superra repro status .                                  # every step's state
 ./superRA/superra repro impact superRA/showcase-analysis/analysis/01_build_panel.py
 ./superRA/superra repro build showcase-analysis --dry-run         # what would run, and its last cost
-./superRA/superra repro build showcase-analysis/02-analysis --upstream
+./superRA/superra repro build showcase-analysis/02-analysis --only  # the analysis alone, on the panel as it is
 ./superRA/superra repro explain showcase-analysis/01-data         # what changed, and what to run next
 ./superRA/superra repro accept showcase-analysis/01-data --reason 'Comment-only edit; diff reviewed'
 ```
