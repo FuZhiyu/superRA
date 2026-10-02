@@ -119,10 +119,12 @@ Status JSON records `targets`, `upstream`, `boundary_inputs` (the saved inputs: 
 | State | Meaning |
 |---|---|
 | `fresh` | Inputs and outputs match the successful build or the current reviewed baseline. Bytes matching the successful build stay fresh when an acceptance no longer validates; the reason names it and the `revoke` that clears it. A check whose lock entry matches its current inputs but has no local stamp is fresh with the reason `passed at these inputs in lock <rev> on <platform>; not run here`, unless it last failed here. |
-| `stale` | A dep, an out, the step definition, or an upstream step changed. |
+| `stale` | A dep, an out, or the step definition changed; or a producer is `stale`, `missing`, or `failed`, and the reason names the furthest-upstream such step, JSON `origin`. |
 | `missing` | Never built, or an out is gone. |
-| `failed` | The last run exited non-zero and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. |
-| `external` | A dep no step produces is not on disk, so the step cannot run. |
+| `failed` | The last or interrupted run did not succeed and the step still has work to do; the reason names its log. Restoring inputs can clear an ordinary failure. |
+| `unverified` | A file cannot be checked here: online-only and not in this machine's hash cache, unreadable, or absent with no step producing it. `build` never runs the step; its outputs are used as they are. |
+
+A step takes the first state its own evidence supports, in the order `failed`, `missing`, `stale`, `unverified`, `fresh`; `local_status` keeps it when a producer lifts it to `stale`. No check downloads a file: an online-only file (`SF_DATALESS`, or a legacy Dropbox placeholder) is never opened, and one whose size differs from the lock's reads changed. Each step's JSON `files` lists every dep and out with its `outcome` (`matches`, `changed`, `absent`, `unknown`, or null for a never-built step's file on disk), `online_only`, and `size`.
 
 A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build writes `repro-lock.json`; that build prints the `git rm` that retires them.
 

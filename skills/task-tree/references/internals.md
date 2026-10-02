@@ -314,8 +314,9 @@ Each step's entry is one line, keys sorted inside, steps in name order with a bl
 | `steps.<name>.spec` | The step definition hash: declared half, `:`, resolved half |
 | `steps.<name>.deps`, `.outs` | Logical path → content hash; a sidecar-tracked out hashes its sidecar, and a check step's out is its stamp |
 | `steps.<name>.built_on` | `platform` (OS and CPU architecture) |
+| `steps.<name>.sizes` | Logical path → file size in bytes, of the out itself for a sidecar-tracked out; a directory has none. Optional: an entry written without it still reads |
 
-Freshness reads `spec`, `deps`, and `outs` only; `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
+Freshness reads `spec`, `deps`, and `outs`; `sizes` only lets an online-only file not in the hash cache read changed, never matching. `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
 
 Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry. Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes.
 
@@ -364,7 +365,7 @@ A `.jl` dep expands through `include` arguments of these forms: a string literal
 
 [_repro_acceptance.py](../scripts/_repro_acceptance.py) owns per-step atomic acceptance records and their legacy-ledger conversion, verified successful receipts, and dependency impact. Current reviewed baselines can precede the first runner execution and bind saved-input bytes outside scope. Status applies acceptance before propagating selected upstream uncertainty; legacy records retain full-chain validation. Public step JSON exposes nullable `acceptance` details without adding a status enum.
 
-[repro_run.py](../scripts/repro_run.py) runs the build itself. Steps are scheduled in dependency order over the selection's step edges, on a thread pool under `-j`; a failed step skips its descendants. Each step is checked with `compute_status` over the whole build selection, counting steps completed earlier in the run: `fresh` (including a valid acceptance) skips and keeps its lock entry; anything else, or a forced step, runs after its inputs are confirmed on disk and its acceptance is superseded. A dry run decides the same way and writes nothing.
+[repro_run.py](../scripts/repro_run.py) runs the build itself. Steps are scheduled in dependency order over the selection's step edges, on a thread pool under `-j`; a failed step skips its descendants. Each step is checked with `compute_status` over the whole build selection, counting steps completed earlier in the run: `fresh` (including a valid acceptance) skips and keeps its lock entry; `unverified` skips unless forced; anything else, or a forced step, runs after its inputs are confirmed on disk and hashable here, and its acceptance is superseded. A dry run decides the same way and writes nothing.
 
 A successful step's receipt is captured only after its declared outs are verified; dependency edits during execution fail the step. The step's lock entry is then written atomically under `RECORD_LOCK`, the in-process lock that also serializes acceptance-ledger rewrites from worker threads. Run records distinguish interrupted/pending work from success. A project-local process lock coordinates builds, accept, and revoke on POSIX systems; records use atomic replacement. Immediate hash and declaration rechecks detect edits from writers outside that lock. Status, impact, and explain remain engine-free.
 
@@ -423,4 +424,5 @@ A successful step's receipt is captured only after its declared outs are verifie
 | `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
 | `test_repro_runner.py` | Runner — hash cache, status classification, target selection, build, rerun, and lock behavior |
 | `test_repro_engine.py` | Build loop and `repro-lock.json` — scheduling, interruption, lock format and merges, legacy locks, freshness fixes |
+| `test_repro_online.py` | File checks that never download — online-only and unreadable files, lock sizes, state precedence, the cascade origin |
 | `tests/test_state_preservation.py` | Dashboard state preservation across reloads |

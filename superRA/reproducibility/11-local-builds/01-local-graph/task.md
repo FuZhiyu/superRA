@@ -1,6 +1,6 @@
 ---
 title: "File Checks and Step States Never Download"
-status: not-started
+status: implemented
 depends_on: []
 ---
 
@@ -43,3 +43,78 @@ Implement the parent's §Checking files and §Step states in the freshness engin
 - **Where the change lands.** `HashCache.file_hash` / `_hashed` / `tree_hash` and `path_state` / `node_state` / `dependency_state` in [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py); `_classify` and `STATUSES` there. Also `apply_to_status`, `validate_record`, and `current_state` in [_repro_acceptance.py](../../../../skills/task-tree/scripts/_repro_acceptance.py), and the saved-input checks in [_repro_scope.py](../../../../skills/task-tree/scripts/_repro_scope.py).
 - **Cache key.** Keep (path, size, mtime_ns). Whether size and mtime survive a download and a later eviction is unverified; the File Provider validation run should note what it saw.
 - **Scope split from [02-upstream-default](../02-upstream-default/task.md).** This task owns how files and steps get their states, plus the floor that keeps `unverified` steps from running. 02 owns what commands do with the states: scope, the gate, and status rendering beyond the marks.
+
+## Results
+
+The freshness engine now checks files without ever downloading one, and steps take the parent's precedence with `unverified` in place of `external`. On OlinStudio, `status`, `build`, `explain`, and `accept --dry-run` ran over a legacy Dropbox placeholder and an `SF_DATALESS` Box file: both read `unknown`, the steps read `unverified`, and neither file materialized.
+
+### File checks never open an online-only file
+
+- **Outcomes.** [_repro_state.py](../../../../skills/task-tree/scripts/_repro_state.py) gives each file `matches`, `changed`, `absent`, or `unknown` through `outcome()`.
+  - `HashCache.path_state` / `file_hash` return a hash, `None` (absent), or an `Unread` value (`online-only` or `unreadable`).
+  - A read or `stat` error on an existing path is `Unread("unreadable")`, never absent.
+- **Detection.** `is_online_only` checks `st_flags & SF_DATALESS`, or a zero-byte file with the `com.dropbox.placeholder` xattr (`ctypes` `getxattr`).
+  - A placeholder is checked before the hash cache, so it never hashes as an empty file.
+  - `tree_hash` checks each directory's flag before listing it. An uncached online-only file, a dataless subdirectory, or a broken link makes the whole directory `Unread`.
+- **Guarded reads outside the cache.** Each one checks the file first, and a test fails if any of them opens a simulated online-only file:
+  - `explain`'s snapshot diff, and its `git diff` against the working tree.
+  - `accept`'s baseline diff (`inspect_baseline`) and receipt snapshots.
+  - The sidecar read in `_bytes_verified`.
+  - The Julia include scan in [_repro.py](../../../../skills/task-tree/scripts/_repro.py), which warns instead of reading.
+  - `explain <path>` prints "online-only here" (or "unreadable here") where it printed "missing here"; its JSON adds `here`.
+- **Lock sizes.** A build records an optional `sizes` map beside the hashes: the out's own size for a sidecar, and none for a directory.
+  - An uncached `SF_DATALESS` file whose size differs from the recorded one reads `changed`.
+  - `LockEntry.sizes` takes no part in equality or in an acceptance's `lock` digest, so existing acceptances stay valid.
+
+### States, cascade, and the run floor
+
+- **Precedence.** `_classify` gives `failed` > `missing` > `stale` > `unverified` > `fresh`. `STATUSES` and the `status` marks drop `external` and add `unverified` (`○`).
+- **Cascade.** `apply_to_status` lifts `fresh` and `unverified` steps to `stale` only for a `stale`, `missing`, or `failed` producer.
+  - It sets `origin` to the furthest-upstream blocking step, and the reason names it: `upstream step 'build-a' is stale`.
+  - The status JSON carries `origin`.
+- **Per-file evidence.** Each status entry and its JSON carry `files`: one row per dep and out, with `node`, `role`, `outcome`, `online_only`, and `size`.
+  - A directory is online-only when anything under it is, and has no size.
+- **Acceptance.**
+  - `accept` refuses a file it cannot hash, naming it: `build-a: cannot record Code/a.sh, which is online-only here`.
+  - A valid acceptance whose files cannot be hashed here reads `unverified` with reason `reviewed baseline; <file> is online-only here`, not invalid.
+- **Run floor.** In [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py), `build` skips an `unverified` step and counts it `unverified`.
+  - `_missing_inputs` no longer reads `external`. It refuses to start any step, dry runs included, whose input is absent, online-only and uncached, or unreadable.
+- **Saved-input rename.** The provenance `unverified` is now `no successful build recorded`, and the boundary change `unverified` is now `unbaselined`.
+  - A saved input that cannot be hashed here has `digest: null` and says why under `here`. It makes its consumer `unverified`, and `build` no longer refuses it as missing.
+
+### Deviations and decisions
+
+- **Lock version stays `2`.** `sizes` is an optional key that older readers ignore, so a lock written before this change and a lock read by an older superRA both still work. A version bump would have made older checkouts reject the lock.
+- **A check that passed elsewhere needs every input checked.** It stays `fresh` when its inputs match, including an online-only input still in this machine's hash cache. An uncached input makes it `unverified`, because "at these inputs" cannot be confirmed.
+- **An absent output a step produces keeps its consumer `stale`.** The consumer's dependency reads `missing`, as before. Only an absent file no step produces is `unknown`.
+- **A forced `unverified` step still goes through the input check,** so `--force` never reads a file the machine cannot hash. 02 decides the final `--force` scope.
+- **A broken link inside a directory dependency now reads `unverified`, not `stale`.** Updated in [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py).
+- **`accept` hashes without the persistent cache, as before,** so it refuses any `SF_DATALESS` file, even one cached from an earlier read.
+- **A never-built step's file on disk has `outcome: null`.** The status never hashes a never-built step's files.
+- **Cache key.** It stays (path, size, mtime_ns). The validation was read-only, so whether size and mtime survive a download and a later eviction was not observed.
+
+### Left for siblings
+
+- **02-upstream-default.**
+  - The download gate must also catch an online-only input that is in the hash cache: `_missing_inputs` passes it because it can be hashed.
+  - `report.ok` still counts `unverified` as not ok, so `status` exits 1 for it.
+  - The frontier `CURRENT` set still flags inputs from `unverified` producers.
+  - The "(stale, missing, failed, or external)" exit-code line at [commands.md:114](../../../../skills/task-tree/references/commands.md#L114).
+- **03-state-display.** `dashboard.js` has no `unverified` entry in `REPRO_STATES` and still lists `external`.
+- **04-discipline.** The `external` state appears in [reproducibility/SKILL.md:35](../../../../skills/reproducibility/SKILL.md#L35) and [rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9).
+
+### Verification
+
+- **Regression tests.** [test_repro_online.py](../../../../skills/task-tree/scripts/test_repro_online.py) has 16 tests covering every Validation bullet, with `file_flags`, `has_placeholder_xattr`, `Path.open`, `open`, and `os.scandir` monkeypatched.
+  - Removing any of the four read guards (`explain` diff, `accept` baseline diff, sidecar read, directory listing) fails its test.
+- **Full suite.** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`: 1082 passed, 10 skipped.
+- **OlinStudio, read-only.** A disposable fixture outside the repo used real files as dependencies:
+  - The legacy placeholder `~/Dropbox/Fit3D_Measurements_History.csv`.
+  - The `SF_DATALESS` Box file `~/Library/CloudStorage/Box-Box/ois_historical_data_extended.xlsx` (5,123,878 bytes).
+  - The fixture's lock entries recorded a placeholder hash for each, and the Box file's true size.
+  - Results:
+    - `status` reported both dependencies `unknown` with `online_only: true`.
+    - `build` skipped both steps as `unverified`.
+    - `accept --dry-run` refused the Box file.
+  - Afterwards the Box file still had `SF_DATALESS` set and the same size and mtime, and the placeholder was still zero bytes with its `com.dropbox.placeholder` xattr.
+

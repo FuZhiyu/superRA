@@ -165,7 +165,7 @@ def test_archived_producer_with_missing_output_is_reported(tmp_path):
     assert "archived producer" in item["reason"]
     dry = run(root, "repro", "build", "m", "--dry-run")
     assert dry.returncode == 1
-    assert "step 'm' cannot start: external input old.txt is missing" in dry.stdout
+    assert "step 'm' cannot start: input old.txt is not on disk, and no step produces it" in dry.stdout
     assert "every selected step is fresh" not in dry.stdout
     (tmp_path / "old.txt").write_text("kept")
     assert frontier(root)["m"]["inputs"] == []

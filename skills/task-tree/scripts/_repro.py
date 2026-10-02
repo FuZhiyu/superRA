@@ -734,7 +734,14 @@ def include_closure(
         if resolved in seen:
             continue
         seen.add(resolved)
+        from _repro_state import is_online_only
         try:
+            if is_online_only(current, current.stat()):
+                warnings_out.append(
+                    f"{_relative(current, project_root)}: online-only here, so its "
+                    f"includes were not scanned; download it to detect them"
+                )
+                continue
             text = current.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue

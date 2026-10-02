@@ -6588,7 +6588,7 @@ class TestReproRoutes:
         assert not (repro_plan.parent / ".superra-repro").exists()
         assert not (repro_plan.parent / ".gitignore").exists()
         assert body["summary"] == {
-            "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "external": 0,
+            "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "unverified": 0,
             "total": 3,
         }
         assert body["ok"] is False

@@ -12,10 +12,10 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from _repro_state import (
-    RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state, directory_dep_nodes,
-    dropbox_ignore,
+    BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
+    directory_dep_nodes, dropbox_ignore, is_online_only,
     node_state, output_nodes, read_lock, read_run_record, select_steps, spec_hash,
-    spec_node_id, step_nodes, _topological,
+    spec_node_id, step_nodes, unread, unread_phrase, _topological,
 )
 
 LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
@@ -252,7 +252,8 @@ def source_snapshots(step, paths, state):
     for dep in step.deps:
         path = absolute(paths.project_root, dep.resolved)
         try:
-            if path.stat().st_size > min(SNAPSHOT_LIMIT, remaining):
+            info = path.stat()
+            if info.st_size > min(SNAPSHOT_LIMIT, remaining) or is_online_only(path, info):
                 continue
             with path.open('rb') as handle:
                 raw = handle.read(min(SNAPSHOT_LIMIT, remaining) + 1)
@@ -273,6 +274,9 @@ def capture_receipt(graph, step, paths, before):
         raise ReproStateError(f'{step.name}: dependencies changed during execution; rerun')
     if any(value is None for group in state.values() for value in group.values()):
         raise ReproStateError(f'{step.name}: required input or output is missing after execution')
+    unhashed = unread_nodes(state)
+    if unhashed:
+        raise ReproStateError(f'{step.name}: {unhashed[0][0]} cannot be hashed here after execution ({unhashed[0][1]})')
     receipt = {'state': state, 'snapshots': source_snapshots(step, paths, state),
                'spec': step.to_dict(), 'recorded_at': time.time(),
                'run': dict(read_run_record(paths, step.name), outcome='success')}
@@ -284,7 +288,7 @@ def capture_receipt(graph, step, paths, before):
     if fingerprints(boundary) != fingerprints(old_boundary):
         raise ReproStateError(f'{step.name}: saved inputs changed during execution; rerun')
     if any(item['digest'] is None for item in boundary):
-        raise ReproStateError(f'{step.name}: saved input is missing after execution')
+        raise ReproStateError(f'{step.name}: saved input is missing or unreadable after execution')
     receipt['boundary_inputs'] = boundary
     receipt['execution_scope'] = sorted(scope)
     receipt['id'] = identity(receipt)
@@ -317,8 +321,18 @@ def differences(before, after):
             for key in sorted(before.keys() | after.keys()) if before.get(key) != after.get(key)]
 
 
-def validate_record(graph, step, paths, record, locks, cache=None):
-    """Return the reason reuse is invalid; callers already validate upstream state."""
+def unread_nodes(state):
+    """(node, why) for each value in a `current_state` that cannot be hashed here."""
+    return [(node, unread_phrase(value)) for group in state.values()
+            for node, value in group.items() if unread(value)]
+
+
+def validate_record(graph, step, paths, record, locks, cache=None, unknown=None):
+    """Return the reason reuse is invalid; callers already validate upstream state.
+
+    A file that cannot be hashed here invalidates nothing: it lands in
+    *unknown* as (node, why), and the record reads unverified.
+    """
     if not record:
         return 'no acceptance'
     if record['lock'] != lock_digest(locks.get(step.name)):
@@ -326,16 +340,25 @@ def validate_record(graph, step, paths, record, locks, cache=None):
     if read_run_record(paths, step.name).get('outcome') in ('failed', 'running', 'pending'):
         return 'last execution did not succeed'
     cache = cache or HashCache()
+    unknown = [] if unknown is None else unknown
     current_paths = {dep.logical: dep.resolved for dep in step.deps}
     for item in record.get('boundary_inputs', []):
         resolved = current_paths.get(item['logical'])
-        if resolved is None or cache.path_state(absolute(paths.project_root, resolved)) != item['digest']:
+        current = cache.path_state(absolute(paths.project_root, resolved)) if resolved else None
+        if unread(current):
+            unknown.append((item['logical'], unread_phrase(current)))
+        elif resolved is None or current != item['digest']:
             return 'saved input bytes changed'
     state = current_state(graph, step, paths, cache)
     if any(value is None for group in state.values() for value in group.values()):
         return 'required input or output missing'
-    if state != record['state']:
+    known = {group: {node: value for node, value in values.items() if not unread(value)}
+             for group, values in state.items()}
+    reviewed = {group: {node: value for node, value in record['state'].get(group, {}).items()
+                        if node in known[group]} for group in state}
+    if known != reviewed or any(set(state[g]) != set(record['state'].get(g, {})) for g in state):
         return 'reviewed state changed'
+    unknown.extend(node for node in unread_nodes(state) if node not in unknown)
     return None
 
 
@@ -353,13 +376,19 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
         if src in by_name and dst in parents and src not in parents[dst]:
             parents[dst].append(src)
     from _repro import step_errors
+    origins = {}  # blocking step -> the furthest-upstream blocking step on its path
     for name in _topological(by_name, parents):
         entry = by_name[name]
         record = ledger['steps'].get(name)
-        blocked = next((p for p in parents[name] if by_name[p].status != 'fresh'), None)
-        invalid = validate_record(report.graph, entry.step, paths, record, lock, cache) if record else None
+        blocked = next((p for p in parents[name] if by_name[p].status in BLOCKING), None)
+        unknown = []
+        invalid = validate_record(report.graph, entry.step, paths, record, lock, cache, unknown) if record else None
         if record and not invalid and not step_errors(report.graph, [name])[0]:
             entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
+            if unknown:
+                entry.status = 'unverified'
+                entry.reason = f'reviewed baseline; {unknown[0][0]} is {unknown[0][1]}' + (
+                    f' (and {len(unknown) - 1} more)' if len(unknown) > 1 else '')
             entry.changes = []
         elif record and invalid and entry.status == 'fresh' and baseline(
                 entry.step, paths, lock.get(name), required=False)['outputs'] == current_state(
@@ -373,7 +402,7 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
             entry.acceptance_invalid = invalid
             state = current_state(report.graph, entry.step, paths, cache)
             entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
-                             for c in state_differences(record['state'], state)] + [
+                             for c in state_differences(record['state'], state) if not unread(c['after'])] + [
                                  c for c in entry.changes if c.kind == 'boundary']
             if entry.status == 'fresh' or (entry.status == 'missing' and all(
                     v is not None for group in state.values() for v in group.values())):
@@ -381,8 +410,12 @@ def apply_to_status(report, paths, cache, ledger=None, lock=None):
             if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
                 entry.status, entry.reason = 'failed', 'last execution did not succeed'
         entry.local_status, entry.local_reason = entry.status, entry.reason
-        if blocked and entry.status == 'fresh':
-            entry.status, entry.reason = 'stale', f'upstream step {blocked!r} is {by_name[blocked].status}'
+        if blocked and entry.status in ('fresh', 'unverified'):
+            entry.origin = origins.get(blocked, blocked)  # a cycle can order a producer later
+            origin = by_name[entry.origin]
+            entry.status, entry.reason = 'stale', f'upstream step {entry.origin!r} is {origin.local_status}'
+        if entry.status in BLOCKING:
+            origins[name] = origins.get(blocked, blocked) if blocked else name
 
 
 def state_differences(before, after):
@@ -421,7 +454,10 @@ def inspect_baseline(graph, step, paths):
         dep = by_logical.get(change['node'])
         if old is not None and hashlib.sha256(old.encode()).hexdigest() == change['before'] and dep:
             try:
-                with absolute(paths.project_root, dep.resolved).open('rb') as handle:
+                path = absolute(paths.project_root, dep.resolved)
+                if is_online_only(path, path.stat()):
+                    raise OSError('online-only here')
+                with path.open('rb') as handle:
                     raw = handle.read(SNAPSHOT_LIMIT + 1)
                 if len(raw) <= SNAPSHOT_LIMIT and hashlib.sha256(raw).hexdigest() == change['after']:
                     row.update(history='verified snapshot', diff=''.join(difflib.unified_diff(old.splitlines(True), raw.decode().splitlines(True), fromfile='successful/' + dep.logical, tofile='current/' + dep.logical)))
@@ -456,6 +492,10 @@ def preview(graph, paths, targets, reason, reviews):
         state = current_state(graph, step, paths)
         if any(v is None for group in state.values() for v in group.values()):
             raise ReproStateError(f'{name}: required input or output is missing')
+        unhashed = unread_nodes(state)
+        if unhashed:
+            raise ReproStateError(f'{name}: cannot record {unhashed[0][0]}, which is {unhashed[0][1]}'
+                                  + (f' (and {len(unhashed) - 1} more)' if len(unhashed) > 1 else ''))
         if step.kind == 'check' and state['products'] != before['lock']['products']:
             raise ReproStateError(f'{name}: check stamp differs from successful baseline; run the check')
         previous_record = ledger['steps'].get(name)
@@ -617,6 +657,7 @@ def source_signature(root, cache=None):
     for path in iter_task_markdown_files(root) + [root / 'config.yaml']:
         key = str(path.relative_to(root))
         digest = hashes.file_hash(path)
+        digest = f'unread:{digest.why}' if unread(digest) else digest
         cached = cache.get(key)
         if cached and cached[0] == digest:
             result[key] = cached[1]
