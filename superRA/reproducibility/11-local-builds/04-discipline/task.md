@@ -1,6 +1,6 @@
 ---
 title: "Skill, References, and Docs Teach the Producer Chain and Online-Only Data"
-status: revise
+status: implemented
 depends_on: [02-upstream-default]
 ---
 
@@ -52,15 +52,15 @@ The reproducibility skill, its references, the reviewer's evidence line, the doc
   - §Recording a Result: a step behind a `stale`, `missing`, or `failed` producer reads `stale`. A selected step reading `unverified` fails the gate even though `status` exits 0. A result checked with `--only`, or one resting on `unverified` producers, says so and names where tracing stopped.
 - **[rerun-or-accept.md](../../../../skills/reproducibility/references/rerun-or-accept.md).**
   - The `--dry-run` cost includes stale producers.
-  - An `unverified` step is outside the stale rule. Report it with the files `status` lists.
-  - New **Accept before you build**: record acceptances first, and while a producer stays stale by the rule, build with `--only`.
-  - Acceptance is step-local: to cover a producer, name it or build it.
+  - An `unverified` step is outside the stale rule. Report it with the files `status` lists. For an absent external input, retrieve it or register its producer.
+  - **Record the rule's acceptances before you build.** While a producer stays stale by the rule, build with `--only`.
+  - Under "What acceptance never covers", producers you did not name: to cover one, name it or build it.
 - **[protect-and-completion.md](../../../../skills/reproducibility/references/protect-and-completion.md).**
   - Step 2 no longer says "building by name only the steps the rule says to run"; rerun-or-accept.md now owns build scope.
-  - The gate passes with stale-rule leftovers and every `unverified` step reported to the researcher, even though `status .` exits 0 over them.
-  - `--force` forces only the named steps, so name every step to rerun (`.` for all).
+  - The gate passes with stale-rule leftovers and every `unverified` step reported to the researcher. `status .` still exits 0 over the `unverified` steps.
+  - For fresh execution, `--force` names every step to rerun (`.` for all).
 - **[online-only-files.md](../../../../skills/reproducibility/references/online-only-files.md).** A new first section, **superra Never Downloads**:
-  - an uncached online-only file reads `unknown` (`changed` on a size difference) and its step `unverified`;
+  - an uncached online-only file reads `changed` when its size differs from the lock's, and `unknown` otherwise;
   - a build refuses while a step it would run reads an online-only file, even a cached one;
   - `--only` builds the steps that read none.
 
@@ -86,10 +86,11 @@ The reproducibility skill, its references, the reviewer's evidence line, the doc
 
 ### Verification
 
-- **Instruction gate.** I applied the CLAUDE.md three tests and §Skill Prose Style line by line. This cut two restatements from SKILL.md, the "builds skip `fresh` steps" rationale and the "plain `status` covers the producer chain" sentence that §Selecting Steps already carried. It also cut the download rule duplicated in rerun-or-accept.md. SKILL.md went from 741 to 824 words.
+- **Instruction gate.** I applied the CLAUDE.md three tests and §Skill Prose Style line by line. This cut two restatements from SKILL.md, the "builds skip `fresh` steps" rationale and the "plain `status` covers the producer chain" sentence that §Selecting Steps already carried. It also cut the download rule duplicated in rerun-or-accept.md. The review then found three same-file restatements in the references, now cut. SKILL.md went from 741 to 824 words.
 - **Harness session A: stale producers in two tasks.**
   - The fixture has `01-left` and `02-right`, each with one step, feeding `final` in `03-final`. After both scripts were edited, `status 03-final` exited 3.
   - Asked to "bring the final wage table up to date", the agent ran `build 03-final --dry-run`, then `build 03-final`, which executed all three steps. It issued no per-step builds.
+  - That session may have run before the last SKILL.md cuts. A second session ran on the final skill text, the text committed in the fix-round implement commit after review `0613a929`. Both scripts had been edited again, and the request was "I tweaked both cleaning scripts again. Can you get the final wage table current?" The agent read SKILL.md and rerun-or-accept.md. It ran `build final --dry-run`, then `build final`, which reran all three steps, and it used neither `accept` nor `--only`.
 - **Harness session B: an online-only input.**
   - The fixture's `rates` step reads a symlink to the `SF_DATALESS` Box file `~/Library/CloudStorage/Box-Box/ois_historical_data_extended.xlsx`. `rates` and `calendar` feed `model`, and none has been built.
   - Asked to rebuild the model results, the agent ran `build 03-model --dry-run` and hit the gate. It then built only `calendar` with `build 02-calendar --only`. Its message to the researcher named `data/ois_history.xlsx` (5.1 MB), said downloading is the researcher's call, and asked for the go-ahead.
@@ -107,9 +108,16 @@ Tier: thorough. Focuses: the CLAUDE.md §Teach the Protocol three-test gate on e
 
 1. **[BLOCKING] Three new lines state one fact twice (CLAUDE.md §Teach the Protocol test 2, which makes each one `[BLOCKING]`).** In each pair, either half can go without losing a fact.
    - [rerun-or-accept.md:26](../../../../skills/reproducibility/references/rerun-or-accept.md#L26): "**Accept before you build.** Record the rule's acceptances first." Fix: keep one of the two, e.g. "**Record the rule's acceptances before you build.** While a producer stays stale by the rule, …".
+     → implemented: [rerun-or-accept.md:26](../../../../skills/reproducibility/references/rerun-or-accept.md#L26) now reads "**Record the rule's acceptances before you build.** While a producer stays stale by the rule, …".
    - [rerun-or-accept.md:43](../../../../skills/reproducibility/references/rerun-or-accept.md#L43): "**Producers you did not name.** Acceptance is step-local: …". Under the heading "What acceptance never covers", "Acceptance is step-local" repeats the bold. Fix: "**Producers you did not name.** To cover one, name it or build it."
+     → implemented: [rerun-or-accept.md:43](../../../../skills/reproducibility/references/rerun-or-accept.md#L43) now reads "**Producers you did not name.** To cover one, name it or build it."
    - [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11): "naming every step to rerun (`.` for all): it forces only the named steps." The clause after the colon is the reason for the instruction before it. Fix: cut it.
+     → implemented: [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11) ends at "naming every step to rerun (`.` for all)."
 2. **[ADVISORY] [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11): the antecedent of "though `status .` exits 0 over them" is ambiguous.** "them" can bind to every reported step. But `status .` exits 1 over a step left `stale` ([_repro_state.py:964](../../../../skills/task-tree/scripts/_repro_state.py#L964)). Fix: limit the clause to `unverified`, e.g. "and every `unverified` step, over which `status .` still exits 0."
+   → implemented: [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11) now reads "and every `unverified` step, over which `status .` still exits 0."
 3. **[ADVISORY] [online-only-files.md:7](../../../../skills/reproducibility/references/online-only-files.md#L7): "and its step reads `unverified`" also reads as following `changed`.** A size change makes the step `stale`, not `unverified` (01 §Lock sizes). The step half also repeats SKILL.md §The Graph's `unverified` bullet. Fix: state only the new fact, e.g. "An online-only file not yet hashed here reads `changed` when its size differs from the lock's, and `unknown` otherwise."
+   → implemented: [online-only-files.md:7](../../../../skills/reproducibility/references/online-only-files.md#L7) states only the file outcome: "`changed` when its size differs from the lock's, and `unknown` otherwise".
 4. **[ADVISORY] [rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9) drops the old fix for an absent external input.** The old `external` line said "retrieve the input, or register its producer". `unverified` now covers this case (01 §States), but the new line only says to report it. An agent that forgot to register a producer gets no prompt to register it. Fix, if worth a line: "an absent external input: retrieve it, or register its producer."
+   → implemented: [rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9) adds "for an absent external input, retrieve it or register its producer".
 5. **[ADVISORY] Harness session A does not say which skill text it ran on.** Session B states that it ran again after the rerun-or-accept.md cut. The SKILL.md cuts, including the "builds skip `fresh` steps" sentence next to the line session A tests, may have come after session A. Fix: state the version in `## Results`, or rerun session A on the final text.
+   → implemented: session A reran on the final skill text; `## Results` §Verification records its commands (`build final --dry-run`, then `build final`) and the commit it ran on.
