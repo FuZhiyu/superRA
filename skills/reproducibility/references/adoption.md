@@ -3,7 +3,7 @@
 **Agree the scope with the researcher:**
 
 - **Whole project** — existing work entering superRA, such as `superRA:onboarding`: declare every task's steps back to external inputs, then build by slice.
-- **One task** — a first trial in a project already on superRA: register one producer and one meaningful `kind: check` step, reading named saved or external inputs. Leave the upstream producers unregistered unless the researcher asks for them.
+- **One task** — a first trial in a project already on superRA: register one producer and one meaningful `kind: check` step, reading named inputs. Leave the upstream producers unregistered unless the researcher asks for them.
 
 ## Declaring an existing project
 
@@ -13,5 +13,7 @@
 ## The first build
 
 **Build upstream-first, in slices the researcher chooses:** `superra repro build <task>` over one task or a cheap chain at a time, each long estimation as its own slice. The recorded durations then price the next slice through `build --dry-run`.
+
+**A declared producer never built reads `missing`, even with its outputs on disk,** so a build of anything downstream runs it. Accept or build such producers first, or build the slice with `--only`.
 
 **Keep path discovery out of the analysis environment.** Every `superra` command evaluates the `shell:` variables in `superRA/config.yaml`. A variable that boots the language runtime or loads the project makes every `status` as slow as a build. After the first build, time `status` and `build` with nothing changed; a warm `status` under a second is the target for a small tree, not a gate.

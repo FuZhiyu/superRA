@@ -14,6 +14,7 @@ Every retained result reruns from committed code through a graph of declared ste
   - **External input** — a dep no step produces: a licensed data extract, a frozen upstream artifact, a hand-curated file. The researcher agrees which inputs are external.
 - **A step is `fresh` when its deps, definition (command and `params`), and outs still match the hashes recorded at its last successful run** in the committed `repro-lock.json`. A step accepted with `superra repro accept` is also `fresh`, without rerunning.
   - Any byte change makes a step stale, even an edited comment that cannot move the result. The stale rule, not the hash, decides whether it needs a rerun.
+- **A step is `unverified` when this machine cannot check one of its files without downloading or obtaining it:** online-only and not yet hashed here, unreadable, or an absent external input. `build` never runs it and uses its outputs as they are.
 
 ## Selecting Steps
 
@@ -23,17 +24,18 @@ Every command acts on the steps its targets select:
 - `task#step` — one step;
 - `.` — every step in the tree.
 
-**A file written by a step outside the selection is a saved input: commands use it as it sits on disk.** Suppose `03-table` reads `panel.parquet`, which a step in `02-merge` writes. `build 03-table` uses the existing `panel.parquet` without rebuilding it, and `status 03-table` lists it as a saved input without checking whether the `02-merge` step is `fresh`.
+**`build` and `status` also take in the targets' producer chain:** the step that writes each file a selected step reads, the steps that write its deps, and so on back to the external inputs. Suppose `03-table` reads `panel.parquet`, which a step in `02-merge` writes: `build 03-table` first rebuilds `panel.parquet` when its producer is stale.
 
-- **`--upstream` adds the producer chain:** the step that writes `panel.parquet`, the steps that write its deps, and so on back to the external inputs.
+- **Name the task or the final result, not each stale step.**
+- **`--only` restricts a command to its targets.** A file written by a step outside them is a saved input, used as it sits on disk. Use `--only` when another session is editing a producer in this worktree.
 
 ## Commands
 
 | Command | Does |
 |---|---|
 | `superra task check` | Validates every `## Reproduction` declaration, including cycles. |
-| `superra repro status <targets>` | Each selected step's state (`fresh`, `stale`, `missing`, `failed`, `external`), and `outside readers`: how many steps in other tasks read its outs. |
-| `superra repro build <targets>` | Runs the selected steps that are not `fresh`. `--upstream` also runs their stale producers; `--dry-run` lists what would run and how long each step last took. |
+| `superra repro status <targets>` | Each selected step's state (`fresh`, `stale`, `missing`, `failed`, `unverified`), the producers behind them that are not `fresh`, and `outside readers`: how many steps in other tasks read its outs. |
+| `superra repro build <targets>` | Runs the `stale`, `missing`, and `failed` steps among the targets and their producers. `--dry-run` lists what would run and how long each step last took. |
 | `superra repro explain <target>` | For each changed hash, what changed and the command to run next. |
 | `superra repro impact <path...>` | Which steps a change to these paths would make stale, and how long each last took. |
 | `superra repro accept <targets> --reason '...'` | Records the current results as reviewed, without running anything. |
@@ -42,10 +44,10 @@ Other flags: `superra repro <command> --help`.
 
 ## Recording a Result
 
-`[BLOCKING]` **Record a result in `## Results` only after `superra repro status <targets>` shows every selected step `fresh`.** Plain `status` checks the selected steps and trusts saved inputs as they are. When the result also claims its saved inputs are current, run `status <targets> --upstream`, which requires their producers to be `fresh` too.
+`[BLOCKING]` **Record a result in `## Results` only after `superra repro status <targets>` shows every selected step `fresh`.** A step behind a `stale`, `missing`, or `failed` producer reads `stale`. A selected step reading `unverified` fails this gate, though `status` exits 0.
 
 1. **Produce the result through the graph:** `superra repro build <targets>`, or [accept](references/rerun-or-accept.md#accept) a result already produced from the same committed code, such as by an interactive run.
-2. **In `## Results`, state what the evidence covers:** the targets, the saved and external inputs they read, the outcome of each check step, and which steps ran versus which were accepted.
+2. **In `## Results`, state what the evidence covers:** the targets, the external inputs they read, the outcome of each check step, and which steps ran versus which were accepted. A result checked with `--only`, or resting on `unverified` producers, says so and names where tracing stopped: the saved inputs, or the `unverified` boundary `status` prints.
 3. **Commit the changed `repro-lock.json` and `repro-acceptance/` records with the work.**
 
 ## Where to Go Next
