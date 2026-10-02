@@ -1,6 +1,6 @@
 ---
 title: "Skill, References, and Docs Teach the Producer Chain and Online-Only Data"
-status: implemented
+status: approved
 depends_on: [02-upstream-default]
 ---
 
@@ -101,23 +101,3 @@ The reproducibility skill, its references, the reviewer's evidence line, the doc
   - "external input" as the name for a file no step produces;
   - `--only`-scoped saved-input lines;
   - the files 03-state-display owns: [internals.md §Graph actions](../../../../skills/task-tree/references/internals.md), `dashboard.js`/`dashboard.css`, and the [dashboard docs page](../../../../docs/site/04-utility-skills/01-task-tree/04-dashboard/task.md).
-
-## Review Notes
-
-Tier: thorough. Focuses: the CLAUDE.md §Teach the Protocol three-test gate on every changed `skills/*` line, §Skill Prose Style, accuracy against 01's and 02's `## Results` and code, and the validation evidence. Both deviations are accepted. The download go-ahead is reached by the SKILL.md routing row, the gate message, and online-only-files.md's new section, and the adoption.md "named inputs" line is correct: with its upstream producers unregistered, every input of a one-task trial is external.
-
-1. **[BLOCKING] Three new lines state one fact twice (CLAUDE.md §Teach the Protocol test 2, which makes each one `[BLOCKING]`).** In each pair, either half can go without losing a fact.
-   - [rerun-or-accept.md:26](../../../../skills/reproducibility/references/rerun-or-accept.md#L26): "**Accept before you build.** Record the rule's acceptances first." Fix: keep one of the two, e.g. "**Record the rule's acceptances before you build.** While a producer stays stale by the rule, …".
-     → implemented: [rerun-or-accept.md:26](../../../../skills/reproducibility/references/rerun-or-accept.md#L26) now reads "**Record the rule's acceptances before you build.** While a producer stays stale by the rule, …".
-   - [rerun-or-accept.md:43](../../../../skills/reproducibility/references/rerun-or-accept.md#L43): "**Producers you did not name.** Acceptance is step-local: …". Under the heading "What acceptance never covers", "Acceptance is step-local" repeats the bold. Fix: "**Producers you did not name.** To cover one, name it or build it."
-     → implemented: [rerun-or-accept.md:43](../../../../skills/reproducibility/references/rerun-or-accept.md#L43) now reads "**Producers you did not name.** To cover one, name it or build it."
-   - [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11): "naming every step to rerun (`.` for all): it forces only the named steps." The clause after the colon is the reason for the instruction before it. Fix: cut it.
-     → implemented: [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11) ends at "naming every step to rerun (`.` for all)."
-2. **[ADVISORY] [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11): the antecedent of "though `status .` exits 0 over them" is ambiguous.** "them" can bind to every reported step. But `status .` exits 1 over a step left `stale` ([_repro_state.py:964](../../../../skills/task-tree/scripts/_repro_state.py#L964)). Fix: limit the clause to `unverified`, e.g. "and every `unverified` step, over which `status .` still exits 0."
-   → implemented: [protect-and-completion.md:11](../../../../skills/reproducibility/references/protect-and-completion.md#L11) now reads "and every `unverified` step, over which `status .` still exits 0."
-3. **[ADVISORY] [online-only-files.md:7](../../../../skills/reproducibility/references/online-only-files.md#L7): "and its step reads `unverified`" also reads as following `changed`.** A size change makes the step `stale`, not `unverified` (01 §Lock sizes). The step half also repeats SKILL.md §The Graph's `unverified` bullet. Fix: state only the new fact, e.g. "An online-only file not yet hashed here reads `changed` when its size differs from the lock's, and `unknown` otherwise."
-   → implemented: [online-only-files.md:7](../../../../skills/reproducibility/references/online-only-files.md#L7) states only the file outcome: "`changed` when its size differs from the lock's, and `unknown` otherwise".
-4. **[ADVISORY] [rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9) drops the old fix for an absent external input.** The old `external` line said "retrieve the input, or register its producer". `unverified` now covers this case (01 §States), but the new line only says to report it. An agent that forgot to register a producer gets no prompt to register it. Fix, if worth a line: "an absent external input: retrieve it, or register its producer."
-   → implemented: [rerun-or-accept.md:9](../../../../skills/reproducibility/references/rerun-or-accept.md#L9) adds "for an absent external input, retrieve it or register its producer".
-5. **[ADVISORY] Harness session A does not say which skill text it ran on.** Session B states that it ran again after the rerun-or-accept.md cut. The SKILL.md cuts, including the "builds skip `fresh` steps" sentence next to the line session A tests, may have come after session A. Fix: state the version in `## Results`, or rerun session A on the final text.
-   → implemented: session A reran on the final skill text; `## Results` §Verification records its commands (`build final --dry-run`, then `build final`) and the commit it ran on.
