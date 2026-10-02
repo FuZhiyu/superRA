@@ -1,6 +1,6 @@
 ---
 title: "Commands Include the Producer Chain, Gate Downloads, and Report Online-Only Data"
-status: revise
+status: implemented
 depends_on: [01-local-graph]
 ---
 
@@ -57,23 +57,24 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 
 ### Commands
 
-- **Scope.** `build` and `status` resolve targets with `select_steps(..., include_ancestors=not args.only)`. `--upstream` is a hidden alias for the default, and combining it with `--only` is a usage error ([repro_run.py:607](../../../../skills/task-tree/scripts/repro_run.py#L607)).
+- **Scope.** `build` and `status` resolve targets with `select_steps(..., include_ancestors=not args.only)`. `--upstream` is a hidden alias for the default, and combining it with `--only` is a usage error ([repro_run.py:617](../../../../skills/task-tree/scripts/repro_run.py#L617)).
 - **Force covers the targets only.** `--force` passes the targets' own steps (`requested`). An added producer runs only when its state calls for it.
-- **What runs.** Unchanged from 01: `stale`, `missing`, `failed`, and forced steps run, and `unverified` steps never do. Added producers that do not run are counted in the closing line, not printed one per line.
-- **Build preview.** Before executing, `build` prints the added producers that will run, with their last durations, capped ([repro_run.py:422](../../../../skills/task-tree/scripts/repro_run.py#L422)). The `Execution scope:` line and the `Saved input:` lines are capped too.
+- **What runs.** Unchanged from 01: `stale`, `missing`, `failed`, and forced steps run, and `unverified` steps never do. `build` prints one line per step that executes or fails; steps that do not run (`unchanged`, `unverified`) are only counted in the closing line.
+- **Build preview.** Before executing, `build` prints the added producers that will run, with their last durations, capped ([repro_run.py:427](../../../../skills/task-tree/scripts/repro_run.py#L427)). The `Execution scope:` line and the `Saved input:` lines are capped too. Every joined list that elides items (`capped_join`) names the command that lists them.
 - **`--only` refusal.** A missing saved input now ends with `build without --only to include their producers`.
 - **`accept`.** After recording, and in `--dry-run`, `accept` names the producers behind the accepted steps that are `stale`, `missing`, or `failed`. It says the accepted steps read stale until those are built or accepted. JSON adds `behind` and `targets`.
 
 ### Download gate
 
-- **Placement.** Inside the mutation lock and before `_schedule`, `_will_run` takes every step whose own state is `stale`, `missing`, or `failed`, or that is forced ([repro_run.py:397](../../../../skills/task-tree/scripts/repro_run.py#L397)). `_gate` then refuses the whole build when one of those steps reads a file not on disk ([repro_run.py:404](../../../../skills/task-tree/scripts/repro_run.py#L404)). A refused build writes no run records.
+- **Placement.** Inside the mutation lock and before `_schedule`, `_will_run` takes every step whose own state is `stale`, `missing`, or `failed`, or that is forced ([repro_run.py:398](../../../../skills/task-tree/scripts/repro_run.py#L398)). `_gate` then returns the refusal when one of those steps reads a file not on disk ([repro_run.py:405](../../../../skills/task-tree/scripts/repro_run.py#L405)). A real build raises it and writes no run records.
+- **Dry run.** `build --dry-run` prints its per-step plan with recorded costs, then the gate's file list, and exits 1. The gated steps appear in the plan as `would execute`, without their own start-time refusal.
   - Not on disk: online-only, even if cached, or absent with no producer.
   - Exempt: an input that a step running in this build writes first.
-- **One check, two call sites.** `_unreadable_inputs` ([repro_run.py:139](../../../../skills/task-tree/scripts/repro_run.py#L139)) is 01's step-start refusal, factored out. `_gate` uses it before scheduling, and `_missing_inputs` uses it again when each step starts. A step that turns stale only after its producer ran is stopped at its start, and records no run.
-- **Message.** One shared formatter, `unread_file_lines` ([_repro_state.py:1443](../../../../skills/task-tree/scripts/_repro_state.py#L1443)), writes the gate message, the step-start refusal, `accept`'s refusal, and the `status` file list:
+- **One check, two call sites.** `_unreadable_inputs` ([repro_run.py:140](../../../../skills/task-tree/scripts/repro_run.py#L140)) is 01's step-start refusal, factored out. `_gate` uses it before scheduling, and `_missing_inputs` uses it again when each step starts. A step that turns stale only after its producer ran is stopped at its start, and records no run.
+- **Message.** One shared formatter, `unread_file_lines` ([_repro_state.py:1444](../../../../skills/task-tree/scripts/_repro_state.py#L1444)), writes the gate message, the step-start refusal, `accept`'s refusal, and the `status` file list:
   - each file with its size, capped;
   - a count line naming the `status … --json` command that lists every file;
-  - for the gate, the `--only` line;
+  - for the gate, the way out: `--only` for the steps that do not read the files, or under `--only`, downloading them or narrowing the targets;
   - the pointer to `references/online-only-files.md` in `superRA:reproducibility`, once, when any file is online-only.
 
   On the fixture:
@@ -87,8 +88,8 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 
 ### Status report shape
 
-- **`selected` holds the targets' own steps.** `compute_status(upstream=True)` keeps the producers in `entries`, and `StatusReport.producers` returns them ([_repro_state.py:947](../../../../skills/task-tree/scripts/_repro_state.py#L947)).
-- **Exit code.** `StatusReport.exit_code` ([_repro_state.py:963](../../../../skills/task-tree/scripts/_repro_state.py#L963)) returns:
+- **`selected` holds the targets' own steps.** `compute_status(upstream=True)` keeps the producers in `entries`, and `StatusReport.producers` returns them ([_repro_state.py:948](../../../../skills/task-tree/scripts/_repro_state.py#L948)).
+- **Exit code.** `StatusReport.exit_code` ([_repro_state.py:964](../../../../skills/task-tree/scripts/_repro_state.py#L964)) returns:
   - 1 for a graph error, or a selected step whose own state is `stale`, `missing`, or `failed`;
   - 3 when only a producer's reported state is;
   - 0 otherwise.
@@ -100,10 +101,10 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
   - `summary`: the selected-step counts at top level, as before, and producer counts under `summary.producers`.
   - `behind`: emitted only under `--only`.
   - `external_inputs`: now covers producers' external inputs too.
-- **Text** ([_repro_state.py:1504](../../../../skills/task-tree/scripts/_repro_state.py#L1504)).
+- **Text** ([_repro_state.py:1505](../../../../skills/task-tree/scripts/_repro_state.py#L1505)).
   - One line per selected step, then the producers' counts per state.
   - Each `stale`, `missing`, or `failed` producer by name: the steps whose own state blocks first, then the ones they lift. Capped.
-  - One line for `unverified` producers: their count, their total online-only size, and the boundary from `unverified_boundary`.
+  - One line for `unverified` producers: their count, their total online-only size (or how many files have no known size), and the boundary from `unverified_boundary`.
   - The files of every `unverified` step that are online-only or unreadable here, with sizes.
   - Saved inputs and missing external inputs, each capped. Every elided list has a count line naming `--json`.
 
@@ -118,8 +119,7 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 
 ### Deviations and decisions
 
-- **`OUTPUT_CAP` is defined in `_repro_state.py` (10), not imported.** `_task_validate.OUTPUT_CAP` exists only in the uncommitted `task check --all` edit, so importing it would break this commit on its own. Once that edit lands, replace the local constant with the import.
-- **`build --dry-run` applies the gate as well.** It prints the gate message ("the build would run nothing") and exits 1, instead of listing per-step costs that the real build would never incur.
+- **`OUTPUT_CAP` is defined in `_repro_state.py` (10), not imported.** `_task_validate.OUTPUT_CAP` exists only in the uncommitted `task check --all` edit, so importing it would break this commit on its own. The constant's comment says to switch to that import once it lands.
 - **The gate skips inputs that a running step writes first.** This includes an online-only output that its producer will overwrite. An absent file that a step produces is not gated, because its producer reads `missing` and runs.
 - **The status file list covers selected `unverified` steps too, not only producers.** Absent external inputs stay under "Missing external inputs", so no file is listed twice.
 - **Changed step-start message.** The step-start refusal now reads `step 'x' cannot start: N input(s) not on this machine:`, followed by the file list. It replaces 01's single-line `input X is …`.
@@ -132,20 +132,23 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
 
 ### Verification
 
-- **Regression tests.** [test_repro_upstream.py](../../../../skills/task-tree/scripts/test_repro_upstream.py) has 11 tests, one or more per Validation bullet:
+- **Regression tests.** [test_repro_upstream.py](../../../../skills/task-tree/scripts/test_repro_upstream.py) has 15 tests, one or more per Validation bullet:
   - default build;
   - target-only `--force`;
   - the gate, online-only and absent;
+  - a gated dry run printing its plan, then the files, then exiting 1;
+  - the `--only` gate's way out;
   - the step-start stop;
+  - steps that did not run counted, not listed;
   - `accept`, then `status` exiting 3;
   - an accepted consumer rebuilt with identical and with changed producer bytes;
   - the frontier;
   - `--upstream` equal to the default;
-  - the `unverified` line;
+  - the `unverified` line, with and without a known size;
   - caps and JSON on a 15-step chain.
 
   The `--only` scoped cases are the existing tests in [test_repro_scope.py](../../../../skills/task-tree/scripts/test_repro_scope.py) and [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py), switched to `--only`. They include a missing saved input that blocks and names its producer.
-- **Full suite.** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`: 1097 passed, 10 skipped. The run included the uncommitted `task check --all` edits in the working tree.
+- **Full suite.** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`: 1101 passed, 10 skipped. The run included the uncommitted `task check --all` edits in the working tree.
 - **Command-line run on OlinStudio.** A disposable fixture outside the repo had two producers, a consumer, and a step whose dependency is a symlink to the `SF_DATALESS` Box file `~/Library/CloudStorage/Box-Box/ois_historical_data_extended.xlsx`. Results:
   - Default `build 02-use` ran both producers after the preview.
   - After a producer edit, `status 02-use` exited 3 and named it.
@@ -153,7 +156,7 @@ Implement the parent's §Commands in the `superra repro` runner and the task CLI
   - `build --force` ran the stale producer and the target, but not the fresh producer.
   - `--force --only` ran the target alone.
   - `accept 02-use` named `p-stale (stale)`, and the next `status` exited 3.
-  - `build 03-box` and `build 03-box --dry-run` printed the gate shown above and ran nothing.
+  - `build 03-box` printed the gate shown above and ran nothing. `build 03-box --dry-run` printed `Would execute 1 step(s): box  unknown`, then the same file list, and exited 1. `build 03-box --only` named downloading or narrowing the targets instead of `--only`.
   - Afterwards the Box file still had `SF_DATALESS` set, with the same size (5,123,878 bytes) and mtime.
 
 
@@ -164,10 +167,16 @@ Tier: thorough. Focus: correctness, contract fidelity to the parent's §Decision
 1. [BLOCKING] **`build --dry-run` that hits the gate prints no per-step plan.** [repro_run.py:482](../../../../skills/task-tree/scripts/repro_run.py#L482) raises from `_gate` before `_schedule`, so the output is only `Execution scope:` plus the gate error. The planner's ruling: the dry run must print its per-step plan with recorded costs, then the gate's file list with sizes, then exit 1. The stale rule relies on that cost preview. Reproduced: with `Data/ext.csv` absent and `Code/use.sh` edited, `build 03-after --dry-run` printed no `Would execute` block.
    - Fix: in dry-run, collect the gate rows without raising, run the schedule and print `format_cost`, then print the gate message and exit 1.
    - Update [commands.md:113](../../../../skills/task-tree/references/commands.md#L113), the `build --dry-run` bullet under §Deviations and decisions, and [test_task_dependencies.py:169](../../../../skills/task-tree/scripts/test_task_dependencies.py#L169). Add a test in [test_repro_upstream.py](../../../../skills/task-tree/scripts/test_repro_upstream.py) asserting the order: plan with costs, file list, exit 1.
+   → implemented: [repro_run.py:488-510](../../../../skills/task-tree/scripts/repro_run.py#L488-L510) — `_gate` returns the message; a dry run schedules, prints `format_cost`, then the gate list, and exits 1; commands.md:113, §Deviations, and test_task_dependencies.py updated; order asserted by `test_a_gated_dry_run_prints_its_plan_with_costs_then_the_files_and_exits_1`.
 2. [ADVISORY] **The local `OUTPUT_CAP` has no pointer to its replacement.** The planner accepted the local copy on condition of a comment naming the `_task_validate.OUTPUT_CAP` import to switch to once the `task check --all` edit lands. The comment at [_repro_state.py:58](../../../../skills/task-tree/scripts/_repro_state.py#L58) does not name it.
+   → implemented: [_repro_state.py:58-61](../../../../skills/task-tree/scripts/_repro_state.py#L58-L61) — the comment names the `_task_validate.OUTPUT_CAP` import to switch to.
 3. [ADVISORY] **`build` still prints one line per fresh requested step.** [repro_run.py:391](../../../../skills/task-tree/scripts/repro_run.py#L391) hides `unchanged` and `unverified` lines only for added producers. `build .` on a fully fresh 20-step chain printed 20 `· unchanged` lines, so output grows with tree size for work that never ran.
    - Acceptable: `✓ executed` and `✗ failed` lines are progress for subprocesses that actually ran, and failures carry their log pointer.
    - Fix: count `unchanged` and `unverified` steps in the closing line for requested steps too.
+   → implemented: [repro_run.py:392-393](../../../../skills/task-tree/scripts/repro_run.py#L392-L393) — no step that did not run is printed; tested by `test_steps_that_did_not_run_are_only_counted`.
 4. [ADVISORY] **Joined lists drop items without naming a command.** `capped_join` ([_repro_state.py:1437](../../../../skills/task-tree/scripts/_repro_state.py#L1437)) ends with "and N more" but no command that lists them. It is used for `Execution scope:`, the `unverified` boundary, `Why not fresh:`, the `--only` producer line, and the missing-saved-input refusal. CLAUDE.md §Bounded Agent-Facing Output requires the count line to give the exact command.
+   → implemented: [_repro_state.py:1438-1441](../../../../skills/task-tree/scripts/_repro_state.py#L1438-L1441) — `capped_join` takes the listing command, and all five call sites pass a `status … --json` command.
 5. [ADVISORY] **The `unverified` line reads "0 B plus 1 of unknown size" when no size is known.** [_repro_state.py:1533](../../../../skills/task-tree/scripts/_repro_state.py#L1533). A legacy Dropbox placeholder (zero bytes, `com.dropbox.placeholder` xattr) produced `○ 1 producer(s) unverified, 0 B plus 1 of unknown size online-only here`. When nothing is sized, print only the unknown count.
+   → implemented: [_repro_state.py:1531-1540](../../../../skills/task-tree/scripts/_repro_state.py#L1531-L1540) — `N online-only file(s) of unknown size here` when nothing is sized, else the total plus the unknown count; tested by `test_unverified_producers_without_a_known_size_say_so`.
 6. [ADVISORY] **Under `--only`, the gate still says to select steps with `--only`.** The `then` line in `_gate` ([repro_run.py:404](../../../../skills/task-tree/scripts/repro_run.py#L404)) is fixed text. When `build.only` is set, tell the user to narrow the targets instead.
+   → implemented: [repro_run.py:421-422](../../../../skills/task-tree/scripts/repro_run.py#L421-L422) — under `--only` the line reads "Download them first, or narrow the targets to steps that do not read them."; tested by `test_under_only_the_gate_names_downloading_or_narrowing_the_targets`.
