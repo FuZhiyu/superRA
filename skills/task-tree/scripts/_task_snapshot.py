@@ -8,7 +8,7 @@ from _task_dependencies import task_index
 from _task_io import walk_plan
 
 INPUT_NOTE = "not blocking; rebuild before relying on it"
-CURRENT = {"fresh", "saved"}
+CURRENT = {"fresh", "saved", "unverified"}  # a build never runs an unverified producer
 
 
 def dependency_errors(graph):
@@ -92,7 +92,7 @@ def task_inputs(graph, path, states, unavailable=None):
             entry = states.get(edge["producer"])
             row.update(state=entry.status if entry else "unknown",
                        reason=entry.reason if entry else (unavailable or "producer state unavailable"),
-                       build=f"superra repro build {edge['to'] or '.'} --upstream")
+                       build=f"superra repro build {edge['to'] or '.'}")
         rows[key] = row
     return [rows[k] for k in sorted(rows)]
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -58,11 +59,11 @@ def test_file_edge_informs_but_never_gates_readiness(tmp_path):
     [item] = rows["a-consumer"]["inputs"]
     assert item["file"] == "data.txt" and item["producer"] == "z-source#source"
     assert (item["state"], item["reason"]) == ("missing", "never built")
-    assert item["build"] == "superra repro build a-consumer --upstream"
+    assert item["build"] == "superra repro build a-consumer"
     assert item["consumers"] == ["a-consumer#consumer", "a-consumer#second"]
     human = run(root, "task", "frontier").stdout
     assert ("input data.txt from z-source#source: missing (never built) — not blocking; "
-            "rebuild before relying on it: superra repro build a-consumer --upstream") in human
+            "rebuild before relying on it: superra repro build a-consumer") in human
     current = read(root, "a-consumer")
     assert current["dependencies"] == [] and current["readiness"]["ready"] is True
     assert current["readiness"]["inputs"][0]["file"] == "data.txt"
@@ -165,7 +166,8 @@ def test_archived_producer_with_missing_output_is_reported(tmp_path):
     assert "archived producer" in item["reason"]
     dry = run(root, "repro", "build", "m", "--dry-run")
     assert dry.returncode == 1
-    assert "step 'm' cannot start: input old.txt is not on disk, and no step produces it" in dry.stdout
+    assert "so the build would run nothing:" in dry.stderr
+    assert re.search(r"old.txt\s+-\s+not on disk, and no step produces it  \(read by m\)", dry.stderr)
     assert "every selected step is fresh" not in dry.stdout
     (tmp_path / "old.txt").write_text("kept")
     assert frontier(root)["m"]["inputs"] == []

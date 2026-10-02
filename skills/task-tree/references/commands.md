@@ -89,14 +89,13 @@ Findings are prefixed `[ERROR]` (blocking; tree inconsistent), `[WARNING]` (advi
 `superra repro` runs the build graph the `## Reproduction` sections declare (schema and records: [task-file-contract.md](task-file-contract.md) §Reproduction Section).
 
 ```bash
-superra repro status .                    # every registered step's freshness; exits 1 unless all are fresh
-superra repro status 02-merge '02-merge#check-panel' # selected tasks/steps against saved inputs
-superra repro status . --upstream --json  # full graph freshness and local evidence
-superra repro build 02-merge -j 4         # task's own and descendant steps only
-superra repro build 02-merge --upstream  # also rebuild stale producer ancestors
+superra repro status .                    # every registered step's freshness
+superra repro status 02-merge '02-merge#check-panel' # selected tasks/steps and their producer chain
+superra repro status 02-merge --only --json # the selected steps alone, against saved inputs
+superra repro build 02-merge -j 4         # task's own and descendant steps, plus producers that need it
+superra repro build 02-merge --only      # its own steps only; producers' files as they sit on disk
 superra repro build 02-merge --dry-run   # what would run, why, and what it last cost
-superra repro build '02-merge#check-panel' --force # force just the check
-superra repro build 02-merge --upstream --force # force the full producer chain
+superra repro build '02-merge#check-panel' --force # force just the check; stale producers still build
 superra repro build . --force            # rerun every registered step
 superra repro explain 02-merge            # where each changed hash came from, grouped by cause
 superra repro explain Output/panel.parquet --json # one file's provenance, producer, and readers
@@ -106,15 +105,25 @@ superra repro dag --mermaid               # the step graph
 
 Every target is a task path, a `task#step` selector, or a unique bare step name; multiple targets select the deduplicated union. A task path includes its own and descendant steps. Paths are task-root-relative; `.` selects the whole active tree and `.#step` selects a root-owned step. A task path wins over a step of the same name. `build` and `status` require at least one target.
 
-Inputs from out-of-scope producers are saved inputs: existing files, used without a successful baseline or override. A missing saved input blocks and names its producer. `--upstream` adds transitive file-producer ancestors; it never selects unrelated steps in their owning tasks. `--force` reruns every step in the resulting scope.
+`build`, `status`, and `build --dry-run` also assess each target's transitive producer chain, never unrelated steps in the producers' tasks. `--only` restricts them to the targets: files from producers outside them are saved inputs, existing files used without a successful baseline or override, and a missing saved input blocks and names its producer. `--upstream` is a hidden alias for the default. `--force` reruns the targets' own steps; an added producer runs only when its state calls for it. `accept` and `revoke` act on the named steps only.
 
-`build` runs each step that is not fresh as one subprocess from the project root, in dependency order; `-j N` runs up to N at once. A failed step skips its descendants while unrelated steps continue, and `build` exits 1; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed; steps not yet started keep their records and acceptance. `build --dry-run` lists each step it would execute, every step below one included, with its last recorded duration; the total is an upper bound. Every command runs on Python 3.10+; reading a legacy `pytask.lock` needs Python 3.11, and the runner re-execs itself under `uv` for it.
+`build` runs each `stale`, `missing`, `failed`, or forced step as one subprocess from the project root, in dependency order; `-j N` runs up to N at once. It never runs an `unverified` step and uses its outputs as they are. A step stale only through a producer reruns only if its inputs changed once that producer ran. Before executing, `build` prints the added producers that will run, with their last recorded durations; added producers that do not run are counted in the closing line, not listed. A failed step skips its descendants while unrelated steps continue, and `build` exits 1; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed; steps not yet started keep their records and acceptance. `build --dry-run` lists each step it would execute, every step below one included, with its last recorded duration; the total is an upper bound. Every command runs on Python 3.10+; reading a legacy `pytask.lock` needs Python 3.11, and the runner re-execs itself under `uv` for it.
 
-`status` exits 0 when every assessed step is fresh, 1 when a selected step is not, and 3 when the selection is fresh but a producer behind it is not (stale, missing, failed, or external), which it names. It counts the steps outside the owning task that read a step's outs (`outside readers: N`); `explain` names them.
+**Download gate.** Before running anything, `build` (and `--dry-run`) refuses when a step that will run reads a file not on disk, online-only or absent with no producer, that no step in the build writes first. It runs nothing, lists those files with their sizes, names `--only` as the way to build the steps that do not read them, and points to the `superRA:reproducibility` download notes. The same check runs when each step starts, because a step can turn stale after its producers run; a step it stops writes no run record.
 
-Status JSON records `targets`, `upstream`, `boundary_inputs` (the saved inputs: paths, producer, fingerprints, provenance, consumers), `behind` (the producers behind the selection that are not fresh, each with `name`, `task`, `status`), and per step `external_consumers`. Step entries carry full-scope `status`/`reason` and `local_status`/`local_reason` before upstream staleness propagation. While another process's build holds the runner lock, a step it is executing reads reason `building now`, with `running: true` and `started_at`, instead of an interrupted run's `failed`.
+`status` prints one line per selected step, then its producers: their counts per state, each `stale`, `missing`, or `failed` producer by name, and the `unverified` ones on one line with their total online-only size and where tracing stops, the first `unverified` producer on each path back from the selection. Files the `unverified` steps cannot check here follow, with their sizes. It counts the steps outside the owning task that read a step's outs (`outside readers: N`); `explain` names them. Exit codes:
 
-`task read <path>` lists prerequisites (`depends_on`, own or inherited) apart from inputs (file, producer, state), and a registered task's owned-step states. Its JSON adds the dependency snapshot, global findings, and `readiness` (`ready`, `blockers`, `inputs`). `task frontier --json` rows carry the `inputs` that are not fresh. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot.
+| Exit | When |
+|---|---|
+| 0 | Every assessed step is `fresh` or `unverified`. |
+| 1 | A selected step's own state is `stale`, `missing`, or `failed`, or a graph error touches an assessed step. |
+| 3 | Only a producer behind the selection is `stale`, `missing`, or `failed`. With `--only`, which assesses no producers, `status` names them. |
+
+Default text output lists at most `OUTPUT_CAP` items per list; the rest collapse to a count and the `--json` command that lists them.
+
+Status JSON records `targets`, `upstream` (false under `--only`), `steps` (the selected steps), `producers` (every assessed producer, uncapped), `ok` (every assessed step is `fresh` or `unverified`), and `summary` (selected-step counts per state, with producer counts under `producers`). It also records `boundary_inputs` (the saved inputs: paths, producer, fingerprints, provenance, consumers), under `--only` `behind` (each producer behind the selection that is `stale`, `missing`, or `failed`, with `name`, `task`, `status`), and per step `external_consumers`. Each step carries its reported `status`/`reason` and its own `local_status`/`local_reason` from before a producer lifts it. While another process's build holds the runner lock, a step it is executing reads reason `building now`, with `running: true` and `started_at`, instead of an interrupted run's `failed`.
+
+`task read <path>` lists prerequisites (`depends_on`, own or inherited) apart from inputs (file, producer, state), and a registered task's owned-step states, with each step's own state when a producer lifts it. Its JSON adds the dependency snapshot, global findings, and `readiness` (`ready`, `blockers`, `inputs`). `task frontier --json` rows carry the `inputs` whose producer is `stale`, `missing`, or `failed`. `task dag [subtree]` renders child groups alongside own steps; `--json` returns the complete dependency snapshot.
 
 | State | Meaning |
 |---|---|
@@ -142,9 +151,9 @@ superra repro revoke 02-merge --json
 
 `--reason` is required to accept; cite any evidence file in it. Optional `--review NODE=RATIONALE` adds a per-node note; repeat it for several.
 
-The call runs every consistency check, rechecks hashes and declarations immediately before writing, and writes each changed step's record atomically. A selected step whose own `status` reads fresh keeps its evidence; no record is written for it. Invalid graphs, missing declared inputs/outputs, concurrent edits, and failed or interrupted runs reject acceptance. `explain` and JSON `acceptance` show the reason, optional notes, and `basis: reviewed`.
+The call runs every consistency check, rechecks hashes and declarations immediately before writing, and writes each changed step's record atomically. A selected step whose own `status` reads fresh keeps its evidence; no record is written for it. Invalid graphs, missing declared inputs/outputs, files this machine cannot hash (listed with their sizes), concurrent edits, and failed or interrupted runs reject acceptance. After recording, and in `--dry-run`, it names the `stale`, `missing`, or `failed` producers behind the accepted steps (JSON `behind`): the accepted steps read stale until those are built or accepted. `explain` and JSON `acceptance` show the reason, optional notes, and `basis: reviewed`.
 
-Forced execution bypasses acceptance within the target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes selected records; a downstream acceptance keeps its own reviewed state, and full-chain status reports it stale while the revoked producer is not fresh.
+Forced execution bypasses acceptance within the target scope; beginning a real attempt removes that step's record, including when the attempt fails. Revoke removes selected records; a downstream acceptance keeps its own reviewed state, and `status` reports it stale while the revoked producer is not fresh.
 
 ### Explain
 

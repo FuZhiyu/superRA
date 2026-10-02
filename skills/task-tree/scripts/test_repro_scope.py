@@ -17,7 +17,7 @@ def test_task_and_qualified_step_targets(project):
 
 def test_scoped_build_uses_existing_unrecorded_inputs(project):
     project.write('output/a.txt', 'saved without a build record\n')
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert set(project.run_times()) == {'build-b', 'check-b'}
     assert compute_status(project.graph(), project.paths, targets=['02-b']).ok
     assert not compute_status(project.graph(), project.paths, targets=['02-b'], upstream=True).ok
@@ -29,16 +29,16 @@ def test_scoped_build_survives_failed_upstream_and_rebuilds_changed_inputs(proje
     assert project.run('build', '01-a') == 1
     failed = read_run_record(project.paths, 'build-a')
     project.write('output/a.txt', 'changed saved input\n')
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert project.read('output/b.txt') == 'changed saved input\n' * 2
     assert read_run_record(project.paths, 'build-a') == failed
     assert compute_status(project.graph(), project.paths, targets=['02-b']).ok
 
 
-def test_missing_boundary_does_not_expand_but_upstream_does(project):
-    assert project.run('build', '02-b') != 0
+def test_only_refuses_a_missing_saved_input_and_the_default_builds_its_producer(project):
+    assert project.run('build', '02-b', '--only') != 0
     assert not (project.root / 'output/a.txt').exists()
-    assert project.run('build', '02-b', '--upstream') == 0
+    assert project.run('build', '02-b') == 0
     assert set(project.run_times()) == {'build-a', 'build-b', 'check-b'}
 
 
@@ -52,22 +52,22 @@ def test_unrelated_task_creation_during_execution_is_allowed(project, jobs):
 
 def test_saved_input_evidence_and_unchanged_repeat(project):
     project.write('output/a.txt', 'unverified\n')
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     receipt = json.loads(receipt_path(project.paths, 'build-b').read_text())
     assert receipt['boundary_inputs'][0]['provenance'] == 'no successful build recorded'
     assert receipt['boundary_inputs'][0]['digest']
     before = project.run_times()
     project.write('Code/a.sh', 'exit 1\n')
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert project.run_times() == before
-    assert project.run('status', '02-b') == 3
-    assert project.run('status', '02-b', '--upstream') == 1
+    assert project.run('status', '02-b', '--only') == 3
+    assert project.run('status', '02-b') == 3  # build-b's own state is fresh; only its producer is not
 
 
 def test_task_reader_preserves_global_freshness_and_local_evidence(project):
     from task_read import _reproduction_view, _render_reproduction_human
     project.write('output/a.txt', 'saved\n')
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     graph = project.graph()
     view = _reproduction_view(project.root / 'superRA', graph.dependencies.tasks['02-b'],
                               graph.dependencies.tasks[''], graph=graph)
@@ -75,7 +75,7 @@ def test_task_reader_preserves_global_freshness_and_local_evidence(project):
     assert row['status'] == 'stale'
     assert row['local_status'] == 'fresh'
     assert row['boundary_inputs'][0]['provenance'] == 'no successful build recorded'
-    assert 'for saved inputs: fresh' in '\n'.join(_render_reproduction_human(view))
+    assert 'own state: fresh' in '\n'.join(_render_reproduction_human(view))
 
 
 def test_saved_input_mutation_during_execution_rejects_receipt(project):
@@ -92,12 +92,12 @@ def test_sidecar_does_not_hide_saved_input_change(project):
     before = project.run_times()
     project.write('output/a.txt', 'changed without updating sidecar\n')
     assert not compute_status(project.graph(), project.paths, targets=['02-b']).ok
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert project.run_times()['build-a'] == before['build-a']
     assert project.read('output/b.txt') == 'changed without updating sidecar\n' * 2
-    assert project.run('status', '02-b') == 0
+    assert project.run('status', '02-b', '--only') == 0
     after = project.run_times()
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     assert project.run_times() == after
 
 
@@ -142,27 +142,27 @@ def test_saved_input_evidence_follows_logical_path_relocation(project, accepted)
     from test_repro_acceptance import review
     _use_a_sidecar(project)
     assert project.run('build', *CHAIN) == 0
-    assert project.run('build', '02-b') == 0
+    assert project.run('build', '02-b', '--only') == 0
     if accepted:
         project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
         review(project, ['02-b#build-b'])
     shutil.copytree(project.root / 'output', project.root / 'relocated')
     project.write('superRA/config.yaml', project.read('superRA/config.yaml').replace('OUT: output', 'OUT: relocated'))
-    assert project.run('status', '02-b') == 0
+    assert project.run('status', '02-b', '--only') == 0
     project.write('relocated/a.txt', 'new bytes with old sidecar\n')
+    assert project.run('status', '02-b', '--only') == 1
     assert project.run('status', '02-b') == 1
-    assert project.run('status', '02-b', '--upstream') == 1
 
 
 def test_partial_selection_leaves_intervening_producer_untouched(project):
     assert project.run('build', *CHAIN) == 0
     before = project.run_times()
     project.write('Code/a.sh', 'echo changed > output/a.txt\n')
-    assert project.run('build', '01-a', '02-b#check-b', '--force') == 0
+    assert project.run('build', '01-a', '02-b#check-b', '--force', '--only') == 0
     assert project.run_times()['build-b'] == before['build-b']
     assert project.read('output/b.txt') == 'hello\nhello\n'
-    assert project.run('status', '02-b#check-b') == 3
-    assert project.run('status', '02-b#check-b', '--upstream') == 1
+    assert project.run('status', '02-b#check-b', '--only') == 3
+    assert project.run('status', '02-b#check-b') == 3  # check-b's own state is fresh
 
 
 @pytest.mark.parametrize('change', ['path'])

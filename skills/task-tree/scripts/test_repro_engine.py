@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -221,8 +222,10 @@ def test_parallel_build_orders_steps_skips_after_failure_and_keeps_every_entry(p
 
 
 def test_build_exit_codes(project, capsys):
-    assert project.run("build", "02-b") == 1   # cannot start: a saved input is missing
-    assert "missing saved inputs" in capsys.readouterr().err
+    assert project.run("build", "02-b", "--only") == 1   # cannot start: a saved input is missing
+    err = capsys.readouterr().err
+    assert "missing saved inputs: ${OUT}/a.txt (producer build-a)" in err
+    assert "build without --only to include their producers" in err
     assert project.run("build", "nope") == 1
     assert project.run("build", *CHAIN) == 0
     project.write("Code/b.sh", "exit 2\n")
@@ -235,8 +238,9 @@ def test_a_missing_input_fails_the_step_before_its_command_runs(project, capsys)
         "      - Code/a.sh\n", "      - Code/a.sh\n      - output/produced-by-nobody.txt\n"))
     capsys.readouterr()
     assert project.run("build", "01-a") == 1
-    out = capsys.readouterr().out
-    assert "cannot start: input output/produced-by-nobody.txt is not on disk, and no step produces it" in out
+    err = capsys.readouterr().err
+    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
+    assert re.search(r"output/produced-by-nobody.txt\s+-\s+not on disk, and no step produces it", err)
     assert not project.paths.run_file("build-a").exists()
 
 
@@ -362,16 +366,21 @@ def test_scoped_status_exits_3_for_a_fresh_selection_behind_a_producer_that_is_n
     project.write("Code/a.sh", project.read("Code/a.sh") + "# edited\n")
     capsys.readouterr()
     assert project.run("status", "02-b") == 3
-    assert "1 producer(s) behind the selection not fresh: build-a (stale)" in capsys.readouterr().out
-    assert project.run("status", "02-b", "--json") == 3
+    out = capsys.readouterr().out
+    assert "1 producer(s) behind them: 1 stale" in out
+    assert re.search(r"~ build-a\s+stale\s+dependency Code/a.sh changed", out)
+    assert project.run("status", "02-b", "--only") == 3
+    assert ("1 producer(s) behind the selection not fresh; drop --only to assess them: build-a (stale)"
+            in capsys.readouterr().out)
+    assert project.run("status", "02-b", "--only", "--json") == 3
     assert json.loads(capsys.readouterr().out)["behind"] == [{"name": "build-a", "task": "01-a", "status": "stale"}]
-    assert project.run("status", "02-b", "--upstream") == 1
+    assert project.run("status", "02-b", "--upstream") == 3  # the default, under its old name
     assert project.run("status", "01-a") == 1
     assert project.run("status", "02-b", "--no-such-flag") == 2
     capsys.readouterr()
     project.run("status", ".")
     out = capsys.readouterr().out
-    assert "for every registered step:" in out and "selected steps only" not in out
+    assert "for every registered step:" in out and "--only" not in out
     (project.root / "output/a.txt").unlink()
     assert project.run("status", "02-b#check-b") == 3  # build-a missing; build-b still fresh
 

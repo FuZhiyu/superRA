@@ -580,7 +580,8 @@ def test_a_failed_parent_skips_its_child_while_a_sibling_parent_runs(tmp_path, c
 
 @pytest.mark.parametrize("flag,expected", [
     (("--force",), {"check-b"}),
-    (("--upstream", "--force"), {"build-a", "build-b", "check-b"}),
+    (("--upstream", "--force"), {"check-b"}),  # the default under its old name; force covers the targets only
+    (("--only", "--force"), {"check-b"}),
 ])
 def test_force_scope_preserves_freshness_and_unrelated_steps(project, flag, expected):
     assert project.run("build", ".") == 0

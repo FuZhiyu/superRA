@@ -9,6 +9,7 @@ from __future__ import annotations
 import builtins
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,7 @@ import pytest
 import _repro_state
 from _repro_acceptance import accept, inspect_baseline
 from _repro_scope import _bytes_verified
-from _repro_state import SF_DATALESS, HashCache, ReproStateError, Unread, read_lock, stamp_ref
+from _repro_state import DOWNLOAD_NOTES, SF_DATALESS, HashCache, ReproStateError, Unread, read_lock, stamp_ref
 from test_repro_acceptance import review
 from test_repro_runner import CHAIN, TASK_A, Project, _use_a_sidecar, project  # noqa: F401
 
@@ -273,7 +274,10 @@ def test_a_stale_step_never_starts_on_an_online_only_input_even_a_cached_one(pro
     before = project.run_times()
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    assert "cannot start: input ${OUT}/a.txt is online-only here" in capsys.readouterr().out
+    err = capsys.readouterr().err
+    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here  \(read by build-b\)", err)
+    assert DOWNLOAD_NOTES in err
     assert project.run_times()["build-b"] == before["build-b"]
     from _repro_state import read_run_record
     assert read_run_record(project.paths, "build-b").get("outcome") == "success"  # no failed run recorded
@@ -287,7 +291,7 @@ def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, c
     assert project.status("01-a").entry("build-a").status == "unverified"
     capsys.readouterr()
     assert project.run("build", "01-a#build-a", "--force") == 1
-    assert "cannot start: input Code/a.sh is online-only here" in capsys.readouterr().out
+    assert re.search(r"Code/a.sh\s+\S+ B\s+online-only here  \(read by build-a\)", capsys.readouterr().err)
     assert project.run_times() == before
 
 
@@ -316,7 +320,7 @@ def test_a_stale_step_never_starts_on_an_input_it_cannot_hash(project, offline, 
     assert project.status(*CHAIN).entry("build-b").local_status == "stale"
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    assert "cannot start: input ${OUT}/a.txt is online-only here" in capsys.readouterr().out
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here", capsys.readouterr().err)
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +347,8 @@ def test_accept_refuses_a_file_it_cannot_hash_and_its_preview_never_opens_one(pr
     project.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n# comment\n")
     assert project.states("01-a")["build-a"] == "stale"
     offline.evict("Code/a.sh")
-    with pytest.raises(ReproStateError, match=r"build-a: cannot record Code/a.sh, which is online-only here"):
+    with pytest.raises(ReproStateError, match=r"build-a: cannot record 1 file\(s\) this machine cannot hash:\n"
+                                              r"\s+Code/a.sh\s+\d+ B\s+online-only here\n.*online-only-files.md"):
         accept(project.graph(), project.paths, ["01-a#build-a"], "reviewed", {})
     details = inspect_baseline(project.graph(), project.graph().step("build-a"), project.paths)
     row = next(r for r in details["diffs"] if r["node"] == "Code/a.sh")

@@ -55,6 +55,12 @@ RECORD_LOCK = threading.RLock()
 STATUSES = ("fresh", "stale", "missing", "failed", "unverified")
 BLOCKING = ("stale", "missing", "failed")
 
+# Default text output lists at most this many items per list; the rest collapse
+# to a count and the command that lists them all.
+OUTPUT_CAP = 10
+DOWNLOAD_NOTES = ("Before downloading, read references/online-only-files.md "
+                  "in the superRA:reproducibility skill.")
+
 
 class ReproStateError(RuntimeError):
     """A runner-state operation that cannot proceed."""
@@ -929,8 +935,8 @@ class StatusReport:
 
     @property
     def external_inputs(self) -> list:
-        """Boundary inputs of the reported steps, so the selection scopes both lists."""
-        names = {e.step.name for e in self.reported}
+        """External inputs the assessed steps read, so the selection scopes both lists."""
+        names = {e.step.name for e in self.entries}
         return [
             e
             for e in self.graph.external_inputs
@@ -938,10 +944,27 @@ class StatusReport:
         ]
 
     @property
-    def ok(self) -> bool:
+    def producers(self) -> list[StepStatus]:
+        """Assessed steps the targets do not select themselves: their producer chain."""
+        if self.selected is None:
+            return []
+        return [e for e in self.entries if e.step.name not in self.selected]
+
+    def _errors(self) -> bool:
         from _repro import step_errors
-        stale = any(e.status != "fresh" for e in self.reported)
-        return not stale and not step_errors(self.graph, {e.step.name for e in self.reported})[0]
+        return bool(step_errors(self.graph, {e.step.name for e in self.entries})[0])
+
+    @property
+    def ok(self) -> bool:
+        """Every assessed step is fresh or unverified, and no graph error touches one."""
+        return not self._errors() and all(e.status in ("fresh", "unverified") for e in self.entries)
+
+    @property
+    def exit_code(self) -> int:
+        """1 when a selected step's own state blocks (or a graph error); 3 when only a producer's does."""
+        if self._errors() or any((e.local_status or e.status) in BLOCKING for e in self.reported):
+            return 1
+        return 3 if any(e.status in BLOCKING for e in self.producers) else 0
 
     def entry(self, name: str) -> StepStatus | None:
         for candidate in self.entries:
@@ -950,19 +973,24 @@ class StatusReport:
         return None
 
     def to_dict(self) -> dict:
-        reported = self.reported
-        summary = {name: 0 for name in STATUSES}
-        for entry in reported:
-            summary[entry.status] += 1
-        summary["total"] = len(reported)
+        reported, producers = self.reported, self.producers
+
+        def counts(entries):
+            summary = {name: 0 for name in STATUSES}
+            for entry in entries:
+                summary[entry.status] += 1
+            summary["total"] = len(entries)
+            return summary
+
         return {
             "root": str(self.project_root),
             "targets": self.targets,
             "upstream": self.upstream,
             "boundary_inputs": self.boundary_inputs,
             "ok": self.ok,
-            "summary": summary,
+            "summary": dict(counts(reported), producers=counts(producers)),
             "steps": [e.to_dict() for e in reported],
+            "producers": [e.to_dict() for e in producers],
             "external_inputs": [e.to_dict() for e in self.external_inputs],
             "findings": [f.to_dict() for f in self.graph.findings],
         }
@@ -994,7 +1022,7 @@ def compute_status(
     if unknown:
         raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
     needed = set(names)
-    selected = needed
+    selected = set(select_steps(graph, targets)[0]) if upstream else needed
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
     lock.update(completed_locks or {})
@@ -1385,49 +1413,156 @@ _MARKS = {
 }
 
 
-def format_status(report: StatusReport) -> str:
-    entries = report.reported
-    if not entries:
-        return "No steps registered; no result verified."
-    width = max(len(e.step.name) for e in entries)
+def format_size(size: int | None) -> str:
+    if size is None:
+        return "size unknown"
+    if size < 1000:
+        return f"{size} B"
+    value = float(size)
+    for unit in ("KB", "MB", "GB", "TB"):
+        value /= 1000
+        if value < 1000 or unit == "TB":
+            break
+    return f"{value:.1f} {unit}"
+
+
+def capped(lines: list[str], what: str, command: str, indent: str = "  ") -> list[str]:
+    """At most `OUTPUT_CAP` lines, then one line counting the rest and naming the command that lists them."""
+    shown = [indent + line for line in lines[:OUTPUT_CAP]]
+    if len(lines) > OUTPUT_CAP:
+        shown.append(f"{indent}… and {len(lines) - OUTPUT_CAP} more {what}; `{command}` lists them")
+    return shown
+
+
+def capped_join(items: list[str]) -> str:
+    """At most `OUTPUT_CAP` items on one line, then how many more."""
+    extra = len(items) - OUTPUT_CAP
+    return ", ".join(items[:OUTPUT_CAP]) + (f" and {extra} more" if extra > 0 else "")
+
+
+def unread_file_lines(rows: list[tuple], command: str, then: Iterable[str] = ()) -> list[str]:
+    """Files this machine cannot read without a download, as (node, why, size[, readers]).
+
+    Capped, each with its size; then *then*, and the download pointer once when any is online-only.
+    """
+    width = max((len(row[0]) for row in rows[:OUTPUT_CAP]), default=0)
     lines = []
-    for entry in sorted(entries, key=lambda e: e.step.name):
-        duration = f"  {entry.duration:.1f}s" if entry.duration else ""
-        readers = f"outside readers: {len(entry.external_consumers)}"
-        lines.append(
-            f"{_MARKS[entry.status]} {entry.step.name:<{width}}  "
-            f"{entry.status:<8}  {readers:<19}  {entry.reason}{duration}"
-        )
-    counts = ", ".join(
+    for node, why, size, *readers in rows:
+        size_text = format_size(size) if size is not None or "online-only" in why else "-"
+        lines.append(f"{node:<{width}}  {size_text:>12}  {why}"
+                     + (f"  (read by {', '.join(readers[0])})" if readers and readers[0] else ""))
+    out = capped(lines, "file(s)", command) + list(then)
+    if any("online-only" in row[1] for row in rows):
+        out.append(DOWNLOAD_NOTES)
+    return out
+
+
+def repro_command(verb: str, targets: Iterable[str], *flags: str) -> str:
+    """A `superra repro` command line for *targets*, as a capped list's count line names it."""
+    return " ".join(["superra repro", verb, *(shlex.quote(t) for t in (list(targets) or ["."])), *flags])
+
+
+def unverified_boundary(report: StatusReport) -> list[str]:
+    """The first `unverified` producer on each path back from the selection."""
+    by_name = {e.step.name: e for e in report.entries}
+    parents: dict[str, list[str]] = {name: [] for name in by_name}
+    for src, dst, _ in report.graph.step_edges:
+        if src in by_name and dst in parents and src not in parents[dst]:
+            parents[dst].append(src)
+    selected = report.selected or set()
+    seen: set[str] = set()
+    found: list[str] = []
+    stack = [name for name in by_name if name in selected]
+    while stack:
+        for parent in parents[stack.pop()]:
+            if parent in seen:
+                continue
+            seen.add(parent)
+            if parent not in selected and by_name[parent].status == "unverified":
+                found.append(parent)
+            else:
+                stack.append(parent)
+    order = {e.step.name: i for i, e in enumerate(report.entries)}
+    return sorted(found, key=order.get)
+
+
+def _status_line(entry: StepStatus, width: int, readers: bool = True) -> str:
+    duration = f"  {entry.duration:.1f}s" if entry.duration else ""
+    count = f"outside readers: {len(entry.external_consumers)}"
+    middle = f"{count:<19}  " if readers else ""
+    return f"{_MARKS[entry.status]} {entry.step.name:<{width}}  {entry.status:<10}  {middle}{entry.reason}{duration}"
+
+
+def _counts(entries: list[StepStatus]) -> str:
+    return ", ".join(
         f"{sum(1 for e in entries if e.status == name)} {name}"
         for name in STATUSES
         if any(e.status == name for e in entries)
     )
+
+
+def format_status(report: StatusReport) -> str:
+    entries = report.reported
+    if not entries:
+        return "No steps registered; no result verified."
+    command = repro_command("status", report.targets, *([] if report.upstream else ["--only"]), "--json")
+    width = max(len(e.step.name) for e in entries)
+    lines = [_status_line(entry, width) for entry in sorted(entries, key=lambda e: e.step.name)]
     lines.append("")
     if {s.name for s in report.graph.steps} <= {e.step.name for e in entries}:
         scope = "for every registered step"
     else:
-        scope = f"for {', '.join(report.targets)}"
-        scope += " (including producer ancestors)" if report.upstream else " (selected steps only)"
-    lines.append(f"{len(entries)} step(s) {scope}: {counts}")
+        scope = f"for {', '.join(report.targets)}" + ("" if report.upstream else " (--only)")
+    lines.append(f"{len(entries)} step(s) {scope}: {_counts(entries)}")
+
+    producers = report.producers
+    if producers:
+        lines.append(f"{len(producers)} producer(s) behind them: {_counts(producers)}")
+        # Where staleness starts first, then the steps it lifts.
+        blocking = sorted((e for e in producers if e.status in BLOCKING),
+                          key=lambda e: (e.local_status or e.status) not in BLOCKING)
+        if blocking:
+            pwidth = max(len(e.step.name) for e in blocking[:OUTPUT_CAP])
+            lines.extend(capped([_status_line(e, pwidth, readers=False) for e in blocking],
+                                "producer(s) not fresh", command))
+        unverified = [e for e in producers if e.status == "unverified"]
+        if unverified:
+            sizes = {row["node"]: row["size"] for e in unverified for row in e.files if row["online_only"]}
+            known = sum(size for size in sizes.values() if size is not None)
+            unsized = sum(size is None for size in sizes.values())
+            size = format_size(known) + (f" plus {unsized} of unknown size" if unsized else "")
+            lines.append(f"{_MARKS['unverified']} {len(unverified)} producer(s) unverified, "
+                         f"{size} online-only here; tracing stops at {capped_join(unverified_boundary(report))}")
+
+    files: dict[str, tuple] = {}
+    for entry in report.entries:
+        if entry.status != "unverified":
+            continue
+        for row in entry.files:
+            if row["outcome"] == "unknown" and (row["online_only"] or row["size"] is not None):
+                files.setdefault(row["node"], (row["node"], "online-only here" if row["online_only"]
+                                               else "unreadable here", row["size"]))
+    if files:
+        lines.append(f"Files this machine cannot check ({len(files)}):")
+        lines.extend(unread_file_lines(list(files.values()), command))
     if report.boundary_inputs:
-        lines.append("Saved inputs from outside scope (upstream freshness not verified):")
-        for item in report.boundary_inputs:
-            lines.append(f"  {item['logical']} — {item['producer']}: {item['provenance']}")
+        lines.append(f"Saved inputs from outside the selection ({len(report.boundary_inputs)}), "
+                     "used as they sit on disk:")
+        lines.extend(capped([f"{item['logical']} — {item['producer']}: {item['provenance']}"
+                             for item in report.boundary_inputs], "saved input(s)", command))
     missing = [e for e in report.external_inputs if not e.exists]
     if missing:
         lines.append("")
         lines.append("Missing external inputs:")
-        lines.extend(f"  {e.path.logical}" for e in missing)
+        lines.extend(capped([e.path.logical for e in missing], "missing input(s)", command))
     errors = [f for f in report.graph.findings if f.severity == "error"]
     if errors:
         lines.append("")
         lines.append(f"{len(errors)} graph error(s); run `superra task check`.")
     stale = {e.step.name for e in entries if e.status != "fresh"}
-    pointed = [t for t in (report.targets or ["."])
-               if stale & set(select_steps(report.graph, [t], include_ancestors=report.upstream)[0])]
+    pointed = [t for t in (report.targets or ["."]) if stale & set(select_steps(report.graph, [t])[0])]
     if pointed:
-        lines.append("Why not fresh: " + "; ".join(f"superra repro explain {shlex.quote(t)}" for t in pointed))
+        lines.append("Why not fresh: " + capped_join([f"superra repro explain {shlex.quote(t)}" for t in pointed]))
     return "\n".join(lines)
 
 
@@ -1491,6 +1626,9 @@ __all__ = [
     "directory_dep_nodes",
     "ensure_state_dir",
     "external_consumers",
+    "capped",
+    "capped_join",
+    "format_size",
     "format_status",
     "is_online_only",
     "node_sizes",

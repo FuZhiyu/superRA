@@ -6589,7 +6589,8 @@ class TestReproRoutes:
         assert not (repro_plan.parent / ".gitignore").exists()
         assert body["summary"] == {
             "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "unverified": 0,
-            "total": 3,
+            "total": 3, "producers": {
+                "fresh": 0, "stale": 0, "missing": 0, "failed": 0, "unverified": 0, "total": 0},
         }
         assert body["ok"] is False
         entry = body["steps"][0]
