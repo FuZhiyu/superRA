@@ -109,8 +109,8 @@ def test_build_menu_and_explain_card(browser, workspace):
     chip.click()
     menu = page.locator('#rp-build-menu')
     assert [menu.locator('[role=menuitem] .rp-build-label').nth(i).inner_text() for i in range(3)] == [
-        'Build this task', 'Build with upstream', 'Rebuild all']
-    assert 'superra repro build analysis-1 --upstream' in menu.inner_text()
+        'Build with producers', 'Build only this task', 'Force rebuild this task']
+    assert 'superra repro build analysis-1 --only' in menu.inner_text()
     assert '4 steps would run' in menu.locator('[data-mode=""]').inner_text()
     page.keyboard.press('Escape')
     assert page.locator('#rp-build-menu').count() == 0

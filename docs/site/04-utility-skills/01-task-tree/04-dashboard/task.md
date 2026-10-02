@@ -21,9 +21,19 @@ Two views share the selected task, the reader, comments, and attachments:
 
 ### Step freshness in the Graph view
 
-Each step shows its state (`fresh`, `stale`, `missing`, `failed`, or `external`) and how long its last run took, and each task card totals its steps. Select a step to see its inputs, its outputs, and its last actual run; an accepted step reads `fresh` with the recorded reason. Freshness is separate from workflow status, so an `approved` task can still hold a stale step. A task whose `## Reproduction` declaration has an error is outlined in red, with a link to the finding.
+Each step card shows its state (`fresh`, `stale`, `missing`, `failed`, or `unverified`) and how long its last run took; each task card and Tree row counts its steps per state. Freshness is separate from workflow status, so an `approved` task can still hold a stale step. A task whose `## Reproduction` declaration has an error is outlined in red, with a link to the finding.
 
-On the live dashboard, each task and step card has a **Build** button. Its menu offers this task or step, the same with its upstream producers, or a forced rerun of all of them, and shows the `superra repro build` command and an estimate from the last recorded runs. Hover a step that is not fresh to see why. An exported snapshot shows the same graph and states without these controls.
+Read a card in two parts:
+
+- **Border, glyph, and label: the state a build acts on.** A step whose producer is stale reads `stale · upstream`.
+- **Fill: the step's own evidence.**
+  - Tinted: its own state, so a stale tint marks where the staleness starts.
+  - Empty: inherited from upstream. The step reruns only if rebuilding its producers changes its inputs.
+  - Hatched: some of its files are online-only on this machine (a Dropbox, Box, or iCloud file not downloaded), so this machine cannot check it: its own state is `unverified`.
+
+Select a step to see its inputs, its outputs, and its last actual run. The panel names where an inherited staleness starts and marks each online-only file with its size. An accepted step reads `fresh` with the recorded reason.
+
+On the live dashboard, each task and step card has a **Build** button. Its menu offers a build with the producers the selection reads, a build of only this task or step, or a forced rerun of it, and shows the `superra repro build` command and an estimate from the last recorded runs. A build that would read a file not on this machine runs nothing and lists the files. Hover a step that is not fresh to see why. An exported snapshot shows the same graph and states without these controls.
 
 ### A shareable snapshot
 

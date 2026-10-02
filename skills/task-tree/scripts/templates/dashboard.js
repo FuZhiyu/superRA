@@ -573,13 +573,16 @@ function workspaceSearchRecords() {
 }
 function syncTreeSteps() {
   if(!_reproData)return;
-  var byTask={};(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
+  var byTask={},statuses=reproStatusIndex(_reproData);(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
   document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
-    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children');
-    if(!steps.length){var old=children&&children.querySelector(':scope > .nav-step-list');if(old)old.remove();return;}
+    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children'),row=node.querySelector(':scope > .task-row'),badge=row&&row.querySelector(':scope > .nav-repro-rollup');
+    if(!steps.length){var old=children&&children.querySelector(':scope > .nav-step-list');if(old)old.remove();if(badge)badge.remove();return;}
+    var rollup=reproRollup(steps,statuses);
+    if(row&&!badge){badge=document.createElement('span');row.insertBefore(badge,row.querySelector(':scope > .badge'));}
+    if(badge){badge.className='nav-repro-rollup'+(rollup.hatched?' rp-hatched':'');badge.innerHTML=rollup.compact;badge.title=steps.length+' steps: '+rollup.text;}
     if(!children){children=document.createElement('div');children.className='task-children';children.style.display='none';node.appendChild(children);node.dataset.needsLoad='false';var caret=node.querySelector(':scope > .task-row > .task-toggle');if(caret){caret.classList.remove('leaf');caret.textContent='▸';}}
     var list=children.querySelector(':scope > .nav-step-list');if(!list){list=document.createElement('div');list.className='nav-step-list';children.prepend(list);}
-    list.innerHTML=steps.map(function(s){return '<button type="button" class="nav-step'+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'>'+escapeHtml(s.name)+'</button>';}).join('');
+    list.innerHTML=steps.map(function(s){var ch=reproChannels(statuses[s.name]);return '<button type="button" class="nav-step '+ch.cls+(s.kind==='check'?' is-check':'')+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'" title="'+escapeAttr(ch.label+(ch.cloud?' · online-only here':''))+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'><span class="repro-glyph" aria-hidden="true">'+ch.glyph+'</span><span class="nav-step-name">'+escapeHtml(s.name)+'</span><span class="nav-step-state">'+escapeHtml(ch.label)+(ch.cloud?' '+REPRO_CLOUD_HTML:'')+'</span></button>';}).join('');
   });
 }
 function updateNavigationToggle() {
@@ -1055,17 +1058,42 @@ function nodeOwnRowMatches(el, status, search) {
 var REPRO_SECTION = 'Reproduction';
 
 /* Every state ships its glyph and its word beside the colour: the palette's
-   own comment names the pairs a red-green reader cannot separate by hue. */
+   own comment names the pairs a red-green reader cannot separate by hue.
+   U+FE0E keeps the cloud a text glyph, not an emoji. */
+var REPRO_CLOUD = '\u2601\uFE0E', REPRO_CLOUD_HTML = '<span class="repro-cloud" aria-hidden="true">' + REPRO_CLOUD + '</span>';
 var REPRO_STATES = [
-  { key: 'fresh',    glyph: '●' },
-  { key: 'stale',    glyph: '◐' },
-  { key: 'missing',  glyph: '○' },
-  { key: 'failed',   glyph: '✕' },
-  { key: 'external', glyph: '⊘' },
-  { key: 'unknown', glyph: '?' }
+  { key: 'fresh',      glyph: '●' },
+  { key: 'stale',      glyph: '◐' },
+  { key: 'missing',    glyph: '○' },
+  { key: 'failed',     glyph: '✕' },
+  { key: 'unverified', glyph: REPRO_CLOUD },
+  { key: 'unknown',    glyph: '?' }
 ];
 var REPRO_GLYPHS = {};
 REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
+
+/* A card's two channels. Border, glyph and label carry the reported state; the
+   fill carries the step's own: its tint when the two agree, empty when the
+   staleness is inherited from upstream, hatched when its files are online-only.
+   `cloud` marks an own-unverified step whose label names another state. */
+/* A task's steps counted per reported state, in REPRO_STATES order; hatched
+   when every step's own state is `unverified`. */
+function reproRollup(steps, statuses) {
+  var counts = {}, unverified = 0;
+  steps.forEach(function(s) { var ch = reproChannels(statuses[s.name]); counts[ch.state] = (counts[ch.state] || 0) + 1; if (ch.own === 'unverified') unverified++; });
+  var present = REPRO_STATES.filter(function(s) { return counts[s.key]; });
+  return { counts: counts, hatched: steps.length > 0 && unverified === steps.length,
+    text: present.map(function(s) { return s.glyph + ' ' + s.key + ' ' + counts[s.key]; }).join(' · '),
+    html: present.map(function(s) { return '<span class="rp-' + s.key + '"><span class="repro-glyph">' + s.glyph + '</span> ' + s.key + ' ' + counts[s.key] + '</span>'; }).join(' · '),
+    compact: present.map(function(s) { return '<span class="rp-' + s.key + '"><span class="repro-glyph">' + s.glyph + '</span>' + counts[s.key] + '</span>'; }).join(' ') };
+}
+function reproChannels(entry) {
+  var state = reproStateOf(entry), own = (entry && entry.local_status) || state;
+  var fill = own === 'unverified' ? ' rp-hatched' : own !== state ? ' rp-inherited' : '';
+  var label = state === 'unverified' ? 'unverified · online-only' : own !== state ? state + ' · upstream' : state;
+  return { state: state, own: own, cls: 'rp-' + state + fill, glyph: REPRO_GLYPHS[state] || '?', label: label,
+    cloud: own === 'unverified' && state !== 'unverified' };
+}
 
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
 var _reproSelected = '', _reproLinkOwner = null;
@@ -1595,14 +1623,14 @@ function reproGraphHTML(lay,statuses) {
   html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
-    if(n.type==='step') {var entry=statuses[n.id],st=reproStateOf(entry),base=(REPRO_GLYPHS[st]||'?')+' '+st+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
-      return '<button class="repro-node rp-'+st+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+'</span><span class="repro-node-state" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></button>'
+    if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
+      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
         +reproChipHTML(target,'▶','rp-build-chip-step',n.id,'left:'+(p.x+p.width-26)+'px;top:'+(p.y+4)+'px');}
-    var counts={},total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name],st=reproStateOf(e);counts[st]=(counts[st]||0)+1;if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(st))explain=true;});
-    var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;});
-    var summary=n.steps.length+' steps'+(n.steps.length?' · ':'')+Object.keys(counts).map(function(k){return (REPRO_GLYPHS[k]||'?')+' '+k+' '+counts[k];}).join(' · ')+(total?' · '+reproDuration(total):'');
+    var total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name];if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(reproStateOf(e)))explain=true;});
+    var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;}),rollup=reproRollup(n.steps,statuses);
+    var tail=total?' · '+reproDuration(total):'',summary=n.steps.length+' steps'+(n.steps.length?' · ':'')+rollup.text+tail;
     var errorLabel=n.errors+' error'+(n.errors===1?'':'s');
-    return '<section class="rp-task'+(n.cycle?' is-cycle':'')+(n.errors?' is-error':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(!_reproSelected&&n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button>'+(n.steps.length?reproChipHTML(reproTaskTarget(n.task),'▶ Build','',n.title||reproTaskTitle(n.task)):'')+'</div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+(n.errors?'<button class="rp-error-link" data-rp-action="finding" data-value="'+escapeAttr(n.task)+'" title="Show '+errorLabel+'">✕ '+errorLabel+'</button> · ':'')+'<span class="rp-task-summary"'+(containsSelected?' hidden':'')+(explain&&reproActionsOn()?' tabindex="0" data-rp-explain="'+escapeAttr(reproTaskTarget(n.task))+'"':'')+'>'+escapeHtml(summary)+'</span><span class="rp-selected-inside"'+(containsSelected?'':' hidden')+'>Contains selected step</span></span>'+'</div></section>';
+    return '<section class="rp-task'+(rollup.hatched?' rp-hatched':'')+(n.cycle?' is-cycle':'')+(n.errors?' is-error':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(!_reproSelected&&n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button>'+(n.steps.length?reproChipHTML(reproTaskTarget(n.task),'▶ Build','',n.title||reproTaskTitle(n.task)):'')+'</div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+(n.errors?'<button class="rp-error-link" data-rp-action="finding" data-value="'+escapeAttr(n.task)+'" title="Show '+errorLabel+'">✕ '+errorLabel+'</button> · ':'')+'<span class="rp-task-summary"'+(containsSelected?' hidden':'')+(explain&&reproActionsOn()?' tabindex="0" data-rp-explain="'+escapeAttr(reproTaskTarget(n.task))+'"':'')+'>'+escapeHtml(n.steps.length+' steps'+(n.steps.length?' · ':''))+rollup.html+escapeHtml(tail)+'</span><span class="rp-selected-inside"'+(containsSelected?'':' hidden')+'>Contains selected step</span></span>'+'</div></section>';
   }).join('');return html;
 }
 function reproHeadHTML() {
@@ -1878,7 +1906,7 @@ function reproLegendHTML(steps, byName, status) {
     counts[st] = (counts[st] || 0) + 1;
     if (s.kind === 'check') checks++;
   });
-  var items = REPRO_STATES.map(function(s) {
+  var items = REPRO_STATES.filter(function(s) { return s.key !== 'unknown' || counts.unknown; }).map(function(s) {
     var n = counts[s.key] || 0;
     return '<span class="repro-legend-item rp-' + s.key + (n ? '' : ' is-off') + '">'
       + '<span class="repro-glyph">' + s.glyph + '</span>' + s.key
@@ -1886,6 +1914,10 @@ function reproLegendHTML(steps, byName, status) {
   });
   items.push('<span class="repro-legend-item is-kind' + (checks ? '' : ' is-off') + '">'
     + '<span class="repro-glyph">✓</span>check step<span class="repro-count">' + checks + '</span></span>');
+  var fills = [['rp-stale', 'tinted', "the step's own state"], ['rp-stale rp-inherited', 'empty', 'inherited from upstream'],
+    ['rp-unverified rp-hatched', 'hatched', 'online-only here']].map(function(f) {
+    return '<span class="repro-legend-item"><span class="repro-fill-swatch ' + f[0] + '"></span><strong>' + f[1] + '</strong> ' + f[2] + '</span>';
+  });
   var banner = status.unavailable
     ? '<div class="repro-findings">Runner state is unavailable, so every step reads <code>unknown</code>: '
       + escapeHtml(status.unavailable) + '</div>'
@@ -1893,7 +1925,8 @@ function reproLegendHTML(steps, byName, status) {
   var wires = '<div class="repro-legend">'
     + '<span class="repro-legend-item"><svg class="repro-legend-wire" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>file dependency</span>'
     + '<span class="repro-legend-item"><svg class="repro-legend-wire is-logical" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>depends_on only</span></div>';
-  return '<div class="repro-legend">' + items.join('') + '</div>' + wires + banner;
+  return '<p class="repro-legend-head">State · border, glyph, label</p><div class="repro-legend">' + items.join('') + '</div>'
+    + '<p class="repro-legend-head">Fill · the step\'s own evidence</p><div class="repro-legend">' + fills.join('') + '</div>' + wires + banner;
 }
 
 function reproFindingsHTML(findings) {
@@ -2016,6 +2049,16 @@ function selectReproStep(name) {
 
 }
 
+/* Leads a file list holding online-only files: their count and known size, then where to read before downloading. */
+function reproOnlineSummary(files) {
+  var online = files.filter(function(f) { return f.online; });
+  if (!online.length) return '';
+  var sizes = online.filter(function(f) { return f.online.size != null; }), total = 0;
+  sizes.forEach(function(f) { total += f.online.size; });
+  return '<p class="repro-online-summary">' + REPRO_CLOUD_HTML + ' ' + online.length + ' file' + (online.length === 1 ? '' : 's') + ' online-only here'
+    + (sizes.length ? ' (' + formatArtifactBytes(total) + (sizes.length < online.length ? ' known' : '') + ')' : '')
+    + '. Before downloading, read <code>references/online-only-files.md</code> in the superRA:reproducibility skill.</p>';
+}
 function reproFileList(files, task) {
   if (!files.length) return '<p class="repro-hint">No files declared.</p>';
   return '<ul class="repro-files">' + files.map(function(file) {
@@ -2024,8 +2067,9 @@ function reproFileList(files, task) {
     var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
       :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
       :projectFileLinkAttrs(task||'',resolved);
-    var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
-    return '<li><div class="repro-file-name">'+link+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
+    var link='<a'+attrs+(!window.STANDALONE&&!file.online?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
+    var cloud=file.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(file.online.size!=null?' · '+formatArtifactBytes(file.online.size):'')+'</span>':'';
+    return '<li'+(file.online?' class="is-online-only"':'')+'><div class="repro-file-name">'+link+cloud+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
       +(file.note?'<div class="repro-file-note">'+escapeHtml(file.note)+'</div>':'')+'</li>';
   }).join('')+'</ul>';
 }
@@ -2219,18 +2263,20 @@ function renderReproDetail(name) {
   var same=host.dataset.step===name, previousState=host.dataset.state, opened=new Set(Array.from(host.querySelectorAll('details[open]')).map(function(el){return el.dataset.detailSection;}));
   var entry=reproStatusIndex(_reproData)[name], state=reproStateOf(entry), related=reproProject(_reproData.graph);
   var external={};(_reproData.graph.external_inputs||[]).filter(function(e){return (e.consumers||[]).indexOf(name)!==-1;}).forEach(function(e){external[e.logical]=e;});
+  var online={};(entry&&entry.files||[]).forEach(function(f){if(f.online_only)online[f.node]=f;});
   var inputs=(step.deps||[]).map(function(d){
     var origins=(step.dependency_origins&&step.dependency_origins[d.logical]||[]).map(function(o){return typeof o==='string'?o:({declared:'Declared input',script:'Script',include:'Included source',environment:'Environment'}[o.kind]||o.kind)+(o.via?' via '+o.via:'');});
-    if(external[d.logical])origins.push(external[d.logical].exists?'External input · available':'External input · missing');
-    return {path:d,note:origins.join(' · ')};
+    if(external[d.logical])origins.push(online[d.logical]?'External input':external[d.logical].exists?'External input · available':'External input · missing');
+    return {path:d,note:origins.join(' · '),online:online[d.logical]};
   });
-  var outs=(step.outs||[]).map(function(o){return {path:o.path,note:o.sidecar?'Freshness checked via '+o.sidecar.logical:''};});
+  var outs=(step.outs||[]).map(function(o){return {path:o.path,note:o.sidecar?'Freshness checked via '+o.sidecar.logical:'',online:online[o.path.logical]};});
   var connections=['incoming','outgoing'].map(function(direction){
     var grouped={};(related[direction][name]||[]).forEach(function(e){var other=direction==='incoming'?e.from:e.to;(grouped[other]||(grouped[other]=[])).push(e.via);});
     return '<section><h4>'+(direction==='incoming'?'Uses':'Used by')+'</h4>'+(Object.keys(grouped).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+(!workspaceTaskMatches(related.byName[other].task)?'<span class="repro-hint">Hidden from navigation</span>':'')+reproPathList(Array.from(new Set(grouped[other])))+'</div>';}).join('')||'<p class="repro-hint">No connected steps.</p>')+'</section>';
   }).join('');
-  var evidence='';
-  if(entry&&entry.local_status&&entry.local_status!==state)evidence+='<p><strong>For saved inputs: '+escapeHtml(entry.local_status)+'</strong> — '+escapeHtml(entry.local_reason||'')+'</p>';
+  var evidence='',ch=reproChannels(entry),own='';
+  if(ch.own!==state)own='<p class="repro-own-line"><strong>Own evidence: '+escapeHtml(ch.own)+'</strong>'+(ch.own==='unverified'?' — '+escapeHtml(entry.local_reason||''):'')
+    +'. A build reruns it only if its inputs change once the steps upstream rerun.'+(entry.origin?' Staleness starts at '+reproButton(entry.origin,'related',entry.origin)+'.':'')+'</p>';
   if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}),step.task);
   if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>';
   if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
@@ -2242,12 +2288,12 @@ function renderReproDetail(name) {
   host.dataset.step=name;host.dataset.state=state;
   host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+'</span></div>'
     +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
-    +'<div class="repro-status-line"><span class="repro-step-state rp-'+state+'"><span class="repro-glyph">'+(REPRO_GLYPHS[state]||'?')+'</span> '+escapeHtml(state)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'
+    +'<div class="repro-status-line"><span class="repro-step-state '+ch.cls+'"><span class="repro-glyph">'+ch.glyph+'</span> '+escapeHtml(ch.label)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'+own
     +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
     +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
     +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
-    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
-    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>',reproFileList(inputs,step.task),opened.has('inputs'))
+    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproOnlineSummary(outs)+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
+    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>'+(inputs.some(function(i){return i.online;})?' <span class="repro-cloud-tag">'+REPRO_CLOUD_HTML+' online-only</span>':''),reproOnlineSummary(inputs)+reproFileList(inputs,step.task),opened.has('inputs')||(!same&&inputs.some(function(i){return i.online;})))
     +reproDisclosure('connections','Connected steps <span>'+new Set((related.incoming[name]||[]).map(function(e){return e.from;}).concat((related.outgoing[name]||[]).map(function(e){return e.to;}))).size+'</span>',connections,opened.has('connections'))
     +(Object.keys(step.params||{}).length?reproDisclosure('params','Parameters','<dl class="repro-params">'+Object.keys(step.params).map(function(key){return reproDetailRow(escapeHtml(key),'<code>'+escapeHtml(JSON.stringify(step.params[key]))+'</code>');}).join('')+'</dl>',opened.has('params')):'')
     +(evidence?reproDisclosure('evidence','Run & evidence',evidence,opened.has('evidence')||(state==='failed'&&(!same||previousState!=='failed'))):'')+'</article>';
@@ -2269,12 +2315,12 @@ var _reproBuildTimer = null, _reproExplainCache = {}, _reproExplainTimer = null,
 var REPRO_BUILD_POLL_MS = 1500, REPRO_EXPLAIN_DELAY_MS = 350, REPRO_BUILD_RECENT_S = 900;
 
 function reproActionsOn() { return !!window.REPRO_ACTIONS && !window.STANDALONE; }
-function reproExplainable(state) { return reproActionsOn() && ['stale', 'missing', 'failed', 'external'].indexOf(state) >= 0; }
+function reproExplainable(state) { return reproActionsOn() && ['stale', 'missing', 'failed', 'unverified'].indexOf(state) >= 0; }
 function reproStepTarget(step) { return (step.task || '.') + '#' + step.name; }
 function reproTaskTarget(path) { return path || '.'; }
 function reproShellWord(word) { return /^[A-Za-z0-9_.\/-]+$/.test(word) ? word : "'" + word.replace(/'/g, "'\\''") + "'"; }
 function reproBuildCommand(target, mode) {
-  return 'superra repro build ' + reproShellWord(target) + (mode === 'upstream' ? ' --upstream' : mode === 'force' ? ' --force' : '');
+  return 'superra repro build ' + reproShellWord(target) + (mode === 'only' ? ' --only' : mode === 'force' ? ' --force' : '');
 }
 function reproIsRunning(name, entry) { return !!_reproBuild.steps[name] || !!(entry && entry.running); }
 function reproNodeMeta(name, entry) {
@@ -2293,29 +2339,34 @@ function reproChipHTML(target, label, cls, name, style) {
 }
 
 /* The steps a build of *target* selects: a task with its descendants, or one
-   step; with upstream, also every transitive file producer. */
-function reproBuildScope(graph, target, upstream) {
+   step; with producers, also every transitive file producer. */
+function reproBuildScope(graph, target, producers) {
   var steps = graph.steps || [], names = new Set(), hash = target.indexOf('#');
   if (hash >= 0) steps.forEach(function(s) { if ((s.task || '.') === target.slice(0, hash) && s.name === target.slice(hash + 1)) names.add(s.name); });
   else steps.forEach(function(s) { if (reproWithin(s.task, target === '.' ? '' : target)) names.add(s.name); });
-  if (upstream) {
-    var producers = {};
-    (graph.step_edges || []).forEach(function(e) { (producers[e.to] || (producers[e.to] = [])).push(e.from); });
+  if (producers) {
+    var from = {};
+    (graph.step_edges || []).forEach(function(e) { (from[e.to] || (from[e.to] = [])).push(e.from); });
     var queue = Array.from(names);
-    while (queue.length) (producers[queue.pop()] || []).forEach(function(p) { if (!names.has(p)) { names.add(p); queue.push(p); } });
+    while (queue.length) (from[queue.pop()] || []).forEach(function(p) { if (!names.has(p)) { names.add(p); queue.push(p); } });
   }
   return Array.from(names);
 }
-/* What the build would run, costed from each step's last recorded run. Approximate:
-   a step downstream of a rerun can go stale once its input changes. */
+/* What the build would run, costed from each step's last recorded run: the
+   steps whose own state is stale, missing, or failed, plus the forced targets.
+   A step stale only through upstream reruns if its inputs change; an
+   `unverified` step never runs. */
 function reproBuildEstimate(target, mode) {
-  var statuses = reproStatusIndex(_reproData), run = [], waiting = 0, total = 0, unknown = 0;
-  reproBuildScope(_reproData.graph, target, mode === 'upstream').forEach(function(name) {
-    var entry = statuses[name], state = reproStateOf(entry);
-    if (state === 'external') waiting++;
-    else if (mode === 'force' || state !== 'fresh') run.push(entry);
+  var statuses = reproStatusIndex(_reproData), targets = new Set(reproBuildScope(_reproData.graph, target, false));
+  var scope = new Set(reproBuildScope(_reproData.graph, target, mode !== 'only'));
+  var run = [], maybe = 0, online = 0, total = 0, unknown = 0;
+  scope.forEach(function(name) {
+    var entry = statuses[name], ch = reproChannels(entry);
+    if ((mode === 'force' && targets.has(name)) || ['stale', 'missing', 'failed'].indexOf(ch.own) >= 0) run.push(entry);
+    else if (ch.own === 'unverified') online++;
+    else if (entry && entry.origin && scope.has(entry.origin)) maybe++;
   });
-  var tail = waiting ? ' · ' + waiting + ' waiting on an external input' : '';
+  var tail = (maybe ? ' · ' + maybe + ' more if their inputs change' : '') + (online ? ' · ' + online + ' online-only, not run' : '');
   if (!run.length) return 'Nothing stale' + tail;
   run.forEach(function(entry) { if (entry && entry.duration != null) total += entry.duration; else unknown++; });
   return run.length + ' step' + (run.length === 1 ? '' : 's') + ' would run'
@@ -2346,7 +2397,8 @@ function reproOpenBuildMenu(chip) {
   if (!stage || !_reproData) return;
   var target = chip.dataset.value, hash = target.indexOf('#'), busy = _reproBuild.running;
   var title = hash >= 0 ? target.slice(hash + 1) : reproTaskTitle(target === '.' ? '' : target);
-  var items = [['', hash >= 0 ? 'Build this step' : 'Build this task'], ['upstream', 'Build with upstream'], ['force', 'Rebuild all']];
+  var noun = hash >= 0 ? 'step' : 'task';
+  var items = [['', 'Build with producers'], ['only', 'Build only this ' + noun], ['force', 'Force rebuild this ' + noun]];
   var menu = document.createElement('div');
   menu.id = 'rp-build-menu';
   menu.className = 'rp-menu-body rp-float';
@@ -2386,7 +2438,7 @@ async function reproStartBuild(target, mode) {
   reproCloseBuildMenu(false);
   _reproBuild.error = '';
   try {
-    var job = await reproBuildRequest('/api/repro/build', { target: target, upstream: mode === 'upstream', force: mode === 'force' });
+    var job = await reproBuildRequest('/api/repro/build', { target: target, only: mode === 'only', force: mode === 'force' });
     _reproBuild.job = Object.assign({ alive: true }, job);
     _reproBuild.running = true;
     _reproBuild.seen = true;
@@ -2432,6 +2484,7 @@ function reproBuildStatusHTML() {
   var recent = job && job.ended_at && (build.seen || Date.now() / 1000 - job.ended_at < REPRO_BUILD_RECENT_S);
   if (!recent || !job.summary) return '';
   return '<span class="rp-build-done' + (job.returncode ? ' is-failed' : '') + '">Last build: ' + escapeHtml(job.summary) + '</span>'
+    + (job.detail && job.detail.length ? '<pre class="rp-build-detail">' + escapeHtml(job.detail.join('\n')) + '</pre>' : '')
     + (job.log_tail ? '<details class="rp-menu rp-build-log" data-rp-menu="build-log"><summary>Log</summary><div class="rp-menu-body"><p><code>' + escapeHtml(job.command)
       + '</code></p><pre class="repro-log">' + escapeHtml(job.log_tail) + '</pre></div></details>' : '');
 }
@@ -2441,7 +2494,7 @@ function reproPaintBuild() {
   if (!container || !_reproData) return;
   var statuses = reproStatusIndex(_reproData), job = _reproBuild.job;
   container.querySelectorAll('.repro-node[data-step]').forEach(function(node) {
-    var name = node.dataset.step, entry = statuses[name], state = node.querySelector('.repro-node-state');
+    var name = node.dataset.step, entry = statuses[name], state = node.querySelector('.repro-node-label');
     node.classList.toggle('is-running', reproIsRunning(name, entry));
     if (state) state.textContent = state.dataset.base + reproNodeMeta(name, entry);
   });
@@ -2540,8 +2593,8 @@ function reproExplainRow(row, withStep, pinned) {
 function reproRenderExplain(card, result) {
   var target = card.dataset.target, hash = target.indexOf('#'), pinned = _reproExplainPinned, statuses = reproStatusIndex(_reproData), head, body = '';
   if (hash >= 0) {
-    var entry = statuses[target.slice(hash + 1)], state = reproStateOf(entry);
-    head = '<p class="rp-float-head"><span class="repro-step-state rp-' + state + '"><span class="repro-glyph">' + (REPRO_GLYPHS[state] || '?') + '</span> ' + escapeHtml(state) + '</span> '
+    var entry = statuses[target.slice(hash + 1)], ch = reproChannels(entry);
+    head = '<p class="rp-float-head"><span class="repro-step-state ' + ch.cls + '"><span class="repro-glyph">' + ch.glyph + '</span> ' + escapeHtml(ch.label) + '</span> '
       + escapeHtml(target.slice(hash + 1)) + '</p><p class="rp-explain-reason">' + escapeHtml(entry ? entry.reason : '') + '</p>';
   } else {
     var path = target === '.' ? '' : target, steps = (_reproData.graph.steps || []).filter(function(s) { return reproWithin(s.task, path); });
@@ -2613,13 +2666,13 @@ function renderReproStepTable(renderedMd, taskPath) {
     var byName = reproStatusIndex(data);
     var rows = steps.map(function(s) {
       var entry = byName[s.name];
-      var state = reproStateOf(entry);
+      var ch = reproChannels(entry);
       var outs = (s.outs || []).map(reproOutLabel).join(', ');
       return '<tr id="step-'+escapeAttr(s.name)+'"><td><button class="repro-step-name" type="button" data-step="'
         + escapeAttr(s.name) + '">' + escapeHtml(s.name) + '</button>'
         + (s.kind === 'check' ? ' <span class="repro-check-tag">✓</span>' : '') + '</td>'
-        + '<td><span class="repro-step-state rp-' + state + '"><span class="repro-glyph">'
-        + (REPRO_GLYPHS[state] || '?') + '</span>' + escapeHtml(state) + '</span></td>'
+        + '<td><span class="repro-step-state ' + ch.cls + '"><span class="repro-glyph">'
+        + ch.glyph + '</span>' + escapeHtml(ch.label) + '</span></td>'
         + '<td>' + escapeHtml(entry ? entry.reason : 'runner state unavailable') + '</td>'
         + '<td class="repro-outs">' + escapeHtml(outs || '—') + '</td></tr>';
     }).join('');

@@ -6735,7 +6735,7 @@ class TestReproBuildRoutes:
             assert not plan_dashboard._is_trusted_authority(host), host
 
     def test_target_is_one_argv_element_after_the_separator(self):
-        assert plan_dashboard._build_args("02-panel", True, True) == ["--upstream", "--force", "--", "02-panel"]
+        assert plan_dashboard._build_args("02-panel", True, True) == ["--only", "--force", "--", "02-panel"]
         assert plan_dashboard._build_args("01-ingest#fetch-crsp", False, False) == ["--", "01-ingest#fetch-crsp"]
 
     # --- Lifecycle --------------------------------------------------------
@@ -6752,6 +6752,27 @@ class TestReproBuildRoutes:
         assert state["job"]["summary"] == "1 step(s): 1 executed"
         assert status["fetch-crsp"]["status"] == "fresh"
         assert status["fetch-crsp"]["duration"] is not None
+
+    def test_only_request_scopes_the_build_and_a_gated_build_lists_its_files(self, plan):
+        """`only` reaches the runner as `--only`; a build the download gate stops
+        returns the gate's file list as `detail`, not only its first line."""
+        (plan.parent / "code" / "fetch.sh").unlink()
+        with self._client(plan) as c:
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp", "only": True})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build --only '01-ingest#fetch-crsp'"
+            assert r.json()["only"] is True
+            job = self._finish(c)["job"]
+        assert job["returncode"] == 1
+        assert job["summary"].startswith("Error: 1 file(s) the build reads are not on this machine")
+        assert job["detail"][0].split() [:2] == ["code/fetch.sh", "-"]
+        assert "no step produces it" in job["detail"][0]
+
+    def test_build_summary_keeps_an_errors_lines(self):
+        log = "Execution scope: 1 step(s): a\nError: 2 file(s) are gone:\n  x.csv  1 B\n  y.csv  2 B\nTry --only.\n"
+        assert plan_dashboard._build_summary(log) == (
+            "Error: 2 file(s) are gone:", ["  x.csv  1 B", "  y.csv  2 B", "Try --only."])
+        assert plan_dashboard._build_summary("✓ a  executed\n1 step(s): 1 executed\n") == ("1 step(s): 1 executed", [])
 
     def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
         monkeypatch.setenv("SLOW", "30")
@@ -6832,26 +6853,32 @@ class TestReproBuildRoutes:
     @pytest.mark.skipif(_NODE is None, reason="node not available")
     def test_menu_estimate_and_command_follow_the_selection(self):
         defs = _extract_js_defs([
-            "REPRO_STATES", "REPRO_GLYPHS", "_reproBuild", "reproStatusIndex", "reproStateOf", "reproWithin",
-            "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope", "reproBuildEstimate",
+            "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD", "_reproBuild", "reproStatusIndex", "reproStateOf",
+            "reproChannels", "reproWithin", "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope",
+            "reproBuildEstimate",
         ])
+        # a (stale) -> b (fresh, stale through a) -> y (unverified, stale through a); c missing; x unverified.
         harness = (
-            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'}],"
-            "step_edges:[{from:'a',to:'b'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
-            "{name:'b',status:'fresh',duration:1},{name:'c',status:'missing',duration:null},{name:'x',status:'external'}]}};"
+            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'},{name:'y',task:'t2'}],"
+            "step_edges:[{from:'a',to:'b'},{from:'a',to:'y'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
+            "{name:'b',status:'stale',local_status:'fresh',origin:'a',duration:1},{name:'c',status:'missing',duration:null},"
+            "{name:'x',status:'unverified',duration:3},{name:'y',status:'stale',local_status:'unverified',origin:'a',duration:4}]}};"
             "console.log(JSON.stringify({"
             "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
-            "this:reproBuildEstimate('t2#b',''), upstream:reproBuildEstimate('t2#b','upstream'), force:reproBuildEstimate('t2','force'),"
-            "cmd:reproBuildCommand('t2#b','upstream'), root:reproBuildCommand('.','force')}));"
+            "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
+            "force:reproBuildEstimate('t2','force'), cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
+            "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
         assert proc.returncode == 0, proc.stderr
         out = json.loads(proc.stdout.strip().splitlines()[-1])
-        assert out["scope"] == ["b", "c", "x"] and out["up"] == ["a", "b"]
-        assert out["this"] == "Nothing stale"
-        assert out["upstream"] == "1 step would run · ~2.0s by last runs"
-        assert out["force"] == "2 steps would run · ~1.0s by last runs · 1 never ran · 1 waiting on an external input"
-        assert out["cmd"] == "superra repro build 't2#b' --upstream"
+        assert out["scope"] == ["b", "c", "x", "y"] and out["up"] == ["a", "b"]
+        assert out["only"] == "Nothing stale"
+        assert out["chain"] == "1 step would run · ~2.0s by last runs · 1 more if their inputs change"
+        assert out["task"] == "2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change · 2 online-only, not run"
+        assert out["force"] == "5 steps would run · ~10.0s by last runs · 1 never ran"
+        assert out["cmd"] == "superra repro build 't2#b' --only"
+        assert out["plain"] == "superra repro build t2"
         assert out["root"] == "superra repro build . --force"
 
 class TestReproExportSnapshot:
@@ -6924,8 +6951,8 @@ class TestReproLockWatch:
 
 def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
-        "REPRO_STATES", "REPRO_GLYPHS",
-        "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
+        "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD",
+        "reproStatusIndex", "reproStateOf", "reproChannels", "reproRollup", "reproTaskTitle", "reproHeadHTML",
         "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
         "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
@@ -6963,6 +6990,35 @@ def _run_repro_render_node(harness_body):
     )
     assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
     return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproStateChannels:
+    def test_cards_split_reported_and_own_state_and_the_legend_explains_both(self):
+        """Border and label carry the reported state, the fill the step's own:
+        tinted where they agree, empty when inherited, hatched when online-only."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "var steps=['clean','merge','join','rows','gate'].map(function(n){return {name:n,task:n==='rows'?'cloud':'est',kind:n==='gate'?'check':'build',deps:[],outs:[]};});"
+            "var data={graph:{steps:steps,step_edges:[{from:'clean',to:'merge',via:'a'},{from:'clean',to:'join',via:'a'}],findings:[],"
+            "  dependencies:{tasks:[{path:'est',title:'Est',status:'in-progress'},{path:'cloud',title:'Cloud',status:'in-progress'}],logical:[]}},"
+            "  status:{steps:[{name:'clean',status:'stale'},{name:'merge',status:'stale',local_status:'fresh',origin:'clean'},"
+            "    {name:'join',status:'stale',local_status:'unverified',origin:'clean'},{name:'rows',status:'unverified'},{name:'gate',status:'fresh'}]}};"
+            "_reproNav.expanded=['est','cloud'];drawReproView(box, data);"
+            "console.log(JSON.stringify({html: box.innerHTML}));"
+        )
+        html = out["html"]
+        assert 'class="repro-node rp-stale" ' in html
+        assert 'class="repro-node rp-stale rp-inherited"' in html and "stale · upstream" in html
+        assert 'class="repro-node rp-stale rp-hatched"' in html and 'repro-cloud-tag' in html
+        assert 'class="repro-node rp-unverified rp-hatched"' in html and "unverified · online-only" in html
+        assert 'class="repro-node rp-fresh is-check"' in html
+        assert 'class="rp-task rp-hatched' in html and html.count('class="rp-task rp-hatched') == 1
+        assert "external" not in html
+        assert "Fill · the step's own evidence" in html
+        for fill in ("tinted", "empty", "hatched"):
+            assert f"<strong>{fill}</strong>" in html
+        assert 'repro-legend-item rp-unverified"' in html and "rp-unknown" not in html
 
 
 @pytest.mark.skipif(_NODE is None, reason="node not available")
