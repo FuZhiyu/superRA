@@ -42,6 +42,7 @@ from _repro_state import (  # noqa: E402
     LOCK_FILENAME,
     TOML_AVAILABLE,
     HashCache,
+    Unread,
     LockEntry,
     ReproStateError,
     RunnerPaths,
@@ -124,11 +125,14 @@ def _decide(build: Build, step: Step):
 
 
 def _missing_inputs(build: Build, step: Step, entry) -> str | None:
-    """Why the step cannot start: a dependency not on disk, or one it cannot hash here."""
+    """Why the step cannot start: a dependency not on disk, online-only even if cached, or unreadable."""
+    root = build.paths.project_root
     deps, _ = step_nodes(step, output_nodes(build.graph))
     deps += directory_dep_nodes(build.graph, step)
     externals = {e.path.logical for e in build.graph.external_inputs}
-    states = [(node[0], dependency_state(build.cache, build.paths.project_root, node)) for node in deps]
+    states = [(node[0], Unread("online-only")
+               if build.cache.probe(absolute(root, node[2] or node[1]), walk=True)[0]
+               else dependency_state(build.cache, root, node)) for node in deps]
     blocked = [(n, v) for n, v in states if v is None] or [(n, v) for n, v in states if unread(v)]
     if not blocked:
         return None

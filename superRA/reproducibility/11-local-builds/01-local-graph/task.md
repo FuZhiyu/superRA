@@ -1,6 +1,6 @@
 ---
 title: "File Checks and Step States Never Download"
-status: revise
+status: implemented
 depends_on: []
 ---
 
@@ -61,6 +61,7 @@ The freshness engine now checks files without ever downloading one, and steps ta
   - `accept`'s baseline diff (`inspect_baseline`) and receipt snapshots.
   - The sidecar read in `_bytes_verified`.
   - The Julia include scan in [_repro.py](../../../../skills/task-tree/scripts/_repro.py), which warns instead of reading.
+  - The edit-detection hook in [_edit_detect.py](../../../../skills/task-tree/scripts/_edit_detect.py): an online-only file stays in the session baseline with no digest and is compared by `stat` alone, and `_scan_dir` never lists an online-only directory.
   - `explain <path>` prints "online-only here" (or "unreadable here") where it printed "missing here"; its JSON adds `here`.
 - **Lock sizes.** A build records an optional `sizes` map beside the hashes: the out's own size for a sidecar, and none for a directory.
   - An uncached `SF_DATALESS` file whose size differs from the recorded one reads `changed`.
@@ -73,12 +74,13 @@ The freshness engine now checks files without ever downloading one, and steps ta
   - It sets `origin` to the furthest-upstream blocking step, and the reason names it: `upstream step 'build-a' is stale`.
   - The status JSON carries `origin`.
 - **Per-file evidence.** Each status entry and its JSON carry `files`: one row per dep and out, with `node`, `role`, `outcome`, `online_only`, and `size`.
-  - A directory is online-only when anything under it is, and has no size.
+  - A directory has no size. It is online-only when its own flag says so or its hash walk found online-only content. `status` never walks a directory just to answer this; a sidecar-tracked out is judged from its sidecar and its own flag.
 - **Acceptance.**
   - `accept` refuses a file it cannot hash, naming it: `build-a: cannot record Code/a.sh, which is online-only here`.
   - A valid acceptance whose files cannot be hashed here reads `unverified` with reason `reviewed baseline; <file> is online-only here`, not invalid.
 - **Run floor.** In [repro_run.py](../../../../skills/task-tree/scripts/repro_run.py), `build` skips an `unverified` step and counts it `unverified`.
-  - `_missing_inputs` no longer reads `external`. It refuses to start any step, dry runs included, whose input is absent, online-only and uncached, or unreadable.
+  - `_missing_inputs` no longer reads `external`. It refuses to start any step, dry runs included, whose input is absent, unreadable, or online-only by metadata. That covers a cached online-only input too, since reading it would download it.
+  - A refused step writes no run record, so its last successful run stands.
 - **Saved-input rename.** The provenance `unverified` is now `no successful build recorded`, and the boundary change `unverified` is now `unbaselined`.
   - A saved input that cannot be hashed here has `digest: null` and says why under `here`. It makes its consumer `unverified`, and `build` no longer refuses it as missing.
 
@@ -87,7 +89,7 @@ The freshness engine now checks files without ever downloading one, and steps ta
 - **Lock version stays `2`.** `sizes` is an optional key that older readers ignore, so a lock written before this change and a lock read by an older superRA both still work. A version bump would have made older checkouts reject the lock.
 - **A check that passed elsewhere needs every input checked.** It stays `fresh` when its inputs match, including an online-only input still in this machine's hash cache. An uncached input makes it `unverified`, because "at these inputs" cannot be confirmed.
 - **An absent output a step produces keeps its consumer `stale`.** The consumer's dependency reads `missing`, as before. Only an absent file no step produces is `unknown`.
-- **A forced `unverified` step still goes through the input check,** so `--force` never reads a file the machine cannot hash. 02 decides the final `--force` scope.
+- **A forced `unverified` step still goes through the input check,** so `--force` never reads an online-only or unreadable file: it refuses and runs nothing. 02 decides the final `--force` scope.
 - **A broken link inside a directory dependency now reads `unverified`, not `stale`.** Updated in [test_repro_engine.py](../../../../skills/task-tree/scripts/test_repro_engine.py).
 - **`accept` hashes without the persistent cache, as before,** so it refuses any `SF_DATALESS` file, even one cached from an earlier read.
 - **A never-built step's file on disk has `outcome: null`.** The status never hashes a never-built step's files.
@@ -96,7 +98,7 @@ The freshness engine now checks files without ever downloading one, and steps ta
 ### Left for siblings
 
 - **02-upstream-default.**
-  - The download gate must also catch an online-only input that is in the hash cache: `_missing_inputs` passes it because it can be hashed.
+  - The pre-scheduling download gate and its message. The per-step refusal in `_missing_inputs` is the floor it builds on.
   - `report.ok` still counts `unverified` as not ok, so `status` exits 1 for it.
   - The frontier `CURRENT` set still flags inputs from `unverified` producers.
   - The "(stale, missing, failed, or external)" exit-code line at [commands.md:114](../../../../skills/task-tree/references/commands.md#L114).
@@ -105,9 +107,10 @@ The freshness engine now checks files without ever downloading one, and steps ta
 
 ### Verification
 
-- **Regression tests.** [test_repro_online.py](../../../../skills/task-tree/scripts/test_repro_online.py) has 16 tests covering every Validation bullet, with `file_flags`, `has_placeholder_xattr`, `Path.open`, `open`, and `os.scandir` monkeypatched.
-  - Removing any of the four read guards (`explain` diff, `accept` baseline diff, sidecar read, directory listing) fails its test.
-- **Full suite.** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`: 1082 passed, 10 skipped.
+- **Regression tests.** [test_repro_online.py](../../../../skills/task-tree/scripts/test_repro_online.py) has 19 tests covering every Validation bullet, with `file_flags`, `has_placeholder_xattr`, `Path.open`, `open`, and `os.scandir` monkeypatched.
+  - They include a stale step whose cached input is evicted, a forced `unverified` step, and edit detection over an evicted file and directory.
+  - Removing any of the six guards fails its test: `explain` diff, `accept` baseline diff, sidecar read, directory listing, the metadata check at step start, and edit detection.
+- **Full suite.** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`: 1085 passed, 10 skipped.
 - **OlinStudio, read-only.** A disposable fixture outside the repo used real files as dependencies:
   - The legacy placeholder `~/Dropbox/Fit3D_Measurements_History.csv`.
   - The `SF_DATALESS` Box file `~/Library/CloudStorage/Box-Box/ois_historical_data_extended.xlsx` (5,123,878 bytes).
@@ -116,6 +119,8 @@ The freshness engine now checks files without ever downloading one, and steps ta
     - `status` reported both dependencies `unknown` with `online_only: true`.
     - `build` skipped both steps as `unverified`.
     - `accept --dry-run` refused the Box file.
+    - `build --force` refused both steps before starting them.
+    - Edit detection kept both files in its baseline with no digest.
   - Afterwards the Box file still had `SF_DATALESS` set and the same size and mtime, and the placeholder was still zero bytes with its `com.dropbox.placeholder` xattr.
 
 ## Review Notes
@@ -129,6 +134,7 @@ Tier: thorough. Focus: correctness, test quality.
      - Before this commit, the same build downloaded the file and succeeded. It now downloads the file and records a failure.
    - **Reproduction.** In a probe on `CHAIN`: build; edit `Code/b.sh`; evict `output/a.txt` while it is still cached; then `build 02-b#build-b`. The command exits 0, and the run record is `failed` with `${OUT}/a.txt cannot be hashed here after execution (online-only here)`.
    - **Fix.** In `_missing_inputs`, refuse an input that is online-only by metadata (`cache.probe(...)[0]` or `is_online_only`), whether it is cached or not. This is the per-step half of the parent's download gate, and it matches the run floor's purpose. Add a test that builds a stale step whose input is cached and evicted. "Left for siblings" then no longer needs the first 02 bullet.
+   → implemented: [repro_run.py:127-135](../../../../skills/task-tree/scripts/repro_run.py#L127-L135) refuses any input that is online-only by metadata, cached or not, before a run record is written; test [test_repro_online.py:268](../../../../skills/task-tree/scripts/test_repro_online.py#L268); the "Left for siblings" bullet now names only the pre-scheduling gate.
 2. **[BLOCKING] The edit-detection hook opens online-only reproduction dependencies on every session.**
    - **Problem.** `_repro_watch` watches every literal-path dep and every declared directory dep of every registered step ([task_hook.py:912](../../../../skills/task-tree/scripts/task_hook.py#L912)). `detect` hashes each watched file that is missing from the session baseline with a plain `open` ([_edit_detect.py:263-279](../../../../skills/task-tree/scripts/_edit_detect.py#L263-L279), [:177-184](../../../../skills/task-tree/scripts/_edit_detect.py#L177-L184)).
      - The hashing covers files of up to 4 MB, and up to 64 MB per call.
@@ -136,9 +142,13 @@ Tier: thorough. Focus: correctness, test quality.
      - A probe confirms it: with `Code/a.sh` evicted, `_edit_detect.detect(plan_root, …, _repro_watch(plan_root))` trips the `Offline` open guard.
    - **Scope.** The parent's §Checking files says "Every read of a tracked file goes through this check", and this task's Objective bullet says "No tracked read bypasses the check". The hook was missing from the Objective's list of read sites, so the orchestrator may route this fix to another task instead.
    - **Fix.** In `visit`, keep an online-only file in the baseline with no digest and without opening it. In `_scan_dir`, check each directory's `SF_DATALESS` flag before descending into it. Add an `Offline` test over `detect`.
+   → implemented: [_edit_detect.py:289](../../../../skills/task-tree/scripts/_edit_detect.py#L289) keeps an online-only file with no digest, unopened; [_edit_detect.py:164](../../../../skills/task-tree/scripts/_edit_detect.py#L164) and `_dataless` skip online-only directories before listing; test [test_repro_online.py:294](../../../../skills/task-tree/scripts/test_repro_online.py#L294).
 3. **[ADVISORY] The forced-`unverified` deviation has no test.** A probe confirms that `build 01-a#build-a --force` with `Code/a.sh` evicted and uncached exits 1 with "cannot start: input Code/a.sh is online-only here" and runs nothing. No test in [test_repro_online.py](../../../../skills/task-tree/scripts/test_repro_online.py) covers this case. Add the probe as a test.
+   → implemented: [test_repro_online.py:282](../../../../skills/task-tree/scripts/test_repro_online.py#L282) adds the probe.
 4. **[ADVISORY] `probe` walks whole directories that status otherwise skips.** For a directory without a recorded walk, `probe` calls `_holds_online_only`, which runs `stat` on every file under it ([_repro_state.py:354-372](../../../../skills/task-tree/scripts/_repro_state.py#L354-L372), [:389](../../../../skills/task-tree/scripts/_repro_state.py#L389)).
    - `_file_rows` calls `probe` on every status ([_repro_state.py:1252](../../../../skills/task-tree/scripts/_repro_state.py#L1252)). For a sidecar-tracked directory out, the sidecar is hashed instead of the directory, so each status and each dashboard refresh walks the very large intermediate that the sidecar exists to avoid.
    - `node_sizes` walks every directory node after each build and then discards the result, because `probe` returns no size for a directory ([_repro_state.py:629](../../../../skills/task-tree/scripts/_repro_state.py#L629)).
    - **Fix.** Skip directories in `node_sizes`. Answer a sidecar directory's `online_only` from its sidecar and the directory's own flag, without walking it.
+   → implemented: [_repro_state.py:354](../../../../skills/task-tree/scripts/_repro_state.py#L354) `probe` walks only with `walk=True` (the step-start check), so `node_sizes` costs one `stat` per directory; [_repro_state.py:1257](../../../../skills/task-tree/scripts/_repro_state.py#L1257) judges a sidecar out from its sidecar and its own flag.
 5. **[ADVISORY] A dead line in a precedence test.** In [test_repro_online.py:226](../../../../skills/task-tree/scripts/test_repro_online.py#L226), the first `entry = project.status(...)` is overwritten at line 229 before it is used. Delete it.
+   → implemented: deleted the line.
