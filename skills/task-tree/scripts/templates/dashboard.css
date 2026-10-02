@@ -69,7 +69,13 @@
   --rp-stale:    #faedd2;  --rp-stale-t:    #a87400;
   --rp-missing:  #e8e5df;  --rp-missing-t:  #67625a;
   --rp-failed:   #f7dbd5;  --rp-failed-t:   #8e2418;
-  --rp-external: #e8e0f4;  --rp-external-t: #5b3d8a;
+  --rp-unverified: #e8e0f4;  --rp-unverified-t: #5b3d8a;
+  /* Online-only fill: unverified-wash stripes on the card surface. Both
+     colours are surfaces --text and --rp-ink-2 already clear 4.5:1 on, so text
+     keeps its contrast wherever it crosses a stripe. Resolves per theme, since
+     both theme blocks style the root element. */
+  --rp-hatch: repeating-linear-gradient(135deg,
+    var(--rp-unverified) 0 4px, var(--bg-card) 4px 7px);
 
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
@@ -129,7 +135,11 @@
   --rp-stale:    #37301a;  --rp-stale-t:    #e5bb45;
   --rp-missing:  #33312e;  --rp-missing-t:  #a09a92;
   --rp-failed:   #3e201c;  --rp-failed-t:   #f2857a;
-  --rp-external: #2b2440;  --rp-external-t: #b49ae0;
+  --rp-unverified: #2b2440;  --rp-unverified-t: #b49ae0;
+  /* The dark wash sits too close to --bg-card to read as stripes; 10% ink
+     lifts it while --rp-ink-2 keeps 4.8:1 on the stripe. */
+  --rp-hatch: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--rp-unverified-t) 10%, var(--rp-unverified)) 0 4px, var(--bg-card) 4px 7px);
 
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
@@ -1732,23 +1742,57 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .rp-stale    { background: var(--rp-stale);    border-left-color: var(--rp-stale-t); }
 .rp-missing  { background: var(--rp-missing);  border-left-color: var(--rp-missing-t); }
 .rp-failed   { background: var(--rp-failed);   border-left-color: var(--rp-failed-t); }
-.rp-external { background: var(--rp-external); border-left-color: var(--rp-external-t); }
+.rp-unverified { background: var(--rp-unverified); border-left-color: var(--rp-unverified-t); }
 .rp-fresh    .repro-glyph, .repro-legend-item.rp-fresh    .repro-glyph { color: var(--rp-fresh-t); }
 .rp-stale    .repro-glyph, .repro-legend-item.rp-stale    .repro-glyph { color: var(--rp-stale-t); }
 .rp-missing  .repro-glyph, .repro-legend-item.rp-missing  .repro-glyph { color: var(--rp-missing-t); }
 .rp-failed   .repro-glyph, .repro-legend-item.rp-failed   .repro-glyph { color: var(--rp-failed-t); }
-.rp-external .repro-glyph, .repro-legend-item.rp-external .repro-glyph { color: var(--rp-external-t); }
+.rp-unverified .repro-glyph, .repro-legend-item.rp-unverified .repro-glyph { color: var(--rp-unverified-t); }
 /* No lock to read (Python < 3.11): the node keeps the neutral card surface and
    says so, rather than borrowing a state's colour. */
+.rp-unknown { background: var(--bg-card); }
 .rp-unknown .repro-glyph, .repro-legend-item.rp-unknown .repro-glyph { color: var(--text-mute); }
 .repro-legend-item.rp-fresh, .repro-legend-item.rp-stale, .repro-legend-item.rp-missing,
-.repro-legend-item.rp-failed, .repro-legend-item.rp-external { border-left-width: 3px; }
+.repro-legend-item.rp-failed, .repro-legend-item.rp-unverified { border-left-width: 3px; }
 .repro-legend-item.rp-fresh    { border-left-color: var(--rp-fresh-t); }
 .repro-legend-item.rp-stale    { border-left-color: var(--rp-stale-t); }
 .repro-legend-item.rp-missing  { border-left-color: var(--rp-missing-t); }
 .repro-legend-item.rp-failed   { border-left-color: var(--rp-failed-t); }
-.repro-legend-item.rp-external { border-left-color: var(--rp-external-t); }
+.repro-legend-item.rp-unverified { border-left-color: var(--rp-unverified-t); }
 .repro-legend-item.is-kind { border-style: dashed; }
+
+/* The fill channel: a card's fill is its own state. Empty when the reported
+   staleness is inherited from upstream; hatched when its files are online-only here. */
+.rp-inherited { background: var(--bg-card); }
+.rp-hatched { background: var(--rp-hatch); }
+/* Menlo and Plex Mono draw U+2601 as a squat mark; these faces draw a cloud. */
+.repro-cloud, .rp-unverified .repro-glyph { font-family: 'Hiragino Sans', 'Lucida Grande', system-ui, sans-serif; }
+.repro-cloud { color: var(--rp-unverified-t); }
+.repro-node-state .repro-glyph { font-size: inherit; }
+.repro-cloud-tag {
+  flex: none;
+  margin-left: auto;
+  font-size: var(--fs-micro);
+  color: var(--rp-ink-2);
+  white-space: nowrap;
+}
+.repro-fill-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 3px;
+}
+.repro-fill-swatch.rp-stale { border-left-color: var(--rp-stale-t); }
+.repro-fill-swatch.rp-unverified { border-left-color: var(--rp-unverified-t); }
+.repro-legend-head { margin: 8px 0 4px; font-size: var(--fs-micro); color: var(--text-mute); }
+.repro-legend-head:first-child { margin-top: 0; }
+.repro-own-line { margin: -4px 0 12px; font-size: var(--fs-meta); color: var(--text-mid); }
+.repro-own-line .hc-btn { height: auto; padding: 0 6px; font-family: var(--font-mono); }
+.repro-online-summary { margin: 0 0 8px; font-size: var(--fs-meta); color: var(--text-mid); }
+.repro-online-summary .repro-glyph { color: var(--rp-unverified-t); }
+.repro-files .repro-cloud-tag, .repro-node-name .repro-cloud-tag { margin-left: 8px; }
 
 /* Steps and task prose occupy the same reader, with the task breadcrumb retained. */
 .step-reading #active-node, .step-reading #children-dag { display:none; }
@@ -2405,6 +2449,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #repro-edge-detail .hc-btn { white-space:normal;height:auto;min-height:28px; }
 #repro-edge-detail h3 { margin:8px 0;font-size:var(--fs-body); }
 .rp-task { position:absolute;border:1px solid var(--border);border-radius:7px;background:var(--bg-card);box-shadow:var(--shadow-sm);box-sizing:border-box;pointer-events:none; }
+.rp-task.rp-hatched:not(.rp-expanded), .rp-task.rp-hatched > .rp-task-head { background:var(--rp-hatch); }
 .rp-task.rp-expanded { background:transparent;border:1px solid var(--border);box-shadow:none; }
 .rp-task-head { display:flex;gap:5px;align-items:flex-start;padding:10px 10px 3px;max-width:100%;height:59px;box-sizing:border-box;background:var(--bg-card);border-radius:7px 7px 0 0;pointer-events:auto; }
 .rp-task-head .hc-btn { flex:none;width:22px;height:24px;padding:0;border:0;background:transparent; }
@@ -2427,7 +2472,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .rp-build-item code { font:var(--fs-micro) var(--font-mono);color:var(--text-mid);overflow-wrap:anywhere; }
 .rp-build-est { font:var(--fs-micro)/1.4 var(--font-text);color:var(--text-mute); }
 .rp-menu-body > .rp-build-item[disabled] { opacity:.55;cursor:not-allowed;background:transparent; }
-.rp-build-status { display:flex;align-items:center;gap:8px;min-width:0; }
+.rp-build-status { display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0; }
+.rp-build-detail { flex-basis:100%;margin:0;font:var(--fs-micro)/1.5 var(--font-mono);color:var(--text-mid);white-space:pre-wrap; }
 .rp-build-status:empty { display:none; }
 .rp-build-status code { font:var(--fs-micro) var(--font-mono);color:var(--text-mid); }
 .rp-build-status .hc-btn { height:auto;padding:2px 8px; }
@@ -2567,9 +2613,16 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #selection-filter-notice { padding:8px 12px;margin-bottom:12px;border:1px solid var(--border);background:var(--bg-alt);font-size:13px; }
 .filter-context > .task-row { opacity:.55; }
 .nav-step-list { padding:4px 8px 4px 24px; }
-.nav-step { display:block;border:0;border-radius:4px;background:transparent;color:var(--text-mid);padding:6px 8px;text-align:left;font:inherit;font-size:12px;width:100%;overflow-wrap:anywhere;cursor:pointer; }
-.nav-step:hover { background:var(--bg-hover); }
-.nav-step.is-selected { color:var(--accent);background:var(--accent-soft); }
+.nav-step-list > .nav-step + .nav-step { margin-top:2px; }
+.nav-step { display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:6px;align-items:baseline;border-width:1px 1px 1px 3px;border-style:solid;border-top-color:transparent;border-right-color:transparent;border-bottom-color:transparent;border-radius:4px;color:var(--text);padding:5px 8px;text-align:left;font:inherit;font-size:12px;width:100%;cursor:pointer; }
+.nav-step.is-check { border-style:dashed;border-left-style:solid;border-top-color:var(--border);border-right-color:var(--border);border-bottom-color:var(--border); }
+.nav-step:hover { box-shadow:var(--shadow-md); }
+.nav-step.is-selected { outline:2px solid var(--accent);outline-offset:1px; }
+.nav-step-name { min-width:0;overflow-wrap:anywhere; }
+.nav-step-state { grid-column:2;font-size:var(--fs-micro);color:var(--rp-ink-2); }
+.nav-repro-rollup > span, .rp-task-summary > span { background:none; }
+.rp-task-summary .repro-glyph { font-size:inherit; }
+.nav-repro-rollup { margin:-3px 0 2px 30px;width:max-content;padding:1px 5px;border-radius:4px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }
 .workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-spacer,.workspace:not(.dag-mode).tree-sidebar-hidden > .nav-tree,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-resizer,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-rail { display:none; }
 #navigation-toggle { white-space:nowrap; }
 @media(max-width:620px) { .header-controls #btn-find { display:inline-flex;max-width:150px;overflow:hidden;white-space:nowrap; } .workspace-filter-summary { padding:6px 12px;gap:6px; } .workspace-filter { padding:16px; } .workspace-filter label { min-height:40px; } }

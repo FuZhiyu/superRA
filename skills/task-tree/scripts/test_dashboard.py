@@ -419,6 +419,36 @@ class TestServerRoutes:
         assert client.get("/api/file-peek", params={"path": "../../etc/passwd"}).status_code == 403
         assert client.get("/api/file-peek", params={"path": "out/fig.png\0x"}).status_code == 400
 
+    def test_file_peek_answers_an_online_only_file_from_its_stat(self, client, plan_root, monkeypatch):
+        """An `SF_DATALESS` file or folder, or a legacy Dropbox placeholder, is
+        never opened or listed: the route returns `online_only` and the size the
+        stat knows."""
+        import builtins
+        import _repro_state
+        root = plan_root.parent
+        (root / "cloud").mkdir()
+        (root / "cloud" / "vendor.csv").write_text("v\n" * 1000)
+        (root / "cloud" / "folder").mkdir()
+        (root / "cloud" / "placeholder.csv").write_bytes(b"")
+        dataless = {(i.st_dev, i.st_ino) for i in (os.stat(root / "cloud" / name) for name in ("vendor.csv", "folder"))}
+        placeholder = os.path.realpath(root / "cloud" / "placeholder.csv")
+        monkeypatch.setattr(_repro_state, "file_flags",
+                            lambda info: _repro_state.SF_DATALESS if (info.st_dev, info.st_ino) in dataless else 0)
+        monkeypatch.setattr(_repro_state, "has_placeholder_xattr", lambda path: os.path.realpath(path) == placeholder)
+        real_open, real_scandir = builtins.open, os.scandir
+
+        def refuse(path):
+            if os.path.realpath(path).startswith(os.path.realpath(root / "cloud")):
+                raise AssertionError(f"read online-only {path}")
+        monkeypatch.setattr(builtins, "open", lambda f, *a, **k: (refuse(f), real_open(f, *a, **k))[1])
+        monkeypatch.setattr(os, "scandir", lambda p=".": (refuse(p), real_scandir(p))[1])
+
+        peek = lambda path: client.get("/api/file-peek", params={"path": path}).json()  # noqa: E731
+        assert peek("cloud/vendor.csv") == {"exists": True, "online_only": True, "kind": "file", "size": 2000,
+                                            "mtime_ns": os.stat(root / "cloud" / "vendor.csv").st_mtime_ns}
+        assert peek("cloud/folder")["online_only"] and peek("cloud/folder")["size"] is None
+        assert peek("cloud/placeholder.csv")["online_only"] and peek("cloud/placeholder.csv")["size"] is None
+
     def test_symlinked_folders_and_declared_external_paths_are_readable(self, plan_root, tmp_path_factory):
         """A symlink inside the project is the researcher's own inclusion, and a path
         the reproduction graph declares is too; `..` and anything else outside stay
@@ -6735,7 +6765,7 @@ class TestReproBuildRoutes:
             assert not plan_dashboard._is_trusted_authority(host), host
 
     def test_target_is_one_argv_element_after_the_separator(self):
-        assert plan_dashboard._build_args("02-panel", True, True) == ["--upstream", "--force", "--", "02-panel"]
+        assert plan_dashboard._build_args("02-panel", True, True) == ["--only", "--force", "--", "02-panel"]
         assert plan_dashboard._build_args("01-ingest#fetch-crsp", False, False) == ["--", "01-ingest#fetch-crsp"]
 
     # --- Lifecycle --------------------------------------------------------
@@ -6752,6 +6782,35 @@ class TestReproBuildRoutes:
         assert state["job"]["summary"] == "1 step(s): 1 executed"
         assert status["fetch-crsp"]["status"] == "fresh"
         assert status["fetch-crsp"]["duration"] is not None
+
+    def test_only_request_scopes_the_build_and_a_gated_build_lists_its_files(self, plan):
+        """`only` reaches the runner as `--only`; a build the download gate stops
+        returns the gate's file list as `detail`, not only its first line."""
+        (plan.parent / "code" / "fetch.sh").unlink()
+        with self._client(plan) as c:
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp", "only": True})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build --only '01-ingest#fetch-crsp'"
+            assert r.json()["only"] is True
+            job = self._finish(c)["job"]
+        assert job["returncode"] == 1
+        assert job["summary"].startswith("Error: 1 file(s) the build reads are not on this machine")
+        assert job["detail"][0].split() [:2] == ["code/fetch.sh", "-"]
+        assert "no step produces it" in job["detail"][0]
+
+    def test_build_summary_keeps_an_errors_lines_and_each_failed_steps_block(self):
+        log = "Execution scope: 1 step(s): a\nError: 2 file(s) are gone:\n  x.csv  1 B\n  y.csv  2 B\nTry --only.\n"
+        assert plan_dashboard._build_summary(log) == (
+            "Error: 2 file(s) are gone:", ["  x.csv  1 B", "  y.csv  2 B", "Try --only."])
+        assert plan_dashboard._build_summary("✓ a  executed\n1 step(s): 1 executed\n") == ("1 step(s): 1 executed", [])
+        stopped = ("✓ clean  executed\n✗ join  failed\n  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:\n"
+                   "    Data/vendor.csv  2.4 MB  online-only here\n✓ report  executed\n3 step(s): 2 executed, 1 failed\n")
+        assert plan_dashboard._build_summary(stopped) == ("3 step(s): 2 executed, 1 failed", [
+            "✗ join  failed", "  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:",
+            "    Data/vendor.csv  2.4 MB  online-only here"])
+        many = "".join(f"✗ s{i}  failed\n  boom\n" for i in range(10)) + "10 step(s): 10 failed\n"
+        detail = plan_dashboard._build_summary(many)[1]
+        assert len(detail) == plan_dashboard.BUILD_DETAIL_LINES + 1 and detail[-1] == "… 8 more line(s) in the log"
 
     def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
         monkeypatch.setenv("SLOW", "30")
@@ -6832,26 +6891,41 @@ class TestReproBuildRoutes:
     @pytest.mark.skipif(_NODE is None, reason="node not available")
     def test_menu_estimate_and_command_follow_the_selection(self):
         defs = _extract_js_defs([
-            "REPRO_STATES", "REPRO_GLYPHS", "_reproBuild", "reproStatusIndex", "reproStateOf", "reproWithin",
-            "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope", "reproBuildEstimate",
+            "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD", "_reproBuild", "reproStatusIndex", "reproStateOf",
+            "reproChannels", "reproWithin", "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope",
+            "reproBuildEstimate", "reproGatedFiles", "formatArtifactBytes",
         ])
+        # a (stale) -> b (fresh, stale through a) and y (unverified, stale through a); c missing; x unverified.
+        # x and y read the online-only D/cloud.csv; nothing writes it.
+        cloud = "files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048}]"
         harness = (
-            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'}],"
-            "step_edges:[{from:'a',to:'b'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
-            "{name:'b',status:'fresh',duration:1},{name:'c',status:'missing',duration:null},{name:'x',status:'external'}]}};"
+            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'},{name:'y',task:'t2'}],"
+            "step_edges:[{from:'a',to:'b'},{from:'a',to:'y'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
+            "{name:'b',status:'stale',local_status:'fresh',origin:'a',duration:1},{name:'c',status:'missing',duration:null},"
+            "{name:'x',status:'unverified',duration:3," + cloud + "},"
+            "{name:'y',status:'stale',local_status:'unverified',origin:'a',duration:4," + cloud + "}]}};"
             "console.log(JSON.stringify({"
             "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
-            "this:reproBuildEstimate('t2#b',''), upstream:reproBuildEstimate('t2#b','upstream'), force:reproBuildEstimate('t2','force'),"
-            "cmd:reproBuildCommand('t2#b','upstream'), root:reproBuildCommand('.','force')}));"
+            "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
+            "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'),"
+            "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
+            "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
+            "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
         assert proc.returncode == 0, proc.stderr
         out = json.loads(proc.stdout.strip().splitlines()[-1])
-        assert out["scope"] == ["b", "c", "x"] and out["up"] == ["a", "b"]
-        assert out["this"] == "Nothing stale"
-        assert out["upstream"] == "1 step would run · ~2.0s by last runs"
-        assert out["force"] == "2 steps would run · ~1.0s by last runs · 1 never ran · 1 waiting on an external input"
-        assert out["cmd"] == "superra repro build 't2#b' --upstream"
+        assert out["scope"] == ["b", "c", "x", "y"] and out["up"] == ["a", "b"]
+        assert out["only"] == "Nothing stale"
+        assert out["chain"] == "1 step would run · ~2.0s by last runs · 1 more if their inputs change"
+        assert out["task"] == ("2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change"
+                               " · 1 need online-only files if their inputs change · 1 online-only, not run")
+        # The runner's gate: forced x and y read D/cloud.csv, so the build runs nothing.
+        assert out["force"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
+        assert out["writtenFirst"] == []
+        assert out["cmd"] == "superra repro build 't2#b' --only"
+        assert out["plain"] == "superra repro build t2"
         assert out["root"] == "superra repro build . --force"
 
 class TestReproExportSnapshot:
@@ -6924,8 +6998,8 @@ class TestReproLockWatch:
 
 def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
-        "REPRO_STATES", "REPRO_GLYPHS",
-        "reproStatusIndex", "reproStateOf", "reproTaskTitle", "reproHeadHTML",
+        "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD",
+        "reproStatusIndex", "reproStateOf", "reproChannels", "reproRollup", "reproTaskTitle", "reproHeadHTML",
         "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
         "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
@@ -6963,6 +7037,35 @@ def _run_repro_render_node(harness_body):
     )
     assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
     return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproStateChannels:
+    def test_cards_split_reported_and_own_state_and_the_legend_explains_both(self):
+        """Border and label carry the reported state, the fill the step's own:
+        tinted where they agree, empty when inherited, hatched when online-only."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "var steps=['clean','merge','join','rows','gate'].map(function(n){return {name:n,task:n==='rows'?'cloud':'est',kind:n==='gate'?'check':'build',deps:[],outs:[]};});"
+            "var data={graph:{steps:steps,step_edges:[{from:'clean',to:'merge',via:'a'},{from:'clean',to:'join',via:'a'}],findings:[],"
+            "  dependencies:{tasks:[{path:'est',title:'Est',status:'in-progress'},{path:'cloud',title:'Cloud',status:'in-progress'}],logical:[]}},"
+            "  status:{steps:[{name:'clean',status:'stale'},{name:'merge',status:'stale',local_status:'fresh',origin:'clean'},"
+            "    {name:'join',status:'stale',local_status:'unverified',origin:'clean'},{name:'rows',status:'unverified'},{name:'gate',status:'fresh'}]}};"
+            "_reproNav.expanded=['est','cloud'];drawReproView(box, data);"
+            "console.log(JSON.stringify({html: box.innerHTML}));"
+        )
+        html = out["html"]
+        assert 'class="repro-node rp-stale" ' in html
+        assert 'class="repro-node rp-stale rp-inherited"' in html and "stale · upstream" in html
+        assert 'class="repro-node rp-stale rp-hatched"' in html and 'repro-cloud-tag' in html
+        assert 'class="repro-node rp-unverified rp-hatched"' in html and "unverified · online-only" in html
+        assert 'class="repro-node rp-fresh is-check"' in html
+        assert 'class="rp-task rp-hatched' in html and html.count('class="rp-task rp-hatched') == 1
+        assert "external" not in html
+        assert "Fill · the step's own evidence" in html
+        for fill in ("tinted", "empty", "hatched"):
+            assert f"<strong>{fill}</strong>" in html
+        assert 'repro-legend-item rp-unverified"' in html and "rp-unknown" not in html
 
 
 @pytest.mark.skipif(_NODE is None, reason="node not available")
