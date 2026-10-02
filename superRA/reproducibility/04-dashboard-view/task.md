@@ -13,8 +13,9 @@ Let the researcher read tasks, review an agent-built reproduction graph, and act
 - **One workspace, two layouts.** Tree prioritizes task reading with a hideable sidebar; Graph prioritizes the map with hideable details. Both share search, task/status filters, task and step selection, the reader, comments, and attachments.
 - **One project map.** Task containers fold and expand independently into their steps and child tasks; Project overview collapses and fits the map; search reveals a task, step, or output file without changing filters. Selection never changes the map's contents.
 - **Dependencies read honestly.** One arrow per visible endpoint pair carries every connecting file and `depends_on` prerequisite; `depends_on`-only arrows are distinguishable; only step cycles and `depends_on` cycles are marked; a task whose declaration has an error is marked with a link to its finding.
-- **Step inspection.** The reader shows a step's state and reason, command, inputs, outputs, acceptance, run evidence, and log tail. Markdown step links (`task.md#step-<name>`) and `?step=<name>` URLs select the step.
-- **Graph actions.** Every task and step card opens a Build menu — `superra repro build <target>`, with `--upstream`, or with `--force` — each item showing its command and an estimate from last run durations. Cards show last durations and a live build; a non-fresh card opens a hover card with `superra repro explain`'s causes. `accept`, `revoke`, and `-j` stay CLI actions.
+- **Each card reads in two channels.** Border, glyph, and label show the reported state; the fill shows the step's own state: tinted, empty when the staleness is inherited from a producer, or hatched when files are online-only here.
+- **Step inspection.** The reader shows a step's state and reason, its own state with the origin step when they differ, command, inputs and outputs with each online-only file and its size, acceptance, run evidence, and log tail. No preview reads an online-only file. Markdown step links (`task.md#step-<name>`) and `?step=<name>` URLs select the step.
+- **Graph actions.** Every task and step card opens a Build menu — with producers (`superra repro build <target>`), `--only`, or `--force` — each item showing its command and an estimate from last run durations that stops where the runner's download gate would. Cards show last durations and a live build; a non-fresh card opens a hover card with `superra repro explain`'s causes. `accept`, `revoke`, and `-j` stay CLI actions.
 - **Data path.** Read-only `GET /api/repro/graph` and `GET /api/repro/status` routes, a live refresh after a build or a `## Reproduction` edit, and a standalone export that works offline. The build, stop, and explain routes are live-server only.
 
 ### Constraints
@@ -35,10 +36,26 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 - **The layout is deterministic** for the same graph: components are laid out separately, with unconnected cards in a labeled area; routes keep separate lanes so crossings never read as joins. The layout function was split into ranking, banding, port reservation, sizing, placement, and routing without changing its output on 3,000 random models.
 - **Neither route writes to the project.** `.superra-repro/` stays `superra repro`'s to create, and without `tomllib` for a legacy lock every step reads `unknown`.
 
+### Cards show reported and own state
+
+[internals.md §Dashboard](../../../skills/task-tree/references/internals.md#dashboard-plan_dashboardpy) (**Card channels**, **Graph actions**) documents the mapping.
+
+- **One mapping, `reproChannels`,** renders every Graph card, Tree step row, task-page step table, step panel, and explain card. When the two states agree, a card keeps the tint it always had. Only the step where staleness starts has a stale tint; its descendants show a stale border around an empty fill, labelled `stale · upstream`.
+- **Online-only is hatching and a cloud.** An own-`unverified` step gets diagonal `--rp-hatch` stripes and the label `unverified · online-only`, or a `☁ online-only` tag when a stale producer sets its label. `--rp-unverified` replaced `--rp-external` with the same validated purple.
+  - Contrast: dark-theme stripes take 10% of the unverified ink, keeping `--rp-ink-2` near 4.8:1. A 16% draft dropped it to about 4.0:1 in light and 4.3:1 in dark.
+  - The cloud (U+2601 U+FE0E) uses Hiragino Sans or Lucida Grande, because Menlo and IBM Plex Mono draw it squat.
+- **Reserved meanings are unchanged.** Dashed borders mean a check step and dashed wires `depends_on`; fading means a zero-count legend row or an unfocused wire. Check cards had lost their `is-check` class in an earlier rewrite; it is back.
+- **Rollups.** Task cards, and a line under each Tree row, count steps per reported state by glyph (`◐3 ○1 ✕1`), leaving each row's slug width unchanged. A task whose steps are all own-`unverified` is hatched.
+- **The step panel** adds `Own evidence: fresh.` or `Own evidence: unverified — <reason>.`, says when the step would rerun, and links the origin step. Inputs and outputs lead with `N files online-only here (size)` and a pointer to [online-only-files.md](../../../skills/reproducibility/references/online-only-files.md).
+- **`/api/file-peek` answers an online-only file or folder from its `stat`,** and the hover card and in-page file view show a note with no Download link and no `/files/` request.
+- **The Build menu sends `{target, only, force}`.** Its estimate runs the steps whose own state is `stale`, `missing`, or `failed`, plus forced targets, and `reproGatedFiles` mirrors the runner's gate: the item reads "Would run nothing: N file(s) not on this machine" with the files. A gated or step-refused build shows its file list under "Last build" (`_build_summary`'s `detail`, at most 12 lines).
+
 ### Evidence and limits
 
 - On the 500-step, 50-task fixture, search took 0.8 ms, Project overview 3.1 ms, and full expansion 97 ms (Chrome 153, macOS ARM64). Light and dark layouts at 390, 768, and 1440 px showed no page-level horizontal overflow.
 - Native Safari and physical trackpad gestures remain unverified.
+- **Long task names truncate in the sidebar** at the default width, where the title and status badge fill the row.
+- **Sidebar rows sometimes load out of order** (01, 03, 02) after switching from Graph to Tree; unchanged code showed it in one of two runs.
 - Each step in the graph payload repeats its declared inputs across `deps`, `declared_deps`, and `dependency_origins`.
 
 ### Graph actions
@@ -52,4 +69,4 @@ The workspace ships in [dashboard.js](../../../skills/task-tree/scripts/template
 - **Reviewed** at the thorough tier for security and correctness: one blocking finding (any lock holder masked interrupted steps) and four advisories, all fixed before approval.
 - **Limits.** Probing the lock takes a shared lock for microseconds, so a CLI build starting in that window is refused and can be rerun. A build whose server restarted mid-run shows no "Last build" line. On a narrow screen the Build menu can extend below the short graph stage.
 
-Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), and browser tests of the map and the Build menu and hover cards in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py). The graph actions add `TestReproBuildRoutes` in test_dashboard.py and the lock-holder test in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py).
+Tests: the dashboard routes, payloads, and refresh in [test_dashboard.py](../../../skills/task-tree/scripts/test_dashboard.py), map projection in [test_navigation_projection.py](../../../skills/task-tree/scripts/tests/test_navigation_projection.py), browser tests of the map and the Build menu and hover cards in [test_dag_workspace_browser.py](../../../skills/task-tree/scripts/tests/test_dag_workspace_browser.py), and the card channels, panel, file view, and gated menu on an every-state fixture in [test_repro_states_browser.py](../../../skills/task-tree/scripts/tests/test_repro_states_browser.py), a separate module because each module's server binds the global `PLAN_ROOT`. The graph actions add `TestReproBuildRoutes` in test_dashboard.py and the lock-holder test in [test_repro_runner.py](../../../skills/task-tree/scripts/test_repro_runner.py).
