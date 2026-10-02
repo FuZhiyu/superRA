@@ -36,13 +36,13 @@ Run the Integrate refactoring pass for the 11-local-builds work, against the rec
 4. **Fix the three advisory record findings, then delete their `## Review Notes`:** [02-runner](../02-runner/task.md) items 1–2 (elided-list command; `--only` exit 3), [04-dashboard-view](../04-dashboard-view/task.md) item 1 (editing-history cues), [07-workflow-integration](../07-workflow-integration/task.md) item 1 (covered by action 3).
 5. **Consolidate the stat-then-check online-only probe.** `_edit_detect._dataless` ([_edit_detect.py:181](../../../skills/task-tree/scripts/_edit_detect.py#L181)) and `Resolver._online_only` ([_repro_provenance.py:607](../../../skills/task-tree/scripts/_repro_provenance.py#L607)) each wrap `stat` plus the flag test with an `OSError` guard. Replace both with one helper beside `is_online_only` in `_repro_state.py`. Hoist the function-local `is_online_only` import in `include_closure` ([_repro.py:737](../../../skills/task-tree/scripts/_repro.py#L737)) out of its loop. Keep `plan_dashboard.py`'s `_repro_state.file_flags` attribute access: tests patch it there.
 6. **Project Doc Audit walk-up.** No `CLAUDE.md` / `AGENTS.md` / `README.md` sits under the touched directories except `skills/task-tree/scripts/vendor/README.md`, which this diff does not touch. Check the root [README.md](../../../README.md) and [CLAUDE.md](../../../CLAUDE.md) for stale claims only.
+7. **Import `OUTPUT_CAP` from `_task_validate`.** The constant landed in `59884a58`. Replace the local copy at [_repro_state.py:60-61](../../../skills/task-tree/scripts/_repro_state.py#L60-L61) with the import, and remove the item from [02-runner](../02-runner/task.md) §Known limits.
 
 **Out of scope.**
 
-- The `OUTPUT_CAP` import (02-runner §Known limits): it waits on `_task_validate.OUTPUT_CAP` being committed.
 - Size and mtime across download and eviction: a live check, not a refactor.
 - Sidebar truncation and row order: 04-dashboard-view limits that predate this work.
-- Another session's uncommitted edits to `CLAUDE.md` and `skills/task-tree/**` (`commands.md`, `internals.md`, `_task_validate.py`, `cli.py`, `task_check.py`, `task_hook.py`, `dashboard.css`, `test_task_tree.py`, `vendor/*`): never stage, revert, or edit them. An action that needs one of those files waits for the researcher.
+- Another session's uncommitted edits to `CLAUDE.md` and `skills/task-tree/**` (`commands.md`, `internals.md`, `cli.py`, `task_check.py`, `task_hook.py`, `dashboard.css`, `test_task_tree.py`, `vendor/*`): never stage, revert, or edit them. An action that needs one of those files waits for the researcher.
 
 ### Verification
 
